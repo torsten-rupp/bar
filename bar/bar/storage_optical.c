@@ -1721,8 +1721,6 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
 
 LOCAL void StorageOptical_close(StorageHandle *storageHandle)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->opticalDisk);
   assert((storageHandle->storageInfo->type == STORAGE_TYPE_CD) || (storageHandle->storageInfo->type == STORAGE_TYPE_DVD) || (storageHandle->storageInfo->type == STORAGE_TYPE_BD));
@@ -1741,7 +1739,7 @@ LOCAL void StorageOptical_close(StorageHandle *storageHandle)
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_MODE_WRITE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         storageHandle->storageInfo->opticalDisk.write.totalSize += File_getSize(&storageHandle->opticalDisk.write.fileHandle);
         StringList_append(&storageHandle->storageInfo->opticalDisk.write.fileNameList,storageHandle->opticalDisk.write.fileName);

@@ -58,6 +58,7 @@
 // compare info
 typedef struct
 {
+  Semaphore           fragmentListLock;
   FragmentList        *fragmentList;
   const EntryList     *includeEntryList;                  // list of included entries
   const PatternList   *excludePatternList;                // list of exclude patterns
@@ -159,13 +160,11 @@ LOCAL void initCompareInfo(CompareInfo         *compareInfo,
     HALT_FATAL_ERROR("Cannot initialize entry message queue!");
   }
 
-#if 0
   // init locks
-  if (!Semaphore_init(&compareInfo->storageInfoLock))
+  if (!Semaphore_init(&compareInfo->fragmentListLock,SEMAPHORE_TYPE_BINARY))
   {
-    HALT_FATAL_ERROR("Cannot initialize storage semaphore!");
+    HALT_FATAL_ERROR("Cannot initialize fragment list semaphore!");
   }
-#endif
 
   DEBUG_ADD_RESOURCE_TRACE(compareInfo,CompareInfo);
 }
@@ -184,6 +183,8 @@ LOCAL void doneCompareInfo(CompareInfo *compareInfo)
   assert(compareInfo != NULL);
 
   DEBUG_REMOVE_RESOURCE_TRACE(compareInfo,CompareInfo);
+
+  Semaphore_done(&compareInfo->fragmentListLock);
 
   MsgQueue_done(&compareInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
 }
@@ -225,6 +226,7 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
+*          fragmentListLock     - fragment list lock
 *          fragmentList         - fragment list
 *          buffer0,buffer1      - buffers for temporary data
 *          bufferSize           - size of data buffer
@@ -236,6 +238,7 @@ LOCAL_INLINE ulong compare(const void *p0, const void *p1, ulong length)
 LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
                               const EntryList   *includeEntryList,
                               const PatternList *excludePatternList,
+                              Semaphore         *fragmentListLock,
                               FragmentList      *fragmentList,
                               byte              *buffer0,
                               byte              *buffer1,
@@ -254,7 +257,6 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   uint64             length;
   ulong              bufferLength;
   ulong              diffIndex;
-  SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
   char               s[256];
 
@@ -263,6 +265,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
+  assert(fragmentListLock != NULL);
   assert(fragmentList != NULL);
   assert(buffer0 != NULL);
   assert(buffer1 != NULL);
@@ -434,7 +437,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get file fragment node
         fragmentNode = FragmentList_find(fragmentList,fileName);
@@ -517,6 +520,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
 *          printableStorageName - printable storage name
+*          fragmentListLock     - fragment list lock
 *          fragmentList         - fragment list
 *          buffer0,buffer1      - buffers for temporary data
 *          bufferSize           - size of data buffer
@@ -528,6 +532,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
                                const EntryList   *includeEntryList,
                                const PatternList *excludePatternList,
+                               Semaphore         *fragmentListLock,
                                FragmentList      *fragmentList,
                                byte              *buffer0,
                                byte              *buffer1,
@@ -546,7 +551,6 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   bool               equalFlag;
   uint64             block;
   ulong              diffIndex;
-  SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
   char               s[256];
 
@@ -555,6 +559,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
+  assert(fragmentListLock != NULL);
   assert(fragmentList != NULL);
   assert(buffer0 != NULL);
   assert(buffer1 != NULL);
@@ -792,7 +797,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
 
     if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get image fragment node
         fragmentNode = FragmentList_find(fragmentList,deviceName);
@@ -1162,6 +1167,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
 * Input  : archiveHandle        - archive handle
 *          includeEntryList     - include entry list
 *          excludePatternList   - exclude pattern list
+*          fragmentListLock     - fragment list lock
 *          fragmentList         - fragment list
 *          buffer0,buffer1      - buffers for temporary data
 *          bufferSize           - size of data buffer
@@ -1173,6 +1179,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
 LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
                                   const EntryList   *includeEntryList,
                                   const PatternList *excludePatternList,
+                                  Semaphore         *fragmentListLock,
                                   FragmentList      *fragmentList,
                                   byte              *buffer0,
                                   byte              *buffer1,
@@ -1194,7 +1201,6 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   uint64             length;
   ulong              bufferLength;
   ulong              diffIndex;
-  SemaphoreLock      semaphoreLock;
   FragmentNode       *fragmentNode;
   char               s[256];
 
@@ -1203,6 +1209,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   assert(archiveHandle->storageInfo->jobOptions != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
+  assert(fragmentListLock != NULL);
   assert(fragmentList != NULL);
   assert(buffer0 != NULL);
   assert(buffer1 != NULL);
@@ -1404,7 +1411,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
 
         if (!archiveHandle->storageInfo->jobOptions->noFragmentsCheckFlag)
         {
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&fragmentList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          SEMAPHORE_LOCKED_DO(fragmentListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
             // get file fragment list
             fragmentNode = FragmentList_find(fragmentList,fileName);
@@ -1743,6 +1750,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareFileEntry(&archiveHandle,
                                  compareInfo->includeEntryList,
                                  compareInfo->excludePatternList,
+                                 &compareInfo->fragmentListLock,
                                  compareInfo->fragmentList,
                                  buffer0,
                                  buffer1,
@@ -1753,6 +1761,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareImageEntry(&archiveHandle,
                                   compareInfo->includeEntryList,
                                   compareInfo->excludePatternList,
+                                  &compareInfo->fragmentListLock,
                                   compareInfo->fragmentList,
                                   buffer0,
                                   buffer1,
@@ -1775,6 +1784,7 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
         error = compareHardLinkEntry(&archiveHandle,
                                      compareInfo->includeEntryList,
                                      compareInfo->excludePatternList,
+                                     &compareInfo->fragmentListLock,
                                      compareInfo->fragmentList,
                                      buffer0,
                                      buffer1,
@@ -1892,6 +1902,7 @@ NULL, // masterSocketHandle
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
+                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getPassword

@@ -163,7 +163,6 @@ LOCAL bool              quitFlag;
 
 LOCAL void printNotifies(void)
 {
-  SemaphoreLock      semaphoreLock;
   DictionaryIterator dictionaryIterator;
   void               *data;
   ulong              length;
@@ -171,7 +170,7 @@ LOCAL void printNotifies(void)
   const UUIDNode     *uuidNode;
 
   printf("Notifies:\n");
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
     while (Dictionary_getNext(&dictionaryIterator,
@@ -618,7 +617,6 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
   String              name;
   Errors              error;
   FileInfo            fileInfo;
-  SemaphoreLock       semaphoreLock;
   DirectoryListHandle directoryListHandle;
   NotifyInfo          *notifyInfo;
   UUIDNode            *uuidNode;
@@ -647,7 +645,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
       }
 
       // update/add notify
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         // get/add notify
         notifyInfo = addNotify(name);
@@ -792,7 +790,6 @@ LOCAL void removeNotifySubDirectories(ConstString name)
 
 LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
 {
-  SemaphoreLock      semaphoreLock;
   DictionaryIterator dictionaryIterator;
   void               *data;
   ulong              length;
@@ -802,7 +799,7 @@ LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
     while (Dictionary_getNext(&dictionaryIterator,
@@ -845,7 +842,6 @@ LOCAL void markNotifies(const char *jobUUID, const char *scheduleUUID)
 
 LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
 {
-  SemaphoreLock      semaphoreLock;
   DictionaryIterator dictionaryIterator;
   NotifyInfo         *notifyInfo;
   const void         *keyData;
@@ -857,7 +853,7 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
     while (Dictionary_getNext(&dictionaryIterator,
@@ -916,7 +912,6 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
 
 LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
 {
-  SemaphoreLock      semaphoreLock;
   DictionaryIterator dictionaryIterator;
   NotifyInfo         *notifyInfo;
   const void         *keyData;
@@ -928,7 +923,7 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
     while (Dictionary_getNext(&dictionaryIterator,
@@ -1265,7 +1260,6 @@ LOCAL void continuousThreadCode(void)
   struct timespec            selectTimeout;
   ssize_t                    n;
   const struct inotify_event *inotifyEvent;
-  SemaphoreLock              semaphoreLock;
   NotifyInfo                 *notifyInfo;
   UUIDNode                   *uuidNode;
 
@@ -1343,7 +1337,7 @@ fprintf(stderr,"%s, %d: inotify event wd=%d mask=%08x: name=%s ->",__FILE__,__LI
    if (inotifyEvent->mask & IN_UNMOUNT)       fprintf(stderr," IN_UNMOUNT"      );
 fprintf(stderr,"\n");
 #endif
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         notifyInfo = getNotifyInfo(inotifyEvent->wd);
         if (notifyInfo != NULL)
@@ -1576,7 +1570,7 @@ Errors Continuous_initAll(void)
   inotifyHandle = inotify_init();
   if (inotifyHandle == -1)
   {
-    Dictionary_done(&notifyNames);    
+    Dictionary_done(&notifyNames);
     Dictionary_done(&notifyHandles);
     Semaphore_done(&notifyLock);
     return ERRORX_(OPEN_FILE,errno,"inotify");
@@ -1982,7 +1976,6 @@ void Continuous_debugPrintStatistics(void)
 {
 //  uint               jobCount;
 //  ulong              entryCount;
-  SemaphoreLock      semaphoreLock;
 //  DictionaryIterator dictionaryIterator;
 //  void               *data;
 //  ulong              length;
@@ -1990,7 +1983,7 @@ void Continuous_debugPrintStatistics(void)
 
 //  jobCount   = 0;
 //  entryCount = 0L;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&notifyLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     fprintf(stderr,"DEBUG: %lu continuous entries\n",
             Dictionary_count(&notifyHandles)

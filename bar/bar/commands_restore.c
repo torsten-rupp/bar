@@ -2866,6 +2866,7 @@ NULL, // masterIO
                        storageSpecifier,
                        restoreInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
+                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),

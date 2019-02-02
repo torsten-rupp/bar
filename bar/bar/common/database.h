@@ -1288,7 +1288,7 @@ DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle);
 * Notes  : For debugging only!
 \***********************************************************************/
 
-void Database_debugEnable(bool enabled);
+void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled);
 
 /***********************************************************************\
 * Name   : Database_debugPrintInfo

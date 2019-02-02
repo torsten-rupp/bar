@@ -69,10 +69,17 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
 // unlimited storage band width
 #define STORAGE_BAND_WIDTH_UNLIMITED 0L
 
 /***************************** Datatypes *******************************/
+
+// storage flags
+typedef ulong StorageFlags;
+#define STORAGE_FLAG_NONE       0
+#define STORAGE_FLAG_NO_STORAGE (1 << 0)
+#define STORAGE_FLAG_DRY_RUN    (1 << 1)
 
 // status info data
 typedef struct
@@ -218,6 +225,8 @@ typedef struct
 
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
+
+  StorageFlags                    storageFlags;              // storage flags; see STORAGE_FLAG_...
 
   StorageUpdateStatusInfoFunction updateStatusInfoFunction;  // storage status info update call-back
   void                            *updateStatusInfoUserData;
@@ -1033,6 +1042,8 @@ Errors Storage_prepare(const String     storageName,
 *          jobOptions                      - job options or NULL
 *          maxBandWidthList                - list with max. band width
 *                                            to use [bits/s] or NULL
+*          storageFlags                    - storage flags; see
+*                                            STORAGE_FLAG_...
 *          serverConnectionPriority        - server connection priority
 *          storageUpdateStatusInfoFunction - update status info call-back
 *          storageUpdateStatusInfoUserData - user data for update status
@@ -1062,6 +1073,7 @@ Errors Storage_prepare(const String     storageName,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
                       ServerConnectionPriorities      serverConnectionPriority,
+                      StorageFlags                    storageFlags,
                       StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                       void                            *storageUpdateStatusInfoUserData,
                       GetNamePasswordFunction         getNamePasswordFunction,
@@ -1081,6 +1093,7 @@ Errors Storage_prepare(const String     storageName,
                         const StorageSpecifier          *storageSpecifier,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
+                        StorageFlags                    storageFlags,
                         ServerConnectionPriorities      serverConnectionPriority,
                         StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                         void                            *storageUpdateStatusInfoUserData,

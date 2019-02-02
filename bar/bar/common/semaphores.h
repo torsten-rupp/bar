@@ -150,15 +150,13 @@ typedef enum
 /***********************************************************************\
 * Name   : SEMAPHORE_LOCKED_DO
 * Purpose: execute block with semaphore locked
-* Input  : semaphoreLock     - lock flag variable (SemaphoreLock)
-*          semaphore         - semaphore
+* Input  : semaphore         - semaphore
 *          semaphoreLockType - lock type; see SemaphoreLockTypes
 *          timeout           - timeout [ms] or NO_WAIT, WAIT_FOREVER
 * Output : -
 * Return : -
 * Notes  : usage:
-*            SemaphoreLock semaphoreLock;
-*            SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType,timeout)
+*            SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType,timeout)
 *            {
 *              ...
 *            }
@@ -166,8 +164,8 @@ typedef enum
 *          semaphore must be unlocked manually if 'break' is used!
 \***********************************************************************/
 
-#define SEMAPHORE_LOCKED_DO(semaphoreLock,semaphore,semaphoreLockType,timeout) \
-  for (semaphoreLock = Semaphore_lock(semaphore,semaphoreLockType,timeout); \
+#define SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType,timeout) \
+  for (SemaphoreLock semaphoreLock = Semaphore_lock(semaphore,semaphoreLockType,timeout); \
        semaphoreLock; \
        Semaphore_unlock(semaphore), semaphoreLock = FALSE \
       )
@@ -237,7 +235,7 @@ void __Semaphore_done(const char *__fileName__,
 /***********************************************************************\
 * Name   : Semaphore_new
 * Purpose: create new semaphore
-* Input  : 
+* Input  :
 * Output : -
 * Return : semaphore or NULL if insufficient memory
 * Notes  : -

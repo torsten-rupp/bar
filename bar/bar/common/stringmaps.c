@@ -39,6 +39,14 @@
 
 const StringMapValue STRINGMAP_VALUE_NONE = {NULL,{0}};
 
+LOCAL const char *TRUE_STRINGS[] =
+{
+  "1",
+  "true",
+  "yes",
+  "on",
+};
+
 #ifndef NDEBUG
 const char *STRING_MAP_TYPE_NAMES[] =
 {
@@ -49,6 +57,7 @@ const char *STRING_MAP_TYPE_NAMES[] =
   [STRINGMAP_TYPE_UINT64 ] = "uint64",
   [STRINGMAP_TYPE_DOUBLE ] = "double",
   [STRINGMAP_TYPE_BOOL   ] = "bool",
+  [STRINGMAP_TYPE_FLAG   ] = "flag",
   [STRINGMAP_TYPE_CHAR   ] = "char",
   [STRINGMAP_TYPE_CSTRING] = "c-string",
   [STRINGMAP_TYPE_STRING ] = "string",
@@ -880,6 +889,30 @@ void __StringMap_putBool(const char *__fileName__, ulong __lineNb__, StringMap s
 }
 
 #ifdef NDEBUG
+void StringMap_putFlag(StringMap stringMap, const char *name, ulong value)
+#else /* not NDEBUG */
+void __StringMap_putFlag(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, ulong value)
+#endif /* NDEBUG */
+{
+  StringMapEntry *stringMapEntry;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+
+  #ifdef NDEBUG
+    stringMapEntry = addStringMapEntry(stringMap,name);
+  #else /* not NDEBUG */
+    stringMapEntry = addStringMapEntry(__fileName__,__lineNb__,stringMap,name);
+  #endif /* NDEBUG */
+  if (stringMapEntry != NULL)
+  {
+    stringMapEntry->type            = STRINGMAP_TYPE_FLAG;
+    stringMapEntry->value.text      = NULL;
+    stringMapEntry->value.data.flag = value;
+  }
+}
+
+#ifdef NDEBUG
 void StringMap_putChar(StringMap stringMap, const char *name, char value)
 #else /* not NDEBUG */
 void __StringMap_putChar(const char *__fileName__, ulong __lineNb__, StringMap stringMap, const char *name, char value)
@@ -1231,16 +1264,8 @@ bool StringMap_getDouble(const StringMap stringMap, const char *name, double *da
 
 bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, bool defaultValue)
 {
-  const char *TRUE_STRINGS[] =
-  {
-    "1",
-    "true",
-    "yes",
-    "on",
-  };
-
   StringMapEntry *stringMapEntry;
-  uint           z;
+  uint           i;
 
   assert(stringMap != NULL);
   assert(name != NULL);
@@ -1250,11 +1275,12 @@ bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, 
   if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
   {
     (*data) = FALSE;
-    for (z = 0; z < SIZE_OF_ARRAY(TRUE_STRINGS); z++)
+    for (i = 0; i < SIZE_OF_ARRAY(TRUE_STRINGS); i++)
     {
-      if (String_equalsIgnoreCaseCString(stringMapEntry->value.text,TRUE_STRINGS[z]))
+      if (String_equalsIgnoreCaseCString(stringMapEntry->value.text,TRUE_STRINGS[i]))
       {
         (*data) = TRUE;
+        break;
       }
     }
     return TRUE;
@@ -1262,6 +1288,37 @@ bool StringMap_getBool(const StringMap stringMap, const char *name, bool *data, 
   else
   {
     (*data) = defaultValue;
+    return FALSE;
+  }
+}
+
+bool StringMap_getFlag(const StringMap stringMap, const char *name, ulong *data, ulong value)
+{
+  StringMapEntry *stringMapEntry;
+  uint           i;
+
+  assert(stringMap != NULL);
+  assert(name != NULL);
+  assert(data != NULL);
+
+
+  stringMapEntry = findStringMapEntry(stringMap,name);
+  if ((stringMapEntry != NULL) && (stringMapEntry->value.text != NULL))
+  {
+    (*data) &= ~value ;
+    for (i = 0; i < SIZE_OF_ARRAY(TRUE_STRINGS); i++)
+    {
+      if (String_equalsIgnoreCaseCString(stringMapEntry->value.text,TRUE_STRINGS[i]))
+      {
+        (*data) |= value;
+        break;
+      }
+    }
+    return TRUE;
+  }
+  else
+  {
+    (*data) &= ~value;
     return FALSE;
   }
 }

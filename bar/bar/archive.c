@@ -532,7 +532,6 @@ LOCAL Errors getCryptPassword(Password                *password,
 
 LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
 {
-  SemaphoreLock  semaphoreLock;
   const Password *password;
   String         printableStorageName;
   Password       newPassword;
@@ -543,7 +542,7 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
   assert(passwordHandle->archiveHandle->storageInfo != NULL);
 
   password = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&passwordHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&passwordHandle->archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     while ((password == NULL) && (passwordHandle->passwordMode != PASSWORD_MODE_NONE))
     {
@@ -640,7 +639,6 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordH
                                               void                    *getNamePasswordUserData
                                              )
 {
-  SemaphoreLock  semaphoreLock;
   const Password *password;
 
   assert(passwordHandle != NULL);
@@ -649,7 +647,7 @@ LOCAL const Password *getFirstDecryptPassword(PasswordHandle          *passwordH
 
   password = NULL;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     passwordHandle->archiveHandle           = archiveHandle;
     passwordHandle->jobCryptPassword        = &jobOptions->cryptPassword;
@@ -804,7 +802,6 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                         uint                keyLength
                                        )
 {
-  SemaphoreLock  semaphoreLock;
   DecryptKeyNode *decryptKeyNode;
   const CryptKey *decryptKey;
   String         printableStorageName;
@@ -817,7 +814,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
   assert(cryptSalt != NULL);
 
   decryptKey = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     while ((decryptKey == NULL) && (decryptKeyIterator->passwordMode != PASSWORD_MODE_NONE))
     {
@@ -958,7 +955,6 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator      *decryptKeyIter
                                          uint                    keyLength
                                         )
 {
-  SemaphoreLock  semaphoreLock;
   const CryptKey *decryptKey;
 
   assert(decryptKeyIterator != NULL);
@@ -967,7 +963,7 @@ LOCAL const CryptKey *getFirstDecryptKey(DecryptKeyIterator      *decryptKeyIter
   assert(cryptSalt != NULL);
 
   decryptKey = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     decryptKeyIterator->archiveHandle           = archiveHandle;
     decryptKeyIterator->passwordMode            = passwordMode;
@@ -1040,15 +1036,14 @@ LOCAL ArchiveCryptInfoNode *addArchiveCryptInfoNode(ArchiveHandle       *archive
 
 LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *password)
 {
-  SemaphoreLock semaphoreLock;
-  Password      *cryptPassword;
-  Errors        error;
+  Password *cryptPassword;
+  Errors   error;
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0])
         && (archiveHandle->cryptPassword == NULL)
@@ -1569,7 +1564,6 @@ LOCAL void deleteArchiveIndexNode(ArchiveIndexNode *archiveIndexNode)
 
 LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEntries)
 {
-  SemaphoreLock    semaphoreLock;
   ArchiveIndexList archiveIndexList;
   Errors           error;
   ArchiveIndexNode *archiveIndexNode;
@@ -1582,7 +1576,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
   List_init(&archiveIndexList);
 
   // get list to flush
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (List_count(&archiveHandle->archiveIndexList) >= maxIndexEntries)
     {
@@ -1593,7 +1587,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
   // flush list
   if (!List_isEmpty(&archiveIndexList))
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       // start transaction
       error = Index_beginTransaction(archiveHandle->indexHandle,INDEX_TIMEOUT);
@@ -1739,8 +1733,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
 
 LOCAL Errors addArchiveIndexNode(ArchiveHandle *archiveHandle, ArchiveIndexNode *archiveIndexNode)
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
+  Errors error;
 
   // flush index list
   error = flushArchiveIndexList(archiveHandle,MAX_INDEX_LIST);
@@ -1750,7 +1743,7 @@ LOCAL Errors addArchiveIndexNode(ArchiveHandle *archiveHandle, ArchiveIndexNode 
   }
 
   // append to list
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     List_append(&archiveHandle->archiveIndexList,archiveIndexNode);
   }
@@ -2804,9 +2797,8 @@ exit(1);
 
 LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
 {
-  AutoFreeList  autoFreeList;
-  SemaphoreLock semaphoreLock;
-  Errors        error;
+  AutoFreeList autoFreeList;
+  Errors       error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2821,7 +2813,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
     // init variables
     AutoFree_init(&autoFreeList);
 
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->lock,{ Semaphore_unlock(&archiveHandle->lock); });
 
@@ -2883,12 +2875,12 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
 
       if (   (archiveHandle->indexHandle != NULL)
           && !archiveHandle->storageInfo->jobOptions->noIndexDatabaseFlag
-          && !archiveHandle->dryRun
-          && !archiveHandle->storageInfo->jobOptions->noStorageFlag
+          && !IS_SET(archiveHandle->storageInfo->storageFlags,STORAGE_FLAG_DRY_RUN)
+          && !IS_SET(archiveHandle->storageInfo->storageFlags,STORAGE_FLAG_NO_STORAGE)
          )
       {
         // create storage index
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           error = Index_newStorage(archiveHandle->indexHandle,
                                    archiveHandle->entityId,
@@ -2909,7 +2901,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         }
         AUTOFREE_ADD(&autoFreeList,&archiveHandle->storageId,
         {
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
             Index_deleteStorage(archiveHandle->indexHandle,archiveHandle->storageId);
           }
@@ -5281,9 +5273,7 @@ bool Archive_isArchiveFile(ConstString fileName)
 
 void Archive_clearDecryptPasswords(void)
 {
-  SemaphoreLock semaphoreLock;
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     List_clear(&decryptPasswordList,(ListNodeFreeFunction)freePasswordNode,NULL);
   }
@@ -5291,13 +5281,12 @@ void Archive_clearDecryptPasswords(void)
 
 const Password *Archive_appendDecryptPassword(const Password *password)
 {
-  PasswordNode  *passwordNode;
-  SemaphoreLock semaphoreLock;
+  PasswordNode *passwordNode;
 
   assert(password != NULL);
 
   passwordNode = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find password
     passwordNode = decryptPasswordList.head;
@@ -5331,12 +5320,11 @@ const Password *Archive_appendDecryptPassword(const Password *password)
 const CryptKey *Archive_appendCryptInfo(const Password *password)
 {
   DecryptKeyNode *decryptKeyNode;
-  SemaphoreLock  semaphoreLock;
 
   assert(password != NULL);
 
   decryptKeyNode = NULL;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&decryptKeyList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
 //TODO:
 //    cryptInfo = addCryptInfo();
@@ -5387,13 +5375,12 @@ const CryptKey *Archive_appendCryptInfo(const Password *password)
 
 bool Archive_waitDecryptPassword(Password *password, long timeout)
 {
-  SemaphoreLock semaphoreLock;
-  bool          modified;
+  bool modified;
 
   Password_clear(password);
 
   modified = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&decryptPasswordList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     modified = Semaphore_waitModified(&decryptPasswordList.lock,timeout);
     if (decryptPasswordList.newPasswordNode != NULL)
@@ -6013,12 +6000,11 @@ UNUSED_VARIABLE(storageInfo);
                         )
 #endif /* NDEBUG */
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-  IndexId       storageId;
-  String        intermediateFileName;
-  int           partNumber;
-  uint64        archiveSize;
+  Errors  error;
+  IndexId storageId;
+  String  intermediateFileName;
+  int     partNumber;
+  uint64  archiveSize;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -6032,7 +6018,7 @@ UNUSED_VARIABLE(storageInfo);
 
   // close file/storage, store archive file (if created)
   intermediateFileName = String_new();
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     switch (archiveHandle->mode)
     {
@@ -6137,8 +6123,7 @@ void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
 #if 0
 Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -6146,7 +6131,7 @@ Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
   switch (archiveHandle->mode)
   {
     case ARCHIVE_MODE_CREATE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         archiveHandle->interrupt.openFlag = archiveHandle->file.openFlag;
         if (archiveHandle->file.openFlag)
@@ -6181,8 +6166,7 @@ Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
 
 Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -6190,7 +6174,7 @@ Errors Archive_storageContinue(ArchiveHandle *archiveHandle)
   switch (archiveHandle->mode)
   {
     case ARCHIVE_MODE_CREATE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         if (archiveHandle->interrupt.openFlag)
         {
@@ -12667,10 +12651,9 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                              )
 #endif /* NDEBUG */
 {
-  Errors        error,tmpError;
-  bool          eofDelta;
-  ulong         deltaLength;
-  SemaphoreLock semaphoreLock;
+  Errors error,tmpError;
+  bool   eofDelta;
+  ulong  deltaLength;
 
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
@@ -12763,7 +12746,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               }
 
               // transfer to archive
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already exists and open)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
@@ -12913,7 +12896,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               }
 
               // transfer to archive
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already exists and open)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
@@ -13147,7 +13130,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               }
 
               // transfer to archive
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already exists and open)
                 tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
@@ -14306,8 +14289,7 @@ bool Archive_eofData(ArchiveEntryInfo *archiveEntryInfo)
 
 uint64 Archive_tell(ArchiveHandle *archiveHandle)
 {
-  SemaphoreLock semaphoreLock;
-  uint64        offset;
+  uint64 offset;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -14320,7 +14302,7 @@ uint64 Archive_tell(ArchiveHandle *archiveHandle)
   switch (archiveHandle->mode)
   {
     case ARCHIVE_MODE_CREATE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         if (archiveHandle->create.openFlag)
         {
@@ -14357,8 +14339,7 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
                     uint64        offset
                    )
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
+  Errors error;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -14372,7 +14353,7 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
   switch (archiveHandle->mode)
   {
     case ARCHIVE_MODE_CREATE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         if (archiveHandle->create.openFlag)
         {
@@ -14396,8 +14377,7 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
 
 uint64 Archive_getSize(ArchiveHandle *archiveHandle)
 {
-  SemaphoreLock semaphoreLock;
-  uint64        size;
+  uint64 size;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -14412,7 +14392,7 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
     switch (archiveHandle->mode)
     {
       case ARCHIVE_MODE_CREATE:
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           size = (archiveHandle->create.openFlag)
                    ? archiveHandle->chunkIO->getSize(archiveHandle->chunkIOUserData)

@@ -425,9 +425,8 @@ LOCAL bool initSSHLogin(ConstString             hostName,
                         void                    *getNamePasswordUserData
                        )
 {
-  SemaphoreLock semaphoreLock;
-  String        s;
-  bool          initFlag;
+  String s;
+  bool   initFlag;
 
   assert(!String_isEmpty(hostName));
   assert(loginName != NULL);
@@ -437,7 +436,7 @@ LOCAL bool initSSHLogin(ConstString             hostName,
 
   if (jobOptions != NULL)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       if (Password_isEmpty(&jobOptions->sshServer.password))
       {
@@ -1700,6 +1699,7 @@ String Storage_getPrintableName(String                 string,
                       const StorageSpecifier          *storageSpecifier,
                       const JobOptions                *jobOptions,
                       BandWidthList                   *maxBandWidthList,
+                      StorageFlags                    storageFlags,
                       ServerConnectionPriorities      serverConnectionPriority,
                       StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                       void                            *storageUpdateStatusInfoUserData,
@@ -1720,6 +1720,7 @@ String Storage_getPrintableName(String                 string,
                         const StorageSpecifier          *storageSpecifier,
                         const JobOptions                *jobOptions,
                         BandWidthList                   *maxBandWidthList,
+                        StorageFlags                    storageFlags,
                         ServerConnectionPriorities      serverConnectionPriority,
                         StorageUpdateStatusInfoFunction storageUpdateStatusInfoFunction,
                         void                            *storageUpdateStatusInfoUserData,
@@ -1750,6 +1751,7 @@ String Storage_getPrintableName(String                 string,
   Semaphore_init(&storageInfo->lock,SEMAPHORE_TYPE_BINARY);
   Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
   storageInfo->jobOptions                = jobOptions;
+  storageInfo->storageFlags              = storageFlags;
   storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
   storageInfo->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
   storageInfo->getNamePasswordFunction   = getNamePasswordFunction;
@@ -3728,6 +3730,7 @@ NULL, // masterIO
                        storageSpecifier,
                        jobOptions,
                        maxBandWidthList,
+                       STORAGE_FLAG_NONE,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
                        CALLBACK(NULL,NULL),  // updateStatusInfo

@@ -1949,6 +1949,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
+                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getPassword

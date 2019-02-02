@@ -173,11 +173,13 @@ INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
 //TODO
+#warning comment
 Errors Connector_authorize(ConnectorInfo *connectorInfo);
 
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                              ConstString   storageName,
-                             JobOptions    *jobOptions
+                             JobOptions    *jobOptions,
+                             bool          noStorage
                             );
 Errors Connector_doneStorage(ConnectorInfo *connectorInfo);
 
@@ -245,9 +247,8 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 *          archiveType                  - archive type to create
 *          scheduleTitle                - schedule title
 *          scheduleCustomText           - schedule custom text
-*          dryRun                       - TRUE for dry-run (no storage,
-*                                         no incremental data, no update
-*                                         database)
+*          storageFlags                 - storage flags; see
+*                                         STROAGE_FLAG_...
 *          getNamePasswordFunction      - get password call back (can
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password
@@ -279,7 +280,7 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         ArchiveTypes                 archiveType,
                         ConstString                  scheduleTitle,
                         ConstString                  scheduleCustomText,
-                        bool                         dryRun,
+                        StorageFlags                 storageFlags,
                         GetNamePasswordFunction      getNamePasswordFunction,
                         void                         *getNamePasswordUserData,
                         StatusInfoFunction           statusInfoFunction,

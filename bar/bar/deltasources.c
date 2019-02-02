@@ -200,6 +200,7 @@ NULL, // masterIO
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
+                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getPassword
@@ -742,7 +743,6 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   bool             restoredFlag;
   Errors           error;
   FragmentNode     fragmentNode;
-  SemaphoreLock    semaphoreLock;
   DeltaSourceNode  *deltaSourceNode;
   String           tmpFileName;
   StorageSpecifier storageSpecifier,localStorageSpecifier;
@@ -770,7 +770,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
   {
     if (deltaSourceList != NULL)
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         LIST_ITERATE(deltaSourceList,deltaSourceNode)
         {
@@ -812,7 +812,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
         // init variables
         FragmentList_initNode(&fragmentNode,name,size,NULL,0);
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           LIST_ITERATE(deltaSourceList,deltaSourceNode)
           {
@@ -901,7 +901,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
         // init variables
         FragmentList_initNode(&fragmentNode,name,size,NULL,0);
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           LIST_ITERATE(deltaSourceList,deltaSourceNode)
           {

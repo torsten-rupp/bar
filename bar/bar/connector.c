@@ -3201,7 +3201,8 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
 
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                              ConstString   storageName,
-                             JobOptions    *jobOptions
+                             JobOptions    *jobOptions,
+                             bool          noStorage
                             )
 {
   String           printableStorageName;
@@ -3239,6 +3240,7 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
+                       noStorage,
                        SERVER_CONNECTION_PRIORITY_HIGH,
 //TODO
 CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,connectorInfo),
@@ -3347,7 +3349,7 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         ArchiveTypes                 archiveType,
                         ConstString                  scheduleTitle,
                         ConstString                  scheduleCustomText,
-                        bool                         dryRun,
+                        StorageFlags                 storageFlags,
                         GetNamePasswordFunction      getNamePasswordFunction,
                         void                         *getNamePasswordUserData,
                         StatusInfoFunction           statusInfoFunction,
@@ -3452,13 +3454,14 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    NULL,
-                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S noStorage=%y archiveType=%s dryRun=%y",
+                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S noStorage=%y archiveType=%s noStorage=%y dryRun=%y",
                                    jobUUID,
                                    scheduleUUID,
                                    NULL,  // scheduleCustomText
                                    FALSE,  // noStorage
                                    Archive_archiveTypeToString(archiveType,NULL),
-                                   dryRun
+                                   IS_SET(storageFlags,STORAGE_FLAG_NO_STORAGE),
+                                   IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN)
                                   );
   if (error != ERROR_NONE)
   {

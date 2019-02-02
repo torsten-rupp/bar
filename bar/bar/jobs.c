@@ -146,11 +146,11 @@ LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variab
 
 const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
-  CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                    ),
-  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,slaveHost.name                          ),
-  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,slaveHost.port,                         0,65535,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",      JobNode,slaveHost.forceSSL                      ),
-  CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.archiveName                             ),
+  CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                 ),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ),
+  CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",      JobNode,job.slaveHost.forceSSL                   ),
+  CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.archiveName                          ),
   CONFIG_STRUCT_VALUE_SELECT      ("archive-type",              JobNode,job.options.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
   CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",     JobNode,job.options.incrementalListFileName      ),
@@ -186,17 +186,17 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key",           JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
 //  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
 
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                       configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.includeFileListFileName                 ),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.includeFileCommand                      ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                       configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.includeImageListFileName                ),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.includeImageCommand                     ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                     configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.excludeListFileName                     ),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.excludeCommand                          ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.deltaSourceList,                        configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.mountList,                              configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                    configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.includeFileListFileName              ),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.includeFileCommand                   ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                    configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.includeImageListFileName             ),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.includeImageCommand                  ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                  configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.excludeListFileName                  ),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.excludeCommand                       ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.deltaSourceList,                     configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.mountList,                           configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",          JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",               JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
@@ -214,49 +214,46 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_BOOLEAN     ("no-stop-on-attribute-error",JobNode,job.options.noStopOnAttributeErrorFlag   ),
 
   CONFIG_VALUE_BEGIN_SECTION("schedule",-1),
-    CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                               ),
-    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                         ),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                              configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                  ScheduleNode,weekDaySet,                        configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                      ScheduleNode,time,                              configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
-    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                       CONFIG_VALUE_ARCHIVE_TYPES),
-    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                          0,MAX_INT,NULL),
-    CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                         ),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage                          ),
-    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled                            ),
+    CONFIG_STRUCT_VALUE_STRING    ("UUID",                      ScheduleNode,uuid                                ),
+    CONFIG_STRUCT_VALUE_STRING    ("parentUUID",                ScheduleNode,parentUUID                          ),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("date",                      ScheduleNode,date,                               configValueParseScheduleDate,configValueFormatInitScheduleDate,configValueFormatDoneScheduleDate,configValueFormatScheduleDate,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("weekdays",                  ScheduleNode,weekDaySet,                         configValueParseScheduleWeekDaySet,configValueFormatInitScheduleWeekDaySet,configValueFormatDoneScheduleWeekDaySet,configValueFormatScheduleWeekDaySet,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("time",                      ScheduleNode,time,                               configValueParseScheduleTime,configValueFormatInitScheduleTime,configValueFormatDoneScheduleTime,configValueFormatScheduleTime,NULL),
+    CONFIG_STRUCT_VALUE_SELECT    ("archive-type",              ScheduleNode,archiveType,                        CONFIG_VALUE_ARCHIVE_TYPES),
+    CONFIG_STRUCT_VALUE_INTEGER   ("interval",                  ScheduleNode,interval,                           0,MAX_INT,NULL),
+    CONFIG_STRUCT_VALUE_STRING    ("text",                      ScheduleNode,customText                          ),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("no-storage",                ScheduleNode,noStorage                           ),
+    CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled                             ),
 
     // deprecated
-    CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                  configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
-    CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                  configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
-    CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                   configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
+    CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                   configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
+    CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                   configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
+    CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                    configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                        configValueParsePersistenceMinKeep,configValueFormatInitPersistenceMinKeep,configValueFormatDonePersistenceMinKeep,configValueFormatPersistenceMinKeep,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                        configValueParsePersistenceMaxKeep,configValueFormatInitPersistenceMaxKeep,configValueFormatDonePersistenceMaxKeep,configValueFormatPersistenceMaxKeep,NULL),
-    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                         configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("min-keep",                  PersistenceNode,minKeep,                         configValueParsePersistenceMinKeep,configValueFormatInitPersistenceMinKeep,configValueFormatDonePersistenceMinKeep,configValueFormatPersistenceMinKeep,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-keep",                  PersistenceNode,maxKeep,                         configValueParsePersistenceMaxKeep,configValueFormatInitPersistenceMaxKeep,configValueFormatDonePersistenceMaxKeep,configValueFormatPersistenceMaxKeep,NULL),
+    CONFIG_STRUCT_VALUE_SPECIAL   ("max-age",                   PersistenceNode,maxAge,                          configValueParsePersistenceMaxAge,configValueFormatInitPersistenceMaxAge,configValueFormatDonePersistenceMaxAge,configValueFormatPersistenceMaxAge,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",                                                          configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",                                                          configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",                                                     configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",                                                              configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                  configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",                                                           configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",                                                           configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",                                                      configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",                                                               configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                   configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
 //TODO
-  CONFIG_STRUCT_VALUE_IGNORE      ("overwrite-archive-files"                                                    ),
+  CONFIG_STRUCT_VALUE_IGNORE      ("overwrite-archive-files"                                                     ),
   // Note: shortcut for --restore-entries-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",                                                           configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",                                                             configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",                                                            configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",                                                              configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
 );
 
 /***************************** Variables *******************************/
 JobList jobList;                // job list
-//LOCAL Thread                jobThread;              // thread executing jobs create/restore
-
-//LOCAL bool                  quitFlag;               // TRUE iff quit requested
 
 /****************************** Macros *********************************/
 
@@ -1578,7 +1575,7 @@ bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  String_setCString(((JobNode*)variable)->slaveHost.name,value);
+  String_setCString(((JobNode*)variable)->job.slaveHost.name,value);
 
   return TRUE;
 }
@@ -1613,7 +1610,7 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
   {
     return FALSE;
   }
-  ((JobNode*)variable)->slaveHost.port = n;
+  ((JobNode*)variable)->job.slaveHost.port = n;
 
   return TRUE;
 }
@@ -1656,7 +1653,7 @@ bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, co
            || stringEqualsIgnoreCase(value,"no")
           )
   {
-    ((JobNode*)variable)->slaveHost.forceSSL = FALSE;
+    ((JobNode*)variable)->job.slaveHost.forceSSL = FALSE;
   }
   else
   {
@@ -1997,15 +1994,11 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   String_delete(jobNode->scheduleCustomText);
   String_delete(jobNode->scheduleUUID);
 
-  if (jobNode->cryptPassword != NULL) Password_delete(jobNode->cryptPassword);
-  if (jobNode->sshPassword != NULL) Password_delete(jobNode->sshPassword);
-  if (jobNode->ftpPassword != NULL) Password_delete(jobNode->ftpPassword);
   String_delete(jobNode->byName);
 
   Connector_done(&jobNode->connectorInfo);
 
   Job_done(&jobNode->job);
-  String_delete(jobNode->slaveHost.name);
   String_delete(jobNode->name);
   String_delete(jobNode->fileName);
 }
@@ -2031,6 +2024,9 @@ void Job_init(Job *job)
   assert(job != NULL);
 
   job->uuid                                      = String_new();
+  job->slaveHost.name                            = String_new();
+  job->slaveHost.port                            = 0;
+  job->slaveHost.forceSSL                        = FALSE;
   job->archiveName                               = String_new();
   job->storageNameListStdin                      = FALSE;
   job->storageNameListFileName                   = String_new();
@@ -2062,6 +2058,9 @@ void Job_duplicate(Job *job, const Job *fromJob)
   DEBUG_CHECK_RESOURCE_TRACE(fromJob);
 
   job->uuid                                      = String_duplicate(fromJob->uuid);
+  job->slaveHost.name                            = String_duplicate(fromJob->slaveHost.name);
+  job->slaveHost.port                            = fromJob->slaveHost.port;
+  job->slaveHost.forceSSL                        = fromJob->slaveHost.forceSSL;
   job->archiveName                               = String_duplicate(fromJob->archiveName);
   job->storageNameListStdin                      = fromJob->storageNameListStdin;
   job->storageNameListFileName                   = String_duplicate(fromJob->storageNameListFileName);
@@ -2132,6 +2131,7 @@ void Job_done(Job *job)
   String_delete(job->storageNameCommand);
   String_delete(job->storageNameListFileName);
   String_delete(job->archiveName);
+  String_delete(job->slaveHost.name);
   String_delete(job->uuid);
 }
 
@@ -2162,7 +2162,6 @@ JobNode *Job_new(JobTypes         jobType,
     Misc_getUUID(jobNode->job.uuid);
   }
   jobNode->name                                      = String_duplicate(name);
-  jobNode->slaveHost.name                            = String_new();
   if (defaultJobOptions != NULL)
   {
     Job_setOptions(&jobNode->job.options,defaultJobOptions);
@@ -2171,10 +2170,6 @@ JobNode *Job_new(JobTypes         jobType,
   jobNode->modifiedFlag                              = FALSE;
 
   jobNode->lastScheduleCheckDateTime                 = 0LL;
-
-  jobNode->ftpPassword                               = NULL;
-  jobNode->sshPassword                               = NULL;
-  jobNode->cryptPassword                             = NULL;
 
   jobNode->fileName                                  = String_duplicate(fileName);
   jobNode->fileModified                              = 0LL;
@@ -2189,8 +2184,7 @@ JobNode *Job_new(JobTypes         jobType,
   jobNode->scheduleUUID                              = String_new();
   jobNode->scheduleCustomText                        = String_new();
   jobNode->archiveType                               = ARCHIVE_TYPE_NORMAL;
-  jobNode->noStorage                                 = FALSE;
-  jobNode->dryRun                                    = FALSE;
+  jobNode->storageFlags                              = STORAGE_FLAG_NONE;
   jobNode->byName                                    = String_new();
 
   jobNode->requestedAbortFlag                        = FALSE;
@@ -2245,16 +2239,9 @@ JobNode *Job_copy(const JobNode *jobNode,
   // init job node
   Job_duplicate(&newJobNode->job,&jobNode->job);
   newJobNode->name                                      = File_getBaseName(String_new(),fileName);
-  newJobNode->slaveHost.name                            = String_duplicate(jobNode->slaveHost.name);
-  newJobNode->slaveHost.port                            = jobNode->slaveHost.port;
-  newJobNode->slaveHost.forceSSL                        = jobNode->slaveHost.forceSSL;
   newJobNode->jobType                                   = jobNode->jobType;
 
   newJobNode->lastScheduleCheckDateTime                 = 0LL;
-
-  newJobNode->ftpPassword                               = NULL;
-  newJobNode->sshPassword                               = NULL;
-  newJobNode->cryptPassword                             = NULL;
 
   newJobNode->fileName                                  = String_duplicate(fileName);
   newJobNode->fileModified                              = 0LL;
@@ -2269,8 +2256,7 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->scheduleUUID                              = String_new();
   newJobNode->scheduleCustomText                        = String_new();
   newJobNode->archiveType                               = ARCHIVE_TYPE_NORMAL;
-  newJobNode->noStorage                                 = FALSE;
-  newJobNode->dryRun                                    = FALSE;
+  newJobNode->storageFlags                              = STORAGE_FLAG_NONE;
   newJobNode->byName                                    = String_new();
 
   newJobNode->requestedAbortFlag                        = FALSE;
@@ -2321,12 +2307,11 @@ void Job_delete(JobNode *jobNode)
 
 bool Job_isSomeRunning(void)
 {
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   bool          runningFlag;
 
   runningFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -2852,11 +2837,10 @@ Errors Job_write(JobNode *jobNode)
 
 void Job_writeModifiedAll(void)
 {
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  Errors        error;
+  JobNode *jobNode;
+  Errors  error;
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -2890,9 +2874,9 @@ bool Job_read(JobNode *jobNode)
 
   // reset job values
   String_clear(jobNode->job.uuid);
-  String_clear(jobNode->slaveHost.name);
-  jobNode->slaveHost.port = 0;
-  jobNode->slaveHost.forceSSL = FALSE;
+  String_clear(jobNode->job.slaveHost.name);
+  jobNode->job.slaveHost.port                            = 0;
+  jobNode->job.slaveHost.forceSSL                        = FALSE;
   String_clear(jobNode->job.archiveName);
   EntryList_clear(&jobNode->job.includeEntryList);
   PatternList_clear(&jobNode->job.excludePatternList);
@@ -2901,45 +2885,45 @@ bool Job_read(JobNode *jobNode)
   List_clear(&jobNode->job.scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   List_clear(&jobNode->job.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
   jobNode->job.persistenceList.lastModificationTimestamp = 0LL;
-  jobNode->job.options.archiveType                    = ARCHIVE_TYPE_NORMAL;
-  jobNode->job.options.archivePartSize                = 0LL;
+  jobNode->job.options.archiveType                       = ARCHIVE_TYPE_NORMAL;
+  jobNode->job.options.archivePartSize                   = 0LL;
   String_clear(jobNode->job.options.incrementalListFileName);
-  jobNode->job.options.directoryStripCount            = DIRECTORY_STRIP_NONE;
+  jobNode->job.options.directoryStripCount               = DIRECTORY_STRIP_NONE;
   String_clear(jobNode->job.options.destination);
-  jobNode->job.options.patternType                    = PATTERN_TYPE_GLOB;
-  jobNode->job.options.compressAlgorithms.value.delta = COMPRESS_ALGORITHM_NONE;
-  jobNode->job.options.compressAlgorithms.value.byte  = COMPRESS_ALGORITHM_NONE;
-  jobNode->job.options.compressAlgorithms.isSet       = FALSE;
+  jobNode->job.options.patternType                       = PATTERN_TYPE_GLOB;
+  jobNode->job.options.compressAlgorithms.value.delta    = COMPRESS_ALGORITHM_NONE;
+  jobNode->job.options.compressAlgorithms.value.byte     = COMPRESS_ALGORITHM_NONE;
+  jobNode->job.options.compressAlgorithms.isSet          = FALSE;
   for (i = 0; i < 4; i++)
   {
     jobNode->job.options.cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
   }
-  jobNode->job.options.cryptAlgorithms.isSet          = FALSE;
+  jobNode->job.options.cryptAlgorithms.isSet             = FALSE;
   #ifdef HAVE_GCRYPT
-    jobNode->job.options.cryptType                    = CRYPT_TYPE_SYMMETRIC;
+    jobNode->job.options.cryptType                       = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */
-    jobNode->job.options.cryptType                    = CRYPT_TYPE_NONE;
+    jobNode->job.options.cryptType                       = CRYPT_TYPE_NONE;
   #endif /* HAVE_GCRYPT */
-  jobNode->job.options.cryptPasswordMode              = PASSWORD_MODE_DEFAULT;
+  jobNode->job.options.cryptPasswordMode                 = PASSWORD_MODE_DEFAULT;
   Password_clear(&jobNode->job.options.cryptPassword);
   clearKey(&jobNode->job.options.cryptPublicKey);
   clearKey(&jobNode->job.options.cryptPrivateKey);
   String_clear(jobNode->job.options.ftpServer.loginName);
   Password_clear(&jobNode->job.options.ftpServer.password);
-  jobNode->job.options.sshServer.port                 = 0;
+  jobNode->job.options.sshServer.port                    = 0;
   String_clear(jobNode->job.options.sshServer.loginName);
   Password_clear(&jobNode->job.options.sshServer.password);
   clearKey(&jobNode->job.options.sshServer.publicKey);
   clearKey(&jobNode->job.options.sshServer.privateKey);
   String_clear(jobNode->job.options.preProcessScript);
   String_clear(jobNode->job.options.postProcessScript);
-  jobNode->job.options.device.volumeSize              = 0LL;
-  jobNode->job.options.waitFirstVolumeFlag            = FALSE;
-  jobNode->job.options.errorCorrectionCodesFlag       = FALSE;
-  jobNode->job.options.blankFlag                      = FALSE;
-  jobNode->job.options.skipUnreadableFlag             = FALSE;
-  jobNode->job.options.rawImagesFlag                  = FALSE;
-  jobNode->job.options.archiveFileMode                = ARCHIVE_FILE_MODE_STOP;
+  jobNode->job.options.device.volumeSize                 = 0LL;
+  jobNode->job.options.waitFirstVolumeFlag               = FALSE;
+  jobNode->job.options.errorCorrectionCodesFlag          = FALSE;
+  jobNode->job.options.blankFlag                         = FALSE;
+  jobNode->job.options.skipUnreadableFlag                = FALSE;
+  jobNode->job.options.rawImagesFlag                     = FALSE;
+  jobNode->job.options.archiveFileMode                   = ARCHIVE_FILE_MODE_STOP;
 
   // open file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
@@ -3304,7 +3288,6 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
   DirectoryListHandle directoryListHandle;
   String              fileName;
   String              baseName;
-  SemaphoreLock       semaphoreLock;
   JobNode             *jobNode;
   const JobNode       *jobNode1,*jobNode2;
 
@@ -3336,7 +3319,7 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
     // check if readable file and not ".*"
     if (File_isFile(fileName) && File_isReadable(fileName) && !String_startsWithChar(baseName,'.'))
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         // find/create job
         jobNode = Job_find(baseName);
@@ -3375,7 +3358,7 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
   File_closeDirectoryList(&directoryListHandle);
 
   // remove not existing jobs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     jobNode = jobList.head;
     while (jobNode != NULL)
@@ -3406,7 +3389,7 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
   }
 
   // check for duplicate UUIDs
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     jobNode1 = jobList.head;
     while (jobNode1 != NULL)
@@ -3431,11 +3414,10 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
 }
 
 void Job_trigger(JobNode      *jobNode,
-                 ArchiveTypes archiveType,
                  ConstString  scheduleUUID,
                  ConstString  scheduleCustomText,
-                 bool         noStorage,
-                 bool         dryRun,
+                 ArchiveTypes archiveType,
+                 StorageFlags storageFlags,
                  uint64       startDateTime,
                  const char   *byName
                 )
@@ -3448,8 +3430,7 @@ void Job_trigger(JobNode      *jobNode,
   String_set(jobNode->scheduleUUID,scheduleUUID);
   String_set(jobNode->scheduleCustomText,scheduleCustomText);
   jobNode->archiveType           = archiveType;
-  jobNode->noStorage             = noStorage;
-  jobNode->dryRun                = dryRun;
+  jobNode->storageFlags          = storageFlags;
   jobNode->startDateTime         = startDateTime;
   String_setCString(jobNode->byName,byName);
 
@@ -3483,23 +3464,6 @@ void Job_end(JobNode *jobNode)
 {
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
-
-  // clear passwords
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->cryptPassword);
-    jobNode->cryptPassword = NULL;
-  }
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->sshPassword);
-    jobNode->sshPassword = NULL;
-  }
-  if (jobNode->cryptPassword != NULL)
-  {
-    Password_delete(jobNode->ftpPassword);
-    jobNode->ftpPassword = NULL;
-  }
 
   // clear schedule
   String_clear(jobNode->scheduleUUID);
@@ -3655,7 +3619,7 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->noFragmentsCheckFlag            = FALSE;
   jobOptions->noIndexDatabaseFlag             = FALSE;
   jobOptions->skipVerifySignaturesFlag        = FALSE;
-  jobOptions->noStorageFlag                   = FALSE;
+//  jobOptions->noStorageFlag                   = FALSE;
   jobOptions->noBAROnMediumFlag               = FALSE;
   jobOptions->noStopOnErrorFlag               = FALSE;
   jobOptions->noStopOnAttributeErrorFlag      = FALSE;
@@ -3736,7 +3700,7 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   jobOptions->noFragmentsCheckFlag                          = fromJobOptions->noFragmentsCheckFlag;
   jobOptions->noIndexDatabaseFlag                           = fromJobOptions->noIndexDatabaseFlag;
   jobOptions->skipVerifySignaturesFlag                      = fromJobOptions->skipVerifySignaturesFlag;
-  jobOptions->noStorageFlag                                 = fromJobOptions->noStorageFlag;
+//  jobOptions->noStorageFlag                                 = fromJobOptions->noStorageFlag;
   jobOptions->noBAROnMediumFlag                             = fromJobOptions->noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag                             = fromJobOptions->noStopOnErrorFlag;
   jobOptions->noStopOnAttributeErrorFlag                    = fromJobOptions->noStopOnAttributeErrorFlag;

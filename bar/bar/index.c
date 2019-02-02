@@ -461,15 +461,14 @@ LOCAL bool progressHandler(void *userData)
 
 LOCAL bool pauseCallback(void *userData)
 {
-  bool          result;
-  SemaphoreLock semaphoreLock;
+  bool result;
 
   UNUSED_VARIABLE(userData);
 
   result = FALSE;
   if (indexPauseCallbackFunction != NULL)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&indexPauseLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&indexPauseLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       result = indexPauseCallbackFunction(indexPauseCallbackUserData);
     }
@@ -2479,7 +2478,6 @@ LOCAL void indexThreadCode(void)
   bool                doneFlag;
   String              storageName;
   uint                sleepTime;
-  SemaphoreLock       semaphoreLock;
 
   assert(indexDatabaseFileName != NULL);
 
@@ -2768,7 +2766,7 @@ LOCAL void indexThreadCode(void)
 
     // check quit flag/trigger, sleep
     sleepTime = 0;
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       while (   !quitFlag
              && (sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD)
@@ -4226,9 +4224,7 @@ void Index_setPauseCallback(IndexPauseCallbackFunction pauseCallbackFunction,
                             void                       *pauseCallbackUserData
                            )
 {
-  SemaphoreLock semaphoreLock;
-
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&indexPauseLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&indexPauseLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     indexPauseCallbackFunction = pauseCallbackFunction;
     indexPauseCallbackUserData = pauseCallbackUserData;

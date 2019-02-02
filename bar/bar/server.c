@@ -819,7 +819,6 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 {
   JobNode                     *jobNode = (JobNode*)userData;
   StorageRequestVolumeResults storageRequestVolumeResult;
-  SemaphoreLock               semaphoreLock;
 
   assert(jobNode != NULL);
 
@@ -828,7 +827,7 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
   storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_NONE;
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // request volume, set job state
     assert(jobNode->state == JOB_STATE_RUNNING);
@@ -1113,10 +1112,12 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
   UNUSED_VARIABLE(validateFlag);
   UNUSED_VARIABLE(weakCheckFlag);
 
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,jobNode->cryptPassword);
-  if (jobNode->cryptPassword != NULL)
+fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&jobNode->job.options.cryptPassword);
+//TODO: remove
+//  if (jobNode->job.options.cryptPassword != NULL)
+  if (Password_isEmpty(&jobNode->job.options.cryptPassword))
   {
-    Password_set(password,jobNode->cryptPassword);
+    Password_set(password,&jobNode->job.options.cryptPassword);
     return ERROR_NONE;
   }
   else
@@ -1141,13 +1142,12 @@ LOCAL void updateStatusInfo(Errors           error,
                             void             *userData
                            )
 {
-  JobNode       *jobNode = (JobNode*)userData;
-  SemaphoreLock semaphoreLock;
-  double        entriesPerSecondAverage,bytesPerSecondAverage,storageBytesPerSecondAverage;
-  ulong         restFiles;
-  uint64        restBytes;
-  uint64        restStorageBytes;
-  ulong         estimatedRestTime;
+  JobNode *jobNode = (JobNode*)userData;
+  double  entriesPerSecondAverage,bytesPerSecondAverage,storageBytesPerSecondAverage;
+  ulong   restFiles;
+  uint64  restBytes;
+  uint64  restStorageBytes;
+  ulong   estimatedRestTime;
 
   assert(jobNode != NULL);
   assert(statusInfo != NULL);
@@ -1157,7 +1157,7 @@ LOCAL void updateStatusInfo(Errors           error,
   UNUSED_VARIABLE(error);
 
   // Note: only try for 2s
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
@@ -1198,8 +1198,7 @@ LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
                                    void             *userData
                                   )
 {
-  JobNode       *jobNode = (JobNode*)userData;
-  SemaphoreLock semaphoreLock;
+  JobNode *jobNode = (JobNode*)userData;
 //NYI:  double        entriesPerSecond,bytesPerSecond,storageBytesPerSecond;
 
   assert(jobNode != NULL);
@@ -1207,7 +1206,7 @@ LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
   assert(statusInfo->storage.name != NULL);
   assert(statusInfo->entry.name != NULL);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
     // calculate estimated rest time
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
@@ -1247,13 +1246,12 @@ LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
 
 LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
 {
-  SemaphoreLock semaphoreLock;
-  uint          n;
+  uint n;
 
   n = 0;
   if (trigger != NULL)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,trigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(trigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       while (   !quitFlag
              && (n < sleepTime)
@@ -1288,8 +1286,8 @@ LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
 LOCAL_INLINE bool isPauseCreate(void *userData)
 {
   UNUSED_VARIABLE(userData);
-  
-  return pauseFlags.create; 
+
+  return pauseFlags.create;
 }
 
 /***********************************************************************\
@@ -1305,7 +1303,7 @@ LOCAL_INLINE bool isPauseStorage(void *userData)
 {
   UNUSED_VARIABLE(userData);
 
-  return pauseFlags.storage; 
+  return pauseFlags.storage;
 }
 
 /***********************************************************************\
@@ -1353,11 +1351,10 @@ LOCAL void jobThreadCode(void)
   StringMap        resultMap;
   JobNode          *jobNode;
   ArchiveTypes     archiveType;
-  bool             dryRun;
+  StorageFlags     storageFlags;
   uint64           startDateTime;
   JobOptions       jobOptions;
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock    semaphoreLock;
   LogHandle        logHandle;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   IndexHandle      *indexHandle;
@@ -1394,12 +1391,12 @@ LOCAL void jobThreadCode(void)
   }
   jobNode       = NULL;
   archiveType   = ARCHIVE_ENTRY_TYPE_UNKNOWN;
-  dryRun        = FALSE;
+  storageFlags  = STORAGE_FLAG_NONE;
   startDateTime = 0LL;
   while (!quitFlag)
   {
     // wait and get next job to run
-    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // wait and get next job to execute
       do
@@ -1445,8 +1442,8 @@ LOCAL void jobThreadCode(void)
 
       // get copy of mandatory job data
       String_set(jobName,jobNode->name);
-      String_set(slaveHostName,jobNode->slaveHost.name);
-      slaveHostPort = jobNode->slaveHost.port;
+      String_set(slaveHostName,jobNode->job.slaveHost.name);
+      slaveHostPort = jobNode->job.slaveHost.port;
       String_set(storageName,jobNode->job.archiveName);
       String_set(jobUUID,jobNode->job.uuid);
       Network_getHostName(hostName);
@@ -1460,17 +1457,15 @@ LOCAL void jobThreadCode(void)
       {
         String_set(scheduleUUID,      jobNode->scheduleUUID);
         String_set(scheduleCustomText,jobNode->scheduleCustomText);
-        jobOptions.noStorageFlag = jobNode->noStorage;
       }
       else
       {
         String_clear(scheduleUUID);
         String_clear(scheduleCustomText);
-        jobOptions.noStorageFlag = FALSE;
       }
       archiveType   = jobNode->archiveType;
       startDateTime = jobNode->startDateTime;
-      dryRun        = jobNode->dryRun;
+      storageFlags  = jobNode->storageFlags;
       String_set(byName,jobNode->byName);
 
       // start job
@@ -1488,17 +1483,17 @@ LOCAL void jobThreadCode(void)
 
     // get info string
     String_clear(s);
-    if (dryRun || jobOptions.noStorageFlag)
+    if (IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN) || IS_SET(storageFlags,STORAGE_FLAG_NO_STORAGE))
     {
       String_appendCString(s," (");
       n = 0;
-      if (dryRun)
+      if (IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN))
       {
         if (n > 0) String_appendCString(s,", ");
         String_appendCString(s,"dry-run");
         n++;
       }
-      if (jobOptions.noStorageFlag)
+      if (IS_SET(storageFlags,STORAGE_FLAG_NO_STORAGE))
       {
         if (n > 0) String_appendCString(s,", ");
         String_appendCString(s,"no-storage");
@@ -1692,7 +1687,7 @@ fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->maste
 NULL,//                                                        scheduleTitle,
                                                             scheduleCustomText,
                                                             startDateTime,
-                                                            dryRun,
+                                                            storageFlags,
                                                             CALLBACK(getCryptPasswordFromConfig,jobNode),
                                                             CALLBACK(updateStatusInfo,jobNode),
                                                             CALLBACK(storageRequestVolume,jobNode),
@@ -1712,7 +1707,7 @@ NULL,//                                                        scheduleTitle,
                                                              &excludePatternList,
                                                              &deltaSourceList,
                                                              &jobOptions,
-                                                             dryRun,
+                                                             storageFlags,
                                                              CALLBACK(restoreUpdateStatusInfo,jobNode),
                                                              CALLBACK(NULL,NULL),  // restoreHandleError
                                                              CALLBACK(getCryptPasswordFromConfig,jobNode),
@@ -1791,7 +1786,8 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
           // init storage
           jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
                                                              jobNode->job.archiveName,
-                                                             &jobNode->job.options
+                                                             &jobNode->job.options,
+                                                             storageFlags
                                                             );
           if (jobNode->runningInfo.error == ERROR_NONE)
           {
@@ -1810,7 +1806,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                           archiveType,
                                                           NULL,  // scheduleTitle,
                                                           NULL,  // scheduleCustomText,
-                                                          dryRun,
+                                                          storageFlags,
                                                           CALLBACK(getCryptPasswordFromConfig,jobNode),
                                                           CALLBACK(updateStatusInfo,jobNode),
                                                           CALLBACK(storageRequestVolume,jobNode)
@@ -2021,7 +2017,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                     );
 
     // done job
-    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // end job
       Job_end(jobNode);
@@ -2067,7 +2063,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       PatternList_clear(&excludePatternList);
       EntryList_clear(&includeEntryList);
 
-      if (!dryRun)
+      if (!IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN))
       {
         // store schedule info
         Job_writeScheduleInfo(jobNode);
@@ -2142,7 +2138,6 @@ LOCAL void pairingThreadCode(void)
 
   ConnectorInfo connectorInfo;
   SlaveList     slaveList;
-  SemaphoreLock semaphoreLock;
   JobNode       *jobNode;
   SlaveNode     *slaveNode;
   Errors        error;
@@ -2163,7 +2158,7 @@ LOCAL void pairingThreadCode(void)
     {
       case SERVER_MODE_MASTER:
         // get slave names/ports for pairing
-        JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+        JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           LIST_ITERATE(&jobList,jobNode)
           {
@@ -2172,8 +2167,8 @@ LOCAL void pairingThreadCode(void)
 //fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(jobNode->slaveHost.name));
               slaveNode = LIST_FIND(&slaveList,
                                     slaveNode,
-                                       String_equals(slaveNode->name,jobNode->slaveHost.name)
-                                    && (slaveNode->port == jobNode->slaveHost.port)
+                                       String_equals(slaveNode->name,jobNode->job.slaveHost.name)
+                                    && (slaveNode->port == jobNode->job.slaveHost.port)
 //TODO: only check offline?
 //                                    && (jobNode->slaveState == SLAVE_STATE_OFFLINE)
                                    );
@@ -2184,8 +2179,9 @@ LOCAL void pairingThreadCode(void)
                 {
                   HALT_INSUFFICIENT_MEMORY();
                 }
-                slaveNode->name = String_duplicate(jobNode->slaveHost.name);
-                slaveNode->port = jobNode->slaveHost.port;
+                slaveNode->name = String_duplicate(jobNode->job.slaveHost.name);
+                slaveNode->port = jobNode->job.slaveHost.port;
+//TODO: ssl?
                 List_append(&slaveList,slaveNode);
               }
               if (Job_isRunning(jobNode->state)) slaveNode->jobRunningFlag = TRUE;
@@ -2234,11 +2230,11 @@ LOCAL void pairingThreadCode(void)
 //fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveNode->port,slaveState);
 
           // store slave state
-          JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+          JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             LIST_ITERATE(&jobList,jobNode)
             {
-              if (String_equals(slaveNode->name,jobNode->slaveHost.name) && (slaveNode->port == jobNode->slaveHost.port))
+              if (String_equals(slaveNode->name,jobNode->job.slaveHost.name) && (slaveNode->port == jobNode->job.slaveHost.port))
               {
                 jobNode->slaveState = slaveState;
               }
@@ -2345,7 +2341,6 @@ LOCAL void schedulerThreadCode(void)
 {
   DatabaseHandle continuousDatabaseHandle;
   IndexHandle    *indexHandle;
-  SemaphoreLock  semaphoreLock;
   JobNode        *jobNode;
   bool           jobListPendingFlag;
   uint64         currentDateTime;
@@ -2375,13 +2370,13 @@ LOCAL void schedulerThreadCode(void)
     // write all modified jobs
     Job_writeModifiedAll();
 
-    // re-read job config files
+    // re-read all job config files
     Job_rereadAll(globalOptions.jobsDirectory,serverDefaultJobOptions);
 
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
     currentDateTime     = Misc_getCurrentDateTime();
-    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
     {
       LIST_ITERATEX(&jobList,jobNode,!quitFlag && !jobListPendingFlag)
       {
@@ -2492,11 +2487,10 @@ LOCAL void schedulerThreadCode(void)
           if (executeScheduleNode != NULL)
           {
             Job_trigger(jobNode,
-                        executeScheduleNode->archiveType,
                         executeScheduleNode->uuid,
                         executeScheduleNode->customText,
-                        executeScheduleNode->noStorage,
-                        FALSE,  // dryRun
+                        executeScheduleNode->archiveType,
+                        executeScheduleNode->noStorage ? STORAGE_FLAG_NO_STORAGE : STORAGE_FLAG_NONE,
                         executeScheduleDateTime,
                         "scheduler"
                        );
@@ -2546,12 +2540,10 @@ LOCAL void schedulerThreadCode(void)
 
 LOCAL void pauseThreadCode(void)
 {
-  SemaphoreLock semaphoreLock;
-
   while (!quitFlag)
   {
     // decrement pause time, continue
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       if (serverState == SERVER_STATE_PAUSE)
       {
@@ -2592,7 +2584,6 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
   String           storageName;
   String           string;
   uint64           createdDateTime;
-  SemaphoreLock    semaphoreLock;
   const JobNode    *jobNode;
   StorageSpecifier storageSpecifier;
   Errors           error;
@@ -2631,7 +2622,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
 
   if (!String_isEmpty(storageName))
   {
-    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       // find job if possible
       jobNode = Job_findByUUID(jobUUID);
@@ -2655,6 +2646,7 @@ NULL, // masterIO
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->job.options : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
+                                     FALSE,  // no storage
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
                                      CALLBACK(NULL,NULL),  // getNamePassword
@@ -2671,6 +2663,7 @@ NULL, // masterIO
                                        &storageSpecifier,
                                        (jobNode != NULL) ? &jobNode->job.options : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
+                                       FALSE,  // no storage
                                        SERVER_CONNECTION_PRIORITY_HIGH,
                                        CALLBACK(NULL,NULL),  // updateStatusInfo
                                        CALLBACK(NULL,NULL),  // getNamePassword
@@ -2688,6 +2681,7 @@ NULL, // masterIO
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->job.options : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
+                                     FALSE,  // no storage
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
                                      CALLBACK(NULL,NULL),  // getNamePassword
@@ -2765,7 +2759,6 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   uint64           createdDateTime;
   Errors           error;
-  SemaphoreLock    semaphoreLock;
   const JobNode    *jobNode;
   IndexQueryHandle indexQueryHandle;
   IndexId          storageId;
@@ -2801,7 +2794,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   }
 
   // find job name (if possible)
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode != NULL)
@@ -3275,7 +3268,6 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   uint64                     expiredTotalEntrySize;
   IndexHandle                *indexHandle;
   Errors                     error;
-  SemaphoreLock              semaphoreLock;
   const JobNode              *jobNode;
   ExpirationEntityList       expirationEntityList;
   const ExpirationEntityNode *expirationEntityNode,*otherExpirationEntityNode;
@@ -3313,7 +3305,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
         expiredTotalEntryCount = 0;
         expiredTotalEntrySize  = 0LL;
 
-        JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+        JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           // find expired/surpluse entity
           LIST_ITERATE(&jobList,jobNode)
@@ -3571,7 +3563,6 @@ LOCAL void indexThreadCode(void)
   String                 storageName,printableStorageName;
   StorageInfo            storageInfo;
   IndexCryptPasswordList indexCryptPasswordList;
-  SemaphoreLock          semaphoreLock;
   JobOptions             jobOptions;
   uint64                 startTimestamp,endTimestamp;
   Errors                 error;
@@ -3615,7 +3606,7 @@ LOCAL void indexThreadCode(void)
       // get all job crypt passwords and crypt private keys (including no password and default crypt password)
       addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
 //      addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
-      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         LIST_ITERATE(&jobList,jobNode)
         {
@@ -3671,6 +3662,7 @@ NULL, // masterIO
                              &storageSpecifier,
                              &jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
+                             FALSE,  // no storage
                              SERVER_CONNECTION_PRIORITY_LOW,
                              CALLBACK(NULL,NULL),  // updateStatusInfo
                              CALLBACK(NULL,NULL),  // getNamePassword
@@ -3793,12 +3785,11 @@ NULL, // masterIO
 LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
   String        storageDirectoryName;
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
   // collect storage locations to check for BAR files
   storageDirectoryName = String_new();
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -4152,15 +4143,14 @@ LOCAL void autoIndexThreadCode(void)
 
 LOCAL bool isCommandAborted(ClientInfo *clientInfo, uint commandId)
 {
-  SemaphoreLock semaphoreLock;
-  bool          abortedFlag;
-  uint          *abortedCommandId;
+  bool abortedFlag;
+  uint *abortedCommandId;
 
   assert(clientInfo != NULL);
 
   abortedFlag = FALSE;
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     if (!abortedFlag)
     {
@@ -4451,8 +4441,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   #ifdef HAVE_GNU_TLS
-    SemaphoreLock semaphoreLock;
-    Errors        error;
+    Errors error;
   #endif /* HAVE_GNU_TLS */
 
   assert(clientInfo != NULL);
@@ -4480,7 +4469,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       error = Network_startSSL(&clientInfo->io.network.socketHandle,
                                serverCA->data,
@@ -4533,7 +4522,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   void                 *buffer;
   uint                 bufferLength;
   CryptHash            uuidCryptHash;
-  SemaphoreLock        semaphoreLock;
   char                 bufferx[256];
 
   assert(clientInfo != NULL);
@@ -4677,7 +4665,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   }
 
   // set authorization state
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (error == ERROR_NONE)
     {
@@ -4797,7 +4785,6 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
 
 LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-//  SemaphoreLock  semaphoreLock;
 //  uint           stringMapIterator;
 //  uint64         n;
 //  const char     *name;
@@ -4814,7 +4801,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 //TODO
 #if 0
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get error
     StringMap_getUInt64(argumentMap,"errorCode",&n,ERROR_UNKNOWN);
@@ -5171,8 +5158,7 @@ LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  SemaphoreLock semaphoreLock;
-  ServerNode    *serverNode;
+  ServerNode *serverNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5180,7 +5166,7 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&globalOptions.serverList,serverNode)
     {
@@ -5267,18 +5253,17 @@ LOCAL void serverCommand_serverList(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String        name;
-  ServerTypes   serverType;
-  uint          port;
-  String        loginName;
-  String        password;
-  String        publicKey;
-  String        privateKey;
-  uint          maxConnectionCount;
-  uint64        maxStorageSize;
-  SemaphoreLock semaphoreLock;
-  ServerNode    *serverNode;
-  Errors        error;
+  String      name;
+  ServerTypes serverType;
+  uint        port;
+  String      loginName;
+  String      password;
+  String      publicKey;
+  String      privateKey;
+  uint        maxConnectionCount;
+  uint64      maxStorageSize;
+  ServerNode  *serverNode;
+  Errors      error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5406,7 +5391,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   serverNode->server.maxStorageSize     = maxStorageSize;
 
   // add to server list
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     List_append(&globalOptions.serverList,serverNode);
   }
@@ -5459,19 +5444,18 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint          serverId;
-  String        name;
-  ServerTypes   serverType;
-  uint          port;
-  String        loginName;
-  String        password;
-  String        publicKey;
-  String        privateKey;
-  uint          maxConnectionCount;
-  uint64        maxStorageSize;
-  SemaphoreLock semaphoreLock;
-  ServerNode    *serverNode;
-  Errors        error;
+  uint        serverId;
+  String      name;
+  ServerTypes serverType;
+  uint        port;
+  String      loginName;
+  String      password;
+  String      publicKey;
+  String      privateKey;
+  uint        maxConnectionCount;
+  uint64      maxStorageSize;
+  ServerNode  *serverNode;
+  Errors      error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5562,7 +5546,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find storage server
     serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
@@ -5657,10 +5641,9 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint          serverId;
-  SemaphoreLock semaphoreLock;
-  ServerNode    *serverNode;
-  Errors        error;
+  uint       serverId;
+  ServerNode *serverNode;
+  Errors     error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5674,7 +5657,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find storage server
     serverNode = LIST_FIND(&globalOptions.serverList,serverNode,serverNode->id == serverId);
@@ -5720,7 +5703,6 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
 LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   uint            commandId;
-  SemaphoreLock   semaphoreLock;
   CommandInfoNode *commandInfoNode;
 
   assert(clientInfo != NULL);
@@ -5736,7 +5718,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   }
 
   // abort command
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     commandInfoNode = LIST_FIND(&clientInfo->commandInfoList,commandInfoNode,commandInfoNode->id == commandId);
     if (commandInfoNode != NULL)
@@ -5824,7 +5806,6 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
 {
   uint            pauseTime;
   String          modeMask;
-  SemaphoreLock   semaphoreLock;
   StringTokenizer stringTokenizer;
   ConstString     token;
   char            buffer[256];
@@ -5849,7 +5830,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   }
 
   // set pause time
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     serverState = SERVER_STATE_PAUSE;
     if (modeMask == NULL)
@@ -5929,7 +5910,6 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
 LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String          modeMask;
-  SemaphoreLock   semaphoreLock;
   StringTokenizer stringTokenizer;
   ConstString     token;
   char            buffer[256];
@@ -5945,7 +5925,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
   StringMap_getString(argumentMap,"modeMask",modeMask,NULL);
 
   // set suspend
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     serverState = SERVER_STATE_SUSPENDED;
     if (String_isEmpty(modeMask))
@@ -6007,8 +5987,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  SemaphoreLock semaphoreLock;
-  char          buffer[256];
+  char buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6017,7 +5996,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
   UNUSED_VARIABLE(argumentMap);
 
   // clear pause/suspend
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     serverState            = SERVER_STATE_RUNNING;
     pauseFlags.create      = FALSE;
@@ -6858,7 +6837,6 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 {
   String            name;
   int64             timeout;
-  SemaphoreLock     semaphoreLock;
   DirectoryInfoNode *directoryInfoNode;
   uint64            fileCount;
   uint64            fileSize;
@@ -6886,7 +6864,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   if (File_isDirectory(name))
   {
 //TODO: avoid lock with getDirectoryInfo inside
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // find/create directory info
       directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
@@ -6997,7 +6975,6 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
 {
   StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
   String            name;
-  SemaphoreLock     semaphoreLock;
   const JobNode     *jobNode;
   int               i;
   String            s;
@@ -7022,7 +6999,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -7079,10 +7056,9 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name,value;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       name,value;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7111,7 +7087,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -7169,11 +7145,10 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  int           i;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       name;
+  JobNode      *jobNode;
+  int          i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7194,7 +7169,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -7259,7 +7234,6 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
   assert(clientInfo != NULL);
@@ -7268,7 +7242,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
@@ -7278,9 +7252,9 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
                           getJobStateText(jobNode->state),
-                          jobNode->slaveHost.name,
-                          jobNode->slaveHost.port,
-                          jobNode->slaveHost.forceSSL,
+                          jobNode->job.slaveHost.name,
+                          jobNode->job.slaveHost.port,
+                          jobNode->job.slaveHost.forceSSL,
                           getSlaveStateText(jobNode->slaveState),
                           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
                                                      (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
@@ -7341,7 +7315,6 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
   assert(clientInfo != NULL);
@@ -7356,7 +7329,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -7404,23 +7377,21 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 *            jobUUID=<uuid>
 *            [scheduleUUID=<text>]
 *            [scheduleCustomText=<text>]
-*            [noStorage=yes|no]
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            [noStorage=yes|no]
 *            [dryRun=yes|no]
 *          Result:
 \***********************************************************************/
 
 LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes  archiveType;
-  bool          dryRun;
-  String        scheduleCustomText;
-  bool          noStorage;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  char          buffer[256];
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes archiveType;
+  StorageFlags storageFlags;
+  String       scheduleCustomText;
+  JobNode      *jobNode;
+  char         buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7436,16 +7407,17 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
   scheduleCustomText = String_new();
   StringMap_getString(argumentMap,"scheduleCustomText",scheduleCustomText,NULL);
-  StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE);
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(scheduleCustomText);
     return;
   }
-  StringMap_getBool(argumentMap,"dryRun",&dryRun,FALSE);
+  storageFlags = STORAGE_FLAG_NONE;
+  StringMap_getFlag(argumentMap,"noStorage",&storageFlags,STORAGE_FLAG_NO_STORAGE);
+  StringMap_getFlag(argumentMap,"dryRun",&storageFlags,STORAGE_FLAG_DRY_RUN);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -7462,11 +7434,10 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       // trigger job
       Job_trigger(jobNode,
-                  archiveType,
                   scheduleUUID,
                   scheduleCustomText,
-                  noStorage,
-                  dryRun,
+                  archiveType,
+                  storageFlags,
                   Misc_getCurrentDateTime(),
                   getClientInfo(clientInfo,buffer,sizeof(buffer))
                  );
@@ -7495,10 +7466,9 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  char          buffer[64];
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
+  char         buffer[64];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7512,7 +7482,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -7550,9 +7520,8 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7566,7 +7535,7 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -7606,14 +7575,13 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String        name;
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        master;
-  SemaphoreLock semaphoreLock;
-  String        fileName;
-  FileHandle    fileHandle;
-  Errors        error;
-  JobNode       *jobNode;
+  String       name;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       master;
+  String       fileName;
+  FileHandle   fileHandle;
+  Errors       error;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7632,7 +7600,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
   master = String_new();
   StringMap_getString(argumentMap,"master",master,NULL);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     jobNode = NULL;
 
@@ -7741,7 +7709,6 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        name;
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   String        fileName;
   FileHandle    fileHandle;
@@ -7767,7 +7734,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // check if mew job already exists
     if (Job_exists(name))
@@ -7849,12 +7816,11 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        newName;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  String        fileName;
-  Errors        error;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       newName;
+  JobNode      *jobNode;
+  String       fileName;
+  Errors       error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7875,7 +7841,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // check if job already exists
     if (Job_exists(newName))
@@ -7937,11 +7903,10 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  Errors        error;
-  String        fileName,pathName,baseName;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
+  Errors       error;
+  String       fileName,pathName,baseName;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7955,7 +7920,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8076,7 +8041,6 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
 
   assert(clientInfo != NULL);
@@ -8091,7 +8055,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8156,7 +8120,6 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
 LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   EntryNode     *entryNode;
 
@@ -8172,7 +8135,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8215,9 +8178,8 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8231,7 +8193,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8275,13 +8237,12 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  EntryTypes    entryType;
-  String        patternString;
-  PatternTypes  patternType;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  uint          entryId;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  EntryTypes   entryType;
+  String       patternString;
+  PatternTypes patternType;
+  JobNode      *jobNode;
+  uint         entryId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8308,7 +8269,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8356,13 +8317,12 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          entryId;
-  EntryTypes    entryType;
-  PatternTypes  patternType;
-  String        patternString;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         entryId;
+  EntryTypes   entryType;
+  PatternTypes patternType;
+  String       patternString;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8394,7 +8354,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8439,10 +8399,9 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          entryId;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         entryId;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8461,7 +8420,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8509,7 +8468,6 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
 LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   PatternNode   *patternNode;
 
@@ -8525,7 +8483,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8567,9 +8525,8 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8583,7 +8540,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8626,12 +8583,11 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  PatternTypes  patternType;
-  String        patternString;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  uint          patternId;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  PatternTypes patternType;
+  String       patternString;
+  JobNode      *jobNode;
+  uint         patternId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8653,7 +8609,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8700,12 +8656,11 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          patternId;
-  PatternTypes  patternType;
-  String        patternString;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         patternId;
+  PatternTypes patternType;
+  String       patternString;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8732,7 +8687,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8777,10 +8732,9 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          patternId;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         patternId;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8799,7 +8753,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8852,7 +8806,6 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
 LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   MountNode     *mountNode;
 
@@ -8868,7 +8821,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8911,9 +8864,8 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -8927,7 +8879,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -8971,14 +8923,13 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        name;
-  String        device;
-  bool          alwaysUnmount;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  MountNode     *mountNode;
-  uint          mountId;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       name;
+  String       device;
+  bool         alwaysUnmount;
+  JobNode      *jobNode;
+  MountNode    *mountNode;
+  uint         mountId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9015,7 +8966,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
   }
 
   mountId = 0;
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9082,14 +9033,13 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          mountId;
-  String        name;
-  String        device;
-  bool          alwaysUnmount;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  MountNode     *mountNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         mountId;
+  String       name;
+  String       device;
+  bool         alwaysUnmount;
+  JobNode      *jobNode;
+  MountNode    *mountNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9130,7 +9080,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9190,11 +9140,10 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          mountId;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  MountNode     *mountNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         mountId;
+  JobNode      *jobNode;
+  MountNode    *mountNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9213,7 +9162,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9266,7 +9215,6 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
 LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock   semaphoreLock;
   const JobNode   *jobNode;
   DeltaSourceNode *deltaSourceNode;
 
@@ -9282,7 +9230,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9325,9 +9273,8 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9341,7 +9288,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9381,12 +9328,11 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  PatternTypes  patternType;
-  String        patternString;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  uint          deltaSourceId;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  PatternTypes patternType;
+  String       patternString;
+  JobNode      *jobNode;
+  uint         deltaSourceId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9408,7 +9354,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9452,12 +9398,11 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          deltaSourceId;
-  String        patternString;
-  PatternTypes  patternType;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         deltaSourceId;
+  String       patternString;
+  PatternTypes patternType;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9484,7 +9429,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9526,10 +9471,9 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          deltaSourceId;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         deltaSourceId;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9548,7 +9492,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9595,7 +9539,6 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
 LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   PatternNode   *patternNode;
 
@@ -9611,7 +9554,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9652,9 +9595,8 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
 
 LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9668,7 +9610,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9708,12 +9650,11 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
 
 LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        patternString;
-  PatternTypes  patternType;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  uint          patternId;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       patternString;
+  PatternTypes patternType;
+  JobNode      *jobNode;
+  uint         patternId;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9735,7 +9676,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9779,12 +9720,11 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
 
 LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          patternId;
-  String        patternString;
-  PatternTypes  patternType;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         patternId;
+  String       patternString;
+  PatternTypes patternType;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9811,7 +9751,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9853,10 +9793,9 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
 
 LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          patternId;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         patternId;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -9875,7 +9814,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -9939,7 +9878,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes  archiveType;
-  SemaphoreLock semaphoreLock;
   const JobNode *jobNode;
   ScheduleNode  *scheduleNode;
   String        date,weekDays,time;
@@ -9957,7 +9895,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
   }
   StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -10102,21 +10040,20 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
 LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  String        title;
-  String        date;
-  String        weekDays;
-  String        time;
-  ArchiveTypes  archiveType;
-  uint          interval;
-  String        customText;
-  int           minKeep,maxKeep;
-  int           maxAge;
-  bool          noStorage;
-  bool          enabled;
-  SemaphoreLock semaphoreLock;
-  ScheduleNode  *scheduleNode;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  String       title;
+  String       date;
+  String       weekDays;
+  String       time;
+  ArchiveTypes archiveType;
+  uint         interval;
+  String       customText;
+  int          minKeep,maxKeep;
+  int          maxAge;
+  bool         noStorage;
+  bool         enabled;
+  ScheduleNode *scheduleNode;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10267,7 +10204,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   scheduleNode->noStorage   = noStorage;
   scheduleNode->enabled     = enabled;
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -10321,11 +10258,10 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  ScheduleNode  *scheduleNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
+  ScheduleNode *scheduleNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10344,7 +10280,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -10406,7 +10342,6 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
 LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString               (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock              semaphoreLock;
   const JobNode              *jobNode;
   const PersistenceNode      *persistenceNode;
   char                       s1[16],s2[16],s3[16];
@@ -10424,7 +10359,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -10504,9 +10439,8 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
 
 LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -10520,7 +10454,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -10570,7 +10504,6 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
   ArchiveTypes    archiveType;
   int             minKeep,maxKeep;
   int             maxAge;
-  SemaphoreLock   semaphoreLock;
   JobNode         *jobNode;
   PersistenceNode *persistenceNode;
   uint            persistenceId;
@@ -10629,7 +10562,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
   }
 
   persistenceId = ID_NONE;
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -10700,7 +10633,6 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
   ArchiveTypes          archiveType;
   int                   minKeep,maxKeep;
   int                   maxAge;
-  SemaphoreLock         semaphoreLock;
   JobNode               *jobNode;
   PersistenceNode       *persistenceNode;
   const PersistenceNode *existingPersistenceNode;
@@ -10762,9 +10694,8 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
       return;
     }
   }
-fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,minKeep,maxKeep,maxAge);
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -10849,7 +10780,6 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
 {
   StaticString    (jobUUID,MISC_UUID_STRING_LENGTH);
   uint            persistenceId;
-  SemaphoreLock   semaphoreLock;
   JobNode         *jobNode;
   PersistenceNode *persistenceNode;
 
@@ -10870,7 +10800,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -10932,7 +10862,6 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String             name;
-  SemaphoreLock      semaphoreLock;
   const JobNode      *jobNode;
   const ScheduleNode *scheduleNode;
   uint               i;
@@ -10963,7 +10892,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -11040,12 +10969,11 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String        name,value;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  ScheduleNode  *scheduleNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String       name,value;
+  JobNode      *jobNode;
+  ScheduleNode *scheduleNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11079,7 +11007,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -11150,13 +11078,12 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
 
 LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String        name;
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  ScheduleNode  *scheduleNode;
-  uint          i;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String       name;
+  JobNode      *jobNode;
+  ScheduleNode *scheduleNode;
+  uint         i;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11182,7 +11109,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -11257,12 +11184,11 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
 
 LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  StaticString  (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
-  ScheduleNode  *scheduleNode;
-  char          buffer[256];
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
+  ScheduleNode *scheduleNode;
+  char         buffer[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11281,7 +11207,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -11311,11 +11237,10 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
 
     // trigger job
     Job_trigger(jobNode,
-                scheduleNode->archiveType,
                 scheduleNode->uuid,
                 scheduleNode->customText,
-                scheduleNode->noStorage,
-                FALSE,  // dryRun
+                scheduleNode->archiveType,
+                scheduleNode->noStorage ? STORAGE_FLAG_NO_STORAGE : STORAGE_FLAG_NONE,
                 Misc_getCurrentDateTime(),
                 getClientInfo(clientInfo,buffer,sizeof(buffer))
                );
@@ -11431,7 +11356,6 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
 {
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
-  SemaphoreLock        semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11453,7 +11377,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // decrypt password
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.ftpServer.password,encryptedPassword,encryptType))
     {
@@ -11489,7 +11413,6 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
 {
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
-  SemaphoreLock        semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11511,7 +11434,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   }
 
   // decrypt password
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.sshServer.password,encryptedPassword,encryptType))
     {
@@ -11547,7 +11470,6 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
 {
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
-  SemaphoreLock        semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11569,7 +11491,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   }
 
   // decrypt password
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.webDAVServer.password,encryptedPassword,encryptType))
     {
@@ -11607,7 +11529,6 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
   StaticString         (jobUUID,MISC_UUID_STRING_LENGTH);
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
-  SemaphoreLock        semaphoreLock;
   JobNode              *jobNode;
 
   assert(clientInfo != NULL);
@@ -11636,7 +11557,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
   if (!String_equalsCString(jobUUID,"*"))
   {
-    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // find job
       jobNode = Job_findByUUID(jobUUID);
@@ -11649,8 +11570,9 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
       }
 
       // decrypt password
-      if (jobNode->cryptPassword == NULL) jobNode->cryptPassword = Password_new();
-      if (!ServerIO_decryptPassword(&clientInfo->io,jobNode->cryptPassword,encryptedPassword,encryptType))
+//TODO: remove
+//      if (jobNode->job.options.cryptPassword == NULL) jobNode->job.options.cryptPassword = Password_new();
+      if (!ServerIO_decryptPassword(&clientInfo->io,&jobNode->job.options.cryptPassword,encryptedPassword,encryptType))
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
         Semaphore_unlock(&jobList.lock);
@@ -11662,7 +11584,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
   else
   {
     // decrypt password
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.cryptPassword,encryptedPassword,encryptType))
       {
@@ -11695,15 +11617,13 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     Password_clear(&clientInfo->jobOptions.ftpServer.password);
     Password_clear(&clientInfo->jobOptions.sshServer.password);
@@ -11730,10 +11650,9 @@ LOCAL void serverCommand_passwordsClear(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint          volumeNumber;
-  SemaphoreLock semaphoreListLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint         volumeNumber;
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11752,7 +11671,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -11787,9 +11706,8 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
 
 LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreListLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11803,7 +11721,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
     return;
   }
 
-  JOB_LIST_LOCKED_DO(semaphoreListLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
     jobNode = Job_findByUUID(jobUUID);
@@ -11895,6 +11813,7 @@ NULL, // masterIO
                        &storageSpecifier,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
+                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getNamePassword
@@ -12420,8 +12339,6 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
 
 LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -12429,7 +12346,7 @@ LOCAL void serverCommand_storageListClear(ClientInfo *clientInfo, IndexHandle *i
   UNUSED_VARIABLE(argumentMap);
 
   // clear index ids
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     Array_clear(&clientInfo->indexIdArray);
   }
@@ -12458,7 +12375,6 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
   StringTokenizer stringTokenizer;
   ConstString     token;
   long            nextIndex;
-  SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12482,7 +12398,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
 
   // add to id array
   String_initTokenizer(&stringTokenizer,indexIds,STRING_BEGIN,",",NULL,TRUE);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
@@ -12530,7 +12446,6 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
   StringTokenizer stringTokenizer;
   ConstString     token;
   long            nextIndex;
-  SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12554,7 +12469,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
 
   // remove from id array
   String_initTokenizer(&stringTokenizer,indexIds,STRING_BEGIN,",",NULL,TRUE);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
@@ -12765,15 +12680,13 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_entryListClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     Array_clear(&clientInfo->entryIdArray);
   }
@@ -12802,7 +12715,6 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
   StringTokenizer stringTokenizer;
   ConstString     token;
   long            nextIndex;
-  SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12826,7 +12738,7 @@ LOCAL void serverCommand_entryListAdd(ClientInfo *clientInfo, IndexHandle *index
 
   // add to id array
   String_initTokenizer(&stringTokenizer,entryIds,STRING_BEGIN,",",NULL,TRUE);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
@@ -12874,7 +12786,6 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
   StringTokenizer stringTokenizer;
   ConstString     token;
   long            nextIndex;
-  SemaphoreLock   semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -12898,7 +12809,7 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
 
   // remove from id array
   String_initTokenizer(&stringTokenizer,entryIds,STRING_BEGIN,",",NULL,TRUE);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     while (String_getNextToken(&stringTokenizer,&token,NULL))
     {
@@ -12998,13 +12909,12 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  IndexId       entityId;
-  IndexId       storageId;
-  Errors        error;
-  StaticString  (uuid,MISC_UUID_STRING_LENGTH);
-  SemaphoreLock semaphoreLock;
-  JobNode       *jobNode;
+  StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  IndexId      entityId;
+  IndexId      storageId;
+  Errors       error;
+  StaticString (uuid,MISC_UUID_STRING_LENGTH);
+  JobNode      *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13033,7 +12943,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   error = ERROR_NONE;
   if      (!String_isEmpty(jobUUID))
   {
-    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       jobNode = Job_findByUUID(jobUUID);
       if (jobNode != NULL)
@@ -13062,7 +12972,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                         )
        )
     {
-      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         jobNode = Job_findByUUID(uuid);
         if (jobNode != NULL)
@@ -13096,7 +13006,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                              )
        )
     {
-      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         jobNode = Job_findByUUID(uuid);
         if (jobNode != NULL)
@@ -13795,7 +13705,6 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   ulong            totalEntryCount;
   uint64           totalEntrySize;
   UUIDNode         *uuidNode;
-  SemaphoreLock    semaphoreLock;
   const JobNode    *jobNode;
   bool             exitsFlag;
 
@@ -13894,7 +13803,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   Index_doneList(&indexQueryHandle);
 
   // get job names and send list
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&uuidList,uuidNode)
     {
@@ -13925,7 +13834,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
 
   // send job UUIDs without database entry
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -14004,7 +13913,6 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   ulong              totalEntryCount;
   uint64             totalEntrySize;
   int                maxAge;
-  SemaphoreLock      semaphoreLock;
   const JobNode      *jobNode;
   const ScheduleNode *scheduleNode;
   uint64             expireDateTime;
@@ -14098,7 +14006,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
     maxAge = AGE_FOREVER;
     if (!String_isEmpty(jobUUID))
     {
-      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
@@ -14221,7 +14129,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   uint64                lastCheckedDateTime;
   ulong                 totalEntryCount;
   uint64                totalEntrySize;
-  SemaphoreLock         semaphoreLock;
   const JobNode         *jobNode;
 
   assert(clientInfo != NULL);
@@ -14370,7 +14277,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   {
     // get job name
     String_set(jobName,jobUUID);
-    JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
     {
       jobNode = Job_findByUUID(jobUUID);
       if (jobNode != NULL)
@@ -14619,7 +14526,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   uint                  userId,groupId;
   uint                  permission;
   uint64                fragmentOrBlockOffset,fragmentSizeOrBlockCount;
-  SemaphoreLock         semaphoreLock;
   const JobNode         *jobNode;
 
   assert(clientInfo != NULL);
@@ -14724,7 +14630,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     // get job name
     if (uuidId != prevUUIDId)
     {
-      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
@@ -14804,25 +14710,24 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
 
 LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  Errors             error;
-  IndexQueryHandle   indexQueryHandle;
-  IndexId            uuidId;
-  String             jobName;
-  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String             hostName;
-  uint64             createdDateTime;
-  ArchiveTypes       archiveType;
-  String             errorMessage;
-  uint64             duration;
-  ulong              totalEntryCount;
-  uint64             totalEntrySize;
-  ulong              skippedEntryCount;
-  uint64             skippedEntrySize;
-  ulong              errorEntryCount;
-  uint64             errorEntrySize;
-  SemaphoreLock      semaphoreLock;
-  const JobNode      *jobNode;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  Errors           error;
+  IndexQueryHandle indexQueryHandle;
+  IndexId          uuidId;
+  String           jobName;
+  StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String           hostName;
+  uint64           createdDateTime;
+  ArchiveTypes     archiveType;
+  String           errorMessage;
+  uint64           duration;
+  ulong            totalEntryCount;
+  uint64           totalEntrySize;
+  ulong            skippedEntryCount;
+  uint64           skippedEntrySize;
+  ulong            errorEntryCount;
+  uint64           errorEntrySize;
+  const JobNode    *jobNode;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -14884,7 +14789,7 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
     String_clear(jobName);
     if (!String_isEmpty(jobUUID))
     {
-      JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
       {
         jobNode = Job_findByUUID(jobUUID);
         if (jobNode != NULL)
@@ -15068,6 +14973,7 @@ NULL, // masterIO
                        &storageSpecifier,
                        NULL, // jobOptions
                        &globalOptions.indexDatabaseMaxBandWidthList,
+                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_LOW,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getNamePassword
@@ -15932,7 +15838,6 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   String           storageName;
   String           printableStorageName;
   IndexStates      indexState;
-  SemaphoreLock    semaphoreLock;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -16058,7 +15963,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         }
 
         // remove index id
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
         {
           Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK(NULL,NULL));
         }
@@ -16083,7 +15988,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     }
 
     // remove index id
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       Array_removeAll(&clientInfo->indexIdArray,&uuidId,CALLBACK(NULL,NULL));
     }
@@ -16100,7 +16005,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     }
 
     // remove index id
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       Array_removeAll(&clientInfo->indexIdArray,&entityId,CALLBACK(NULL,NULL));
     }
@@ -16117,7 +16022,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     }
 
     // remove index id
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK(NULL,NULL));
     }
@@ -16912,7 +16817,6 @@ LOCAL bool getCommand(ClientInfo            *clientInfo,
 LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 {
   IndexHandle     *indexHandle;
-  SemaphoreLock   semaphoreLock;
   CommandInfoNode *commandInfoNode;
   String          result;
   Command         command;
@@ -16937,7 +16841,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
     {
       // add command info
       commandInfoNode = NULL;
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
         if (commandInfoNode == NULL)
@@ -16971,7 +16875,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       #endif /* not DEBUG */
 
       // remove command info
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
         List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode,CALLBACK_NULL);
       }
@@ -17150,7 +17054,6 @@ LOCAL Errors initBatchClient(ClientInfo *clientInfo,
 
 LOCAL void doneClient(ClientInfo *clientInfo)
 {
-  SemaphoreLock   semaphoreLock;
   JobNode         *jobNode;
   CommandInfoNode *commandInfoNode;
   int             i;
@@ -17162,7 +17065,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   clientInfo->quitFlag = TRUE;
 
   // abort all running master jobs
-  JOB_LIST_LOCKED_DO(semaphoreLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
@@ -17639,7 +17542,6 @@ Errors Server_run(ServerModes       mode,
   sigset_t              signalMask;
   struct pollfd         *pollfds;
   uint                  maxPollfdCount;
-  SemaphoreLock         semaphoreLock;
   uint                  pollfdCount;
   uint                  pollServerSocketIndex,pollServerTLSSocketIndex;
   uint64                nowTimestamp,waitTimeout,nextTimestamp;  // [us]
@@ -17924,7 +17826,7 @@ Errors Server_run(ServerModes       mode,
     // get active sockets to wait for
     pollfdCount = 0;
     waitTimeout = 0LL;
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // get standard port connection requests
       if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
@@ -18014,7 +17916,7 @@ Errors Server_run(ServerModes       mode,
       error = newNetworkClient(&clientNode,&serverSocketHandle);
       if (error == ERROR_NONE)
       {
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           // append to list of connected clients
           List_append(&clientList,clientNode);
@@ -18095,7 +17997,7 @@ Errors Server_run(ServerModes       mode,
           return FALSE;
         #endif /* HAVE_GNU_TLS */
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           // append to list of connected clients
           List_append(&clientList,clientNode);
@@ -18135,7 +18037,7 @@ Errors Server_run(ServerModes       mode,
     }
 
     // process client commands/disconnects/results
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
       {

@@ -125,7 +125,7 @@ struct JobOptions
   bool                         noIndexDatabaseFlag;           // TRUE for do not store index database for archives
   bool                         forceVerifySignaturesFlag;     // TRUE to force verify signatures of archives
   bool                         skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
-  bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
+//  bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
   bool                         noSignatureFlag;               // TRUE for not appending signatures
   bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                         noStopOnErrorFlag;             // TRUE for not stopping immediately on error
@@ -139,16 +139,20 @@ typedef struct
   int month;                                            // month or SCHEDULE_ANY
   int day;                                              // day or SCHEDULE_ANY
 } ScheduleDate;
+
 typedef WeekDaySet ScheduleWeekDaySet;
+
 typedef struct
 {
   int hour;                                             // hour or SCHEDULE_ANY
   int minute;                                           // minute or SCHEDULE_ANY
 } ScheduleTime;
+
 typedef struct ScheduleNode
 {
   LIST_NODE_HEADER(struct ScheduleNode);
 
+  // settings
   String             uuid;                              // unique id
   String             parentUUID;                        // unique parent id or NULL
   ScheduleDate       date;
@@ -157,11 +161,12 @@ typedef struct ScheduleNode
   ArchiveTypes       archiveType;                       // archive type to create
   uint               interval;                          // continuous interval [min]
   String             customText;                        // custom text
-  bool               noStorage;                         // TRUE to skip storage, only create incremental data file
-  bool               enabled;                           // TRUE iff enabled
   String             preProcessScript;                  // script to execute before start of job
   String             postProcessScript;                 // script to execute after after termination of job
+  bool               noStorage;                         // TRUE to skip storage, only create incremental data file
+  bool               enabled;                           // TRUE iff enabled
 
+  // run info
   uint64             lastExecutedDateTime;              // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
   String             lastErrorMessage;                  // last error message
   ulong              executionCount;                    // number of executions
@@ -212,6 +217,14 @@ typedef enum
 typedef struct
 {
   String              uuid;                             // unique id
+
+  struct
+  {
+    String name;
+    uint   port;
+    bool   forceSSL;
+  }                   slaveHost;                        // slave host
+
   String              archiveName;                      // archive name
   bool                storageNameListStdin;             // read storage names from stdin
   String              storageNameListFileName;          // storage names list file name
@@ -248,12 +261,6 @@ typedef struct JobNode
   // job
   Job                 job;
   String              name;                             // name of job
-  struct
-  {
-    String name;
-    uint   port;
-    bool   forceSSL;
-  }                   slaveHost;                        // slave host
   JobTypes            jobType;                          // job type
 
   // modified info
@@ -264,11 +271,6 @@ typedef struct JobNode
 
   // schedule info
   uint64              lastScheduleCheckDateTime;        // last check date/time (timestamp)
-
-  // job passwords
-  Password            *ftpPassword;                     // FTP password if password mode is 'ask'
-  Password            *sshPassword;                     // SSH password if password mode is 'ask'
-  Password            *cryptPassword;                   // crypt password if password mode is 'ask'
 
   // job file/master
   String              fileName;                         // file name or NULL
@@ -284,11 +286,10 @@ typedef struct JobNode
 
   StatusInfo          statusInfo;
 
-  String              scheduleUUID;                     // schedule UUID or empty
+  String              scheduleUUID;                     // current schedule UUID or empty
   String              scheduleCustomText;               // schedule custom text or empty
   ArchiveTypes        archiveType;                      // archive type to create
-  bool                noStorage;                        // TRUE to skip storage, only create incremental data file
-  bool                dryRun;                           // TRUE iff dry-run (no storage, no index update)
+  StorageFlags        storageFlags;                     // storage flags; see STORAGE_FLAG_...
   uint64              startDateTime;                    // start date/time [s]
   String              byName;                           // state changed by name
 
@@ -356,14 +357,12 @@ extern JobList jobList;                // job list
 /***********************************************************************\
 * Name   : JOB_LIST_LOCKED_DO
 * Purpose: execute block with job list locked
-* Input  : semaphoreLock     - lock flag variable (SemaphoreLock)
-*          semaphoreLockType - lock type; see SemaphoreLockTypes
+* Input  : semaphoreLockType - lock type; see SemaphoreLockTypes
 *          timeout           - timeout [ms] or NO_WAIT, WAIT_FOREVER
 * Output : -
 * Return : -
 * Notes  : usage:
-*            SemaphoreLock semaphoreLock;
-*            JOB_LIST_LOCKED_DO(semaphoreLock,semaphoreLockType,timeout)
+*            JOB_LIST_LOCKED_DO(semaphoreLockType,timeout)
 *            {
 *              ...
 *            }
@@ -371,8 +370,8 @@ extern JobList jobList;                // job list
 *          semaphore must be unlocked manually if 'break' is used!
 \***********************************************************************/
 
-#define JOB_LIST_LOCKED_DO(semaphoreLock,semaphoreLockType,timeout) \
-  for (semaphoreLock = Job_listLock(semaphoreLockType,timeout); \
+#define JOB_LIST_LOCKED_DO(semaphoreLockType,timeout) \
+  for (SemaphoreLock semaphoreLock = Job_listLock(semaphoreLockType,timeout); \
        semaphoreLock; \
        Job_listUnlock(), semaphoreLock = FALSE \
       )
@@ -540,7 +539,7 @@ INLINE bool Job_isLocal(const JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  return String_isEmpty(jobNode->slaveHost.name);
+  return String_isEmpty(jobNode->job.slaveHost.name);
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -559,7 +558,7 @@ INLINE bool Job_isRemote(const JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
-  return !String_isEmpty(jobNode->slaveHost.name);
+  return !String_isEmpty(jobNode->job.slaveHost.name);
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -860,11 +859,10 @@ INLINE void Job_setModified(JobNode *jobNode)
 * Name   : Job_trigger
 * Purpose: trogger job run
 * Input  : jobNode            - job node
-*          archiveType        - archive type to create
 *          scheduleUUID       - schedule UUID or NULL
 *          scheduleCustomText - schedule custom text or NULL
-*          noStorage          - TRUE for no-strage, FALSE otherwise
-*          dryRun             - TRUE for dry-run, FALSE otherwise
+*          archiveType        - archive type to create
+*          storageFlags       - storage flags; see STORAGE_FLAG_...
 *          startDateTime      - date/time of start [s]
 *          byName             - by name or NULL
 * Output : -
@@ -873,11 +871,10 @@ INLINE void Job_setModified(JobNode *jobNode)
 \***********************************************************************/
 
 void Job_trigger(JobNode      *jobNode,
-                 ArchiveTypes archiveType,
                  ConstString  scheduleUUID,
                  ConstString  scheduleCustomText,
-                 bool         noStorage,
-                 bool         dryRun,
+                 ArchiveTypes archiveType,
+                 StorageFlags storageFlags,
                  uint64       startDateTime,
                  const char   *byName
                 );

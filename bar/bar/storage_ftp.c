@@ -90,9 +90,8 @@ LOCAL bool initFTPLogin(ConstString             hostName,
                         void                    *getNamePasswordUserData
                        )
 {
-  SemaphoreLock semaphoreLock;
-  String        s;
-  bool          initFlag;
+  String s;
+  bool   initFlag;
 
   assert(!String_isEmpty(hostName));
   assert(loginName != NULL);
@@ -102,7 +101,7 @@ LOCAL bool initFTPLogin(ConstString             hostName,
 
   if (jobOptions != NULL)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       if (Password_isEmpty(&jobOptions->ftpServer.password))
       {

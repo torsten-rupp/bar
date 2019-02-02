@@ -897,8 +897,6 @@ String_delete(storageHandle->device.fileName);
 
 LOCAL void StorageDevice_close(StorageHandle *storageHandle)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
@@ -913,7 +911,7 @@ LOCAL void StorageDevice_close(StorageHandle *storageHandle)
       String_delete(storageHandle->device.fileName);
       break;
     case STORAGE_MODE_WRITE:
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         storageHandle->storageInfo->device.totalSize += File_getSize(&storageHandle->device.fileHandle);
       }

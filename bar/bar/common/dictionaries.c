@@ -650,14 +650,13 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
 
 void Dictionary_clear(Dictionary *dictionary)
 {
-  SemaphoreLock semaphoreLock;
-  uint          z;
-  uint          index;
+  uint z;
+  uint index;
 
   assert(dictionary != NULL);
   assert(dictionary->entryTables != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     for (z = 0; z < dictionary->entryTableCount; z++)
     {
@@ -692,15 +691,14 @@ void Dictionary_clear(Dictionary *dictionary)
 
 ulong Dictionary_count(Dictionary *dictionary)
 {
-  SemaphoreLock semaphoreLock;
-  ulong         count;
-  uint          z;
+  ulong count;
+  uint  z;
 
   assert(dictionary != NULL);
   assert(dictionary->entryTables != NULL);
 
   count = 0;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     for (z = 0; z < dictionary->entryTableCount; z++)
     {
@@ -743,7 +741,6 @@ bool Dictionary_add(Dictionary *dictionary,
                    )
 {
   ulong                hash;
-  SemaphoreLock        semaphoreLock;
   DictionaryEntryTable *dictionaryEntryTable;
   uint                 entryIndex;
   void                 *newData;
@@ -757,7 +754,7 @@ bool Dictionary_add(Dictionary *dictionary,
 
   hash = calculateHash(keyData,keyLength);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // update entry
     if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&entryIndex))
@@ -1082,7 +1079,6 @@ void Dictionary_remove(Dictionary *dictionary,
                       )
 {
   ulong                hash;
-  SemaphoreLock        semaphoreLock;
   DictionaryEntryTable *dictionaryEntryTable;
   uint                 entryIndex;
 
@@ -1091,7 +1087,7 @@ void Dictionary_remove(Dictionary *dictionary,
 
   hash = calculateHash(keyData,keyLength);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&entryIndex))
     {
@@ -1122,7 +1118,6 @@ bool Dictionary_find(Dictionary *dictionary,
 {
   ulong                hash;
   bool                 foundFlag;
-  SemaphoreLock        semaphoreLock;
   DictionaryEntryTable *dictionaryEntryTable;
   uint                 index;
 
@@ -1132,7 +1127,7 @@ bool Dictionary_find(Dictionary *dictionary,
   hash = calculateHash(keyData,keyLength);
 
   foundFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     if (findEntry(dictionary,hash,keyData,keyLength,&dictionaryEntryTable,&index))
     {
@@ -1271,13 +1266,12 @@ bool Dictionary_iterate(Dictionary                *dictionary,
 #ifndef NDEBUG
 void Dictionary_printStatistic(Dictionary *dictionary)
 {
-  SemaphoreLock semaphoreLock;
-  ulong         totalEntryCount,totalIndexCount;
-  uint          i;
+  ulong totalEntryCount,totalIndexCount;
+  uint  i;
 
   assert(dictionary != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&dictionary->lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     fprintf(stderr,"Dictionary statistics:\n");
     fprintf(stderr,"  tables : %d\n",dictionary->entryTableCount);

@@ -1683,7 +1683,6 @@ LOCAL int progressHandler(void *userData)
 {
   DatabaseHandle                    *databaseHandle = (DatabaseHandle*)userData;
   bool                              interruptFlag;
-  SemaphoreLock                     semaphoreLock;
   const DatabaseProgressHandlerNode *progressHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -1692,11 +1691,12 @@ LOCAL int progressHandler(void *userData)
 
   // execute registered progress handlers
   interruptFlag = FALSE;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
   {
     LIST_ITERATEX(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode,!interruptFlag)
     {
       interruptFlag = !progressHandlerNode->function(progressHandlerNode->userData);
+if (interruptFlag) fprintf(stderr,"%s, %d: interrupteed!!!!!!!!!!!!!!\n",__FILE__,__LINE__);
     }
   }
 
@@ -2372,7 +2372,6 @@ void Database_doneAll(void)
   String        databaseFileName;
   int           sqliteMode;
   int           sqliteResult;
-  SemaphoreLock semaphoreLock;
   DatabaseNode  *databaseNode;
   #ifndef NDEBUG
     uint          i;
@@ -2448,7 +2447,7 @@ void Database_doneAll(void)
   }
 
   // get database node
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&databaseList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     databaseNode = LIST_FIND(&databaseList,databaseNode,String_equals(databaseNode->fileName,databaseFileName));
     if (databaseNode != NULL)
@@ -2682,7 +2681,6 @@ void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
                              void                        *busyHandlerUserData
                             )
 {
-  SemaphoreLock           semaphoreLock;
   DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -2691,7 +2689,7 @@ void Database_addBusyHandler(DatabaseHandle              *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(busyHandlerFunction != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
     busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
@@ -2720,7 +2718,6 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
                                 void                        *busyHandlerUserData
                                )
 {
-  SemaphoreLock           semaphoreLock;
   DatabaseBusyHandlerNode *busyHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -2729,7 +2726,7 @@ void Database_removeBusyHandler(DatabaseHandle              *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(busyHandlerFunction != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->busyHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
     busyHandlerNode = LIST_FIND(&databaseHandle->databaseNode->busyHandlerList,
@@ -2752,7 +2749,6 @@ void Database_addProgressHandler(DatabaseHandle                  *databaseHandle
                                  void                            *progressHandlerUserData
                                 )
 {
-  SemaphoreLock               semaphoreLock;
   DatabaseProgressHandlerNode *progressHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -2761,7 +2757,7 @@ void Database_addProgressHandler(DatabaseHandle                  *databaseHandle
   assert(databaseHandle->handle != NULL);
   assert(progressHandlerFunction != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing busy handler
     progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
@@ -2790,7 +2786,6 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
                                     void                            *progressHandlerUserData
                                    )
 {
-  SemaphoreLock               semaphoreLock;
   DatabaseProgressHandlerNode *progressHandlerNode;
 
   assert(databaseHandle != NULL);
@@ -2799,7 +2794,7 @@ void Database_removeProgressHandler(DatabaseHandle                  *databaseHan
   assert(databaseHandle->handle != NULL);
   assert(progressHandlerFunction != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&databaseHandle->databaseNode->progressHandlerList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // find existing progress handler
     progressHandlerNode = LIST_FIND(&databaseHandle->databaseNode->progressHandlerList,
@@ -6384,17 +6379,28 @@ DatabaseId Database_getLastRowId(DatabaseHandle *databaseHandle)
 
 #ifndef NDEBUG
 
-void Database_debugEnable(bool enabled)
+void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
 {
   if (enabled)
   {
     databaseDebugCounter++;
+sqlite3_exec(databaseHandle->handle,
+                              "PRAGMA vdbe_trace=ON",
+                              CALLBACK(NULL,NULL),
+                              NULL
+                             );
   }
   else
   {
     assert(databaseDebugCounter>0);
 
     databaseDebugCounter--;
+if (databaseDebugCounter == 0) sqlite3_exec(databaseHandle->handle,
+                              "PRAGMA vdbe_trace=OFF",
+                              CALLBACK(NULL,NULL),
+                              NULL
+                             );
+
   }
 }
 

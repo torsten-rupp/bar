@@ -101,9 +101,8 @@ LOCAL bool initWebDAVLogin(ConstString             hostName,
                            void                    *getNamePasswordUserData
                           )
 {
-  bool          initFlag;
-  SemaphoreLock semaphoreLock;
-  String        s;
+  bool   initFlag;
+  String s;
 
   assert(!String_isEmpty(hostName));
   assert(loginName != NULL);
@@ -113,7 +112,7 @@ LOCAL bool initWebDAVLogin(ConstString             hostName,
 
   if (jobOptions != NULL)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       if (Password_isEmpty(&jobOptions->webDAVServer.password))
       {

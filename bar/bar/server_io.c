@@ -319,16 +319,15 @@ LOCAL void doneLine(ServerIO *serverIO)
 
 LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 {
-  SemaphoreLock semaphoreLock;
-  Errors        error;
-  uint          n;
-  uint          newOutputBufferSize;
+  Errors error;
+  uint   n;
+  uint   newOutputBufferSize;
 
   assert(serverIO != NULL);
   assert(line != NULL);
 
   error = ERROR_UNKNOWN;
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  SEMAPHORE_LOCKED_DO(&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get line length
     n = String_length(line);
@@ -1340,7 +1339,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
   uint               errorCode;
   String             data;
   ServerIOResultNode *resultNode;
-  SemaphoreLock      semaphoreLock;
   #ifndef NDEBUG
     size_t             iteratorVariable;
     Codepoint          codepoint;
@@ -1385,7 +1383,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
 //TODO: parse arguments?
 
       // add result
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         List_append(&serverIO->resultList,resultNode);
 //fprintf(stderr,"%s, %d: appended result: %d %d %d %s\n",__FILE__,__LINE__,resultNode->id,resultNode->error,resultNode->completedFlag,String_cString(resultNode->data));
@@ -1640,7 +1638,6 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
                             StringMap  resultMap
                            )
 {
-  SemaphoreLock      semaphoreLock;
   TimeoutInfo        timeoutInfo;
   uint               i;
   ServerIOResultNode *resultNode;
@@ -1652,7 +1649,7 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
   // wait for result, timeout, or quit
   resultNode     = NULL;
   Misc_initTimeout(&timeoutInfo,timeout);
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,timeout)
+  SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,timeout)
   {
     do
     {
