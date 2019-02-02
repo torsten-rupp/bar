@@ -78,7 +78,7 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
 {
   uint64                  size;
   const FragmentRangeNode *fragmentRangeNode;
-  
+
   size = 0LL;
   LIST_ITERATE(&fragmentNode->rangeList,fragmentRangeNode)
   {
@@ -152,14 +152,12 @@ void FragmentList_init(FragmentList *fragmentList)
   assert(fragmentList != NULL);
 
   List_init(fragmentList);
-  Semaphore_init(&fragmentList->lock,SEMAPHORE_TYPE_BINARY);
 }
 
 void FragmentList_done(FragmentList *fragmentList)
 {
   assert(fragmentList != NULL);
 
-  Semaphore_done(&fragmentList->lock);
   List_done(fragmentList,(ListNodeFreeFunction)freeFragmentNode,NULL);
 }
 

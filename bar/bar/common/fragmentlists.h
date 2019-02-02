@@ -60,37 +60,11 @@ typedef struct FragmentNode
 typedef struct
 {
   LIST_HEADER(FragmentNode);
-
-  Semaphore lock;
 } FragmentList;
 
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
-
-/***********************************************************************\
-* Name   : FRAGMENTLIST_LOCKED_DO
-* Purpose: execute block with fragment list locked
-* Input  : fragmentList      - fragment list
-*          semaphoreLockType - lock type; see SemaphoreLockTypes
-*          timeout           - timeout [ms] or NO_WAIT, WAIT_FOREVER
-* Output : -
-* Return : -
-* Notes  : usage:
-*            SemaphoreLock semaphoreLock;
-*            FRAGMENTLIST_LOCKED_DO(fragmentList,semaphoreLockType,timeout)
-*            {
-*              ...
-*            }
-*
-*          semaphore must be unlocked manually if 'break' is used!
-\***********************************************************************/
-
-#define FRAGMENTLIST_LOCKED_DO(fragmentList,semaphoreLockType,timeout) \
-  for (SemaphoreLock semaphoreLock = Semaphore_lock(&(fragmentList)->lock,semaphoreLockType,timeout); \
-       semaphoreLock; \
-       Semaphore_unlock(&(fragmentList)->lock), semaphoreLock = FALSE \
-      )
 
 /***********************************************************************\
 * Name   : FRAGMENTLIST_ITERATE
@@ -162,44 +136,6 @@ void FragmentList_init(FragmentList *fragmentList);
 \***********************************************************************/
 
 void FragmentList_done(FragmentList *fragmentList);
-
-/***********************************************************************\
-* Name   : FragmentList_lock
-* Purpose: lock fragment list
-* Input  : fragmentNode - fragment node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-INLINE void FragmentList_lock(FragmentList *fragmentList, SemaphoreLockTypes semaphoreLockType);
-#if defined(NDEBUG) || defined(__FRAGMENTLISTS_IMPLEMENTATION__)
-INLINE void FragmentList_lock(FragmentList *fragmentList, SemaphoreLockTypes semaphoreLockType)
-{
-  assert(fragmentList != NULL);
-
-  Semaphore_lock(&fragmentList->lock,semaphoreLockType,WAIT_FOREVER);
-}
-#endif /* NDEBUG || __FRAGMENTLISTS_IMPLEMENTATION__ */
-
-/***********************************************************************\
-* Name   : FragmentList_unlock
-* Purpose: unlock fragment list
-* Input  : fragmentNode - fragment node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-INLINE void FragmentList_unlock(FragmentList *fragmentList);
-#if defined(NDEBUG) || defined(__FRAGMENTLISTS_IMPLEMENTATION__)
-INLINE void FragmentList_unlock(FragmentList *fragmentList)
-{
-  assert(fragmentList != NULL);
-
-  Semaphore_unlock(&fragmentList->lock);
-}
-#endif /* NDEBUG || __FRAGMENTLISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : FragmentList_initNode
@@ -330,7 +266,7 @@ bool FragmentList_rangeExists(const FragmentNode *fragmentNode,
 \***********************************************************************/
 
 bool FragmentList_isComplete(const FragmentNode *fragmentNode);
- 
+
 /***********************************************************************\
 * Name   : FragmentList_getSize
 * Purpose: get fragment ranges size
