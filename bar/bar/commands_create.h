@@ -68,9 +68,8 @@
 *          scheduleTitle                - schedule title
 *          scheduleCustomText           - schedule custome text or NULL
 *          startDateTime                - date/time of start [s]
-*          dryRun                       - TRUE for dry-run (no storage,
-*                                         no incremental data, no update
-*                                         database)
+*          storageFlags                 - storage flags; see
+*                                         STORAGE_FLAGS_...
 *          getNamePasswordFunction      - get password callback (can
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password
@@ -111,7 +110,7 @@ Errors Command_create(ServerIO                     *masterIO,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
                       uint64                       startDateTime,
-                      bool                         dryRun,
+                      StorageFlags                 storageFlags,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
                       StatusInfoFunction           statusInfoFunction,

@@ -103,7 +103,7 @@ typedef struct
   ConstString                 scheduleTitle;                      // schedule title or NULL
   ConstString                 scheduleCustomText;                 // schedule custom text or NULL
   uint64                      startDateTime;                      // date/time of start [s]
-  bool                        dryRun;
+  StorageFlags                storageFlags;                       // storage flags; see STORAGE_FLAGS_...
 
   LogHandle                   *logHandle;                         // log handle
 
@@ -116,9 +116,6 @@ typedef struct
   ArchiveHandle               archiveHandle;
 
   bool                        collectorSumThreadExitedFlag;       // TRUE iff collector sum thread exited
-
-  FragmentList                fragmentList;                       // fragment list
-  FragmentNode                *statusInfoFragmentNode;            // current fragment node in status info
 
   MsgQueue                    storageMsgQueue;                    // queue with waiting storage files
   Semaphore                   storageInfoLock;                    // lock semaphore for storage info
@@ -134,8 +131,10 @@ typedef struct
 
   StatusInfoFunction          statusInfoFunction;                 // status info callback
   void                        *statusInfoUserData;                // user data for status info call back
-  StatusInfo                  statusInfo;                         // status info
   Semaphore                   statusInfoLock;                     // status info lock
+  StatusInfo                  statusInfo;                         // status info
+  FragmentList                statusInfoFragmentList;             // status info fragment list
+  FragmentNode                *statusInfoCurrentFragmentNode;     // current fragment node in status info
   Semaphore                   statusInfoNameLock;                 // status info name lock
   uint                        statusInfoNameLockCounter;          // status info name lock counter
 
@@ -264,7 +263,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *                                       (normal/full/incremental)
 *          storageNameCustomText      - storage name custome text or NULL
 *          startDateTime              - date/time of start [s]
-*          dryRun                     - TRUE for dry-run
+*          storageFlags               - storage flags; see STORAGE_FLAGS_...
 *          statusInfoFunction         - status info call back function
 *                                       (can be NULL)
 *          statusInfoUserData         - user data for status info
@@ -299,7 +298,7 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
                           ConstString           scheduleTitle,
                           ConstString           scheduleCustomText,
                           uint64                startDateTime,
-                          bool                  dryRun,
+                          StorageFlags          storageFlags,
                           StatusInfoFunction    statusInfoFunction,
                           void                  *statusInfoUserData,
                           IsPauseFunction       isPauseCreateFunction,
@@ -314,58 +313,60 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
   assert(createInfo != NULL);
 
   // init variables
-  createInfo->indexHandle                  = indexHandle;
-  createInfo->jobUUID                      = jobUUID;
-  createInfo->scheduleUUID                 = scheduleUUID;
-  createInfo->includeEntryList             = includeEntryList;
-  createInfo->excludePatternList           = excludePatternList;
-  createInfo->compressExcludePatternList   = compressExcludePatternList;
-  createInfo->deltaSourceList              = deltaSourceList;
-  createInfo->jobOptions                   = jobOptions;
-  createInfo->scheduleTitle                = scheduleTitle;
-  createInfo->scheduleCustomText           = scheduleCustomText;
-  createInfo->dryRun                       = dryRun;
-  createInfo->logHandle                    = logHandle;
-  createInfo->storeIncrementalFileInfoFlag = FALSE;
-  createInfo->startDateTime                = startDateTime;
-  createInfo->collectorSumThreadExitedFlag = FALSE;
-  FragmentList_init(&createInfo->fragmentList);
-  createInfo->statusInfoFragmentNode       = NULL;
-  createInfo->storage.count                = 0;
-  createInfo->storage.bytes                = 0LL;
-  createInfo->storageThreadExitFlag        = FALSE;
+  createInfo->indexHandle                   = indexHandle;
+  createInfo->jobUUID                       = jobUUID;
+  createInfo->scheduleUUID                  = scheduleUUID;
+  createInfo->includeEntryList              = includeEntryList;
+  createInfo->excludePatternList            = excludePatternList;
+  createInfo->compressExcludePatternList    = compressExcludePatternList;
+  createInfo->deltaSourceList               = deltaSourceList;
+  createInfo->jobOptions                    = jobOptions;
+  createInfo->scheduleTitle                 = scheduleTitle;
+  createInfo->scheduleCustomText            = scheduleCustomText;
+  createInfo->startDateTime                 = startDateTime;
+  createInfo->storageFlags                  = storageFlags;
+
+  createInfo->logHandle                     = logHandle;
+
+  createInfo->storeIncrementalFileInfoFlag  = FALSE;
+
+  createInfo->collectorSumThreadExitedFlag  = FALSE;
+
+  createInfo->storage.count                 = 0;
+  createInfo->storage.bytes                 = 0LL;
+  createInfo->storageThreadExitFlag         = FALSE;
   StringList_init(&createInfo->storageFileList);
-  createInfo->failError                    = ERROR_NONE;
-  createInfo->statusInfoFunction           = statusInfoFunction;
-  createInfo->statusInfoUserData           = statusInfoUserData;
-  createInfo->isPauseCreateFunction        = isPauseCreateFunction;
-  createInfo->isPauseCreateUserData        = isPauseCreateUserData;
-  createInfo->isPauseStorageFunction       = isPauseStorageFunction;
-  createInfo->isPauseStorageUserData       = isPauseStorageUserData;
-  createInfo->isAbortedFunction            = isAbortedFunction;
-  createInfo->isAbortedUserData            = isAbortedUserData;
+
+  createInfo->failError                     = ERROR_NONE;
+
+  createInfo->statusInfoFunction            = statusInfoFunction;
+  createInfo->statusInfoUserData            = statusInfoUserData;
+  FragmentList_init(&createInfo->statusInfoFragmentList);
+  createInfo->statusInfoCurrentFragmentNode = NULL;
+
+  createInfo->isPauseCreateFunction         = isPauseCreateFunction;
+  createInfo->isPauseCreateUserData         = isPauseCreateUserData;
+  createInfo->isPauseStorageFunction        = isPauseStorageFunction;
+  createInfo->isPauseStorageUserData        = isPauseStorageUserData;
+  createInfo->isAbortedFunction             = isAbortedFunction;
+  createInfo->isAbortedUserData             = isAbortedUserData;
   initStatusInfo(&createInfo->statusInfo);
 
-  if (   (archiveType == ARCHIVE_TYPE_FULL)
-      || (archiveType == ARCHIVE_TYPE_INCREMENTAL)
-      || (archiveType == ARCHIVE_TYPE_DIFFERENTIAL)
-      || (archiveType == ARCHIVE_TYPE_CONTINUOUS)
-     )
+  // get archive type
+  if (archiveType != ARCHIVE_TYPE_NONE)
   {
     createInfo->archiveType = archiveType;
-    createInfo->partialFlag =    (archiveType == ARCHIVE_TYPE_INCREMENTAL)
-                              || (archiveType == ARCHIVE_TYPE_DIFFERENTIAL);
-//TODO
-//                              || (archiveType == ARCHIVE_TYPE_CONTINUOUS);
   }
   else
   {
     createInfo->archiveType = jobOptions->archiveType;
-    createInfo->partialFlag =    (jobOptions->archiveType == ARCHIVE_TYPE_INCREMENTAL)
-                              || (jobOptions->archiveType == ARCHIVE_TYPE_DIFFERENTIAL);
-//TODO
-//                              || (jobOptions->archiveType == ARCHIVE_TYPE_CONTINUOUS);
   }
+
+  // set partial flag
+  createInfo->partialFlag =    (createInfo->archiveType == ARCHIVE_TYPE_INCREMENTAL)
+                            || (createInfo->archiveType == ARCHIVE_TYPE_DIFFERENTIAL);
+//TODO
+//                            || (createInfo->archiveType == ARCHIVE_TYPE_CONTINUOUS);
 
   // init entry name queue, storage queue
   if (!MsgQueue_init(&createInfo->entryMsgQueue,MAX_ENTRY_MSG_QUEUE))
@@ -418,8 +419,8 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
   MsgQueue_done(&createInfo->entryMsgQueue,(MsgQueueMsgFreeFunction)freeEntryMsg,NULL);
 
   doneStatusInfo(&createInfo->statusInfo);
+  FragmentList_done(&createInfo->statusInfoFragmentList);
   StringList_done(&createInfo->storageFileList);
-  FragmentList_done(&createInfo->fragmentList);
 }
 
 /***********************************************************************\
@@ -621,7 +622,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
       return error;
     }
   }
-  
+
   // check write permission
   if (!File_isWritable(directoryName))
   {
@@ -930,13 +931,12 @@ LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
                                    void                    *userData
                                   )
 {
-  CreateInfo    *createInfo = (CreateInfo*)userData;
-  SemaphoreLock semaphoreLock;
+  CreateInfo *createInfo = (CreateInfo*)userData;
 
   assert(createInfo != NULL);
   assert(storageStatusInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
   {
     createInfo->statusInfo.storage.doneSize = storageStatusInfo->storageDoneBytes;
     createInfo->statusInfo.volume.number    = storageStatusInfo->volumeNumber;
@@ -1541,8 +1541,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   String         name;
   Errors         error;
   FileInfo       fileInfo;
-  SemaphoreLock  semaphoreLock;
-  DeviceInfo    deviceInfo;
+  DeviceInfo     deviceInfo;
 
   assert(createInfo != NULL);
   assert(createInfo->includeEntryList != NULL);
@@ -1609,7 +1608,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
                     createInfo->statusInfo.total.count++;
                     createInfo->statusInfo.total.size += fileInfo.size;
@@ -1622,7 +1621,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               // add to known names history
               Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 createInfo->statusInfo.total.count++;
                 updateStatusInfo(createInfo,FALSE);
@@ -1639,7 +1638,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
                     createInfo->statusInfo.total.count++;
                     updateStatusInfo(createInfo,FALSE);
@@ -1659,7 +1658,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
                     createInfo->statusInfo.total.count++;
                     createInfo->statusInfo.total.size += fileInfo.size;
@@ -1679,7 +1678,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
                     createInfo->statusInfo.total.count++;
                     updateStatusInfo(createInfo,FALSE);
@@ -1780,7 +1779,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
-                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
                         createInfo->statusInfo.total.count++;
                         createInfo->statusInfo.total.size += fileInfo.size;
@@ -1815,7 +1814,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                           || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                          )
                       {
-                        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                         {
                           createInfo->statusInfo.total.count++;
                           updateStatusInfo(createInfo,FALSE);
@@ -1880,7 +1879,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                       || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                       )
                                   {
-                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       createInfo->statusInfo.total.size += fileInfo.size;
@@ -1915,7 +1914,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                       || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                      )
                                   {
-                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       updateStatusInfo(createInfo,FALSE);
@@ -1945,7 +1944,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                       || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                       )
                                   {
-                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       createInfo->statusInfo.total.size += fileInfo.size;
@@ -1976,7 +1975,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                       || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                       )
                                   {
-                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
@@ -1992,7 +1991,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                 case ENTRY_TYPE_IMAGE:
                                   if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                   {
-                                    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       createInfo->statusInfo.total.size += fileInfo.size;
@@ -2036,7 +2035,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                         )
                     {
-                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
                         createInfo->statusInfo.total.count++;
                         updateStatusInfo(createInfo,FALSE);
@@ -2069,7 +2068,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                         )
                     {
-                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
                         createInfo->statusInfo.total.count++;
                         createInfo->statusInfo.total.size += fileInfo.size;
@@ -2103,7 +2102,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                         )
                     {
-                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
                         createInfo->statusInfo.total.count++;
                         updateStatusInfo(createInfo,FALSE);
@@ -2121,7 +2120,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       }
                       UNUSED_VARIABLE(deviceInfo);
 
-                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
                         createInfo->statusInfo.total.count++;
                         createInfo->statusInfo.total.size += fileInfo.size;
@@ -2156,7 +2155,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   }
 
   // done
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     createInfo->statusInfo.collectTotalSumDone = TRUE;
     updateStatusInfo(createInfo,TRUE);
@@ -2194,7 +2193,6 @@ LOCAL void collectorThreadCode(CreateInfo *createInfo)
   ulong              n;
   String             basePath;
   FileInfo           fileInfo;
-  SemaphoreLock      semaphoreLock;
   String             fileName;
   Errors             error;
   DeviceInfo         deviceInfo;
@@ -2264,7 +2262,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           createInfo->statusInfo.done.count++;
           createInfo->statusInfo.error.count++;
@@ -2304,7 +2302,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'\n",String_cString(name));
 
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
                     createInfo->statusInfo.skipped.count++;
                     createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2317,7 +2315,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             {
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 createInfo->statusInfo.skipped.count++;
                 createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2364,7 +2362,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             {
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 createInfo->statusInfo.skipped.count++;
                 createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2446,7 +2444,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'\n",String_cString(name));
 
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
                     createInfo->statusInfo.skipped.count++;
                     createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2459,7 +2457,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             {
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 createInfo->statusInfo.skipped.count++;
                 createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2493,7 +2491,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             {
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 createInfo->statusInfo.skipped.count++;
                 createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2505,7 +2503,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
             logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
 
-            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
             {
               createInfo->statusInfo.done.count++;
               createInfo->statusInfo.done.size += (uint64)fileInfo.size;
@@ -2585,7 +2583,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
           logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
             createInfo->statusInfo.done.count++;
             createInfo->statusInfo.error.count++;
@@ -2641,7 +2639,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-                SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                 {
                   createInfo->statusInfo.skipped.count++;
                   createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2690,7 +2688,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
                     createInfo->statusInfo.skipped.count++;
                     createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2718,7 +2716,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
                       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
-                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
                         createInfo->statusInfo.done.count++;
                         createInfo->statusInfo.done.size += (uint64)fileInfo.size;
@@ -2736,7 +2734,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
                       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
 
-                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
                         createInfo->statusInfo.done.count++;
                         createInfo->statusInfo.error.count++;
@@ -2958,7 +2956,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
                             logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
 
-                            SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                            SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                             {
                               createInfo->statusInfo.done.count++;
                               createInfo->statusInfo.done.size += (uint64)fileInfo.size;
@@ -2973,7 +2971,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       {
                         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(fileName));
 
-                        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                         {
                           createInfo->statusInfo.skipped.count++;
                           createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -2985,7 +2983,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     {
                       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(fileName));
 
-                      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
                         createInfo->statusInfo.skipped.count++;
                         createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -3002,7 +3000,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
                   logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
-                  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
                     createInfo->statusInfo.done.count++;
                     createInfo->statusInfo.error.count++;
@@ -3057,7 +3055,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-                SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                 {
                   createInfo->statusInfo.skipped.count++;
                   createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -3160,7 +3158,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-                SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                 {
                   createInfo->statusInfo.skipped.count++;
                   createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -3207,7 +3205,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
                           logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
 
-                          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                          SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                           {
                             createInfo->statusInfo.done.count++;
                             createInfo->statusInfo.error.count++;
@@ -3237,7 +3235,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
 
-                SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                 {
                   createInfo->statusInfo.skipped.count++;
                   createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -3249,7 +3247,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 createInfo->statusInfo.done.count++;
                 createInfo->statusInfo.done.size += (uint64)fileInfo.size;
@@ -3264,7 +3262,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(name));
 
-          SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
             createInfo->statusInfo.skipped.count++;
             createInfo->statusInfo.skipped.size += fileInfo.size;
@@ -3281,7 +3279,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       {
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_MISSING,"No matching entry found for '%s'\n",String_cString(includeEntryNode->string));
 
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           createInfo->statusInfo.skipped.count++;
           updateStatusInfo(createInfo,FALSE);
@@ -3354,11 +3352,9 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
 LOCAL void storageInfoIncrement(CreateInfo *createInfo, uint64 size)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(createInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     createInfo->storage.count += 1;
     createInfo->storage.bytes += size;
@@ -3377,11 +3373,9 @@ LOCAL void storageInfoIncrement(CreateInfo *createInfo, uint64 size)
 
 LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 {
-  SemaphoreLock semaphoreLock;
-
   assert(createInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     assert(createInfo->storage.count > 0);
     assert(createInfo->storage.bytes >= size);
@@ -3402,12 +3396,10 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 
 LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 {
-  SemaphoreLock semaphoreLock;
-
   // wait for space in temporary directory
   if (globalOptions.maxTmpSize > 0)
   {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&createInfo->storageInfoLock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       while (   (createInfo->storage.count > 2)                           // more than 2 archives are waiting
              && (createInfo->storage.bytes > globalOptions.maxTmpSize)    // temporary space limit exceeded
@@ -3524,7 +3516,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   FileInfo      fileInfo;
   String        archiveName;
   StorageMsg    storageMsg;
-  SemaphoreLock semaphoreLock;
 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(intermediateFileName));
@@ -3575,7 +3566,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   }
 
   // update status info
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     createInfo->statusInfo.storage.totalSize += fileInfo.size;
     updateStatusInfo(createInfo,FALSE);
@@ -3878,6 +3869,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                &storageSpecifier,
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
+                               FALSE,  // no storage
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK(NULL,NULL),  // updateStatusInfo
                                CALLBACK(NULL,NULL),  // getPassword
@@ -4090,6 +4082,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                &storageSpecifier,
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
+                               FALSE,  // no storage
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                CALLBACK(NULL,NULL),  // updateStatusInfo
                                CALLBACK(NULL,NULL),  // getPassword
@@ -4189,7 +4182,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   bool             appendFlag;
   StorageHandle    storageHandle;
 //  ulong            bufferLength;
-  SemaphoreLock    semaphoreLock;
   String           pattern;
 
   String           directoryName;
@@ -4225,7 +4217,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // initial storage pre-processing
   if (   (createInfo->failError == ERROR_NONE)
-      && !createInfo->dryRun
+      && !IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN)
       && !isAborted(createInfo)
      )
   {
@@ -4272,7 +4264,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                 );
 
     if (   (createInfo->failError == ERROR_NONE)
-        && !createInfo->dryRun
+        && !IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN)
         && !isAborted(createInfo)
        )
     {
@@ -4310,7 +4302,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
       // check storage size, purge old archives
-      if (!createInfo->dryRun && (createInfo->jobOptions->maxStorageSize > 0LL))
+      if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN) && (createInfo->jobOptions->maxStorageSize > 0LL))
       {
         // purge archives by max. job storage size
         purgeStorageByJobUUID(createInfo->indexHandle,
@@ -4407,7 +4399,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
 
         // update status info
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
         {
           String_set(createInfo->statusInfo.storage.name,printableStorageName);
           updateStatusInfo(createInfo,FALSE);
@@ -4783,7 +4775,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // final storage post-processing
   if (   (createInfo->failError == ERROR_NONE)
-      && !createInfo->dryRun
+      && !IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN)
       && !isAborted(createInfo)
      )
   {
@@ -4887,13 +4879,13 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size)
 {
   FragmentNode *fragmentNode;
 
-  FRAGMENTLIST_LOCKED_DO(&createInfo->fragmentList,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // get/create fragment node
-    fragmentNode = FragmentList_find(&createInfo->fragmentList,name);
+    fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
     if (fragmentNode == NULL)
     {
-      fragmentNode = FragmentList_add(&createInfo->fragmentList,name,size,NULL,0);
+      fragmentNode = FragmentList_add(&createInfo->statusInfoFragmentList,name,size,NULL,0);
       if (fragmentNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
@@ -4902,23 +4894,20 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size)
     assert(fragmentNode != NULL);
 
     // status update (Note: additional unprotected check to optimize number of locks)
-    if (createInfo->statusInfoFragmentNode == NULL)
+    if (createInfo->statusInfoCurrentFragmentNode == NULL)
     {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {      
-        if (createInfo->statusInfoFragmentNode == NULL)
-        {
-          createInfo->statusInfoFragmentNode     = fragmentNode;
+      if (createInfo->statusInfoCurrentFragmentNode == NULL)
+      {
+        createInfo->statusInfoCurrentFragmentNode = fragmentNode;
 
-          String_set(createInfo->statusInfo.entry.name,name);
-          createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-          createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+        String_set(createInfo->statusInfo.entry.name,name);
+        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
 
-          updateStatusInfo(createInfo,TRUE);
-        }
+        updateStatusInfo(createInfo,TRUE);
       }
     }
-    assert(createInfo->statusInfoFragmentNode != NULL);
+    assert(createInfo->statusInfoCurrentFragmentNode != NULL);
   }
 }
 
@@ -4936,101 +4925,22 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 {
   FragmentNode *fragmentNode;
 
-  FRAGMENTLIST_LOCKED_DO(&createInfo->fragmentList,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // get/create fragment node
-    fragmentNode = FragmentList_find(&createInfo->fragmentList,name);
+    fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
 
     // check if fragment complete
     if (   (fragmentNode != NULL)
-        && (fragmentNode == createInfo->statusInfoFragmentNode)
-        && FragmentList_isComplete(createInfo->statusInfoFragmentNode)
+        && (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+        && FragmentList_isComplete(createInfo->statusInfoCurrentFragmentNode)
        )
     {
-      FragmentList_discard(&createInfo->fragmentList,createInfo->statusInfoFragmentNode);
-      createInfo->statusInfoFragmentNode = NULL;
+      FragmentList_discard(&createInfo->statusInfoFragmentList,createInfo->statusInfoCurrentFragmentNode);
+      createInfo->statusInfoCurrentFragmentNode = NULL;
     }
   }
 }
-
-/***********************************************************************\
-* Name   : fragmentUpdateLock
-* Purpose: lock fragment update
-* Input  : createInfo - create info structure
-*          name       - name of entry
-* Output : -
-* Return : fragment node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL FragmentNode *fragmentUpdateLock(CreateInfo *createInfo, ConstString name)
-{
-  FragmentNode  *fragmentNode;
-  SemaphoreLock semaphoreLock;
-
-  assert(createInfo != NULL);
-
-  // lock
-  FragmentList_lock(&createInfo->fragmentList,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-
-  // get/create fragment node
-  fragmentNode = FragmentList_find(&createInfo->fragmentList,name);
-  assert(fragmentNode != NULL);
-
-  // status update (Note: additional unprotected check to optimize number of locks)
-  if (createInfo->statusInfoFragmentNode == NULL)
-  {
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {      
-      if (createInfo->statusInfoFragmentNode == NULL)
-      {
-        createInfo->statusInfoFragmentNode     = fragmentNode;
-
-        String_set(createInfo->statusInfo.entry.name,name);
-        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
-
-        updateStatusInfo(createInfo,TRUE);
-      }
-    }
-  }
-  assert(createInfo->statusInfoFragmentNode != NULL);
-  
-  return fragmentNode;
-}
-
-/***********************************************************************\
-* Name   : fragmentUpdateUnlock
-* Purpose: fragment update unlock
-* Input  : createInfo - create info structure
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void fragmentUpdateUnlock(CreateInfo *createInfo)
-{
-  assert(createInfo != NULL);
-
-  // unlock
-  FragmentList_unlock(&createInfo->fragmentList);
-}
-
-/***********************************************************************\
-* Name   : FRAGMENT_UPDATE
-* Purpose: update fragment
-* Input  : createInfo - create info structure
-*          name       - name of entry
-* Output : fragmentNode - fragment node
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#define FRAGMENT_UPDATE(fragmentNode,createInfo,name) \
-  for (FragmentNode *fragmentNode = fragmentUpdateLock(createInfo,name); \
-       fragmentNode != NULL; \
-       fragmentUpdateUnlock(createInfo), fragmentNode = NULL \
-      )
 
 /***********************************************************************\
 * Name   : statusInfoUpdateLock
@@ -5038,48 +4948,40 @@ LOCAL void fragmentUpdateUnlock(CreateInfo *createInfo)
 * Input  : createInfo - create info structure
 *          name - name of entry
 * Output : -
-* Return : TRUE if status info update ok, FALSE otherwise
+* Return : TRUE iff locked
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool statusInfoUpdateLock(CreateInfo *createInfo, ConstString name)
+LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString name, uint64 offset, uint64 length)
 {
-  bool         updateFlag;
-  FragmentNode *fragmentNode;
+  SemaphoreLock semaphoreLock;
+  FragmentNode  *fragmentNode;
 
   assert(createInfo != NULL);
 
-  updateFlag = FALSE;
-
-  FRAGMENTLIST_LOCKED_DO(&createInfo->fragmentList,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  // lock
+  semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+  if (semaphoreLock)
   {
     // get fragment node (if possible)
-    fragmentNode = FragmentList_find(&createInfo->fragmentList,name);
+    fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
 
     if (fragmentNode != NULL)
     {
-      // status update (Note: additional unprotected check to optimize number of locks)
-      if (createInfo->statusInfoFragmentNode == NULL)
-      {
-        SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {      
-          if (createInfo->statusInfoFragmentNode == NULL)
-          {
-            createInfo->statusInfoFragmentNode = fragmentNode;
+      FragmentList_addRange(fragmentNode,offset,length);
 
-            String_set(createInfo->statusInfo.entry.name,name);
-            createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-            createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
-          }
-        }
+      if (createInfo->statusInfoCurrentFragmentNode == NULL)
+      {
+        createInfo->statusInfoCurrentFragmentNode = fragmentNode;
+
+        String_set(createInfo->statusInfo.entry.name,name);
+        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
       }
     }
-
-    // check if update ok
-    updateFlag = (fragmentNode == NULL) || String_equals(createInfo->statusInfoFragmentNode->name,name);
   }
 
-  return updateFlag;
+  return semaphoreLock;
 }
 
 /***********************************************************************\
@@ -5100,38 +5002,36 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 
   assert(createInfo != NULL);
 
-  FRAGMENTLIST_LOCKED_DO(&createInfo->fragmentList,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  // get fragment node (if possible)
+  fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+
+  // check if fragment complete
+  if (   (fragmentNode != NULL)
+      && (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      && FragmentList_isComplete(createInfo->statusInfoCurrentFragmentNode)
+     )
   {
-    // get fragment node (if possible)
-    fragmentNode = FragmentList_find(&createInfo->fragmentList,name);
+    FragmentList_discard(&createInfo->statusInfoFragmentList,createInfo->statusInfoCurrentFragmentNode);
+    createInfo->statusInfoCurrentFragmentNode = NULL;
 
-    // check if fragment complete
-    if (   (fragmentNode != NULL)
-        && (fragmentNode == createInfo->statusInfoFragmentNode)
-        && FragmentList_isComplete(createInfo->statusInfoFragmentNode)
-       )
-    {
-      FragmentList_discard(&createInfo->fragmentList,createInfo->statusInfoFragmentNode);
-      createInfo->statusInfoFragmentNode = NULL;
-
-      updateFlag = TRUE;
-    }
-
-    // update
-    if (updateFlag)
-    {
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        updateStatusInfo(createInfo,TRUE);
-      }
-    }
+    updateFlag = TRUE;
   }
+
+  // update
+  if (updateFlag)
+  {
+    updateStatusInfo(createInfo,TRUE);
+  }
+
+
+  // unlock
+  Semaphore_unlock(&createInfo->statusInfoLock);
 }
 
 #define STATUS_INFO_GET(createInfo,name) \
-  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name); \
+  for (SemaphoreLock semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
        semaphoreLock; \
-       statusInfoUpdateUnlock(createInfo,name,FALSE), semaphoreLock = FALSE \
+       Semaphore_unlock(&createInfo->statusInfoLock), semaphoreLock = FALSE \
       )
 
 /***********************************************************************\
@@ -5145,8 +5045,8 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 * Notes  : -
 \***********************************************************************/
 
-#define STATUS_INFO_UPDATE(createInfo,name) \
-  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name); \
+#define STATUS_INFO_UPDATE(createInfo,name,offset,length) \
+  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name,offset,length); \
        semaphoreLock; \
        statusInfoUpdateUnlock(createInfo,name,TRUE), semaphoreLock = FALSE \
       )
@@ -5207,7 +5107,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName)
+      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -5234,7 +5134,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName)
+      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -5262,7 +5162,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName)
+      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.done.size += (uint64)fileInfo.size;
@@ -5287,7 +5187,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   // init fragment
   fragmentInit(createInfo,fileName,fileInfo.size);
 
-  if (!createInfo->jobOptions->noStorageFlag)
+  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -5363,28 +5263,22 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               // get current archive size
               archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
-              // update fragment
-              FRAGMENT_UPDATE(fragmentNode,createInfo,fileName)
-              {
-                FragmentList_addRange(fragmentNode,offset,bufferLength);
-              }
-              offset += bufferLength;
-
               // update status info
-              STATUS_INFO_UPDATE(createInfo,fileName)
+              STATUS_INFO_UPDATE(createInfo,fileName,offset,bufferLength)
               {
                 doneSize         = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
-                compressionRatio = (!createInfo->dryRun && (doneSize > 0))
+                compressionRatio = (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN) && (doneSize > 0))
                                      ? 100.0-(archiveSize*100.0)/doneSize
                                      : 0.0;
 
-                createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoFragmentNode);
-                createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoFragmentNode);
+                createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+                createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
                 createInfo->statusInfo.done.size        = doneSize;
                 createInfo->statusInfo.archiveSize      = archiveSize;
                 createInfo->statusInfo.compressionRatio = compressionRatio;
               }
+              offset += bufferLength;
             }
 
             if (isPrintInfo(2))
@@ -5426,7 +5320,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
-        STATUS_INFO_UPDATE(createInfo,fileName)
+        STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
         {
           createInfo->statusInfo.done.count++;
           createInfo->statusInfo.done.size += fragmentSize;
@@ -5494,7 +5388,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
     }
 
-    if (!createInfo->dryRun)
+    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
     {
       printInfo(1,"OK (%llu bytes%s%s)\n",
                 fragmentSize,
@@ -5527,7 +5421,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   }
 
   // update done entries
-  STATUS_INFO_UPDATE(createInfo,fileName)
+  STATUS_INFO_UPDATE(createInfo,fileName,offset,0LL)
   {
     createInfo->statusInfo.done.count++;
   }
@@ -5582,9 +5476,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   FileSystemHandle fileSystemHandle;
   ArchiveFlags     archiveFlags;
   ArchiveEntryInfo archiveEntryInfo;
-  uint64           offset;
+  uint64           blockOffset;
   uint64           blockCount;
-  uint64           block;
   uint             bufferBlockCount;
   uint64           archiveSize;
   uint64           doneSize;
@@ -5607,7 +5500,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(deviceName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,deviceName)
+      STATUS_INFO_UPDATE(createInfo,deviceName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -5655,7 +5548,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'\n",String_cString(deviceName));
-      STATUS_INFO_UPDATE(createInfo,deviceName)
+      STATUS_INFO_UPDATE(createInfo,deviceName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.done.size += (uint64)deviceInfo.size;
@@ -5690,7 +5583,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   // init fragment
   fragmentInit(createInfo,deviceName,deviceInfo.size);
 
-  if (!createInfo->jobOptions->noStorageFlag)
+  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -5736,10 +5629,9 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
 
     // write device content to archive
-    offset     = fragmentOffset;
-    block      = fragmentOffset/(uint64)deviceInfo.blockSize;
-    blockCount = (fragmentSize+(uint64)deviceInfo.blockSize-1)/(uint64)deviceInfo.blockSize;
-    error      = ERROR_NONE;
+    blockOffset = fragmentOffset/(uint64)deviceInfo.blockSize;
+    blockCount  = (fragmentSize+(uint64)deviceInfo.blockSize-1)/(uint64)deviceInfo.blockSize;
+    error       = ERROR_NONE;
     while (   (createInfo->failError == ERROR_NONE)
            && !isAborted(createInfo)
            && (error == ERROR_NONE)
@@ -5756,11 +5648,11 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
             )
       {
         if (   !fileSystemFlag
-            || FileSystem_blockIsUsed(&fileSystemHandle,block*(uint64)deviceInfo.blockSize)
+            || FileSystem_blockIsUsed(&fileSystemHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo.blockSize)
            )
         {
           // seek to block
-          error = Device_seek(&deviceHandle,block*(uint64)deviceInfo.blockSize);
+          error = Device_seek(&deviceHandle,(blockOffset+(uint64)bufferBlockCount)*(uint64)deviceInfo.blockSize);
           if (error != ERROR_NONE) break;
 
           // read block
@@ -5770,10 +5662,9 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
         else
         {
           // block not used -> store as "0"-block
-          memset(buffer+bufferBlockCount*deviceInfo.blockSize,0,deviceInfo.blockSize);
+          memClear(buffer+bufferBlockCount*deviceInfo.blockSize,deviceInfo.blockSize);
         }
         bufferBlockCount++;
-        block++;
         blockCount--;
       }
       if (error != ERROR_NONE) break;
@@ -5787,28 +5678,22 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           // get current archive size
           archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
-          // update fragment
-          FRAGMENT_UPDATE(fragmentNode,createInfo,deviceName)
-          {
-            FragmentList_addRange(fragmentNode,offset,(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize);
-          }
-          offset += (uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
-
           // update status info
-          STATUS_INFO_UPDATE(createInfo,deviceName)
+          STATUS_INFO_UPDATE(createInfo,deviceName,blockOffset*(uint64)deviceInfo.blockSize,(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize)
           {
             doneSize         = createInfo->statusInfo.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
-            compressionRatio = (!createInfo->dryRun && (doneSize > 0))
+            compressionRatio = (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN) && (doneSize > 0))
                                  ? 100.0-(archiveSize*100.0)/doneSize
                                  : 0.0;
 
-            createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoFragmentNode);
-            createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoFragmentNode);
+            createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+            createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
             createInfo->statusInfo.done.size        = doneSize;
             createInfo->statusInfo.archiveSize      = archiveSize;
             createInfo->statusInfo.compressionRatio = compressionRatio;
           }
+          blockOffset += (uint64)bufferBlockCount;
         }
 
         if (isPrintInfo(2))
@@ -5897,7 +5782,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!createInfo->dryRun)
+    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
     {
       printInfo(1,"OK (%s, %llu bytes%s%s)\n",
                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
@@ -5934,7 +5819,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   }
 
   // update done entries
-  STATUS_INFO_UPDATE(createInfo,deviceName)
+  STATUS_INFO_UPDATE(createInfo,deviceName,blockOffset*(uint64)deviceInfo.blockSize,0LL)
   {
     createInfo->statusInfo.done.count++;
   }
@@ -5981,7 +5866,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,directoryName)
+      STATUS_INFO_UPDATE(createInfo,directoryName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6008,7 +5893,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,directoryName)
+      STATUS_INFO_UPDATE(createInfo,directoryName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6028,10 +5913,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     }
   }
 
-  // fragment
-  fragmentInit(createInfo,directoryName,0LL);
-
-  if (!createInfo->jobOptions->noStorageFlag)
+  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
   {
     // new directory
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
@@ -6048,8 +5930,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
                  Error_getText(error)
                 );
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(directoryName));
-      fragmentDone(createInfo,directoryName);
-      File_doneExtendedAttributes(&fileExtendedAttributeList);      
+      File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
@@ -6061,13 +5942,12 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       printError("Cannot close archive directory entry (error: %s)!\n",
                  Error_getText(error)
                 );
-      fragmentDone(createInfo,directoryName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
     // output result
-    if (!createInfo->dryRun)
+    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -6087,13 +5967,12 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
   }
 
   // update done entries
-  STATUS_INFO_UPDATE(createInfo,directoryName)
+  STATUS_INFO_UPDATE(createInfo,directoryName,0LL,0LL)
   {
     createInfo->statusInfo.done.count++;
   }
 
   // free resources
-  fragmentDone(createInfo,directoryName);
   File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
@@ -6138,7 +6017,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,linkName)
+      STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6165,7 +6044,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,linkName)
+      STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6185,10 +6064,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     }
   }
 
-  // init fragment
-  fragmentInit(createInfo,linkName,0LL);
-
-  if (!createInfo->jobOptions->noStorageFlag)
+  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
   {
     // read link
     fileName = String_new();
@@ -6199,7 +6075,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(linkName));
-        STATUS_INFO_UPDATE(createInfo,linkName)
+        STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
         {
           createInfo->statusInfo.done.count++;
           createInfo->statusInfo.done.size += (uint64)fileInfo.size;
@@ -6207,7 +6083,6 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
           createInfo->statusInfo.error.size += (uint64)fileInfo.size;
         }
         String_delete(fileName);
-        fragmentDone(createInfo,linkName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
         return ERROR_NONE;
       }
@@ -6219,7 +6094,6 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
                    Error_getText(error)
                   );
         String_delete(fileName);
-        fragmentDone(createInfo,linkName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
         return error;
       }
@@ -6241,13 +6115,12 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
                  Error_getText(error)
                 );
       String_delete(fileName);
-      fragmentDone(createInfo,linkName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
     // update status info
-    STATUS_INFO_UPDATE(createInfo,linkName)
+    STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
     {
       // no additional values
     }
@@ -6261,13 +6134,12 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
                  Error_getText(error)
                 );
       String_delete(fileName);
-      fragmentDone(createInfo,linkName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
     // output result
-    if (!createInfo->dryRun)
+    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -6290,13 +6162,12 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   }
 
   // update done entries
-  STATUS_INFO_UPDATE(createInfo,linkName)
+  STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
   {
     createInfo->statusInfo.done.count++;
   }
 
   // free resources
-  fragmentDone(createInfo,linkName);
   File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
@@ -6340,7 +6211,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   FileHandle                fileHandle;
   ArchiveFlags              archiveFlags;
   ArchiveEntryInfo          archiveEntryInfo;
-  SemaphoreLock             semaphoreLock;
   uint64                    offset;
   uint64                    size;
   ulong                     bufferLength;
@@ -6367,7 +6237,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         createInfo->statusInfo.done.count += StringList_count(fileNameList);
         createInfo->statusInfo.error.count += StringList_count(fileNameList);
@@ -6395,7 +6265,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL))
+      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6423,7 +6293,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL))
+      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
       {
         createInfo->statusInfo.done.count += StringList_count(fileNameList);
         createInfo->statusInfo.done.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
@@ -6448,7 +6318,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   // init fragment
   fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo.size);
 
-  if (!createInfo->jobOptions->noStorageFlag)
+  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -6524,28 +6394,22 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               // get current archive size
               archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
-              // update fragment
-              FRAGMENT_UPDATE(fragmentNode,createInfo,StringList_first(fileNameList,NULL))
-              {
-                FragmentList_addRange(fragmentNode,offset,bufferLength);
-              }
-              offset += bufferLength;
-
               // update status info
-              STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL))
+              STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),offset,bufferLength)
               {
                 doneSize         = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
-                compressionRatio = (!createInfo->dryRun && (doneSize > 0))
+                compressionRatio = (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN) && (doneSize > 0))
                                      ? 100.0-(archiveSize*100.0)/doneSize
                                      : 0.0;
 
-                createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoFragmentNode);
-                createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoFragmentNode);
+                createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+                createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
                 createInfo->statusInfo.done.size        = doneSize;
                 createInfo->statusInfo.archiveSize      = archiveSize;
                 createInfo->statusInfo.compressionRatio = compressionRatio;
               }
+              offset += bufferLength;
             }
 
             if (isPrintInfo(2))
@@ -6632,7 +6496,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // output result
-    if (!createInfo->dryRun)
+    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
     {
       printInfo(1,"OK (%llu bytes%s%s)\n",
                 fragmentSize,
@@ -6665,7 +6529,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // update done entries
-  STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL))
+  STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
   {
     createInfo->statusInfo.done.count += StringList_count(fileNameList);
   }
@@ -6722,7 +6586,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName)
+      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6749,7 +6613,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName)
+      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6769,10 +6633,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     }
   }
 
-  // init fragment
-  fragmentInit(createInfo,fileName,0LL);
-
-  if (!createInfo->jobOptions->noStorageFlag)
+  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
   {
     // new special
     error = Archive_newSpecialEntry(&archiveEntryInfo,
@@ -6788,7 +6649,6 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
-      fragmentDone(createInfo,fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
@@ -6801,13 +6661,12 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       printError("Cannot close archive special entry (error: %s)!\n",
                  Error_getText(error)
                 );
-      fragmentDone(createInfo,fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
 
     // output result
-    if (!createInfo->dryRun)
+    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -6827,13 +6686,12 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   }
 
   // update done entries
-  STATUS_INFO_UPDATE(createInfo,fileName)
+  STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
   {
     createInfo->statusInfo.done.count++;
   }
 
   // free resources
-  fragmentDone(createInfo,fileName);
   File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
@@ -6862,7 +6720,6 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
   const StringNode *stringNode;
   String           name;
   Errors           error;
-  SemaphoreLock    semaphoreLock;
 
   assert(createInfo != NULL);
 
@@ -7022,7 +6879,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     {
       printInfo(1,"Add '%s'...skipped (reason: own created file)\n",String_cString(entryMsg.name));
 
-      SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         createInfo->statusInfo.skipped.count++;
         updateStatusInfo(createInfo,FALSE);
@@ -7030,7 +6887,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     }
 
     // update status info and check if aborted
-    SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       updateStatusInfo(createInfo,FALSE);
     }
@@ -7076,7 +6933,7 @@ Errors Command_create(ServerIO                     *masterIO,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
                       uint64                       startDateTime,
-                      bool                         dryRun,
+                      StorageFlags                 storageFlags,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
                       StatusInfoFunction           statusInfoFunction,
@@ -7109,7 +6966,6 @@ Errors Command_create(ServerIO                     *masterIO,
   uint             createThreadCount;
   uint             i;
   Errors           error;
-  SemaphoreLock    semaphoreLock;
   String           fileName;
 
   assert(storageName != NULL);
@@ -7166,7 +7022,7 @@ Errors Command_create(ServerIO                     *masterIO,
                  scheduleTitle,
                  scheduleCustomText,
                  startDateTime,
-                 dryRun,
+                 storageFlags,
                  CALLBACK(statusInfoFunction,statusInfoUserData),
                  CALLBACK(isPauseCreateFunction,isPauseCreateUserData),
                  CALLBACK(isPauseStorageFunction,isPauseStorageUserData),
@@ -7198,6 +7054,7 @@ masterIO, // masterIO
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
+                       storageFlags,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        CALLBACK(updateStorageStatusInfo,&createInfo),
                        CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
@@ -7382,7 +7239,7 @@ masterIO, // masterIO
                          archiveType,
                          NULL,  // cryptPassword
                          TRUE,  // createMeta
-                         dryRun,
+                         storageFlags,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
                          CALLBACK(archiveGetSize,&createInfo),
@@ -7486,7 +7343,7 @@ masterIO, // masterIO
   Thread_done(&storageThread);
 
   // final update of status info
-  SEMAPHORE_LOCKED_DO(semaphoreLock,&createInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+  SEMAPHORE_LOCKED_DO(&createInfo.statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
   {
     (void)updateStatusInfo(&createInfo,TRUE);
   }
@@ -7530,7 +7387,7 @@ masterIO, // masterIO
 
   // write incremental list
   if (   (createInfo.failError == ERROR_NONE)
-      && !dryRun
+      && !IS_SET(createInfo.storageFlags,STORAGE_FLAG_DRY_RUN)
       && !isAborted(&createInfo)
       && createInfo.storeIncrementalFileInfoFlag
      )
