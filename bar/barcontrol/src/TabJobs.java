@@ -1203,7 +1203,7 @@ public class TabJobs
     {
       assert (year == ANY) || (year >= 1) : year;
 
-      return (year != ANY) ? Integer.toString(year) : "*";
+      return (year != ANY) ? String.format("%04d",year) : "*";
     }
 
     /** get month value
@@ -1239,7 +1239,7 @@ public class TabJobs
     {
       assert (day == ANY) || ((day >= 1) && (day <= 31)) : day;
 
-      return (day != ANY) ? Integer.toString(day) : "*";
+      return (day != ANY) ? String.format("%02d",day) : "*";
     }
 
     /** get week days value
@@ -1632,17 +1632,17 @@ public class TabJobs
       switch (sortMode)
       {
         case DATE:
-          String date1 = scheduleData1.year+"-"+scheduleData1.month+"-"+scheduleData1.day;
-          String date2 = scheduleData2.year+"-"+scheduleData2.month+"-"+scheduleData2.day;
+          String date1 = scheduleData1.getDate();
+          String date2 = scheduleData2.getDate();
 
           return date1.compareTo(date2);
         case WEEKDAY:
           if      (scheduleData1.weekDays < scheduleData2.weekDays) return -1;
           else if (scheduleData1.weekDays > scheduleData2.weekDays) return  1;
-          else                      return  0;
+          else                                                      return  0;
         case TIME:
-          String time1 = scheduleData1.hour+":"+scheduleData1.minute;
-          String time2 = scheduleData2.hour+":"+scheduleData2.minute;
+          String time1 = scheduleData1.getTime();
+          String time2 = scheduleData2.getTime();
 
           return time1.compareTo(time2);
         case ARCHIVE_TYPE:
@@ -8538,8 +8538,7 @@ widgetArchivePartSize.setListVisible(true);
         // schedule table
         widgetScheduleTable = Widgets.newTable(tab,SWT.CHECK);
         Widgets.layout(widgetScheduleTable,0,0,TableLayoutData.NSWE);
-//????
-// automatic column width calculation?
+//TODO: automatic column width calculation?
 //widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
         widgetScheduleTable.addSelectionListener(new SelectionListener()
         {
@@ -8714,7 +8713,7 @@ widgetArchivePartSize.setListVisible(true);
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            TableColumn             tableColumn             = (TableColumn)selectionEvent.widget;
+            TableColumn            tableColumn            = (TableColumn)selectionEvent.widget;
             ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable,tableColumn);
             Widgets.sortTableColumn(widgetScheduleTable,tableColumn,scheduleDataComparator);
           }
