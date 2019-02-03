@@ -929,11 +929,11 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_BEGIN_SECTION     ("master",-1),
 //TODO
-    CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1                              ),
+  CONFIG_VALUE_STRING            ("name",                             &globalOptions.masterInfo.name,-1                              ),
 //TODO: rename to password?
-    CONFIG_VALUE_SPECIAL         ("password-hash",                    &globalOptions.masterInfo.passwordHash,-1,                     configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
+  CONFIG_VALUE_SPECIAL           ("password-hash",                    &globalOptions.masterInfo.passwordHash,-1,                     configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
 //TODO: required to save?
-    CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_STRING            ("tmp-directory",                    &globalOptions.tmpDirectory,-1                                 ),
@@ -3482,7 +3482,6 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, c
 * Notes  : -
 \***********************************************************************/
 
-//TODO: remove
 LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
@@ -4722,60 +4721,6 @@ const char *getPasswordTypeText(PasswordTypes passwordType)
   return text;
 }
 
-//TODO: move to server.c
-const char *getJobStateText(JobStates jobState)
-{
-  const char *stateText;
-
-  stateText = "UNKNOWN";
-  switch (jobState)
-  {
-    case JOB_STATE_NONE:
-      stateText = "NONE";
-      break;
-    case JOB_STATE_WAITING:
-      stateText = "WAITING";
-      break;
-    case JOB_STATE_RUNNING:
-      stateText = IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN) ? "DRY_RUNNING" : "RUNNING";
-      break;
-    case JOB_STATE_REQUEST_FTP_PASSWORD:
-      stateText = "REQUEST_FTP_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_SSH_PASSWORD:
-      stateText = "REQUEST_SSH_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_WEBDAV_PASSWORD:
-      stateText = "REQUEST_WEBDAV_PASSWORD";
-      break;
-    case JOB_STATE_REQUEST_CRYPT_PASSWORD:
-      stateText = "request_crypt_password";
-      break;
-    case JOB_STATE_REQUEST_VOLUME:
-      stateText = "REQUEST_VOLUME";
-      break;
-    case JOB_STATE_DONE:
-      stateText = "DONE";
-      break;
-    case JOB_STATE_ERROR:
-      stateText = "ERROR";
-      break;
-    case JOB_STATE_ABORTED:
-      stateText = "ABORTED";
-      break;
-    case JOB_STATE_DISCONNECTED:
-      stateText = "DISCONNECTED";
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break; /* not reached */
-    #endif /* NDEBUG */
-  }
-
-  return stateText;
-}
-
 void vprintInfo(uint verboseLevel, const char *prefix, const char *format, va_list arguments)
 {
   String line;
@@ -5494,6 +5439,7 @@ void logPostProcess(LogHandle        *logHandle,
                     ConstString      scheduleCustomText,
                     ConstString      jobName,
                     JobStates        jobState,
+                    StorageFlags     storageFlags,
                     ConstString      message
                    )
 {
@@ -5531,7 +5477,7 @@ void logPostProcess(LogHandle        *logHandle,
         TEXT_MACRO_N_CSTRING(textMacros[2],"%type",   Archive_archiveTypeToString(archiveType,"UNKNOWN"),TEXT_MACRO_PATTERN_STRING);
         TEXT_MACRO_N_CSTRING(textMacros[3],"%T",      Archive_archiveTypeToShortString(archiveType,"U"), ".");
         TEXT_MACRO_N_STRING (textMacros[4],"%text",   scheduleCustomText,                                TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_CSTRING(textMacros[5],"%state",  getJobStateText(jobState),                         NULL);
+        TEXT_MACRO_N_CSTRING(textMacros[5],"%state",  Job_getStateText(jobState,storageFlags),           NULL);
         TEXT_MACRO_N_STRING (textMacros[6],"%message",String_cString(message),NULL);
         Misc_expandMacros(command,
                           logPostCommand,
@@ -5827,8 +5773,6 @@ bool setKey(Key *key, const void *data, uint length)
 
 bool setKeyString(Key *key, ConstString string)
 {
-//TODO: decode base64
-__B();
   return setKey(key,String_cString(string),String_length(string));
 }
 
@@ -7549,9 +7493,6 @@ LOCAL bool configValueParseEntryPattern(EntryTypes entryType, void *userData, vo
   else                                 { patternType = (PatternTypes)userData;                  }
 
   // append to list
-#ifndef WERROR
-#warning TODO String_mapCString needed?
-#endif
   pattern = String_mapCString(String_newCString(value),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
   error = EntryList_append((EntryList*)variable,entryType,pattern,patternType,NULL);
   if (error != ERROR_NONE)

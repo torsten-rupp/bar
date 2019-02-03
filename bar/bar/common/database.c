@@ -1696,7 +1696,6 @@ LOCAL int progressHandler(void *userData)
     LIST_ITERATEX(&databaseHandle->databaseNode->progressHandlerList,progressHandlerNode,!interruptFlag)
     {
       interruptFlag = !progressHandlerNode->function(progressHandlerNode->userData);
-if (interruptFlag) fprintf(stderr,"%s, %d: interrupteed!!!!!!!!!!!!!!\n",__FILE__,__LINE__);
     }
   }
 

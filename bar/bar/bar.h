@@ -199,17 +199,6 @@ const char *getArchiveTypeShortText(ArchiveTypes archiveType);
 
 const char *getPasswordTypeText(PasswordTypes passwordType);
 
-/***********************************************************************\
-* Name   : getJobStateText
-* Purpose: get text for job state
-* Input  : jobState   - job state
-* Output : -
-* Return : text
-* Notes  : -
-\***********************************************************************/
-
-const char *getJobStateText(JobStates jobState);
-
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
@@ -494,6 +483,7 @@ Errors executeTemplate(const char       *templateString,
 *          scheduleCustomText - schedule custom text
 *          jobName            - job name
 *          jobState           - job state
+*          storageFlags       - storage flags; see STORAGE_FLAG_...
 *          message            - message
 * Output : -
 * Return : -
@@ -506,6 +496,7 @@ void logPostProcess(LogHandle        *logHandle,
                     ConstString      scheduleCustomText,
                     ConstString      jobName,
                     JobStates        jobState,
+                    StorageFlags     storageFlags,
                     ConstString      message
                    );
 

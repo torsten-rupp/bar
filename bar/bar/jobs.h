@@ -245,6 +245,23 @@ typedef struct
   JobOptions          options;                          // options for job
 } Job;
 
+// job states
+typedef enum
+{
+  JOB_STATE_NONE,
+  JOB_STATE_WAITING,
+  JOB_STATE_RUNNING,
+  JOB_STATE_REQUEST_FTP_PASSWORD,
+  JOB_STATE_REQUEST_SSH_PASSWORD,
+  JOB_STATE_REQUEST_WEBDAV_PASSWORD,
+  JOB_STATE_REQUEST_CRYPT_PASSWORD,
+  JOB_STATE_REQUEST_VOLUME,
+  JOB_STATE_DONE,
+  JOB_STATE_ERROR,
+  JOB_STATE_ABORTED,
+  JOB_STATE_DISCONNECTED
+} JobStates;
+
 // slave states
 typedef enum
 {
@@ -655,6 +672,18 @@ INLINE bool Job_isSomeActive(void)
 \***********************************************************************/
 
 bool Job_isSomeRunning(void);
+
+/***********************************************************************\
+* Name   : Job_getStateText
+* Purpose: get text for job state
+* Input  : jobState     - job state
+*          storageFlags - storage flags; see STORAGE_FLAG_...
+* Output : -
+* Return : text
+* Notes  : -
+\***********************************************************************/
+
+const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags);
 
 /***********************************************************************\
 * Name   : Job_find

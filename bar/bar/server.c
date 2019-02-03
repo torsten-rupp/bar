@@ -60,8 +60,7 @@
 
 #define _NO_SESSION_ID
 #define _SIMULATOR
-#warning disable
-#define SIMULATE_PURGE
+#define _SIMULATE_PURGE
 
 /***************************** Constants *******************************/
 
@@ -84,11 +83,6 @@
 #define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
 // sleep times [s]
-//TODO
-//#define SLEEP_TIME_SLAVE_CONNECT_THREAD                 ( 1*60)  // [s]
-#define SLEEP_TIME_SLAVE_CONNECT_THREAD          (   10)  // [s]
-//#define SLEEP_TIME_SLAVE_THREAD                  (    1)  // [s]
-//TODO
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*60)  // [s]
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
@@ -496,81 +490,6 @@ LOCAL void deleteScheduleNode(ScheduleNode *scheduleNode)
   LIST_DELETE_NODE(scheduleNode);
 }
 
-#if 0
-//TODO: remove
-/***********************************************************************\
-* Name   : equalsScheduleNode
-* Purpose: compare schedule nodes if equals
-* Input  : scheduleNode1,scheduleNode2 - schedule nodes
-* Output : -
-* Return : TRUE iff scheduleNode1 = scheduleNode2
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleNode *scheduleNode2)
-{
-  assert(scheduleNode1 != NULL);
-  assert(scheduleNode2 != NULL);
-
-  if (   (scheduleNode1->date.year  != scheduleNode2->date.year )
-      || (scheduleNode1->date.month != scheduleNode2->date.month)
-      || (scheduleNode1->date.day   != scheduleNode2->date.day  )
-     )
-  {
-    return 0;
-  }
-
-  if (scheduleNode1->weekDaySet != scheduleNode2->weekDaySet)
-  {
-    return 0;
-  }
-
-  if (   (scheduleNode1->time.hour   != scheduleNode2->time.hour )
-      || (scheduleNode1->time.minute != scheduleNode2->time.minute)
-     )
-  {
-    return 0;
-  }
-
-  if (scheduleNode1->archiveType != scheduleNode2->archiveType)
-  {
-    return 0;
-  }
-
-  if (scheduleNode1->interval != scheduleNode2->interval)
-  {
-    return 0;
-  }
-
-  if (!String_equals(scheduleNode1->customText,scheduleNode2->customText))
-  {
-    return 0;
-  }
-
-  if (scheduleNode1->minKeep != scheduleNode2->minKeep)
-  {
-    return 0;
-  }
-
-  if (scheduleNode1->maxKeep != scheduleNode2->maxKeep)
-  {
-    return 0;
-  }
-
-  if (scheduleNode1->maxAge != scheduleNode2->maxAge)
-  {
-    return 0;
-  }
-
-  if (scheduleNode1->noStorage != scheduleNode2->noStorage)
-  {
-    return 0;
-  }
-
-  return 1;
-}
-#endif
-
 /***********************************************************************\
 * Name   : freePersistenceNode
 * Purpose: free persistence node
@@ -936,25 +855,6 @@ LOCAL void clearPairedMaster(void)
               );
   }
 }
-
-#if 0
-//TODO: remove?
-/***********************************************************************\
-* Name   : isSlaveOnline
-* Purpose: check if a slave is online
-* Input  : jobNode - job node
-* Output : -
-* Return : TRUE iff slave is online
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isSlaveOnline(const JobNode *jobNode)
-{
-  assert(jobNode != NULL);
-
-  return (jobNode->slaveState == SLAVE_STATE_ONLINE);
-}
-#endif
 
 /***********************************************************************\
 * Name   : isSlavePaired
@@ -1731,6 +1631,7 @@ NULL,//                                                        scheduleTitle,
                          scheduleCustomText,
                          jobName,
                          jobNode->state,
+                         jobNode->storageFlags,
                          jobNode->statusInfo.message
                         );
         }
@@ -1738,14 +1639,14 @@ NULL,//                                                        scheduleTitle,
         // post-process command
         if (jobNode->job.options.postProcessScript != NULL)
         {
-          TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+          TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,                                                      NULL);
+          TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,                                                  NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),           NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),            NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-          TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    getJobStateText(jobNode->state),NULL);
-          TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),NULL);
+          TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,                                 NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    Job_getStateText(jobNode->state,jobNode->storageFlags),       NULL);
+          TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
           error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
                                   executeStartDateTime,
                                   textMacros,
@@ -1766,6 +1667,7 @@ NULL,//                                                        scheduleTitle,
       else
       {
         // slave job -> send to slave and run on slave machine
+//TODO: remove
 fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
 
         // connect slave
@@ -7251,7 +7153,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
-                          getJobStateText(jobNode->state),
+                          Job_getStateText(jobNode->state,jobNode->storageFlags),
                           jobNode->job.slaveHost.name,
                           jobNode->job.slaveHost.port,
                           jobNode->job.slaveHost.forceSSL,
@@ -7678,6 +7580,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
       // set master i/o
       jobNode->masterIO = &clientInfo->io;
+//TODO: remove
 fprintf(stderr,"%s, %d: set master i/o jobNode=%p: %p\n",__FILE__,__LINE__,jobNode,jobNode->masterIO);
     }
 
@@ -8069,7 +7972,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "state=%s errorCode=%u errorData=%'s doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeProgress=%lf requestedVolumeNumber=%d message=%'S entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu",
-                        getJobStateText(jobNode->state),
+                        Job_getStateText(jobNode->state,jobNode->storageFlags),
                         Error_getCode(jobNode->runningInfo.error),
                         Error_getData(jobNode->runningInfo.error),
                         jobNode->statusInfo.done.count,
@@ -13614,8 +13517,6 @@ LOCAL void serverCommand_restoreContinue(ClientInfo *clientInfo, IndexHandle *in
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
@@ -15063,7 +14964,6 @@ NULL, // masterIO
                              UNUSED_VARIABLE(fileInfo);
                              UNUSED_VARIABLE(userData);
 
-fprintf(stderr,"%s, %d: check storageName=%s\n",__FILE__,__LINE__,String_cString(storageName));
                              error = Storage_parseName(&storageSpecifier,storageName);
                              if (error == ERROR_NONE)
                              {

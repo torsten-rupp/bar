@@ -145,23 +145,6 @@ typedef enum
   RESTORE_ENTRY_MODE_OVERWRITE
 } RestoreEntryModes;
 
-// job states
-typedef enum
-{
-  JOB_STATE_NONE,
-  JOB_STATE_WAITING,
-  JOB_STATE_RUNNING,
-  JOB_STATE_REQUEST_FTP_PASSWORD,
-  JOB_STATE_REQUEST_SSH_PASSWORD,
-  JOB_STATE_REQUEST_WEBDAV_PASSWORD,
-  JOB_STATE_REQUEST_CRYPT_PASSWORD,
-  JOB_STATE_REQUEST_VOLUME,
-  JOB_STATE_DONE,
-  JOB_STATE_ERROR,
-  JOB_STATE_ABORTED,
-  JOB_STATE_DISCONNECTED
-} JobStates;
-
 #define INDEX_TIMEOUT       (10L*60L*1000L)  // index timeout [ms]
 #define INDEX_PURGE_TIMEOUT (30L*1000L)      // index purge timeout [ms]
 
@@ -546,6 +529,8 @@ typedef struct
                                                               */
 
   uint                   serverDebugLevel;                     // server debug level (for debug only)
+
+//  JobOptions             defaultJobOptions;
 } GlobalOptions;
 
 // status info data
@@ -560,18 +545,18 @@ typedef struct
   {
     ulong     count;                                          // total number of entries
     uint64    size;                                           // total size of entries [bytes]
-  } totalEntry;
-  bool      collectTotalSumDone;                              // TRUEinitOp iff all file sums are collected
+  } total;
+  bool      collectTotalSumDone;                              // TRUE iff all file sums are collected
   struct
   {
     ulong     count;                                          // number of skipped entries
     uint64    size;                                           // sum of skipped bytes
-  } skippedEntry;
+  } skipped;
   struct
   {
     ulong     count;                                          // number of entries with errors
     uint64    size;                                           // sum of bytes of entries with errors
-  } errorEntry;
+  } error;
   uint64 archiveSize;                                         // number of bytes stored in archive
   double compressionRatio;                                    // compression ratio
   struct

@@ -3525,7 +3525,6 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   UNUSED_VARIABLE(scheduleUUID);
 
   // get file info
-// TODO replace by getFileSize()
   error = File_getInfo(&fileInfo,intermediateFileName);
   if (error != ERROR_NONE)
   {
@@ -4890,22 +4889,20 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
+assert(createInfo->statusInfoFragmentList.count<200);
     }
     assert(fragmentNode != NULL);
 
     // status update (Note: additional unprotected check to optimize number of locks)
     if (createInfo->statusInfoCurrentFragmentNode == NULL)
     {
-      if (createInfo->statusInfoCurrentFragmentNode == NULL)
-      {
-        createInfo->statusInfoCurrentFragmentNode = fragmentNode;
+      createInfo->statusInfoCurrentFragmentNode = fragmentNode;
 
-        String_set(createInfo->statusInfo.entry.name,name);
-        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+      String_set(createInfo->statusInfo.entry.name,name);
+      createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+      createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
 
-        updateStatusInfo(createInfo,TRUE);
-      }
+      updateStatusInfo(createInfo,TRUE);
     }
     assert(createInfo->statusInfoCurrentFragmentNode != NULL);
   }
@@ -4932,12 +4929,14 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 
     // check if fragment complete
     if (   (fragmentNode != NULL)
-        && (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
-        && FragmentList_isComplete(createInfo->statusInfoCurrentFragmentNode)
+        && FragmentList_isComplete(fragmentNode)
        )
     {
-      FragmentList_discard(&createInfo->statusInfoFragmentList,createInfo->statusInfoCurrentFragmentNode);
-      createInfo->statusInfoCurrentFragmentNode = NULL;
+      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      {
+        createInfo->statusInfoCurrentFragmentNode = NULL;
+      }
+      FragmentList_discard(&createInfo->statusInfoFragmentList,fragmentNode);
     }
   }
 }
@@ -5007,14 +5006,14 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 
   // check if fragment complete
   if (   (fragmentNode != NULL)
-      && (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
-      && FragmentList_isComplete(createInfo->statusInfoCurrentFragmentNode)
+      && FragmentList_isComplete(fragmentNode)
      )
   {
-    FragmentList_discard(&createInfo->statusInfoFragmentList,createInfo->statusInfoCurrentFragmentNode);
-    createInfo->statusInfoCurrentFragmentNode = NULL;
-
-    updateFlag = TRUE;
+    if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+    {
+      createInfo->statusInfoCurrentFragmentNode = NULL;
+    }
+    FragmentList_discard(&createInfo->statusInfoFragmentList,fragmentNode);
   }
 
   // update
@@ -5097,7 +5096,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   assert(fileName != NULL);
   assert(buffer != NULL);
 
-  printInfo(1,"Add file '%s'...",String_cString(fileName));
+  printInfo(1,"Add file      '%s'...",String_cString(fileName));
 
   // get file info
   error = File_getInfo(&fileInfo,fileName);
@@ -5490,7 +5489,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   assert(deviceName != NULL);
   assert(buffer != NULL);
 
-  printInfo(1,"Add image '%s'...",String_cString(deviceName));
+  printInfo(1,"Add image     '%s'...",String_cString(deviceName));
 
   // get device info
   error = Device_getInfo(&deviceInfo,deviceName);
@@ -6007,7 +6006,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   assert(createInfo != NULL);
   assert(linkName != NULL);
 
-  printInfo(1,"Add link '%s'...",String_cString(linkName));
+  printInfo(1,"Add link      '%s'...",String_cString(linkName));
 
   // get file info
   error = File_getInfo(&fileInfo,linkName);
@@ -6227,7 +6226,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   assert(!StringList_isEmpty(fileNameList));
   assert(buffer != NULL);
 
-  printInfo(1,"Add hardlink '%s'...",String_cString(StringList_first(fileNameList,NULL)));
+  printInfo(1,"Add hardlink  '%s'...",String_cString(StringList_first(fileNameList,NULL)));
 
   // get file info
   error = File_getInfo(&fileInfo,StringList_first(fileNameList,NULL));
@@ -6576,7 +6575,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   assert(createInfo->jobOptions != NULL);
   assert(fileName != NULL);
 
-  printInfo(1,"Add special '%s'...",String_cString(fileName));
+  printInfo(1,"Add special   '%s'...",String_cString(fileName));
 
   // get file info, file extended attributes
   error = File_getInfo(&fileInfo,fileName);
@@ -7207,22 +7206,6 @@ masterIO, // masterIO
     assert(entityId != INDEX_ID_NONE);
     DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
-
-//TODO: remove
-#if 0
-    // start index database transaction
-    error = Index_beginTransaction(indexHandle,INDEX_TIMEOUT);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot create index for '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_rollbackTransaction(indexHandle); });
-#endif
   }
 
   // create new archive
@@ -7230,7 +7213,6 @@ masterIO, // masterIO
                          NULL,  // hostName
                          &createInfo.storageInfo,
                          NULL,  // archiveName
-//                         indexHandle,
                          uuidId,
                          entityId,
                          jobUUID,
@@ -7352,22 +7334,6 @@ masterIO, // masterIO
   if (indexHandle != NULL)
   {
     assert(entityId != INDEX_ID_NONE);
-
-//TODO: remove
-#if 0
-    // end index database transaction
-    AUTOFREE_REMOVE(&autoFreeList,indexHandle);
-    error = Index_endTransaction(indexHandle);
-    if (error != ERROR_NONE)
-    {
-      printError("Cannot create index for '%s' (error: %s)!\n",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-#endif
 
     // unlock entity
     (void)Index_unlockEntity(indexHandle,entityId);

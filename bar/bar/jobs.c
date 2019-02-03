@@ -2326,6 +2326,59 @@ bool Job_isSomeRunning(void)
   return runningFlag;
 }
 
+const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags)
+{
+  const char *stateText;
+
+  stateText = "UNKNOWN";
+  switch (jobState)
+  {
+    case JOB_STATE_NONE:
+      stateText = "NONE";
+      break;
+    case JOB_STATE_WAITING:
+      stateText = "WAITING";
+      break;
+    case JOB_STATE_RUNNING:
+      stateText = IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN) ? "DRY_RUNNING" : "RUNNING";
+      break;
+    case JOB_STATE_REQUEST_FTP_PASSWORD:
+      stateText = "REQUEST_FTP_PASSWORD";
+      break;
+    case JOB_STATE_REQUEST_SSH_PASSWORD:
+      stateText = "REQUEST_SSH_PASSWORD";
+      break;
+    case JOB_STATE_REQUEST_WEBDAV_PASSWORD:
+      stateText = "REQUEST_WEBDAV_PASSWORD";
+      break;
+    case JOB_STATE_REQUEST_CRYPT_PASSWORD:
+      stateText = "request_crypt_password";
+      break;
+    case JOB_STATE_REQUEST_VOLUME:
+      stateText = "REQUEST_VOLUME";
+      break;
+    case JOB_STATE_DONE:
+      stateText = "DONE";
+      break;
+    case JOB_STATE_ERROR:
+      stateText = "ERROR";
+      break;
+    case JOB_STATE_ABORTED:
+      stateText = "ABORTED";
+      break;
+    case JOB_STATE_DISCONNECTED:
+      stateText = "DISCONNECTED";
+      break;
+    #ifndef NDEBUG
+      default:
+        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+        break; /* not reached */
+    #endif /* NDEBUG */
+  }
+
+  return stateText;
+}
+
 JobNode *Job_find(ConstString name)
 {
   JobNode *jobNode;
