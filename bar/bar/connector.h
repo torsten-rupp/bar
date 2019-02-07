@@ -240,9 +240,6 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
 *          storageName                  - storage name
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
-*          mountList                    - mount list
-*          compressExcludePatternList   - compress exclude list
-*          deltaSourceList              - delta source list
 *          jobOptions                   - job options
 *          archiveType                  - archive type to create
 *          scheduleTitle                - schedule title
@@ -273,9 +270,6 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         ConstString                  storageName,
                         const EntryList              *includeEntryList,
                         const PatternList            *excludePatternList,
-                        const MountList              *mountList,
-                        const PatternList            *compressExcludePatternList,
-                        const DeltaSourceList        *deltaSourceList,
                         const JobOptions             *jobOptions,
                         ArchiveTypes                 archiveType,
                         ConstString                  scheduleTitle,

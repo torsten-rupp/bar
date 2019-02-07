@@ -616,6 +616,8 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Notes  : -
 \***********************************************************************/
 
+typedef uint32 Set;
+
 #define SET_CLEAR(set) \
   do \
   { \
@@ -642,8 +644,40 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 #define IN_SET(set,element) (((set) & SET_VALUE(element)) == SET_VALUE(element))
 
+typedef byte* ValueSet;
+
+#define ValueSet(x,n) byte x[3]
+#define VALUE_SET \
+  enum
+
+#define VALUESET_CLEAR(set) \
+  do \
+  { \
+    memClear(set,sizeof(set)); \
+  } \
+  while (0)
+
+#define VALUESET_SET(set,bit) \
+  do \
+  { \
+    ((byte*)(set))[bit/8] |= (1 << (bit%8)); \
+  } \
+  while (0)
+
+#define VALUESET_REM(set,bit) \
+  do \
+  { \
+    ((byte*)(set))[bit/8] &= ~(1 << (bit%8)); \
+  } \
+  while (0)
+
+#define VALUESET_IS_SET(set,bit) \
+  ((((byte*)(set))[bit/8] & (1 << (bit%8))) != 0)
+
+
+
 /***********************************************************************\
-* Name   : BITSET_SET, BITSET_CLEAR, BITSET_IS_SET, SET_REM, IN_SET
+* Name   : BITSET_SET, BITSET_CLEAR, BITSET_IS_SET
 * Purpose: set macros
 * Input  : set     - set (array)
 *          element - element
@@ -651,6 +685,8 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Return : TRUE if value is in bitset, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
+
+typedef byte* BitSet;
 
 #define BITSET_SET(set,bit) \
   do \

@@ -95,8 +95,7 @@ Errors Server_run(ServerModes       mode,
 //                  const Password    *password,
                   const Hash        *password,
                   uint              maxConnections,
-                  const char        *indexDatabaseFileName,
-                  const JobOptions  *defaultJobOptions
+                  const char        *indexDatabaseFileName
                  );
 
 /***********************************************************************\
@@ -132,8 +131,7 @@ Errors Server_addJob(JobTypes          jobType,
                      const String      name,
                      const String      archiveName,
                      const PatternList *includePatternList,
-                     const PatternList *excludePatternList,
-                     const JobOptions  *jobOptions
+                     const PatternList *excludePatternList
                     );
 #endif /* 0 */
 

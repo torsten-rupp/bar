@@ -90,67 +90,66 @@ typedef struct
 // create info
 typedef struct
 {
-  StorageInfo                 storageInfo;                        // storage info
+  StorageInfo                 storageInfo;                          // storage info
   IndexHandle                 *indexHandle;
-  ConstString                 jobUUID;                            // unique job id to store or NULL
-  ConstString                 scheduleUUID;                       // unique schedule id to store or NULL
-  const EntryList             *includeEntryList;                  // list of included entries
-  const PatternList           *excludePatternList;                // list of exclude patterns
-  const PatternList           *compressExcludePatternList;        // exclude compression pattern list
-  const DeltaSourceList       *deltaSourceList;                   // delta sources
+  ConstString                 jobUUID;                              // unique job id to store or NULL
+  ConstString                 scheduleUUID;                         // unique schedule id to store or NULL
+  const EntryList             *includeEntryList;                    // list of included entries
+  const PatternList           *excludePatternList;                  // list of exclude patterns
   const JobOptions            *jobOptions;
-  ArchiveTypes                archiveType;                        // archive type to create
-  ConstString                 scheduleTitle;                      // schedule title or NULL
-  ConstString                 scheduleCustomText;                 // schedule custom text or NULL
-  uint64                      startDateTime;                      // date/time of start [s]
-  StorageFlags                storageFlags;                       // storage flags; see STORAGE_FLAGS_...
+  ArchiveTypes                archiveType;                          // archive type to create
+  ConstString                 scheduleTitle;                        // schedule title or NULL
+  ConstString                 scheduleCustomText;                   // schedule custom text or NULL
+  uint64                      startDateTime;                        // date/time of start [s]
+  StorageFlags                storageFlags;                         // storage flags; see STORAGE_FLAGS_...
 
-  LogHandle                   *logHandle;                         // log handle
+  LogHandle                   *logHandle;                           // log handle
 
-  bool                        partialFlag;                        // TRUE for create incremental/differential archive
-  Dictionary                  namesDictionary;                    // dictionary with files (used for incremental/differental backup)
-  bool                        storeIncrementalFileInfoFlag;       // TRUE to store incremental file data
+  bool                        partialFlag;                          // TRUE for create incremental/differential archive
+  Dictionary                  namesDictionary;                      // dictionary with files (used for incremental/differental backup)
+  bool                        storeIncrementalFileInfoFlag;         // TRUE to store incremental file data
 
-  MsgQueue                    entryMsgQueue;                      // queue with entries to store
+  MsgQueue                    entryMsgQueue;                        // queue with entries to store
 
   ArchiveHandle               archiveHandle;
 
-  bool                        collectorSumThreadExitedFlag;       // TRUE iff collector sum thread exited
+  bool                        collectorSumThreadExitedFlag;         // TRUE iff collector sum thread exited
 
-  MsgQueue                    storageMsgQueue;                    // queue with waiting storage files
-  Semaphore                   storageInfoLock;                    // lock semaphore for storage info
+  MsgQueue                    storageMsgQueue;                      // queue with waiting storage files
+  Semaphore                   storageInfoLock;                      // lock semaphore for storage info
   struct
   {
-    uint                      count;                              // number of current storage files
-    uint64                    bytes;                              // number of bytes in current storage files
+    uint                      count;                                // number of current storage files
+    uint64                    bytes;                                // number of bytes in current storage files
   }                           storage;
   bool                        storageThreadExitFlag;
-  StringList                  storageFileList;                    // list with stored storage files
+  StringList                  storageFileList;                      // list with stored storage files
 
-  Errors                      failError;                          // failure error
+  Errors                      failError;                            // failure error
 
-  StatusInfoFunction          statusInfoFunction;                 // status info callback
-  void                        *statusInfoUserData;                // user data for status info call back
-  Semaphore                   statusInfoLock;                     // status info lock
-  StatusInfo                  statusInfo;                         // status info
-  FragmentList                statusInfoFragmentList;             // status info fragment list
-  FragmentNode                *statusInfoCurrentFragmentNode;     // current fragment node in status info
-  Semaphore                   statusInfoNameLock;                 // status info name lock
-  uint                        statusInfoNameLockCounter;          // status info name lock counter
+  StatusInfoFunction          statusInfoFunction;                   // status info callback
+  void                        *statusInfoUserData;                  // user data for status info call back
+  Semaphore                   statusInfoLock;                       // status info lock
+  StatusInfo                  statusInfo;                           // status info
+  FragmentList                statusInfoFragmentList;               // status info fragment list
+  FragmentNode                *statusInfoCurrentFragmentNode;       // current fragment node in status info
+  uint64                      statusInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
+//  Semaphore                   statusInfoNameLock;                 // status info name lock
+//  uint                        statusInfoNameLockCounter;          // status info name lock counter
 
-  IsPauseFunction             isPauseCreateFunction;              // is pause check callback (can be NULL)
-  void                        *isPauseCreateUserData;             // user data for is pause create check
-  IsPauseFunction             isPauseStorageFunction;             // is pause storage callback (can be NULL)
-  void                        *isPauseStorageUserData;            // user data for is pause storage check
-  IsAbortedFunction           isAbortedFunction;                  // is abort check callback (can be NULL)
-  void                        *isAbortedUserData;                 // user data for is aborted check
+  IsPauseFunction             isPauseCreateFunction;                // is pause check callback (can be NULL)
+  void                        *isPauseCreateUserData;               // user data for is pause create check
+  IsPauseFunction             isPauseStorageFunction;               // is pause storage callback (can be NULL)
+  void                        *isPauseStorageUserData;              // user data for is pause storage check
+  IsAbortedFunction           isAbortedFunction;                    // is abort check callback (can be NULL)
+  void                        *isAbortedUserData;                   // user data for is aborted check
 } CreateInfo;
 
 // hard link info
 typedef struct
 {
-  uint       count;                                               // number of hard links
-  StringList nameList;                                            // list of hard linked names
+  uint       count;                                                 // number of hard links
+  StringList nameList;                                              // list of hard linked names
   uint64     size;
 } HardLinkInfo;
 
@@ -256,8 +255,6 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *          scheduleUUID               - unique schedule id to store or NULL
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
-*          compressExcludePatternList - exclude compression pattern list
-*          deltaSourceList            - delta source list
 *          jobOptions                 - job options
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
@@ -291,8 +288,6 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
                           ConstString           scheduleUUID,
                           const EntryList       *includeEntryList,
                           const PatternList     *excludePatternList,
-                          const PatternList     *compressExcludePatternList,
-                          const DeltaSourceList *deltaSourceList,
                           const JobOptions      *jobOptions,
                           ArchiveTypes          archiveType,
                           ConstString           scheduleTitle,
@@ -313,43 +308,42 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
   assert(createInfo != NULL);
 
   // init variables
-  createInfo->indexHandle                   = indexHandle;
-  createInfo->jobUUID                       = jobUUID;
-  createInfo->scheduleUUID                  = scheduleUUID;
-  createInfo->includeEntryList              = includeEntryList;
-  createInfo->excludePatternList            = excludePatternList;
-  createInfo->compressExcludePatternList    = compressExcludePatternList;
-  createInfo->deltaSourceList               = deltaSourceList;
-  createInfo->jobOptions                    = jobOptions;
-  createInfo->scheduleTitle                 = scheduleTitle;
-  createInfo->scheduleCustomText            = scheduleCustomText;
-  createInfo->startDateTime                 = startDateTime;
-  createInfo->storageFlags                  = storageFlags;
+  createInfo->indexHandle                          = indexHandle;
+  createInfo->jobUUID                              = jobUUID;
+  createInfo->scheduleUUID                         = scheduleUUID;
+  createInfo->includeEntryList                     = includeEntryList;
+  createInfo->excludePatternList                   = excludePatternList;
+  createInfo->jobOptions                           = jobOptions;
+  createInfo->scheduleTitle                        = scheduleTitle;
+  createInfo->scheduleCustomText                   = scheduleCustomText;
+  createInfo->startDateTime                        = startDateTime;
+  createInfo->storageFlags                         = storageFlags;
 
-  createInfo->logHandle                     = logHandle;
+  createInfo->logHandle                            = logHandle;
 
-  createInfo->storeIncrementalFileInfoFlag  = FALSE;
+  createInfo->storeIncrementalFileInfoFlag         = FALSE;
 
-  createInfo->collectorSumThreadExitedFlag  = FALSE;
+  createInfo->collectorSumThreadExitedFlag         = FALSE;
 
-  createInfo->storage.count                 = 0;
-  createInfo->storage.bytes                 = 0LL;
-  createInfo->storageThreadExitFlag         = FALSE;
+  createInfo->storage.count                        = 0;
+  createInfo->storage.bytes                        = 0LL;
+  createInfo->storageThreadExitFlag                = FALSE;
   StringList_init(&createInfo->storageFileList);
 
-  createInfo->failError                     = ERROR_NONE;
+  createInfo->failError                            = ERROR_NONE;
 
-  createInfo->statusInfoFunction            = statusInfoFunction;
-  createInfo->statusInfoUserData            = statusInfoUserData;
+  createInfo->statusInfoFunction                   = statusInfoFunction;
+  createInfo->statusInfoUserData                   = statusInfoUserData;
   FragmentList_init(&createInfo->statusInfoFragmentList);
-  createInfo->statusInfoCurrentFragmentNode = NULL;
+  createInfo->statusInfoCurrentFragmentNode        = NULL;
+  createInfo->statusInfoCurrentLastUpdateTimestamp = 0LL;
 
-  createInfo->isPauseCreateFunction         = isPauseCreateFunction;
-  createInfo->isPauseCreateUserData         = isPauseCreateUserData;
-  createInfo->isPauseStorageFunction        = isPauseStorageFunction;
-  createInfo->isPauseStorageUserData        = isPauseStorageUserData;
-  createInfo->isAbortedFunction             = isAbortedFunction;
-  createInfo->isAbortedUserData             = isAbortedUserData;
+  createInfo->isPauseCreateFunction                = isPauseCreateFunction;
+  createInfo->isPauseCreateUserData                = isPauseCreateUserData;
+  createInfo->isPauseStorageFunction               = isPauseStorageFunction;
+  createInfo->isPauseStorageUserData               = isPauseStorageUserData;
+  createInfo->isAbortedFunction                    = isAbortedFunction;
+  createInfo->isAbortedUserData                    = isAbortedUserData;
   initStatusInfo(&createInfo->statusInfo);
 
   // get archive type
@@ -387,11 +381,11 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize status info semaphore!");
   }
-  if (!Semaphore_init(&createInfo->statusInfoNameLock,SEMAPHORE_TYPE_BINARY))
-  {
-    HALT_FATAL_ERROR("Cannot initialize status info name semaphore!");
-  }
-  createInfo->statusInfoNameLockCounter = 0;
+//  if (!Semaphore_init(&createInfo->statusInfoNameLock,SEMAPHORE_TYPE_BINARY))
+//  {
+//    HALT_FATAL_ERROR("Cannot initialize status info name semaphore!");
+//  }
+//  createInfo->statusInfoNameLockCounter = 0;
 
   DEBUG_ADD_RESOURCE_TRACE(createInfo,CreateInfo);
 }
@@ -411,7 +405,7 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(createInfo,CreateInfo);
 
-  Semaphore_done(&createInfo->statusInfoNameLock);
+//  Semaphore_done(&createInfo->statusInfoNameLock);
   Semaphore_done(&createInfo->statusInfoLock);
   Semaphore_done(&createInfo->storageInfoLock);
 
@@ -4889,14 +4883,16 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-assert(createInfo->statusInfoFragmentList.count<200);
     }
     assert(fragmentNode != NULL);
 
     // status update (Note: additional unprotected check to optimize number of locks)
-    if (createInfo->statusInfoCurrentFragmentNode == NULL)
+    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+       )
     {
-      createInfo->statusInfoCurrentFragmentNode = fragmentNode;
+      createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
+      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
 
       String_set(createInfo->statusInfo.entry.name,name);
       createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
@@ -4962,20 +4958,30 @@ LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString nam
   semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
   if (semaphoreLock)
   {
-    // get fragment node (if possible)
-    fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
-
-    if (fragmentNode != NULL)
+    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+       )
     {
-      FragmentList_addRange(fragmentNode,offset,length);
+      String_set(createInfo->statusInfo.entry.name,name);
 
-      if (createInfo->statusInfoCurrentFragmentNode == NULL)
+      // get fragment node (if possible)
+      fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+      if (fragmentNode != NULL)
       {
         createInfo->statusInfoCurrentFragmentNode = fragmentNode;
 
-        String_set(createInfo->statusInfo.entry.name,name);
+        FragmentList_addRange(fragmentNode,offset,length);
+        createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+
         createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
         createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+      }
+      else
+      {
+        createInfo->statusInfoCurrentFragmentNode = NULL;
+
+        createInfo->statusInfo.entry.doneSize  = 0;
+        createInfo->statusInfo.entry.totalSize = 0;
       }
     }
   }
@@ -5192,7 +5198,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
     // check if file data should be delta compressed
     if (   (fileInfo.size > globalOptions.compressMinFileSize)
-        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta)
        )
     {
        archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
@@ -5200,7 +5206,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
     // check if file data should be byte compressed
     if (   (fileInfo.size > globalOptions.compressMinFileSize)
-        && !PatternList_match(createInfo->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
+        && !PatternList_match(&createInfo->jobOptions->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
        )
     {
        archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
@@ -5209,8 +5215,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     // create new archive file entry
     error = Archive_newFileEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
-                                 createInfo->jobOptions->compressAlgorithms.value.delta,
-                                 createInfo->jobOptions->compressAlgorithms.value.byte,
+                                 createInfo->jobOptions->compressAlgorithms.delta,
+                                 createInfo->jobOptions->compressAlgorithms.byte,
                                  fileName,
                                  &fileInfo,
                                  &fileExtendedAttributeList,
@@ -5380,8 +5386,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
     // ratio info
     stringClear(s2);
-    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
-        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
+    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
@@ -5588,7 +5594,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     // check if file data should be delta compressed
     if (   (deviceInfo.size > globalOptions.compressMinFileSize)
-        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta)
        )
     {
        archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
@@ -5596,7 +5602,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     // check if file data should be byte compressed
     if (   (deviceInfo.size > globalOptions.compressMinFileSize)
-        && !PatternList_match(createInfo->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
+        && !PatternList_match(&createInfo->jobOptions->compressExcludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
        )
     {
        archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
@@ -5605,8 +5611,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     // create new archive image entry
     error = Archive_newImageEntry(&archiveEntryInfo,
                                   &createInfo->archiveHandle,
-                                  createInfo->jobOptions->compressAlgorithms.value.delta,
-                                  createInfo->jobOptions->compressAlgorithms.value.byte,
+                                  createInfo->jobOptions->compressAlgorithms.delta,
+                                  createInfo->jobOptions->compressAlgorithms.byte,
                                   deviceName,
                                   &deviceInfo,
                                   fileSystemHandle.type,
@@ -5773,8 +5779,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
     // get ratio info
     stringClear(s2);
-    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
-        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
+    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
@@ -6323,7 +6329,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     // check if file data should be delta compressed
     if (   (fileInfo.size > globalOptions.compressMinFileSize)
-        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta)
+        && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta)
        )
     {
        archiveFlags |= ARCHIVE_FLAG_TRY_DELTA_COMPRESS;
@@ -6331,7 +6337,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     // check if file data should be byte compressed
     if (   (fileInfo.size > globalOptions.compressMinFileSize)
-        && !PatternList_matchStringList(createInfo->compressExcludePatternList,fileNameList,PATTERN_MATCH_MODE_EXACT)
+        && !PatternList_matchStringList(&createInfo->jobOptions->compressExcludePatternList,fileNameList,PATTERN_MATCH_MODE_EXACT)
        )
     {
        archiveFlags |= ARCHIVE_FLAG_TRY_BYTE_COMPRESS;
@@ -6340,8 +6346,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     // create new archive hard link entry
     error = Archive_newHardLinkEntry(&archiveEntryInfo,
                                      &createInfo->archiveHandle,
-                                     createInfo->jobOptions->compressAlgorithms.value.delta,
-                                     createInfo->jobOptions->compressAlgorithms.value.byte,
+                                     createInfo->jobOptions->compressAlgorithms.delta,
+                                     createInfo->jobOptions->compressAlgorithms.byte,
                                      fileNameList,
                                      &fileInfo,
                                      &fileExtendedAttributeList,
@@ -6487,8 +6493,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     // get ratio info
     stringClear(s2);
-    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.delta))
-        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.value.byte ))
+    if (   ((archiveFlags & ARCHIVE_FLAG_TRY_DELTA_COMPRESS) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta))
+        || ((archiveFlags & ARCHIVE_FLAG_TRY_BYTE_COMPRESS ) && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.byte ))
        )
     {
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
@@ -6917,6 +6923,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 /*---------------------------------------------------------------------*/
 
 Errors Command_create(ServerIO                     *masterIO,
+                      ArchiveTypes                 archiveType,
                       ConstString                  jobUUID,
 //                      ConstString                  hostName,
 //                      uint                         hostPort,
@@ -6924,11 +6931,7 @@ Errors Command_create(ServerIO                     *masterIO,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
-                      MountList                    *mountList,
-                      const PatternList            *compressExcludePatternList,
-                      DeltaSourceList              *deltaSourceList,
                       JobOptions                   *jobOptions,
-                      ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
                       uint64                       startDateTime,
@@ -7014,8 +7017,6 @@ Errors Command_create(ServerIO                     *masterIO,
                  scheduleUUID,
                  includeEntryList,
                  excludePatternList,
-                 compressExcludePatternList,
-                 deltaSourceList,
                  jobOptions,
                  archiveType,
                  scheduleTitle,
@@ -7031,7 +7032,7 @@ Errors Command_create(ServerIO                     *masterIO,
   AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
 
   // mount devices
-  error = mountAll(mountList);
+  error = mountAll(&jobOptions->mountList);
   if (error != ERROR_NONE)
   {
     printError("Cannot mount devices (error: %s)\n",
@@ -7040,7 +7041,7 @@ Errors Command_create(ServerIO                     *masterIO,
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  AUTOFREE_ADD(&autoFreeList,mountList,{ unmountAll(mountList); });
+  AUTOFREE_ADD(&autoFreeList,&jobOptions->mountList,{ unmountAll(&jobOptions->mountList); });
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
@@ -7217,7 +7218,7 @@ masterIO, // masterIO
                          entityId,
                          jobUUID,
                          scheduleUUID,
-                         deltaSourceList,
+                         &createInfo.jobOptions->deltaSourceList,
                          archiveType,
                          NULL,  // cryptPassword
                          TRUE,  // createMeta
@@ -7412,7 +7413,7 @@ masterIO, // masterIO
   }
 
   // unmount devices
-  error = unmountAll(mountList);
+  error = unmountAll(&jobOptions->mountList);
   if (error != ERROR_NONE)
   {
     printWarning("Cannot unmount devices (error: %s)\n",

@@ -54,7 +54,6 @@ typedef struct
   StorageSpecifier                *storageSpecifier;             // storage specifier structure
   const EntryList                 *includeEntryList;             // list of included entries
   const PatternList               *excludePatternList;           // list of exclude patterns
-  DeltaSourceList                 *deltaSourceList;              // delta sources
   const JobOptions                *jobOptions;
   bool                            dryRun;                        //
 
@@ -97,7 +96,6 @@ typedef struct
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
 *          compressExcludePatternList - exclude compression pattern list
-*          deltaSourceList            - delta source list
 *          jobOptions                 - job options
 *          dryRun                     -
 *          storageNameCustomText      - storage name custome text or NULL
@@ -122,7 +120,6 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
                            StorageSpecifier                *storageSpecifier,
                            const EntryList                 *includeEntryList,
                            const PatternList               *excludePatternList,
-                           DeltaSourceList                 *deltaSourceList,
                            JobOptions                      *jobOptions,
                            bool                            dryRun,
                            RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
@@ -144,7 +141,6 @@ LOCAL void initRestoreInfo(RestoreInfo                     *restoreInfo,
   restoreInfo->storageSpecifier               = storageSpecifier;
   restoreInfo->includeEntryList               = includeEntryList;
   restoreInfo->excludePatternList             = excludePatternList;
-  restoreInfo->deltaSourceList                = deltaSourceList;
   restoreInfo->jobOptions                     = jobOptions;
   restoreInfo->dryRun                         = dryRun;
   restoreInfo->logHandle                      = logHandle;
@@ -2901,7 +2897,7 @@ NULL, // masterIO
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        archiveName,
-                       restoreInfo->deltaSourceList,
+                       &restoreInfo->jobOptions->deltaSourceList,
                        CALLBACK(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
                        restoreInfo->logHandle
                       );
@@ -3108,7 +3104,6 @@ NULL, // masterIO
 Errors Command_restore(const StringList                *storageNameList,
                        const EntryList                 *includeEntryList,
                        const PatternList               *excludePatternList,
-                       DeltaSourceList                 *deltaSourceList,
                        JobOptions                      *jobOptions,
                        bool                            dryRun,
                        RestoreUpdateStatusInfoFunction updateStatusInfoFunction,
@@ -3147,7 +3142,6 @@ Errors Command_restore(const StringList                *storageNameList,
                   &storageSpecifier,
                   includeEntryList,
                   excludePatternList,
-                  deltaSourceList,
                   jobOptions,
                   dryRun,
                   CALLBACK(updateStatusInfoFunction,updateStatusInfoUserData),

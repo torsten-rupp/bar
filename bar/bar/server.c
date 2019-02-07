@@ -253,9 +253,6 @@ typedef struct
   // current list settings
   EntryList             includeEntryList;
   PatternList           excludePatternList;
-  MountList             mountList;
-  PatternList           compressExcludePatternList;
-  DeltaSourceList       deltaSourceList;
   JobOptions            jobOptions;
   DirectoryInfoList     directoryInfoList;
 
@@ -332,7 +329,6 @@ LOCAL const Certificate     *serverCert;
 LOCAL const Key             *serverKey;
 #endif /* HAVE_GNU_TLS */
 LOCAL const Hash            *serverPasswordHash;
-LOCAL const JobOptions      *serverDefaultJobOptions;
 
 LOCAL ClientList            clientList;                  // list with clients
 LOCAL AuthorizationFailList authorizationFailList;       // list with failed client authorizations
@@ -1242,9 +1238,6 @@ LOCAL void jobThreadCode(void)
   String           hostName;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
-  MountList        mountList;
-  PatternList      compressExcludePatternList;
-  DeltaSourceList  deltaSourceList;
   String           scheduleCustomText;
   String           byName;
   AggregateInfo    jobAggregateInfo,scheduleAggregateInfo;
@@ -1277,9 +1270,6 @@ LOCAL void jobThreadCode(void)
   hostName                               = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
-  List_init(&mountList);
-  PatternList_init(&compressExcludePatternList);
-  DeltaSourceList_init(&deltaSourceList);
   scheduleCustomText                     = String_new();
   byName                                 = String_new();
   jobAggregateInfo.lastErrorMessage      = String_new();
@@ -1349,9 +1339,6 @@ LOCAL void jobThreadCode(void)
       Network_getHostName(hostName);
       EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->job.includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->job.excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
-      List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL)); List_copy(&jobNode->job.mountList,&mountList,NULL,NULL,NULL,CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL));
-      PatternList_clear(&compressExcludePatternList); PatternList_copy(&jobNode->job.compressExcludePatternList,&compressExcludePatternList,CALLBACK(NULL,NULL));
-      DeltaSourceList_clear(&deltaSourceList); DeltaSourceList_copy(&jobNode->job.deltaSourceList,&deltaSourceList,CALLBACK(NULL,NULL));
       Job_duplicateOptions(&jobOptions,&jobNode->job.options);
       if (!String_isEmpty(jobNode->scheduleUUID))
       {
@@ -1461,46 +1448,46 @@ LOCAL void jobThreadCode(void)
         // get include/excluded entries from commands
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->job.includeFileCommand))
+          if (!String_isEmpty(jobNode->job.options.includeFileCommand))
           {
-            jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.includeFileCommand));
+            jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileCommand));
           }
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->job.includeImageCommand))
+          if (!String_isEmpty(jobNode->job.options.includeImageCommand))
           {
-            jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.includeImageCommand));
+            jobNode->runningInfo.error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageCommand));
           }
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->job.excludeCommand))
+          if (!String_isEmpty(jobNode->job.options.excludeCommand))
           {
-            jobNode->runningInfo.error = addExcludeListFromCommand(&excludePatternList,String_cString(jobNode->job.excludeCommand));
+            jobNode->runningInfo.error = addExcludeListFromCommand(&excludePatternList,String_cString(jobNode->job.options.excludeCommand));
           }
         }
 
         // get include/excluded entries from file
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->job.includeFileListFileName))
+          if (!String_isEmpty(jobNode->job.options.includeFileListFileName))
           {
-            jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.includeFileListFileName));
+            jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(jobNode->job.options.includeFileListFileName));
           }
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->job.includeImageListFileName))
+          if (!String_isEmpty(jobNode->job.options.includeImageListFileName))
           {
-            jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.includeImageListFileName));
+            jobNode->runningInfo.error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(jobNode->job.options.includeImageListFileName));
           }
         }
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          if (!String_isEmpty(jobNode->job.excludeListFileName))
+          if (!String_isEmpty(jobNode->job.options.excludeListFileName))
           {
-            jobNode->runningInfo.error = addExcludeListFromFile(&excludePatternList,String_cString(jobNode->job.excludeListFileName));
+            jobNode->runningInfo.error = addExcludeListFromFile(&excludePatternList,String_cString(jobNode->job.options.excludeListFileName));
           }
         }
 
@@ -1574,16 +1561,13 @@ LOCAL void jobThreadCode(void)
                 // create archive
 fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->masterIO);
                 jobNode->runningInfo.error = Command_create(jobNode->masterIO,
+                                                            archiveType,
                                                             jobUUID,
                                                             scheduleUUID,
                                                             storageName,
                                                             &includeEntryList,
                                                             &excludePatternList,
-                                                            &mountList,
-                                                            &compressExcludePatternList,
-                                                            &deltaSourceList,
                                                             &jobOptions,
-                                                            archiveType,
 NULL,//                                                        scheduleTitle,
                                                             scheduleCustomText,
                                                             startDateTime,
@@ -1605,7 +1589,6 @@ NULL,//                                                        scheduleTitle,
                 jobNode->runningInfo.error = Command_restore(&storageNameList,
                                                              &includeEntryList,
                                                              &excludePatternList,
-                                                             &deltaSourceList,
                                                              &jobOptions,
                                                              storageFlags,
                                                              CALLBACK(restoreUpdateStatusInfo,jobNode),
@@ -1701,9 +1684,6 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                           storageName,
                                                           &includeEntryList,
                                                           &excludePatternList,
-                                                          &mountList,
-                                                          &compressExcludePatternList,
-                                                          &deltaSourceList,
                                                           &jobOptions,
                                                           archiveType,
                                                           NULL,  // scheduleTitle,
@@ -1959,9 +1939,6 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
 
       // free resources
       Job_doneOptions(&jobOptions);
-      DeltaSourceList_clear(&deltaSourceList);
-      PatternList_clear(&compressExcludePatternList);
-      List_clear(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
       PatternList_clear(&excludePatternList);
       EntryList_clear(&includeEntryList);
 
@@ -1978,9 +1955,6 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
   String_delete(jobAggregateInfo.lastErrorMessage);
   String_delete(byName);
   String_delete(scheduleCustomText);
-  DeltaSourceList_done(&deltaSourceList);
-  PatternList_done(&compressExcludePatternList);
-  List_done(&mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
   String_delete(hostName);
@@ -2273,7 +2247,7 @@ LOCAL void schedulerThreadCode(void)
     Job_writeModifiedAll();
 
     // re-read all job config files
-    Job_rereadAll(globalOptions.jobsDirectory,serverDefaultJobOptions);
+    Job_rereadAll(globalOptions.jobsDirectory);
 
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
@@ -2289,7 +2263,7 @@ LOCAL void schedulerThreadCode(void)
           if (executeScheduleNode == NULL)
           {
             // find oldest job to execute, prefer 'full' job
-            if (!List_isEmpty(&jobNode->job.scheduleList))
+            if (!List_isEmpty(&jobNode->job.options.scheduleList))
             {
               dateTime = currentDateTime;
               while (   !jobListPendingFlag
@@ -2310,7 +2284,7 @@ LOCAL void schedulerThreadCode(void)
                                   );
 
                 // check if matching with some schedule list node
-                LIST_ITERATEX(&jobNode->job.scheduleList,scheduleNode,executeScheduleNode == NULL)
+                LIST_ITERATEX(&jobNode->job.options.scheduleList,scheduleNode,executeScheduleNode == NULL)
                 {
                   if (   scheduleNode->enabled
                       && (scheduleNode->archiveType != ARCHIVE_TYPE_CONTINUOUS)
@@ -2360,7 +2334,7 @@ LOCAL void schedulerThreadCode(void)
                               );
 
             // check if matching with some schedule list node
-            LIST_ITERATEX(&jobNode->job.scheduleList,scheduleNode,executeScheduleNode == NULL)
+            LIST_ITERATEX(&jobNode->job.options.scheduleList,scheduleNode,executeScheduleNode == NULL)
             {
               if (   scheduleNode->enabled
                   && (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
@@ -3066,7 +3040,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
       age                 = (now-createdDateTime)/S_PER_DAY;
       lastPersistenceNode = NULL;
 
-      persistenceNode = LIST_HEAD(&jobNode->job.persistenceList);
+      persistenceNode = LIST_HEAD(&jobNode->job.options.persistenceList);
       do
       {
         // find persistence node for archive type
@@ -3215,7 +3189,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
             List_init(&expirationEntityList);
 #warning TODO
 //TODO: revert
-//            if (   (Misc_getCurrentDateTime() > (jobNode->job.persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
+//            if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
 if (1
                 && getJobExpirationEntityList(&expirationEntityList,indexHandle,jobNode)
                )
@@ -3223,7 +3197,7 @@ if (1
 //LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalSize); }
 
               // mount devices
-              error = mountAll(&jobNode->job.mountList);
+              error = mountAll(&jobNode->job.options.mountList);
               if (error == ERROR_NONE)
               {
                 // find expired entity
@@ -3281,7 +3255,7 @@ if (1
                 }
 
                 // unmount devices
-                (void)unmountAll(&jobNode->job.mountList);
+                (void)unmountAll(&jobNode->job.options.mountList);
               }
             }
 
@@ -3779,7 +3753,7 @@ LOCAL void autoIndexThreadCode(void)
       getStorageDirectories(&storageDirectoryList);
 
       // check storage locations for BAR files, send index update request
-      Job_duplicateOptions(&jobOptions,serverDefaultJobOptions);
+      Job_initOptions(&jobOptions);
       while (!StringList_isEmpty(&storageDirectoryList))
       {
         storageDirectoryName = StringList_removeFirst(&storageDirectoryList,NULL);
@@ -7168,11 +7142,11 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                                                      NULL
                                                     ),
                           jobNode->job.options.archivePartSize,
-                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.value.delta,NULL),
-                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.value.byte, NULL),
+                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.delta,NULL),
+                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.byte, NULL),
 //TODO
-                          Crypt_algorithmToString(jobNode->job.options.cryptAlgorithms.values[0],"unknown"),
-                          (jobNode->job.options.cryptAlgorithms.values[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
+                          Crypt_algorithmToString(jobNode->job.options.cryptAlgorithms[0],"unknown"),
+                          (jobNode->job.options.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.options.cryptPasswordMode,NULL),
                           jobNode->lastExecutedDateTime,
                           jobNode->runningInfo.estimatedRestTime
@@ -7539,8 +7513,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       jobNode = Job_new(JOB_TYPE_CREATE,
                         name,
                         jobUUID,
-                        fileName,
-                        serverDefaultJobOptions
+                        fileName
                        );
       assert(jobNode != NULL);
 
@@ -7569,8 +7542,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
         jobNode = Job_new(JOB_TYPE_CREATE,
                           name,
                           jobUUID,
-                          NULL, // fileName
-                          serverDefaultJobOptions
+                          NULL // fileName
                          );
         assert(jobNode != NULL);
 
@@ -8736,7 +8708,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     }
 
     // send mount list
-    LIST_ITERATE(&jobNode->job.mountList,mountNode)
+    LIST_ITERATE(&jobNode->job.options.mountList,mountNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "id=%u name=%'S device=%'S alwaysUnmount=%y",
@@ -8794,7 +8766,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // clear mount list
-    List_clear(&jobNode->job.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+    List_clear(&jobNode->job.options.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
 
     // notify about changed lists
     Job_mountChanged(jobNode);
@@ -8897,7 +8869,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
       String_delete(name);
       return;
     }
-    List_append(&jobNode->job.mountList,mountNode);
+    List_append(&jobNode->job.options.mountList,mountNode);
 
     // get id
     mountId = mountNode->id;
@@ -8997,7 +8969,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get mount
-    mountNode = LIST_FIND(&jobNode->job.mountList,mountNode,mountNode->id == mountId);
+    mountNode = LIST_FIND(&jobNode->job.options.mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount %S not found",name);
@@ -9077,7 +9049,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // get mount
-    mountNode = LIST_FIND(&jobNode->job.mountList,mountNode,mountNode->id == mountId);
+    mountNode = LIST_FIND(&jobNode->job.options.mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount with id #%u not found",mountId);
@@ -9086,7 +9058,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // remove from mount list and free
-    List_remove(&jobNode->job.mountList,mountNode);
+    List_remove(&jobNode->job.options.mountList,mountNode);
     deleteMountNode(mountNode);
 
     // notify about changed lists
@@ -9145,7 +9117,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     }
 
     // send delta source list
-    LIST_ITERATE(&jobNode->job.deltaSourceList,deltaSourceNode)
+    LIST_ITERATE(&jobNode->job.options.deltaSourceList,deltaSourceNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "id=%u pattern=%'S patternType=%s",
@@ -9203,7 +9175,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // clear source list
-    DeltaSourceList_clear(&jobNode->job.deltaSourceList);
+    DeltaSourceList_clear(&jobNode->job.options.deltaSourceList);
 
     // set modified
     Job_setModified(jobNode);
@@ -9270,7 +9242,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
     }
 
     // add to source list
-    DeltaSourceList_append(&jobNode->job.deltaSourceList,patternString,patternType,&deltaSourceId);
+    DeltaSourceList_append(&jobNode->job.options.deltaSourceList,patternString,patternType,&deltaSourceId);
 
     // set modified
     Job_setModified(jobNode);
@@ -9345,7 +9317,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // update source list
-    DeltaSourceList_update(&jobNode->job.deltaSourceList,deltaSourceId,patternString,patternType);
+    DeltaSourceList_update(&jobNode->job.options.deltaSourceList,deltaSourceId,patternString,patternType);
 
     // set modified
     Job_setModified(jobNode);
@@ -9407,7 +9379,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // remove from source list
-    if (!DeltaSourceList_remove(&jobNode->job.deltaSourceList,deltaSourceId))
+    if (!DeltaSourceList_remove(&jobNode->job.options.deltaSourceList,deltaSourceId))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"delta source with id #%u not found",deltaSourceId);
       Semaphore_unlock(&jobList.lock);
@@ -9469,7 +9441,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     }
 
     // send exclude list
-    LIST_ITERATE(&jobNode->job.compressExcludePatternList,patternNode)
+    LIST_ITERATE(&jobNode->job.options.compressExcludePatternList,patternNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "pattern=%'S patternType=%s",
@@ -9525,7 +9497,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     }
 
     // clear exclude list
-    PatternList_clear(&jobNode->job.compressExcludePatternList);
+    PatternList_clear(&jobNode->job.options.compressExcludePatternList);
 
     // set modified
     Job_setModified(jobNode);
@@ -9592,7 +9564,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     }
 
     // add to exclude list
-    PatternList_append(&jobNode->job.compressExcludePatternList,patternString,patternType,&patternId);
+    PatternList_append(&jobNode->job.options.compressExcludePatternList,patternString,patternType,&patternId);
 
     // set modified
     Job_setModified(jobNode);
@@ -9667,7 +9639,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
     }
 
     // update exclude list
-    PatternList_update(&jobNode->job.compressExcludePatternList,patternId,patternString,patternType);
+    PatternList_update(&jobNode->job.options.compressExcludePatternList,patternId,patternString,patternType);
 
     // set modified
     Job_setModified(jobNode);
@@ -9729,7 +9701,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     }
 
     // remove from exclude list
-    if (!PatternList_remove(&jobNode->job.compressExcludePatternList,patternId))
+    if (!PatternList_remove(&jobNode->job.options.compressExcludePatternList,patternId))
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
       Semaphore_unlock(&jobList.lock);
@@ -9813,7 +9785,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     date     = String_new();
     weekDays = String_new();
     time     = String_new();
-    LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
+    LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
     {
       if ((archiveType == ARCHIVE_TYPE_NONE) || (scheduleNode->archiveType == archiveType))
       {
@@ -10125,7 +10097,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // add to schedule list
-    List_append(&jobNode->job.scheduleList,scheduleNode);
+    List_append(&jobNode->job.options.scheduleList,scheduleNode);
 
     // notify about changed schedule
     Job_scheduleChanged(jobNode);
@@ -10204,7 +10176,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     }
 
     // remove from list
-    List_removeAndFree(&jobNode->job.scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+    List_removeAndFree(&jobNode->job.options.scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
 
     // notify about changed schedule
     Job_scheduleChanged(jobNode);
@@ -10281,7 +10253,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     }
 
 //TODO: totalStorageCount, totalStorageSize
-    LIST_ITERATE(&jobNode->job.persistenceList,persistenceNode)
+    LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
     {
       // send persistence info
       if (persistenceNode->minKeep != KEEP_ALL   ) stringFormat(s1,sizeof(s1),"%d",persistenceNode->minKeep); else stringSet(s1,sizeof(s1),"*");
@@ -10369,8 +10341,8 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     }
 
     // clear persistence list
-    List_clear(&jobNode->job.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-    jobNode->job.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    List_clear(&jobNode->job.options.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+    jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed lists
     Job_persistenceChanged(jobNode);
@@ -10477,7 +10449,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       return;
     }
 
-    if (!LIST_CONTAINS(&jobNode->job.persistenceList,
+    if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                        persistenceNode,
                           (persistenceNode->archiveType == archiveType)
                        && (persistenceNode->minKeep     == minKeep    )
@@ -10489,10 +10461,10 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       // insert into persistence list
       persistenceNode = newPersistenceNode(archiveType,minKeep,maxKeep,maxAge);
       assert(persistenceNode != NULL);
-      insertPersistenceNode(&jobNode->job.persistenceList,persistenceNode);
+      insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
 
       // set last-modified timestamp
-      jobNode->job.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+      jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
       // get id
       persistenceId = persistenceNode->id;
@@ -10610,7 +10582,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     }
 
     // find persistence node
-    persistenceNode = LIST_FIND(&jobNode->job.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
+    persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
     if (persistenceNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"persistence #%u not found",persistenceId);
@@ -10619,7 +10591,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     }
 
     // remove from persistence list
-    List_remove(&jobNode->job.persistenceList,persistenceNode);
+    List_remove(&jobNode->job.options.persistenceList,persistenceNode);
 
     // update persistence
     persistenceNode->archiveType = archiveType;
@@ -10627,7 +10599,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     persistenceNode->maxKeep     = maxKeep;
     persistenceNode->maxAge      = maxAge;
 
-    if (!LIST_CONTAINS(&jobNode->job.persistenceList,
+    if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                        existingPersistenceNode,
                           (existingPersistenceNode->archiveType == persistenceNode->archiveType)
                        && (existingPersistenceNode->minKeep     == persistenceNode->minKeep    )
@@ -10637,7 +10609,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
        )
     {
       // re-insert updated node into persistence list
-      insertPersistenceNode(&jobNode->job.persistenceList,persistenceNode);
+      insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
     }
     else
     {
@@ -10647,10 +10619,10 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
 
 //TODO: remove
     // update "forever"-nodes
-//    insertForeverPersistenceNodes(&jobNode->job.persistenceList);
+//    insertForeverPersistenceNodes(&jobNode->job.options.persistenceList);
 
     // set last-modified timestamp
-    jobNode->job.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed lists
     Job_persistenceChanged(jobNode);
@@ -10715,7 +10687,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     }
 
     // find persistence
-    persistenceNode = LIST_FIND(&jobNode->job.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
+    persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
     if (persistenceNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"persistence %u of job %S not found",persistenceId,jobUUID);
@@ -10724,14 +10696,17 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     }
 
     // remove from list
-    List_removeAndFree(&jobNode->job.persistenceList,persistenceNode,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+    List_removeAndFree(&jobNode->job.options.persistenceList,
+                       persistenceNode,
+                       CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL)
+                      );
 
 //TODO: remove
     // update "forever"-nodes
-//    insertForeverPersistenceNodes(&jobNode->job.persistenceList);
+//    insertForeverPersistenceNodes(&jobNode->job.options.persistenceList);
 
     // set last-modified timestamp
-    jobNode->job.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
 
     // notify about changed persistence
     Job_persistenceChanged(jobNode);
@@ -12851,7 +12826,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
       jobNode = Job_findByUUID(jobUUID);
       if (jobNode != NULL)
       {
-        error = mountAll(&jobNode->job.mountList);
+        error = mountAll(&jobNode->job.options.mountList);
       }
     }
   }
@@ -12880,7 +12855,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
         jobNode = Job_findByUUID(uuid);
         if (jobNode != NULL)
         {
-          error = mountAll(&jobNode->job.mountList);
+          error = mountAll(&jobNode->job.options.mountList);
         }
       }
     }
@@ -12914,7 +12889,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
         jobNode = Job_findByUUID(uuid);
         if (jobNode != NULL)
         {
-          error = mountAll(&jobNode->job.mountList);
+          error = mountAll(&jobNode->job.options.mountList);
         }
       }
     }
@@ -13462,7 +13437,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   error = Command_restore(&storageNameList,
                           &includeEntryList,
                           NULL,  // excludePatternList
-                          NULL,  // deltaSourceList
                           &clientInfo->jobOptions,
                           FALSE,  // dryRun
                           CALLBACK(restoreUpdateStatusInfo,&restoreCommandInfo),
@@ -16829,8 +16803,6 @@ LOCAL void initClient(ClientInfo *clientInfo)
 
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
-  PatternList_init(&clientInfo->compressExcludePatternList);
-  DeltaSourceList_init(&clientInfo->deltaSourceList);
   Job_initOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
   Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
@@ -17025,8 +16997,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   Array_done(&clientInfo->indexIdArray);
   List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   Job_doneOptions(&clientInfo->jobOptions);
-  DeltaSourceList_done(&clientInfo->deltaSourceList);
-  PatternList_done(&clientInfo->compressExcludePatternList);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
   ServerIO_done(&clientInfo->io);
@@ -17431,8 +17401,7 @@ Errors Server_run(ServerModes       mode,
                   const Key         *key,
                   const Hash        *passwordHash,
                   uint              maxConnections,
-                  const char        *indexDatabaseFileName,
-                  const JobOptions  *defaultJobOptions
+                  const char        *indexDatabaseFileName
                  )
 {
   AutoFreeList          autoFreeList;
@@ -17467,7 +17436,6 @@ Errors Server_run(ServerModes       mode,
     serverKey                    = key;
   #endif /* HAVE_GNU_TLS */
   serverPasswordHash             = passwordHash;
-  serverDefaultJobOptions        = defaultJobOptions;
   Semaphore_init(&clientList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&clientList);
   List_init(&authorizationFailList);

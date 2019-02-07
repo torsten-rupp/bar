@@ -62,7 +62,6 @@ typedef struct
   FragmentList        *fragmentList;
   const EntryList     *includeEntryList;                  // list of included entries
   const PatternList   *excludePatternList;                // list of exclude patterns
-  DeltaSourceList     *deltaSourceList;                   // delta sources
   const JobOptions    *jobOptions;
   LogHandle           *logHandle;                         // log handle
 
@@ -120,7 +119,6 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Input  : compareInfo         - compare info variable
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
-*          deltaSourceList     - delta source list
 *          archiveHandle       - archive handle
 *          pauseTestFlag       - pause creation flag (can be NULL)
 *          requestedAbortFlag  - request abort flag (can be NULL)
@@ -134,7 +132,6 @@ LOCAL void initCompareInfo(CompareInfo         *compareInfo,
                            FragmentList        *fragmentList,
                            const EntryList     *includeEntryList,
                            const PatternList   *excludePatternList,
-                           DeltaSourceList     *deltaSourceList,
                            const JobOptions    *jobOptions,
                            bool                *pauseTestFlag,
                            bool                *requestedAbortFlag,
@@ -147,7 +144,6 @@ LOCAL void initCompareInfo(CompareInfo         *compareInfo,
   compareInfo->fragmentList        = fragmentList;
   compareInfo->includeEntryList    = includeEntryList;
   compareInfo->excludePatternList  = excludePatternList;
-  compareInfo->deltaSourceList     = deltaSourceList;
   compareInfo->jobOptions          = jobOptions;
   compareInfo->pauseTestFlag       = pauseTestFlag;
   compareInfo->requestedAbortFlag  = requestedAbortFlag;
@@ -1843,7 +1839,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
 *          archiveName             - archive name (can be NULL)
 *          includeEntryList        - include entry list
 *          excludePatternList      - exclude pattern list
-*          deltaSourceList         - delta source list
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password
@@ -1858,7 +1853,6 @@ LOCAL Errors compareArchiveContent(StorageSpecifier        *storageSpecifier,
                                    ConstString             archiveName,
                                    const EntryList         *includeEntryList,
                                    const PatternList       *excludePatternList,
-                                   DeltaSourceList         *deltaSourceList,
                                    const JobOptions        *jobOptions,
                                    GetNamePasswordFunction getNamePasswordFunction,
                                    void                    *getNamePasswordUserData,
@@ -1936,7 +1930,7 @@ NULL, // masterSocketHandle
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        archiveName,
-                       deltaSourceList,
+                       &jobOptions->deltaSourceList,
                        CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                        logHandle
                       );
@@ -1999,7 +1993,6 @@ NULL, // masterSocketHandle
                   fragmentList,
                   includeEntryList,
                   excludePatternList,
-                  deltaSourceList,
                   jobOptions,
 //TODO
 NULL,  //               pauseTestFlag,
@@ -2162,7 +2155,6 @@ NULL,  //               requestedAbortFlag,
 Errors Command_compare(const StringList        *storageNameList,
                        const EntryList         *includeEntryList,
                        const PatternList       *excludePatternList,
-                       DeltaSourceList         *deltaSourceList,
                        JobOptions              *jobOptions,
                        GetNamePasswordFunction getNamePasswordFunction,
                        void                    *getNamePasswordUserData,
@@ -2214,7 +2206,6 @@ Errors Command_compare(const StringList        *storageNameList,
                                     NULL,
                                     includeEntryList,
                                     excludePatternList,
-                                    deltaSourceList,
                                     jobOptions,
                                     CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                     &fragmentList,
@@ -2261,7 +2252,6 @@ Errors Command_compare(const StringList        *storageNameList,
                                           fileName,
                                           includeEntryList,
                                           excludePatternList,
-                                          deltaSourceList,
                                           jobOptions,
                                           CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                           &fragmentList,

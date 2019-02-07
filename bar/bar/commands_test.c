@@ -60,7 +60,6 @@ typedef struct
   FragmentList        *fragmentList;
   const EntryList     *includeEntryList;                  // list of included entries
   const PatternList   *excludePatternList;                // list of exclude patterns
-  DeltaSourceList     *deltaSourceList;                   // delta sources
   const JobOptions    *jobOptions;
   LogHandle           *logHandle;                         // log handle
 
@@ -118,7 +117,6 @@ LOCAL void freeEntryMsg(EntryMsg *entryMsg, void *userData)
 * Input  : testInfo            - test info variable
 *          includeEntryList    - include entry list
 *          excludePatternList  - exclude pattern list
-*          deltaSourceList     - delta source list
 *          jobOptions          - job options
 *          pauseTestFlag       - pause creation flag (can be NULL)
 *          requestedAbortFlag  - request abort flag (can be NULL)
@@ -132,7 +130,6 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
                         FragmentList        *fragmentList,
                         const EntryList     *includeEntryList,
                         const PatternList   *excludePatternList,
-                        DeltaSourceList     *deltaSourceList,
                         const JobOptions    *jobOptions,
                         bool                *pauseTestFlag,
                         bool                *requestedAbortFlag,
@@ -145,7 +142,6 @@ LOCAL void initTestInfo(TestInfo            *testInfo,
   testInfo->fragmentList        = fragmentList;
   testInfo->includeEntryList    = includeEntryList;
   testInfo->excludePatternList  = excludePatternList;
-  testInfo->deltaSourceList     = deltaSourceList;
   testInfo->jobOptions          = jobOptions;
   testInfo->pauseTestFlag       = pauseTestFlag;
   testInfo->requestedAbortFlag  = requestedAbortFlag;
@@ -1260,7 +1256,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
 *          archiveName             - archive name (can be NULL)
 *          includeEntryList        - include entry list
 *          excludePatternList      - exclude pattern list
-*          deltaSourceList         - delta source list
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password
@@ -1275,7 +1270,6 @@ LOCAL Errors testArchiveContent(StorageSpecifier        *storageSpecifier,
                                 ConstString             archiveName,
                                 const EntryList         *includeEntryList,
                                 const PatternList       *excludePatternList,
-                                DeltaSourceList         *deltaSourceList,
                                 const JobOptions        *jobOptions,
                                 GetNamePasswordFunction getNamePasswordFunction,
                                 void                    *getNamePasswordUserData,
@@ -1353,7 +1347,7 @@ NULL, // masterSocketHandle
   error = Archive_open(&archiveHandle,
                        &storageInfo,
                        archiveName,
-                       deltaSourceList,
+                       &jobOptions->deltaSourceList,
                        CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                        logHandle
                       );
@@ -1416,7 +1410,6 @@ NULL, // masterSocketHandle
                fragmentList,
                includeEntryList,
                excludePatternList,
-               deltaSourceList,
                jobOptions,
 //TODO
 NULL,  //               pauseTestFlag,
@@ -1579,7 +1572,6 @@ NULL,  //               requestedAbortFlag,
 Errors Command_test(const StringList        *storageNameList,
                     const EntryList         *includeEntryList,
                     const PatternList       *excludePatternList,
-                    DeltaSourceList         *deltaSourceList,
                     JobOptions              *jobOptions,
                     GetNamePasswordFunction getNamePasswordFunction,
                     void                    *getNamePasswordUserData,
@@ -1634,7 +1626,6 @@ Errors Command_test(const StringList        *storageNameList,
                                    NULL,  // fileName
                                    includeEntryList,
                                    excludePatternList,
-                                   deltaSourceList,
                                    jobOptions,
                                    CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                    &fragmentList,
@@ -1682,7 +1673,6 @@ Errors Command_test(const StringList        *storageNameList,
                                        fileName,
                                        includeEntryList,
                                        excludePatternList,
-                                       deltaSourceList,
                                        jobOptions,
                                        CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                                        &fragmentList,

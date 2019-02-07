@@ -490,39 +490,33 @@ LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstS
 /***********************************************************************\
 * Name   : transmitJob
 * Purpose: transmit job config to slave
-* Input  : connectorInfo              - connector info
-*          name                       - job name
-*          jobUUID                    - job UUID
-*          scheduleUUID               - schedule UUID
-*          storageName                - storage name
-*          includeEntryList           - include entry list
-*          excludePatternList         - exclude pattern list
-*          mountList                  - mount list
-*          compressExcludePatternList - compress exclude pattern list
-*          deltaSourceList            - delta source list
-*          jobOptions                 - job options
-*          archiveType                - archive type
-*          scheduleTitle              - schedule title
-*          scheduleCustomText         - schedule custom text
+* Input  : connectorInfo      - connector info
+*          name               - job name
+*          jobUUID            - job UUID
+*          scheduleUUID       - schedule UUID
+*          storageName        - storage name
+*          includeEntryList   - include entry list
+*          excludePatternList - exclude pattern list
+*          jobOptions         - job options
+*          archiveType        - archive type
+*          scheduleTitle      - schedule title
+*          scheduleCustomText - schedule custom text
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors transmitJob(ConnectorInfo         *connectorInfo,
-                         ConstString           name,
-                         ConstString           jobUUID,
-                         ConstString           scheduleUUID,
-                         ConstString           storageName,
-                         const EntryList       *includeEntryList,
-                         const PatternList     *excludePatternList,
-                         const MountList       *mountList,
-                         const PatternList     *compressExcludePatternList,
-                         const DeltaSourceList *deltaSourceList,
-                         const JobOptions      *jobOptions,
-                         ArchiveTypes          archiveType,
-                         ConstString           scheduleTitle,
-                         ConstString           scheduleCustomText
+LOCAL Errors transmitJob(ConnectorInfo     *connectorInfo,
+                         ConstString       name,
+                         ConstString       jobUUID,
+                         ConstString       scheduleUUID,
+                         ConstString       storageName,
+                         const EntryList   *includeEntryList,
+                         const PatternList *excludePatternList,
+                         const JobOptions  *jobOptions,
+                         ArchiveTypes      archiveType,
+                         ConstString       scheduleTitle,
+                         ConstString       scheduleCustomText
                         )
 {
   #define SET_OPTION_STRING(name,value) \
@@ -639,11 +633,11 @@ UNUSED_VARIABLE(scheduleCustomText);
 
   SET_OPTION_STRING   ("compress-algorithm",     String_format(s,
                                                                "%s+%s",
-                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.value.delta,NULL),
-                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.value.byte, NULL)
+                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.delta,NULL),
+                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.byte, NULL)
                                                               )
                       );
-  SET_OPTION_CSTRING  ("crypt-algorithm",        Crypt_algorithmToString(jobOptions->cryptAlgorithms.values[0],NULL));
+  SET_OPTION_CSTRING  ("crypt-algorithm",        Crypt_algorithmToString(jobOptions->cryptAlgorithms[0],NULL));
   SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
   SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
   SET_OPTION_PASSWORD ("crypt-password",         &jobOptions->cryptPassword              );
@@ -680,7 +674,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   SET_OPTION_CSTRING  ("restore-entry-mode",     ConfigValue_selectToString(CONFIG_VALUE_RESTORE_ENTRY_MODES,jobOptions->restoreEntryMode,NULL));
   SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
 
-  SET_OPTION_STRING   ("comment",                jobOptions->comment.value               );
+  SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
 
   // set lists
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -738,7 +732,7 @@ UNUSED_VARIABLE(scheduleCustomText);
                                                             "MOUNT_LIST_CLEAR jobUUID=%S",
                                                             jobUUID
                                                            );
-  LIST_ITERATE(mountList,mountNode)
+  LIST_ITERATE(&jobOptions->mountList,mountNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
@@ -758,7 +752,7 @@ UNUSED_VARIABLE(scheduleCustomText);
                                                             "EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",
                                                             jobUUID
                                                            );
-  LIST_ITERATE(compressExcludePatternList,patternNode)
+  LIST_ITERATE(&jobOptions->compressExcludePatternList,patternNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
@@ -778,7 +772,7 @@ UNUSED_VARIABLE(scheduleCustomText);
                                                             "SOURCE_LIST_CLEAR jobUUID=%S",
                                                             jobUUID
                                                            );
-  LIST_ITERATE(deltaSourceList,deltaSourceNode)
+  LIST_ITERATE(&jobOptions->deltaSourceList,deltaSourceNode)
   {
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
@@ -3342,9 +3336,6 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
                         ConstString                  storageName,
                         const EntryList              *includeEntryList,
                         const PatternList            *excludePatternList,
-                        const MountList              *mountList,
-                        const PatternList            *compressExcludePatternList,
-                        const DeltaSourceList        *deltaSourceList,
                         const JobOptions             *jobOptions,
                         ArchiveTypes                 archiveType,
                         ConstString                  scheduleTitle,
@@ -3426,9 +3417,6 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                       storageName,
                       includeEntryList,
                       excludePatternList,
-                      mountList,
-                      compressExcludePatternList,
-                      deltaSourceList,
                       jobOptions,
                       archiveType,
                       scheduleTitle,

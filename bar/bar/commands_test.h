@@ -50,7 +50,6 @@
 * Input  : archiveFileNameList     - list with archive files
 *          includeEntryList        - include entry list
 *          excludePatternList      - exclude pattern list
-*          deltaSourceList         - delta source list
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password call back
@@ -62,7 +61,6 @@
 Errors Command_test(const StringList        *archiveFileNameList,
                     const EntryList         *includeEntryList,
                     const PatternList       *excludePatternList,
-                    DeltaSourceList         *deltaSourceList,
                     JobOptions              *jobOptions,
                     GetNamePasswordFunction getNamePasswordFunction,
                     void                    *getNamePasswordUserData,

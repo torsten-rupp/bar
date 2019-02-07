@@ -548,6 +548,7 @@ LOCAL bool getInteger64Option(int64                 *value,
 LOCAL bool processOption(const CommandLineOption *commandLineOption,
                          const char              *option,
                          const char              *value,
+                         ValueSet                optionSet,
                          FILE                    *outputHandle,
                          const char              *errorPrefix,
                          const char              *warningPrefix
@@ -1033,7 +1034,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
       }
       break;
   }
-  if (commandLineOption->isSetVariable != NULL) (*commandLineOption->isSetVariable) = TRUE;
+  if (optionSet != NULL) VALUESET_SET(optionSet,commandLineOption->setValue);
 
   return TRUE;
 }
@@ -1293,6 +1294,7 @@ bool CmdOption_parse(const char              *argv[],
                      uint                    commandLineOptionCount,
                      uint                    minPriority,
                      uint                    maxPriority,
+                     ValueSet                optionSet,
                      FILE                    *outputHandle,
                      const char              *errorPrefix,
                      const char              *warningPrefix
@@ -1533,7 +1535,7 @@ bool CmdOption_parse(const char              *argv[],
           {
             // process option
             snprintf(option,sizeof(option),"--%s",name);
-            if (!processOption(&commandLineOptions[j],option,value,outputHandle,errorPrefix,warningPrefix))
+            if (!processOption(&commandLineOptions[j],option,value,optionSet,outputHandle,errorPrefix,warningPrefix))
             {
               return FALSE;
             }
@@ -1663,7 +1665,7 @@ bool CmdOption_parse(const char              *argv[],
             {
               // process option
               snprintf(option,sizeof(option),"-%s",name);
-              if (!processOption(&commandLineOptions[j],option,value,outputHandle,errorPrefix,warningPrefix))
+              if (!processOption(&commandLineOptions[j],option,value,optionSet,outputHandle,errorPrefix,warningPrefix))
               {
                 return FALSE;
               }
@@ -1779,7 +1781,7 @@ bool CmdOption_parseString(const CommandLineOption *commandLineOption,
   assert(commandLineOption != NULL);
 
 
-  return processOption(commandLineOption,commandLineOption->name,value,NULL,NULL,NULL);
+  return processOption(commandLineOption,commandLineOption->name,value,NULL,NULL,NULL,NULL);
 }
 
 bool CmdOption_getIntegerOption(int                   *value,

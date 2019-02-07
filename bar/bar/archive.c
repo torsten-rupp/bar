@@ -686,6 +686,10 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
   assert(keyLength > 0);
   assert(cryptSalt != NULL);
 
+fprintf(stderr,"%s, %d: ------------------- deriveDecryptKey %d\n",__FILE__,__LINE__,cryptKeyDeriveType);
+Password_dump(decryptKeyNode->password);
+Crypt_dumpSalt(cryptSalt);
+
   // derive decrypt key from password with salt
   error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                           cryptKeyDeriveType,
@@ -733,7 +737,10 @@ LOCAL CryptKey *addDecryptKey(const Password      *password,
   assert(Semaphore_isLocked(&decryptKeyList.lock));
 
   // find decrypt key
-  decryptKeyNode = LIST_FIND(&decryptKeyList,decryptKeyNode,Password_equals(decryptKeyNode->password,password));
+  decryptKeyNode = LIST_FIND(&decryptKeyList,
+                             decryptKeyNode,
+                             Password_equals(decryptKeyNode->password,password)
+                            );
 
   // create new decrypt key node if required
   if (decryptKeyNode == NULL)
@@ -759,21 +766,15 @@ LOCAL CryptKey *addDecryptKey(const Password      *password,
       || !Crypt_equalsSalt(&decryptKeyNode->cryptSalt,cryptSalt)
      )
   {
-    // derive decrypt key from password with salt
-    error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
-                            cryptKeyDeriveType,
-                            Crypt_isSalt(cryptSalt) ? cryptSalt : NULL,
-                            password,
-                            keyLength
-                           );
+    error = deriveDecryptKey(decryptKeyNode,
+                             cryptKeyDeriveType,
+                             cryptSalt,
+                             keyLength
+                            );
     if (error != ERROR_NONE)
     {
       return NULL;
     }
-
-    // store new salt/key length
-    Crypt_copySalt(&decryptKeyNode->cryptSalt,cryptSalt);
-    decryptKeyNode->keyLength = keyLength;
   }
 
   return (decryptKeyNode != NULL) ? &decryptKeyNode->cryptKey : NULL;
@@ -896,7 +897,7 @@ LOCAL const CryptKey *getNextDecryptKey(DecryptKeyIterator  *decryptKeyIterator,
                                                                    FALSE,  // weakCheckFlag
                                                                    decryptKeyIterator->getNamePasswordUserData
                                                                   );
-               if (error == ERROR_NONE)
+               if ((error == ERROR_NONE) && !Password_isEmpty(&newPassword))
                {
                  // add to decrypt key list
                  decryptKey = addDecryptKey(&newPassword,
@@ -1043,9 +1044,10 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
+fprintf(stderr,"%s, %d: -----------\n",__FILE__,__LINE__);
   SEMAPHORE_LOCKED_DO(&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0])
+    if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0])
         && (archiveHandle->cryptPassword == NULL)
        )
     {
@@ -1054,9 +1056,10 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
       if (cryptPassword == NULL)
       {
         Semaphore_unlock(&archiveHandle->passwordLock);
-        return ERROR_NO_CRYPT_PASSWORD;
+        return ERROR_INIT_PASSWORD;
       }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if      (password != NULL)
       {
         // use given crypt password
@@ -1064,11 +1067,13 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
       }
       else if (!Password_isEmpty(&archiveHandle->storageInfo->jobOptions->cryptPassword))
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // use crypt password
         Password_set(cryptPassword,&archiveHandle->storageInfo->jobOptions->cryptPassword);
       }
       else
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // get crypt password
         error = getCryptPassword(cryptPassword,
                                  archiveHandle,
@@ -1083,6 +1088,16 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
         }
       }
 
+      // check if passwort is not empty
+      if (Password_isEmpty(cryptPassword))
+      {
+        Password_delete(cryptPassword);
+        Semaphore_unlock(&archiveHandle->passwordLock);
+        return ERROR_NO_CRYPT_PASSWORD;
+      }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Password_dump(cryptPassword);
+
       // set crypt password
       archiveHandle->cryptPassword = cryptPassword;
     }
@@ -1094,24 +1109,26 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
 #ifdef MULTI_CRYPT
 
 /***********************************************************************\
-* Name   : cryptInit
-* Purpose:
+* Name   : multiCryptInit
+* Purpose: multi-crypt init
 * Input  :
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors cryptInit(CryptInfo       *cryptInfo,
-                       CryptAlgorithms *cryptAlgorithms,
-                       CryptKey        *cryptKey,
-                       uint            count,
-                       const CryptSalt *cryptSalt,
-                       Password        *cryptPassword
-                      )
+LOCAL Errors multiCryptInit(CryptInfo       *cryptInfo,
+                            CryptAlgorithms *cryptAlgorithms,
+                            CryptKey        *cryptKey,
+                            uint            count,
+                            const CryptSalt *cryptSalt,
+                            Password        *cryptPassword
+                           )
 {
   int    i;
   Errors error;
+
+HALT_NOT_YET_IMPLEMENTED();
 
   for (i = 0; i < (int)count; i++)
   {
@@ -1135,20 +1152,20 @@ LOCAL Errors cryptInit(CryptInfo       *cryptInfo,
 }
 
 /***********************************************************************\
-* Name   : cryptDone
-* Purpose:
+* Name   : multiCryptDone
+* Purpose: multi-crypt done
 * Input  :
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cryptDone(CryptInfo       *cryptInfo,
-                     CryptAlgorithms *cryptAlgorithms,
-                     uint            cryptAlgorithmCount
-                    )
+LOCAL void multiCryptDone(CryptInfo       *cryptInfo,
+                          CryptAlgorithms *cryptAlgorithms,
+                          uint            cryptAlgorithmCount
+                         )
 {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+HALT_NOT_YET_IMPLEMENTED();
 }
 
 /***********************************************************************\
@@ -2545,12 +2562,12 @@ LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
     return error;
   }
 #ifdef MULTI_CRYPT
-  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[0]);
-  chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[1]);
-  chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
-  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
+  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+  chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
+  chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
+  chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
   chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
@@ -2560,7 +2577,7 @@ LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
   error = Crypt_init(&cryptInfo,
 //TODO: MULTI_CRYPT
 //TODO: CBC, CTS?
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -2595,7 +2612,7 @@ LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
   String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
   chunkMetaEntry.archiveType     = archiveHandle->archiveType;
   chunkMetaEntry.createdDateTime = Misc_getCurrentDateTime();
-  String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment.value);
+  String_set(chunkMetaEntry.comment,archiveHandle->storageInfo->jobOptions->comment);
 
   // write meta chunks
   error = Chunk_create(&chunkMeta.info);
@@ -5554,7 +5571,7 @@ UNUSED_VARIABLE(storageInfo);
 
   // create new crypt info
   archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
-                                                 Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms.values[0])
+                                                 Crypt_isEncrypted(storageInfo->jobOptions->cryptAlgorithms[0])
                                                    ? storageInfo->jobOptions->cryptType
                                                    : CRYPT_TYPE_NONE,
                                                  CRYPT_MODE_NONE,
@@ -5566,7 +5583,7 @@ UNUSED_VARIABLE(storageInfo);
   Crypt_randomSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
 
   // detect crypt block length, crypt key length
-  error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms.values[0],&archiveHandle->blockLength);
+  error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -5578,7 +5595,7 @@ UNUSED_VARIABLE(storageInfo);
     AutoFree_cleanup(&autoFreeList);
     return ERROR_UNSUPPORTED_BLOCK_LENGTH;
   }
-  error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms.values[0],&keyLength);
+  error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0],&keyLength);
   if (error != ERROR_NONE)
   {
     return error;
@@ -5598,6 +5615,8 @@ UNUSED_VARIABLE(storageInfo);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+Password_dump(archiveHandle->cryptPassword);
 
       // derive crypt key from password with salt
       error = Crypt_deriveKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
@@ -6586,14 +6605,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->file.chunkFile.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->file.chunkFile.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->file.chunkFile.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->file.chunkFile.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->file.chunkFile.info,{ Chunk_done(&archiveEntryInfo->file.chunkFile.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -6608,7 +6627,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -6623,7 +6642,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -6638,7 +6657,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -6653,7 +6672,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
 //TODO MULTI_CRYPT
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -6996,14 +7015,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   archiveEntryInfo->image.chunkImage.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->image.chunkImage.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->image.chunkImage.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->image.chunkImage.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->image.chunkImage.info,{ Chunk_done(&archiveEntryInfo->image.chunkImage.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7018,7 +7037,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7033,7 +7052,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7048,7 +7067,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7265,19 +7284,19 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     return error;
   }
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[0]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[1]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->directory.chunkDirectory.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->directory.chunkDirectory.info,{ Chunk_done(&archiveEntryInfo->directory.chunkDirectory.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7291,7 +7310,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7503,14 +7522,14 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   archiveEntryInfo->link.chunkLink.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->link.chunkLink.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->link.chunkLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->link.chunkLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->link.chunkLink.info,{ Chunk_done(&archiveEntryInfo->link.chunkLink.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7524,7 +7543,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7828,14 +7847,14 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->hardLink.chunkHardLink.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->hardLink.chunkHardLink.info,{ Chunk_done(&archiveEntryInfo->hardLink.chunkHardLink.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7849,7 +7868,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7863,7 +7882,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7877,7 +7896,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7891,7 +7910,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -7905,7 +7924,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8178,14 +8197,14 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[2]);
   archiveEntryInfo->special.chunkSpecial.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->special.chunkSpecial.cryptAlgorithm = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
 #endif
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo->special.chunkSpecial.info,{ Chunk_done(&archiveEntryInfo->special.chunkSpecial.info); });
 
   // init crypt
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8199,7 +8218,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -8411,12 +8430,12 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
     return error;
   }
 #ifdef MULTI_CRYPT
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[0]);
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[1]);
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[2]);
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms.values[3]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[0]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[1]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[2]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->jobOptions->cryptAlgorithms[3]);
 #else
-  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0]);
+  archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[0] = CRYPT_ALGORITHM_TO_CONSTANT(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0]);
   archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[1] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[2] = CRYPT_ALGORITHM_NONE;
   archiveEntryInfo->meta.chunkMeta.cryptAlgorithms[3] = CRYPT_ALGORITHM_NONE;
@@ -8426,7 +8445,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   // init crypt
   error = Crypt_init(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
 //TODO
-                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms.values[0],
+                     archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
                      CRYPT_MODE_CBC,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
@@ -9601,12 +9620,12 @@ Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle)
                          decryptKey
                         );
 #else
-      error = cryptInit(&archiveEntryInfo->file.chunkFileEntry.cryptInfos,
-                        archiveEntryInfo->cryptAlgorithms,
-                        SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),
-                        decryptKey,
-                        &archiveHandle->archiveCryptInfo->cryptSalt,
-NULL//                         password
+      error = multiCryptInit(&archiveEntryInfo->file.chunkFileEntry.cryptInfos,
+                             archiveEntryInfo->cryptAlgorithms,
+                             SIZE_OF_ARRAY(archiveEntryInfo->cryptAlgorithms),
+                             decryptKey,
+                             &archiveHandle->archiveCryptInfo->cryptSalt,
+NULL//                             password
                        );
 #endif
       if (error == ERROR_NONE)
@@ -10748,7 +10767,6 @@ NULL//                         password
       {
         AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,{ Crypt_done(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo); });
       }
-//assert(decryptKey->key != NULL);
     }
     if (error == ERROR_NONE)
     {

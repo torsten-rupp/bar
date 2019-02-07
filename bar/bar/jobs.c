@@ -1,4 +1,4 @@
-/***********************************************************************\
+  /***********************************************************************\
 *
 * $Revision: 8947 $
 * $Date: 2018-11-29 13:04:59 +0100 (Thu, 29 Nov 2018) $
@@ -164,7 +164,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_SELECT      ("pattern-type",              JobNode,job.options.patternType,                 CONFIG_VALUE_PATTERN_TYPES),
 
   CONFIG_STRUCT_VALUE_SPECIAL     ("compress-algorithm",        JobNode,job.options.compressAlgorithms,          configValueParseCompressAlgorithms,configValueFormatInitCompressAlgorithms,configValueFormatDoneCompressAlgorithms,configValueFormatCompressAlgorithms,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",          JobNode,job.compressExcludePatternList,          configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("compress-exclude",          JobNode,job.options.compressExcludePatternList,  configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL     ("crypt-algorithm",           JobNode,job.options.cryptAlgorithms,             configValueParseCryptAlgorithms,configValueFormatInitCryptAlgorithms,configValueFormatDoneCryptAlgorithms,configValueFormatCryptAlgorithms,NULL),
   CONFIG_STRUCT_VALUE_SELECT      ("crypt-type",                JobNode,job.options.cryptType,                   CONFIG_VALUE_CRYPT_TYPES),
@@ -187,16 +187,16 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 //  CONFIG_STRUCT_VALUE_SPECIAL     ("ssh-private-key-data",      JobNode,job.options.sshServer.privateKey,        configValueParseKeyData,NULL,NULL,NULL,NULL),
 
   CONFIG_STRUCT_VALUE_SPECIAL     ("include-file",              JobNode,job.includeEntryList,                    configValueParseFileEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatFileEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.includeFileListFileName              ),
-  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.includeFileCommand                   ),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-list",         JobNode,job.options.includeFileListFileName      ),
+  CONFIG_STRUCT_VALUE_STRING      ("include-file-command",      JobNode,job.options.includeFileCommand           ),
   CONFIG_STRUCT_VALUE_SPECIAL     ("include-image",             JobNode,job.includeEntryList,                    configValueParseImageEntryPattern,configValueFormatInitEntryPattern,configValueFormatDoneEntryPattern,configValueFormatImageEntryPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.includeImageListFileName             ),
-  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.includeImageCommand                  ),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-list",        JobNode,job.options.includeImageListFileName     ),
+  CONFIG_STRUCT_VALUE_STRING      ("include-image-command",     JobNode,job.options.includeImageCommand          ),
   CONFIG_STRUCT_VALUE_SPECIAL     ("exclude",                   JobNode,job.excludePatternList,                  configValueParsePattern,configValueFormatInitPattern,configValueFormatDonePattern,configValueFormatPattern,NULL),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.excludeListFileName                  ),
-  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.excludeCommand                       ),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.deltaSourceList,                     configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
-  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.mountList,                           configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-list",              JobNode,job.options.excludeListFileName          ),
+  CONFIG_STRUCT_VALUE_STRING      ("exclude-command",           JobNode,job.options.excludeCommand               ),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("delta-source",              JobNode,job.options.deltaSourceList,             configValueParseDeltaSource,configValueFormatInitDeltaSource,configValueFormatDoneDeltaSource,configValueFormatDeltaSource,NULL),
+  CONFIG_STRUCT_VALUE_SPECIAL     ("mount",                     JobNode,job.options.mountList,                   configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
 
   CONFIG_STRUCT_VALUE_INTEGER64   ("max-storage-size",          JobNode,job.options.maxStorageSize,              0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_STRUCT_VALUE_INTEGER64   ("volume-size",               JobNode,job.options.volumeSize,                  0LL,MAX_INT64,CONFIG_VALUE_BYTES_UNITS),
@@ -1891,7 +1891,7 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    List_append(&((JobNode*)variable)->job.mountList,mountNode);
+    List_append(&((JobNode*)variable)->job.options.mountList,mountNode);
   }
 
   return TRUE;
@@ -2028,23 +2028,8 @@ void Job_init(Job *job)
   job->slaveHost.port                            = 0;
   job->slaveHost.forceSSL                        = FALSE;
   job->archiveName                               = String_new();
-  job->storageNameListStdin                      = FALSE;
-  job->storageNameListFileName                   = String_new();
-  job->storageNameCommand                        = String_new();
   EntryList_init(&job->includeEntryList);
-  job->includeFileListFileName                   = String_new();
-  job->includeFileCommand                        = String_new();
-  job->includeImageListFileName                  = String_new();
-  job->includeImageCommand                       = String_new();
   PatternList_init(&job->excludePatternList);
-  job->excludeListFileName                       = String_new();
-  job->excludeCommand                            = String_new();
-  List_init(&job->mountList);
-  PatternList_init(&job->compressExcludePatternList);
-  DeltaSourceList_init(&job->deltaSourceList);
-  List_init(&job->scheduleList);
-  List_init(&job->persistenceList);
-  job->persistenceList.lastModificationTimestamp = 0LL;
   Job_initOptions(&job->options);
 
   DEBUG_ADD_RESOURCE_TRACE(job,Job);
@@ -2062,47 +2047,14 @@ void Job_duplicate(Job *job, const Job *fromJob)
   job->slaveHost.port                            = fromJob->slaveHost.port;
   job->slaveHost.forceSSL                        = fromJob->slaveHost.forceSSL;
   job->archiveName                               = String_duplicate(fromJob->archiveName);
-  job->storageNameListStdin                      = fromJob->storageNameListStdin;
-  job->storageNameListFileName                   = String_duplicate(fromJob->storageNameListFileName);
-  job->storageNameCommand                        = String_duplicate(fromJob->storageNameCommand);
   EntryList_initDuplicate(&job->includeEntryList,
                           &fromJob->includeEntryList,
                           CALLBACK(NULL,NULL)
                          );
-  job->includeFileListFileName                   = String_duplicate(fromJob->includeFileListFileName);
-  job->includeFileCommand                        = String_duplicate(fromJob->includeFileCommand);
-  job->includeImageListFileName                  = String_duplicate(fromJob->includeImageListFileName);
-  job->includeImageCommand                       = String_duplicate(fromJob->includeImageCommand);
-  PatternList_initDuplicate(&job->compressExcludePatternList,
-                            &fromJob->compressExcludePatternList,
+  PatternList_initDuplicate(&job->excludePatternList,
+                            &fromJob->excludePatternList,
                             CALLBACK(NULL,NULL)
                            );
-  job->excludeListFileName                       = String_duplicate(fromJob->excludeListFileName);
-  job->excludeCommand                            = String_duplicate(fromJob->excludeCommand);
-  List_initDuplicate(&job->mountList,
-                     &fromJob->mountList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
-                    );
-  PatternList_initDuplicate(&job->compressExcludePatternList,
-                            &fromJob->compressExcludePatternList,
-                            CALLBACK(NULL,NULL)
-                           );
-  DeltaSourceList_initDuplicate(&job->deltaSourceList,
-                                &fromJob->deltaSourceList,
-                                CALLBACK(NULL,NULL)
-                               );
-  List_initDuplicate(&job->scheduleList,
-                     &fromJob->scheduleList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
-                    );
-  List_initDuplicate(&job->persistenceList,
-                     &fromJob->persistenceList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
-                    );
-  job->persistenceList.lastModificationTimestamp = 0LL;
   Job_duplicateOptions(&job->options,&fromJob->options);
 
   DEBUG_ADD_RESOURCE_TRACE(job,Job);
@@ -2115,31 +2067,15 @@ void Job_done(Job *job)
   DEBUG_REMOVE_RESOURCE_TRACE(job,Job);
 
   Job_doneOptions(&job->options);
-  List_done(&job->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  List_done(&job->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  DeltaSourceList_done(&job->deltaSourceList);
-  PatternList_done(&job->compressExcludePatternList);
-  List_done(&job->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
-  String_delete(job->excludeCommand);
-  String_delete(job->excludeListFileName);
-  PatternList_done(&job->excludePatternList);
-  String_delete(job->includeImageCommand);
-  String_delete(job->includeImageListFileName);
-  String_delete(job->includeFileCommand);
-  String_delete(job->includeFileListFileName);
-  EntryList_done(&job->includeEntryList);
-  String_delete(job->storageNameCommand);
-  String_delete(job->storageNameListFileName);
   String_delete(job->archiveName);
   String_delete(job->slaveHost.name);
   String_delete(job->uuid);
 }
 
-JobNode *Job_new(JobTypes         jobType,
-                 ConstString      name,
-                 ConstString      jobUUID,
-                 ConstString      fileName,
-                 const JobOptions *defaultJobOptions
+JobNode *Job_new(JobTypes    jobType,
+                 ConstString name,
+                 ConstString jobUUID,
+                 ConstString fileName
                 )
 {
   JobNode *jobNode;
@@ -2162,10 +2098,6 @@ JobNode *Job_new(JobTypes         jobType,
     Misc_getUUID(jobNode->job.uuid);
   }
   jobNode->name                                      = String_duplicate(name);
-  if (defaultJobOptions != NULL)
-  {
-    Job_setOptions(&jobNode->job.options,defaultJobOptions);
-  }
   jobNode->jobType                                   = jobType;
   jobNode->modifiedFlag                              = FALSE;
 
@@ -2434,14 +2366,14 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
 
   if (jobNode != NULL)
   {
-    scheduleNode = LIST_FIND(&jobNode->job.scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
+    scheduleNode = LIST_FIND(&jobNode->job.options.scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
   }
   else
   {
     scheduleNode = NULL;
     LIST_ITERATEX(&jobList,jobNode,scheduleNode == NULL)
     {
-      scheduleNode = LIST_FIND(&jobNode->job.scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
+      scheduleNode = LIST_FIND(&jobNode->job.options.scheduleList,scheduleNode,String_equals(scheduleNode->uuid,scheduleUUID));
     }
   }
 
@@ -2459,7 +2391,7 @@ void Job_includeExcludeChanged(JobNode *jobNode)
   assert(Semaphore_isLocked(&jobList.lock));
 
   // check if continuous schedule exists, update continuous notifies
-  LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
+  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
   {
     if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
     {
@@ -2488,7 +2420,7 @@ void Job_mountChanged(JobNode *jobNode)
 
   assert(Semaphore_isLocked(&jobList.lock));
 
-  LIST_ITERATE(&jobNode->job.mountList,mountNode)
+  LIST_ITERATE(&jobNode->job.options.mountList,mountNode)
   {
   }
 }
@@ -2500,7 +2432,7 @@ void Job_scheduleChanged(const JobNode *jobNode)
   assert(Semaphore_isLocked(&jobList.lock));
 
   // check if continuous schedule exists, update continuous notifies
-  LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
+  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
   {
     if (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS)
     {
@@ -2572,7 +2504,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode)
     for (archiveType = ARCHIVE_TYPE_MIN; archiveType <= ARCHIVE_TYPE_MAX; archiveType++)
     {
       lastExecutedDateTime = 0LL;
-      LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
+      LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
       {
         if ((scheduleNode->archiveType == archiveType) && (scheduleNode->lastExecutedDateTime > lastExecutedDateTime))
         {
@@ -2649,7 +2581,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       {
         jobNode->lastScheduleCheckDateTime = n;
         jobNode->lastExecutedDateTime      = n;
-        LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
+        LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
         {
           scheduleNode->lastExecutedDateTime = n;
         }
@@ -2662,7 +2594,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       {
         if (Archive_parseType(s,&archiveType,NULL))
         {
-          LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
+          LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
           {
             if (scheduleNode->archiveType == archiveType)
             {
@@ -2691,7 +2623,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   }
 
   // convert deprecated schedule persistence -> persistence data
-  LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
+  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
   {
     if (scheduleNode->deprecatedPersistenceFlag)
     {
@@ -2701,7 +2633,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       maxAge  = (scheduleNode->maxAge  != 0) ? scheduleNode->maxAge  : AGE_FOREVER;
 
       // find existing persistence node
-      persistenceNode = LIST_FIND(&jobNode->job.persistenceList,
+      persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,
                                   persistenceNode,
                                      (persistenceNode->archiveType == scheduleNode->archiveType)
                                   && (persistenceNode->minKeep     == minKeep                  )
@@ -2719,7 +2651,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
         assert(persistenceNode != NULL);
 
         // insert into persistence list
-        insertPersistenceNode(&jobNode->job.persistenceList,persistenceNode);
+        insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
       }
     }
   }
@@ -2797,10 +2729,10 @@ Errors Job_write(JobNode *jobNode)
 
     // delete old schedule sections, get position for insert new schedule sections, write new schedule sections
     nextStringNode = ConfigValue_deleteSections(&jobLinesList,"schedule");
-    if (!List_isEmpty(&jobNode->job.scheduleList))
+    if (!List_isEmpty(&jobNode->job.options.scheduleList))
     {
       StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->job.scheduleList,scheduleNode)
+      LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
       {
         // insert new schedule sections
         String_format(line,"[schedule]");
@@ -2827,10 +2759,10 @@ Errors Job_write(JobNode *jobNode)
 
     // delete old persistence sections, get position for insert new persistence sections, write new persistence sections
     nextStringNode = ConfigValue_deleteSections(&jobLinesList,"persistence");
-    if (!List_isEmpty(&jobNode->job.persistenceList))
+    if (!List_isEmpty(&jobNode->job.options.persistenceList))
     {
       StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->job.persistenceList,persistenceNode)
+      LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
       {
         // insert new persistence sections
         String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType,"normal"));
@@ -2911,7 +2843,6 @@ void Job_writeModifiedAll(void)
 
 bool Job_read(JobNode *jobNode)
 {
-  uint       i;
   Errors     error;
   FileHandle fileHandle;
   bool       failFlag;
@@ -2933,50 +2864,11 @@ bool Job_read(JobNode *jobNode)
   String_clear(jobNode->job.archiveName);
   EntryList_clear(&jobNode->job.includeEntryList);
   PatternList_clear(&jobNode->job.excludePatternList);
-  PatternList_clear(&jobNode->job.compressExcludePatternList);
-  DeltaSourceList_clear(&jobNode->job.deltaSourceList);
-  List_clear(&jobNode->job.scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  List_clear(&jobNode->job.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  jobNode->job.persistenceList.lastModificationTimestamp = 0LL;
-  jobNode->job.options.archiveType                       = ARCHIVE_TYPE_NORMAL;
-  jobNode->job.options.archivePartSize                   = 0LL;
-  String_clear(jobNode->job.options.incrementalListFileName);
-  jobNode->job.options.directoryStripCount               = DIRECTORY_STRIP_NONE;
-  String_clear(jobNode->job.options.destination);
-  jobNode->job.options.patternType                       = PATTERN_TYPE_GLOB;
-  jobNode->job.options.compressAlgorithms.value.delta    = COMPRESS_ALGORITHM_NONE;
-  jobNode->job.options.compressAlgorithms.value.byte     = COMPRESS_ALGORITHM_NONE;
-  jobNode->job.options.compressAlgorithms.isSet          = FALSE;
-  for (i = 0; i < 4; i++)
-  {
-    jobNode->job.options.cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
-  }
-  jobNode->job.options.cryptAlgorithms.isSet             = FALSE;
-  #ifdef HAVE_GCRYPT
-    jobNode->job.options.cryptType                       = CRYPT_TYPE_SYMMETRIC;
-  #else /* not HAVE_GCRYPT */
-    jobNode->job.options.cryptType                       = CRYPT_TYPE_NONE;
-  #endif /* HAVE_GCRYPT */
-  jobNode->job.options.cryptPasswordMode                 = PASSWORD_MODE_DEFAULT;
-  Password_clear(&jobNode->job.options.cryptPassword);
-  clearKey(&jobNode->job.options.cryptPublicKey);
-  clearKey(&jobNode->job.options.cryptPrivateKey);
-  String_clear(jobNode->job.options.ftpServer.loginName);
-  Password_clear(&jobNode->job.options.ftpServer.password);
-  jobNode->job.options.sshServer.port                    = 0;
-  String_clear(jobNode->job.options.sshServer.loginName);
-  Password_clear(&jobNode->job.options.sshServer.password);
-  clearKey(&jobNode->job.options.sshServer.publicKey);
-  clearKey(&jobNode->job.options.sshServer.privateKey);
-  String_clear(jobNode->job.options.preProcessScript);
-  String_clear(jobNode->job.options.postProcessScript);
-  jobNode->job.options.device.volumeSize                 = 0LL;
-  jobNode->job.options.waitFirstVolumeFlag               = FALSE;
-  jobNode->job.options.errorCorrectionCodesFlag          = FALSE;
-  jobNode->job.options.blankFlag                         = FALSE;
-  jobNode->job.options.skipUnreadableFlag                = FALSE;
-  jobNode->job.options.rawImagesFlag                     = FALSE;
-  jobNode->job.options.archiveFileMode                   = ARCHIVE_FILE_MODE_STOP;
+  DeltaSourceList_clear(&jobNode->job.options.deltaSourceList);
+  List_clear(&jobNode->job.options.scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_clear(&jobNode->job.options.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  jobNode->job.options.persistenceList.lastModificationTimestamp = 0LL;
+  Job_clearOptions(&jobNode->job.options);
 
   // open file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
@@ -3097,7 +2989,7 @@ bool Job_read(JobNode *jobNode)
 #endif
 
       // append to list (if not a duplicate)
-      if (!LIST_CONTAINS(&jobNode->job.scheduleList,
+      if (!LIST_CONTAINS(&jobNode->job.options.scheduleList,
                          existingScheduleNode,
                             (existingScheduleNode->date.year   == scheduleNode->date.year            )
                          && (existingScheduleNode->date.month  == scheduleNode->date.month           )
@@ -3116,7 +3008,7 @@ bool Job_read(JobNode *jobNode)
         )
       {
         // append to schedule list
-        List_append(&jobNode->job.scheduleList,scheduleNode);
+        List_append(&jobNode->job.options.scheduleList,scheduleNode);
       }
       else
       {
@@ -3177,7 +3069,7 @@ bool Job_read(JobNode *jobNode)
         File_ungetLine(&fileHandle,line,&lineNb);
 
         // insert into persistence list (if not a duplicate)
-        if (!LIST_CONTAINS(&jobNode->job.persistenceList,
+        if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                            existingPersistenceNode,
                               (existingPersistenceNode->archiveType == persistenceNode->archiveType)
                            && (existingPersistenceNode->minKeep     == persistenceNode->minKeep    )
@@ -3187,7 +3079,7 @@ bool Job_read(JobNode *jobNode)
            )
         {
           // insert into persistence list
-          insertPersistenceNode(&jobNode->job.persistenceList,persistenceNode);
+          insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
         }
         else
         {
@@ -3333,9 +3225,7 @@ bool Job_read(JobNode *jobNode)
   return TRUE;
 }
 
-Errors Job_rereadAll(ConstString      jobsDirectory,
-                     const JobOptions *defaultJobOptions
-                    )
+Errors Job_rereadAll(ConstString jobsDirectory)
 {
   Errors              error;
   DirectoryListHandle directoryListHandle;
@@ -3382,8 +3272,7 @@ Errors Job_rereadAll(ConstString      jobsDirectory,
           jobNode = Job_new(JOB_TYPE_CREATE,
                             baseName,
                             NULL, // jobUUID
-                            fileName,
-                            defaultJobOptions
+                            fileName
                            );
           assert(jobNode != NULL);
           List_append(&jobList,jobNode);
@@ -3614,23 +3503,41 @@ void Job_initOptions(JobOptions *jobOptions)
   assert(jobOptions != NULL);
 
   memClear(jobOptions,sizeof(JobOptions));
+
   jobOptions->uuid                            = String_new();
+
   jobOptions->archiveType                     = ARCHIVE_TYPE_NORMAL;
-  jobOptions->archivePartSize                 = 0LL;
+
+  jobOptions->storageNameListStdin            = FALSE;
+  jobOptions->storageNameListFileName         = String_new();
+  jobOptions->storageNameCommand              = String_new();
+
+  jobOptions->includeFileListFileName         = String_new();
+  jobOptions->includeFileCommand              = String_new();
+  jobOptions->includeImageListFileName        = String_new();
+  jobOptions->includeImageCommand             = String_new();
+  jobOptions->excludeListFileName             = String_new();
+  jobOptions->excludeCommand                  = String_new();
+  List_init(&jobOptions->mountList);
+  PatternList_init(&jobOptions->compressExcludePatternList);
+  DeltaSourceList_init(&jobOptions->deltaSourceList);
+  List_init(&jobOptions->scheduleList);
+  List_init(&jobOptions->persistenceList);
+  jobOptions->persistenceList.lastModificationTimestamp = 0LL;
+
+  jobOptions->archivePartSize                 = globalOptions.archivePartSize;
   jobOptions->incrementalListFileName         = String_new();
   jobOptions->directoryStripCount             = DIRECTORY_STRIP_NONE;
   jobOptions->destination                     = String_new();
-  jobOptions->owner.userId                    = FILE_DEFAULT_USER_ID;
-  jobOptions->owner.groupId                   = FILE_DEFAULT_GROUP_ID;
-  jobOptions->patternType                     = PATTERN_TYPE_GLOB;
-  jobOptions->compressAlgorithms.value.delta  = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithms.value.byte   = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithms.isSet        = FALSE;
+  jobOptions->owner.userId                    = globalOptions.owner.userId;
+  jobOptions->owner.groupId                   = globalOptions.owner.groupId;
+  jobOptions->patternType                     = globalOptions.patternType;
+  jobOptions->compressAlgorithms.delta        = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithms.byte         = COMPRESS_ALGORITHM_NONE;
   for (i = 0; i < 4; i++)
   {
-    jobOptions->cryptAlgorithms.values[i] = CRYPT_ALGORITHM_NONE;
+    jobOptions->cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
   }
-  jobOptions->cryptAlgorithms.isSet           = FALSE;
   #ifdef HAVE_GCRYPT
     jobOptions->cryptType                     = CRYPT_TYPE_SYMMETRIC;
   #else /* not HAVE_GCRYPT */
@@ -3638,44 +3545,109 @@ void Job_initOptions(JobOptions *jobOptions)
   #endif /* HAVE_GCRYPT */
   jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
   Password_init(&jobOptions->cryptPassword);
-  initKey(&jobOptions->cryptPublicKey);
-  initKey(&jobOptions->cryptPrivateKey);
+  duplicateKey(&jobOptions->cryptPublicKey,&globalOptions.cryptPublicKey);
+  duplicateKey(&jobOptions->cryptPrivateKey,&globalOptions.cryptPrivateKey);
 
   jobOptions->preProcessScript                = NULL;
   jobOptions->postProcessScript               = NULL;
+//TODO: requrired?
+#if 0
+  jobOptions->file.preProcessScript           = NULL;
+  jobOptions->file.postProcessScript          = NULL;
+  jobOptions->ftp.preProcessScript            = NULL;
+  jobOptions->ftp.postProcessScript           = NULL;
+  jobOptions->scp.preProcessScript            = NULL;
+  jobOptions->scp.postProcessScript           = NULL;
+  jobOptions->sftp.preProcessScript           = NULL;
+  jobOptions->sftp.postProcessScript          = NULL;
+  jobOptions->webdav.preProcessScript         = NULL;
+  jobOptions->webdav.postProcessScript        = NULL;
+  jobOptions->cd.deviceName                   = NULL;
+  jobOptions->cd.requestVolumeCommand         = NULL;
+  jobOptions->cd.unloadVolumeCommand          = NULL;
+  jobOptions->cd.loadVolumeCommand            = NULL;
+  jobOptions->cd.volumeSize                   = 0LL;
+  jobOptions->cd.imagePreProcessCommand       = NULL;
+  jobOptions->cd.imagePostProcessCommand      = NULL;
+  jobOptions->cd.imageCommand                 = NULL;
+  jobOptions->cd.eccPreProcessCommand         = NULL;
+  jobOptions->cd.eccPostProcessCommand        = NULL;
+  jobOptions->cd.eccCommand                   = NULL;
+  jobOptions->cd.blankCommand                 = NULL;
+  jobOptions->cd.writePreProcessCommand       = NULL;
+  jobOptions->cd.writePostProcessCommand      = NULL;
+  jobOptions->cd.writeCommand                 = NULL;
+  jobOptions->cd.writeImageCommand            = NULL;
+  jobOptions->dvd.deviceName                  = NULL;
+  jobOptions->dvd.requestVolumeCommand        = NULL;
+  jobOptions->dvd.unloadVolumeCommand         = NULL;
+  jobOptions->dvd.loadVolumeCommand           = NULL;
+  jobOptions->dvd.volumeSize                  = 0LL;
+  jobOptions->dvd.imagePreProcessCommand      = NULL;
+  jobOptions->dvd.imagePostProcessCommand     = NULL;
+  jobOptions->dvd.imageCommand                = NULL;
+  jobOptions->dvd.eccPreProcessCommand        = NULL;
+  jobOptions->dvd.eccPostProcessCommand       = NULL;
+  jobOptions->dvd.eccCommand                  = NULL;
+  jobOptions->dvd.blankCommand                = NULL;
+  jobOptions->dvd.writePreProcessCommand      = NULL;
+  jobOptions->dvd.writePostProcessCommand     = NULL;
+  jobOptions->dvd.writeCommand                = NULL;
+  jobOptions->dvd.writeImageCommand           = NULL;
+  jobOptions->bd.deviceName                   = NULL;
+  jobOptions->bd.requestVolumeCommand         = NULL;
+  jobOptions->bd.unloadVolumeCommand          = NULL;
+  jobOptions->bd.loadVolumeCommand            = NULL;
+  jobOptions->bd.volumeSize                   = 0LL;
+  jobOptions->bd.imagePreProcessCommand       = NULL;
+  jobOptions->bd.imagePostProcessCommand      = NULL;
+  jobOptions->bd.imageCommand                 = NULL;
+  jobOptions->bd.eccPreProcessCommand         = NULL;
+  jobOptions->bd.eccPostProcessCommand        = NULL;
+  jobOptions->bd.eccCommand                   = NULL;
+  jobOptions->bd.blankCommand                 = NULL;
+  jobOptions->bd.writePreProcessCommand       = NULL;
+  jobOptions->bd.writePostProcessCommand      = NULL;
+  jobOptions->bd.writeCommand                 = NULL;
+  jobOptions->bd.writeImageCommand            = NULL;
+#endif
 
-  Password_init(&jobOptions->ftpServer.password);
+  assert(globalOptions.defaultFTPServer != NULL);
+  Password_initDuplicate(&jobOptions->ftpServer.password,&globalOptions.defaultFTPServer->ftp.password);
 
-  Password_init(&jobOptions->sshServer.password);
-  initKey(&jobOptions->sshServer.publicKey);
-  initKey(&jobOptions->sshServer.privateKey);
+  assert(globalOptions.defaultSSHServer != NULL);
+  Password_initDuplicate(&jobOptions->sshServer.password,&globalOptions.defaultSSHServer->ssh.password);
+  duplicateKey(&jobOptions->sshServer.publicKey,&globalOptions.defaultSSHServer->ssh.publicKey);
+  duplicateKey(&jobOptions->sshServer.privateKey,&globalOptions.defaultSSHServer->ssh.privateKey);
 
-  Password_init(&jobOptions->webDAVServer.password);
-  initKey(&jobOptions->webDAVServer.publicKey);
-  initKey(&jobOptions->webDAVServer.privateKey);
+  assert(globalOptions.defaultWebDAVServer != NULL);
+  Password_initDuplicate(&jobOptions->webDAVServer.password,&globalOptions.defaultWebDAVServer->webDAV.password);
+  duplicateKey(&jobOptions->webDAVServer.publicKey,&globalOptions.defaultWebDAVServer->webDAV.publicKey);
+  duplicateKey(&jobOptions->webDAVServer.privateKey,&globalOptions.defaultWebDAVServer->webDAV.privateKey);
 
-  jobOptions->maxFragmentSize                 = 0LL;
-  jobOptions->maxStorageSize                  = 0LL;
-  jobOptions->volumeSize                      = 0LL;
-  jobOptions->comment.value                   = String_new();
-  jobOptions->comment.isSet                   = FALSE;
-  jobOptions->skipUnreadableFlag              = TRUE;
-  jobOptions->forceDeltaCompressionFlag       = FALSE;
-  jobOptions->ignoreNoDumpAttributeFlag       = FALSE;
-  jobOptions->archiveFileMode                 = ARCHIVE_FILE_MODE_STOP;
-  jobOptions->restoreEntryMode                = RESTORE_ENTRY_MODE_STOP;
-  jobOptions->errorCorrectionCodesFlag        = FALSE;
-  jobOptions->blankFlag                       = FALSE;
-  jobOptions->alwaysCreateImageFlag           = FALSE;
-  jobOptions->waitFirstVolumeFlag             = FALSE;
-  jobOptions->rawImagesFlag                   = FALSE;
-  jobOptions->noFragmentsCheckFlag            = FALSE;
-  jobOptions->noIndexDatabaseFlag             = FALSE;
-  jobOptions->skipVerifySignaturesFlag        = FALSE;
+  jobOptions->fragmentSize                    = globalOptions.fragmentSize;
+  jobOptions->maxStorageSize                  = globalOptions.maxStorageSize;
+  jobOptions->volumeSize                      = globalOptions.volumeSize;
+  jobOptions->comment                         = String_duplicate(globalOptions.comment);
+  jobOptions->skipUnreadableFlag              = globalOptions.skipUnreadableFlag;
+  jobOptions->forceDeltaCompressionFlag       = globalOptions.forceDeltaCompressionFlag;
+  jobOptions->ignoreNoDumpAttributeFlag       = globalOptions.ignoreNoDumpAttributeFlag;
+  jobOptions->archiveFileMode                 = globalOptions.archiveFileMode;
+  jobOptions->restoreEntryMode                = globalOptions.restoreEntryMode;
+  jobOptions->errorCorrectionCodesFlag        = globalOptions.errorCorrectionCodesFlag;
+  jobOptions->blankFlag                       = globalOptions.blankFlag;
+  jobOptions->alwaysCreateImageFlag           = globalOptions.alwaysCreateImageFlag;
+  jobOptions->waitFirstVolumeFlag             = globalOptions.waitFirstVolumeFlag;
+  jobOptions->rawImagesFlag                   = globalOptions.rawImagesFlag;
+  jobOptions->noFragmentsCheckFlag            = globalOptions.noFragmentsCheckFlag;
+//TODO: job option or better global option only?
+  jobOptions->noIndexDatabaseFlag             = globalOptions.noIndexDatabaseFlag;
+  jobOptions->skipVerifySignaturesFlag        = globalOptions.skipVerifySignaturesFlag;
 //  jobOptions->noStorageFlag                   = FALSE;
-  jobOptions->noBAROnMediumFlag               = FALSE;
-  jobOptions->noStopOnErrorFlag               = FALSE;
-  jobOptions->noStopOnAttributeErrorFlag      = FALSE;
+//TODO: job option or better global option only?
+  jobOptions->noBAROnMediumFlag               = globalOptions.noBAROnMediumFlag;
+  jobOptions->noStopOnErrorFlag               = globalOptions.noStopOnErrorFlag;
+  jobOptions->noStopOnAttributeErrorFlag      = globalOptions.noStopOnAttributeErrorFlag;
 
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
@@ -3698,7 +3670,44 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   DEBUG_CHECK_RESOURCE_TRACE(fromJobOptions);
 
   String_set(jobOptions->uuid,                                fromJobOptions->uuid);
+
   jobOptions->archiveType                                   = fromJobOptions->archiveType;
+
+  jobOptions->storageNameListStdin                          = fromJobOptions->storageNameListStdin;
+  String_set(jobOptions->storageNameListFileName,             fromJobOptions->storageNameListFileName);
+  String_set(jobOptions->storageNameCommand,                  fromJobOptions->storageNameCommand);
+
+  String_set(jobOptions->includeFileListFileName,             fromJobOptions->includeFileListFileName);
+  String_set(jobOptions->includeFileCommand,                  fromJobOptions->includeFileCommand);
+  String_set(jobOptions->includeImageListFileName,            fromJobOptions->includeImageListFileName);
+  String_set(jobOptions->includeImageCommand,                 fromJobOptions->includeImageCommand);
+  String_set(jobOptions->excludeListFileName,                fromJobOptions->excludeListFileName);
+  String_set(jobOptions->excludeCommand,                     fromJobOptions->excludeCommand);
+  List_initDuplicate(&jobOptions->mountList,
+                     &fromJobOptions->mountList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+                    );
+  PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
+                            &fromJobOptions->compressExcludePatternList,
+                            CALLBACK(NULL,NULL)
+                           );
+  DeltaSourceList_initDuplicate(&jobOptions->deltaSourceList,
+                                &fromJobOptions->deltaSourceList,
+                                CALLBACK(NULL,NULL)
+                               );
+  List_initDuplicate(&jobOptions->scheduleList,
+                     &fromJobOptions->scheduleList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
+                    );
+  List_initDuplicate(&jobOptions->persistenceList,
+                     &fromJobOptions->persistenceList,
+                     CALLBACK(NULL,NULL),
+                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+                    );
+  jobOptions->persistenceList.lastModificationTimestamp = 0LL;
+
   jobOptions->archivePartSize                               = fromJobOptions->archivePartSize;
   String_set(jobOptions->incrementalListFileName,             fromJobOptions->incrementalListFileName);
   jobOptions->directoryStripCount                           = fromJobOptions->directoryStripCount;
@@ -3706,14 +3715,12 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   jobOptions->owner.userId                                  = fromJobOptions->owner.userId;
   jobOptions->owner.groupId                                 = fromJobOptions->owner.groupId;
   jobOptions->patternType                                   = fromJobOptions->patternType;
-  jobOptions->compressAlgorithms.value.delta                = fromJobOptions->compressAlgorithms.value.delta;
-  jobOptions->compressAlgorithms.value.byte                 = fromJobOptions->compressAlgorithms.value.byte;
-  jobOptions->compressAlgorithms.isSet                      = FALSE;
+  jobOptions->compressAlgorithms.delta                      = fromJobOptions->compressAlgorithms.delta;
+  jobOptions->compressAlgorithms.byte                       = fromJobOptions->compressAlgorithms.byte;
   for (i = 0; i < 4; i++)
   {
-    jobOptions->cryptAlgorithms.values[i] = fromJobOptions->cryptAlgorithms.values[i];
+    jobOptions->cryptAlgorithms[i] = fromJobOptions->cryptAlgorithms[i];
   }
-  jobOptions->cryptAlgorithms.isSet                         = FALSE;
   jobOptions->cryptType                                     = fromJobOptions->cryptType;
   jobOptions->cryptPasswordMode                             = fromJobOptions->cryptPasswordMode;
   Password_set(&jobOptions->cryptPassword,                    &fromJobOptions->cryptPassword);
@@ -3735,11 +3742,10 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   setKey(&jobOptions->webDAVServer.publicKey,fromJobOptions->webDAVServer.publicKey.data,fromJobOptions->webDAVServer.publicKey.length);
   setKey(&jobOptions->webDAVServer.privateKey,fromJobOptions->webDAVServer.privateKey.data,fromJobOptions->webDAVServer.privateKey.length);
 
-  jobOptions->maxFragmentSize                               = fromJobOptions->maxFragmentSize;
+  jobOptions->fragmentSize                                  = fromJobOptions->fragmentSize;
   jobOptions->maxStorageSize                                = fromJobOptions->maxStorageSize;
   jobOptions->volumeSize                                    = fromJobOptions->volumeSize;
-  String_set(jobOptions->comment.value,                       fromJobOptions->comment.value);
-  jobOptions->comment.isSet                                 = FALSE;
+  String_set(jobOptions->comment,                             fromJobOptions->comment);
   jobOptions->skipUnreadableFlag                            = fromJobOptions->skipUnreadableFlag;
   jobOptions->forceDeltaCompressionFlag                     = fromJobOptions->forceDeltaCompressionFlag;
   jobOptions->ignoreNoDumpAttributeFlag                     = fromJobOptions->ignoreNoDumpAttributeFlag;
@@ -3784,6 +3790,70 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   String_set(jobOptions->device.writePreProcessCommand,       fromJobOptions->device.writePreProcessCommand);
   String_set(jobOptions->device.writePostProcessCommand,      fromJobOptions->device.writePostProcessCommand);
   String_set(jobOptions->device.writeCommand,                 fromJobOptions->device.writeCommand);
+}
+
+void Job_clearOptions(JobOptions *jobOptions)
+{
+  uint i;
+
+  assert(jobOptions != NULL);
+
+  String_clear(jobOptions->uuid);
+
+  jobOptions->archiveType                       = ARCHIVE_TYPE_NORMAL;
+
+  String_clear(jobOptions->includeFileListFileName);
+  String_clear(jobOptions->includeFileCommand);
+  String_clear(jobOptions->includeImageListFileName);
+  String_clear(jobOptions->includeImageCommand);
+  String_clear(jobOptions->excludeListFileName);
+  String_clear(jobOptions->excludeCommand);
+  List_clear(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+
+  jobOptions->archivePartSize                   = globalOptions.archivePartSize;
+  String_clear(jobOptions->incrementalListFileName);
+  jobOptions->directoryStripCount               = DIRECTORY_STRIP_NONE;
+  String_clear(jobOptions->destination);
+  jobOptions->owner.userId                      = globalOptions.owner.userId;
+  jobOptions->owner.groupId                     = globalOptions.owner.groupId;
+  jobOptions->patternType                       = globalOptions.patternType;
+  jobOptions->compressAlgorithms.delta          = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithms.byte           = COMPRESS_ALGORITHM_NONE;
+  for (i = 0; i < 4; i++)
+  {
+    jobOptions->cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
+  }
+  #ifdef HAVE_GCRYPT
+    jobOptions->cryptType                       = CRYPT_TYPE_SYMMETRIC;
+  #else /* not HAVE_GCRYPT */
+    jobOptions->cryptType                       = CRYPT_TYPE_NONE;
+  #endif /* HAVE_GCRYPT */
+  jobOptions->cryptPasswordMode                 = PASSWORD_MODE_DEFAULT;
+  Password_clear(&jobOptions->cryptPassword);
+  clearKey(&jobOptions->cryptPublicKey);
+  clearKey(&jobOptions->cryptPrivateKey);
+
+  String_clear(jobOptions->ftpServer.loginName);
+  Password_clear(&jobOptions->ftpServer.password);
+  jobOptions->sshServer.port                    = 0;
+  String_clear(jobOptions->sshServer.loginName);
+  Password_clear(&jobOptions->sshServer.password);
+  clearKey(&jobOptions->sshServer.publicKey);
+  clearKey(&jobOptions->sshServer.privateKey);
+  String_clear(jobOptions->preProcessScript);
+  String_clear(jobOptions->postProcessScript);
+
+  jobOptions->device.volumeSize                 = 0LL;
+
+  jobOptions->waitFirstVolumeFlag               = FALSE;
+  jobOptions->errorCorrectionCodesFlag          = FALSE;
+  jobOptions->blankFlag                         = FALSE;
+  jobOptions->skipUnreadableFlag                = FALSE;
+  jobOptions->rawImagesFlag                     = FALSE;
+  jobOptions->archiveFileMode                   = ARCHIVE_FILE_MODE_STOP;
+
+  String_delete(jobOptions->preProcessScript ); jobOptions->preProcessScript  = NULL;
+  String_delete(jobOptions->postProcessScript); jobOptions->postProcessScript = NULL;
 }
 
 void Job_doneOptions(JobOptions *jobOptions)
@@ -3832,7 +3902,7 @@ void Job_doneOptions(JobOptions *jobOptions)
   Password_done(&jobOptions->ftpServer.password);
   String_delete(jobOptions->ftpServer.loginName);
 
-  String_delete(jobOptions->comment.value);
+  String_delete(jobOptions->comment);
 
   String_delete(jobOptions->postProcessScript);
   String_delete(jobOptions->preProcessScript);
@@ -3843,6 +3913,22 @@ void Job_doneOptions(JobOptions *jobOptions)
 
   String_delete(jobOptions->destination);
   String_delete(jobOptions->incrementalListFileName);
+
+  List_done(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_done(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  DeltaSourceList_done(&jobOptions->deltaSourceList);
+  PatternList_done(&jobOptions->compressExcludePatternList);
+  List_done(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  String_delete(jobOptions->excludeCommand);
+  String_delete(jobOptions->excludeListFileName);
+  String_delete(jobOptions->includeImageCommand);
+  String_delete(jobOptions->includeImageListFileName);
+  String_delete(jobOptions->includeFileCommand);
+  String_delete(jobOptions->includeFileListFileName);
+
+  String_delete(jobOptions->storageNameCommand);
+  String_delete(jobOptions->storageNameListFileName);
+
   String_delete(jobOptions->uuid);
 }
 

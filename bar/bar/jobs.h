@@ -22,6 +22,7 @@
 #include "common/patternlists.h"
 
 #include "bar_global.h"
+#include "entrylists.h"
 #include "connector.h"
 
 /****************** Conditional compilation switches *******************/
@@ -31,42 +32,32 @@ extern const ConfigValue JOB_CONFIG_VALUES[];
 
 /***************************** Datatypes *******************************/
 
-// job owner
-typedef struct
-{
-  uint32 userId;                                              // user id
-  uint32 groupId;                                             // group id
-} JobOptionsOwner;
-
-// job compress algorithms
-typedef struct
-{
-  struct
-  {
-    CompressAlgorithms delta;                                 // delta compress algorithm to use
-    CompressAlgorithms byte;                                  // byte compress algorithm to use
-  } value;
-  bool               isSet;                                   // TRUE if byte compress algorithm command line option is set
-} JobOptionsCompressAlgorithms;
-
-// job crypt algorithm
-typedef struct
-{
-  CryptAlgorithms              values[4];                     // crypt algorithms to use
-  bool                         isSet;                         // TRUE if byte crypt algorithm command line option is set
-} JobOptionsCryptAlgorithms;
-
-// job comment
-typedef struct
-{
-  String                       value;                         // comment
-  bool                         isSet;                         // TRUE if comment command line option is set
-} JobComment;
-
 // see forward declaration in forward.h
 struct JobOptions
 {
   String                       uuid;
+
+  bool                storageNameListStdin;             // read storage names from stdin
+  String              storageNameListFileName;          // storage names list file name
+  String              storageNameCommand;               // storage names command
+
+  String              includeFileListFileName;          // include files list file name
+  String              includeFileCommand;               // include files command
+  String              includeImageListFileName;         // include images list file name
+  String              includeImageCommand;              // include images command
+  String              excludeListFileName;              // exclude entries list file name
+  String              excludeCommand;                   // exclude entries command
+
+  MountList                    mountList;                     // mount list
+  PatternList         compressExcludePatternList;       // excluded compression patterns
+
+  DeltaSourceList     deltaSourceList;                  // delta sources
+
+  ScheduleList        scheduleList;                     // schedule list (unordered)
+
+  PersistenceList     persistenceList;                  // persistence list (ordered)
+
+
   ArchiveTypes                 archiveType;                   // archive type (normal, full, incremental, differential)
 
   uint64                       archivePartSize;               // archive part size [bytes]
@@ -75,15 +66,15 @@ struct JobOptions
 
   int                          directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
   String                       destination;                   // destination for restore
-  JobOptionsOwner              owner;                         // restore owner
+  Owner                        owner;                         // restore owner
   FilePermission               permissions;                   // restore permissions
 
   PatternTypes                 patternType;                   // pattern type
 
-  JobOptionsCompressAlgorithms compressAlgorithms;            // compress algorithms
+  CompressAlgorithmsDeltaByte  compressAlgorithms;            // compress algorithms delta/byte
 
   CryptTypes                   cryptType;                     // crypt type (symmetric, asymmetric)
-  JobOptionsCryptAlgorithms    cryptAlgorithms;               // crypt algorithms to use
+  CryptAlgorithms              cryptAlgorithms[4];            // crypt algorithms to use
   PasswordModes                cryptPasswordMode;             // crypt password mode
   Password                     cryptPassword;                 // crypt password
   Key                          cryptPublicKey;
@@ -100,7 +91,7 @@ struct JobOptions
   String                       deviceName;                    // device name to use
   Device                       device;                        // job specific device settings
 
-  uint64                       maxFragmentSize;               // max. fragment size [bytes]
+  uint64                       fragmentSize;                  // fragment size [bytes]
   uint64                       maxStorageSize;                // max. storage size [bytes]
 //TODO
 #if 0
@@ -109,7 +100,7 @@ struct JobOptions
 #endif
   uint64                       volumeSize;                    // volume size or 0LL for default [bytes]
 
-  JobComment                   comment;                       // comment
+  String                       comment;                       // comment
 
   bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
   bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
@@ -125,85 +116,11 @@ struct JobOptions
   bool                         noIndexDatabaseFlag;           // TRUE for do not store index database for archives
   bool                         forceVerifySignaturesFlag;     // TRUE to force verify signatures of archives
   bool                         skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
-//  bool                         noStorageFlag;                 // TRUE to skip storage, only create incremental data file
   bool                         noSignatureFlag;               // TRUE for not appending signatures
   bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
   bool                         noStopOnErrorFlag;             // TRUE for not stopping immediately on error
   bool                         noStopOnAttributeErrorFlag;    // TRUE for not stopping immediately on attribute error
 };
-
-// schedule date/time
-typedef struct
-{
-  int year;                                             // year or SCHEDULE_ANY
-  int month;                                            // month or SCHEDULE_ANY
-  int day;                                              // day or SCHEDULE_ANY
-} ScheduleDate;
-
-typedef WeekDaySet ScheduleWeekDaySet;
-
-typedef struct
-{
-  int hour;                                             // hour or SCHEDULE_ANY
-  int minute;                                           // minute or SCHEDULE_ANY
-} ScheduleTime;
-
-typedef struct ScheduleNode
-{
-  LIST_NODE_HEADER(struct ScheduleNode);
-
-  // settings
-  String             uuid;                              // unique id
-  String             parentUUID;                        // unique parent id or NULL
-  ScheduleDate       date;
-  ScheduleWeekDaySet weekDaySet;
-  ScheduleTime       time;
-  ArchiveTypes       archiveType;                       // archive type to create
-  uint               interval;                          // continuous interval [min]
-  String             customText;                        // custom text
-  String             preProcessScript;                  // script to execute before start of job
-  String             postProcessScript;                 // script to execute after after termination of job
-  bool               noStorage;                         // TRUE to skip storage, only create incremental data file
-  bool               enabled;                           // TRUE iff enabled
-
-  // run info
-  uint64             lastExecutedDateTime;              // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
-  String             lastErrorMessage;                  // last error message
-  ulong              executionCount;                    // number of executions
-  uint64             averageDuration;                   // average duration [s]
-  ulong              totalEntityCount;                  // total number of entities
-  ulong              totalStorageCount;                 // total number of storage files
-  uint64             totalStorageSize;                  // total size of storage files
-  ulong              totalEntryCount;                   // total number of entries
-  uint64             totalEntrySize;                    // total size of entities
-
-  // deprecated
-  bool               deprecatedPersistenceFlag;         // TRUE iff deprecated persistance data is set
-  int                minKeep,maxKeep;                   // min./max keep count
-  int                maxAge;                            // max. age [days]
-} ScheduleNode;
-
-typedef struct
-{
-  LIST_HEADER(ScheduleNode);
-} ScheduleList;
-
-// persistence
-typedef struct PersistenceNode
-{
-  LIST_NODE_HEADER(struct PersistenceNode);
-
-  uint         id;
-  ArchiveTypes archiveType;                             // archive type to create
-  int          minKeep,maxKeep;                         // min./max keep count
-  int          maxAge;                                  // max. age [days]
-} PersistenceNode;
-
-typedef struct
-{
-  LIST_HEADER(PersistenceNode);
-  uint64 lastModificationTimestamp;                     // last modification timestamp
-} PersistenceList;
 
 // job type
 typedef enum
@@ -225,23 +142,12 @@ typedef struct
     bool   forceSSL;
   }                   slaveHost;                        // slave host
 
+//TODO: rename: storageName
   String              archiveName;                      // archive name
-  bool                storageNameListStdin;             // read storage names from stdin
-  String              storageNameListFileName;          // storage names list file name
-  String              storageNameCommand;               // storage names command
+
   EntryList           includeEntryList;                 // included entries
-  String              includeFileListFileName;          // include files list file name
-  String              includeFileCommand;               // include files command
-  String              includeImageListFileName;         // include images list file name
-  String              includeImageCommand;              // include images command
   PatternList         excludePatternList;               // excluded entry patterns
-  String              excludeListFileName;              // exclude entries list file name
-  String              excludeCommand;                   // exclude entries command
-  MountList           mountList;                        // mount list
-  PatternList         compressExcludePatternList;       // excluded compression patterns
-  DeltaSourceList     deltaSourceList;                  // delta sources
-  ScheduleList        scheduleList;                     // schedule list (unordered)
-  PersistenceList     persistenceList;                  // persistence list (ordered)
+
   JobOptions          options;                          // options for job
 } Job;
 
@@ -499,21 +405,19 @@ INLINE void Job_listUnlock(void)
 /***********************************************************************\
 * Name   : Job_new
 * Purpose: create new job
-* Input  : jobType           - job type
-*          name              - name
-*          jobUUID           - job UUID or NULL for generate new UUID
-*          fileName          - file name or NULL
-*          defaultJobOptions - default job options or NULL
+* Input  : jobType  - job type
+*          name     - name
+*          jobUUID  - job UUID or NULL for generate new UUID
+*          fileName - file name or NULL
 * Output : -
 * Return : job node
 * Notes  : -
 \***********************************************************************/
 
-JobNode *Job_new(JobTypes         jobType,
-                 ConstString      name,
-                 ConstString      jobUUID,
-                 ConstString      fileName,
-                 const JobOptions *defaultJobOptions
+JobNode *Job_new(JobTypes    jobType,
+                 ConstString name,
+                 ConstString jobUUID,
+                 ConstString fileName
                 );
 
 /***********************************************************************\
@@ -856,16 +760,13 @@ bool Job_read(JobNode *jobNode);
 /***********************************************************************\
 * Name   : Job_rereadAll
 * Purpose: re-read all job files
-* Input  : jobsDirectory     - directory with job files
-*          defaultJobOptions - default job options or NULL
+* Input  : jobsDirectory - directory with job files
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : update jobList
 \***********************************************************************/
 
-Errors Job_rereadAll(ConstString      jobsDirectory,
-                     const JobOptions *defaultJobOptions
-                    );
+Errors Job_rereadAll(ConstString jobsDirectory);
 
 /***********************************************************************\
 * Name   : Job_setModified
@@ -1011,6 +912,17 @@ void Job_initOptions(JobOptions *jobOptions);
 \***********************************************************************/
 
 void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
+
+/***********************************************************************\
+* Name   : Job_clearOptions
+* Purpose: clear job options
+* Input  : jobOptions - job options variable
+* Output : jobOptions - cleared job options
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_clearOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
 * Name   : Job_setOptions

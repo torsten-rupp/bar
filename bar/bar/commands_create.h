@@ -50,21 +50,17 @@
 * Name   : Command_create
 * Purpose: create archive
 * Input  : masterIO                     - master i/o or NULL
+*          archiveType                  - archive type; see
+*                                         ArchiveTypes (normal/full/
+*                                         incremental)
 *          jobUUID                      - unique job id to store or NULL
 *          scheduleUUID                 - unique schedule id to store or
 *                                         NULL
 *          storageName                  - storage name
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
-*          mountList                    - mount list or NULL
-*          compressExcludePatternList   - exclude compression pattern
-*                                         list
-*          deltaSourceList              - delta soruce list
 *          jobOptions                   - job options
 *          entityId                     - entityId or INDEX_ID_NONE
-*          archiveType                  - archive type; see
-*                                         ArchiveTypes (normal/full/
-*                                         incremental)
 *          scheduleTitle                - schedule title
 *          scheduleCustomText           - schedule custome text or NULL
 *          startDateTime                - date/time of start [s]
@@ -97,16 +93,13 @@
 \***********************************************************************/
 
 Errors Command_create(ServerIO                     *masterIO,
+                      ArchiveTypes                 archiveType,
                       ConstString                  jobUUID,
                       ConstString                  scheduleUUID,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
-                      MountList                    *mountList,
-                      const PatternList            *compressExcludePatternList,
-                      DeltaSourceList              *deltaSourceList,
                       JobOptions                   *jobOptions,
-                      ArchiveTypes                 archiveType,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
                       uint64                       startDateTime,

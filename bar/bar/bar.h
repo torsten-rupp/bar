@@ -94,11 +94,12 @@ typedef struct
 } TemplateHandle;
 
 /***************************** Variables *******************************/
-extern GlobalOptions globalOptions;          // global options
-extern String        uuid;                   // BAR instance UUID
-extern String        tmpDirectory;           // temporary directory
-extern Semaphore     consoleLock;            // lock console
-extern locale_t      POSIXLocale;            // POSIX locale
+extern GlobalOptions   globalOptions;          // global options
+extern GlobalOptionSet globalOptionSet;        // global option set
+extern String          uuid;                   // BAR instance UUID
+extern String          tmpDirectory;           // temporary directory
+extern Semaphore       consoleLock;            // lock console
+extern locale_t        POSIXLocale;            // POSIX locale
 
 /****************************** Macros *********************************/
 
@@ -1460,6 +1461,61 @@ void configValueFormatDoneOwner(void **formatUserData, void *userData);
 \***********************************************************************/
 
 bool configValueFormatOwner(void **formatUserData, void *userData, String line);
+
+/***********************************************************************\
+* Name   : configValueParsePermissions
+* Purpose: config value call back for parsing permissions
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored into variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool configValueParsePermissions(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
+
+/***********************************************************************\
+* Name   : configValueFormatInitPermissions
+* Purpose: init format of config owner statements
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatInitPermissions(void **formatUserData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : configValueFormatDoneOwner
+* Purpose: done format of config owner statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void configValueFormatDonePermissions(void **formatUserData, void *userData);
+
+/***********************************************************************\
+* Name   : configValueFormatPermissions
+* Purpose: format next config owner statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Notes  : -
+\***********************************************************************/
+
+bool configValueFormatPermissions(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
 * Name   : configValueParseFileEntryPattern,

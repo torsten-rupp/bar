@@ -547,7 +547,7 @@ LOCAL void printFileInfo(ConstString        storageName,
     File_userIdToUserName(userName,sizeof(userName),userId);
     File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
-  if (globalOptions.numericPermissionFlag)
+  if (globalOptions.numericPermissionsFlag)
   {
     stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
@@ -871,7 +871,7 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
     File_userIdToUserName(userName,sizeof(userName),userId);
     File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
-  if (globalOptions.numericPermissionFlag)
+  if (globalOptions.numericPermissionsFlag)
   {
     stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
@@ -975,7 +975,7 @@ LOCAL void printLinkInfo(ConstString     storageName,
     File_userIdToUserName(userName,sizeof(userName),userId);
     File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
-  if (globalOptions.numericPermissionFlag)
+  if (globalOptions.numericPermissionsFlag)
   {
     stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
@@ -1109,7 +1109,7 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
     File_userIdToUserName(userName,sizeof(userName),userId);
     File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
-  if (globalOptions.numericPermissionFlag)
+  if (globalOptions.numericPermissionsFlag)
   {
     stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
@@ -1333,7 +1333,7 @@ LOCAL void printSpecialInfo(ConstString      storageName,
     File_userIdToUserName(userName,sizeof(userName),userId);
     File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
-  if (globalOptions.numericPermissionFlag)
+  if (globalOptions.numericPermissionsFlag)
   {
     stringFormat(permissionString,sizeof(permissionString),"%4o",permission & FILE_PERMISSION_ALL);
   }
@@ -4201,7 +4201,7 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
         File_userIdToUserName(userName,sizeof(userName),fileInfo.userId);
         File_groupIdToGroupName(groupName,sizeof(groupName),fileInfo.groupId);
       }
-      if (globalOptions.numericPermissionFlag)
+      if (globalOptions.numericPermissionsFlag)
       {
         stringFormat(permissionString,sizeof(permissionString),"%4o",fileInfo.permission & FILE_PERMISSION_ALL);
       }
