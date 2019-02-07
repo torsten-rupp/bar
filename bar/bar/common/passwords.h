@@ -54,13 +54,14 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Password_init(...)       __Password_init      (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Password_done(...)       __Password_done      (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Password_new(...)        __Password_new       (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Password_newString(...)  __Password_newString (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Password_newCString(...) __Password_newCString(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Password_duplicate(...)  __Password_duplicate (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Password_delete(...)     __Password_delete    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_init(...)          __Password_init         (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_initDuplicate(...) __Password_initDuplicate(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_done(...)          __Password_done         (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_new(...)           __Password_new          (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_newString(...)     __Password_newString    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_newCString(...)    __Password_newCString   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_duplicate(...)     __Password_duplicate    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Password_delete(...)        __Password_delete       (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -111,6 +112,26 @@ void Password_doneAll(void);
                        ulong      __lineNb__,
                        Password   *password
                       );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Password_intiDuplicate
+* Purpose: initialize duplicate password
+* Input  : password     - password variable
+*          fromPassword - from password
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  void Password_initDuplicate(Password *password, const Password *fromPassword);
+#else /* not NDEBUG */
+  void __Password_initDuplicate(const char     *__fileName__,
+                                ulong          __lineNb__,
+                                Password       *password,
+                                const Password *fromPassword
+                               );
 #endif /* NDEBUG */
 
 /***********************************************************************\

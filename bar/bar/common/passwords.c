@@ -117,6 +117,28 @@ void Password_doneAll(void)
 }
 
 #ifdef NDEBUG
+  void Password_initDuplicate(Password *password, const Password *fromPassword)
+#else /* not NDEBUG */
+  void __Password_initDuplicate(const char     *__fileName__,
+                                ulong          __lineNb__,
+                                Password       *password,
+                                const Password *fromPassword
+                               )
+#endif /* NDEBUG */
+{
+  assert(password != NULL);
+  assert(fromPassword != NULL);
+
+  #ifdef NDEBUG
+    Password_init(password);
+  #else
+    __Password_init(__fileName__,__lineNb__,password);
+  #endif
+
+  Password_set(password,fromPassword);
+}
+
+#ifdef NDEBUG
   void Password_done(Password *password)
 #else /* not NDEBUG */
   void __Password_done(const char *__fileName__,
@@ -270,15 +292,14 @@ void Password_set(Password *password, const Password *fromPassword)
 {
   assert(password != NULL);
 
-  if (fromPassword != NULL)
+  if (!Password_isEmpty(fromPassword))
   {
     memmove(password->data,fromPassword->data,MAX_PASSWORD_LENGTH+1);
     password->dataLength = fromPassword->dataLength;
   }
   else
   {
-    password->data[0]    = '\0';
-    password->dataLength = 0;
+    Password_clear(password);
   }
 }
 
@@ -287,7 +308,7 @@ void Password_setString(Password *password, const String string)
   uint length;
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
-    uint z;
+    uint i;
   #endif /* HAVE_GCRYPT */
 
   assert(password != NULL);
@@ -296,9 +317,9 @@ void Password_setString(Password *password, const String string)
   #ifdef HAVE_GCRYPT
     memcpy(password->data,String_cString(string),length);
   #else /* not HAVE_GCRYPT */
-    for (z = 0; z < length; z++)
+    for (i = 0; i < length; i++)
     {
-      password->data[z] = String_index(string,z)^obfuscator[z];
+      password->data[i] = String_index(string,z)^obfuscator[i];
     }
   #endif /* HAVE_GCRYPT */
   password->data[length] = '\0';
@@ -310,7 +331,7 @@ void Password_setCString(Password *password, const char *s)
   uint length;
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
-    uint z;
+    uint i;
   #endif /* HAVE_GCRYPT */
 
   assert(password != NULL);
@@ -319,9 +340,9 @@ void Password_setCString(Password *password, const char *s)
   #ifdef HAVE_GCRYPT
     memcpy(password->data,s,length);
   #else /* not HAVE_GCRYPT */
-    for (z = 0; z < length; z++)
+    for (i = 0; i < length; i++)
     {
-      password->data[z] = s[z]^obfuscator[z];
+      password->data[i] = s[i]^obfuscator[i];
     }
   #endif /* HAVE_GCRYPT */
   password->data[length] = '\0';
@@ -333,7 +354,7 @@ void Password_setBuffer(Password *password, const void *buffer, uint length)
   #ifdef HAVE_GCRYPT
   #else /* not HAVE_GCRYPT */
     char *p;
-    uint z;
+    uint i;
   #endif /* HAVE_GCRYPT */
 
   assert(password != NULL);
@@ -343,9 +364,9 @@ void Password_setBuffer(Password *password, const void *buffer, uint length)
     memmove(password->data,buffer,length);
   #else /* not HAVE_GCRYPT */
     p = (char*)buffer;
-    for (z = 0; z < length; z++)
+    for (i = 0; i < length; i++)
     {
-      password->data[z] = p[z]^obfuscator[z];
+      password->data[i] = p[i]^obfuscator[i];
     }
   #endif /* HAVE_GCRYPT */
   password->data[length] = '\0';
