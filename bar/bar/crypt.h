@@ -1612,10 +1612,11 @@ bool Crypt_verifyMAC(const CryptMAC *cryptMAC,
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : Crypt_dumpKey, Crypt_dumpHash, Crypt_dumpMAC
-* Purpose: dump key/hash/MAC
+* Name   : Crypt_dumpKey, Crypt_dumpSalt, Crypt_dumpHash, Crypt_dumpMAC
+* Purpose: dump key/salt/hash/MAC
 * Input  : text      - text
 *          cryptKey  - crypt key
+*          cryptSalt - crypt salt
 *          cryptHash - crypt hash
 *          cryptMAC  - crypt MAC
 * Output : -
@@ -1624,6 +1625,7 @@ bool Crypt_verifyMAC(const CryptMAC *cryptMAC,
 \***********************************************************************/
 
 void Crypt_dumpKey(const CryptKey *cryptKey);
+void Crypt_dumpSalt(const CryptSalt *cryptSalt);
 void Crypt_dumpHash(const CryptHash *cryptHash);
 void Crypt_dumpMAC(const CryptMAC *cryptMAC);
 #endif /* not NDEBUG */

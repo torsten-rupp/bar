@@ -694,11 +694,6 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 
 /*---------------------------------------------------------------------*/
 
-#ifndef WERROR
-#warning remove!
-#endif
-#define _CTS_ONCE
-
 #ifdef NDEBUG
 Errors Crypt_init(CryptInfo       *cryptInfo,
                   CryptAlgorithms cryptAlgorithm,
@@ -786,7 +781,7 @@ Errors __Crypt_init(const char      *__fileName__,
               #endif /* NDEBUG */
               break; /* not reached */
           }
-          gcryptMode = ((cryptMode & CRYPT_MODE_CBC) == CRYPT_MODE_CBC) ? GCRY_CIPHER_MODE_CBC : GCRY_CIPHER_MODE_NONE;
+          gcryptMode  = ((cryptMode & CRYPT_MODE_CBC) == CRYPT_MODE_CBC) ? GCRY_CIPHER_MODE_CBC : GCRY_CIPHER_MODE_NONE;
           gcryptFlags = 0;
 
           // check if algorithm available
@@ -881,7 +876,6 @@ Errors __Crypt_init(const char      *__fileName__,
             return error;
           }
 
-//fprintf(stderr,"%s, %d: set IV 1\n",__FILE__,__LINE__); debugDumpMemory(salt,cryptInfo->blockLength,0);
           // set salt as IV
           if (Crypt_isSalt(&cryptInfo->cryptSalt))
           {
@@ -905,18 +899,6 @@ Errors __Crypt_init(const char      *__fileName__,
               return error;
             }
           }
-
-//TODO
-#ifndef WERROR
-#warning remove
-#endif
-#ifdef CTS_ONCE
-          gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
-          if (gcryptError != 0)
-          {
-            return ERROR_ENCRYPT_FAIL;
-          }
-#endif
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(cryptInfo);
@@ -1092,18 +1074,6 @@ Errors Crypt_reset(CryptInfo *cryptInfo)
                             );
             }
           }
-
-//TODO
-#ifndef WERROR
-#warning remove
-#endif
-#ifdef CTS_ONCE
-          gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
-          if (gcryptError != 0)
-          {
-            return ERROR_ENCRYPT_FAIL;
-          }
-#endif
         }
       #else /* not HAVE_GCRYPT */
         UNUSED_VARIABLE(cryptInfo);
@@ -1154,21 +1124,6 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
       #ifdef HAVE_GCRYPT
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
-
-#if 0
-if ((cryptInfo->cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS)
-{
-fprintf(stderr,"%s, %d: encrpyt withg tcts bufferLength=%d\n",__FILE__,__LINE__,bufferLength);
- gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
-}
-#ifndef CTS_ONCE
-        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
-        if (gcryptError != 0)
-        {
-          return ERROR_ENCRYPT_FAIL;
-        }
-#endif
-#endif
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1231,20 +1186,13 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
-#if 0
-if ((cryptInfo->cryptMode & CRYPT_MODE_CTS) == CRYPT_MODE_CTS)
-{
-fprintf(stderr,"%s, %d: decrpyt withg tcts bufferLength=%d\n",__FILE__,__LINE__,bufferLength);
- gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
-}
-#ifndef CTS_ONCE
-        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,TRUE);
+        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,
+                                      IS_SET(cryptInfo->cryptMode,CRYPT_MODE_CTS)
+                                     );
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
-#endif
-#endif
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1308,14 +1256,13 @@ Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
-//TODO: required?
-#if 1
-        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,(cryptInfo->cryptMode & CRYPT_MODE_CTS_DATA) == CRYPT_MODE_CTS_DATA);
+        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,
+                                      IS_SET(cryptInfo->cryptMode,CRYPT_MODE_CTS_DATA)
+                                     );
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
-#endif
 
         gcryptError = gcry_cipher_encrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -1378,14 +1325,13 @@ Errors Crypt_decryptBytes(CryptInfo *cryptInfo,
         assert(cryptInfo->blockLength > 0);
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
-//TODO: required?
-#if 1
-        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,(cryptInfo->cryptMode & CRYPT_MODE_CTS_DATA) == CRYPT_MODE_CTS_DATA);
+        gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,
+                                      IS_SET(cryptInfo->cryptMode,CRYPT_MODE_CTS_DATA)
+                                     );
         if (gcryptError != 0)
         {
           return ERROR_ENCRYPT_FAIL;
         }
-#endif
 
         gcryptError = gcry_cipher_decrypt(cryptInfo->gcry_cipher_hd,
                                           buffer,
@@ -3980,6 +3926,13 @@ void Crypt_dumpKey(const CryptKey *cryptKey)
   #else /* not HAVE_GCRYPT */
     UNUSED_VARIABLE(cryptKey);
   #endif /* HAVE_GCRYPT */
+}
+
+void Crypt_dumpSalt(const CryptSalt *cryptSalt)
+{
+  assert(cryptSalt != NULL);
+
+  debugDumpMemory(cryptSalt->data,cryptSalt->length,FALSE);
 }
 
 void Crypt_dumpHash(const CryptHash *cryptHash)
