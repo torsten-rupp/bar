@@ -21,7 +21,7 @@ DEFAULT "unknownx"
 
 // --- general ----------------------------------------------------------
 ERROR INSUFFICIENT_MEMORY              TR("insufficient memory")
-ERROR INIT                             TR("init fail")
+ERROR INIT                             TR("initialize fail")
 ERROR INVALID_ARGUMENT                 TR("invalid argument")
 ERROR CONFIG                           TR("config error")
 ERROR ABORTED                          TR("aborted")
@@ -30,6 +30,7 @@ ERROR FUNCTION_NOT_SUPPORTED           TR("function not supported")
 ERROR STILL_NOT_IMPLEMENTED            TR("function still not implemented")
 ERROR DAEMON_FAIL                      TR("run as daemon fail")
 ERROR IPC                              TR("inter-process communication fail")
+ERROR INIT_PASSWORD                    TR("initialize password fail")
 ERROR NO_PASSWORD                      TR("no password given")
 ERROR INVALID_PASSWORD                 TR("invalid password")
 ERROR PROCESS                          TR("process data fail")
@@ -79,7 +80,7 @@ ERROR NO_RESPONSE                      TR("no response from remote program")
 ERROR INVALID_RESPONSE                 TR("invalid response from remote program")
 
 // --- TLS/SSL ----------------------------------------------------------
-ERROR INIT_TLS                         TR("init TLS (SSL) fail")
+ERROR INIT_TLS                         TR("initialize TLS (SSL) fail")
 ERROR NO_TLS_CA                        TR("no TLS (SSL) certificate authority file")
 ERROR NO_TLS_CERTIFICATE               TR("no TLS (SSL) certificate file")
 ERROR NO_TLS_KEY                       TR("no or unreadable TLS (SSL) key file")
@@ -149,7 +150,7 @@ ERROR SSH
   }
 
 // --- storage ----------------------------------------------------------
-ERROR INIT_STORAGE                     TR("init storage fail")
+ERROR INIT_STORAGE                     TR("initialize storage fail")
 ERROR NO_STORAGE_NAME                  TR("no storage name given")
 ERROR INVALID_STORAGE                  TR("invalid storage")
 
@@ -193,7 +194,7 @@ ERROR WEBDAV_GET_SIZE                  TR("get WebDAV file size fail")
 
 // --- compress ---------------------------------------------------------
 ERROR INIT_COMPRESS
-  stringSet(errorText,sizeof(errorText),TR("init compress fail"));
+  stringSet(errorText,sizeof(errorText),TR("initialize compress fail"));
   stringAppend(errorText,sizeof(errorText),": ");
   if (!stringIsEmpty(ERROR_DATA))
   {
@@ -205,7 +206,7 @@ ERROR INIT_COMPRESS
   }
 
 ERROR INIT_DECOMPRESS
-  stringSet(errorText,sizeof(errorText),TR("init decompress fail"));
+  stringSet(errorText,sizeof(errorText),TR("initialize decompress fail"));
   stringAppend(errorText,sizeof(errorText),": ");
   if (!stringIsEmpty(ERROR_DATA))
   {
@@ -250,11 +251,11 @@ ERROR UNSUPPORTED_BLOCK_LENGTH         TR("unsupported block length")
 ERROR INIT_CRYPT
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("init crypt fail: %s"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),TR("initialize crypt fail: %s"),ERROR_DATA);
   }
   else
   {
-    stringSet(errorText,sizeof(errorText),TR("init crypt fail"));
+    stringSet(errorText,sizeof(errorText),TR("initialize crypt fail"));
   }
 
 ERROR NO_DECRYPT_KEY                   TR("no decrypt key for cipher")
@@ -263,7 +264,7 @@ ERROR INVALID_CRYPT_PASSWORD           TR("invalid decryption password")
 ERROR CRYPT_PASSWORDS_MISMATCH         TR("encryption passwords mismatch")
 
 ERROR INIT_CIPHER
-  stringSet(errorText,sizeof(errorText),TR("init cipher fail"));
+  stringSet(errorText,sizeof(errorText),TR("initialize cipher fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -298,11 +299,11 @@ ERROR INVALID_ENCODING                 TR("invalid encoding")
 ERROR INIT_KEY
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("init key fail (error: %s)"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),TR("initialize key fail (error: %s)"),ERROR_DATA);
   }
   else
   {
-    stringSet(errorText,sizeof(errorText),TR("init key fail"));
+    stringSet(errorText,sizeof(errorText),TR("initialize key fail"));
   }
 
 ERROR KEY_NOT_FOUND
@@ -402,11 +403,11 @@ ERROR WRONG_PRIVATE_KEY                TR("wrong private decryption key")
 ERROR INVALID_CRYPT_ALGORITHM          TR("invalid encryption algorithm")
 ERROR UNKNOWN_CRYPT_ALGORITHM          TR("unknown encryption algorithm")
 
-ERROR INIT_HASH                        TR("init hash fail")
+ERROR INIT_HASH                        TR("initialize hash fail")
 ERROR INVALID_HASH_ALGORITHM           TR("invalid hash algorithm")
 ERROR UNKNOWN_HASH_ALGORITHM           TR("unknown hash algorithm")
 
-ERROR INIT_MAC                         TR("init message authentication code fail")
+ERROR INIT_MAC                         TR("initialize message authentication code fail")
 ERROR INVALID_MAC_ALGORITHM            TR("invalid message authentication code algorithm")
 ERROR UNKNOWN_MAC_ALGORITHM            TR("unknown message authentication code algorithm")
 
