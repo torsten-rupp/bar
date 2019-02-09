@@ -203,7 +203,9 @@ SOCKET_TYPE_PLAIN,
 
 //TODO
   // start SSL
+#ifndef WERROR
 #warning TODO
+#endif
 #if 0
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
@@ -3073,7 +3075,9 @@ void Connector_duplicate(ConnectorInfo *connectorInfo, const ConnectorInfo *from
   assert(fromConnectorInfo != NULL);
 
   Connector_init(connectorInfo);
+#ifndef WERROR
 #warning TODO: copy
+#endif
 UNUSED_VARIABLE(fromConnectorInfo);
 }
 

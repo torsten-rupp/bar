@@ -173,7 +173,9 @@ INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
 //TODO
+#ifndef WERROR
 #warning comment
+#endif
 Errors Connector_authorize(ConnectorInfo *connectorInfo);
 
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
