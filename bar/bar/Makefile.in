@@ -1188,9 +1188,26 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 
 # tests
 .PHONY: test test_clean test_distclean
-test:
+test: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
 	@$(MAKE) -C test $@
-test%:
+test%-debug: \
+  bar-debug@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test $@
+
+test%-gcov: \
+  bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test $@
+
+test%-valgrind: \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
 	@$(MAKE) -C test $@
 
 test_clean:
