@@ -539,59 +539,59 @@ typedef struct
 typedef struct
 {
   // --- program options
-  RunModes               runMode;
+  RunModes                    runMode;
 
-  String                 barExecutable;                       // name of BAR executable (absolute)
+  String                      barExecutable;                  // name of BAR executable (absolute)
 
-  uint                   niceLevel;                           // nice level 0..19
-  uint                   maxThreads;                          // max. number of concurrent compress/encryption threads or 0
+  uint                        niceLevel;                      // nice level 0..19
+  uint                        maxThreads;                     // max. number of concurrent compress/encryption threads or 0
 
-  String                 tmpDirectory;                        // directory for temporary files
-  uint64                 maxTmpSize;                          // max. size of temporary files
+  String                      tmpDirectory;                   // directory for temporary files
+  uint64                      maxTmpSize;                     // max. size of temporary files
 
-  String                 jobsDirectory;                       // jobs directory
-  String                 incrementalDataDirectory;            // incremental data directory
+  String                      jobsDirectory;                  // jobs directory
+  String                      incrementalDataDirectory;       // incremental data directory
 
-  MasterInfo             masterInfo;                          // master info
+  MasterInfo                  masterInfo;                     // master info
 
-  ArchiveTypes           archiveType;                         // archive type for create
+  ArchiveTypes                archiveType;                    // archive type for create
 
-  BandWidthList          maxBandWidthList;                    // list of max. send/receive bandwidth to use [bits/s]
+  BandWidthList               maxBandWidthList;               // list of max. send/receive bandwidth to use [bits/s]
 
-  ServerList             serverList;                          // list with FTP/SSH/WebDAV servers
-  DeviceList             deviceList;                          // list with devices
+  ServerList                  serverList;                     // list with FTP/SSH/WebDAV servers
+  DeviceList                  deviceList;                     // list with devices
 
-  bool                   indexDatabaseAutoUpdateFlag;         // TRUE for automatic update of index datbase
-  BandWidthList          indexDatabaseMaxBandWidthList;       // list of max. band width to use for index updates [bits/s]
-  uint                   indexDatabaseKeepTime;               // number of seconds to keep index data of not existing storage
+  bool                        indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index datbase
+  BandWidthList               indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
+  uint                        indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
 
-  bool                   metaInfoFlag;                        // TRUE iff meta info should be print
-  bool                   groupFlag;                           // TRUE iff entries in list should be grouped
-  bool                   allFlag;                             // TRUE iff all entries should be listed/restored
-  bool                   longFormatFlag;                      // TRUE iff long format list
-  bool                   humanFormatFlag;                     // TRUE iff human format list
-  bool                   numericUIDGIDFlag;                   // TRUE for printing numeric user/group ids
-  bool                   numericPermissionsFlag;              // TRUE for printing numeric permissions
-  bool                   noHeaderFooterFlag;                  // TRUE iff no header/footer should be printed in list
-  bool                   deleteOldArchiveFilesFlag;           // TRUE iff old archive files should be deleted after creating new files
-  bool                   ignoreNoBackupFileFlag;              // TRUE iff .nobackup/.NOBACKUP file should be ignored
-  bool                   noDefaultConfigFlag;                 // TRUE iff default config should not be read
-  bool                   forceDeltaCompressionFlag;           // TRUE to force delta compression of files
-  bool                   ignoreNoDumpAttributeFlag;           // TRUE for ignoring no-dump attribute
-  bool                   alwaysCreateImageFlag;               // TRUE iff always create image for CD/DVD/BD/device
-  bool                   blankFlag;                           // TRUE to blank medium before writing
-  bool                   rawImagesFlag;                       // TRUE for storing raw images
-  bool                   noFragmentsCheckFlag;                // TRUE to skip checking file fragments for completeness
-  bool                   noIndexDatabaseFlag;                 // TRUE for do not store index database for archives
-  bool                   forceVerifySignaturesFlag;           // TRUE to force verify signatures of archives
-  bool                   skipVerifySignaturesFlag;            // TRUE to not verify signatures of archives
-  bool                   noSignatureFlag;                     // TRUE for not appending signatures
-  bool                   noBAROnMediumFlag;                   // TRUE for not storing BAR on medium
-  bool                   noStopOnErrorFlag;                   // TRUE for not stopping immediately on error
-  bool                   noStopOnAttributeErrorFlag;          // TRUE for not stopping immediately on attribute error
+  bool                        metaInfoFlag;                   // TRUE iff meta info should be print
+  bool                        groupFlag;                      // TRUE iff entries in list should be grouped
+  bool                        allFlag;                        // TRUE iff all entries should be listed/restored
+  bool                        longFormatFlag;                 // TRUE iff long format list
+  bool                        humanFormatFlag;                // TRUE iff human format list
+  bool                        numericUIDGIDFlag;              // TRUE for printing numeric user/group ids
+  bool                        numericPermissionsFlag;         // TRUE for printing numeric permissions
+  bool                        noHeaderFooterFlag;             // TRUE iff no header/footer should be printed in list
+  bool                        deleteOldArchiveFilesFlag;      // TRUE iff old archive files should be deleted after creating new files
+  bool                        ignoreNoBackupFileFlag;         // TRUE iff .nobackup/.NOBACKUP file should be ignored
+  bool                        noDefaultConfigFlag;            // TRUE iff default config should not be read
+  bool                        forceDeltaCompressionFlag;      // TRUE to force delta compression of files
+  bool                        ignoreNoDumpAttributeFlag;      // TRUE for ignoring no-dump attribute
+  bool                        alwaysCreateImageFlag;          // TRUE iff always create image for CD/DVD/BD/device
+  bool                        blankFlag;                      // TRUE to blank medium before writing
+  bool                        rawImagesFlag;                  // TRUE for storing raw images
+  bool                        noFragmentsCheckFlag;           // TRUE to skip checking file fragments for completeness
+  bool                        noIndexDatabaseFlag;            // TRUE for do not store index database for archives
+  bool                        forceVerifySignaturesFlag;      // TRUE to force verify signatures of archives
+  bool                        skipVerifySignaturesFlag;       // TRUE to not verify signatures of archives
+  bool                        noSignatureFlag;                // TRUE for not appending signatures
+  bool                        noBAROnMediumFlag;              // TRUE for not storing BAR on medium
+  bool                        noStopOnErrorFlag;              // TRUE for not stopping immediately on error
+  bool                        noStopOnAttributeErrorFlag;     // TRUE for not stopping immediately on attribute error
 
-  bool                   quietFlag;                           // TRUE iff suppress any output
-  long                   verboseLevel;                        /* verbosity level
+  bool                        quietFlag;                      // TRUE iff suppress any output
+  long                        verboseLevel;                   /* verbosity level
                                                                    0 - none
                                                                    1 - fatal errors
                                                                    2 - processing information
@@ -601,100 +601,102 @@ typedef struct
                                                                    6 - all SSH/FTP/WebDAV debug
                                                               */
 
-  uint                   serverDebugLevel;                     // server debug level (for debug only)
+  uint                        serverDebugLevel;                // server debug level (for debug only)
 
   // --- job options default values
 
-  bool                storageNameListStdin;             // read storage names from stdin
-  String              storageNameListFileName;          // storage names list file name
-  String              storageNameCommand;               // storage names command
+  bool                        storageNameListStdin;           // read storage names from stdin
+  String                      storageNameListFileName;        // storage names list file name
+  String                      storageNameCommand;             // storage names command
 
-  EntryList           includeEntryList;                 // included entries
-  String              includeFileListFileName;          // include files list file name
-  String              includeFileCommand;               // include files command
-  String              includeImageListFileName;         // include images list file name
-  String              includeImageCommand;              // include images command
-  PatternList         excludePatternList;               // excluded entry patterns
-  String              excludeListFileName;              // exclude entries list file name
-  String              excludeCommand;                   // exclude entries command
+  String                      includeFileListFileName;        // include files list file name
+  String                      includeFileCommand;             // include files command
+  String                      includeImageListFileName;       // include images list file name
+  String                      includeImageCommand;            // include images command
+  String                      excludeListFileName;            // exclude entries list file name
+  String                      excludeCommand;                 // exclude entries command
 
-  MountList                    mountList;                     // mount list
-  PatternList         compressExcludePatternList;       // excluded compression patterns
+  MountList                   mountList;                      // mount list
+//TODO: required?
+  PatternList                 compressExcludePatternList;     // excluded compression patterns
 
-  DeltaSourceList     deltaSourceList;                  // delta sources
+//TODO: required?
+  DeltaSourceList             deltaSourceList;                // delta sources
 
-  ScheduleList        scheduleList;                     // schedule list (unordered)
+//TODO: required?
+  ScheduleList                scheduleList;                   // schedule list (unordered)
 
-  PersistenceList     persistenceList;                  // persistence list (ordered)
+//TODO: required?
+  PersistenceList             persistenceList;                // persistence list (ordered)
 
-  uint64                 archivePartSize;                     // archive part size [bytes]
+  uint64                      archivePartSize;                // archive part size [bytes]
 
-  String                 incrementalListFileName;             // name of incremental list file
+  String                      incrementalListFileName;        // name of incremental list file
 
-  int                    directoryStripCount;                 // number of directories to strip in restore
-  String                 destination;                         // destination for restore
-  Owner                  owner;                               // restore owner
-  FilePermission         permissions;                         // restore permissions
+  int                         directoryStripCount;            // number of directories to strip in restore
+  String                      destination;                    // destination for restore
+  Owner                       owner;                          // restore owner
+  FilePermission              permissions;                    // restore permissions
 
-  PatternTypes           patternType;                         // pattern type
+  PatternTypes                patternType;                    // pattern type
 
-  uint64                 fragmentSize;                        // fragment size [bytes]
-  uint64                 maxStorageSize;                      // max. storage size [bytes]
-  uint64                 volumeSize;                          // volume size or 0LL for default [bytes]
+  uint64                      fragmentSize;                   // fragment size [bytes]
+  uint64                      maxStorageSize;                 // max. storage size [bytes]
+  uint64                      volumeSize;                     // volume size or 0LL for default [bytes]
 
-  ulong                  compressMinFileSize;                 // min. size of file for using compression
-  uint64                 continuousMaxSize;                   // max. entry size for continuous backup
-  uint                   continuousMinTimeDelta;              // min. time between consequtive continuous backup of an entry [s]
+  ulong                       compressMinFileSize;            // min. size of file for using compression
+  uint64                      continuousMaxSize;              // max. entry size for continuous backup
+  uint                        continuousMinTimeDelta;         // min. time between consequtive continuous backup of an entry [s]
 
   CompressAlgorithmsDeltaByte compressAlgorithms;             // compress algorithms delta/byte
 
-  CryptTypes             cryptType;                           // crypt type (symmetric, asymmetric)
-  CryptAlgorithms        cryptAlgorithms[4];                  // crypt algorithms to use
-  PasswordModes          cryptPasswordMode;                   // crypt password mode
-  Password               cryptPassword;                       // default crypt password if none set in job options
-  Password               cryptNewPassword;                    // new crypt password
-  Key                    cryptPublicKey;
-  Key                    cryptPrivateKey;
+  CryptTypes                  cryptType;                      // crypt type (symmetric, asymmetric)
+  CryptAlgorithms             cryptAlgorithms[4];             // crypt algorithms to use
+  PasswordModes               cryptPasswordMode;              // crypt password mode
+  Password                    cryptPassword;                  // default crypt password if none set in job options
+  Password                    cryptNewPassword;               // new crypt password
+  Key                         cryptPublicKey;
+  Key                         cryptPrivateKey;
 
-  CryptKey               signaturePublicKey;
-  CryptKey               signaturePrivateKey;
+  CryptKey                    signaturePublicKey;
+  CryptKey                    signaturePrivateKey;
 
-  Server                 *fileServer;                         // current selected file server
-  Server                 *defaultFileServer;                  // default file server
+  Server                      *fileServer;                    // current selected file server
+  Server                      *defaultFileServer;             // default file server
 
-  Server                 *ftpServer;                          // current selected FTP server
-  Server                 *defaultFTPServer;                   // default FTP server
+  Server                      *ftpServer;                     // current selected FTP server
+  Server                      *defaultFTPServer;              // default FTP server
 
-  Server                 *sshServer;                          // current selected SSH server
-  Server                 *defaultSSHServer;                   // default SSH server
+  Server                      *sshServer;                     // current selected SSH server
+  Server                      *defaultSSHServer;              // default SSH server
 
-  Server                 *webDAVServer;                       // current selected WebDAV server
-  Server                 *defaultWebDAVServer;                // default WebDAV server
+  Server                      *webDAVServer;                  // current selected WebDAV server
+  Server                      *defaultWebDAVServer;           // default WebDAV server
 
-  Device                 *defaultDevice;                      // default device
-  Device                 *device;                             // current selected device
+  Device                      *defaultDevice;                 // default device
+  Device                      *device;                        // current selected device
 
-  String                 comment;                             // comment
+  String                      comment;                        // comment
 
-  String                 remoteBARExecutable;
+  String                      remoteBARExecutable;
 
-  String                 preProcessScript;                    // script to execute before start of job
-  String                 postProcessScript;                   // script to execute after after termination of
+  String                      preProcessScript;               // script to execute before start of job
+  String                      postProcessScript;              // script to execute after after termination of
 
-  File                   file;                                // file settings
-  FTP                    ftp;                                 // ftp settings
-  SCP                    scp;                                 // scp settings
-  SFTP                   sftp;                                // sftp settings
-  WebDAV                 webdav;                              // WebDAV settings
-  OpticalDisk            cd;                                  // CD settings
-  OpticalDisk            dvd;                                 // DVD settings
-  OpticalDisk            bd;                                  // BD settings
+  File                        file;                           // file settings
+  FTP                         ftp;                            // ftp settings
+  SCP                         scp;                            // scp settings
+  SFTP                        sftp;                           // sftp settings
+  WebDAV                      webdav;                         // WebDAV settings
+  OpticalDisk                 cd;                             // CD settings
+  OpticalDisk                 dvd;                            // DVD settings
+  OpticalDisk                 bd;                             // BD settings
 
-  ArchiveFileModes       archiveFileMode;                     // archive files write mode
-  RestoreEntryModes      restoreEntryMode;                    // overwrite existing entry mode on restore
-  bool                   skipUnreadableFlag;                  // TRUE for skipping unreadable files
-  bool                   errorCorrectionCodesFlag;            // TRUE iff error correction codes should be added
-  bool                   waitFirstVolumeFlag;                 // TRUE for wait for first volume
+  ArchiveFileModes            archiveFileMode;                // archive files write mode
+  RestoreEntryModes           restoreEntryMode;               // overwrite existing entry mode on restore
+  bool                        skipUnreadableFlag;             // TRUE for skipping unreadable files
+  bool                        errorCorrectionCodesFlag;       // TRUE iff error correction codes should be added
+  bool                        waitFirstVolumeFlag;            // TRUE for wait for first volume
 } GlobalOptions;
 
 typedef ValueSet(GlobalOptionSet,32);
