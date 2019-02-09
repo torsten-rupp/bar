@@ -243,7 +243,7 @@ void EntryList_initDuplicate(EntryList       *entryList,
   assert(entryList != NULL);
 
   EntryList_init(entryList);
-  EntryList_copy(fromEntryList,entryList,fromEntryListFromNode,fromEntryListToNode);
+  EntryList_copy(entryList,fromEntryList,fromEntryListFromNode,fromEntryListToNode);
 }
 
 void EntryList_done(EntryList *entryList)
@@ -260,8 +260,8 @@ EntryList *EntryList_clear(EntryList *entryList)
   return (EntryList*)List_clear(entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
 }
 
-void EntryList_copy(const EntryList *fromEntryList,
-                    EntryList       *toEntryList,
+void EntryList_copy(EntryList       *toEntryList,
+                    const EntryList *fromEntryList,
                     const EntryNode *fromEntryListFromNode,
                     const EntryNode *fromEntryListToNode
                    )
@@ -269,19 +269,19 @@ void EntryList_copy(const EntryList *fromEntryList,
   assert(fromEntryList != NULL);
   assert(toEntryList != NULL);
 
-  List_copy(fromEntryList,toEntryList,fromEntryListFromNode,fromEntryListToNode,NULL,(ListNodeDuplicateFunction)duplicateEntryNode,NULL);
+  List_copy(toEntryList,NULL,fromEntryList,fromEntryListFromNode,fromEntryListToNode,(ListNodeDuplicateFunction)duplicateEntryNode,NULL);
 }
 
-void EntryList_move(EntryList       *fromEntryList,
-                    EntryList       *toEntryList,
+void EntryList_move(EntryList       *toEntryList,
+                    EntryList       *fromEntryList,
                     const EntryNode *fromEntryListFromNode,
                     const EntryNode *fromEntryListToNode
                    )
 {
-  assert(fromEntryList != NULL);
   assert(toEntryList != NULL);
+  assert(fromEntryList != NULL);
 
-  List_move(fromEntryList,toEntryList,fromEntryListFromNode,fromEntryListToNode,NULL);
+  List_move(toEntryList,NULL,fromEntryList,fromEntryListFromNode,fromEntryListToNode);
 }
 
 Errors EntryList_append(EntryList    *entryList,

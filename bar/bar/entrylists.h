@@ -175,8 +175,8 @@ EntryList *EntryList_clear(EntryList *entryList);
 /***********************************************************************\
 * Name   : Entry_copyList
 * Purpose: copy all entrys from source list to destination list
-* Input  : fromEntryList         - from entry list (source)
-*          toEntryList           - to entry list (destination)
+* Input  : toEntryList           - to entry list (destination)
+*          fromEntryList         - from entry list (source)
 *          fromEntryListFromNode - from node (could be NULL)
 *          fromEntryListToNode   - to node (could be NULL)
 * Output : -
@@ -184,8 +184,8 @@ EntryList *EntryList_clear(EntryList *entryList);
 * Notes  : -
 \***********************************************************************/
 
-void EntryList_copy(const EntryList *fromEntryList,
-                    EntryList       *toEntryList,
+void EntryList_copy(EntryList       *toEntryList,
+                    const EntryList *fromEntryList,
                     const EntryNode *fromEntryListFromNode,
                     const EntryNode *fromEntryListToNode
                    );
@@ -193,8 +193,8 @@ void EntryList_copy(const EntryList *fromEntryList,
 /***********************************************************************\
 * Name   : EntryList_move
 * Purpose: move all entrys from source list to destination list
-* Input  : fromEntryList         - from entry list (source)
-*          toEntryList           - to entry list (destination)
+* Input  : toEntryList           - to entry list (destination)
+*          fromEntryList         - from entry list (source)
 *          fromEntryListFromNode - from node (could be NULL)
 *          fromEntryListToNode   - to node (could be NULL)
 * Output : -
@@ -202,8 +202,8 @@ void EntryList_copy(const EntryList *fromEntryList,
 * Notes  : -
 \***********************************************************************/
 
-void EntryList_move(EntryList       *fromEntryList,
-                    EntryList       *toEntryList,
+void EntryList_move(EntryList       *toEntryList,
+                    EntryList       *fromEntryList,
                     const EntryNode *fromEntryListFromNode,
                     const EntryNode *fromEntryListToNode
                    );
