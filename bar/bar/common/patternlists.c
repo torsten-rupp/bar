@@ -161,7 +161,7 @@ void PatternList_initDuplicate(PatternList       *patternList,
   assert(fromPatternList != NULL);
 
   PatternList_init(patternList);
-  PatternList_copy(fromPatternList,patternList,fromPatternListFromNode,fromPatternListToNode);
+  PatternList_copy(patternList,fromPatternList,fromPatternListFromNode,fromPatternListToNode);
 }
 
 void PatternList_done(PatternList *patternList)
@@ -178,20 +178,20 @@ PatternList *PatternList_clear(PatternList *patternList)
   return (PatternList*)List_clear(patternList,(ListNodeFreeFunction)freePatternNode,NULL);
 }
 
-void PatternList_copy(const PatternList *fromPatternList,
-                      PatternList       *toPatternList,
+void PatternList_copy(PatternList       *toPatternList,
+                      const PatternList *fromPatternList,
                       const PatternNode *fromPatternListFromNode,
                       const PatternNode *fromPatternListToNode
                      )
 {
-  assert(fromPatternList != NULL);
   assert(toPatternList != NULL);
+  assert(fromPatternList != NULL);
 
-  List_copy(fromPatternList,toPatternList,fromPatternListFromNode,fromPatternListToNode,NULL,(ListNodeDuplicateFunction)duplicatePatternNode,NULL);
+  List_copy(toPatternList,NULL,fromPatternList,fromPatternListFromNode,fromPatternListToNode,(ListNodeDuplicateFunction)duplicatePatternNode,NULL);
 }
 
-void PatternList_move(PatternList       *fromPatternList,
-                      PatternList       *toPatternList,
+void PatternList_move(PatternList       *toPatternList,
+                      PatternList       *fromPatternList,
                       const PatternNode *fromPatternListFromNode,
                       const PatternNode *fromPatternListToNode
                      )
@@ -199,7 +199,7 @@ void PatternList_move(PatternList       *fromPatternList,
   assert(fromPatternList != NULL);
   assert(toPatternList != NULL);
 
-  List_move(fromPatternList,toPatternList,fromPatternListFromNode,fromPatternListToNode,NULL);
+  List_move(toPatternList,NULL,fromPatternList,fromPatternListFromNode,fromPatternListToNode);
 }
 
 Errors PatternList_append(PatternList  *patternList,

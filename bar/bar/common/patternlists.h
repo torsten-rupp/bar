@@ -183,8 +183,8 @@ PatternList *PatternList_clear(PatternList *patternList);
 /***********************************************************************\
 * Name   : Pattern_copyList
 * Purpose: copy all patterns from source list to destination list
-* Input  : fromPatternList         - from pattern list (source)
-*          toPatternList           - to pattern list (destination)
+* Input  : toPatternList           - to pattern list (destination)
+*          fromPatternList         - from pattern list (source)
 *          fromPatternListFromNode - from node (could be NULL)
 *          fromPatternListToNode   - to node (could be NULL)
 * Output : -
@@ -192,8 +192,8 @@ PatternList *PatternList_clear(PatternList *patternList);
 * Notes  : -
 \***********************************************************************/
 
-void PatternList_copy(const PatternList *fromPatternList,
-                      PatternList       *toPatternList,
+void PatternList_copy(PatternList       *toPatternList,
+                      const PatternList *fromPatternList,
                       const PatternNode *fromPatternListFromNode,
                       const PatternNode *fromPatternListToNode
                      );
@@ -201,8 +201,8 @@ void PatternList_copy(const PatternList *fromPatternList,
 /***********************************************************************\
 * Name   : PatternList_move
 * Purpose: move all patterns from source list to destination list
-* Input  : fromPatternList         - from pattern list (source)
-*          toPatternList           - to pattern list (destination)
+* Input  : toPatternList           - to pattern list (destination)
+*          fromPatternList         - from pattern list (source)
 *          fromPatternListFromNode - from node (could be NULL)
 *          fromPatternListToNode   - to node (could be NULL)
 * Output : -
@@ -210,8 +210,8 @@ void PatternList_copy(const PatternList *fromPatternList,
 * Notes  : -
 \***********************************************************************/
 
-void PatternList_move(PatternList       *fromPatternList,
-                      PatternList       *toPatternList,
+void PatternList_move(PatternList       *toPatternList,
+                      PatternList       *fromPatternList,
                       const PatternNode *fromPatternListFromNode,
                       const PatternNode *fromPatternListToNode
                      );
