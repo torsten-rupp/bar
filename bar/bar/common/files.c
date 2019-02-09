@@ -3826,12 +3826,6 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
       {
         return ERRORX_(IO,errno,"%s",fileName);
       }
-      #ifdef HAVE_CHOWN
-        if (chown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
-        {
-          return ERRORX_(IO,errno,"%s",fileName);
-        }
-      #endif /* HAVE_CHOWN */
       #ifdef HAVE_CHMOD
         if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
         {
@@ -3841,12 +3835,6 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
       break;
     case FILE_TYPE_LINK:
       // set user/group id
-      #ifdef HAVE_LCHMOD
-        if (lchown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
-        {
-          return ERRORX_(IO,errno,"%s",fileName);
-        }
-      #endif /* HAVE_LCHMOD */
       break;
     case FILE_TYPE_SPECIAL:
       // set last access, time modified, user/group id, permissions
@@ -3856,12 +3844,6 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
       {
         return ERRORX_(IO,errno,"%s",fileName);
       }
-      #ifdef HAVE_CHOWN
-        if (chown(fileName,fileInfo->userId,fileInfo->groupId) != 0)
-        {
-          return ERRORX_(IO,errno,"%s",fileName);
-        }
-      #endif /* HAVE_CHOWN */
       #ifdef HAVE_CHMOD
         if (chmod(fileName,(mode_t)fileInfo->permission) != 0)
         {
@@ -4295,10 +4277,17 @@ Errors File_setOwner(ConstString fileName,
     else if (userId == FILE_DEFAULT_GROUP_ID) gid = -1;
     else                                      gid = (uid_t)groupId;
 
-    if (chown(String_cString(fileName),uid,gid) != 0)
-    {
-      return ERRORX_(IO,errno,"%s",String_cString(fileName));
-    }
+    #if   defined(HAVE_LCHMOD)
+      if (lchown(String_cString(fileName),uid,gid) != 0)
+      {
+        return ERRORX_(IO,errno,"%s",String_cString(fileName));
+      }
+    #elif defined(HAVE_CHOWN)
+      if (chown(String_cString(fileName),uid,gid) != 0)
+      {
+        return ERRORX_(IO,errno,"%s",fileName);
+      }
+    #endif /* HAVE_LCHMOD, HAVE_CHOWN */
 
     return ERROR_NONE;
   #else /* not HAVE_CHOWN */
