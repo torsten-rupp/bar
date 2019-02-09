@@ -1691,7 +1691,7 @@ Errors Continuous_initNotify(ConstString     name,
   initNotifyMsg.name = String_duplicate(name);
   stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
   stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
-  EntryList_init(&initNotifyMsg.entryList); EntryList_copy(entryList,&initNotifyMsg.entryList,NULL,NULL);
+  EntryList_initDuplicate(&initNotifyMsg.entryList,entryList,NULL,NULL);
 
   (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
 
