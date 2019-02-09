@@ -54,7 +54,7 @@ typedef struct
   StorageSpecifier                *storageSpecifier;             // storage specifier structure
   const EntryList                 *includeEntryList;             // list of included entries
   const PatternList               *excludePatternList;           // list of exclude patterns
-  const JobOptions                *jobOptions;
+  JobOptions                      *jobOptions;
   bool                            dryRun;                        //
 
   RestoreUpdateStatusInfoFunction updateStatusInfoFunction;      // update status info call-back
@@ -750,9 +750,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     {
       if (!restoreInfo->dryRun)
       {
-        // set file time, file owner/group, file permission
-        if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
-        if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+        // set file time, file permission
         error = File_setInfo(&fileInfo,destinationFileName);
         if (error != ERROR_NONE)
         {
@@ -771,6 +769,33 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           else
           {
             printWarning("Cannot set file info of '%s' (error: %s)\n",
+                         String_cString(destinationFileName),
+                         Error_getText(error)
+                        );
+          }
+        }
+
+        // set file owner/group
+        if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
+        if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+        error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+        if (error != ERROR_NONE)
+        {
+          if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+              && !File_isNetworkFileSystem(destinationFileName)
+             )
+          {
+            printInfo(1,"FAIL!\n");
+            printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+            AutoFree_cleanup(&autoFreeList);
+            return error;
+          }
+          else
+          {
+            printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -1518,9 +1543,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
 
     if (!restoreInfo->dryRun)
     {
-      // set file time, file owner/group
-      if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
-      if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+      // set file time, file permission
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
@@ -1539,6 +1562,33 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
         else
         {
           printWarning("Cannot set directory info of '%s' (error: %s)\n",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+        }
+      }
+
+      // set file owner/group
+      if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
+      if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+      error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+      if (error != ERROR_NONE)
+      {
+        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
+        {
+          printInfo(1,"FAIL!\n");
+          printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                     String_cString(destinationFileName),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        else
+        {
+          printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -1827,9 +1877,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
 
     if (!restoreInfo->dryRun)
     {
-      // set file time, file owner/group
-      if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
-      if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+      // set file time, file permissions
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
@@ -1848,6 +1896,33 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
         else
         {
           printWarning("Cannot set file info of '%s' (error: %s)\n",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+        }
+      }
+
+      // set file owner/group
+      if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
+      if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+      error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+      if (error != ERROR_NONE)
+      {
+        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
+        {
+          printInfo(1,"FAIL!\n");
+          printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                     String_cString(destinationFileName),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        else
+        {
+          printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2310,9 +2385,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         {
           if (!restoreInfo->dryRun)
           {
-            // set file time, file owner/group
-            if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
-            if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+            // set file time, file permissions
             error = File_setInfo(&fileInfo,destinationFileName);
             if (error != ERROR_NONE)
             {
@@ -2331,6 +2404,33 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               else
               {
                 printWarning("Cannot set file info of '%s' (error: %s)\n",
+                             String_cString(destinationFileName),
+                             Error_getText(error)
+                            );
+              }
+            }
+
+            // set file owner/group
+            if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
+            if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+            error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+            if (error != ERROR_NONE)
+            {
+              if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+                  && !File_isNetworkFileSystem(destinationFileName)
+                 )
+              {
+                printInfo(1,"FAIL!\n");
+                printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                           String_cString(destinationFileName),
+                           Error_getText(error)
+                          );
+                AutoFree_cleanup(&autoFreeList);
+                return error;
+              }
+              else
+              {
+                printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -2737,9 +2837,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
 
     if (!restoreInfo->dryRun)
     {
-      // set file time, file owner/group
-      if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
-      if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+      // set file time, file permissions
       error = File_setInfo(&fileInfo,destinationFileName);
       if (error != ERROR_NONE)
       {
@@ -2758,6 +2856,33 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
         else
         {
           printWarning("Cannot set file info of '%s' (error: %s)\n",
+                       String_cString(destinationFileName),
+                       Error_getText(error)
+                      );
+        }
+      }
+
+      // set file owner/group
+      if (restoreInfo->jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = restoreInfo->jobOptions->owner.userId;
+      if (restoreInfo->jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = restoreInfo->jobOptions->owner.groupId;
+      error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+      if (error != ERROR_NONE)
+      {
+        if (   !restoreInfo->jobOptions->noStopOnAttributeErrorFlag
+            && !File_isNetworkFileSystem(destinationFileName)
+           )
+        {
+          printInfo(1,"FAIL!\n");
+          printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                     String_cString(destinationFileName),
+                     Error_getText(error)
+                    );
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        else
+        {
+          printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -3274,9 +3399,7 @@ Errors Command_restore(const StringList                *storageNameList,
         {
           if (!dryRun)
           {
-            // set file time, file owner/group, file permission of incomplete entries
-            if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
-            if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ((FileInfo*)fragmentNode->userData)->groupId = jobOptions->owner.groupId;
+            // set file time, file permission of incomplete entries
             error = File_setInfo((FileInfo*)fragmentNode->userData,fragmentNode->name);
             if (error != ERROR_NONE)
             {
@@ -3299,7 +3422,33 @@ Errors Command_restore(const StringList                *storageNameList,
               }
             }
 
-            // set attributes
+            // set file owner/group of incomplete entries
+            if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) ((FileInfo*)fragmentNode->userData)->userId  = jobOptions->owner.userId;
+            if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) ((FileInfo*)fragmentNode->userData)->groupId = jobOptions->owner.groupId;
+            error = File_setOwner(fragmentNode->name,((FileInfo*)fragmentNode->userData)->userId,((FileInfo*)fragmentNode->userData)->groupId);
+            if (error != ERROR_NONE)
+            {
+              if (   !jobOptions->noStopOnAttributeErrorFlag
+                  && !File_isNetworkFileSystem(fragmentNode->name)
+                 )
+              {
+                printInfo(1,"FAIL!\n");
+                printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                           String_cString(fragmentNode->name),
+                           Error_getText(error)
+                          );
+                return error;
+              }
+              else
+              {
+                printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                             String_cString(fragmentNode->name),
+                             Error_getText(error)
+                            );
+              }
+            }
+
+            // set attributes of incomplete entries
             error = File_setAttributes(((FileInfo*)fragmentNode->userData)->attributes,fragmentNode->name);
             if (error != ERROR_NONE)
             {

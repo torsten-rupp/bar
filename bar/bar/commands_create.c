@@ -96,7 +96,7 @@ typedef struct
   ConstString                 scheduleUUID;                         // unique schedule id to store or NULL
   const EntryList             *includeEntryList;                    // list of included entries
   const PatternList           *excludePatternList;                  // list of exclude patterns
-  const JobOptions            *jobOptions;
+  JobOptions                  *jobOptions;
   ArchiveTypes                archiveType;                          // archive type to create
   ConstString                 scheduleTitle;                        // schedule title or NULL
   ConstString                 scheduleCustomText;                   // schedule custom text or NULL
@@ -134,8 +134,6 @@ typedef struct
   FragmentList                statusInfoFragmentList;               // status info fragment list
   FragmentNode                *statusInfoCurrentFragmentNode;       // current fragment node in status info
   uint64                      statusInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
-//  Semaphore                   statusInfoNameLock;                 // status info name lock
-//  uint                        statusInfoNameLockCounter;          // status info name lock counter
 
   IsPauseFunction             isPauseCreateFunction;                // is pause check callback (can be NULL)
   void                        *isPauseCreateUserData;               // user data for is pause create check
@@ -282,27 +280,27 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void initCreateInfo(CreateInfo            *createInfo,
-                          IndexHandle           *indexHandle,
-                          ConstString           jobUUID,
-                          ConstString           scheduleUUID,
-                          const EntryList       *includeEntryList,
-                          const PatternList     *excludePatternList,
-                          const JobOptions      *jobOptions,
-                          ArchiveTypes          archiveType,
-                          ConstString           scheduleTitle,
-                          ConstString           scheduleCustomText,
-                          uint64                startDateTime,
-                          StorageFlags          storageFlags,
-                          StatusInfoFunction    statusInfoFunction,
-                          void                  *statusInfoUserData,
-                          IsPauseFunction       isPauseCreateFunction,
-                          void                  *isPauseCreateUserData,
-                          IsPauseFunction       isPauseStorageFunction,
-                          void                  *isPauseStorageUserData,
-                          IsAbortedFunction     isAbortedFunction,
-                          void                  *isAbortedUserData,
-                          LogHandle             *logHandle
+LOCAL void initCreateInfo(CreateInfo         *createInfo,
+                          IndexHandle        *indexHandle,
+                          ConstString        jobUUID,
+                          ConstString        scheduleUUID,
+                          const EntryList    *includeEntryList,
+                          const PatternList  *excludePatternList,
+                          JobOptions         *jobOptions,
+                          ArchiveTypes       archiveType,
+                          ConstString        scheduleTitle,
+                          ConstString        scheduleCustomText,
+                          uint64             startDateTime,
+                          StorageFlags       storageFlags,
+                          StatusInfoFunction statusInfoFunction,
+                          void               *statusInfoUserData,
+                          IsPauseFunction    isPauseCreateFunction,
+                          void               *isPauseCreateUserData,
+                          IsPauseFunction    isPauseStorageFunction,
+                          void               *isPauseStorageUserData,
+                          IsAbortedFunction  isAbortedFunction,
+                          void               *isAbortedUserData,
+                          LogHandle          *logHandle
                          )
 {
   assert(createInfo != NULL);
@@ -381,11 +379,6 @@ LOCAL void initCreateInfo(CreateInfo            *createInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize status info semaphore!");
   }
-//  if (!Semaphore_init(&createInfo->statusInfoNameLock,SEMAPHORE_TYPE_BINARY))
-//  {
-//    HALT_FATAL_ERROR("Cannot initialize status info name semaphore!");
-//  }
-//  createInfo->statusInfoNameLockCounter = 0;
 
   DEBUG_ADD_RESOURCE_TRACE(createInfo,CreateInfo);
 }
@@ -405,7 +398,6 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(createInfo,CreateInfo);
 
-//  Semaphore_done(&createInfo->statusInfoNameLock);
   Semaphore_done(&createInfo->statusInfoLock);
   Semaphore_done(&createInfo->storageInfoLock);
 
@@ -7085,7 +7077,7 @@ masterIO, // masterIO
     AUTOFREE_ADD(&autoFreeList,&createInfo.namesDictionary,{ Dictionary_done(&createInfo.namesDictionary); });
 
     // get increment list file name
-    incrementalListFileName      = String_new();
+    incrementalListFileName = String_new();
     if (!String_isEmpty(jobOptions->incrementalListFileName))
     {
       String_set(incrementalListFileName,jobOptions->incrementalListFileName);
