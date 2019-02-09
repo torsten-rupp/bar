@@ -686,10 +686,6 @@ LOCAL Errors deriveDecryptKey(DecryptKeyNode      *decryptKeyNode,
   assert(keyLength > 0);
   assert(cryptSalt != NULL);
 
-fprintf(stderr,"%s, %d: ------------------- deriveDecryptKey %d\n",__FILE__,__LINE__,cryptKeyDeriveType);
-Password_dump(decryptKeyNode->password);
-Crypt_dumpSalt(cryptSalt);
-
   // derive decrypt key from password with salt
   error = Crypt_deriveKey(&decryptKeyNode->cryptKey,
                           cryptKeyDeriveType,
@@ -1044,7 +1040,6 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
 
-fprintf(stderr,"%s, %d: -----------\n",__FILE__,__LINE__);
   SEMAPHORE_LOCKED_DO(&archiveHandle->passwordLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     if (   Crypt_isEncrypted(archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0])
@@ -1059,7 +1054,6 @@ fprintf(stderr,"%s, %d: -----------\n",__FILE__,__LINE__);
         return ERROR_INIT_PASSWORD;
       }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if      (password != NULL)
       {
         // use given crypt password
@@ -1067,13 +1061,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else if (!Password_isEmpty(&archiveHandle->storageInfo->jobOptions->cryptPassword))
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // use crypt password
         Password_set(cryptPassword,&archiveHandle->storageInfo->jobOptions->cryptPassword);
       }
       else
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // get crypt password
         error = getCryptPassword(cryptPassword,
                                  archiveHandle,
@@ -1095,8 +1087,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         Semaphore_unlock(&archiveHandle->passwordLock);
         return ERROR_NO_CRYPT_PASSWORD;
       }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-Password_dump(cryptPassword);
 
       // set crypt password
       archiveHandle->cryptPassword = cryptPassword;
@@ -1597,7 +1587,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
   {
     if (List_count(&archiveHandle->archiveIndexList) >= maxIndexEntries)
     {
-      List_move(&archiveHandle->archiveIndexList,&archiveIndexList,NULL,NULL,NULL);
+      List_move(&archiveIndexList,NULL,&archiveHandle->archiveIndexList,NULL,NULL);
     }
   }
 
@@ -5615,8 +5605,6 @@ UNUSED_VARIABLE(storageInfo);
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-Password_dump(archiveHandle->cryptPassword);
 
       // derive crypt key from password with salt
       error = Crypt_deriveKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey,
@@ -15929,11 +15917,9 @@ archiveHandle->archiveInitUserData              = NULL;
               }
             }
 
-            // set file time, file owner/group
+            // set file time, file owner/group, file permission, file attributes
             if (!dryRun)
             {
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setInfo(&fileInfo,destinationFileName);
               if (error != ERROR_NONE)
               {
@@ -15961,6 +15947,32 @@ archiveHandle->archiveInitUserData              = NULL;
                               );
                 }
               }
+
+              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+              error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+              if (error != ERROR_NONE)
+              {
+                if (   !jobOptions->noStopOnAttributeErrorFlag
+                    && !File_isNetworkFileSystem(fragmentNode->name)
+                   )
+                {
+                  printInfo(1,"FAIL!\n");
+                  printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                             String_cString(fragmentNode->name),
+                             Error_getText(error)
+                            );
+                  return error;
+                }
+                else
+                {
+                  printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                               String_cString(fragmentNode->name),
+                               Error_getText(error)
+                              );
+                }
+              }
+
               error = File_setAttributes(fileInfo.attributes,destinationFileName);
               if (error != ERROR_NONE)
               {
@@ -16178,11 +16190,9 @@ archiveHandle->archiveInitUserData              = NULL;
               }
             }
 
-            // set file time, file owner/group
+            // set file time, file owner/group, file permission, file attributes
             if (!dryRun)
             {
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setInfo(&fileInfo,destinationFileName);
               if (error != ERROR_NONE)
               {
@@ -16211,6 +16221,32 @@ archiveHandle->archiveInitUserData              = NULL;
                               );
                 }
               }
+
+              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+              error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+              if (error != ERROR_NONE)
+              {
+                if (   !jobOptions->noStopOnAttributeErrorFlag
+                    && !File_isNetworkFileSystem(fragmentNode->name)
+                   )
+                {
+                  printInfo(1,"FAIL!\n");
+                  printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                             String_cString(fragmentNode->name),
+                             Error_getText(error)
+                            );
+                  return error;
+                }
+                else
+                {
+                  printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                               String_cString(fragmentNode->name),
+                               Error_getText(error)
+                              );
+                }
+              }
+
               error = File_setAttributes(fileInfo.attributes,destinationFileName);
               if (error != ERROR_NONE)
               {
@@ -16554,11 +16590,9 @@ archiveHandle->archiveInitUserData              = NULL;
                   File_close(&fileHandle);
                 }
 
-                // set file time, file owner/group
+                // set file time, file owner/group, file permission, file attributes
                 if (!dryRun)
                 {
-                  if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-                  if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
                   error = File_setInfo(&fileInfo,destinationFileName);
                   if (error != ERROR_NONE)
                   {
@@ -16580,6 +16614,32 @@ archiveHandle->archiveInitUserData              = NULL;
                                   );
                     }
                   }
+
+                  if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+                  if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+                  error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+                  if (error != ERROR_NONE)
+                  {
+                    if (   !jobOptions->noStopOnAttributeErrorFlag
+                        && !File_isNetworkFileSystem(fragmentNode->name)
+                       )
+                    {
+                      printInfo(1,"FAIL!\n");
+                      printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                                 String_cString(fragmentNode->name),
+                                 Error_getText(error)
+                                );
+                      return error;
+                    }
+                    else
+                    {
+                      printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                                   String_cString(fragmentNode->name),
+                                   Error_getText(error)
+                                  );
+                    }
+                  }
+
                   error = File_setAttributes(fileInfo.attributes,destinationFileName);
                   if (error != ERROR_NONE)
                   {
@@ -16848,11 +16908,9 @@ archiveHandle->archiveInitUserData              = NULL;
               }
             }
 
-            // set file time, file owner/group
+            // set file time, file owner/group, file permission, file attributes
             if (!dryRun)
             {
-              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
-              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
               error = File_setInfo(&fileInfo,destinationFileName);
               if (error != ERROR_NONE)
               {
@@ -16880,6 +16938,32 @@ archiveHandle->archiveInitUserData              = NULL;
                               );
                 }
               }
+
+              if (jobOptions->owner.userId  != FILE_DEFAULT_USER_ID ) fileInfo.userId  = jobOptions->owner.userId;
+              if (jobOptions->owner.groupId != FILE_DEFAULT_GROUP_ID) fileInfo.groupId = jobOptions->owner.groupId;
+              error = File_setOwner(destinationFileName,fileInfo.userId,fileInfo.groupId);
+              if (error != ERROR_NONE)
+              {
+                if (   !jobOptions->noStopOnAttributeErrorFlag
+                    && !File_isNetworkFileSystem(fragmentNode->name)
+                   )
+                {
+                  printInfo(1,"FAIL!\n");
+                  printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                             String_cString(fragmentNode->name),
+                             Error_getText(error)
+                            );
+                  return error;
+                }
+                else
+                {
+                  printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                               String_cString(fragmentNode->name),
+                               Error_getText(error)
+                              );
+                }
+              }
+
               error = File_setAttributes(fileInfo.attributes,destinationFileName);
               if (error != ERROR_NONE)
               {

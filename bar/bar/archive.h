@@ -458,10 +458,10 @@ typedef struct ArchiveEntryInfo
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define Archive_create(...)             __Archive_create    (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_open(...)               __Archive_open      (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_openHandle(...)         __Archive_openHandle(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Archive_close(...)              __Archive_close     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_create(...)             __Archive_create            (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_open(...)               __Archive_open              (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_openHandle(...)         __Archive_openHandle        (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Archive_close(...)              __Archive_close             (__FILE__,__LINE__, ## __VA_ARGS__)
 
   #define Archive_newMetaEntry(...)       __Archive_newMetaEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Archive_newFileEntry(...)       __Archive_newFileEntry      (__FILE__,__LINE__, ## __VA_ARGS__)
