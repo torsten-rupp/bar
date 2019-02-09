@@ -1205,14 +1205,16 @@ LOCAL_INLINE bool isPauseStorage(void *userData)
 /***********************************************************************\
 * Name   : isAborted
 * Purpose: check if job is aborted
-* Input  : jobNode - job node
+* Input  : userData - job node
 * Output : -
 * Return : TRUE iff aborted
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE bool isAborted(const JobNode *jobNode)
+LOCAL_INLINE bool isAborted(void *userData)
 {
+  const JobNode *jobNode = (const JobNode*)userData;
+
   assert(jobNode != NULL);
 
   return jobNode->requestedAbortFlag;
@@ -1337,8 +1339,8 @@ LOCAL void jobThreadCode(void)
       String_set(storageName,jobNode->job.archiveName);
       String_set(jobUUID,jobNode->job.uuid);
       Network_getHostName(hostName);
-      EntryList_clear(&includeEntryList); EntryList_copy(&jobNode->job.includeEntryList,&includeEntryList,CALLBACK(NULL,NULL));
-      PatternList_clear(&excludePatternList); PatternList_copy(&jobNode->job.excludePatternList,&excludePatternList,CALLBACK(NULL,NULL));
+      EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK(NULL,NULL));
+      PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK(NULL,NULL));
       Job_duplicateOptions(&jobOptions,&jobNode->job.options);
       if (!String_isEmpty(jobNode->scheduleUUID))
       {
@@ -1559,7 +1561,6 @@ LOCAL void jobThreadCode(void)
                 break;
               case JOB_TYPE_CREATE:
                 // create archive
-fprintf(stderr,"%s, %d: jobNode->masterIO=%p\n",__FILE__,__LINE__,jobNode->masterIO);
                 jobNode->runningInfo.error = Command_create(jobNode->masterIO,
                                                             archiveType,
                                                             jobUUID,
@@ -3187,7 +3188,9 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           LIST_ITERATE(&jobList,jobNode)
           {
             List_init(&expirationEntityList);
+#ifndef WERROR
 #warning TODO
+#endif
 //TODO: revert
 //            if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
 if (1
