@@ -658,11 +658,11 @@ void __List_initDuplicate(const char                *__fileName__,
   #else /* not NDEBUG */
     __List_init(__fileName__,__lineNb__,list);
   #endif /* NDEBUG */
-  List_copy(fromList,
-            list,
+  List_copy(list,
+            NULL,
+            fromList,
             fromListFromNode,
             fromListToNode,
-            NULL,
             listNodeDuplicateFunction,
             listNodeDuplicateUserData
            );
@@ -784,11 +784,11 @@ void *List_clear(void                 *list,
   return list;
 }
 
-void List_copy(const void                *fromList,
-               void                      *toList,
+void List_copy(void                      *toList,
+               void                      *toListNextNode,
+               const void                *fromList,
                const void                *fromListFromNode,
                const void                *fromListToNode,
-               void                      *toListNextNode,
                ListNodeDuplicateFunction listNodeDuplicateFunction,
                void                      *listNodeDuplicateUserData
               )
@@ -796,8 +796,8 @@ void List_copy(const void                *fromList,
   Node *node;
   Node *newNode;
 
-  assert(fromList != NULL);
   assert(toList != NULL);
+  assert(fromList != NULL);
   assert(listNodeDuplicateFunction != NULL);
 
   if (fromListFromNode == LIST_START) fromListFromNode = ((List*)fromList)->head;
@@ -816,18 +816,18 @@ void List_copy(const void                *fromList,
   }
 }
 
-void List_move(void       *fromList,
-               void       *toList,
+void List_move(void       *toList,
+               void       *toListNextNode,
+               void       *fromList,
                const void *fromListFromNode,
-               const void *fromListToNode,
-               void       *toListNextNode
+               const void *fromListToNode
               )
 {
   Node *node;
   Node *nextNode;
 
-  assert(fromList != NULL);
   assert(toList != NULL);
+  assert(fromList != NULL);
 
   if (fromListFromNode == LIST_START) fromListFromNode = ((List*)fromList)->head;
 

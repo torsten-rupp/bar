@@ -574,12 +574,12 @@ void *List_clear(void                 *list,
 /***********************************************************************\
 * Name   : List_copy
 * Purpose: copy contents of list
-* Input  : fromList                        - from list
-*          toList                          - to list
-*          fromListFromNode,fromListToNode - from/to node (could be
-*                                            NULL)
+* Input  : toList                          - to list
 *          toListNextNode                  - insert node before nextNode
 *                                            (could be NULL)
+*          fromList                        - from list
+*          fromListFromNode,fromListToNode - from/to node (could be
+*                                            NULL)
 *          listNodeDuplicateFunction       - node duplicate function
 *          listNodeDuplicateUserData       - node duplicate user data
 * Output : -
@@ -587,11 +587,11 @@ void *List_clear(void                 *list,
 * Notes  : -
 \***********************************************************************/
 
-void List_copy(const void                *fromList,
-               void                      *toList,
+void List_copy(void                      *toList,
+               void                      *toListNextNode,
+               const void                *fromList,
                const void                *fromListFromNode,
                const void                *fromListToNode,
-               void                      *toListNextNode,
                ListNodeDuplicateFunction listNodeDuplicateFunction,
                void                      *listNodeDuplicateUserData
               );
@@ -599,22 +599,22 @@ void List_copy(const void                *fromList,
 /***********************************************************************\
 * Name   : List_move
 * Purpose: move contents of list
-* Input  : fromList                        - from list
-*          toList                          - to list
-*          fromListFromNode,fromListToNode - from/to node (could be
-*                                            NULL)
+* Input  : toList                          - to list
 *          toListNextNode                  - insert node before nextNode
 *                                            (could be NULL)
+*          fromList                        - from list
+*          fromListFromNode,fromListToNode - from/to node (could be
+*                                            NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void List_move(void       *fromList,
-               void       *toList,
+void List_move(void       *toList,
+               void       *toListNextNode,
+               void       *fromList,
                const void *fromListFromNode,
-               const void *fromListToNode,
-               void       *toListNextNode
+               const void *fromListToNode
               );
 
 /***********************************************************************\
