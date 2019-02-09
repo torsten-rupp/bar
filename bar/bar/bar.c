@@ -500,7 +500,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_ENUM         ("generate-signature-keys",           0,  0,1,command,                                         0,COMMAND_GENERATE_SIGNATURE_KEYS,                             "generate new public/private key pair for signature"                       ),
 //  CMD_OPTION_ENUM         ("new-key-password",                  0,  1,1,command,                                         0,COMMAND_NEW_KEY_PASSWORD,                                    "set new private key password"                                             ),
   CMD_OPTION_INTEGER      ("generate-keys-bits",                0,  1,1,generateKeyBits,                                 0,MIN_ASYMMETRIC_CRYPT_KEY_BITS,
-                                                                                                                              MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits",NULL                                                            ),
+                                                                                                                           MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits",NULL                                                            ),
   CMD_OPTION_SELECT       ("generate-keys-mode",                0,  1,2,generateKeyMode,                                 0,COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES,                     "select generate key mode mode"                                            ),
   CMD_OPTION_STRING       ("job",                               0,  0,1,jobUUIDName,                                     0,                                                             "set/execute job","name or UUID"                                           ),
 
@@ -517,13 +517,13 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("storage-command",                   0,  1,3,globalOptions.storageNameCommand,                0,                                                             "storage name command","command"                                           ),
 
   CMD_OPTION_SPECIAL      ("include",                           '#',0,3,&includeEntryList,                               0,cmdOptionParseEntryPattern,NULL,1,                           "include pattern","pattern"                                                ),
-  CMD_OPTION_STRING       ("include-file-list",                 0,  1,3,globalOptions.includeFileListFileName,                         0,                                                             "include file pattern list file name","file name"                          ),
-  CMD_OPTION_STRING       ("include-file-command",              0,  1,3,globalOptions.includeFileCommand,                              0,                                                             "include file pattern command","command"                                   ),
-  CMD_OPTION_STRING       ("include-image-list",                0,  1,3,globalOptions.includeImageListFileName,                        0,                                                             "include image pattern list file name","file name"                         ),
-  CMD_OPTION_STRING       ("include-image-command",             0,  1,3,globalOptions.includeImageCommand,                             0,                                                             "include image pattern command","command"                                  ),
+  CMD_OPTION_STRING       ("include-file-list",                 0,  1,3,globalOptions.includeFileListFileName,           0,                                                             "include file pattern list file name","file name"                          ),
+  CMD_OPTION_STRING       ("include-file-command",              0,  1,3,globalOptions.includeFileCommand,                0,                                                             "include file pattern command","command"                                   ),
+  CMD_OPTION_STRING       ("include-image-list",                0,  1,3,globalOptions.includeImageListFileName,          0,                                                             "include image pattern list file name","file name"                         ),
+  CMD_OPTION_STRING       ("include-image-command",             0,  1,3,globalOptions.includeImageCommand,               0,                                                             "include image pattern command","command"                                  ),
   CMD_OPTION_SPECIAL      ("exclude",                           '!',0,3,&excludePatternList,                             0,cmdOptionParsePattern,NULL,1,                                "exclude pattern","pattern"                                                ),
-  CMD_OPTION_STRING       ("exclude-list",                      0,  1,3,globalOptions.excludeListFileName,                             0,                                                             "exclude pattern list file name","file name"                               ),
-  CMD_OPTION_STRING       ("exclude-command",                   0,  1,3,globalOptions.excludeCommand,                                  0,                                                             "exclude pattern command","command"                                        ),
+  CMD_OPTION_STRING       ("exclude-list",                      0,  1,3,globalOptions.excludeListFileName,               0,                                                             "exclude pattern list file name","file name"                               ),
+  CMD_OPTION_STRING       ("exclude-command",                   0,  1,3,globalOptions.excludeCommand,                    0,                                                             "exclude pattern command","command"                                        ),
   CMD_OPTION_SPECIAL      ("mount",                             0  ,1,3,&globalOptions.mountList,                        0,cmdOptionParseMount,NULL,1,                                  "mount device","name"                                                      ),
 
   CMD_OPTION_SPECIAL      ("delta-source",                      0,  0,3,&globalOptions.deltaSourceList,                  0,cmdOptionParseDeltaSource,NULL,1,                            "source pattern","pattern"                                                 ),
@@ -652,8 +652,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("batch",                             0,  2,1,batchFlag,                                       0,                                                             "run in batch mode"                                                        ),
   CMD_OPTION_SPECIAL      ("remote-bar-executable",             0,  1,1,&globalOptions.remoteBARExecutable,              0,cmdOptionParseString,NULL,1,                                 "remote BAR executable","file name"                                        ),
 
-  CMD_OPTION_STRING       ("pre-command",                       0,  1,1,globalOptions.preProcessScript,                    0,                                                             "pre-process command","command"                                            ),
-  CMD_OPTION_STRING       ("post-command",                      0,  1,1,globalOptions.postProcessScript,                   0,                                                             "post-process command","command"                                           ),
+  CMD_OPTION_STRING       ("pre-command",                       0,  1,1,globalOptions.preProcessScript,                  0,                                                             "pre-process command","command"                                            ),
+  CMD_OPTION_STRING       ("post-command",                      0,  1,1,globalOptions.postProcessScript,                 0,                                                             "post-process command","command"                                           ),
 
   CMD_OPTION_STRING       ("file-write-pre-command",            0,  1,1,globalOptions.file.writePreProcessCommand,       0,                                                             "write file pre-process command","command"                                 ),
   CMD_OPTION_STRING       ("file-write-post-command",           0,  1,1,globalOptions.file.writePostProcessCommand,      0,                                                             "write file post-process command","command"                                ),
@@ -3730,6 +3730,7 @@ LOCAL void initGlobalOptions(void)
 {
   memset(&globalOptions,0,sizeof(GlobalOptions));
 
+  // --- program options
   globalOptions.runMode                                         = RUN_MODE_INTERACTIVE;
   globalOptions.barExecutable                                   = String_new();
   globalOptions.niceLevel                                       = 0;
@@ -3786,6 +3787,37 @@ LOCAL void initGlobalOptions(void)
   globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
 
   globalOptions.serverDebugLevel                                = DEFAULT_SERVER_DEBUG_LEVEL;
+
+  // --- job options default values
+
+  globalOptions.storageNameListStdin                            = FALSE;
+  globalOptions.storageNameListFileName                         = String_new();
+  globalOptions.storageNameCommand                              = String_new();
+
+  globalOptions.includeFileListFileName                         = String_new();
+  globalOptions.includeFileCommand                              = String_new();
+  globalOptions.includeImageListFileName                        = String_new();
+  globalOptions.includeImageCommand                             = String_new();
+  globalOptions.excludeListFileName                             = String_new();
+  globalOptions.excludeCommand                                  = String_new();
+
+  List_init(&globalOptions.mountList);
+  PatternList_init(&globalOptions.compressExcludePatternList);
+  DeltaSourceList_init(&globalOptions.deltaSourceList);
+  List_init(&globalOptions.scheduleList);
+  List_init(&globalOptions.persistenceList);
+
+  globalOptions.archivePartSize                                 = 0LL;
+
+  globalOptions.incrementalListFileName                         = String_new();
+
+  globalOptions.directoryStripCount                             = 0;
+  globalOptions.destination                                     = String_new();
+  globalOptions.owner.userId                                    = FILE_DEFAULT_USER_ID;
+  globalOptions.owner.groupId                                   = FILE_DEFAULT_GROUP_ID;
+  globalOptions.permissions                                     = FILE_DEFAULT_PERMISSION;
+
+  globalOptions.patternType                                     = PATTERN_TYPE_GLOB;
 
   globalOptions.fragmentSize                                    = DEFAULT_FRAGMENT_SIZE;
   globalOptions.maxStorageSize                                  = 0LL;
@@ -3978,6 +4010,23 @@ LOCAL void doneGlobalOptions(void)
   doneKey(&globalOptions.cryptPublicKey);
   Password_done(&globalOptions.cryptNewPassword);
   Password_done(&globalOptions.cryptPassword);
+
+extern void freeScheduleNode(ScheduleNode *scheduleNode, void *userData);
+extern void freePersistenceNode(PersistenceNode *persistenceNode, void *userData);
+
+  List_done(&globalOptions.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_done(&globalOptions.scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  DeltaSourceList_done(&globalOptions.deltaSourceList);
+  PatternList_done(&globalOptions.compressExcludePatternList);
+  List_done(&globalOptions.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+
+  String_delete(globalOptions.excludeCommand);
+  String_delete(globalOptions.excludeListFileName);
+  String_delete(globalOptions.includeImageCommand);
+  String_delete(globalOptions.includeImageListFileName);
+  String_delete(globalOptions.includeFileCommand);
+  String_delete(globalOptions.includeFileListFileName);
+
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   doneKey(&globalOptions.masterInfo.publicKey);
   doneHash(&globalOptions.masterInfo.passwordHash);
@@ -9749,6 +9798,13 @@ LOCAL Errors runDaemon(void)
   // open log file
   openLog();
 
+  // init UUID if needed (ignore errors)
+  if (String_isEmpty(uuid))
+  {
+    Misc_getUUID(uuid);
+    configModified = TRUE;
+  }
+
   // create pid file
   error = createPIDFile();
   if (error != ERROR_NONE)
@@ -9848,7 +9904,7 @@ LOCAL Errors runJob(void)
   // get include/excluded entries from file list
   if (!String_isEmpty(globalOptions.includeFileListFileName))
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileListFileName));
+    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileListFileName));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9856,7 +9912,7 @@ LOCAL Errors runJob(void)
   }
   if (!String_isEmpty(globalOptions.includeImageListFileName))
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageListFileName));
+    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageListFileName));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9874,7 +9930,7 @@ LOCAL Errors runJob(void)
   // get include/excluded entries from commands
   if (!String_isEmpty(globalOptions.includeFileCommand))
   {
-    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9882,7 +9938,7 @@ LOCAL Errors runJob(void)
   }
   if (!String_isEmpty(globalOptions.includeImageCommand))
   {
-    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9952,7 +10008,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   // get include/excluded entries from file list
   if (!String_isEmpty(globalOptions.includeFileListFileName))
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileListFileName));
+    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileListFileName));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9960,7 +10016,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(globalOptions.includeImageListFileName))
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageListFileName));
+    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageListFileName));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9978,7 +10034,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   // get include/excluded entries from commands
   if (!String_isEmpty(globalOptions.includeFileCommand))
   {
-    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&globalOptions.includeEntryList,String_cString(globalOptions.includeFileCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -9986,7 +10042,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   }
   if (!String_isEmpty(globalOptions.includeImageCommand))
   {
-    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&globalOptions.includeEntryList,String_cString(globalOptions.includeImageCommand));
+    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageCommand));
     if (error != ERROR_NONE)
     {
       return error;
@@ -10012,7 +10068,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     case COMMAND_CREATE_IMAGES:
       {
         EntryTypes entryType;
-        int        z;
+        int        i;
 
         // get storage name
         if (argc > 1)
@@ -10034,9 +10090,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             case COMMAND_CREATE_IMAGES: entryType = ENTRY_TYPE_IMAGE; break;
             default:                    entryType = ENTRY_TYPE_FILE;  break;
           }
-          for (z = 2; z < argc; z++)
+          for (i = 2; i < argc; i++)
           {
-            error = EntryList_appendCString(&globalOptions.includeEntryList,entryType,argv[z],globalOptions.patternType,NULL);
+            error = EntryList_appendCString(&includeEntryList,entryType,argv[i],globalOptions.patternType,NULL);
             if (error != ERROR_NONE)
             {
               break;
@@ -10430,20 +10486,6 @@ exit(1);
     return ERROR_INVALID_ARGUMENT;
   }
 
-  // init UUID if needed (ignore errors)
-  if (String_isEmpty(uuid))
-  {
-    Misc_getUUID(uuid);
-    configModified = TRUE;
-  }
-
-  // update config
-  if (configModified)
-  {
-    (void)updateConfig();
-    configModified = FALSE;
-  }
-
   // create temporary directory
   error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
@@ -10472,6 +10514,13 @@ exit(1);
   else
   {
     error = runInteractive(argc,argv);
+  }
+
+  // update config
+  if (configModified)
+  {
+    (void)updateConfig();
+    configModified = FALSE;
   }
 
   // delete temporary directory
