@@ -295,9 +295,9 @@ INLINE uint64 FragmentList_getSize(const FragmentNode *fragmentNode)
 * Notes  : -
 \***********************************************************************/
 
-uint64 FragmentList_getTotalSize(const FragmentNode *fragmentNode);
+INLINE uint64 FragmentList_getTotalSize(const FragmentNode *fragmentNode);
 #if defined(NDEBUG) || defined(__FRAGMENTLISTS_IMPLEMENTATION__)
-uint64 FragmentList_getTotalSize(const FragmentNode *fragmentNode)
+INLINE uint64 FragmentList_getTotalSize(const FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
 
