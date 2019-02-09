@@ -275,7 +275,8 @@ JobList jobList;                // job list
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
+//TODO: LOCAL
+void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 {
   assert(scheduleNode != NULL);
   assert(scheduleNode->uuid != NULL);
@@ -496,7 +497,8 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
+//TODO: LOCAL
+void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
 {
   assert(persistenceNode != NULL);
 
@@ -2023,11 +2025,14 @@ void Job_init(Job *job)
 {
   assert(job != NULL);
 
-  job->uuid                                      = String_new();
-  job->slaveHost.name                            = String_new();
-  job->slaveHost.port                            = 0;
-  job->slaveHost.forceSSL                        = FALSE;
-  job->archiveName                               = String_new();
+  job->uuid                    = String_new();
+  job->slaveHost.name          = String_new();
+  job->slaveHost.port          = 0;
+  job->slaveHost.forceSSL      = FALSE;
+  job->archiveName             = String_new();
+  job->storageNameListStdin    = FALSE;
+  job->storageNameListFileName = String_new();
+  job->storageNameCommand      = String_new();
   EntryList_init(&job->includeEntryList);
   PatternList_init(&job->excludePatternList);
   Job_initOptions(&job->options);
@@ -2035,25 +2040,32 @@ void Job_init(Job *job)
   DEBUG_ADD_RESOURCE_TRACE(job,Job);
 }
 
-void Job_duplicate(Job *job, const Job *fromJob)
+void Job_initDuplicate(Job *job, const Job *fromJob)
 {
   assert(job != NULL);
   assert(fromJob != NULL);
 
   DEBUG_CHECK_RESOURCE_TRACE(fromJob);
 
-  job->uuid                                      = String_duplicate(fromJob->uuid);
-  job->slaveHost.name                            = String_duplicate(fromJob->slaveHost.name);
-  job->slaveHost.port                            = fromJob->slaveHost.port;
-  job->slaveHost.forceSSL                        = fromJob->slaveHost.forceSSL;
-  job->archiveName                               = String_duplicate(fromJob->archiveName);
+  job->uuid                    = String_duplicate(fromJob->uuid);
+  job->slaveHost.name          = String_duplicate(fromJob->slaveHost.name);
+  job->slaveHost.port          = fromJob->slaveHost.port;
+  job->slaveHost.forceSSL      = fromJob->slaveHost.forceSSL;
+
+  job->archiveName             = String_duplicate(fromJob->archiveName);
+  job->storageNameListStdin    = fromJob->storageNameListStdin;
+  job->storageNameListFileName = String_duplicate(fromJob->storageNameListFileName);
+  job->storageNameCommand      = String_duplicate(fromJob->storageNameCommand);
+
   EntryList_initDuplicate(&job->includeEntryList,
                           &fromJob->includeEntryList,
-                          CALLBACK(NULL,NULL)
+                          NULL,  // fromEntryListFromNode
+                          NULL  // fromEntryListToNode
                          );
   PatternList_initDuplicate(&job->excludePatternList,
                             &fromJob->excludePatternList,
-                            CALLBACK(NULL,NULL)
+                            NULL,  // fromPatternListFromNode
+                            NULL  // fromPatternListToNode
                            );
   Job_duplicateOptions(&job->options,&fromJob->options);
 
@@ -2067,7 +2079,14 @@ void Job_done(Job *job)
   DEBUG_REMOVE_RESOURCE_TRACE(job,Job);
 
   Job_doneOptions(&job->options);
+
+  PatternList_done(&job->excludePatternList);
+  EntryList_done(&job->includeEntryList);
+
+  String_delete(job->storageNameCommand);
+  String_delete(job->storageNameListFileName);
   String_delete(job->archiveName);
+
   String_delete(job->slaveHost.name);
   String_delete(job->uuid);
 }
@@ -2169,7 +2188,7 @@ JobNode *Job_copy(const JobNode *jobNode,
   }
 
   // init job node
-  Job_duplicate(&newJobNode->job,&jobNode->job);
+  Job_initDuplicate(&newJobNode->job,&jobNode->job);
   newJobNode->name                                      = File_getBaseName(String_new(),fileName);
   newJobNode->jobType                                   = jobNode->jobType;
 
@@ -3504,112 +3523,131 @@ void Job_initOptions(JobOptions *jobOptions)
 
   memClear(jobOptions,sizeof(JobOptions));
 
-  jobOptions->uuid                            = String_new();
+  jobOptions->uuid                                      = String_new();
 
-  jobOptions->archiveType                     = ARCHIVE_TYPE_NORMAL;
+  jobOptions->archiveType                               = globalOptions.archiveType;
 
-  jobOptions->storageNameListStdin            = FALSE;
-  jobOptions->storageNameListFileName         = String_new();
-  jobOptions->storageNameCommand              = String_new();
-
-  jobOptions->includeFileListFileName         = String_new();
-  jobOptions->includeFileCommand              = String_new();
-  jobOptions->includeImageListFileName        = String_new();
-  jobOptions->includeImageCommand             = String_new();
-  jobOptions->excludeListFileName             = String_new();
-  jobOptions->excludeCommand                  = String_new();
-  List_init(&jobOptions->mountList);
-  PatternList_init(&jobOptions->compressExcludePatternList);
-  DeltaSourceList_init(&jobOptions->deltaSourceList);
-  List_init(&jobOptions->scheduleList);
-  List_init(&jobOptions->persistenceList);
+  jobOptions->includeFileListFileName                   = String_duplicate(globalOptions.includeFileListFileName);
+  jobOptions->includeFileCommand                        = String_duplicate(globalOptions.includeFileCommand);
+  jobOptions->includeImageListFileName                  = String_duplicate(globalOptions.includeImageListFileName);
+  jobOptions->includeImageCommand                       = String_duplicate(globalOptions.includeImageCommand);
+  jobOptions->excludeListFileName                       = String_duplicate(globalOptions.excludeListFileName);
+  jobOptions->excludeCommand                            = String_duplicate(globalOptions.excludeCommand);
+  List_initDuplicate(&jobOptions->mountList,
+                     &globalOptions.mountList,
+                     NULL,  // fromListFromNode
+                     NULL,  // fromListToNode
+                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+                    );
+  PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
+                            &globalOptions.compressExcludePatternList,
+                            NULL,  // fromPatternListFromNode
+                            NULL  // fromPatternListToNode
+                           );
+  DeltaSourceList_initDuplicate(&jobOptions->deltaSourceList,
+                                &globalOptions.deltaSourceList,
+                                NULL,  // fromDeltaSourceListFromNode
+                                NULL  // fromDeltaSourceListToNode
+                               );
+  List_initDuplicate(&jobOptions->scheduleList,
+                     &globalOptions.scheduleList,
+                     NULL,  // fromListFromNode
+                     NULL,  // fromListToNode
+                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
+                    );
+  List_initDuplicate(&jobOptions->persistenceList,
+                     &globalOptions.persistenceList,
+                     NULL,  // fromListFromNode
+                     NULL,  // fromListToNode
+                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+                    );
   jobOptions->persistenceList.lastModificationTimestamp = 0LL;
 
-  jobOptions->archivePartSize                 = globalOptions.archivePartSize;
-  jobOptions->incrementalListFileName         = String_new();
-  jobOptions->directoryStripCount             = DIRECTORY_STRIP_NONE;
-  jobOptions->destination                     = String_new();
-  jobOptions->owner.userId                    = globalOptions.owner.userId;
-  jobOptions->owner.groupId                   = globalOptions.owner.groupId;
-  jobOptions->patternType                     = globalOptions.patternType;
-  jobOptions->compressAlgorithms.delta        = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithms.byte         = COMPRESS_ALGORITHM_NONE;
+  jobOptions->archivePartSize                           = globalOptions.archivePartSize;
+  jobOptions->incrementalListFileName                   = String_duplicate(globalOptions.incrementalListFileName);
+  jobOptions->directoryStripCount                       = globalOptions.directoryStripCount;
+  jobOptions->destination                               = String_duplicate(globalOptions.destination);
+  jobOptions->owner.userId                              = globalOptions.owner.userId;
+  jobOptions->owner.groupId                             = globalOptions.owner.groupId;
+  jobOptions->patternType                               = globalOptions.patternType;
+  jobOptions->compressAlgorithms.delta                  = globalOptions.compressAlgorithms.delta;
+  jobOptions->compressAlgorithms.byte                   = globalOptions.compressAlgorithms.byte;
   for (i = 0; i < 4; i++)
   {
-    jobOptions->cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
+    jobOptions->cryptAlgorithms[i] = globalOptions.cryptAlgorithms[i];
   }
   #ifdef HAVE_GCRYPT
-    jobOptions->cryptType                     = CRYPT_TYPE_SYMMETRIC;
+    jobOptions->cryptType                               = globalOptions.cryptType;
   #else /* not HAVE_GCRYPT */
-    jobOptions->cryptType                     = CRYPT_TYPE_NONE;
+    jobOptions->cryptType                               = globalOptions.cryptType;
   #endif /* HAVE_GCRYPT */
-  jobOptions->cryptPasswordMode               = PASSWORD_MODE_DEFAULT;
-  Password_init(&jobOptions->cryptPassword);
+  jobOptions->cryptPasswordMode                         = globalOptions.cryptPasswordMode;
+  Password_initDuplicate(&jobOptions->cryptPassword,&globalOptions.cryptPassword);
   duplicateKey(&jobOptions->cryptPublicKey,&globalOptions.cryptPublicKey);
   duplicateKey(&jobOptions->cryptPrivateKey,&globalOptions.cryptPrivateKey);
 
-  jobOptions->preProcessScript                = NULL;
-  jobOptions->postProcessScript               = NULL;
+  jobOptions->preProcessScript                          = NULL;
+  jobOptions->postProcessScript                         = NULL;
 //TODO: requrired?
 #if 0
-  jobOptions->file.preProcessScript           = NULL;
-  jobOptions->file.postProcessScript          = NULL;
-  jobOptions->ftp.preProcessScript            = NULL;
-  jobOptions->ftp.postProcessScript           = NULL;
-  jobOptions->scp.preProcessScript            = NULL;
-  jobOptions->scp.postProcessScript           = NULL;
-  jobOptions->sftp.preProcessScript           = NULL;
-  jobOptions->sftp.postProcessScript          = NULL;
-  jobOptions->webdav.preProcessScript         = NULL;
-  jobOptions->webdav.postProcessScript        = NULL;
-  jobOptions->cd.deviceName                   = NULL;
-  jobOptions->cd.requestVolumeCommand         = NULL;
-  jobOptions->cd.unloadVolumeCommand          = NULL;
-  jobOptions->cd.loadVolumeCommand            = NULL;
-  jobOptions->cd.volumeSize                   = 0LL;
-  jobOptions->cd.imagePreProcessCommand       = NULL;
-  jobOptions->cd.imagePostProcessCommand      = NULL;
-  jobOptions->cd.imageCommand                 = NULL;
-  jobOptions->cd.eccPreProcessCommand         = NULL;
-  jobOptions->cd.eccPostProcessCommand        = NULL;
-  jobOptions->cd.eccCommand                   = NULL;
-  jobOptions->cd.blankCommand                 = NULL;
-  jobOptions->cd.writePreProcessCommand       = NULL;
-  jobOptions->cd.writePostProcessCommand      = NULL;
-  jobOptions->cd.writeCommand                 = NULL;
-  jobOptions->cd.writeImageCommand            = NULL;
-  jobOptions->dvd.deviceName                  = NULL;
-  jobOptions->dvd.requestVolumeCommand        = NULL;
-  jobOptions->dvd.unloadVolumeCommand         = NULL;
-  jobOptions->dvd.loadVolumeCommand           = NULL;
-  jobOptions->dvd.volumeSize                  = 0LL;
-  jobOptions->dvd.imagePreProcessCommand      = NULL;
-  jobOptions->dvd.imagePostProcessCommand     = NULL;
-  jobOptions->dvd.imageCommand                = NULL;
-  jobOptions->dvd.eccPreProcessCommand        = NULL;
-  jobOptions->dvd.eccPostProcessCommand       = NULL;
-  jobOptions->dvd.eccCommand                  = NULL;
-  jobOptions->dvd.blankCommand                = NULL;
-  jobOptions->dvd.writePreProcessCommand      = NULL;
-  jobOptions->dvd.writePostProcessCommand     = NULL;
-  jobOptions->dvd.writeCommand                = NULL;
-  jobOptions->dvd.writeImageCommand           = NULL;
-  jobOptions->bd.deviceName                   = NULL;
-  jobOptions->bd.requestVolumeCommand         = NULL;
-  jobOptions->bd.unloadVolumeCommand          = NULL;
-  jobOptions->bd.loadVolumeCommand            = NULL;
-  jobOptions->bd.volumeSize                   = 0LL;
-  jobOptions->bd.imagePreProcessCommand       = NULL;
-  jobOptions->bd.imagePostProcessCommand      = NULL;
-  jobOptions->bd.imageCommand                 = NULL;
-  jobOptions->bd.eccPreProcessCommand         = NULL;
-  jobOptions->bd.eccPostProcessCommand        = NULL;
-  jobOptions->bd.eccCommand                   = NULL;
-  jobOptions->bd.blankCommand                 = NULL;
-  jobOptions->bd.writePreProcessCommand       = NULL;
-  jobOptions->bd.writePostProcessCommand      = NULL;
-  jobOptions->bd.writeCommand                 = NULL;
-  jobOptions->bd.writeImageCommand            = NULL;
+  jobOptions->file.preProcessScript                     = NULL;
+  jobOptions->file.postProcessScript                    = NULL;
+  jobOptions->ftp.preProcessScript                      = NULL;
+  jobOptions->ftp.postProcessScript                     = NULL;
+  jobOptions->scp.preProcessScript                      = NULL;
+  jobOptions->scp.postProcessScript                     = NULL;
+  jobOptions->sftp.preProcessScript                     = NULL;
+  jobOptions->sftp.postProcessScript                    = NULL;
+  jobOptions->webdav.preProcessScript                   = NULL;
+  jobOptions->webdav.postProcessScript                  = NULL;
+  jobOptions->cd.deviceName                             = NULL;
+  jobOptions->cd.requestVolumeCommand                   = NULL;
+  jobOptions->cd.unloadVolumeCommand                    = NULL;
+  jobOptions->cd.loadVolumeCommand                      = NULL;
+  jobOptions->cd.volumeSize                             = 0LL;
+  jobOptions->cd.imagePreProcessCommand                 = NULL;
+  jobOptions->cd.imagePostProcessCommand                = NULL;
+  jobOptions->cd.imageCommand                           = NULL;
+  jobOptions->cd.eccPreProcessCommand                   = NULL;
+  jobOptions->cd.eccPostProcessCommand                  = NULL;
+  jobOptions->cd.eccCommand                             = NULL;
+  jobOptions->cd.blankCommand                           = NULL;
+  jobOptions->cd.writePreProcessCommand                 = NULL;
+  jobOptions->cd.writePostProcessCommand                = NULL;
+  jobOptions->cd.writeCommand                           = NULL;
+  jobOptions->cd.writeImageCommand                      = NULL;
+  jobOptions->dvd.deviceName                            = NULL;
+  jobOptions->dvd.requestVolumeCommand                  = NULL;
+  jobOptions->dvd.unloadVolumeCommand                   = NULL;
+  jobOptions->dvd.loadVolumeCommand                     = NULL;
+  jobOptions->dvd.volumeSize                            = 0LL;
+  jobOptions->dvd.imagePreProcessCommand                = NULL;
+  jobOptions->dvd.imagePostProcessCommand               = NULL;
+  jobOptions->dvd.imageCommand                          = NULL;
+  jobOptions->dvd.eccPreProcessCommand                  = NULL;
+  jobOptions->dvd.eccPostProcessCommand                 = NULL;
+  jobOptions->dvd.eccCommand                            = NULL;
+  jobOptions->dvd.blankCommand                          = NULL;
+  jobOptions->dvd.writePreProcessCommand                = NULL;
+  jobOptions->dvd.writePostProcessCommand               = NULL;
+  jobOptions->dvd.writeCommand                          = NULL;
+  jobOptions->dvd.writeImageCommand                     = NULL;
+  jobOptions->bd.deviceName                             = NULL;
+  jobOptions->bd.requestVolumeCommand                   = NULL;
+  jobOptions->bd.unloadVolumeCommand                    = NULL;
+  jobOptions->bd.loadVolumeCommand                      = NULL;
+  jobOptions->bd.volumeSize                             = 0LL;
+  jobOptions->bd.imagePreProcessCommand                 = NULL;
+  jobOptions->bd.imagePostProcessCommand                = NULL;
+  jobOptions->bd.imageCommand                           = NULL;
+  jobOptions->bd.eccPreProcessCommand                   = NULL;
+  jobOptions->bd.eccPostProcessCommand                  = NULL;
+  jobOptions->bd.eccCommand                             = NULL;
+  jobOptions->bd.blankCommand                           = NULL;
+  jobOptions->bd.writePreProcessCommand                 = NULL;
+  jobOptions->bd.writePostProcessCommand                = NULL;
+  jobOptions->bd.writeCommand                           = NULL;
+  jobOptions->bd.writeImageCommand                      = NULL;
 #endif
 
   assert(globalOptions.defaultFTPServer != NULL);
@@ -3643,7 +3681,6 @@ void Job_initOptions(JobOptions *jobOptions)
 //TODO: job option or better global option only?
   jobOptions->noIndexDatabaseFlag             = globalOptions.noIndexDatabaseFlag;
   jobOptions->skipVerifySignaturesFlag        = globalOptions.skipVerifySignaturesFlag;
-//  jobOptions->noStorageFlag                   = FALSE;
 //TODO: job option or better global option only?
   jobOptions->noBAROnMediumFlag               = globalOptions.noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag               = globalOptions.noStopOnErrorFlag;
@@ -3673,40 +3710,50 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
 
   jobOptions->archiveType                                   = fromJobOptions->archiveType;
 
-  jobOptions->storageNameListStdin                          = fromJobOptions->storageNameListStdin;
-  String_set(jobOptions->storageNameListFileName,             fromJobOptions->storageNameListFileName);
-  String_set(jobOptions->storageNameCommand,                  fromJobOptions->storageNameCommand);
-
   String_set(jobOptions->includeFileListFileName,             fromJobOptions->includeFileListFileName);
   String_set(jobOptions->includeFileCommand,                  fromJobOptions->includeFileCommand);
   String_set(jobOptions->includeImageListFileName,            fromJobOptions->includeImageListFileName);
   String_set(jobOptions->includeImageCommand,                 fromJobOptions->includeImageCommand);
   String_set(jobOptions->excludeListFileName,                fromJobOptions->excludeListFileName);
   String_set(jobOptions->excludeCommand,                     fromJobOptions->excludeCommand);
-  List_initDuplicate(&jobOptions->mountList,
-                     &fromJobOptions->mountList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
-                    );
-  PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
-                            &fromJobOptions->compressExcludePatternList,
-                            CALLBACK(NULL,NULL)
-                           );
-  DeltaSourceList_initDuplicate(&jobOptions->deltaSourceList,
-                                &fromJobOptions->deltaSourceList,
-                                CALLBACK(NULL,NULL)
-                               );
-  List_initDuplicate(&jobOptions->scheduleList,
-                     &fromJobOptions->scheduleList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
-                    );
-  List_initDuplicate(&jobOptions->persistenceList,
-                     &fromJobOptions->persistenceList,
-                     CALLBACK(NULL,NULL),
-                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
-                    );
-  jobOptions->persistenceList.lastModificationTimestamp = 0LL;
+
+  List_clear(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  List_copy(&jobOptions->mountList,
+            NULL,  // toListNextNode
+            &fromJobOptions->mountList,
+            NULL,  // fromListFromNode
+            NULL,  // fromListToNode
+            CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+           );
+  PatternList_clear(&jobOptions->compressExcludePatternList);
+  PatternList_copy(&jobOptions->compressExcludePatternList,
+                   &fromJobOptions->compressExcludePatternList,
+                   NULL,  // fromPatternListFromNode
+                   NULL  // fromPatternListToNode
+                  );
+  DeltaSourceList_clear(&jobOptions->deltaSourceList);
+  DeltaSourceList_copy(&jobOptions->deltaSourceList,
+                       &fromJobOptions->deltaSourceList,
+                       NULL,  // fromDeltaSourceListFromNode
+                       NULL  // fromDeltaSourceListToNode
+                      );
+  List_clear(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_copy(&jobOptions->scheduleList,
+            NULL, // toListNextNode
+            &fromJobOptions->scheduleList,
+            NULL,  // fromListFromNode
+            NULL,  // fromListToNode
+            CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
+           );
+  List_clear(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_copy(&jobOptions->persistenceList,
+            NULL,  // toListNextNode
+            &fromJobOptions->persistenceList,
+            NULL,  // fromListFromNode
+            NULL,  // fromListToNode
+            CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+           );
+  jobOptions->persistenceList.lastModificationTimestamp     = 0LL;
 
   jobOptions->archivePartSize                               = fromJobOptions->archivePartSize;
   String_set(jobOptions->incrementalListFileName,             fromJobOptions->incrementalListFileName);
@@ -3808,7 +3855,12 @@ void Job_clearOptions(JobOptions *jobOptions)
   String_clear(jobOptions->includeImageCommand);
   String_clear(jobOptions->excludeListFileName);
   String_clear(jobOptions->excludeCommand);
+
   List_clear(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  PatternList_clear(&jobOptions->compressExcludePatternList);
+  DeltaSourceList_clear(&jobOptions->deltaSourceList);
+  List_clear(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_clear(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
 
   jobOptions->archivePartSize                   = globalOptions.archivePartSize;
   String_clear(jobOptions->incrementalListFileName);
@@ -3919,15 +3971,13 @@ void Job_doneOptions(JobOptions *jobOptions)
   DeltaSourceList_done(&jobOptions->deltaSourceList);
   PatternList_done(&jobOptions->compressExcludePatternList);
   List_done(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+
   String_delete(jobOptions->excludeCommand);
   String_delete(jobOptions->excludeListFileName);
   String_delete(jobOptions->includeImageCommand);
   String_delete(jobOptions->includeImageListFileName);
   String_delete(jobOptions->includeFileCommand);
   String_delete(jobOptions->includeFileListFileName);
-
-  String_delete(jobOptions->storageNameCommand);
-  String_delete(jobOptions->storageNameListFileName);
 
   String_delete(jobOptions->uuid);
 }

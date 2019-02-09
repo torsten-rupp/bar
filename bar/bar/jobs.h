@@ -35,91 +35,82 @@ extern const ConfigValue JOB_CONFIG_VALUES[];
 // see forward declaration in forward.h
 struct JobOptions
 {
-  String                       uuid;
+  String                      uuid;
 
-  bool                storageNameListStdin;             // read storage names from stdin
-  String              storageNameListFileName;          // storage names list file name
-  String              storageNameCommand;               // storage names command
+  String                      includeFileListFileName;       // include files list file name
+  String                      includeFileCommand;            // include files command
+  String                      includeImageListFileName;      // include images list file name
+  String                      includeImageCommand;           // include images command
+  String                      excludeListFileName;           // exclude entries list file name
+  String                      excludeCommand;                // exclude entries command
 
-  String              includeFileListFileName;          // include files list file name
-  String              includeFileCommand;               // include files command
-  String              includeImageListFileName;         // include images list file name
-  String              includeImageCommand;              // include images command
-  String              excludeListFileName;              // exclude entries list file name
-  String              excludeCommand;                   // exclude entries command
+  MountList                            mountList;                  // mount list
+  PatternList                 compressExcludePatternList;    // excluded compression patterns
 
-  MountList                    mountList;                     // mount list
-  PatternList         compressExcludePatternList;       // excluded compression patterns
+  DeltaSourceList             deltaSourceList;               // delta sources
 
-  DeltaSourceList     deltaSourceList;                  // delta sources
+  ScheduleList                scheduleList;                  // schedule list (unordered)
 
-  ScheduleList        scheduleList;                     // schedule list (unordered)
-
-  PersistenceList     persistenceList;                  // persistence list (ordered)
+  PersistenceList             persistenceList;               // persistence list (ordered)
 
 
-  ArchiveTypes                 archiveType;                   // archive type (normal, full, incremental, differential)
+  ArchiveTypes                archiveType;                   // archive type (normal, full, incremental, differential)
 
-  uint64                       archivePartSize;               // archive part size [bytes]
+  uint64                      archivePartSize;               // archive part size [bytes]
 
-  String                       incrementalListFileName;       // name of incremental list file
+  String                      incrementalListFileName;       // name of incremental list file
 
-  int                          directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
-  String                       destination;                   // destination for restore
-  Owner                        owner;                         // restore owner
-  FilePermission               permissions;                   // restore permissions
+  int                         directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
+  String                      destination;                   // destination for restore
+  Owner                       owner;                         // restore owner
+  FilePermission              permissions;                   // restore permissions
 
-  PatternTypes                 patternType;                   // pattern type
+  PatternTypes                patternType;                   // pattern type
 
-  CompressAlgorithmsDeltaByte  compressAlgorithms;            // compress algorithms delta/byte
+  CompressAlgorithmsDeltaByte compressAlgorithms;            // compress algorithms delta/byte
 
-  CryptTypes                   cryptType;                     // crypt type (symmetric, asymmetric)
-  CryptAlgorithms              cryptAlgorithms[4];            // crypt algorithms to use
-  PasswordModes                cryptPasswordMode;             // crypt password mode
-  Password                     cryptPassword;                 // crypt password
-  Key                          cryptPublicKey;
-  Key                          cryptPrivateKey;
+  CryptTypes                  cryptType;                     // crypt type (symmetric, asymmetric)
+  CryptAlgorithms             cryptAlgorithms[4];            // crypt algorithms to use
+  PasswordModes               cryptPasswordMode;             // crypt password mode
+  Password                    cryptPassword;                 // crypt password
+  Key                         cryptPublicKey;
+  Key                         cryptPrivateKey;
 
-  String                       preProcessScript;              // script to execute before start of job
-  String                       postProcessScript;             // script to execute after after termination of job
+  String                      preProcessScript;              // script to execute before start of job
+  String                      postProcessScript;             // script to execute after after termination of job
 
-  FileServer                   fileServer;                    // job specific file server settings
-  FTPServer                    ftpServer;                     // job specific FTP server settings
-  SSHServer                    sshServer;                     // job specific SSH server settings
-  WebDAVServer                 webDAVServer;                  // job specific WebDAV server settings
-  OpticalDisk                  opticalDisk;                   // job specific optical disk settings
-  String                       deviceName;                    // device name to use
-  Device                       device;                        // job specific device settings
+  FileServer                  fileServer;                    // job specific file server settings
+  FTPServer                   ftpServer;                     // job specific FTP server settings
+  SSHServer                   sshServer;                     // job specific SSH server settings
+  WebDAVServer                webDAVServer;                  // job specific WebDAV server settings
+  OpticalDisk                 opticalDisk;                   // job specific optical disk settings
+  String                      deviceName;                    // device name to use
+  Device                      device;                        // job specific device settings
 
-  uint64                       fragmentSize;                  // fragment size [bytes]
-  uint64                       maxStorageSize;                // max. storage size [bytes]
-//TODO
-#if 0
-  uint                         minKeep,maxKeep;               // min./max keep count
-  uint                         maxAge;                        // max. age [days]
-#endif
-  uint64                       volumeSize;                    // volume size or 0LL for default [bytes]
+  uint64                      fragmentSize;                  // fragment size [bytes]
+  uint64                      maxStorageSize;                // max. storage size [bytes]
+  uint64                      volumeSize;                    // volume size or 0LL for default [bytes]
 
-  String                       comment;                       // comment
+  String                      comment;                       // comment
 
-  bool                         skipUnreadableFlag;            // TRUE for skipping unreadable files
-  bool                         forceDeltaCompressionFlag;     // TRUE to force delta compression of files
-  bool                         ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
-  ArchiveFileModes             archiveFileMode;               // archive files write mode
-  RestoreEntryModes            restoreEntryMode;              // overwrite existing entry mode on restore
-  bool                         errorCorrectionCodesFlag;      // TRUE iff error correction codes should be added
-  bool                         alwaysCreateImageFlag;         // TRUE iff always create image for CD/DVD/BD/device
-  bool                         blankFlag;                     // TRUE to blank medium before writing
-  bool                         waitFirstVolumeFlag;           // TRUE for wait for first volume
-  bool                         rawImagesFlag;                 // TRUE for storing raw images
-  bool                         noFragmentsCheckFlag;          // TRUE to skip checking file fragments for completeness
-  bool                         noIndexDatabaseFlag;           // TRUE for do not store index database for archives
-  bool                         forceVerifySignaturesFlag;     // TRUE to force verify signatures of archives
-  bool                         skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
-  bool                         noSignatureFlag;               // TRUE for not appending signatures
-  bool                         noBAROnMediumFlag;             // TRUE for not storing BAR on medium
-  bool                         noStopOnErrorFlag;             // TRUE for not stopping immediately on error
-  bool                         noStopOnAttributeErrorFlag;    // TRUE for not stopping immediately on attribute error
+  bool                        skipUnreadableFlag;            // TRUE for skipping unreadable files
+  bool                        forceDeltaCompressionFlag;     // TRUE to force delta compression of files
+  bool                        ignoreNoDumpAttributeFlag;     // TRUE for ignoring no-dump attribute
+  ArchiveFileModes            archiveFileMode;               // archive files write mode
+  RestoreEntryModes           restoreEntryMode;              // overwrite existing entry mode on restore
+  bool                        errorCorrectionCodesFlag;      // TRUE iff error correction codes should be added
+  bool                        alwaysCreateImageFlag;         // TRUE iff always create image for CD/DVD/BD/device
+  bool                        blankFlag;                     // TRUE to blank medium before writing
+  bool                        waitFirstVolumeFlag;           // TRUE for wait for first volume
+  bool                        rawImagesFlag;                 // TRUE for storing raw images
+  bool                        noFragmentsCheckFlag;          // TRUE to skip checking file fragments for completeness
+  bool                        noIndexDatabaseFlag;           // TRUE for do not store index database for archives
+  bool                        forceVerifySignaturesFlag;     // TRUE to force verify signatures of archives
+  bool                        skipVerifySignaturesFlag;      // TRUE to not verify signatures of archives
+  bool                        noSignatureFlag;               // TRUE for not appending signatures
+  bool                        noBAROnMediumFlag;             // TRUE for not storing BAR on medium
+  bool                        noStopOnErrorFlag;             // TRUE for not stopping immediately on error
+  bool                        noStopOnAttributeErrorFlag;    // TRUE for not stopping immediately on attribute error
 };
 
 // job type
@@ -144,6 +135,10 @@ typedef struct
 
 //TODO: rename: storageName
   String              archiveName;                      // archive name
+
+  bool                storageNameListStdin;             // read storage names from stdin
+  String              storageNameListFileName;          // storage names list file name
+  String              storageNameCommand;               // storage names command
 
   EntryList           includeEntryList;                 // included entries
   PatternList         excludePatternList;               // excluded entry patterns
@@ -341,8 +336,8 @@ void Job_doneAll(void);
 void Job_init(Job *job);
 
 /***********************************************************************\
-* Name   : Job_duplicate
-* Purpose: duplicate job
+* Name   : Job_initDuplicate
+* Purpose: init duplicate job
 * Input  : job     - job
 *          fromJob - copy from job
 * Output : -
@@ -350,7 +345,7 @@ void Job_init(Job *job);
 * Notes  : -
 \***********************************************************************/
 
-void Job_duplicate(Job *job, const Job *fromJob);
+void Job_initDuplicate(Job *job, const Job *fromJob);
 
 /***********************************************************************\
 * Name   : Job_done
