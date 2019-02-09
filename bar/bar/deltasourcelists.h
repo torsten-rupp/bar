@@ -174,8 +174,8 @@ DeltaSourceList *DeltaSourceList_clear(DeltaSourceList *deltaSourceList);
 /***********************************************************************\
 * Name   : DeltaSourceList_copy
 * Purpose: copy all delta sources from source list to destination list
-* Input  : fromDeltaSourceList         - from delta source list (source)
-*          toDeltaSourceList           - to delta source list (destination)
+* Input  : toDeltaSourceList           - to delta source list (destination)
+*          fromDeltaSourceList         - from delta source list (source)
 *          fromDeltaSourceListFromNode - from node (could be NULL)
 *          fromDeltaSourceListToNode   - to node (could be NULL)
 * Output : -
@@ -183,8 +183,8 @@ DeltaSourceList *DeltaSourceList_clear(DeltaSourceList *deltaSourceList);
 * Notes  : -
 \***********************************************************************/
 
-void DeltaSourceList_copy(const DeltaSourceList *fromDeltaSourceList,
-                          DeltaSourceList       *toDeltaSourceList,
+void DeltaSourceList_copy(DeltaSourceList       *toDeltaSourceList,
+                          const DeltaSourceList *fromDeltaSourceList,
                           const DeltaSourceNode *fromDeltaSourceListFromNode,
                           const DeltaSourceNode *fromDeltaSourceListToNode
                          );

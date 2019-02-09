@@ -181,7 +181,7 @@ void DeltaSourceList_doneAll(void)
   #else /* not NDEBUG */
     __DeltaSourceList_init(__fileName__,__lineNb__,deltaSourceList);
   #endif /* NDEBUG */
-  DeltaSourceList_copy(fromDeltaSourceList,deltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode);
+  DeltaSourceList_copy(deltaSourceList,fromDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode);
 }
 
 #ifdef NDEBUG
@@ -212,16 +212,16 @@ DeltaSourceList *DeltaSourceList_clear(DeltaSourceList *deltaSourceList)
   return (DeltaSourceList*)List_clear(deltaSourceList,(ListNodeFreeFunction)freeDeltaSourceNode,NULL);
 }
 
-void DeltaSourceList_copy(const DeltaSourceList *fromDeltaSourceList,
-                          DeltaSourceList       *toDeltaSourceList,
+void DeltaSourceList_copy(DeltaSourceList       *toDeltaSourceList,
+                          const DeltaSourceList *fromDeltaSourceList,
                           const DeltaSourceNode *fromDeltaSourceListFromNode,
                           const DeltaSourceNode *fromDeltaSourceListToNode
                          )
 {
-  assert(fromDeltaSourceList != NULL);
   assert(toDeltaSourceList != NULL);
+  assert(fromDeltaSourceList != NULL);
 
-  List_copy(fromDeltaSourceList,toDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode,NULL,(ListNodeDuplicateFunction)duplicateDeltaSourceNode,NULL);
+  List_copy(toDeltaSourceList,NULL,fromDeltaSourceList,fromDeltaSourceListFromNode,fromDeltaSourceListToNode,(ListNodeDuplicateFunction)duplicateDeltaSourceNode,NULL);
 }
 
 Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
