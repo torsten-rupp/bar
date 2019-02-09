@@ -393,6 +393,19 @@ bool Dictionary_iterate(Dictionary                *dictionary,
                         void                      *dictionaryIterateUserData
                        );
 
+#ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : Dictionary_debugDump
+* Purpose: print dictionary (debug only)
+* Input  : dictionary - dictionary
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Dictionary_debugDump(Dictionary *dictionary);
+
 /***********************************************************************\
 * Name   : Dictionary_printStatistic
 * Purpose: print statistics (debug only)
@@ -402,8 +415,8 @@ bool Dictionary_iterate(Dictionary                *dictionary,
 * Notes  : -
 \***********************************************************************/
 
-#ifndef NDEBUG
 void Dictionary_printStatistic(Dictionary *dictionary);
+
 #endif /* NDEBUG */
 
 #ifdef __cplusplus

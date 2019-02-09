@@ -1264,6 +1264,27 @@ bool Dictionary_iterate(Dictionary                *dictionary,
 }
 
 #ifndef NDEBUG
+
+void Dictionary_debugDump(Dictionary *dictionary)
+{
+  assert(dictionary != NULL);
+
+  Dictionary_iterate(dictionary,
+                     CALLBACK_INLINE(bool,(const void *keyData,
+                                           ulong      keyLength,
+                                           void       *data,
+                                           ulong      length,
+                                           void       *userData
+                                          ),
+                     {
+                       printf("%s: %s\n",(const char*)keyData,(const char*)data);
+
+                       return TRUE;
+                     },
+                     NULL)
+                    );
+}
+
 void Dictionary_printStatistic(Dictionary *dictionary)
 {
   ulong totalEntryCount,totalIndexCount;
@@ -1289,6 +1310,7 @@ void Dictionary_printStatistic(Dictionary *dictionary)
     fprintf(stderr,"  total size:    %lu\n",totalIndexCount);
   }
 }
+
 #endif /* NDEBUG */
 
 #ifdef __cplusplus
