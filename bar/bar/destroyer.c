@@ -361,6 +361,7 @@ int main(int argc, const char *argv[])
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
                        CMD_PRIORITY_ANY,CMD_PRIORITY_ANY,
+                       NULL,  // globalOptionSet
                        stderr,NULL,NULL
                       )
      )
