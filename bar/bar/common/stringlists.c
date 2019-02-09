@@ -177,12 +177,12 @@ StringList *StringList_clear(StringList *stringList)
   return (StringList*)List_clear(stringList,(ListNodeFreeFunction)freeStringNode,NULL);
 }
 
-void StringList_move(StringList *fromStringList, StringList *toStringList)
+void StringList_move(StringList *toStringList, StringList *fromStringList)
 {
-  assert(fromStringList != NULL);
   assert(toStringList != NULL);
+  assert(fromStringList != NULL);
 
-  List_move(fromStringList,toStringList,NULL,NULL,NULL);
+  List_move(toStringList,NULL,fromStringList,NULL,NULL);
 }
 
 #ifdef NDEBUG

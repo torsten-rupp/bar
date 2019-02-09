@@ -270,14 +270,14 @@ StringList *StringList_clear(StringList *stringList);
 /***********************************************************************\
 * Name   : StringList_move
 * Purpose: move strings from soruce list to destination list
-* Input  : fromStringList - from string list
-*          toStringList   - to string list
+* Input  : toStringList   - to string list
+*          fromStringList - from string list
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void StringList_move(StringList *fromStringList, StringList *toStringList);
+void StringList_move(StringList *toStringList, StringList *fromStringList);
 
 /***********************************************************************\
 * Name   : StringList_isEmpty
