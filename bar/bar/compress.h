@@ -499,6 +499,23 @@ INLINE bool Compress_isLZ4Compressed(CompressAlgorithms compressAlgorithm)
 #endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : Compress_isZSTDCompressed
+* Purpose: check if zstd algorithm
+* Input  : compressAlgorithm - compress algorithm
+* Output : -
+* Return : TRUE iff zstd compress algorithm, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Compress_isZSTDCompressed(CompressAlgorithms compressAlgorithm);
+#if defined(NDEBUG) || defined(__COMPRESS_IMPLEMENTATION__)
+INLINE bool Compress_isZSTDCompressed(CompressAlgorithms compressAlgorithm)
+{
+  return (COMPRESS_ALGORITHM_ZSTD_0 <= compressAlgorithm) && (compressAlgorithm <= COMPRESS_ALGORITHM_ZSTD_19);
+}
+#endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Compress_isXDeltaCompressed
 * Purpose: check if XDELTA algorithm
 * Input  : compressAlgorithm - compress algorithm
@@ -532,7 +549,8 @@ INLINE bool Compress_isByteCompressed(CompressAlgorithms compressAlgorithm)
          || Compress_isBZIP2Compressed(compressAlgorithm)
          || Compress_isLZMACompressed(compressAlgorithm)
          || Compress_isLZOCompressed(compressAlgorithm)
-         || Compress_isLZ4Compressed(compressAlgorithm);
+         || Compress_isLZ4Compressed(compressAlgorithm)
+         || Compress_isZSTDCompressed(compressAlgorithm);
 }
 #endif /* NDEBUG || __COMPRESS_IMPLEMENTATION__ */
 
