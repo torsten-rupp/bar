@@ -137,7 +137,7 @@ ifeq ($(COMPRESS_NAMES),)
   endif
   ifeq ($(COMPRESS_NAMES_ZSTD),)
     ifeq (@HAVE_ZSTD@,1)
-      COMPRESS_NAMES += zstd0
+      COMPRESS_NAMES += zstd0 zstd9 zstd19
     endif
   else
     COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD)
@@ -355,6 +355,30 @@ help_output:
 	@$(ECHO) "  test_keys"
 	@$(ECHO) "  test_keys_clean"
 	@$(ECHO) "  test_keys_distclean"
+	@$(ECHO) ""
+	@$(ECHO) "Variables:"
+	@$(ECHO) "  COMPRESS_NAMES"
+        ifeq (@HAVE_BZ2@,1)
+	@$(ECHO) "    bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9"
+        endif
+        ifeq (@HAVE_LZMA@,1)
+	@$(ECHO) "    lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8 lzma9"
+        endif
+        ifeq (@HAVE_LZO@,1)
+	@$(ECHO) "    lzo1 lzo2 lzo3 lzo4 lzo5"
+        endif
+        ifeq (@HAVE_LZ4@,1)
+	@$(ECHO) "    lz4-0 lz4-1 lz4-2 lz4-3 lz4-4 lz4-5 lz4-6 lz4-7 lz4-8 lz4-9"
+        endif
+        ifeq (@HAVE_ZSTD@,1)
+	@$(ECHO) "    zstd0 zstd1 zstd2 zstd3 zstd4 zstd5 zstd6 zstd7 zstd8 zstd9 zstd10 zstd11 zstd12 zstd13 zstd14 zstd15 zstd16 zstd17 zstd18 zstd19"
+        endif
+	@$(ECHO) "  CRYPT_NAMES"
+        ifeq (@HAVE_GCRYPT@,1)
+	@$(ECHO) "    3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256"
+        endif
+
+
 
 # ----------------------------------------------------------------------------
 
@@ -1426,6 +1450,7 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --comment 'Hello World!' $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar -z zip0 $(TEST_FILES) /dev/ram0 /dev/zero --overwrite-archive-files --comment 'Hello World!' --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null))
+	$(call functionTestCheckExitcode,0,0,$(ECHO) intermediate/test*.bar | $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l --storage-list-stdin $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test*.bar --info $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test*.bar -g $(if $(QUIET),</dev/null 1>/dev/null))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test*.bar -H $(if $(QUIET),</dev/null 1>/dev/null))
