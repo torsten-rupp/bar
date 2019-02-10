@@ -4011,6 +4011,11 @@ LOCAL void doneGlobalOptions(void)
   Password_done(&globalOptions.cryptNewPassword);
   Password_done(&globalOptions.cryptPassword);
 
+  String_delete(globalOptions.destination);
+
+  String_delete(globalOptions.incrementalListFileName);
+
+//TODO: required?
 extern void freeScheduleNode(ScheduleNode *scheduleNode, void *userData);
 extern void freePersistenceNode(PersistenceNode *persistenceNode, void *userData);
 
@@ -4026,6 +4031,9 @@ extern void freePersistenceNode(PersistenceNode *persistenceNode, void *userData
   String_delete(globalOptions.includeImageListFileName);
   String_delete(globalOptions.includeFileCommand);
   String_delete(globalOptions.includeFileListFileName);
+
+  String_delete(globalOptions.storageNameCommand);
+  String_delete(globalOptions.storageNameListFileName);
 
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   doneKey(&globalOptions.masterInfo.publicKey);
@@ -7173,6 +7181,7 @@ bool parseDateMonth(ConstString s, int *month)
     (*month) = (uint)String_toInteger(s,i,&nextIndex,NULL,0);
     if ((nextIndex != STRING_END) || ((*month) < 1) || ((*month) > 12))
     {
+      String_delete(name);
       return FALSE;
     }
   }
