@@ -922,7 +922,7 @@ String File_getRootNameCString(String rootName, const char *fileName)
   String_clear(rootName);
   if (fileName != NULL)
   {
-    n = strlen(fileName);
+    n = stringLength(fileName);
     #if   defined(PLATFORM_LINUX)
       if ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR))
       {
@@ -1034,7 +1034,7 @@ bool File_isAbsoluteFileNameCString(const char *fileName)
 
   assert(fileName != NULL);
 
-  n = strlen(fileName);
+  n = stringLength(fileName);
   #if   defined(PLATFORM_LINUX)
     return ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR));
   #elif defined(PLATFORM_WINDOWS)
@@ -1070,17 +1070,17 @@ const char *File_getSystemTmpDirectory()
       if ((n > 0) && (n <= MAX_PATH))
       {
         // remove trailing \\ if Windows added it (Note: Windows should not try to be smart - it cannot...)
-        s = &buffer[strlen(buffer)-1];
+        s = &buffer[stringLength(buffer)-1];
         while ((s >= buffer) && ((*s) == '\\'))
         {
-          (*s) = '\0';
+          (*s) = NUL;
           s--;
         }
       }
       else
       {
         strncpy(buffer,"c:\\tmp",sizeof(buffer)-1);
-        buffer[sizeof(buffer)-1] = '\0';
+        buffer[sizeof(buffer)-1] = NUL;
       }
 
       bufferInit = TRUE;
@@ -1127,8 +1127,9 @@ Errors __File_getTmpFileCString(const char *__fileName__,
                                )
 #endif /* NDEBUG */
 {
-  const char *tmpDirectory;
+  uint       n;
   char       *s;
+  const char *tmpDirectory;
   int        handle;
   Errors     error;
   #ifndef NDEBUG
@@ -1142,34 +1143,37 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   // get directory
   if (!stringIsEmpty(directory))
   {
-    s = (char*)malloc(strlen(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(prefix)+7+1);
+    n = stringLength(directory)+stringLength(FILE_SEPARATOR_STRING)+stringLength(prefix)+7+1;
+    s = (char*)malloc(n);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    strcpy(s,directory);
-    strcat(s,FILE_SEPARATOR_STRING);
+    stringSet(s,n,directory);
+    stringAppend(s,n,FILE_SEPARATOR_STRING);
   }
   else
   {
     tmpDirectory = File_getSystemTmpDirectory();
-    s = (char*)malloc(((tmpDirectory != NULL) ? strlen(tmpDirectory)+1 : 0)+strlen(prefix)+7+1);
+
+    n = ((tmpDirectory != NULL) ? stringLength(tmpDirectory)+1 : 0)+stringLength(prefix)+7+1;
+    s = (char*)malloc(n);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
     if (tmpDirectory != NULL)
     {
-      strcpy(s,tmpDirectory);
-      strcat(s,FILE_SEPARATOR_STRING);
+      stringSet(s,n,tmpDirectory);
+      stringAppend(s,n,FILE_SEPARATOR_STRING);
     }
     else
     {
-      s[0] = '\0';
+      stringClear(s);
     }
   }
-  strcat(s,prefix);
-  strcat(s,"-XXXXXX");
+  stringAppend(s,n,prefix);
+  stringAppend(s,n,"-XXXXXX");
 
   // create temporary file
   #ifdef HAVE_MKSTEMP
@@ -1322,6 +1326,7 @@ Errors File_getTmpFileNameCString(String     fileName,
                                   const char *directory
                                  )
 {
+  uint   n;
   char   *s;
   int    handle;
   Errors error;
@@ -1333,25 +1338,27 @@ Errors File_getTmpFileNameCString(String     fileName,
   // get directory
   if (!stringIsEmpty(directory))
   {
-    s = (char*)malloc(strlen(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(prefix)+7+1);
+    n = stringLength(directory)+stringLength(FILE_SEPARATOR_STRING)+stringLength(prefix)+7+1;
+    s = (char*)malloc(n);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    strcpy(s,directory);
-    strcat(s,FILE_SEPARATOR_STRING);
+    stringSet(s,n,directory);
+    stringAppend(s,n,FILE_SEPARATOR_STRING);
   }
   else
   {
-    s = (char*)malloc(strlen(prefix)+7+1);
+    n = stringLength(prefix)+7+1;
+    s = (char*)malloc(n);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    s[0] = '\0';
+    stringClear(s);
   }
-  strcat(s,prefix);
-  strcat(s,"-XXXXXX");
+  stringAppend(s,n,prefix);
+  stringAppend(s,n,"-XXXXXX");
 
   // create temporary file
   #ifdef HAVE_MKSTEMP
@@ -1383,7 +1390,7 @@ Errors File_getTmpFileNameCString(String     fileName,
     #error mkstemp() nor mktemp() available
   #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
 
-  String_setBuffer(fileName,s,strlen(s));
+  String_setBuffer(fileName,s,stringLength(s));
 
   free(s);
 
@@ -1403,6 +1410,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
                                        const char *directory
                                       )
 {
+  uint   n;
   char   *s;
   #ifdef HAVE_MKDTEMP
   #elif HAVE_MKTEMP
@@ -1419,25 +1427,27 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
 
   if (!stringIsEmpty(directory))
   {
-    s = (char*)malloc(strlen(directory)+strlen(FILE_SEPARATOR_STRING)+strlen(prefix)+7+1);
+    n = stringLength(directory)+stringLength(FILE_SEPARATOR_STRING)+stringLength(prefix)+7+1;
+    s = (char*)malloc(n);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    strcpy(s,directory);
-    strcat(s,FILE_SEPARATOR_STRING);
+    stringSet(s,n,directory);
+    stringAppend(s,n,FILE_SEPARATOR_STRING);
   }
   else
   {
-    s = (char*)malloc(strlen(prefix)+7+1);
+    n = stringLength(prefix)+7+1;
+    s = (char*)malloc(n);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    s[0] = '\0';
+    stringClear(s);
   }
-  strcat(s,prefix);
-  strcat(s,"-XXXXXX");
+  stringAppend(s,n,prefix);
+  stringAppend(s,n,"-XXXXXX");
 
   #ifdef HAVE_MKDTEMP
     if (mkdtemp(s) == NULL)
@@ -1480,7 +1490,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
     #error mkstemp() nor mktemp() available
   #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
 
-  String_setBuffer(directoryName,s,strlen(s));
+  String_setBuffer(directoryName,s,stringLength(s));
 
   free(s);
 
@@ -2478,7 +2488,7 @@ Errors File_openRootList(RootListHandle *rootListHandle)
       {
         t++;
       }
-      (*t) = '\0';
+      (*t) = NUL;
       StringList_appendCString(&rootListHandle->fileSystemNames,s);
     }
   }
@@ -2791,7 +2801,7 @@ const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId)
   assert(name != NULL);
   assert(nameSize > 0);
 
-  name[0] = '\0';
+  stringClear(name);
 
   #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R)
     // allocate buffer
@@ -2837,7 +2847,7 @@ const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId)
     {
       strncpy(name,"NONE",nameSize);
     }
-    name[nameSize-1] = '\0';
+    name[nameSize-1] = NUL;
 
     // free resources
     free(buffer);
@@ -2845,7 +2855,7 @@ const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId)
     UNUSED_VARIABLE(userId);
 
     strncpy(name,"NONE",nameSize);
-    name[nameSize-1] = '\0';
+    name[nameSize-1] = NUL;
   #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
 
   return name;
@@ -2936,7 +2946,7 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
   assert(name != NULL);
   assert(nameSize > 0);
 
-  name[0] = '\0';
+  stringClear(name);
 
   #if defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R)
     // allocate buffer
@@ -2982,7 +2992,7 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
     {
       strncpy(name,"NONE",nameSize);
     }
-    name[nameSize-1] = '\0';
+    name[nameSize-1] = NUL;
 
     // free resources
     free(buffer);
@@ -2990,7 +3000,7 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
     UNUSED_VARIABLE(groupId);
 
     strncpy(name,"NONE",nameSize);
-    name[nameSize-1] = '\0';
+    name[nameSize-1] = NUL;
   #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R) */
 
   return name;
@@ -3002,25 +3012,25 @@ const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
 FilePermission File_stringToPermission(const char *string)
 {
   FilePermission permission;
-  uint           stringLength;
+  uint           n;
 
   assert(string != NULL);
 
   permission = FILE_PERMISSION_NONE;
 
-  stringLength = strlen(string);
-  if ((stringLength >= 1) && (toupper(string[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
-  if ((stringLength >= 2) && (toupper(string[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
-  if ((stringLength >= 3) && (toupper(string[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
-  if ((stringLength >= 3) && (toupper(string[2]) == 'S')) permission |= FILE_PERMISSION_USER_SET_ID;
-  if ((stringLength >= 4) && (toupper(string[3]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
-  if ((stringLength >= 5) && (toupper(string[4]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
-  if ((stringLength >= 6) && (toupper(string[5]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
-  if ((stringLength >= 6) && (toupper(string[5]) == 'S')) permission |= FILE_PERMISSION_GROUP_SET_ID;
-  if ((stringLength >= 7) && (toupper(string[6]) == 'R')) permission |= FILE_PERMISSION_OTHER_READ;
-  if ((stringLength >= 8) && (toupper(string[7]) == 'W')) permission |= FILE_PERMISSION_OTHER_WRITE;
-  if ((stringLength >= 9) && (toupper(string[8]) == 'X')) permission |= FILE_PERMISSION_OTHER_EXECUTE;
-  if ((stringLength >= 9) && (toupper(string[8]) == 'T')) permission |= FILE_PERMISSION_STICKY_BIT;
+  n = stringLength(string);
+  if ((n >= 1) && (toupper(string[0]) == 'R')) permission |= FILE_PERMISSION_USER_READ;
+  if ((n >= 2) && (toupper(string[1]) == 'W')) permission |= FILE_PERMISSION_USER_WRITE;
+  if ((n >= 3) && (toupper(string[2]) == 'X')) permission |= FILE_PERMISSION_USER_EXECUTE;
+  if ((n >= 3) && (toupper(string[2]) == 'S')) permission |= FILE_PERMISSION_USER_SET_ID;
+  if ((n >= 4) && (toupper(string[3]) == 'R')) permission |= FILE_PERMISSION_GROUP_READ;
+  if ((n >= 5) && (toupper(string[4]) == 'W')) permission |= FILE_PERMISSION_GROUP_WRITE;
+  if ((n >= 6) && (toupper(string[5]) == 'X')) permission |= FILE_PERMISSION_GROUP_EXECUTE;
+  if ((n >= 6) && (toupper(string[5]) == 'S')) permission |= FILE_PERMISSION_GROUP_SET_ID;
+  if ((n >= 7) && (toupper(string[6]) == 'R')) permission |= FILE_PERMISSION_OTHER_READ;
+  if ((n >= 8) && (toupper(string[7]) == 'W')) permission |= FILE_PERMISSION_OTHER_WRITE;
+  if ((n >= 9) && (toupper(string[8]) == 'X')) permission |= FILE_PERMISSION_OTHER_EXECUTE;
+  if ((n >= 9) && (toupper(string[8]) == 'T')) permission |= FILE_PERMISSION_STICKY_BIT;
 
   return permission;
 }
@@ -3043,7 +3053,7 @@ const char *File_permissionToString(char *string, uint stringSize, FilePermissio
   if ((stringSize >= 8) && ((permission & FILE_PERMISSION_OTHER_WRITE  ) != 0)) string[7] = 'w';
   if ((stringSize >= 9) && ((permission & FILE_PERMISSION_OTHER_EXECUTE) != 0)) string[8] = 'x';
   if ((stringSize >= 9) && ((permission & FILE_PERMISSION_STICKY_BIT   ) != 0)) string[8] = 't';
-  string[stringSize-1] = '\0';
+  string[stringSize-1] = NUL;
 
   return string;
 }
@@ -3298,7 +3308,7 @@ Errors File_renameCString(const char *oldFileName,
     else
     {
       // create temporary file
-      fileName = (char*)malloc(strlen(newFileName)+7+1);
+      fileName = (char*)malloc(stringLength(newFileName)+7+1);
       if (fileName == NULL)
       {
         return ERROR_INSUFFICIENT_MEMORY;
@@ -3536,7 +3546,7 @@ bool File_existsCString(const char *fileName)
 
   assert(fileName != NULL);
 
-  return (LSTAT((strlen(fileName) > 0) ? fileName : "",&fileStat) == 0);
+  return (LSTAT(!stringIsEmpty(fileName) ? fileName : "",&fileStat) == 0);
 }
 
 bool File_isFile(ConstString fileName)
@@ -3636,11 +3646,11 @@ bool File_isWritableCString(const char *fileName)
   assert(fileName != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    return access((strlen(fileName) > 0) ? fileName : ".",W_OK) == 0;
+    return access(!stringIsEmpty(fileName) ? fileName : ".",W_OK) == 0;
   #elif defined(PLATFORM_WINDOWS)
     // Note: access() does not return correct values on MinGW
 
-    fileAttributes = GetFileAttributes((strlen(fileName) > 0) ? fileName : ".");
+    fileAttributes = GetFileAttributes(!stringIsEmpty(fileName) ? fileName : ".");
     return    ((fileAttributes & (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_NORMAL)
            || ((fileAttributes & (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_DIRECTORY);
   #endif /* PLATFORM_... */
@@ -4194,7 +4204,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     List_append(fileExtendedAttributeList,fileExtendedAttributeNode);
 
     // next attribute
-    name += strlen(name)+1;
+    name += stringLength(name)+1;
   }
 
   // free resources
