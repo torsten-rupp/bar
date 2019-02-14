@@ -2111,8 +2111,8 @@ static inline bool stringIsEmpty(const char *s)
 * Name   : stringSet
 * Purpose: set string
 * Input  : destination - destination string
+*          n           - size of string (including termination NUL)
 *          source      - source string
-*          n           - size of destination string
 * Output : -
 * Return : destination string
 * Notes  : string is always NULL or NUL-terminated
@@ -2141,7 +2141,7 @@ static inline char* stringSet(char *destination, ulong n, const char *source)
 * Name   : stringFormat
 * Purpose: format string
 * Input  : string - string
-*          n      - size of string
+*          n      - size of string (including termination NUL)
 *          format - format string
 *          ...    - optional arguments
 * Output : -
@@ -2168,7 +2168,8 @@ static inline char* stringFormat(char *string, ulong n, const char *format, ...)
 * Name   : stringFormatAppend
 * Purpose: format string and append
 * Input  : string - string
-*          n      - size of string
+*          n      - size of destination string (including termination
+*                   NUL)
 *          format - format string
 *          ...    - optional arguments
 * Output : -
@@ -2200,8 +2201,9 @@ static inline char* stringFormatAppend(char *string, ulong n, const char *format
 * Name   : stringAppend
 * Purpose: append string
 * Input  : destination - destination string
+*          n           - size of destination string (including
+*                        termination NUL)
 *          source      - source string
-*          n           - size of destination string
 * Output : -
 * Return : destination string
 * Notes  : string is always NULL or NUL-terminated
@@ -2219,6 +2221,37 @@ static inline char* stringAppend(char *destination, ulong n, const char *source)
     if ((source != NULL) && (n > (m+1)))
     {
       strncat(destination,source,n-(m+1));
+    }
+  }
+
+  return destination;
+}
+
+/***********************************************************************\
+* Name   : stringAppendChar
+* Purpose: append chararacter
+* Input  : destination - destination string
+*          n           - size of destination string (including
+*                        termination NUL)
+*          ch          - character
+* Output : -
+* Return : destination string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringAppendChar(char *destination, ulong n, char ch)
+{
+  ulong m;
+
+  assert(n > 0);
+
+  if (destination != NULL)
+  {
+    m = strlen(destination);
+    if (n > (m+1))
+    {
+      destination[m]   = ch;
+      destination[m+1] = NUL;
     }
   }
 
