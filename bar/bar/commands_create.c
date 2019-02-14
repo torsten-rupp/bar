@@ -4219,6 +4219,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                    Error_getText(error)
                   );
         createInfo->failError = error;
+        AutoFree_cleanup(&autoFreeList);
+        return;
       }
     }
   }
@@ -6949,8 +6951,9 @@ Errors Command_create(ServerIO                     *masterIO,
   bool             useIncrementalFileInfoFlag;
   bool             incrementalFileInfoExistFlag;
   IndexHandle      *indexHandle;
-  StorageSpecifier storageSpecifier;
   CreateInfo       createInfo;
+  StorageSpecifier storageSpecifier;
+//  String           directoryName;
   IndexId          uuidId;
   IndexId          entityId;
   Thread           collectorSumThread;                 // files collector sum thread
@@ -7065,6 +7068,23 @@ masterIO, // masterIO
   }
   DEBUG_TESTCODE() { Storage_done(&createInfo.storageInfo); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,&createInfo.storageInfo,{ Storage_done(&createInfo.storageInfo); });
+
+#if 0
+//TODO: useful?
+  // check if write access
+  directoryName = File_getDirectoryName(String_new(),storageSpecifier.archiveName);
+  if (!Storage_isWritable(&createInfo.storageInfo,directoryName))
+  {
+    error = ERRORX_(WRITE_FILE,0,"%s",String_cString(storageSpecifier.archiveName));
+    printError("Cannot write storage (error: no write access for '%s')!\n",
+               String_cString(storageSpecifier.archiveName)
+              );
+    String_delete(directoryName);
+    AutoFree_cleanup(&autoFreeList);
+    return error;
+  }
+  String_delete(directoryName);
+#endif
 
   if (   (createInfo.archiveType == ARCHIVE_TYPE_FULL)
       || (createInfo.archiveType == ARCHIVE_TYPE_INCREMENTAL)
