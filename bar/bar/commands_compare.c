@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/types.h>
@@ -254,7 +255,8 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
   ulong              bufferLength;
   ulong              diffIndex;
   FragmentNode       *fragmentNode;
-  char               s[256];
+  char               sizeString[32];
+  char               fragmentString[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -406,7 +408,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = ERROR_ENTRIES_DIFFER;
 
         printInfo(1,"FAIL!\n");
-        printError("'%s' differ at offset %llu\n",
+        printError("'%s' differ at offset %"PRIu64"\n",
                    String_cString(fileName),
                    fragmentOffset+length+(uint64)diffIndex
                   );
@@ -478,15 +480,23 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return error;
     }
 
-    // get fragment info
-    stringClear(s);
+    // get size/fragment info
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),fragmentSize);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fragmentSize);
+    }
+    stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64"",fragmentOffset,fragmentOffset+fragmentSize-1LL);
     }
 
     // output
-    printInfo(1,"OK (%llu bytes%s)\n",fragmentSize,s);
+    printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
 
     // free resources
   }
@@ -548,7 +558,8 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   uint64             block;
   ulong              diffIndex;
   FragmentNode       *fragmentNode;
-  char               s[256];
+  char               sizeString[32];
+  char               fragmentString[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -588,7 +599,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&archiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   if (deviceInfo.blockSize > bufferSize)
   {
-    printError("Device block size %llu on '%s' is too big (max: %llu)\n",
+    printError("Device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")\n",
                deviceInfo.blockSize,
                String_cString(deviceName),
                bufferSize
@@ -642,7 +653,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     if (deviceInfo.blockSize > bufferSize)
     {
       printInfo(1,"FAIL\n");
-      printError("Device block size %llu on '%s' is too big (max: %llu)\n",
+      printError("Device block size %"PRIu64" on '%s' is too big (max: %"PRIu64")\n",
                  deviceInfo.blockSize,
                  String_cString(deviceName),
                  bufferSize
@@ -768,7 +779,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
           error = ERROR_ENTRIES_DIFFER;
 
           printInfo(1,"FAIL!\n");
-          printError("'%s' differ at offset %llu\n",
+          printError("'%s' differ at offset %"PRIu64"\n",
                      String_cString(deviceName),
                      blockOffset*(uint64)deviceInfo.blockSize+block*(uint64)deviceInfo.blockSize+(uint64)diffIndex
                     );
@@ -832,15 +843,23 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       return error;
     }
 
-    // get fragment info
-    stringClear(s);
+    // get size/fragment info
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),blockCount*(uint64)deviceInfo.blockSize);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
+    }
+    stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
-      stringFormat(s,sizeof(s),", fragment %15llu..%15llu",(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
     }
 
     // output
-    printInfo(1,"OK (%llu bytes%s)\n",blockCount*(uint64)deviceInfo.blockSize,s);
+    printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
 
     // done file system
     if (fileSystemFlag)
@@ -960,7 +979,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
       String_delete(directoryName);
       return error;
     }
-    D EBUG_TESTCODE("Command_compare301") { Archive_closeEntry(&archiveEntryInfo); String_delete(directoryName); return DEBUG_TESTCODE_ERROR(); }
+    DEBUG_TESTCODE("Command_compare301") { Archive_closeEntry(&archiveEntryInfo); String_delete(directoryName); return DEBUG_TESTCODE_ERROR(); }
 
     // check file time, permissions, file owner/group
 #endif /* 0 */
@@ -1198,7 +1217,8 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
   ulong              bufferLength;
   ulong              diffIndex;
   FragmentNode       *fragmentNode;
-  char               s[256];
+  char               sizeString[32];
+  char               fragmentString[256];
 
   assert(archiveHandle != NULL);
   assert(archiveHandle->storageInfo != NULL);
@@ -1384,7 +1404,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
             error = ERROR_ENTRIES_DIFFER;
 
             printInfo(1,"FAIL!\n");
-            printError("'%s' differ at offset %llu\n",
+            printError("'%s' differ at offset %"PRIu64"\n",
                        String_cString(fileName),
                        fragmentOffset+length+(uint64)diffIndex
                       );
@@ -1449,15 +1469,23 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
           return error;
         }
 
-        // get fragment info
-        stringClear(s);
+        // get size/fragment info
+        if (globalOptions.humanFormatFlag)
+        {
+          getHumanSizeString(sizeString,sizeof(sizeString),fragmentSize);
+        }
+        else
+        {
+          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fragmentSize);
+        }
+        stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(s,sizeof(s),", fragment %15llu..%15llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
         }
 
         // output
-        printInfo(1,"OK (%llu bytes%s)\n",fragmentSize,s);
+        printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
 
         comparedDataFlag = TRUE;
       }

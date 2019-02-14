@@ -338,12 +338,12 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
     }
     else
     {
-      snprintf(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
     }
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(fragmentString,sizeof(fragmentString),", fragment %15"PRIu64"..%15"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
     }
 
     // output
@@ -538,12 +538,12 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
     }
     else
     {
-      snprintf(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
     }
     stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
-      stringFormat(fragmentString,sizeof(fragmentString),", fragment %15"PRIu64"..%15"PRIu64,(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
     }
 
     // output
@@ -917,12 +917,12 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          snprintf(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
         }
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(fragmentString,sizeof(fragmentString),", fragment %15"PRIu64"..%15"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
         }
 
         // output
@@ -939,12 +939,12 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         }
         else
         {
-          snprintf(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
         }
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(fragmentString,sizeof(fragmentString),", fragment %15"PRIu64"..%15"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
         }
 
         if (error == ERROR_NONE)
