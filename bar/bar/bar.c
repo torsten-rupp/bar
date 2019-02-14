@@ -1473,6 +1473,21 @@ LOCAL void initDevice(Device *device)
 LOCAL void doneDevice(Device *device)
 {
   assert(device != NULL);
+
+  String_delete(device->writeCommand           );
+  String_delete(device->writePostProcessCommand);
+  String_delete(device->writePreProcessCommand );
+  String_delete(device->blankCommand           );
+  String_delete(device->eccCommand             );
+  String_delete(device->eccPostProcessCommand  );
+  String_delete(device->eccPreProcessCommand   );
+  String_delete(device->imageCommand           );
+  String_delete(device->imagePostProcessCommand);
+  String_delete(device->imagePreProcessCommand );
+  String_delete(device->loadVolumeCommand      );
+  String_delete(device->unloadVolumeCommand    );
+  String_delete(device->requestVolumeCommand   );
+  String_delete(device->name                   );
 }
 
 /***********************************************************************\
@@ -1494,7 +1509,9 @@ LOCAL DeviceNode *newDeviceNode(ConstString name)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+
   initDevice(&deviceNode->device);
+
   deviceNode->id          = Misc_getId();
   deviceNode->device.name = String_duplicate(name);
 
@@ -1517,20 +1534,7 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(deviceNode->device.writeCommand           );
-  String_delete(deviceNode->device.writePostProcessCommand);
-  String_delete(deviceNode->device.writePreProcessCommand );
-  String_delete(deviceNode->device.blankCommand           );
-  String_delete(deviceNode->device.eccCommand             );
-  String_delete(deviceNode->device.eccPostProcessCommand  );
-  String_delete(deviceNode->device.eccPreProcessCommand   );
-  String_delete(deviceNode->device.imageCommand           );
-  String_delete(deviceNode->device.imagePostProcessCommand);
-  String_delete(deviceNode->device.imagePreProcessCommand );
-  String_delete(deviceNode->device.loadVolumeCommand      );
-  String_delete(deviceNode->device.unloadVolumeCommand    );
-  String_delete(deviceNode->device.requestVolumeCommand   );
-  String_delete(deviceNode->device.name                   );
+  doneDevice(&deviceNode->device);
 }
 
 /***********************************************************************\
@@ -3828,6 +3832,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.continuousMinTimeDelta                          = 0LL;
 
   globalOptions.cryptType                                       = CRYPT_TYPE_SYMMETRIC;
+  globalOptions.cryptPasswordMode                               = PASSWORD_MODE_DEFAULT;
   Password_init(&globalOptions.cryptPassword);
   Password_init(&globalOptions.cryptNewPassword);
   initKey(&globalOptions.cryptPublicKey);
@@ -5189,25 +5194,27 @@ void fatalLogMessage(const char *text, void *userData)
 
 const char* getHumanSizeString(char *buffer, uint bufferSize, uint64 n)
 {
+  assert(buffer != NULL);
+
   if      (n > 1024LL*1024LL*1024LL*1024LL)
   {
-    snprintf(buffer,bufferSize,"%.1fG",(double)n/(double)(1024LL*1024LL*1024LL*1024LL));
+    stringFormat(buffer,bufferSize,"%.1fG",(double)n/(double)(1024LL*1024LL*1024LL*1024LL));
   }
   else if (n >        1024LL*1024LL*1024LL)
   {
-    snprintf(buffer,bufferSize,"%.1fG",(double)n/(double)(1024LL*1024LL*1024LL));
+    stringFormat(buffer,bufferSize,"%.1fG",(double)n/(double)(1024LL*1024LL*1024LL));
   }
   else if (n >               1024LL*1024LL)
   {
-    snprintf(buffer,bufferSize,"%.1fM",(double)n/(double)(1024LL*1024LL));
+    stringFormat(buffer,bufferSize,"%.1fM",(double)n/(double)(1024LL*1024LL));
   }
   else if (n >                      1024LL)
   {
-    snprintf(buffer,bufferSize,"%.1fK",(double)n/(double)(1024LL));
+    stringFormat(buffer,bufferSize,"%.1fK",(double)n/(double)(1024LL));
   }
   else
   {
-    snprintf(buffer,bufferSize,"%"PRIu64,n);
+    stringFormat(buffer,bufferSize,"%"PRIu64,n);
   }
 
   return buffer;
