@@ -1935,7 +1935,6 @@ public class TabJobs
         default:
           break;
       }
-Dprintf.dprintf("%s <-> %s: %d",persistenceData1,persistenceData2,result);
 
       return result;
     }
@@ -14673,10 +14672,6 @@ throw new Error("NYI");
    */
   private void updatePersistenceTree(JobData jobData)
   {
-//    Widgets.removeAllTreeItems(widgetPersistenceTree);
-
-//TODO
-Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
     final HashSet<TreeItem> removedTreeItems = Widgets.getAllTreeItems(widgetPersistenceTree);
     try
     {
@@ -14772,7 +14767,6 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
       Dialogs.error(shell,BARControl.tr("Cannot get persistence list (error: {0})",exception.getMessage()));
       return;
     }
-Dprintf.dprintf("remove %s",removedTreeItems);
     Widgets.removeTreeItems(widgetPersistenceTree,removedTreeItems);
   }
 
