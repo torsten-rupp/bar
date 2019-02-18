@@ -5038,6 +5038,7 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 * Purpose: update status info
 * Input  : createInfo - create info structure
 *          name       - name of entry
+*          offset     - offset [bytes]
 *          size       - size of entry [bytes] or 0
 * Output : -
 * Return : -
@@ -5186,6 +5187,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   // init fragment
   fragmentInit(createInfo,fileName,fileInfo.size);
 
+  offset = 0LL;
+  size   = 0LL;
   if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
@@ -5582,6 +5585,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   // init fragment
   fragmentInit(createInfo,deviceName,deviceInfo.size);
 
+  blockOffset = 0LL;
+  blockCount  = 0LL;
   if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
   {
     archiveFlags = ARCHIVE_FLAG_NONE;

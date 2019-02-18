@@ -18,7 +18,7 @@
 #endif
 #include <assert.h>
 
-#include "lists.h"
+#include "common/lists.h"
 
 #include "autofree.h"
 

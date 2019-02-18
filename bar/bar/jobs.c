@@ -275,8 +275,7 @@ JobList jobList;                // job list
 * Notes  : -
 \***********************************************************************/
 
-//TODO: LOCAL
-void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
+LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 {
   assert(scheduleNode != NULL);
   assert(scheduleNode->uuid != NULL);
@@ -497,8 +496,7 @@ LOCAL bool equalsScheduleNode(const ScheduleNode *scheduleNode1, const ScheduleN
 * Notes  : -
 \***********************************************************************/
 
-//TODO: LOCAL
-void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
+LOCAL void freePersistenceNode(PersistenceNode *persistenceNode, void *userData)
 {
   assert(persistenceNode != NULL);
 
@@ -3549,18 +3547,8 @@ void Job_initOptions(JobOptions *jobOptions)
                                 NULL,  // fromDeltaSourceListFromNode
                                 NULL  // fromDeltaSourceListToNode
                                );
-  List_initDuplicate(&jobOptions->scheduleList,
-                     &globalOptions.scheduleList,
-                     NULL,  // fromListFromNode
-                     NULL,  // fromListToNode
-                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
-                    );
-  List_initDuplicate(&jobOptions->persistenceList,
-                     &globalOptions.persistenceList,
-                     NULL,  // fromListFromNode
-                     NULL,  // fromListToNode
-                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
-                    );
+  List_init(&jobOptions->scheduleList);
+  List_init(&jobOptions->persistenceList);
   jobOptions->persistenceList.lastModificationTimestamp = 0LL;
 
   jobOptions->archivePartSize                           = globalOptions.archivePartSize;

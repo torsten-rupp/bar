@@ -25,11 +25,10 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "lists.h"
-#include "strings.h"
-#include "stringlists.h"
-
-#include "patterns.h"
+#include "common/lists.h"
+#include "common/strings.h"
+#include "common/stringlists.h"
+#include "common/patterns.h"
 
 #include "patternlists.h"
 

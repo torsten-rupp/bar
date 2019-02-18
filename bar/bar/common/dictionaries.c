@@ -16,7 +16,7 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "semaphores.h"
+#include "common/semaphores.h"
 
 #include "dictionaries.h"
 
@@ -1277,6 +1277,10 @@ void Dictionary_debugDump(Dictionary *dictionary)
                                            void       *userData
                                           ),
                      {
+                       UNUSED_VARIABLE(keyLength);
+                       UNUSED_VARIABLE(length);
+                       UNUSED_VARIABLE(userData);
+
                        printf("%s: %s\n",(const char*)keyData,(const char*)data);
 
                        return TRUE;

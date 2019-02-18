@@ -25,8 +25,8 @@
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
-#include "lists.h"
-#include "strings.h"
+#include "common/lists.h"
+#include "common/strings.h"
 
 #include "stringmaps.h"
 
@@ -241,6 +241,7 @@ LOCAL void removeStringMapEntry(StringMapEntry *stringMapEntry)
     case STRINGMAP_TYPE_UINT64:
     case STRINGMAP_TYPE_DOUBLE:
     case STRINGMAP_TYPE_BOOL:
+    case STRINGMAP_TYPE_FLAG:
     case STRINGMAP_TYPE_CHAR:
       break;
     case STRINGMAP_TYPE_CSTRING:
@@ -413,6 +414,7 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
         case STRINGMAP_TYPE_UINT64:  stringMap->entries[i].value.data.ul     = fromStringMap->entries[i].value.data.ul;                       break;
         case STRINGMAP_TYPE_DOUBLE:  stringMap->entries[i].value.data.d      = fromStringMap->entries[i].value.data.d;                        break;
         case STRINGMAP_TYPE_BOOL:    stringMap->entries[i].value.data.b      = fromStringMap->entries[i].value.data.b;                        break;
+        case STRINGMAP_TYPE_FLAG:    stringMap->entries[i].value.data.flag   = fromStringMap->entries[i].value.data.flag;                     break;
         case STRINGMAP_TYPE_CHAR:    stringMap->entries[i].value.data.c      = fromStringMap->entries[i].value.data.c;                        break;
         case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = stringDuplicate(fromStringMap->entries[i].value.data.s);       break;
         case STRINGMAP_TYPE_STRING:  stringMap->entries[i].value.data.string = String_duplicate(fromStringMap->entries[i].value.data.string); break;
@@ -471,17 +473,18 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
     stringMap->entries[i].value.text = fromStringMap->entries[i].value.text;
     switch (fromStringMap->entries[i].type)
     {
-      case STRINGMAP_TYPE_NONE:    break;
-      case STRINGMAP_TYPE_INT:     stringMap->entries[i].value.data.i      = fromStringMap->entries[i].value.data.i; break;
-      case STRINGMAP_TYPE_INT64:   stringMap->entries[i].value.data.l      = fromStringMap->entries[i].value.data.l; break;
-      case STRINGMAP_TYPE_UINT:    stringMap->entries[i].value.data.ui     = fromStringMap->entries[i].value.data.ui; break;
-      case STRINGMAP_TYPE_UINT64:  stringMap->entries[i].value.data.ul     = fromStringMap->entries[i].value.data.ul; break;
-      case STRINGMAP_TYPE_DOUBLE:  stringMap->entries[i].value.data.d      = fromStringMap->entries[i].value.data.d; break;
-      case STRINGMAP_TYPE_BOOL:    stringMap->entries[i].value.data.b      = fromStringMap->entries[i].value.data.b; break;
-      case STRINGMAP_TYPE_CHAR:    stringMap->entries[i].value.data.c      = fromStringMap->entries[i].value.data.c; break;
-      case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = fromStringMap->entries[i].value.data.s; break;
+      case STRINGMAP_TYPE_NONE:                                                                                           break;
+      case STRINGMAP_TYPE_INT:     stringMap->entries[i].value.data.i      = fromStringMap->entries[i].value.data.i;      break;
+      case STRINGMAP_TYPE_INT64:   stringMap->entries[i].value.data.l      = fromStringMap->entries[i].value.data.l;      break;
+      case STRINGMAP_TYPE_UINT:    stringMap->entries[i].value.data.ui     = fromStringMap->entries[i].value.data.ui;     break;
+      case STRINGMAP_TYPE_UINT64:  stringMap->entries[i].value.data.ul     = fromStringMap->entries[i].value.data.ul;     break;
+      case STRINGMAP_TYPE_DOUBLE:  stringMap->entries[i].value.data.d      = fromStringMap->entries[i].value.data.d;      break;
+      case STRINGMAP_TYPE_BOOL:    stringMap->entries[i].value.data.b      = fromStringMap->entries[i].value.data.b;      break;
+      case STRINGMAP_TYPE_FLAG:    stringMap->entries[i].value.data.flag   = fromStringMap->entries[i].value.data.flag;   break;
+      case STRINGMAP_TYPE_CHAR:    stringMap->entries[i].value.data.c      = fromStringMap->entries[i].value.data.c;      break;
+      case STRINGMAP_TYPE_CSTRING: stringMap->entries[i].value.data.s      = fromStringMap->entries[i].value.data.s;      break;
       case STRINGMAP_TYPE_STRING:  stringMap->entries[i].value.data.string = fromStringMap->entries[i].value.data.string; break;
-      case STRINGMAP_TYPE_DATA:    stringMap->entries[i].value.data.p      = fromStringMap->entries[i].value.data.p; break;
+      case STRINGMAP_TYPE_DATA:    stringMap->entries[i].value.data.p      = fromStringMap->entries[i].value.data.p;      break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -1034,17 +1037,18 @@ void __StringMap_putValue(const char *__fileName__, ulong __lineNb__,StringMap s
     stringMapEntry->value.text = String_duplicate(value->text);
     switch (type)
     {
-      case STRINGMAP_TYPE_NONE:    break;
-      case STRINGMAP_TYPE_INT:     stringMapEntry->value.data.i      = value->data.i; break;
-      case STRINGMAP_TYPE_INT64:   stringMapEntry->value.data.l      = value->data.l; break;
-      case STRINGMAP_TYPE_UINT:    stringMapEntry->value.data.ui     = value->data.ui; break;
-      case STRINGMAP_TYPE_UINT64:  stringMapEntry->value.data.ul     = value->data.ul; break;
-      case STRINGMAP_TYPE_DOUBLE:  stringMapEntry->value.data.d      = value->data.d; break;
-      case STRINGMAP_TYPE_BOOL:    stringMapEntry->value.data.b      = value->data.b; break;
-      case STRINGMAP_TYPE_CHAR:    stringMapEntry->value.data.c      = value->data.c; break;
-      case STRINGMAP_TYPE_CSTRING: stringMapEntry->value.data.s      = stringDuplicate(value->data.s); break;
+      case STRINGMAP_TYPE_NONE:                                                                              break;
+      case STRINGMAP_TYPE_INT:     stringMapEntry->value.data.i      = value->data.i;                        break;
+      case STRINGMAP_TYPE_INT64:   stringMapEntry->value.data.l      = value->data.l;                        break;
+      case STRINGMAP_TYPE_UINT:    stringMapEntry->value.data.ui     = value->data.ui;                       break;
+      case STRINGMAP_TYPE_UINT64:  stringMapEntry->value.data.ul     = value->data.ul;                       break;
+      case STRINGMAP_TYPE_DOUBLE:  stringMapEntry->value.data.d      = value->data.d;                        break;
+      case STRINGMAP_TYPE_BOOL:    stringMapEntry->value.data.b      = value->data.b;                        break;
+      case STRINGMAP_TYPE_FLAG:    stringMapEntry->value.data.flag   = value->data.flag;                     break;
+      case STRINGMAP_TYPE_CHAR:    stringMapEntry->value.data.c      = value->data.c;                        break;
+      case STRINGMAP_TYPE_CSTRING: stringMapEntry->value.data.s      = stringDuplicate(value->data.s);       break;
       case STRINGMAP_TYPE_STRING:  stringMapEntry->value.data.string = String_duplicate(value->data.string); break;
-      case STRINGMAP_TYPE_DATA:    stringMapEntry->value.data.p      = value->data.p; break;
+      case STRINGMAP_TYPE_DATA:    stringMapEntry->value.data.p      = value->data.p;                        break;
       #ifndef NDEBUG
         default:
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();

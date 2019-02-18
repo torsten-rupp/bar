@@ -19,8 +19,8 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
-#include "bitmaps.h"
+#include "common/strings.h"
+#include "common/bitmaps.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/

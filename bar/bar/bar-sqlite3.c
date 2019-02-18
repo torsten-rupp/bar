@@ -392,17 +392,17 @@ LOCAL String vformatSQLString(String     sqlString,
             if      (longLongFlag)
             {
               value.ll = va_arg(arguments,int64);
-              String_format(sqlString,"%"PRIi64,value.ll);
+              String_formatAppend(sqlString,"%"PRIi64,value.ll);
             }
             else if (longFlag)
             {
               value.l = va_arg(arguments,int64);
-              String_format(sqlString,"%ld",value.l);
+              String_formatAppend(sqlString,"%ld",value.l);
             }
             else
             {
               value.i = va_arg(arguments,int);
-              String_format(sqlString,"%d",value.i);
+              String_formatAppend(sqlString,"%d",value.i);
             }
             break;
           case 'u':
@@ -412,17 +412,17 @@ LOCAL String vformatSQLString(String     sqlString,
             if      (longLongFlag)
             {
               value.ull = va_arg(arguments,uint64);
-              String_format(sqlString,"%"PRIu64,value.ull);
+              String_formatAppend(sqlString,"%"PRIu64,value.ull);
             }
             else if (longFlag)
             {
               value.ul = va_arg(arguments,ulong);
-              String_format(sqlString,"%lu",value.ul);
+              String_formatAppend(sqlString,"%lu",value.ul);
             }
             else
             {
               value.ui = va_arg(arguments,uint);
-              String_format(sqlString,"%u",value.ui);
+              String_formatAppend(sqlString,"%u",value.ui);
             }
             break;
           case 's':
@@ -700,7 +700,7 @@ LOCAL void finalize(sqlite3_stmt *statementHandle)
 \***********************************************************************/
 
 
-typedef Errors(*SQLRowFunction)(const char *values[], uint count, void *userData);
+typedef Errors(*SQLRowFunction)(const char *columns[], const char *values[], uint count, void *userData);
 
 LOCAL Errors sqlExecute(sqlite3        *databaseHandle,
                         SQLRowFunction rowFunction,
@@ -714,7 +714,7 @@ LOCAL Errors sqlExecute(sqlite3        *databaseHandle,
   int          sqliteResult;
   sqlite3_stmt *statementHandle;
   uint         count;
-  const char   *values[64];
+  const char   *columns[64],*values[64];
   uint         i;
   Errors       error;
 
@@ -737,6 +737,7 @@ LOCAL Errors sqlExecute(sqlite3        *databaseHandle,
                                    );
   if (sqliteResult != SQLITE_OK)
   {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
     error = ERRORX_(DATABASE,sqliteResult,"'%s': %s",String_cString(sqlString),sqlite3_errmsg(databaseHandle));
     String_delete(sqlString);
     return error;
@@ -744,25 +745,31 @@ LOCAL Errors sqlExecute(sqlite3        *databaseHandle,
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,sqlite3_expanded_sql(statementHandle));
   while ((sqliteResult = sqlite3_step(statementHandle)) == SQLITE_ROW)
   {
-    count = sqlite3_column_count(statementHandle);
-    assert(count < SIZE_OF_ARRAY(values));
-    for (i = 0; i < count; i++)
+    if (rowFunction != NULL)
     {
-      values[i] = (const char*)sqlite3_column_text(statementHandle,i);
-    }
-    error = rowFunction(values,count,rowUserData);
-    if (error != ERROR_NONE)
-    {
-      sqlite3_finalize(statementHandle);
-      String_delete(sqlString);
-      return error;
+      count = sqlite3_column_count(statementHandle);
+      assert(count < SIZE_OF_ARRAY(values));
+      for (i = 0; i < count; i++)
+      {
+        columns[i] = (const char*)sqlite3_column_name(statementHandle,i);
+      }
+      for (i = 0; i < count; i++)
+      {
+        values[i] = (const char*)sqlite3_column_text(statementHandle,i);
+      }
+      error = rowFunction(columns,values,count,rowUserData);
+      if (error != ERROR_NONE)
+      {
+        sqlite3_finalize(statementHandle);
+        String_delete(sqlString);
+        return error;
+      }
     }
   }
   if (sqliteResult != SQLITE_DONE)
   {
     error = ERRORX_(DATABASE,sqliteResult,"'%s': %s",sqlite3_expanded_sql(statementHandle),sqlite3_errmsg(databaseHandle));
 //fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,sqlite3_expanded_sql());
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
     sqlite3_finalize(statementHandle);
     String_delete(sqlString);
     return error;
@@ -824,9 +831,9 @@ LOCAL Errors sqlCommand(sqlite3    *databaseHandle,
       String_delete(sqlString);
       return error;
     }
-//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,sqlite3_expanded_sql(statementHandle));
     while ((sqliteResult = sqlite3_step(statementHandle)) == SQLITE_ROW)
     {
+      // ignore output
     }
     if (sqliteResult != SQLITE_DONE)
     {
@@ -886,12 +893,13 @@ LOCAL void createTriggers(sqlite3 *databaseHandle)
   {
     stringClear(name);
     error = sqlExecute(databaseHandle,
-                       CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                       CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                        {
                          assert(count == 1);
                          assert(values != NULL);
                          assert(values[0] != NULL);
 
+                         UNUSED_VARIABLE(columns);
                          UNUSED_VARIABLE(userData);
 
                          stringSet(name,sizeof(name),values[0]);
@@ -964,12 +972,13 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   {
     stringClear(name);
     error = sqlExecute(databaseHandle,
-                       CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                       CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                        {
                          assert(count == 1);
                          assert(values != NULL);
                          assert(values[0] != NULL);
 
+                         UNUSED_VARIABLE(columns);
                          UNUSED_VARIABLE(userData);
 
                          stringSet(name,sizeof(name),values[0]);
@@ -999,12 +1008,13 @@ LOCAL void createIndizes(sqlite3 *databaseHandle)
   {
     stringClear(name);
     error = sqlExecute(databaseHandle,
-                       CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                       CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                        {
                          assert(count == 1);
                          assert(values != NULL);
                          assert(values[0] != NULL);
 
+                         UNUSED_VARIABLE(columns);
                          UNUSED_VARIABLE(userData);
 
                          stringSet(name,sizeof(name),values[0]);
@@ -1173,12 +1183,13 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
   totalCount = 0L;
   n          = 0L;
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values != NULL);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        totalCount = (ulong)atol(values[0]);
@@ -1207,7 +1218,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
 
   // insert newest
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        bool       existsFlag;
                        uint64     entryId;
@@ -1233,6 +1244,7 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
                        assert(values[8] != NULL);
                        assert(values[9] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        entryId         = (uint64)atoll(values[0]);
@@ -1249,12 +1261,13 @@ LOCAL void createNewest(sqlite3 *databaseHandle)
                        // check if exists
                        existsFlag = FALSE;
                        error = sqlExecute(databaseHandle,
-                                          CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                           {
                                             assert(count == 1);
                                             assert(values != NULL);
                                             assert(values[0] != NULL);
 
+                                            UNUSED_VARIABLE(columns);
                                             UNUSED_VARIABLE(userData);
 
                                             existsFlag = (values[0] != NULL);
@@ -1392,14 +1405,14 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   totalCount = 0L;
   n          = 0L;
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(void *userData, int count, char *values[], char *columns[]),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values != NULL);
                        assert(values[0] != NULL);
 
-                       UNUSED_VARIABLE(userData);
                        UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
                        totalCount = (ulong)atol(values[0]);
 
@@ -1418,7 +1431,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   }
 
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(void *userData, int count, char *values[], char *columns[]),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint64 entryId;
                        uint64 fragmentOffset;
@@ -1430,8 +1443,8 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                        assert(values[1] != NULL);
                        assert(values[2] != NULL);
 
-                       UNUSED_VARIABLE(userData);
                        UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
 
                        entryId        = (uint64)atoll(values[0]);
                        fragmentOffset = (uint64)atoll(values[1]);
@@ -1582,7 +1595,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint64 entryId;
                        uint64 offset;
@@ -1594,6 +1607,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                        assert(values[1] != NULL);
                        assert(values[2] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        entryId = (uint64)atoll(values[0]);
@@ -1642,12 +1656,13 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   totalCount = 0L;
   n          = 0L;
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values != NULL);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        totalCount = (ulong)atol(values[0]);
@@ -1683,7 +1698,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint64 storageId;
                        String name;
@@ -1695,6 +1710,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                        assert(values[1] != NULL);
                        assert(values[2] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        storageId    = (uint64)atoll(values[0]);
@@ -1749,7 +1765,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   }
 
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint64 storageId;
                        String name;
@@ -1759,6 +1775,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        storageId = (uint64)atoll(values[0]);
@@ -1807,7 +1824,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint64 storageId;
                        String name;
@@ -1817,6 +1834,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        storageId = (uint64)atoll(values[0]);
@@ -1866,7 +1884,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint64 storageId;
                        String name;
@@ -1878,6 +1896,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                        assert(values[1] != NULL);
                        assert(values[2] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        storageId    = (uint64)atoll(values[0]);
@@ -1931,7 +1950,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint64 storageId;
                        String name;
@@ -1941,6 +1960,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        storageId = (uint64)atoll(values[0]);
@@ -1996,12 +2016,13 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   totalCount = 0L;
   n          = 0L;
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values != NULL);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        totalCount = (ulong)atol(values[0]);
@@ -2018,7 +2039,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
   }
 
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint64 storageId;
 
@@ -2026,6 +2047,7 @@ LOCAL void createAggregates(sqlite3 *databaseHandle)
                        assert(values != NULL);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        storageId = (uint64)atoll(values[0]);
@@ -2240,7 +2262,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
   // clean-up *Entries without entry
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
+                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
@@ -2251,6 +2273,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
                      databaseId = (int64)atoll(values[0]);
 
+                     UNUSED_VARIABLE(columns);
                      UNUSED_VARIABLE(count);
                      UNUSED_VARIABLE(userData);
 
@@ -2274,7 +2297,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
+                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
@@ -2285,6 +2308,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
 
                      databaseId = (int64)atoll(values[0]);
 
+                     UNUSED_VARIABLE(columns);
                      UNUSED_VARIABLE(count);
                      UNUSED_VARIABLE(userData);
 
@@ -2308,7 +2332,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
+                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
@@ -2317,6 +2341,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                      assert(values != NULL);
                      assert(values[0] != NULL);
 
+                     UNUSED_VARIABLE(columns);
                      UNUSED_VARIABLE(count);
                      UNUSED_VARIABLE(userData);
 
@@ -2342,7 +2367,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
+                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
@@ -2351,6 +2376,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                      assert(values != NULL);
                      assert(values[0] != NULL);
 
+                     UNUSED_VARIABLE(columns);
                      UNUSED_VARIABLE(count);
                      UNUSED_VARIABLE(userData);
 
@@ -2376,7 +2402,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
+                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
@@ -2385,6 +2411,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                      assert(values != NULL);
                      assert(values[0] != NULL);
 
+                     UNUSED_VARIABLE(columns);
                      UNUSED_VARIABLE(count);
                      UNUSED_VARIABLE(userData);
 
@@ -2410,7 +2437,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                    "
                   );
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
+                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                    {
                      int64  databaseId;
                      Errors error;
@@ -2419,6 +2446,7 @@ LOCAL void cleanUpOrphanedEntries(sqlite3 *databaseHandle)
                      assert(values != NULL);
                      assert(values[0] != NULL);
 
+                     UNUSED_VARIABLE(columns);
                      UNUSED_VARIABLE(count);
                      UNUSED_VARIABLE(userData);
 
@@ -2470,7 +2498,7 @@ LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
   // get storage entry
   n = 0L;
   (void)sqlExecute(databaseHandle,
-                   CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
+                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                    {
                      int64      databaseId;
                      const char *storageName;
@@ -2479,6 +2507,7 @@ LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
                      assert(values != NULL);
                      assert(values[0] != NULL);
 
+                     UNUSED_VARIABLE(columns);
                      UNUSED_VARIABLE(count);
                      UNUSED_VARIABLE(userData);
 
@@ -2486,7 +2515,7 @@ LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
                      storageName = values[1];
 
                      (void)sqlExecute(databaseHandle,
-                                      CALLBACK_INLINE(Errors,(const char* values[], uint count, void *userData),
+                                      CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                       {
                                         int64 duplicateDatabaseId;
 
@@ -2494,6 +2523,7 @@ LOCAL void cleanUpDuplicateIndizes(sqlite3 *databaseHandle)
                                         assert(values != NULL);
                                         assert(values[0] != NULL);
 
+                                        UNUSED_VARIABLE(columns);
                                         UNUSED_VARIABLE(count);
                                         UNUSED_VARIABLE(userData);
 
@@ -2564,23 +2594,23 @@ LOCAL void vacuum(sqlite3 *databaseHandle)
 /***********************************************************************\
 * Name   : getColumnsWidth
 * Purpose: get column width
-* Input  : argc    - number of columns
-*          argv    - values
-*          columns - column names
+* Input  : columns - column names
+*          values  - values
+*          count   - number of values
 * Output : width - widths
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void getColumnsWidth(size_t widths[], int argc, char *argv[], char *columns[])
+LOCAL void getColumnsWidth(size_t widths[], const char *columns[], const char *values[], uint count)
 {
-  int i;
+  uint i;
 
-  for (i = 0; i < argc; i++)
+  for (i = 0; i < count; i++)
   {
     widths[i] = 0;
-    if ((argv[i]    != NULL) && (strlen(argv[i]   ) > widths[i])) widths[i] = strlen(argv[i]   );
     if ((columns[i] != NULL) && (strlen(columns[i]) > widths[i])) widths[i] = strlen(columns[i]);
+    if ((values [i] != NULL) && (strlen(values [i]) > widths[i])) widths[i] = strlen(values [i]);
   }
 }
 
@@ -2606,29 +2636,28 @@ LOCAL void printSpaces(int n)
 /***********************************************************************\
 * Name   : printRow
 * Purpose: print row call back
-* Input  : userData - user data
-*          count    - number of values
+* Input  : columns  - column names
 *          values   - values
-*          columns  - column names
+*          count    - number of values
+*          userData - user data
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL int printRow(void *userData, int count, char *values[], char *columns[])
+LOCAL Errors printRow(const char *columns[], const char *values[], uint count, void *userData)
 {
-  int    i;
+  uint   i;
   size_t *widths;
 
-  assert(count >= 0);
-  assert(values != NULL);
   assert(columns != NULL);
+  assert(values != NULL);
 
   UNUSED_VARIABLE(userData);
 
   widths = (size_t*)malloc(count*sizeof(size_t));
   assert(widths != NULL);
-  getColumnsWidth(widths,count,values,columns);
+  getColumnsWidth(widths,columns,values,count);
 
   if (showHeaderFlag && !headerPrintedFlag)
   {
@@ -2656,7 +2685,7 @@ LOCAL int printRow(void *userData, int count, char *values[], char *columns[])
 
   free(widths);
 
-  return SQLITE_OK;
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -2675,12 +2704,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
   // show meta data
   printf("Meta:\n");
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  %-11s: %s\n",values[0],values[1]);
@@ -2698,11 +2728,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
   // show number of storages
   printf("Storages:\n");
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  OK         : %s\n",values[0]);
@@ -2718,11 +2749,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Error      : %s\n",values[0]);
@@ -2737,11 +2769,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Deleted    : %s\n",values[0]);
@@ -2760,12 +2793,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
   // show number of entries, newest entries
   printf("Entries:\n");
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -2780,12 +2814,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -2800,12 +2835,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -2820,11 +2856,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Directories: %lu\n",atol(values[0]));
@@ -2839,11 +2876,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Links      : %lu\n",atol(values[0]));
@@ -2858,12 +2896,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -2878,11 +2917,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Special    : %lu\n",atol(values[0]));
@@ -2900,12 +2940,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
   // show number of newest entries
   printf("Newest entries:\n");
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -2920,12 +2961,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -2940,12 +2982,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -2960,11 +3003,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Directories: %lu\n",atol(values[0]));
@@ -2979,11 +3023,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Links      : %lu\n",atol(values[0]));
@@ -2998,12 +3043,13 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3018,11 +3064,12 @@ LOCAL void printInfo(sqlite3 *databaseHandle)
     exit(1);
   }
   error = sqlExecute(databaseHandle,
-                     CALLBACK_INLINE(Errors,(const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 1);
                        assert(values[0] != NULL);
 
+                       UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
                        printf("  Special    : %lu\n",atol(values[0]));
@@ -3314,9 +3361,9 @@ int main(int argc, const char *argv[])
     // check database
     printf("Check:\n");
     fprintf(stderr,"  Quick integrity check...");
-    sqliteResult = sqlCommand(databaseHandle,
-                              "PRAGMA quick_check;"
-                             );
+    error = sqlCommand(databaseHandle,
+                       "PRAGMA quick_check;"
+                      );
     if (error != ERROR_NONE)
     {
       fprintf(stderr,"ok\n");
@@ -3327,9 +3374,9 @@ int main(int argc, const char *argv[])
     }
 
     fprintf(stderr,"  Foreign key check...");
-    sqliteResult = sqlCommand(databaseHandle,
-                              "PRAGMA foreign_key_check;"
-                             );
+    error = sqlCommand(databaseHandle,
+                       "PRAGMA foreign_key_check;"
+                      );
     if (error != ERROR_NONE)
     {
       fprintf(stderr,"ok\n");
@@ -3565,7 +3612,8 @@ int main(int argc, const char *argv[])
     else
     {
       // single command execution
-      error = sqlCommand(databaseHandle,
+      error = sqlExecute(databaseHandle,
+                         CALLBACK(printRow,NULL),
                          String_cString(commands)
                         );
       if (error != ERROR_NONE)
@@ -3580,9 +3628,9 @@ int main(int argc, const char *argv[])
   while (inputAvailable() && (fgets(line,sizeof(line),stdin) != NULL))
   {
     l = stringTrim(line);
-    sqliteResult = sqlCommand(databaseHandle,
-                              l
-                             );
+    error = sqlCommand(databaseHandle,
+                       l
+                      );
     if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
     if (sqliteResult != SQLITE_OK)
     {

@@ -617,17 +617,9 @@ typedef struct
   String                      excludeCommand;                 // exclude entries command
 
   MountList                   mountList;                      // mount list
-//TODO: required?
   PatternList                 compressExcludePatternList;     // excluded compression patterns
 
-//TODO: required?
   DeltaSourceList             deltaSourceList;                // delta sources
-
-//TODO: required?
-  ScheduleList                scheduleList;                   // schedule list (unordered)
-
-//TODO: required?
-  PersistenceList             persistenceList;                // persistence list (ordered)
 
   uint64                      archivePartSize;                // archive part size [bytes]
 

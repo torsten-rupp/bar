@@ -39,9 +39,10 @@
 #include "common/misc.h"
 #include "common/threads.h"
 #include "common/semaphores.h"
-#include "errors.h"
 
 #include "sqlite3.h"
+
+#include "errors.h"
 
 #include "database.h"
 

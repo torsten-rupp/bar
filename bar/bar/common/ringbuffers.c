@@ -25,7 +25,7 @@
 
 #include "common/global.h"
 #ifndef NDEBUG
-  #include "lists.h"
+  #include "common/lists.h"
 #endif /* not NDEBUG */
 
 #include "ringbuffers.h"

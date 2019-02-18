@@ -57,12 +57,11 @@
 #include "common/strings.h"
 #include "common/files.h"
 #include "common/misc.h"
-#include "errors.h"
-
-//#include "bar.h"
 #include "common/passwords.h"
 
-#include "common/network.h"
+#include "errors.h"
+
+#include "network.h"
 
 /****************** Conditional compilation switches *******************/
 

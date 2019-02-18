@@ -625,6 +625,7 @@ LOCAL Errors updateNewestInfo(IndexHandle *indexHandle,
   uint64           newestTimeLastChanged;
 
 //TODO
+#warning TODO
 return ERROR_NONE;
 
   // get current newest entry data (if exists)
@@ -8916,6 +8917,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     filterAppend(filterString,!String_isEmpty(storageIdsString),"AND","entries.storageId IN (%S)",storageIdsString);  // Note: use entries.storageId instead of storage.id: this is must faster
     filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(string,indexTypeSet));
   }
+fprintf(stderr,"%s, %d: filterString=%s\n",__FILE__,__LINE__,String_cString(filterString));
 
   // get sort mode, ordering
   if (newestOnly)
@@ -9174,6 +9176,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   else /* if (!String_isEmpty(ftsName) && String_isEmpty(entryIdsString)) */
   {
     // names (and optional entries) selected
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // get additional filters
     filterAppend(filterString,!String_isEmpty(ftsName),"AND","FTS_entries MATCH %S",ftsName);
@@ -9315,7 +9318,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   // free resources
   String_delete(string);
@@ -10966,10 +10969,9 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle)
 
   DEBUG_REMOVE_RESOURCE_TRACE(indexQueryHandle,IndexQueryHandle);
 
+fprintf(stderr,"%s, %d: Index_doneList\n",__FILE__,__LINE__);
   Database_finalize(&indexQueryHandle->databaseQueryHandle);
   doneIndexQueryHandle(indexQueryHandle);
-//TODO: remove
-//  Database_unlock(&indexQueryHandle->indexHandle->databaseHandle);
 }
 
 Errors Index_addFile(IndexHandle *indexHandle,

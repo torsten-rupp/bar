@@ -3808,8 +3808,6 @@ LOCAL void initGlobalOptions(void)
   List_init(&globalOptions.mountList);
   PatternList_init(&globalOptions.compressExcludePatternList);
   DeltaSourceList_init(&globalOptions.deltaSourceList);
-  List_init(&globalOptions.scheduleList);
-  List_init(&globalOptions.persistenceList);
 
   globalOptions.archivePartSize                                 = 0LL;
 
@@ -4020,12 +4018,6 @@ LOCAL void doneGlobalOptions(void)
 
   String_delete(globalOptions.incrementalListFileName);
 
-//TODO: required?
-extern void freeScheduleNode(ScheduleNode *scheduleNode, void *userData);
-extern void freePersistenceNode(PersistenceNode *persistenceNode, void *userData);
-
-  List_done(&globalOptions.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  List_done(&globalOptions.scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&globalOptions.deltaSourceList);
   PatternList_done(&globalOptions.compressExcludePatternList);
   List_done(&globalOptions.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));

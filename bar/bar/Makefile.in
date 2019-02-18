@@ -43,76 +43,75 @@ TEST_DATA_DIR      ?= test
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
-SHELL                  = bash
+SHELL                       = bash
 
-CC                     = @CC@
-CC_FLAGS               = @CC_FLAGS@ -g
-CC_WARN_FLAGS          = @CC_WARN_FLAGS@
-CXX                    = @CXX@
-CXX_FLAGS              = @CXX_FLAGS@ -g
-CXX_WARN_FLAGS         = @CXX_WARN_FLAGS@
-CC_OPTIMIZE            = @CC_OPTIMIZE@
-CC_OPTIMIZE_RELEASE    = @CC_OPTIMIZE_RELEASE@
-CC_OPTIMIZE_DEBUG      = @CC_OPTIMIZE_DEBUG@
-CC_ADDITIONAL          =
-CC_ADDITIONAL_RELEASE  =
-CC_ADDITIONAL_DEBUG    = -fno-pie -no-pie -finstrument-functions
+CC                        = @CC@
+CC_FLAGS                  = @CC_FLAGS@ -g
+CC_WARN_FLAGS             = @CC_WARN_FLAGS@
+CXX                       = @CXX@
+CXX_FLAGS                 = @CXX_FLAGS@ -g
+CXX_WARN_FLAGS            = @CXX_WARN_FLAGS@
+CC_FLAGS_RELEASE          =
+CC_FLAGS_DEBUG            = -fno-pie -no-pie -finstrument-functions
 #-fno-sanitize-recover=all -fstack-protector-all -fsanitize=undefined
-CC_ADDITIONAL_GCOV     = -fno-pie -no-pie -fprofile-arcs -ftest-coverage
-CC_ADDITIONAL_VALGRIND = -fno-pie -no-pie -fno-builtin
-CC_DEFINES             = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
-CC_DEFINES_RELEASE     = @CC_DEFINES_RELEASE@
-CC_DEFINES_DEBUG       = @CC_DEFINES_DEBUG@
+CC_FLAGS_OPTIMIZE         = @CC_FLAGS_OPTIMIZE@
+CC_FLAGS_OPTIMIZE_RELEASE = @CC_FLAGS_OPTIMIZE_RELEASE@
+CC_FLAGS_OPTIMIZE_DEBUG   = @CC_FLAGS_OPTIMIZE_DEBUG@
+CC_FLAGS_GCOV             = -fno-pie -no-pie -fprofile-arcs -ftest-coverage
+CC_FLAGS_VALGRIND         = -fno-pie -no-pie -fno-builtin
+CC_DEFINES                = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
+CC_DEFINES_RELEASE        = @CC_DEFINES_RELEASE@
+CC_DEFINES_DEBUG          = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG
-CC_INCLUDES            = @CC_INCLUDES@
+CC_INCLUDES               = @CC_INCLUDES@ extern .
 ifdef WERROR
   CC_FLAGS   += -Werror
   CC_DEFINES += WERROR
 endif
 
-LD                     = $(if @CXX@,@CXX@,@CC@)
-LD_FLAGS               = @LD_FLAGS@
+LD                        = $(if @CXX@,@CXX@,@CC@)
+LD_FLAGS                  = @LD_FLAGS@
 #-static-libstdc++ -static-libasan
-LD_FLAGS_RELEASE       =
-LD_FLAGS_DEBUG         = -fno-pie -no-pie -Wl,-wrap,pthread_create
+LD_FLAGS_RELEASE          =
+LD_FLAGS_DEBUG            = -fno-pie -no-pie -Wl,-wrap,pthread_create
 ifneq (@HEAPVIEW_DIR@,)
-LD_FLAGS_DEBUG         += -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
+LD_FLAGS_DEBUG            += -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
 else
-LD_FLAGS_DEBUG         +=
+LD_FLAGS_DEBUG            +=
 endif
-LD_FLAGS_GCOV          = -fno-pie -no-pie -Wl,-wrap,pthread_create -fprofile-arcs
-LD_FLAGS_VALGRIND      = -fno-pie -no-pie
-LD_LIBRARY_PATHS       = @LIBRARY_PATHS@
+LD_FLAGS_GCOV             = -fno-pie -no-pie -Wl,-wrap,pthread_create -fprofile-arcs
+LD_FLAGS_VALGRIND         = -fno-pie -no-pie
+LD_LIBRARY_PATHS          = @LIBRARY_PATHS@
 ifneq (@HEAPVIEW_DIR@,)
   LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
 endif
-LD_LIBRARIES           = @LIBRARIES@
+LD_LIBRARIES              = @LIBRARIES@
 #ubsan
-LD_STATIC_LIBRARIES    = @STATIC_LIBRARIES@
+LD_STATIC_LIBRARIES       = @STATIC_LIBRARIES@
 ifneq (@HEAPVIEW_DIR@,)
   LD_STATIC_LIBRARIES += HeapView
 endif
-LD_STATIC_PREFIX       = -Wl,-Bstatic
-LD_DYNAMIC_PREFIX      = -Wl,-Bdynamic
+LD_STATIC_PREFIX          = -Wl,-Bstatic
+LD_DYNAMIC_PREFIX         = -Wl,-Bdynamic
 
 ifneq ($(SANITIZER),)
-  CC_ADDITIONAL_DEBUG += -fno-sanitize-recover=all -fstack-protector-all
+  CC_FLAGS_DEBUG += -fno-sanitize-recover=all -fstack-protector-all
   ifeq ($(SANITIZER),address)
-    CC_ADDITIONAL_DEBUG += -fsanitize=address
-    LD_FLAGS            += -static-libasan
-    LD_LIBRARIES        += asan
+    CC_FLAGS_DEBUG += -fsanitize=address
+    LD_FLAGS       += -static-libasan
+    LD_LIBRARIES   += asan
   else ifeq ($(SANITIZER),leak)
-    CC_ADDITIONAL_DEBUG += -fsanitize=leak
-    LD_FLAGS            += -static-liblsan
-    LD_LIBRARIES        += lsan
+    CC_FLAGS_DEBUG += -fsanitize=leak
+    LD_FLAGS       += -static-liblsan
+    LD_LIBRARIES   += lsan
   else ifeq ($(SANITIZER),thread)
-    CC_ADDITIONAL_DEBUG += -fsanitize=thread
-    LD_FLAGS            += -static-libtsan
-    LD_LIBRARIES        += tsan
+    CC_FLAGS_DEBUG += -fsanitize=thread
+    LD_FLAGS       += -static-libtsan
+    LD_LIBRARIES   += tsan
   else ifeq ($(SANITIZER),undefined)
-    CC_ADDITIONAL_DEBUG += -fsanitize=undefined
-    LD_FLAGS            += -static-libubsan
-    LD_LIBRARIES        += ubsan
+    CC_FLAGS_DEBUG += -fsanitize=undefined
+    LD_FLAGS       += -static-libubsan
+    LD_LIBRARIES   += ubsan
   else ifeq ($(SANITIZER),help)
     $(error available sanitizers: address, leak, thread, undefined)
   else
@@ -337,66 +336,66 @@ endif
 # compile C source
 release/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
 
 debug/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
 
 gcov/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_GCOV) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
 
 valgrind/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
 
 common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/common/$*.c -o common/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/common/$*.c -o common/$*.o
 
 %.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 release/%.o: %.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o release/$*.o
 
 debug/%.o: %.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o debug/$*.o
 
 gcov/%.o: %.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_GCOV) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
 
 valgrind/%.o: %.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
 
 %.o: %.c
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 # compile C++ source
 release/%.o: $(SOURCE_DIR)/%.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_RELEASE) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o release/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_RELEASE) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o release/$*.o
 
 debug/%.o: $(SOURCE_DIR)/%.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o debug/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o debug/$*.o
 
 gcov/%.o: $(SOURCE_DIR)/%.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o gcov/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o gcov/$*.o
 
 valgrind/%.o: $(SOURCE_DIR)/%.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_VALGRIND) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o valgrind/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o valgrind/$*.o
 
 common/%.o: common/%.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c common/$*.cpp -o common/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c common/$*.cpp -o common/$*.o
 
 %.o: %.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cpp -o $*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cpp -o $*.o
 
 %.o: %.cc
-	$(CXX) $(CXX_FLAGS) $(CC_ADDITIONAL) $(CC_OPTIMIZE) $(CC_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cc -o $*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cc -o $*.o
 
 %.o:
 	$(error Unkown object file '$*.o': do not know how to compile it)
@@ -691,25 +690,25 @@ Makefile.depend: Makefile Makefile.in
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(ECHO) >Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(foreach header,$(INTERMEDIATE_HEADERS),\
               $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
             ) \
             $(SED) 's|\(.*\.o:\)|release/\1|g' | \
             $(CAT) >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(foreach header,$(INTERMEDIATE_HEADERS),\
               $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
             ) \
             $(SED) 's|\(.*\.o:\)|debug/\1|g' | \
             $(CAT) >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(foreach header,$(INTERMEDIATE_HEADERS),\
               $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
             ) \
             $(SED) 's|\(.*\.o:\)|gcov/\1|g' | \
             $(CAT) >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(foreach header,$(INTERMEDIATE_HEADERS),\
               $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
             ) \
@@ -717,13 +716,13 @@ Makefile.depend: Makefile Makefile.in
             $(CAT) >> Makefile.depend; \
         done;
 	for z in $(COMMON_SOURCES); do \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|release/common/\1|g' >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|debug/common/\1|g' >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|gcov/common/\1|g' >> Makefile.depend; \
-          $(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|valgrind/common/\1|g' >> Makefile.depend; \
         done;
 
@@ -861,30 +860,30 @@ endif
 # compile SQLite, xdelta C source without warning flags
 release/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 debug/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 gcov/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 valgrind/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
 ifeq (@HAVE_XDELTA3@,1)
 release/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 debug/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 gcov/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 valgrind/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 endif
 
 # create bar-keygen script
@@ -952,10 +951,10 @@ showchunks@EXEEXT@: showchunks.o
 
 # create bar-sqlite3
 bar-sqlite3.o: bar-sqlite3.c errors.h index_definition.h
-	$(CC) $(CC_FLAGS) $(CC_ADDITIONAL) $(CC_ADDITIONAL_DEBUG) $(CC_OPTIMIZE) $(CC_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) -I. $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o $*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) $(foreach z,$(CC_INCLUDES),-isystem $z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
 bar-sqlite3: bar-sqlite3.o debug/common/global.o debug/common/lists.o debug/common/strings.o debug/common/stringlists.o debug/common/files.o debug/common/devices.o debug/common/stacktraces.o debug/errors.o debug/sqlite3.o
-	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 

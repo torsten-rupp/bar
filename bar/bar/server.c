@@ -1008,9 +1008,6 @@ LOCAL Errors getCryptPasswordFromConfig(String        name,
   UNUSED_VARIABLE(validateFlag);
   UNUSED_VARIABLE(weakCheckFlag);
 
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&jobNode->job.options.cryptPassword);
-//TODO: remove
-//  if (jobNode->job.options.cryptPassword != NULL)
   if (Password_isEmpty(&jobNode->job.options.cryptPassword))
   {
     Password_set(password,&jobNode->job.options.cryptPassword);
@@ -1063,9 +1060,9 @@ LOCAL void updateStatusInfo(Errors           error,
     bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
     storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
 
-    restFiles        = (statusInfo->total.count  > statusInfo->done.count      ) ? statusInfo->total.count -statusInfo->done.count       : 0L;
-    restBytes        = (statusInfo->total.size   > statusInfo->done.size       ) ? statusInfo->total.size  -statusInfo->done.size        : 0LL;
-    restStorageBytes = (statusInfo->storage.totalSize > statusInfo->storage.doneSize) ? statusInfo->storage.totalSize-statusInfo->storage.doneSize : 0LL;
+    restFiles         = (statusInfo->total.count  > statusInfo->done.count      ) ? statusInfo->total.count -statusInfo->done.count       : 0L;
+    restBytes         = (statusInfo->total.size   > statusInfo->done.size       ) ? statusInfo->total.size  -statusInfo->done.size        : 0LL;
+    restStorageBytes  = (statusInfo->storage.totalSize > statusInfo->storage.doneSize) ? statusInfo->storage.totalSize-statusInfo->storage.doneSize : 0LL;
     estimatedRestTime = 0L;
     if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
     if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }

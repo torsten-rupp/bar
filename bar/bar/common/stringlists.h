@@ -19,8 +19,8 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
-#include "lists.h"
+#include "common/strings.h"
+#include "common/lists.h"
 
 /****************** Conditional compilation switches *******************/
 

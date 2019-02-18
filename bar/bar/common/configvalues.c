@@ -16,9 +16,9 @@
 #include <assert.h>
 
 #include "common/global.h"
-#include "strings.h"
-#include "stringlists.h"
-#include "files.h"
+#include "common/strings.h"
+#include "common/stringlists.h"
+#include "common/files.h"
 
 #include "configvalues.h"
 

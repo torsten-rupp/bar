@@ -59,13 +59,13 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
-#include "strings.h"
-#include "stringlists.h"
-#include "devices.h"
+#include "common/strings.h"
+#include "common/stringlists.h"
+#include "common/devices.h"
 
 #ifndef NDEBUG
   #include <pthread.h>
-  #include "lists.h"
+  #include "common/lists.h"
 #endif /* not NDEBUG */
 
 #include "files.h"

@@ -19,10 +19,10 @@
 #include "common/global.h"
 #ifndef NDEBUG
   #include <pthread.h>
-  #include "lists.h"
+  #include "common/lists.h"
 #endif /* not NDEBUG */
 
-#include "common/arrays.h"
+#include "arrays.h"
 
 /****************** Conditional compilation switches *******************/
 #define HALT_ON_INSUFFICIENT_MEMORY

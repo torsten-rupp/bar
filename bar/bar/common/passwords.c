@@ -34,7 +34,6 @@
 #include "common/misc.h"
 
 #include "errors.h"
-//#include "bar.h"
 
 #include "common/passwords.h"
 

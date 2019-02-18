@@ -36,7 +36,7 @@
 #include "common/global.h"
 #ifndef NDEBUG
   #include <pthread.h>
-  #include "lists.h"
+  #include "common/lists.h"
 #endif /* not NDEBUG */
 
 #include "strings.h"

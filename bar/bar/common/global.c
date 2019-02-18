@@ -26,17 +26,17 @@
   #include <execinfo.h>
 #endif
 #ifdef HAVE_BFD_H
-  #include "stacktraces.h"
+  #include "common/stacktraces.h"
 #endif
 #include <assert.h>
 
 #ifndef NDEBUG
-  #include "lists.h"
+  #include "common/lists.h"
 #endif /* not NDEBUG */
 
 #include "errors.h"
 
-#include "common/global.h"
+#include "global.h"
 
 /****************** Conditional compilation switches *******************/
 

@@ -28,9 +28,9 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
-#include "strings.h"
-#include "lists.h"
-#include "stringlists.h"
+#include "common/strings.h"
+#include "common/lists.h"
+#include "common/stringlists.h"
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/

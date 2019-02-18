@@ -24,8 +24,8 @@
 #endif /* HAVE_PCRE || HAVE_REGEX_H */
 #include <assert.h>
 
-#include "lists.h"
-#include "strings.h"
+#include "common/lists.h"
+#include "common/strings.h"
 
 #include "stringlists.h"
 

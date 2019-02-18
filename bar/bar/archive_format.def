@@ -308,10 +308,26 @@ fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__
 
 # ----------------------------------------------------------------------
 
+# salt
+#
+# Used for the following chunks which could be encrypted by
+# the specified symmetric encryption.
+#
+# Salt may be stored multiple times to change the salt for
+# the following chunks.
+#
+# parent: none
+# never compress/encrypted
+CHUNK SALT "SLT0" Salt
+  byte[128] salt;
+  crc32     crc
+
+# ----------------------------------------------------------------------
+
 # asymmetric encryption key
 #
 # Used for the following chunks which could be encrypted by
-# the specified symmetric entryption. A random generated key
+# the specified symmetric encryption. A random generated key
 # for symmetric encryption is encrypted itself with the
 # asymmetric RSA entryption and the public key (hybrid
 # encryption). To decrypt the random key the private key is
