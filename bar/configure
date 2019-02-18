@@ -688,9 +688,9 @@ CC_INCLUDES
 CC_DEFINES_DEBUG
 CC_DEFINES_RELEASE
 CC_DEFINES
-CC_OPTIMIZE_DEBUG
-CC_OPTIMIZE_RELEASE
-CC_OPTIMIZE
+CC_FLAGS_OPTIMIZE_DEBUG
+CC_FLAGS_OPTIMIZE_RELEASE
+CC_FLAGS_OPTIMIZE
 CXX_WARN_FLAGS
 CXX_FLAGS
 CC_WARN_FLAGS
@@ -2605,9 +2605,9 @@ CC_FLAGS="$CFLAGS"
 CC_WARN_FLAGS=""
 CXX_FLAGS="$CFLAGS"
 CXX_WARN_FLAGS=""
-CC_OPTIMIZE=""
-CC_OPTIMIZE_RELEASE=""
-CC_OPTIMIZE_DEBUG=""
+CC_FLAGS_OPTIMIZE=""
+CC_FLAGS_OPTIMIZE_RELEASE=""
+CC_FLAGS_OPTIMIZE_DEBUG=""
 CC_DEFINES="_GNU_SOURCE"
 CC_DEFINES_RELEASE=""
 CC_DEFINES_DEBUG=""
@@ -5363,10 +5363,10 @@ eval ac_res=\$ac_cv_c_option_`echo -Wno-unknown-pragmas|tr -c -d a-zA-Z0-9_`
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 
-CC_OPTIMIZE="$CC_OPTIMIZE"
+CC_FLAGS_OPTIMIZE="$CC_FLAGS_OPTIMIZE"
 CC_DEFINES="$CC_DEFINES"
 
-CC_OPTIMIZE_RELEASE="$CC_OPTIMIZE_RELEASE -O2"
+CC_FLAGS_OPTIMIZE_RELEASE="$CC_FLAGS_OPTIMIZE_RELEASE -O2"
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -fno-schedule-insns2" >&5
@@ -5388,7 +5388,7 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
-        for s in CC_OPTIMIZE_RELEASE; do
+        for s in CC_FLAGS_OPTIMIZE_RELEASE; do
           eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
           eval "$s=\"\$$s-fno-schedule-insns2\""
         done
@@ -5406,7 +5406,7 @@ eval ac_res=\$ac_cv_c_option_`echo -fno-schedule-insns2|tr -c -d a-zA-Z0-9_`
 $as_echo "$ac_res" >&6; }
 CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
 
-CC_OPTIMIZE_DEBUG="$CC_OPTIMIZE_DEBUG -O0"
+CC_FLAGS_OPTIMIZE_DEBUG="$CC_FLAGS_OPTIMIZE_DEBUG -O0"
 CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
 
 CC_INCLUDES="$CC_INCLUDES"

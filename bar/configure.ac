@@ -664,9 +664,9 @@ AC_SUBST(CC_FLAGS)                          dnl C compiler flags
 AC_SUBST(CC_WARN_FLAGS)                     dnl C compiler warning flags
 AC_SUBST(CXX_FLAGS)                         dnl C++ compiler flags
 AC_SUBST(CXX_WARN_FLAGS)                    dnl C++ compiler warning flags
-AC_SUBST(CC_OPTIMIZE)                       dnl C compiler optimization flags
-AC_SUBST(CC_OPTIMIZE_RELEASE)               dnl additional C compiler optimization flags for release version
-AC_SUBST(CC_OPTIMIZE_DEBUG)                 dnl addtiional C compiler optimization flags for debug version
+AC_SUBST(CC_FLAGS_OPTIMIZE)                 dnl C compiler optimization flags
+AC_SUBST(CC_FLAGS_OPTIMIZE_RELEASE)         dnl additional C compiler optimization flags for release version
+AC_SUBST(CC_FLAGS_OPTIMIZE_DEBUG)           dnl addtiional C compiler optimization flags for debug version
 AC_SUBST(CC_DEFINES)                        dnl C compiler defines
 AC_SUBST(CC_DEFINES_RELEASE)                dnl additional C compiler defines for debug version
 AC_SUBST(CC_DEFINES_DEBUG)                  dnl addtioonal C compiler defines for debug version
@@ -736,9 +736,9 @@ CC_FLAGS="$CFLAGS"
 CC_WARN_FLAGS=""
 CXX_FLAGS="$CFLAGS"
 CXX_WARN_FLAGS=""
-CC_OPTIMIZE=""
-CC_OPTIMIZE_RELEASE=""
-CC_OPTIMIZE_DEBUG=""
+CC_FLAGS_OPTIMIZE=""
+CC_FLAGS_OPTIMIZE_RELEASE=""
+CC_FLAGS_OPTIMIZE_DEBUG=""
 CC_DEFINES="_GNU_SOURCE"
 CC_DEFINES_RELEASE=""
 CC_DEFINES_DEBUG=""
@@ -1154,16 +1154,16 @@ AC_COMPILER_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
 
-CC_OPTIMIZE="$CC_OPTIMIZE"
+CC_FLAGS_OPTIMIZE="$CC_FLAGS_OPTIMIZE"
 CC_DEFINES="$CC_DEFINES"
 
-CC_OPTIMIZE_RELEASE="$CC_OPTIMIZE_RELEASE -O2"
+CC_FLAGS_OPTIMIZE_RELEASE="$CC_FLAGS_OPTIMIZE_RELEASE -O2"
 dnl Check: bug in gcc with -fschedule-insns2? If -O2 is used and -fno-schedule-insns2 is
 dnl        not given, the program either crashes or parsing a string with %y seems to fail.
-AC_COMPILER_OPTION(-fno-schedule-insns2,CC_OPTIMIZE_RELEASE)
+AC_COMPILER_OPTION(-fno-schedule-insns2,CC_FLAGS_OPTIMIZE_RELEASE)
 CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
 
-CC_OPTIMIZE_DEBUG="$CC_OPTIMIZE_DEBUG -O0"
+CC_FLAGS_OPTIMIZE_DEBUG="$CC_FLAGS_OPTIMIZE_DEBUG -O0"
 CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
 
 CC_INCLUDES="$CC_INCLUDES"
