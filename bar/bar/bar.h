@@ -668,14 +668,14 @@ bool setKeyString(Key *key, ConstString string);
 /***********************************************************************\
 * Name   : duplicateKey
 * Purpose: duplicate public/private key
-* Input  : toKey   - key variable
+* Input  : key     - key variable
 *          fromKey - from key
 * Output : -
 * Return : TRUE iff key duplicated
 * Notes  : -
 \***********************************************************************/
 
-bool duplicateKey(Key *toKey, const Key *fromKey);
+bool duplicateKey(Key *key, const Key *fromKey);
 
 /***********************************************************************\
 * Name   : doneKey
@@ -698,6 +698,18 @@ void doneKey(Key *key);
 \***********************************************************************/
 
 void clearKey(Key *key);
+
+/***********************************************************************\
+* Name   : copyKey
+* Purpose: copy public/private key
+* Input  : key     - key variable
+*          fromKey - from key
+* Output : -
+* Return : TRUE iff key copied
+* Notes  : -
+\***********************************************************************/
+
+bool copyKey(Key *key, const Key *fromKey);
 
 /***********************************************************************\
 * Name   : isKeyAvailable

@@ -5874,12 +5874,12 @@ bool setKeyString(Key *key, ConstString string)
   return setKey(key,String_cString(string),String_length(string));
 }
 
-bool duplicateKey(Key *toKey, const Key *fromKey)
+bool duplicateKey(Key *key, const Key *fromKey)
 {
   uint length;
   void *data;
 
-  assert(toKey != NULL);
+  assert(key != NULL);
 
   if (fromKey != NULL)
   {
@@ -5897,8 +5897,8 @@ bool duplicateKey(Key *toKey, const Key *fromKey)
     length = 0;
   }
 
-  toKey->data   = data;
-  toKey->length = length;
+  key->data   = data;
+  key->length = length;
 
   return TRUE;
 }
@@ -5917,6 +5917,36 @@ void clearKey(Key *key)
   assert(key != NULL);
 
   doneKey(key);
+}
+
+bool copyKey(Key *key, const Key *fromKey)
+{
+  uint length;
+  void *data;
+
+  assert(key != NULL);
+
+  if (fromKey != NULL)
+  {
+    length = fromKey->length;
+    data = allocSecure(length+12);
+    if (data == NULL)
+    {
+      return FALSE;
+    }
+    memcpy(data,fromKey->data,length);
+  }
+  else
+  {
+    data   = NULL;
+    length = 0;
+  }
+
+  if (key->data != NULL) freeSecure(key->data);
+  key->data   = data;
+  key->length = length;
+
+  return TRUE;
 }
 
 void initHash(Hash *hash)
@@ -5985,8 +6015,8 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
 {
   assert(server != NULL);
 
-  server->name                    = (name != NULL) ? String_duplicate(name) : String_new();
-  server->type                    = serverType;
+  server->name = (name != NULL) ? String_duplicate(name) : String_new();
+  server->type = serverType;
   switch (serverType)
   {
     case SERVER_TYPE_NONE:
@@ -5994,18 +6024,18 @@ void initServer(Server *server, ConstString name, ServerTypes serverType)
     case SERVER_TYPE_FILE:
       break;
     case SERVER_TYPE_FTP:
-      server->ftp.loginName = NULL;
+      server->ftp.loginName = String_new();
       Password_init(&server->ftp.password);
       break;
     case SERVER_TYPE_SSH:
-      server->ssh.port                  = 22;
-      server->ssh.loginName             = NULL;
+      server->ssh.port      = 22;
+      server->ssh.loginName = String_new();
       Password_init(&server->ssh.password);
       initKey(&server->ssh.publicKey);
       initKey(&server->ssh.privateKey);
       break;
     case SERVER_TYPE_WEBDAV:
-      server->webDAV.loginName          = NULL;
+      server->webDAV.loginName = String_new();
       Password_init(&server->webDAV.password);
       initKey(&server->webDAV.publicKey);
       initKey(&server->webDAV.privateKey);
@@ -6040,13 +6070,13 @@ void doneServer(Server *server)
       if (isKeyAvailable(&server->ssh.privateKey)) doneKey(&server->ssh.privateKey);
       if (isKeyAvailable(&server->ssh.publicKey)) doneKey(&server->ssh.publicKey);
       Password_done(&server->ssh.password);
-      if (server->ssh.loginName != NULL) String_delete(server->ssh.loginName);
+      String_delete(server->ssh.loginName);
       break;
     case SERVER_TYPE_WEBDAV:
       if (isKeyAvailable(&server->webDAV.privateKey)) doneKey(&server->webDAV.privateKey);
       if (isKeyAvailable(&server->webDAV.publicKey)) doneKey(&server->webDAV.publicKey);
       Password_done(&server->webDAV.password);
-      if (server->webDAV.loginName != NULL) String_delete(server->webDAV.loginName);
+      String_delete(server->webDAV.loginName);
       break;
     #ifndef NDEBUG
       default:
@@ -6412,12 +6442,14 @@ uint initSSHServerSettings(SSHServer        *sshServer,
                                    ? serverNode->server.ssh.port
                                    : globalOptions.defaultSSHServer->ssh.port
                                 );
-    sshServer->loginName  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName) )
-                              ? jobOptions->sshServer.loginName
-                              : ((serverNode != NULL)
-                                   ? serverNode->server.ssh.loginName
-                                   : globalOptions.defaultSSHServer->ssh.loginName
-                                );
+    String_set(sshServer->loginName,
+               ((jobOptions != NULL) && !String_isEmpty(jobOptions->sshServer.loginName) )
+                 ? jobOptions->sshServer.loginName
+                 : ((serverNode != NULL)
+                      ? serverNode->server.ssh.loginName
+                      : globalOptions.defaultSSHServer->ssh.loginName
+                   )
+              );
     Password_set(&sshServer->password,
                  ((jobOptions != NULL) && !Password_isEmpty(&jobOptions->sshServer.password))
                    ? &jobOptions->sshServer.password
@@ -6426,18 +6458,22 @@ uint initSSHServerSettings(SSHServer        *sshServer,
                         : &globalOptions.defaultSSHServer->ssh.password
                      )
                 );
-    sshServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey) )
-                              ? jobOptions->sshServer.publicKey
-                              : ((serverNode != NULL)
-                                   ? serverNode->server.ssh.publicKey
-                                   : globalOptions.defaultSSHServer->ssh.publicKey
-                                );
-    sshServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey))
-                              ? jobOptions->sshServer.privateKey
-                              : ((serverNode != NULL)
-                                   ? serverNode->server.ssh.privateKey
-                                   : globalOptions.defaultSSHServer->ssh.privateKey
-                                );
+    duplicateKey(&sshServer->publicKey,
+                 ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.publicKey) )
+                   ? &jobOptions->sshServer.publicKey
+                   : ((serverNode != NULL)
+                        ? &serverNode->server.ssh.publicKey
+                        : &globalOptions.defaultSSHServer->ssh.publicKey
+                     )
+                );
+    duplicateKey(&sshServer->privateKey,
+                 ((jobOptions != NULL) && isKeyAvailable(&jobOptions->sshServer.privateKey))
+                   ? &jobOptions->sshServer.privateKey
+                   : ((serverNode != NULL)
+                        ? &serverNode->server.ssh.privateKey
+                        : &globalOptions.defaultSSHServer->ssh.privateKey
+                     )
+                );
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;
@@ -6447,6 +6483,8 @@ void doneSSHServerSettings(SSHServer *sshServer)
 {
   assert(sshServer != NULL);
 
+  doneKey(&sshServer->privateKey);
+  doneKey(&sshServer->publicKey);
   Password_done(&sshServer->password);
   String_delete(sshServer->loginName);
 }
@@ -6492,18 +6530,22 @@ uint initWebDAVServerSettings(WebDAVServer     *webDAVServer,
                         : &globalOptions.defaultWebDAVServer->webDAV.password
                      )
                 );
-    webDAVServer->publicKey  = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey))
-                                 ? jobOptions->webDAVServer.publicKey
-                                 : ((serverNode != NULL)
-                                      ? serverNode->server.webDAV.publicKey
-                                      : globalOptions.defaultWebDAVServer->webDAV.publicKey
-                                   );
-    webDAVServer->privateKey = ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey))
-                                 ? jobOptions->webDAVServer.privateKey
-                                 : ((serverNode != NULL)
-                                      ? serverNode->server.webDAV.privateKey
-                                      : globalOptions.defaultWebDAVServer->webDAV.privateKey
-                                   );
+    duplicateKey(&webDAVServer->publicKey,
+                 ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.publicKey))
+                   ? &jobOptions->webDAVServer.publicKey
+                   : ((serverNode != NULL)
+                        ? &serverNode->server.webDAV.publicKey
+                        : &globalOptions.defaultWebDAVServer->webDAV.publicKey
+                     )
+                );
+    duplicateKey(&webDAVServer->privateKey,
+                 ((jobOptions != NULL) && isKeyAvailable(&jobOptions->webDAVServer.privateKey))
+                   ? &jobOptions->webDAVServer.privateKey
+                   : ((serverNode != NULL)
+                        ? &serverNode->server.webDAV.privateKey
+                        : &globalOptions.defaultWebDAVServer->webDAV.privateKey
+                     )
+                );
   }
 
   return (serverNode != NULL) ? serverNode->id : 0;
@@ -6513,6 +6555,8 @@ void doneWebDAVServerSettings(WebDAVServer *webDAVServer)
 {
   assert(webDAVServer != NULL);
 
+  doneKey(&webDAVServer->privateKey);
+  doneKey(&webDAVServer->publicKey);
   Password_done(&webDAVServer->password);
   String_delete(webDAVServer->loginName);
 }
