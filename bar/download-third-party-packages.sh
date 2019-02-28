@@ -44,13 +44,11 @@ LIBSSH2_VERSION=1.8.0
 C_ARES_VERSION=1.15.0
 CURL_VERSION=7.62.0
 PCRE_VERSION=8.40
-#SQLITE_YEAR=2016
 SQLITE_YEAR=2017
-#SQLITE_VERSION=3140100
 SQLITE_VERSION=3210000
-# Note: * 61.1 seems to be the latest version without c11
-#       * 58.2 seems to be the latest version which can be compiled on
-#         older 32bit systems, e. g. CentOS 6
+# Note ICU: * 61.1 seems to be the latest version without C++11
+#           * 58.2 seems to be the latest version which can be
+#              compiled on older 32bit systems, e. g. CentOS 6
 ICU_VERSION=58.2
 MTX_VERSION=1.3.12
 LIBCDIO_VERSION=2.0.0
