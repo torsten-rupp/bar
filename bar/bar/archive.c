@@ -2179,8 +2179,8 @@ LOCAL Errors indexAddMeta(ArchiveHandle *archiveHandle,
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : readBARHeader
-* Purpose: read BAR header
+* Name   : readHeader
+* Purpose: read header
 * Input  : archiveHandle - archive handle
 *          chunkHeader - key chunk header
 * Output : -
@@ -2188,9 +2188,9 @@ LOCAL Errors indexAddMeta(ArchiveHandle *archiveHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
-                           const ChunkHeader *chunkHeader
-                          )
+LOCAL Errors readHeader(ArchiveHandle     *archiveHandle,
+                        const ChunkHeader *chunkHeader
+                       )
 {
   Errors               error;
   ChunkBAR             chunkBAR;
@@ -2218,12 +2218,13 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  // add new crypt info
+  // add new crypt info (Note: history BAR version use CTS+simple key derivation)
   archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
                                                  CRYPT_TYPE_NONE,
-                                                 CRYPT_MODE_NONE,
-                                                 CRYPT_KEY_DERIVE_FUNCTION
+                                                 CRYPT_MODE_CTS,
+                                                 CRYPT_KEY_DERIVE_SIMPLE
                                                 );
+  assert(archiveCryptInfoNode != NULL);
 
   // read BAR chunk
   error = Chunk_open(&chunkBAR.info,
@@ -2236,11 +2237,6 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
     Chunk_done(&chunkBAR.info);
     return error;
   }
-
-  // get crypt salt
-  assert(sizeof(archiveHandle->archiveCryptInfo->cryptSalt.data) >= sizeof(chunkBAR.salt));
-  Crypt_setSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt,chunkBAR.salt,sizeof(chunkBAR.salt));
-//fprintf(stderr,"%s, %d: init crypt salt\n",__FILE__,__LINE__); debugDumpMemory(cryptSalt,sizeof(cryptSalt),0);
 
   // close chunk
   error = Chunk_close(&chunkBAR.info);
@@ -2255,7 +2251,99 @@ LOCAL Errors readBARHeader(ArchiveHandle     *archiveHandle,
 }
 
 /***********************************************************************\
-* Name   : readAsymmetricEncryptionKey
+* Name   : readSalt
+* Purpose: read salt
+* Input  : archiveHandle - archive handle
+*          chunkHeader   - key chunk header
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readSalt(ArchiveHandle     *archiveHandle,
+                      const ChunkHeader *chunkHeader
+                     )
+{
+  Errors               error;
+  ChunkSalt            chunkSalt;
+  ArchiveCryptInfoNode *archiveCryptInfoNode;
+
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(chunkHeader != NULL);
+  assert(chunkHeader->id == CHUNK_ID_SALT);
+
+  // check size
+  if (chunkHeader->size < CHUNK_FIXED_SIZE_SALT)
+  {
+    return ERROR_INVALID_CHUNK_SIZE;
+  }
+
+  // init salt chunk
+  error = Chunk_init(&chunkSalt.info,
+                     NULL,  // parentChunkInfo
+                     archiveHandle->chunkIO,
+                     archiveHandle->chunkIOUserData,
+                     CHUNK_ID_SALT,
+                     CHUNK_DEFINITION_SALT,
+//TODO: DEFAULT_ALIGNMENT
+                     0,  // alignment
+                     NULL,  // cryptInfo
+                     &chunkSalt
+                    );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // open salt chunk
+  error = Chunk_open(&chunkSalt.info,
+                     chunkHeader,
+                     CHUNK_FIXED_SIZE_SALT,
+                     archiveHandle
+                    );
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkSalt.info);
+    return error;
+  }
+
+  // check if all data read
+  if (!Chunk_eofSub(&chunkSalt.info))
+  {
+    Chunk_close(&chunkSalt.info);
+    Chunk_done(&chunkSalt.info);
+    return ERRORX_(CORRUPT_DATA,0,"%s",String_cString(archiveHandle->printableStorageName));
+  }
+
+  // add new crypt info
+  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
+                                                 CRYPT_TYPE_NONE,
+                                                 CRYPT_MODE_NONE,
+                                                 CRYPT_KEY_DERIVE_FUNCTION
+                                                );
+  assert(archiveCryptInfoNode != NULL);
+  Crypt_setSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt,
+                &chunkSalt.salt,
+                sizeof(chunkSalt.salt)
+               );
+
+  // close chunk
+  error = Chunk_close(&chunkSalt.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkSalt.info);
+    return error;
+  }
+  Chunk_done(&chunkSalt.info);
+
+  // free resources
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : readEncryptionKey
 * Purpose: read asymmetric encryption key and decrypt with private key
 * Input  : archiveHandle   - archive handle
 *          chunkHeader     - key chunk header
@@ -2406,7 +2494,7 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-  assert(archiveHandle->archiveCryptInfo != NULL);
+//  assert(archiveHandle->archiveCryptInfo != NULL);
 
   // init BAR chunk
   error = Chunk_init(&chunkBAR.info,
@@ -2423,8 +2511,11 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   {
     return error;
   }
+//TODO: remove
+#if 0
   assert(sizeof(chunkBAR.salt) == archiveHandle->archiveCryptInfo->cryptSalt.length);
   Crypt_getSalt(chunkBAR.salt,sizeof(chunkBAR.salt),&archiveHandle->archiveCryptInfo->cryptSalt);
+#endif
 
   // write header chunks
   error = Chunk_create(&chunkBAR.info);
@@ -2444,6 +2535,68 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
 
   // free resources
   Chunk_done(&chunkBAR.info);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : writeSalt
+* Purpose: write new salt chunk
+* Input  : archiveHandle - archive handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeSalt(ArchiveHandle *archiveHandle)
+{
+  Errors    error;
+  ChunkSalt chunkSalt;
+
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(Semaphore_isOwned(&archiveHandle->lock));
+  assert(archiveHandle->archiveCryptInfo != NULL);
+
+  // init key chunk
+  error = Chunk_init(&chunkSalt.info,
+                     NULL,  // parentChunkInfo
+                     archiveHandle->chunkIO,
+                     archiveHandle->chunkIOUserData,
+                     CHUNK_ID_SALT,
+                     CHUNK_DEFINITION_SALT,
+//TODO: DEFAULT_ALIGNMENT
+                     0,  // alignment
+                     NULL,  // cryptInfo
+                     &chunkSalt
+                    );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // get salt
+  assert(sizeof(chunkSalt.salt) == archiveHandle->archiveCryptInfo->cryptSalt.length);
+  Crypt_getSalt(chunkSalt.salt,sizeof(chunkSalt.salt),&archiveHandle->archiveCryptInfo->cryptSalt);
+
+  // write salt
+  error = Chunk_create(&chunkSalt.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkSalt.info);
+    return error;
+  }
+
+  // close chunk
+  error = Chunk_close(&chunkSalt.info);
+  if (error != ERROR_NONE)
+  {
+    Chunk_done(&chunkSalt.info);
+    return error;
+  }
+
+  // free resources
+  Chunk_done(&chunkSalt.info);
 
   return ERROR_NONE;
 }
@@ -2846,7 +2999,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       AUTOFREE_ADD(&autoFreeList,&archiveHandle->create.tmpFileHandle,{ File_close(&archiveHandle->create.tmpFileHandle); });
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
-      // write BAR header
+      // write header
       error = writeHeader(archiveHandle);
       if (error != ERROR_NONE)
       {
@@ -2855,9 +3008,23 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       }
       DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
 
+      // write salt if encryption enabled
+      if (archiveHandle->archiveCryptInfo->cryptType != CRYPT_TYPE_NONE)
+      {
+        // write salt
+        error = writeSalt(archiveHandle);
+        if (error != ERROR_NONE)
+        {
+          AutoFree_cleanup(&autoFreeList);
+          return error;
+        }
+        DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
+      }
+
       // write encrypted key if asymmetric encryption enabled
       if (archiveHandle->archiveCryptInfo->cryptType == CRYPT_TYPE_ASYMMETRIC)
       {
+        // write encrypted key
         error = writeEncryptionKey(archiveHandle);
         if (error != ERROR_NONE)
         {
@@ -3150,7 +3317,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
     }
   }
 
-  // create archive (if not already exists and open)
+  // create new archive
   error = createArchiveFile(archiveHandle);
   if (error != ERROR_NONE)
   {
@@ -4237,9 +4404,6 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         }
 
         // reset header "written"
-        archiveEntryInfo->image.headerWrittenFlag = FALSE;
-
-        // mark header "not written"
         archiveEntryInfo->image.headerWrittenFlag = FALSE;
 
         // create archive file (if not already exists and open)
@@ -5568,7 +5732,7 @@ UNUSED_VARIABLE(storageInfo);
                                                 );
   assert(archiveHandle->archiveCryptInfo != NULL);
 
-  // create new random crypt salt
+  // create intitial random crypt salt
   Crypt_randomSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
 
   // detect crypt block length, crypt key length
@@ -6115,17 +6279,6 @@ const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle)
   return archiveHandle->archiveCryptInfo;
 }
 
-void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
-                          const ArchiveCryptInfo *archiveCryptInfo
-                         )
-{
-  assert(archiveHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
-  assert(archiveCryptInfo != NULL);
-
-  archiveHandle->archiveCryptInfo = archiveCryptInfo;
-}
-
 #if 0
 Errors Archive_storageInterrupt(ArchiveHandle *archiveHandle)
 {
@@ -6275,7 +6428,15 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
     {
       case CHUNK_ID_BAR:
         // read BAR header
-        archiveHandle->pendingError = readBARHeader(archiveHandle,&chunkHeader);
+        archiveHandle->pendingError = readHeader(archiveHandle,&chunkHeader);
+        if (archiveHandle->pendingError != ERROR_NONE)
+        {
+          return FALSE;
+        }
+        break;
+      case CHUNK_ID_SALT:
+        // read salt
+        archiveHandle->pendingError = readSalt(archiveHandle,&chunkHeader);
         if (archiveHandle->pendingError != ERROR_NONE)
         {
           return FALSE;
@@ -7376,6 +7537,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+//TODO: required?
 assert(Semaphore_isOwned(&archiveHandle->lock));
 
     // ensure space in archive
@@ -8572,13 +8734,21 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
     {
       case CHUNK_ID_BAR:
         // BAR header
-        error = readBARHeader(archiveHandle,&chunkHeader);
+        error = readHeader(archiveHandle,&chunkHeader);
         if (error != ERROR_NONE)
         {
           return error;
         }
 
         scanMode = FALSE;
+        break;
+      case CHUNK_ID_SALT:
+        // read salt
+        archiveHandle->pendingError = readSalt(archiveHandle,&chunkHeader);
+        if (archiveHandle->pendingError != ERROR_NONE)
+        {
+          return FALSE;
+        }
         break;
       case CHUNK_ID_KEY:
         {

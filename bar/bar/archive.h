@@ -255,7 +255,7 @@ typedef struct
   LogHandle                *logHandle;                                 // log handle
 
   ArchiveCryptInfoList     archiveCryptInfoList;                       // crypt info list
-  const ArchiveCryptInfo   *archiveCryptInfo;                          // current crypt info
+  ArchiveCryptInfo         *archiveCryptInfo;                          // current crypt info
 
   Semaphore                passwordLock;                               // input password lock
   Password                 *cryptPassword;                             // crypt password for encryption/decryption
@@ -853,9 +853,21 @@ const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle)
 * Notes  : -
 \***********************************************************************/
 
-void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
-                          const ArchiveCryptInfo *archiveCryptInfo
-                         );
+INLINE void Archive_setCryptInfo(ArchiveHandle    *archiveHandle,
+                                 ArchiveCryptInfo *archiveCryptInfo
+                                );
+#if defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__)
+INLINE void Archive_setCryptInfo(ArchiveHandle    *archiveHandle,
+                                 ArchiveCryptInfo *archiveCryptInfo
+                                )
+{
+  assert(archiveHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
+  assert(archiveCryptInfo != NULL);
+
+  archiveHandle->archiveCryptInfo = archiveCryptInfo;
+}
+#endif /* defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__) */
 
 #if 0
 /***********************************************************************\
