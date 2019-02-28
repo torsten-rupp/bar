@@ -950,10 +950,28 @@ showchunks@EXEEXT@: showchunks.o
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
 # create bar-sqlite3
-bar-sqlite3.o: bar-sqlite3.c errors.h index_definition.h
+bar-sqlite3.o: \
+  bar-sqlite3.c \
+  errors.h \
+  index_definition.h
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) $(foreach z,$(CC_INCLUDES),-isystem $z) -c $(SOURCE_DIR)/$*.c -o $*.o
 
-bar-sqlite3: bar-sqlite3.o debug/common/global.o debug/common/lists.o debug/common/strings.o debug/common/stringlists.o debug/common/files.o debug/common/devices.o debug/common/stacktraces.o debug/errors.o debug/sqlite3.o
+bar-sqlite3: \
+  bar-sqlite3.o \
+  debug/errors.o \
+  debug/sqlite3.o \
+  debug/common/global.o \
+  debug/common/lists.o \
+  debug/common/strings.o \
+  debug/common/stringlists.o \
+  debug/common/files.o \
+  debug/common/devices.o \
+  debug/common/database.o \
+  debug/common/threads.o \
+  debug/common/misc.o \
+  debug/common/arrays.o \
+  debug/common/semaphores.o \
+  debug/common/stacktraces.o
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
