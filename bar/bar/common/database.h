@@ -300,16 +300,17 @@ typedef struct
 /***********************************************************************\
 * Name   : DatabaseRowFunction
 * Purpose: execute row callback function
-* Input  : count    - number of columns
-*          names    - column names
+* Input  : names    - column names
 *          values   - column values
+*          count    - number of columns
 *          userData - user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef Errors(*DatabaseRowFunction)(uint count, const char* names[], const char* values[], void *userData);
+typedef Errors(*DatabaseRowFunction)(const char* names[], const char* values[], uint count, void *userData);
+//TODO: remove typedef Errors(*DatabaseRowFunction)(uint count, const char* names[], const char* values[], void *userData);
 
 // database id
 typedef int64 DatabaseId;
@@ -912,7 +913,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 Errors Database_flush(DatabaseHandle *databaseHandle);
 
 /***********************************************************************\
-* Name   : Database_execute
+* Name   : Database_execute, Database_vexecute
 * Purpose: execute SQL statement
 * Input  : databaseHandle - database handle
 *          databaseRowFunction - callback function for row data (can be
@@ -925,6 +926,7 @@ Errors Database_flush(DatabaseHandle *databaseHandle);
 *                                string
 *                                special functions:
 *                                  REGEXP(pattern,case-flag,text)
+*          arguments           - arguments for SQL command string
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -936,6 +938,14 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
                         ulong               *changedRowCount,
                         const char          *command,
                         ...
+                       );
+
+Errors Database_vexecute(DatabaseHandle      *databaseHandle,
+                         DatabaseRowFunction databaseRowFunction,
+                         void                *databaseRowUserData,
+                         ulong               *changedRowCount,
+                         const char          *command,
+                         va_list             arguments
                        );
 
 /***********************************************************************\

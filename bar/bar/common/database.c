@@ -1187,9 +1187,9 @@ LOCAL void debugDatabaseInit(void)
 /***********************************************************************\
 * Name   : vformatSQLString
 * Purpose: format SQL string from command and append
-* Input  : sqlString - SQL string variable
-*          command   - command string with %[l]d, %S, %s
-*          arguments - optional argument list
+* Input  : sqlString   - SQL string variable
+*          command     - command string with %[l]d, %S, %s
+*          arguments   - optional argument list
 * Output : -
 * Return : SQL string
 * Notes  : -
@@ -1201,28 +1201,28 @@ LOCAL String vformatSQLString(String     sqlString,
                              )
 {
   const char *s;
-  char       ch;
   bool       longFlag,longLongFlag;
   char       quoteFlag;
   Value      value;
   const char *t;
   ulong      i;
+  char       ch;
 
   assert(sqlString != NULL);
   assert(command != NULL);
 
-  s = command;
-  while ((ch = (*s)) != '\0')
+  s  = command;
+  while (!stringIsEmpty(s))
   {
-    switch (ch)
+    switch (stringAt(s,0))
     {
       case '\\':
         // escaped character
         String_appendChar(sqlString,'\\');
         s++;
-        if ((*s) != '\0')
+        if (!stringIsEmpty(s))
         {
-          String_appendChar(sqlString,*s);
+          String_appendChar(sqlString,stringAt(s,0));
           s++;
         }
         break;
@@ -1233,10 +1233,10 @@ LOCAL String vformatSQLString(String     sqlString,
         // check for longlong/long flag
         longLongFlag = FALSE;
         longFlag     = FALSE;
-        if ((*s) == 'l')
+        if (stringAt(s,0) == 'l')
         {
           s++;
-          if ((*s) == 'l')
+          if (stringAt(s,0) == 'l')
           {
             s++;
             longLongFlag = TRUE;
@@ -1248,11 +1248,11 @@ LOCAL String vformatSQLString(String     sqlString,
         }
 
         // quoting flag (ignore quote char)
-        if (   ((*s) != '\0')
-            && !isalpha(*s)
-            && ((*s) != '%')
-            && (   ((*(s+1)) == 's')
-                || ((*(s+1)) == 'S')
+        if (   !stringIsEmpty(s)
+            && !isalpha(stringAt(s,0))
+            && (stringAt(s,0) != '%')
+            && (   (stringAt(s,1) == 's')
+                || (stringAt(s,1) == 'S')
                )
            )
         {
@@ -1264,130 +1264,133 @@ LOCAL String vformatSQLString(String     sqlString,
           quoteFlag = FALSE;
         }
 
-        // handle format type
-        switch (*s)
+        if (!stringIsEmpty(s))
         {
-          case 'd':
-            // integer
-            s++;
+          // handle format type
+          switch (stringAt(s,0))
+          {
+            case 'd':
+              // integer
+              s++;
 
-            if      (longLongFlag)
-            {
-              value.ll = va_arg(arguments,int64);
-              String_appendFormat(sqlString,"%lld",value.ll);
-            }
-            else if (longFlag)
-            {
-              value.l = va_arg(arguments,int64);
-              String_appendFormat(sqlString,"%ld",value.l);
-            }
-            else
-            {
-              value.i = va_arg(arguments,int);
-              String_appendFormat(sqlString,"%d",value.i);
-            }
-            break;
-          case 'u':
-            // unsigned integer
-            s++;
-
-            if      (longLongFlag)
-            {
-              value.ull = va_arg(arguments,uint64);
-              String_appendFormat(sqlString,"%llu",value.ull);
-            }
-            else if (longFlag)
-            {
-              value.ul = va_arg(arguments,ulong);
-              String_appendFormat(sqlString,"%lu",value.ul);
-            }
-            else
-            {
-              value.ui = va_arg(arguments,uint);
-              String_appendFormat(sqlString,"%u",value.ui);
-            }
-            break;
-          case 's':
-            // C string
-            s++;
-
-            value.s = va_arg(arguments,const char*);
-
-            if (quoteFlag) String_appendChar(sqlString,'\'');
-            if (value.s != NULL)
-            {
-              t = value.s;
-              while ((ch = (*t)) != '\0')
+              if      (longLongFlag)
               {
-                switch (ch)
-                {
-                  case '\'':
-                    if (quoteFlag)
-                    {
-                      String_appendCString(sqlString,"''");
-                    }
-                    else
-                    {
-                      String_appendChar(sqlString,'\'');
-                    }
-                    break;
-                  default:
-                    String_appendChar(sqlString,ch);
-                    break;
-                }
-                t++;
+                value.ll = va_arg(arguments,int64);
+                String_appendFormat(sqlString,"%lld",value.ll);
               }
-            }
-            if (quoteFlag) String_appendChar(sqlString,'\'');
-            break;
-          case 'S':
-            // string
-            s++;
-
-            value.string = va_arg(arguments,String);
-
-            if (quoteFlag) String_appendChar(sqlString,'\'');
-            if (value.string != NULL)
-            {
-              i = 0L;
-              while (i < String_length(value.string))
+              else if (longFlag)
               {
-                ch = String_index(value.string,i);
-                switch (ch)
-                {
-                  case '\'':
-                    if (quoteFlag)
-                    {
-                      String_appendCString(sqlString,"''");
-                    }
-                    else
-                    {
-                      String_appendChar(sqlString,'\'');
-                    }
-                    break;
-                  default:
-                    String_appendChar(sqlString,ch);
-                    break;
-                }
-                i++;
+                value.l = va_arg(arguments,int64);
+                String_appendFormat(sqlString,"%ld",value.l);
               }
-            }
-            if (quoteFlag) String_appendChar(sqlString,'\'');
-            break;
-          case '%':
-            // %%
-            s++;
+              else
+              {
+                value.i = va_arg(arguments,int);
+                String_appendFormat(sqlString,"%d",value.i);
+              }
+              break;
+            case 'u':
+              // unsigned integer
+              s++;
 
-            String_appendChar(sqlString,'%');
-            break;
-          default:
-            String_appendChar(sqlString,'%');
-            String_appendChar(sqlString,*s);
-            break;
+              if      (longLongFlag)
+              {
+                value.ull = va_arg(arguments,uint64);
+                String_appendFormat(sqlString,"%llu",value.ull);
+              }
+              else if (longFlag)
+              {
+                value.ul = va_arg(arguments,ulong);
+                String_appendFormat(sqlString,"%lu",value.ul);
+              }
+              else
+              {
+                value.ui = va_arg(arguments,uint);
+                String_appendFormat(sqlString,"%u",value.ui);
+              }
+              break;
+            case 's':
+              // C string
+              s++;
+
+              value.s = va_arg(arguments,const char*);
+
+              if (quoteFlag) String_appendChar(sqlString,'\'');
+              if (value.s != NULL)
+              {
+                t = value.s;
+                while (!stringIsEmpty(t))
+                {
+                  switch (stringAt(t,0))
+                  {
+                    case '\'':
+                      if (quoteFlag)
+                      {
+                        String_appendCString(sqlString,"''");
+                      }
+                      else
+                      {
+                        String_appendChar(sqlString,'\'');
+                      }
+                      break;
+                    default:
+                      String_appendChar(sqlString,stringAt(t,0));
+                      break;
+                  }
+                  t++;
+                }
+              }
+              if (quoteFlag) String_appendChar(sqlString,'\'');
+              break;
+            case 'S':
+              // string
+              s++;
+
+              value.string = va_arg(arguments,String);
+
+              if (quoteFlag) String_appendChar(sqlString,'\'');
+              if (value.string != NULL)
+              {
+                i = 0L;
+                while (i < String_length(value.string))
+                {
+                  ch = String_index(value.string,i);
+                  switch (ch)
+                  {
+                    case '\'':
+                      if (quoteFlag)
+                      {
+                        String_appendCString(sqlString,"''");
+                      }
+                      else
+                      {
+                        String_appendChar(sqlString,'\'');
+                      }
+                      break;
+                    default:
+                      String_appendChar(sqlString,ch);
+                      break;
+                  }
+                  i++;
+                }
+              }
+              if (quoteFlag) String_appendChar(sqlString,'\'');
+              break;
+            case '%':
+              // %%
+              s++;
+
+              String_appendChar(sqlString,'%');
+              break;
+            default:
+              String_appendChar(sqlString,'%');
+              String_appendChar(sqlString,stringAt(s,0));
+              break;
+          }
         }
         break;
       default:
-        String_appendChar(sqlString,ch);
+        String_appendChar(sqlString,stringAt(s,0));
         s++;
         break;
     }
@@ -1456,7 +1459,7 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
   if (text != NULL)
   {
     timestamp = strtol(text,&s,10);
-    if ((*s) != '\0')
+    if (!stringIsEmpty(s))
     {
       #ifdef HAVE_GETDATE_R
         tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
@@ -1470,7 +1473,7 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
       else
       {
         s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
-        if ((s != NULL) && ((*s) == '\0'))
+        if ((s != NULL) && stringIsEmpty(s))
         {
           timestamp = (uint64)timegm(&tmBuffer);
         }
@@ -1846,8 +1849,8 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
-  assert(databaseHandle->handle != NULL);
   assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
+  assert(databaseHandle->handle != NULL);
 
   if (changedRowCount != NULL) (*changedRowCount) = 0L;
 
@@ -1937,14 +1940,9 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
             names[i]  = sqlite3_column_name(statementHandle,i);
             values[i] = (const char*)sqlite3_column_text(statementHandle,i);
           }
-          error = databaseRowFunction(count,names,values,databaseRowUserData);
+          error = databaseRowFunction(names,values,count,databaseRowUserData);
 //TODO callback
         }
-      }
-
-      if (changedRowCount != NULL)
-      {
-        (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->handle);
       }
     }
     while ((error == ERROR_NONE) && (sqliteResult == SQLITE_ROW));
@@ -1954,6 +1952,12 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
     {
       free(values);
       free(names);
+    }
+
+    // get number of changes
+    if (changedRowCount != NULL)
+    {
+      (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->handle);
     }
 
     // done SQL statement
@@ -4876,9 +4880,43 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
                         ...
                        )
 {
-  String  sqlString;
   va_list arguments;
   Errors  error;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->handle != NULL);
+  assert(command != NULL);
+
+  va_start(arguments,command);
+  {
+    error = Database_vexecute(databaseHandle,
+                              databaseRowFunction,
+                              databaseRowUserData,
+                              changedRowCount,
+                              command,
+                              arguments
+                             );
+  }
+  va_end(arguments);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
+Errors Database_vexecute(DatabaseHandle      *databaseHandle,
+                         DatabaseRowFunction databaseRowFunction,
+                         void                *databaseRowUserData,
+                         ulong               *changedRowCount,
+                         const char          *command,
+                         va_list             arguments
+                        )
+{
+  String sqlString;
+  Errors error;
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -4889,12 +4927,10 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
   if (changedRowCount != NULL) (*changedRowCount) = 0L;
 
   // format SQL command string
-  va_start(arguments,command);
   sqlString = vformatSQLString(String_new(),
                                command,
                                arguments
                               );
-  va_end(arguments);
 
   // execute SQL command
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
@@ -4953,10 +4989,12 @@ Errors Database_execute(DatabaseHandle      *databaseHandle,
 
   // format SQL command string
   va_start(arguments,command);
-  sqlString = vformatSQLString(String_new(),
-                               command,
-                               arguments
-                              );
+  {
+    sqlString = vformatSQLString(String_new(),
+                                 command,
+                                 arguments
+                                );
+  }
   va_end(arguments);
   #ifndef NDEBUG
     databaseQueryHandle->sqlString = String_duplicate(sqlString);
