@@ -11,9 +11,10 @@
   * added meta info chunk: store user name, host name,
     job UUID, schedule UUID, type, created date/time,
     comment into archives
-  * hardend encryption: added salt to crypt (Note: this
-    required a new archive format BAR1; the old format BAR0
-    can still be read)
+  * hardend encryption: added salt to crypt
+    NOTE: this required a new archive format BAR1! The old
+    format BAR0 can still be read, but older versions of BAR
+    cannot read archives with BAR1 format.
   * hardend encryption: use key derivation function (Note: this
     required a new archive format BAR1; the old format BAR0
     can still be read)
@@ -26,6 +27,11 @@
   * added option --directory, -C
   * added option --convert
   * added option --no-stop-on-attribute-error
+  * added option --storage-list-stdin, --storage-list,
+    --storage-command
+  * added option --include-file-list, --include-image-list,
+    --exclude-list
+  * renamed option numeric-permission -> numeric-permissions
   * support SSL WebDAV: webdavs
   * renamed options --server-jobs-directory to --jobs-directory;
     option --server-jobs-directory is now deprecated
@@ -39,6 +45,8 @@
   * fixed command line option: override settings in
     configuration/job files
   * upgraded libgcrypt 1.8.0, libgpg-error 1.25
+  * fixed newest entries: name only
+  * fixed delete from index: directories
   * fixed schedule info on job clone
   * fixed parsing passwords in SSH/SFTP/WebDav specifiers
   * fixed checking if archive exists
@@ -56,6 +64,7 @@
   * fixed SFTP directory list
   * fixed parse numeric permissions
   * fixed parse owner
+  * improved database delete: FTS entries
   * upgrade OpenSSL 1.1.1
   * upgrade ICU 63.1
   * upgrade GnuTLS 3.5.19
