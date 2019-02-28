@@ -414,6 +414,7 @@ public class Settings
   public static String                         indexDatabaseEntitiesListName   = null;
   public static String                         indexDatabaseStoragesListName   = null;
   public static String                         indexDatabaseEntriesListName    = null;
+  public static boolean                        indexDatabaseEntriesNewestOnly  = false;
   public static boolean                        indexDatabaseHistoryList        = false;
 
   public static String                         restoreStorageName              = null;

@@ -1540,6 +1540,7 @@ public class BARControl
     new Option("--index-database-entities-list", "-n",Options.Types.STRING,     "indexDatabaseEntitiesListName",""),
     new Option("--index-database-storages-list", "-a",Options.Types.STRING,     "indexDatabaseStoragesListName",""),
     new Option("--index-database-entries-list",  "-e",Options.Types.STRING,     "indexDatabaseEntriesListName"),
+    new Option("--index-database-entries-newest",null,Options.Types.BOOLEAN,    "indexDatabaseEntriesNewestOnly"),
     new Option("--index-database-history-list",  null,Options.Types.BOOLEAN,    "indexDatabaseHistoryList"),
 
     new Option("--restore",                      null,Options.Types.STRING,     "restoreStorageName"),
@@ -1846,6 +1847,8 @@ public class BARControl
     System.out.println("         -n|--index-database-entities-list[=<text>] - list index entities");
     System.out.println("         -a|--index-database-storages-list=<text>   - list index storage archives");
     System.out.println("         -e|--index-database-entries-list=<text>    - list index entries");
+    System.out.println("         --index-database-entries-newest            - list index newest entries only");
+    System.out.println("         --index-database-history-list              - list index history");
     System.out.println("");
     System.out.println("         --restore=<name>                           - restore storage <name>");
     System.out.println("         --destination=<directory>                  - destination to restore entries");
@@ -4347,7 +4350,8 @@ Dprintf.dprintf("-----------------------------------");
                                             )
                               );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST indexType=* newestOnly=no name=%'S limit=1024",
+            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST indexType=* newestOnly=%y name=%'S limit=1024",
+                                                         Settings.indexDatabaseEntriesNewestOnly,
                                                          Settings.indexDatabaseEntriesListName
                                                         ),
                                      1,  // debug level
