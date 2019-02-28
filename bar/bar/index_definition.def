@@ -280,7 +280,6 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
           permission     =NEW.permission,
           size           =NEW.size
       WHERE     entryId!=NEW.id
-            AND size=NEW.size
             AND name=NEW.name
             AND NEW.timeLastChanged>timeLastChanged;
   END;
@@ -294,7 +293,6 @@ CREATE TRIGGER BEFORE DELETE ON entries
       SELECT id,storageId,name,type,size,MAX(timeLastChanged)
         FROM entries
         WHERE     id!=OLD.id
-              AND size=OLD.size
               AND name=OLD.name
         ORDER BY timeLastChanged DESC
         LIMIT 1;
@@ -364,8 +362,8 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
   id                    INTEGER PRIMARY KEY,
-  storageId             INTEGER NOT NULL REFERENCES storage(id),  // Note: redundancy for faster access
-  entryId               INTEGER NOT NULL REFERENCES entries(id),
+  storageId             INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+  entryId               INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   name                  TEXT,                                     // Note: redundancy for faster access of parent directories
 
   // updated by updateDirectoryContentAggregates()
