@@ -4856,7 +4856,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 * Purpose: init fragment
 * Input  : createInfo - create info structure
 *          name       - name of entry
-*          size       - size [bytes] or 0
+*          size       - total size of entry [bytes] or 0
 * Output : -
 * Return : -
 * Notes  : -
@@ -4880,7 +4880,7 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size)
     }
     assert(fragmentNode != NULL);
 
-    // status update (Note: additional unprotected check to optimize number of locks)
+    // status update
     if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
         || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
        )
@@ -4962,6 +4962,7 @@ LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString nam
       fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
       if (fragmentNode != NULL)
       {
+        // set new current status info
         createInfo->statusInfoCurrentFragmentNode = fragmentNode;
 
         FragmentList_addRange(fragmentNode,offset,length);
@@ -4972,10 +4973,8 @@ LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString nam
       }
       else
       {
+        // clear current status info
         createInfo->statusInfoCurrentFragmentNode = NULL;
-
-        createInfo->statusInfo.entry.doneSize  = 0;
-        createInfo->statusInfo.entry.totalSize = 0;
       }
     }
   }
@@ -5011,8 +5010,11 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
   {
     if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
     {
+      // clear current status info
       createInfo->statusInfoCurrentFragmentNode = NULL;
     }
+
+    // free resources
     FragmentList_discard(&createInfo->statusInfoFragmentList,fragmentNode);
   }
 
@@ -5027,6 +5029,7 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
   Semaphore_unlock(&createInfo->statusInfoLock);
 }
 
+//TODO: comment
 #define STATUS_INFO_GET(createInfo,name) \
   for (SemaphoreLock semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
        semaphoreLock; \
@@ -5422,7 +5425,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
              );
   }
 
-  // update done entries
+  // update status info
   STATUS_INFO_UPDATE(createInfo,fileName,offset,0LL)
   {
     createInfo->statusInfo.done.count++;
@@ -5822,7 +5825,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
              );
   }
 
-  // update done entries
+  // update status info
   STATUS_INFO_UPDATE(createInfo,deviceName,blockOffset*(uint64)deviceInfo.blockSize,0LL)
   {
     createInfo->statusInfo.done.count++;
@@ -5970,7 +5973,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     printInfo(1,"OK (not stored)\n");
   }
 
-  // update done entries
+  // update status info
   STATUS_INFO_UPDATE(createInfo,directoryName,0LL,0LL)
   {
     createInfo->statusInfo.done.count++;
@@ -6165,7 +6168,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     printInfo(1,"OK (not stored)\n");
   }
 
-  // update done entries
+  // update status info
   STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
   {
     createInfo->statusInfo.done.count++;
@@ -6532,7 +6535,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
              );
   }
 
-  // update done entries
+  // update status info
   STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
   {
     createInfo->statusInfo.done.count += StringList_count(fileNameList);
@@ -6689,7 +6692,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     printInfo(1,"OK (not stored)\n");
   }
 
-  // update done entries
+  // update status info
   STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
   {
     createInfo->statusInfo.done.count++;
