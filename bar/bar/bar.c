@@ -8788,27 +8788,25 @@ void initStatusInfo(StatusInfo *statusInfo)
 {
   assert(statusInfo != NULL);
 
-  statusInfo->done.count           = 0L;
-  statusInfo->done.size            = 0LL;
-  statusInfo->total.count          = 0L;
-  statusInfo->total.size           = 0LL;
-  statusInfo->collectTotalSumDone  = FALSE;
-  statusInfo->skipped.count        = 0L;
-  statusInfo->skipped.size         = 0LL;
-  statusInfo->error.count          = 0L;
-  statusInfo->error.size           = 0LL;
-  statusInfo->archiveSize          = 0LL;
-  statusInfo->compressionRatio     = 0.0;
-  statusInfo->entry.name           = String_new();
-  statusInfo->entry.doneSize       = 0LL;
-  statusInfo->entry.totalSize      = 0LL;
-  statusInfo->storage.name         = String_new();
-  statusInfo->storage.doneSize     = 0LL;
-  statusInfo->storage.totalSize    = 0LL;
-  statusInfo->volume.number        = 0;
-  statusInfo->volume.progress      = 0.0;
-//TODO: remove
-//  statusInfo->estimatedRestTime   = 0;
+  statusInfo->done.count          = 0L;
+  statusInfo->done.size           = 0LL;
+  statusInfo->total.count         = 0L;
+  statusInfo->total.size          = 0LL;
+  statusInfo->collectTotalSumDone = FALSE;
+  statusInfo->skipped.count       = 0L;
+  statusInfo->skipped.size        = 0LL;
+  statusInfo->error.count         = 0L;
+  statusInfo->error.size          = 0LL;
+  statusInfo->archiveSize         = 0LL;
+  statusInfo->compressionRatio    = 0.0;
+  statusInfo->entry.name          = String_new();
+  statusInfo->entry.doneSize      = 0LL;
+  statusInfo->entry.totalSize     = 0LL;
+  statusInfo->storage.name        = String_new();
+  statusInfo->storage.doneSize    = 0LL;
+  statusInfo->storage.totalSize   = 0LL;
+  statusInfo->volume.number       = 0;
+  statusInfo->volume.progress     = 0.0;
   statusInfo->message             = String_new();
 }
 
