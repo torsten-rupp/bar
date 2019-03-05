@@ -4937,49 +4937,50 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 * Input  : createInfo - create info structure
 *          name - name of entry
 * Output : -
-* Return : TRUE iff locked
+* Return : always TRUE
 * Notes  : -
 \***********************************************************************/
 
 LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString name, uint64 offset, uint64 length)
 {
-  SemaphoreLock semaphoreLock;
-  FragmentNode  *fragmentNode;
+  FragmentNode *fragmentNode;
 
   assert(createInfo != NULL);
 
   // lock
-  semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-  if (semaphoreLock)
+  Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+
+  // update fragment node
+  fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+  if (fragmentNode != NULL)
   {
-    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
-       )
-    {
-      String_set(createInfo->statusInfo.entry.name,name);
-
-      // get fragment node (if possible)
-      fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
-      if (fragmentNode != NULL)
-      {
-        // set new current status info
-        createInfo->statusInfoCurrentFragmentNode = fragmentNode;
-
-        FragmentList_addRange(fragmentNode,offset,length);
-        createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
-
-        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
-      }
-      else
-      {
-        // clear current status info
-        createInfo->statusInfoCurrentFragmentNode = NULL;
-      }
-    }
+    FragmentList_addRange(fragmentNode,offset,length);
   }
 
-  return semaphoreLock;
+  // update status (if possible)
+  if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+      || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+     )
+  {
+    // set new current status
+    createInfo->statusInfoCurrentFragmentNode = fragmentNode;
+    createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+
+    // update status
+    String_set(createInfo->statusInfo.entry.name,name);
+    if (fragmentNode != NULL)
+    {
+      createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+      createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+    }
+  }
+  else
+  {
+    // clear current status info
+//      createInfo->statusInfoCurrentFragmentNode = NULL;
+  }
+
+  return TRUE;
 }
 
 /***********************************************************************\
