@@ -266,9 +266,7 @@ public class TabRestore
 
     public long                     id;
 
-    private TreeItem                treeItem;                 // reference tree item or null
     private TreeItemUpdateRunnable  treeItemUpdateRunnable;
-    private TableItem               tableItem;                // reference table item or null
     private TableItemUpdateRunnable tableItemUpdateRunnable;
     private Menu                    subMenu;                  // reference sub-menu or null
     private MenuItem                menuItem;                 // reference menu item or null
@@ -280,55 +278,10 @@ public class TabRestore
     IndexData(long indexId)
     {
       this.id        = indexId;
-      this.treeItem  = null;
-      this.tableItem = null;
+//      this.treeItem  = null;
+//      this.tableItem = null;
       this.subMenu   = null;
       this.menuItem  = null;
-    }
-
-    /** get tree item reference
-     * @param tree item or null
-     */
-    public TreeItem getTreeItem()
-    {
-      return treeItem;
-    }
-
-    /** set tree item reference
-     * @param treeItem tree item
-     * @param treeItemUpdateRunnable tree item update runnable
-     */
-//TODO: obsolete?
-    public void setTreeItem(TreeItem treeItem, TreeItemUpdateRunnable treeItemUpdateRunnable)
-    {
-      this.treeItem               = treeItem;
-      this.treeItemUpdateRunnable = treeItemUpdateRunnable;
-      update();
-    }
-
-    /** clear tree item reference
-     */
-    public void clearTreeItem()
-    {
-      this.treeItem = null;
-    }
-
-    /** set table item reference
-     * @param tableItem table item
-     * @param tableItemUpdateRunnable table item update runnable
-     */
-    protected void updateTableItem(TableItem tableItem, TableItemUpdateRunnable tableItemUpdateRunnable)
-    {
-      this.tableItem               = tableItem;
-      this.tableItemUpdateRunnable = tableItemUpdateRunnable;
-      update();
-    }
-
-    /** clear table item reference
-     */
-    public void clearTableItem()
-    {
-      this.tableItem = null;
     }
 
     /** get sub-menu reference
@@ -424,21 +377,7 @@ public class TabRestore
      */
     public void setState(IndexStates indexState)
     {
-      update();
-    }
-
-    /** update tree/table item
-     */
-    public void update()
-    {
-      if ((treeItem != null) && !treeItem.isDisposed())
-      {
-        treeItemUpdateRunnable.update(treeItem,this);
-      }
-      if ((tableItem != null) && !tableItem.isDisposed())
-      {
-        tableItemUpdateRunnable.update(tableItem,this);
-      }
+      // nothing to do
     }
 
     /** get info string
@@ -994,15 +933,6 @@ public class TabRestore
       return totalEntrySize;
     }
 
-    /** set tree item reference
-     * @param treeItem tree item
-     */
-//TODO: obsolete?
-    public void setTreeItem(TreeItem treeItem)
-    {
-      setTreeItem(treeItem,treeItemUpdateRunnable);
-    }
-
     /** set menu item reference
      * @param menuItem menu item
      */
@@ -1186,15 +1116,6 @@ Dprintf.dprintf("");
     public long getTotalEntrySize()
     {
       return totalEntrySize;
-    }
-
-    /** set tree item reference
-     * @param treeItem tree item
-     */
-//TODO: obsolete?
-    public void setTreeItem(TreeItem treeItem)
-    {
-      setTreeItem(treeItem,treeItemUpdateRunnable);
     }
 
     /** set menu item reference
@@ -1514,30 +1435,6 @@ Dprintf.dprintf("");
       return indexState;
     }
 
-    /** set tree item reference
-     * @param treeItem tree item
-     */
-//TODO: obsolete?
-    public void setTreeItem(TreeItem treeItem)
-    {
-      setTreeItem(treeItem,treeItemUpdateRunnable);
-    }
-
-    /** set table item reference
-     * @param tableItem table item
-     */
-    public void XupdateItem(TableItem tableItem)
-    {
-      Widgets.setTableItem(tableItem,
-                           (Object)this,
-                           name,
-                           SIMPLE_DATE_FORMAT.format(new Date(createdDateTime*1000L)),
-                           Units.formatByteSize(totalEntrySize),
-                           indexState.toString()
-                          );
-
-    }
-
     /** get info string
      * @return string
      */
@@ -1552,7 +1449,7 @@ Dprintf.dprintf("");
     public void setState(IndexStates indexState)
     {
       this.indexState = indexState;
-      update();
+//      update();
     }
 
     /** write storage index data object to object stream
@@ -1706,41 +1603,6 @@ Dprintf.dprintf("");
     }
 
     return index;
-
-//TODO
-/*
-//Dprintf.dprintf("---------- %d",treeItems.length);
-    int index = 0;
-
-    if (treeItems.length > 0)
-    {
-      int i      = 0;
-      int i0     = 0;
-      int i1     = treeItems.length-1;
-      int result = -1;
-      while (i0 < i1)
-      {
-        i = (i1+i0)/2;
-//  Dprintf.dprintf("i=%d: %s <-> %s",i,indexData,(IndexData)treeItems[i].getData());
-        result = indexDataComparator.compare(indexData,(IndexData)treeItems[i].getData());
-        if      (result < 0) i1 = i-1;     // before i
-        else if (result > 0) i0 = i+1;     // after i
-        else                 i0 = i1 = i;  // exactly found at i
-      }
-//Dprintf.dprintf("%d: %d %d %d",result,i,i0,i1);
-      if (indexDataComparator.compare(indexData,(IndexData)treeItems[i0].getData()) < 0)
-      {
-        index = i0;
-      }
-      else
-      {
-        index = i0+1;
-      }
-    }
-
-//Dprintf.dprintf("at=%d",index);
-    return index;
-*/
   }
 
   /** find index for insert of item in sorted storage item list
@@ -1761,31 +1623,6 @@ Dprintf.dprintf("");
   private int findStorageTreeIndex(TreeItem treeItem, IndexData indexData, IndexDataComparator indexDataComparator)
   {
     TreeItem subTreeItems[] = treeItem.getItems();
-
-/* Note: binary search not possible because items are not sorted
-    int i0 = 0;
-    int i1 = subTreeItems.length-1;
-    while (i0 < i1)
-    {
-      int i = (i1-i0)/2;
-      int result = indexDataComparator.compare(indexData,(IndexData)subTreeItems[i].getData());
-      if      (result < 0) i0 = i+1;
-      else if (result > 0) i1 = i-1;
-      else return i;
-    }
-
-    return subTreeItems.length;
-*/
-/*
-    int index = 0;
-    while (   (index < subTreeItems.length)
-           && (indexDataComparator.compare(indexData,(IndexData)subTreeItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;*/
 
     int index = 0;
 
@@ -1836,7 +1673,7 @@ Dprintf.dprintf("");
     MenuItem            menuItems[]         = menu.getItems();
     IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTree);
 
-//TODO: binary search
+//TODO: binary search?
     int index = STORAGE_TREE_MENU_START_INDEX;
     while (   (index < menuItems.length)
            && (indexDataComparator.compare(uuidIndexData,(UUIDIndexData)menuItems[index].getData()) > 0)
@@ -1881,22 +1718,7 @@ Dprintf.dprintf("");
   {
     TableItem tableItems[] = widgetStorageTable.getItems();
 
-/*
-    int i0 = 0;
-    int i1 = tableItems.length-1;
-    while (i0 < i1)
-    {
-      int i = (i1-i0)/2;
-      int result = indexDataComparator.compare(indexData,(IndexData)tableItems[i].getData());
-      if      (result < 0) i0 = i+1;
-      else if (result > 0) i1 = i-1;
-      else return i;
-    }
-
-    return tableItems.length;*/
-
     int index = 0;
-Dprintf.dprintf("cirrect?");
 
     if (tableItems.length > 0)
     {
@@ -2076,8 +1898,6 @@ Dprintf.dprintf("cirrect?");
           // wait for trigger or sleep a short time
           synchronized(trigger)
           {
-//TODO
-//Dprintf.dprintf("WAIOTTTTTTTTt");
             if (!this.requestUpdateStorageCount && this.requestUpdateOffsets.isEmpty())
             {
               // wait for refresh request trigger or timeout
@@ -2387,7 +2207,6 @@ Dprintf.dprintf("cirrect?");
             {
               for (final UUIDIndexData uuidIndexData : uuidIndexDataArray)
               {
-//Dprintf.dprintf("uuidIndexData=%s");
                 TreeItem uuidTreeItem = Widgets.getTreeItem(widgetStorageTree,uuidIndexComperator,uuidIndexData);
                 if (uuidTreeItem == null)
                 {
@@ -2402,8 +2221,6 @@ Dprintf.dprintf("cirrect?");
                                                         Units.formatByteSize(uuidIndexData.totalSize),
                                                         ""
                                                        );
-//TODO
-//uuidIndexData.setTreeItem(uuidTreeItem);
                   uuidTreeItem.setChecked(checkedIndexIdSet.contains(uuidIndexData.id));
                 }
                 else
@@ -2443,7 +2260,6 @@ Dprintf.dprintf("cirrect?");
                 {
                   IndexData indexData = (IndexData)treeItem.getData();
                   Widgets.removeTreeItem(widgetStorageTree,treeItem);
-                  indexData.clearTreeItem();
                 }
               }
             }
@@ -2588,8 +2404,6 @@ Dprintf.dprintf("cirrect?");
                                                         Units.formatByteSize(entityIndexData.totalSize),
                                                         ""
                                                        );
-//TODO
-//entityIndexData.setTreeItem(entityTreeItem);
                 entityTreeItem.setChecked(checkedIndexIdSet.contains(entityIndexData.id));
               }
               else
@@ -2633,8 +2447,6 @@ Dprintf.dprintf("cirrect?");
                   if (indexData != null)
                   {
                     setStorageList(indexData.id,false);
-//TODO: remove?
-                    indexData.clearTreeItem();
                   }
                 }
               }
@@ -2837,8 +2649,6 @@ Dprintf.dprintf("cirrect?");
                 if (indexData != null)
                 {
                   setStorageList(indexData.id,false);
-//TODO: remove?
-                  indexData.clearTreeItem();
                 }
 
                 Widgets.removeTreeItem(widgetStorageTree,treeItem);
@@ -2932,7 +2742,7 @@ Dprintf.dprintf("cirrect?");
         BARServer.asyncCommandWait(storageCountCommand);
         storageCountCommand.getResult(valueMap);
         storageCount = valueMap.getInt("storageCount");
-  //TODO: remove
+//TODO: remove
         if (storageCount < 0)
         {
           if (Settings.debugLevel > 0)
@@ -3415,8 +3225,6 @@ Dprintf.dprintf("cirrect?");
      */
     public int compare(EntryIndexData entryIndexData1, EntryIndexData entryIndexData2)
     {
-//Dprintf.dprintf("");
-//if ((entryIndexData1 == null) || (entryIndexData2 == null)) return 0;
       if      ((entryIndexData1 != null) && (entryIndexData2 != null))
       {
         switch (sortMode)
@@ -3641,7 +3449,6 @@ Dprintf.dprintf("cirrect?");
     /** get entry name
      * @return entry name
      */
-//TODO: getEntryNames
     public String getEntryName()
     {
       return entryName;
@@ -3965,7 +3772,7 @@ Dprintf.dprintf("cirrect?");
                                                                                 sortMode[0],
                                                                                 ordering[0]
                                                                                ),
-                                                            2,  // debugLevel
+0,//                                                            2,  // debugLevel
                                                             new Command.ResultHandler()
                                                             {
                                                               @Override
@@ -5475,8 +5282,8 @@ Dprintf.dprintf("cirrect?");
             for (TreeItem treeItem : widgetStorageTree.getSelection())
             {
               IndexData indexData = (IndexData)treeItem.getData();
-Dprintf.dprintf("");
-//              indexData.setChecked(!indexData.isChecked());
+
+              treeItem.setChecked(!treeItem.getChecked());
 
               Event treeEvent = new Event();
               treeEvent.item   = treeItem;
@@ -5753,8 +5560,8 @@ Dprintf.dprintf("");
             for (TableItem tableItem : widgetStorageTable.getSelection())
             {
               IndexData indexData = (IndexData)tableItem.getData();
-Dprintf.dprintf("");
-//              indexData.setChecked(!indexData.isChecked());
+
+              tableItem.setChecked(!tableItem.getChecked());
 
               Event treeEvent = new Event();
               treeEvent.item   = tableItem;
@@ -6319,11 +6126,6 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-//TODO
-Dprintf.dprintf("remove");
-//            getCheckedIndexData(indexDataHashSet);
-//            getSelectedIndexData(indexDataHashSet);
-
             restore(RestoreTypes.ARCHIVES,checkedIndexIdSet);
           }
         });
@@ -8445,7 +8247,7 @@ Dprintf.dprintf("remove");
 
               updateStorageTreeTableThread.triggerUpdate();
             }
-//TODO: pass error to calelr?
+//TODO: pass error to caller?
             catch (CommunicationError error)
             {
               final String errorMessage = error.getMessage();
@@ -9070,6 +8872,7 @@ Dprintf.dprintf("remove");
     }
 
     // check/uncheck all entries
+Dprintf.dprintf("/////////////////////////////////////////////////");
     if (checked)
     {
       if (doit[0])
@@ -9088,7 +8891,7 @@ Dprintf.dprintf("remove");
                                                        updateEntryTableThread.getEntryType().toString(),
                                                        updateEntryTableThread.getNewestOnly()
                                                       ),
-                                   2,  // debugLevel
+0,//                                   2,  // debugLevel
                                    new Command.ResultHandler()
                                    {
                                      @Override
@@ -9560,8 +9363,6 @@ Dprintf.dprintf("");
     {
       public void run(final IndexIdSet indexIdSet)
       {
-//TODO: remove
-Dprintf.dprintf("indexIdSet=%s",indexIdSet);
         {
           display.syncExec(new Runnable()
           {
