@@ -65,6 +65,7 @@
   * fixed parse numeric permissions
   * fixed parse owner
   * improved database delete: FTS entries
+  * use C99
   * upgrade OpenSSL 1.1.1
   * upgrade ICU 63.1
   * upgrade GnuTLS 3.5.19
@@ -81,6 +82,7 @@
   * BARControl restore tab: select job
   * BARControl: reset job state via context menu
   * BARControl: show entities with no job/schedule info
+  * BARControl: added option --index-database-entries-newest
   * BARControl: added option --index-database-history-list
   * BARControl: added option --config
   * BARControl: fixed options --index-database-list-entities,
