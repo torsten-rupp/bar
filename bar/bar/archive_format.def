@@ -276,37 +276,15 @@ const MAC_ALGORITHM_SHA2_512         = 4
 # info header
 #
 # parent: none
+#
+# Note: default is simple key derivation and encryption mode CBC+CTS
+#
 # never compress/encrypted
 CHUNK BAR "BAR0" BAR
   crc32  crc
 
-#CHUNK BAR "BAR1" BAR
-#  byte[128] salt;
-#  crc32     crc
-#
-#CHUNK BAR "BAR0" BAR DEPRECATED
-#  crc32  crc
-#
-#TRANSFORM "BAR0" "BAR1"
+#TRANSFORM "x" "y"
 #{
-#  ArchiveHandle        *archiveHandle = (ArchiveHandle*)userData;
-#  ArchiveCryptInfoNode *archiveCryptInfoNode;
-#
-#  assert(archiveHandle != NULL);
-#  assert(archiveHandle != NULL);
-#
-#  UNUSED_VARIABLE(OLD);
-#fprintf(stderr,"%s, %d: TRANSFORM --- %s: %s ---------------------------\n",__FILE__,__LINE__,String_cString(archiveHandle->read.storageFileName),String_cString(archiveHandle->jobUUID));
-#
-#  // BAR0 use CTS, simple key derive, and no salt
-#  archiveCryptInfoNode = archiveHandle->archiveCryptInfoList.tail;
-#  assert(archiveCryptInfoNode != NULL);
-#  archiveCryptInfoNode->archiveCryptInfo.cryptMode |= CRYPT_MODE_CTS;
-#  archiveCryptInfoNode->archiveCryptInfo.cryptKeyDeriveType = CRYPT_KEY_DERIVE_SIMPLE;
-#  memset(NEW->salt,0,sizeof(NEW->salt));
-#
-#fprintf(stderr,"%s, %d: done ------------------------------\n",__FILE__,__LINE__);
-#  return ERROR_NONE;
 #}
 
 # ----------------------------------------------------------------------
@@ -316,8 +294,8 @@ CHUNK BAR "BAR0" BAR
 # Used for the following chunks which could be encrypted by
 # the specified symmetric encryption.
 #
-# Note: if a salt is given, key derivation smf encryption mode
-#       CBC/no CTS is used!
+# Note: if a salt is given, key derivation and encryption mode
+#       CBC+no CTS is used!
 #
 # Salt may be stored multiple times to change the salt for
 # the following chunks.
