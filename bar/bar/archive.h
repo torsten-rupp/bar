@@ -96,16 +96,12 @@ typedef struct ArchiveCryptInfoNode
   LIST_NODE_HEADER(struct ArchiveCryptInfoNode);
 
   ArchiveCryptInfo archiveCryptInfo;
-//  const Password   *password;
-  uint             keyLength;
-//  CryptAlgorithms cryptAlgorithm;
 } ArchiveCryptInfoNode;
 
 typedef struct
 {
   LIST_HEADER(ArchiveCryptInfoNode);
-  Semaphore                  lock;
-  const ArchiveCryptInfoNode *archiveNewCryptInfoNode;   // new added decrypt key
+  Semaphore lock;
 } ArchiveCryptInfoList;
 
 /***********************************************************************\
@@ -255,7 +251,7 @@ typedef struct
   LogHandle                *logHandle;                                 // log handle
 
   ArchiveCryptInfoList     archiveCryptInfoList;                       // crypt info list
-  ArchiveCryptInfo         *archiveCryptInfo;                          // current crypt info
+  const  ArchiveCryptInfo  *archiveCryptInfo;                          // current crypt info
 
   Semaphore                passwordLock;                               // input password lock
   Password                 *cryptPassword;                             // crypt password for encryption/decryption
@@ -853,12 +849,12 @@ const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle)
 * Notes  : -
 \***********************************************************************/
 
-INLINE void Archive_setCryptInfo(ArchiveHandle    *archiveHandle,
-                                 ArchiveCryptInfo *archiveCryptInfo
+INLINE void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
+                                 const ArchiveCryptInfo *archiveCryptInfo
                                 );
 #if defined(NDEBUG) || defined(__ARCHIVE_IMPLEMENTATION__)
-INLINE void Archive_setCryptInfo(ArchiveHandle    *archiveHandle,
-                                 ArchiveCryptInfo *archiveCryptInfo
+INLINE void Archive_setCryptInfo(ArchiveHandle          *archiveHandle,
+                                 const ArchiveCryptInfo *archiveCryptInfo
                                 )
 {
   assert(archiveHandle != NULL);

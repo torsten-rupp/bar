@@ -360,8 +360,6 @@ LOCAL void freeArchiveCryptInfoNode(ArchiveCryptInfoNode *archiveCryptInfoNode, 
 
   Crypt_doneKey(&archiveCryptInfoNode->archiveCryptInfo.cryptKey);
   Crypt_doneSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt);
-//TODO: required?
-//  Password_delete(archiveCryptInfoNode->password);
 }
 
 /***********************************************************************\
@@ -2192,9 +2190,8 @@ LOCAL Errors readHeader(ArchiveHandle     *archiveHandle,
                         const ChunkHeader *chunkHeader
                        )
 {
-  Errors               error;
-  ChunkBAR             chunkBAR;
-  ArchiveCryptInfoNode *archiveCryptInfoNode;
+  Errors   error;
+  ChunkBAR chunkBAR;
 
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
@@ -2218,13 +2215,12 @@ LOCAL Errors readHeader(ArchiveHandle     *archiveHandle,
     return error;
   }
 
-  // add new crypt info (Note: history BAR version use CTS+simple key derivation)
-  archiveCryptInfoNode = addArchiveCryptInfoNode(archiveHandle,
-                                                 CRYPT_TYPE_NONE,
-                                                 CRYPT_MODE_CTS,
-                                                 CRYPT_KEY_DERIVE_SIMPLE
-                                                );
-  assert(archiveCryptInfoNode != NULL);
+  // add new crypt info (Note: older BAR version use CTS+simple key derivation)
+  addArchiveCryptInfoNode(archiveHandle,
+                          CRYPT_TYPE_NONE,
+                          CRYPT_MODE_CTS,
+                          CRYPT_KEY_DERIVE_SIMPLE
+                         );
 
   // read BAR chunk
   error = Chunk_open(&chunkBAR.info,
@@ -2323,8 +2319,10 @@ LOCAL Errors readSalt(ArchiveHandle     *archiveHandle,
                                                  CRYPT_KEY_DERIVE_FUNCTION
                                                 );
   assert(archiveCryptInfoNode != NULL);
+
+  // set salt
   Crypt_setSalt(&archiveCryptInfoNode->archiveCryptInfo.cryptSalt,
-                &chunkSalt.salt,
+                chunkSalt.salt,
                 sizeof(chunkSalt.salt)
                );
 
@@ -2376,8 +2374,8 @@ LOCAL Errors readEncryptionKey(ArchiveHandle     *archiveHandle,
     return ERROR_INVALID_CHUNK_SIZE;
   }
 
-  // get current archive crypt info
-  archiveCryptInfoNode = archiveHandle->archiveCryptInfoList.tail;
+  // get last archive crypt info
+  archiveCryptInfoNode = LIST_TAIL(&archiveHandle->archiveCryptInfoList);
   assert(archiveCryptInfoNode != NULL);
 
   // init key chunk
