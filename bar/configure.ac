@@ -979,7 +979,7 @@ AC_ARG_ENABLE(
 )
 AC_ARG_ENABLE(
   extern-compile,
-  AC_HELP_STRING([--disable-package-compile],[disable compilation of external software]),
+  AC_HELP_STRING([--disable-extern-compile],[disable compilation of external software]),
   [ENABLE_EXTERN_COMPILE=$enableval]
 )
 
@@ -1139,6 +1139,7 @@ fi
 
 AC_PATH_PROGS(MD5SUM,md5sum)
 
+AC_PROG_CC_STDC
 AC_COMPILER_OPTION(-Wall,                        CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wpointer-arith,              CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wunused-label,               CC_WARN_FLAGS CXX_WARN_FLAGS)
@@ -1146,6 +1147,7 @@ AC_COMPILER_OPTION(-Wunused-parameter,           CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wunused-variable,            CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wmissing-prototypes,         CC_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wmissing-declarations,       CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_COMPILER_OPTION(-Wstrict-aliasing,            CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wextra,                      CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wfloat-equal,                CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_COMPILER_OPTION(-Wdeclaration-after-statement,CC_WARN_FLAGS)
