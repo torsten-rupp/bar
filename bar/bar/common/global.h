@@ -2259,6 +2259,40 @@ static inline char* stringAppendChar(char *destination, ulong n, char ch)
 }
 
 /***********************************************************************\
+* Name   : stringFill
+* Purpose: fill string
+* Input  : destination - destination string
+*          n           - size of destination string (including
+*                        termination NUL)
+*          length      - length
+*          ch          - character
+* Output : -
+* Return : destination string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringFill(char *destination, ulong n, ulong length, char ch)
+{
+  ulong m;
+
+  assert(n > 0);
+
+  if (destination != NULL)
+  {
+    m = strlen(destination);
+    while ((length > 0) && ((m+1) < n))
+    {
+      destination[m] = ch;
+      length--;
+      m++;
+    }
+    destination[m] = NUL;
+  }
+
+  return destination;
+}
+
+/***********************************************************************\
 * Name   : stringTrimBegin
 * Purpose: trim spaces at beginning of string
 * Input  : string - string
