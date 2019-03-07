@@ -1144,7 +1144,7 @@ uint64 n;
 
   // purge all stored entries
 //fprintf(stderr,"%s, %d: --- jobUUID=%s scheduleUUID=%s delta=%d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,globalOptions.continuousMinTimeDelta);
-//dumpEntries(databaseHandle,jobUUID,scheduleUUID);
+//Continuous_dumpEntries(databaseHandle,jobUUID,scheduleUUID);
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
 &n,//                           NULL,  // changedRowCount
@@ -1183,9 +1183,8 @@ uint64 n;
   {
     return error;
   }
+//Continuous_dumpEntries(databaseHandle,jobUUID,scheduleUUID);
 
-//fprintf(stderr,"%s, %d: --- %llu\n",__FILE__,__LINE__,n);
-//dumpEntries(databaseHandle,jobUUID,scheduleUUID);
   return ERROR_NONE;
 }
 
@@ -1889,7 +1888,7 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
   // prepare list
   error = Database_prepare(databaseQueryHandle,
                            databaseHandle,
-                           "SELECT id,dateTime,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S AND storedFlag=0",
+                           "SELECT id,name FROM names WHERE jobUUID=%'S AND scheduleUUID=%'S AND storedFlag=0",
                            jobUUID,
                            scheduleUUID
                           );
@@ -1918,20 +1917,13 @@ bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
                         String              name
                        )
 {
-uint64 dateTime;
-bool b;
-
   assert(databaseQueryHandle != NULL);
 
-  b= Database_getNextRow(databaseQueryHandle,
-                             "%lld %lld %S",
+  return Database_getNextRow(databaseQueryHandle,
+                             "%lld %S",
                              databaseId,
-&dateTime,
                              name
                             );
-fprintf(stderr,"%s, %d: %ld: %ld %s\n",__FILE__,__LINE__,*databaseId,dateTime,String_cString(name));
-
-return b;
 }
 
 #ifndef NDEBUG
