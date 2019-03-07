@@ -229,6 +229,9 @@
 /* lgetxattr() available */
 #undef HAVE_LGETXATTR
 
+/* Define to 1 if you have the <libiberty/demangle.h> header file. */
+#undef HAVE_LIBIBERTY_DEMANGLE_H
+
 /* Define to 1 if you have the <libintl.h> header file. */
 #undef HAVE_LIBINTL_H
 
