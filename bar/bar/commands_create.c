@@ -5094,6 +5094,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   uint64                    doneSize;
   uint                      percentageDone;
   double                    compressionRatio;
+  char                      t1[16],t2[16];
   char                      s1[256],s2[256];
 
   assert(createInfo != NULL);
@@ -5382,7 +5383,11 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     stringClear(s1);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
+      stringFormat(t1,sizeof(t1),"%u",maxFragmentNumber);
+      stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
+      stringAppend(s1,sizeof(s1),", Xfragment #");
+      stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
+      stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
     }
 
     // ratio info
@@ -5489,6 +5494,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   uint64           doneSize;
   uint             percentageDone;
   double           compressionRatio;
+  char             t1[16],t2[16];
   char             s1[256],s2[256];
 
   assert(createInfo != NULL);
@@ -5777,7 +5783,11 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     stringClear(s1);
     if (fragmentSize < deviceInfo.size)
     {
-      stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
+      stringFormat(t1,sizeof(t1),"%u",maxFragmentNumber);
+      stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
+      stringAppend(s1,sizeof(s1),", Xfragment #");
+      stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
+      stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
     }
 
     // get ratio info
@@ -6226,6 +6236,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   uint64                    doneSize;
   uint                      percentageDone;
   double                    compressionRatio;
+  char                      t1[16],t2[16];
   char                      s1[256],s2[256];
   const StringNode          *stringNode;
   String                    fileName;
@@ -6491,7 +6502,11 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     stringClear(s1);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(s1,sizeof(s1),", fragment #%4u/%4u",fragmentNumber+1,maxFragmentNumber);
+      stringFormat(t1,sizeof(t1),"%u",maxFragmentNumber);
+      stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
+      stringAppend(s1,sizeof(s1),", Xfragment #");
+      stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
+      stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
     }
 
     // get ratio info
