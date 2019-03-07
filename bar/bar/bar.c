@@ -4765,7 +4765,7 @@ Errors updateConfig(void)
     ConfigValue_formatInit(&configValueFormat,
                            &CONFIG_VALUES[i],
                            CONFIG_VALUE_FORMAT_MODE_LINE,
-                           &serverNode->server
+                           &globalOptions.masterInfo
                           );
     while (ConfigValue_format(&configValueFormat,line))
     {
