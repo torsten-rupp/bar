@@ -294,9 +294,6 @@ typedef struct
   IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
   IndexId                  storageId;                                  // index id of storage
   ArchiveIndexList         archiveIndexList;
-//  bool                     transactionFlag;                            // TRUE iff transaction is running
-volatile  uint                     transactionFlag;                            // TRUE iff transaction is running
-//  Semaphore                flushIndexLock;
 
   uint64                   entries;                                    // number of entries
   uint64                   archiveFileSize;                            // size of current archive file part
@@ -1221,20 +1218,6 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
 \***********************************************************************/
 
 Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
-
-//TODO: remove
-#if 0
-/***********************************************************************\
-* Name   : Archive_readKeyEntry
-* Purpose: read key from archive
-* Input  : archiveHandle    - archive handle
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Archive_readKeyEntry(ArchiveHandle *archiveHandle);
-#endif
 
 /***********************************************************************\
 * Name   : Archive_readFileEntry
