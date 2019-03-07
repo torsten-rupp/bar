@@ -23,7 +23,9 @@
 #ifdef HAVE_BFD_H
   #include <bfd.h>
 #endif
-#ifdef HAVE_DEMANGLE_H
+#if   defined(HAVE_DEMANGLE_H)
+  #include <demangle.h>
+#elif defined(HAVE_LIBIBERTY_DEMANGLE_H)
   #include <libiberty/demangle.h>
 #endif
 #ifdef HAVE_LINK_H
