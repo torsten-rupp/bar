@@ -51,14 +51,14 @@ CC_WARN_FLAGS             = @CC_WARN_FLAGS@
 CXX                       = @CXX@
 CXX_FLAGS                 = @CXX_FLAGS@ -g
 CXX_WARN_FLAGS            = @CXX_WARN_FLAGS@
-CC_FLAGS_RELEASE          =
-CC_FLAGS_DEBUG            = -fno-pie -finstrument-functions
+CC_FLAGS_RELEASE          = @CC_FLAGS_RELEASE@
+CC_FLAGS_DEBUG            = @CC_FLAGS_DEBUG@ -finstrument-functions
 #-fno-sanitize-recover=all -fstack-protector-all -fsanitize=undefined
 CC_FLAGS_OPTIMIZE         = @CC_FLAGS_OPTIMIZE@
 CC_FLAGS_OPTIMIZE_RELEASE = @CC_FLAGS_OPTIMIZE_RELEASE@
 CC_FLAGS_OPTIMIZE_DEBUG   = @CC_FLAGS_OPTIMIZE_DEBUG@
-CC_FLAGS_GCOV             = -fno-pie -fprofile-arcs -ftest-coverage
-CC_FLAGS_VALGRIND         = -fno-pie -fno-builtin
+CC_FLAGS_GCOV             = @CC_FLAGS_GCOV@ -fprofile-arcs -ftest-coverage
+CC_FLAGS_VALGRIND         = @CC_FLAGS_VALGRIND@ -fno-builtin
 CC_DEFINES                = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_LONG "tr(s)=s"
 CC_DEFINES_RELEASE        = @CC_DEFINES_RELEASE@
 CC_DEFINES_DEBUG          = @CC_DEFINES_DEBUG@
@@ -72,15 +72,15 @@ endif
 LD                        = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS                  = @LD_FLAGS@
 #-static-libstdc++ -static-libasan
-LD_FLAGS_RELEASE          =
-LD_FLAGS_DEBUG            = -no-pie -Wl,-wrap,pthread_create
+LD_FLAGS_RELEASE          = @LD_FLAGS_RELEASE@
+LD_FLAGS_DEBUG            = @LD_FLAGS_DEBUG@ -Wl,-wrap,pthread_create
 ifneq (@HEAPVIEW_DIR@,)
 LD_FLAGS_DEBUG            += -Wl,-wrap,malloc -Wl,-wrap,calloc -Wl,-wrap,realloc -Wl,-wrap,free
 else
 LD_FLAGS_DEBUG            +=
 endif
-LD_FLAGS_GCOV             = -no-pie -Wl,-wrap,pthread_create -fprofile-arcs
-LD_FLAGS_VALGRIND         = -no-pie
+LD_FLAGS_GCOV             = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -fprofile-arcs
+LD_FLAGS_VALGRIND         = @LD_FLAGS_VALGRIND@
 LD_LIBRARY_PATHS          = @LIBRARY_PATHS@
 ifneq (@HEAPVIEW_DIR@,)
   LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
