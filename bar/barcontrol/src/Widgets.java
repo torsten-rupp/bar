@@ -668,7 +668,7 @@ class WidgetModifyListener
    * @param widget widget widget to set
    * @param variable variable
    */
-  void modified(final Widget widget, final WidgetVariable variable)
+  public void modified(final Widget widget, final WidgetVariable variable)
   {
 //TODO
     if (widget != null)
@@ -887,7 +887,7 @@ class WidgetModifyListener
    * @param button button to notify about modified variable
    * @param variable variable
    */
-  void modified(Button button, WidgetVariable variable)
+  public void modified(Button button, WidgetVariable variable)
   {
     modified((Widget)button,variable);
   }
@@ -897,7 +897,7 @@ class WidgetModifyListener
    * @param combo combo to notify about modified variable
    * @param variable variable
    */
-  void modified(Combo combo, WidgetVariable variable)
+  public void modified(Combo combo, WidgetVariable variable)
   {
     modified((Widget)combo,variable);
   }
@@ -907,7 +907,7 @@ class WidgetModifyListener
    * @param text text to notify about modified variable
    * @param variable variable
    */
-  void modified(Text text, WidgetVariable variable)
+  public void modified(Text text, WidgetVariable variable)
   {
     modified((Widget)text,variable);
   }
@@ -917,7 +917,7 @@ class WidgetModifyListener
    * @param menuItem menu item to notify about modified variable
    * @param variable variable
    */
-  void modified(MenuItem menuItem, WidgetVariable variable)
+  public void modified(MenuItem menuItem, WidgetVariable variable)
   {
     modified((Widget)menuItem,variable);
   }
@@ -926,7 +926,7 @@ class WidgetModifyListener
    * @param widget widget to notify about modified variable
    * @param variables variables
    */
-  void modified(Widget widget, WidgetVariable[] variables)
+  public void modified(Widget widget, WidgetVariable[] variables)
   {
     if (!widget.isDisposed())
     {
@@ -941,7 +941,7 @@ class WidgetModifyListener
    * @param control control to notify about modified variable
    * @param variables variables
    */
-  void modified(Control control, WidgetVariable[] variables)
+  public void modified(Control control, WidgetVariable[] variables)
   {
     if (!control.isDisposed())
     {
@@ -956,34 +956,34 @@ class WidgetModifyListener
    * @param button button to notify about modified variable
    * @param variables variables
    */
-  void modified(Button button, WidgetVariable[] variables)
+  public void modified(Button button, WidgetVariable[] variables)
   {
-    modified((Widget)button,variables);
+    modified((Control)button,variables);
   }
 
   /** set text or selection for widget according to value of variable
    * @param combo combo to notify about modified variable
    * @param variables variables
    */
-  void modified(Combo combo, WidgetVariable[] variables)
+  public void modified(Combo combo, WidgetVariable[] variables)
   {
-    modified((Widget)combo,variables);
+    modified((Control)combo,variables);
   }
 
   /** set text or selection for widget according to value of variable
    * @param text text to notify about modified variable
    * @param variables variables
    */
-  void modified(Text text, WidgetVariable[] variables)
+  public void modified(Text text, WidgetVariable[] variables)
   {
-    modified((Widget)text,variables);
+    modified((Control)text,variables);
   }
 
   /** set text or selection for widget according to value of variable
    * @param menuItem menu item to notify about modified variable
    * @param variables variables
    */
-  void modified(MenuItem menuItem, WidgetVariable[] variables)
+  public void modified(MenuItem menuItem, WidgetVariable[] variables)
   {
     modified((Widget)menuItem,variables);
   }
@@ -1021,7 +1021,7 @@ class WidgetModifyListener
   /** notify modify variable
    * @param widget widget modified
    */
-  void modified(Widget widget)
+  public void modified(Widget widget)
   {
     modified(widget,variables);
   }
@@ -1030,7 +1030,7 @@ class WidgetModifyListener
    * Note: required because it can be overwritten by specific handler
    * @param control control modified
    */
-  void modified(Control control)
+  public void modified(Control control)
   {
     modified(control,variables);
   }
@@ -1039,43 +1039,43 @@ class WidgetModifyListener
    * Note: required because it can be overwritten by specific handler
    * @param label label modified
    */
-  void modified(Label label)
+  public void modified(Label label)
   {
-    modified((Control)label);
+    modified(label,variables);
   }
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
    * @param button button modified
    */
-  void modified(Button button)
+  public void modified(Button button)
   {
-    modified((Control)button);
+    modified(button,variables);
   }
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
    * @param combo combo modified
    */
-  void modified(Combo combo)
+  public void modified(Combo combo)
   {
-    modified((Control)combo);
+    modified(combo,variables);
   }
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
    * @param text text modified
    */
-  void modified(Text text)
+  public void modified(Text text)
   {
-    modified((Control)text);
+    modified(text,variables);
   }
 
   /** notify modify variable
    * Note: required because it can be overwritten by specific handler
    * @param menuItem menu item modified
    */
-  void modified(MenuItem menuItem)
+  public void modified(MenuItem menuItem)
   {
     modified(menuItem,variables);
   }
