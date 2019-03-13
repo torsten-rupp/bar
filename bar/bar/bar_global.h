@@ -554,8 +554,6 @@ typedef struct
 
   MasterInfo                  masterInfo;                     // master info
 
-  ArchiveTypes                archiveType;                    // archive type for create
-
   BandWidthList               maxBandWidthList;               // list of max. send/receive bandwidth to use [bits/s]
 
   ServerList                  serverList;                     // list with FTP/SSH/WebDAV servers
@@ -604,6 +602,7 @@ typedef struct
   uint                        serverDebugLevel;                // server debug level (for debug only)
 
   // --- job options default values
+  ArchiveTypes                archiveType;                    // archive type for create
 
   bool                        storageNameListStdin;           // read storage names from stdin
   String                      storageNameListFileName;        // storage names list file name
