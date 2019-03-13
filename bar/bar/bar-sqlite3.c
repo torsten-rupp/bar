@@ -1046,7 +1046,8 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 LOCAL void createNewest(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  ulong  n,totalCount;
+  ulong  totalCount;
+  ulong  n,m;
 
   // start transaction
   error = Database_execute(databaseHandle,
@@ -1063,8 +1064,8 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
   // set entries offset/size
   if (verboseFlag) { fprintf(stderr,"Create newest entries..."); fflush(stderr); }
 
+  // get total count
   totalCount = 0L;
-  n          = 0L;
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1089,12 +1090,20 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
 
+  n = 0L;
+
   // delete newest
-  error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "DELETE FROM entriesNewest"
-                          );
+  do
+  {
+    error = Database_execute(databaseHandle,
+                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             &m,
+                             "DELETE FROM entriesNewest LIMIT 0,1000"
+                            );
+    n += m;
+    if (verboseFlag) printPercentage(n,2*totalCount);
+  }
+  while ((error == ERROR_NONE) && (n > 0));
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
@@ -1223,7 +1232,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              }
 
                              n++;
-                             if (verboseFlag) printPercentage(n,totalCount);
+                             if (verboseFlag) printPercentage(n,2*totalCount);
 
                              return ERROR_NONE;
                            },NULL),
@@ -1275,7 +1284,8 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
 LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  ulong  n,totalCount;
+  ulong  totalCount;
+  ulong  n;
 
   // start transaction
   error = Database_execute(databaseHandle,
@@ -1295,7 +1305,6 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
   if (verboseFlag) { fprintf(stderr,"Create aggregates for entries..."); fflush(stderr); }
 
   totalCount = 0L;
-  n          = 0L;
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1323,6 +1332,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
 
+  n = 0L;
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1553,11 +1563,11 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
   if (verboseFlag) fprintf(stderr,"OK  \n");
 #endif
 
-  // calculate directory content size/count
+  // calculate directory content size/count aggregated data
   if (verboseFlag) { fprintf(stderr,"Create aggregates for directory content..."); fflush(stderr); }
 
+  // get total count
   totalCount = 0L;
-  n          = 0L;
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1586,6 +1596,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
 
+  // clear directory content size/count aggregated data
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -1603,6 +1614,10 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+
+  n = 0L;
+
+  // update directory content size/count aggegated data: files
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1622,12 +1637,15 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              storageId    = (uint64)atoll(values[0]);
                              name         = String_newCString(values[1]);
                              fragmentSize = (uint64)atoll(values[2]);
-      //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+//if (String_equalsCString(name,"/home/torsten/tmp/blender/yofrankie/trunk/textures/level_nut/X.png"))
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+
 
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
                              {
-      //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                error = Database_execute(databaseHandle,
                                                         CALLBACK(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
@@ -1672,7 +1690,77 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             uint64 storageId;
+                             String name;
+                             uint64 fragmentSize;
 
+                             assert(count == 3);
+                             assert(values != NULL);
+                             assert(values[0] != NULL);
+                             assert(values[1] != NULL);
+                             assert(values[2] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(userData);
+
+                             storageId    = (uint64)atoll(values[0]);
+                             name         = String_newCString(values[1]);
+                             fragmentSize = (uint64)atoll(values[2]);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+
+                             // update directory content count/size aggregates in all newest directories
+                             while (!String_isEmpty(File_getDirectoryName(name,name)))
+                             {
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+                               error = Database_execute(databaseHandle,
+                                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                        NULL,  // changedRowCount
+                                                        "UPDATE directoryEntries \
+                                                         SET totalEntryCountNewest=totalEntryCountNewest+1, \
+                                                             totalEntrySizeNewest =totalEntrySizeNewest +%llu \
+                                                         WHERE     storageId=%llu \
+                                                               AND name=%'S \
+                                                        ",
+                                                        fragmentSize,
+                                                        storageId,
+                                                        name
+                                                       );
+                               if (error != ERROR_NONE)
+                               {
+                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 return error;
+                               }
+                             }
+
+                             String_delete(name);
+
+                             n++;
+                             if (verboseFlag) printPercentage(n,totalCount);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT entriesNewest.storageId, \
+                                   entriesNewest.name, \
+                                   fileEntries.fragmentSize \
+                            FROM fileEntries \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=fileEntries.entryId \
+                            WHERE entriesNewest.id IS NOT NULL \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+    printf("FAIL\n");
+    (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+
+  // update directory content size/count aggegated data: directories
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1756,6 +1844,70 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
                              {
+                               error = Database_execute(databaseHandle,
+                                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                        NULL,  // changedRowCount
+                                                        "UPDATE directoryEntries \
+                                                         SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                                         WHERE     storageId=%llu \
+                                                               AND name=%'S \
+                                                        ",
+                                                        storageId,
+                                                        name
+                                                       );
+                               if (error != ERROR_NONE)
+                               {
+                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 return error;
+                               }
+                             }
+
+                             String_delete(name);
+
+                             n++;
+                             if (verboseFlag) printPercentage(n,totalCount);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT entriesNewest.storageId, \
+                                   entriesNewest.name \
+                            FROM directoryEntries \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
+                            WHERE entriesNewest.id IS NOT NULL \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+    printf("FAIL\n");
+    (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+
+  // update directory content size/count aggegated data: links
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             uint64 storageId;
+                             String name;
+
+                             assert(count == 2);
+                             assert(values != NULL);
+                             assert(values[0] != NULL);
+                             assert(values[1] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(userData);
+
+                             storageId = (uint64)atoll(values[0]);
+                             name      = String_newCString(values[1]);
+      //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+
+                             // update directory content count/size aggregates in all directories
+                             while (!String_isEmpty(File_getDirectoryName(name,name)))
+                             {
       //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                error = Database_execute(databaseHandle,
                                                         CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -1798,6 +1950,71 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             uint64 storageId;
+                             String name;
+
+                             assert(count == 2);
+                             assert(values != NULL);
+                             assert(values[0] != NULL);
+                             assert(values[1] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(userData);
+
+                             storageId = (uint64)atoll(values[0]);
+                             name      = String_newCString(values[1]);
+      //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+
+                             // update directory content count/size aggregates in all directories
+                             while (!String_isEmpty(File_getDirectoryName(name,name)))
+                             {
+      //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+                               error = Database_execute(databaseHandle,
+                                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                        NULL,  // changedRowCount
+                                                        "UPDATE directoryEntries \
+                                                         SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                                         WHERE     storageId=%llu \
+                                                               AND name=%'S \
+                                                        ",
+                                                        storageId,
+                                                        name
+                                                       );
+                               if (error != ERROR_NONE)
+                               {
+                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 return error;
+                               }
+                             }
+
+                             String_delete(name);
+
+                             n++;
+                             if (verboseFlag) printPercentage(n,totalCount);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT entriesNewest.storageId, \
+                                   entriesNewest.name \
+                            FROM linkEntries \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
+                            WHERE entriesNewest.id IS NOT NULL \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+    printf("FAIL\n");
+    (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+
+  // update directory content size/count aggegated data: hardlinks
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1872,6 +2089,77 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                            {
                              uint64 storageId;
                              String name;
+                             uint64 fragmentSize;
+
+                             assert(count == 3);
+                             assert(values != NULL);
+                             assert(values[0] != NULL);
+                             assert(values[1] != NULL);
+                             assert(values[2] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(userData);
+
+                             storageId    = (uint64)atoll(values[0]);
+                             name         = String_newCString(values[1]);
+                             fragmentSize = (uint64)atoll(values[2]);
+      //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+
+                             // update directory content count/size aggregates in all directories
+                             while (!String_isEmpty(File_getDirectoryName(name,name)))
+                             {
+      //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+                               error = Database_execute(databaseHandle,
+                                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                        NULL,  // changedRowCount
+                                                        "UPDATE directoryEntries \
+                                                         SET totalEntryCountNewest=totalEntryCountNewest+1, \
+                                                             totalEntrySizeNewest =totalEntrySizeNewest +%llu \
+                                                         WHERE     storageId=%llu \
+                                                               AND name=%'S \
+                                                        ",
+                                                        fragmentSize,
+                                                        storageId,
+                                                        name
+                                                       );
+                               if (error != ERROR_NONE)
+                               {
+                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 return error;
+                               }
+                             }
+
+                             String_delete(name);
+
+                             n++;
+                             if (verboseFlag) printPercentage(n,totalCount);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT entriesNewest.storageId, \
+                                   entriesNewest.name, \
+                                   hardlinkEntries.fragmentSize \
+                            FROM hardlinkEntries \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=hardlinkEntries.entryId \
+                            WHERE entriesNewest.id IS NOT NULL \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+    printf("FAIL\n");
+    (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+
+  // update directory content size/count aggegated data: special
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             uint64 storageId;
+                             String name;
 
                              assert(count == 2);
                              assert(values != NULL);
@@ -1929,13 +2217,76 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             uint64 storageId;
+                             String name;
+
+                             assert(count == 2);
+                             assert(values != NULL);
+                             assert(values[0] != NULL);
+                             assert(values[1] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(userData);
+
+                             storageId = (uint64)atoll(values[0]);
+                             name      = String_newCString(values[1]);
+      //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+
+                             // update directory content count/size aggregates in all directories
+                             while (!String_isEmpty(File_getDirectoryName(name,name)))
+                             {
+                               error = Database_execute(databaseHandle,
+                                                        CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                        NULL,  // changedRowCount
+                                                        "UPDATE directoryEntries \
+                                                         SET totalEntryCountNewest=totalEntryCountNewest+1 \
+                                                         WHERE     storageId=%llu \
+                                                               AND name=%'S \
+                                                        ",
+                                                        storageId,
+                                                        name
+                                                       );
+                               if (error != ERROR_NONE)
+                               {
+                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
+                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 return error;
+                               }
+                             }
+
+                             String_delete(name);
+
+                             n++;
+                             if (verboseFlag) printPercentage(n,totalCount);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT entriesNewest.storageId, \
+                                   entriesNewest.name \
+                            FROM specialEntries \
+                              LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
+                            WHERE entriesNewest.id IS NOT NULL \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+    printf("FAIL\n");
+    (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
+    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+
   if (verboseFlag) printf("OK  \n");
 
-  // calculate total count/size aggregates
+  // calculate storage total count/size aggregates
   if (verboseFlag) { fprintf(stderr,"Create aggregates for storage..."); fflush(stderr); }
 
+  // get total count
   totalCount = 0L;
-  n          = 0L;
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1960,6 +2311,9 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(1);
   }
 
+  n = 0L;
+
+  // update storage total count/size aggregates
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -3527,7 +3881,19 @@ int main(int argc, const char *argv[])
   }
 
   // output info
-  if (infoFlag)
+  if (   infoFlag
+      || (   !checkFlag
+          && !createTriggersFlag
+          && !createNewestFlag
+          && !createIndizesFlag
+          && !createAggregatesFlag
+          && !cleanFlag
+          && !purgeDeletedFlag
+          && !vacuumFlag
+          && String_isEmpty(commands)
+          && !pipeFlag
+          && !inputAvailable())
+     )
   {
     printInfo(&databaseHandle);
   }
