@@ -3793,6 +3793,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.serverDebugLevel                                = DEFAULT_SERVER_DEBUG_LEVEL;
 
   // --- job options default values
+  globalOptions.archiveType                                     = ARCHIVE_TYPE_NORMAL;
 
   globalOptions.storageNameListStdin                            = FALSE;
   globalOptions.storageNameListFileName                         = String_new();
