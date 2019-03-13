@@ -4806,8 +4806,6 @@ Dprintf.dprintf("loginData.serverTLSPort=%d",loginData.serverTLSPort);
             // try to connect to server with empty password
             try
             {
-Dprintf.dprintf("loginData.serverPort=%d",loginData.serverPort);
-Dprintf.dprintf("loginData.serverTLSPort=%d",loginData.serverTLSPort);
               BARServer.connect(display,
                                 loginData.serverName,
                                 loginData.serverPort,
