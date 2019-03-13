@@ -197,7 +197,7 @@ public class BARWidgets
     final WidgetModifyListener widgetModifiedListener = (listener != null)
       ? new WidgetModifyListener(text,widgetVariable)
         {
-          void modified(Widget widget, WidgetVariable variable)
+          public void modified(Widget widget, WidgetVariable variable)
           {
             text.setText(listener.getString(widgetVariable));
           }
@@ -347,7 +347,7 @@ public class BARWidgets
     final WidgetModifyListener widgetModifiedListener = (listener != null)
       ? new WidgetModifyListener(spinner,widgetVariable)
         {
-          void modified(Widget widget, WidgetVariable variable)
+          public void modified(Widget widget, WidgetVariable variable)
           {
             spinner.setSelection(listener.getInt(widgetVariable));
           }
@@ -446,7 +446,7 @@ public class BARWidgets
     final WidgetModifyListener widgetModifiedListener = (listener != null)
       ? new WidgetModifyListener(button,widgetVariable)
         {
-          void modified(Widget widget, WidgetVariable variable)
+          public void modified(Widget widget, WidgetVariable variable)
           {
             button.setSelection(listener.getChecked(widgetVariable));
           }
@@ -649,7 +649,7 @@ public class BARWidgets
     final WidgetModifyListener widgetModifiedListener = (listener != null)
       ? new WidgetModifyListener(combo,widgetVariable)
         {
-          void modified(Widget widget, WidgetVariable variable)
+          public void modified(Widget widget, WidgetVariable variable)
           {
             combo.setText(listener.getString(widgetVariable));
           }
@@ -892,7 +892,7 @@ public class BARWidgets
     final WidgetModifyListener widgetModifiedListener = (listener != null)
       ? new WidgetModifyListener(combo,widgetVariable)
         {
-          void modified(Widget widget, WidgetVariable variable)
+          public void modified(Widget widget, WidgetVariable variable)
           {
             long n = 0;
             try
@@ -1324,7 +1324,7 @@ public class BARWidgets
     final WidgetModifyListener widgetModifiedListener = (listener != null)
       ? new WidgetModifyListener(text,widgetVariable)
         {
-          void modified(Widget widget, WidgetVariable variable)
+          public void modified(Widget widget, WidgetVariable variable)
           {
             text.setText(listener.getString(widgetVariable));
           }
