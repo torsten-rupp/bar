@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
 
   size            INTEGER DEFAULT 0,       // file/image/hardlink size. Note: redundancy for faster access
 
-  CONSTRAINT newest UNIQUE (name,size)
+  CONSTRAINT newest UNIQUE (name)
 );
 CREATE INDEX ON entriesNewest (entryId,name,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (name,size,type,timeLastChanged);
