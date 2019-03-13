@@ -1365,9 +1365,9 @@ public class BARControl
     {
       final Settings.Server defaultServer = Settings.getLastServer();
 
-      this.serverName    = !name.isEmpty()     ? name     : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME);
-      this.serverPort    = (port != 0        ) ? port     : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
-      this.serverTLSPort = (port != 0        ) ? tlsPort  : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT);
+      this.serverName    = !name.isEmpty()     ? name     : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME    );
+      this.serverPort    = (port != 0        ) ? port     : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT    );
+      this.serverTLSPort = (port != 0        ) ? tlsPort  : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT);
       this.forceSSL      = forceSSL;
       this.password      = !password.isEmpty() ? password : "";
       this.role          = role;
@@ -2391,7 +2391,7 @@ if (false) {
           {
             final Settings.Server defaultServer = Settings.getLastServer();
             loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                      (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
+                                      (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
                                       Settings.forceSSL,
                                       Settings.role
                                      );
@@ -3030,7 +3030,6 @@ Dprintf.dprintf("");
       }
       catch (ConnectionError error)
       {
-Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
         // disconnected -> try to reconnect
         connectOkFlag = false;
 
@@ -3144,21 +3143,18 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
       }
       catch (AssertionError error)
       {
-Dprintf.dprintf("");
         printInternalError(error);
         showFatalError(error);
         System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
       catch (InternalError error)
       {
-Dprintf.dprintf("");
         printInternalError(error);
         showFatalError(error);
         System.exit(EXITCODE_INTERNAL_ERROR);
       }
       catch (Throwable throwable)
       {
-Dprintf.dprintf("");
         if (Settings.debugLevel > 0)
         {
           printInternalError(throwable);
@@ -3433,7 +3429,7 @@ Dprintf.dprintf("");
             {
               loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
-                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                        (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
                                         Settings.forceSSL,
                                         (!server.password.isEmpty()) ? server.password : "",
                                         Settings.role
@@ -3497,7 +3493,7 @@ Dprintf.dprintf("");
             {
               loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
-                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
+                                        (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_TLS_PORT,
                                         Settings.forceSSL,
                                         Settings.role
                                        );
@@ -3776,11 +3772,11 @@ Dprintf.dprintf("");
 
       // server login data
       Settings.Server server = null;
-      if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT);
-      if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_PORT);
+      if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT    );
+      if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
-                                (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
+                                (server != null) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
                                 Settings.forceSSL,
                                 (server != null) ? server.password : "",
                                 Settings.role
@@ -4786,6 +4782,8 @@ Dprintf.dprintf("still not supported");
             // try to connect to server with preset data
             try
             {
+Dprintf.dprintf("loginData.serverPort=%d",loginData.serverPort);
+Dprintf.dprintf("loginData.serverTLSPort=%d",loginData.serverTLSPort);
               BARServer.connect(display,
                                 loginData.serverName,
                                 loginData.serverPort,
@@ -4808,6 +4806,8 @@ Dprintf.dprintf("still not supported");
             // try to connect to server with empty password
             try
             {
+Dprintf.dprintf("loginData.serverPort=%d",loginData.serverPort);
+Dprintf.dprintf("loginData.serverTLSPort=%d",loginData.serverTLSPort);
               BARServer.connect(display,
                                 loginData.serverName,
                                 loginData.serverPort,
