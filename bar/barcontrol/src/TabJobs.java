@@ -5373,13 +5373,13 @@ widgetArchivePartSize.setListVisible(true);
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,cryptAlgorithm,cryptType,cryptPasswordMode)
           {
             @Override
-            public void modified(Control control, WidgetVariable variables[])
+            public void modified(Text text, WidgetVariable variables[])
             {
-              Widgets.setEnabled(control,
-                                    !variables[0].equals("none")
-                                 && (variables[1].equals("none") || variables[1].equals("symmetric"))
-                                 && variables[2].equals("config")
-                                );
+              boolean enabledFlag =    !variables[0].equals("none")
+                                    && (variables[1].equals("none") || variables[1].equals("symmetric"))
+                                    && variables[2].equals("config");
+              if (!enabledFlag) text.setText("");
+              Widgets.setEnabled(text,enabledFlag);
             }
           });
           widgetCryptPassword1.addModifyListener(new ModifyListener()
@@ -5435,7 +5435,18 @@ widgetArchivePartSize.setListVisible(true);
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,cryptPassword));
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword1,cryptPassword)
+          {
+            public void modified(Text text, WidgetVariable[] variables)
+            {
+              super.modified(text,variables);
+
+              boolean enabledFlag =    !cryptAlgorithm.getString().equals("none")
+                                    && (cryptType.getString().equals("none") || cryptType.getString().equals("symmetric"))
+                                    && cryptPasswordMode.getString().equals("config");
+              if (!enabledFlag) text.setText("");
+            }
+          });
 
           label = Widgets.newLabel(composite,BARControl.tr("Repeat")+":");
           Widgets.layout(label,0,4,TableLayoutData.W);
@@ -5446,13 +5457,13 @@ widgetArchivePartSize.setListVisible(true);
           Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,cryptAlgorithm,cryptType,cryptPasswordMode)
           {
             @Override
-            public void modified(Control control, WidgetVariable[] variables)
+            public void modified(Text text, WidgetVariable variables[])
             {
-              Widgets.setEnabled(control,
-                                    !variables[0].equals("none")
-                                 && (variables[1].equals("none") || variables[1].equals("symmetric"))
-                                 && variables[2].equals("config")
-                                );
+              boolean enabledFlag =    !variables[0].equals("none")
+                                    && (variables[1].equals("none") || variables[1].equals("symmetric"))
+                                    && variables[2].equals("config");
+              if (!enabledFlag) text.setText("");
+              Widgets.setEnabled(text,enabledFlag);
             }
           });
           widgetCryptPassword2.addModifyListener(new ModifyListener()
@@ -5512,7 +5523,18 @@ widgetArchivePartSize.setListVisible(true);
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,cryptPassword));
+          Widgets.addModifyListener(new WidgetModifyListener(widgetCryptPassword2,cryptPassword)
+          {
+            public void modified(Text text, WidgetVariable[] variables)
+            {
+              super.modified(text,variables);
+
+              boolean enabledFlag =    !cryptAlgorithm.getString().equals("none")
+                                    && (cryptType.getString().equals("none") || cryptType.getString().equals("symmetric"))
+                                    && cryptPasswordMode.getString().equals("config");
+              if (!enabledFlag) text.setText("");
+            }
+          });
         }
 
         // archive type
