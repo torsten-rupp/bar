@@ -4077,7 +4077,6 @@ Dprintf.dprintf("");
           // get joblist
           try
           {
-Dprintf.dprintf("-----------------------------------");
             ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
             BARServer.executeCommand(StringParser.format("JOB_LIST"),
                                      1,  // debug level
