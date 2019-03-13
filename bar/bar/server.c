@@ -4968,7 +4968,7 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
         )
   {
     // update rest time
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"restTime=%u totalTime=%u",Misc_getRestTimeout(&pairingMasterTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"name=\"\" restTime=%u totalTime=%u",Misc_getRestTimeout(&pairingMasterTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
 
     // sleep a short time
     Misc_udelay(1LL*US_PER_SECOND);
@@ -4976,7 +4976,7 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
   }
   stopPairingMaster();
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S restTime=0 totalTime=%u",globalOptions.masterInfo.name,PAIRING_MASTER_TIMEOUT);
 
   // free resources
 }
@@ -7144,7 +7144,6 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           jobNode->job.options.archivePartSize,
                           Compress_algorithmToString(jobNode->job.options.compressAlgorithms.delta,NULL),
                           Compress_algorithmToString(jobNode->job.options.compressAlgorithms.byte, NULL),
-//TODO
                           Crypt_algorithmToString(jobNode->job.options.cryptAlgorithms[0],"unknown"),
                           (jobNode->job.options.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.options.cryptPasswordMode,NULL),
