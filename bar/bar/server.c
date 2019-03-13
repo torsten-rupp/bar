@@ -1416,7 +1416,14 @@ LOCAL void jobThreadCode(void)
     }
 
     // open index
-    indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
+    indexHandle = NULL;
+    if (Index_isAvailable())
+    {
+      while (!quitFlag && (indexHandle == NULL))
+      {
+        indexHandle = Index_open(jobNode->masterIO,10*MS_PER_SECOND);
+      }
+    }
 
     // get start date/time
     executeStartDateTime = Misc_getCurrentDateTime();
@@ -2236,7 +2243,14 @@ LOCAL void schedulerThreadCode(void)
   }
 
   // init index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+  indexHandle = NULL;
+  if (Index_isAvailable())
+  {
+    while (!quitFlag && (indexHandle == NULL))
+    {
+      indexHandle = Index_open(NULL,10*MS_PER_SECOND);
+    }
+  }
 
   executeScheduleDateTime = 0LL;
   while (!quitFlag)
@@ -3154,8 +3168,15 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   string  = String_new();
 
   // init index
-  indexHandle = Index_open(NULL,INDEX_PURGE_TIMEOUT);
-  if (indexHandle == NULL)
+  indexHandle = NULL;
+  if (Index_isAvailable())
+  {
+    while (!quitFlag && (indexHandle == NULL))
+    {
+      indexHandle = Index_open(NULL,10*MS_PER_SECOND);
+    }
+  }
+  else
   {
     plogMessage(NULL,  // logHandle,
                 LOG_TYPE_INDEX,
@@ -3454,8 +3475,15 @@ LOCAL void indexThreadCode(void)
   List_init(&indexCryptPasswordList);
 
   // init index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-  if (indexHandle == NULL)
+  indexHandle = NULL;
+  if (Index_isAvailable())
+  {
+    while (!quitFlag && (indexHandle == NULL))
+    {
+      indexHandle = Index_open(NULL,10*MS_PER_SECOND);
+    }
+  }
+  else
   {
     List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
     String_delete(printableStorageName);
@@ -3722,8 +3750,15 @@ LOCAL void autoIndexThreadCode(void)
   storageName          = String_new();
 
   // init index (Note: timeout not important; auto-index should not block)
-  indexHandle = Index_open(NULL,5L*MS_PER_SECOND);
-  if (indexHandle == NULL)
+  indexHandle = NULL;
+  if (Index_isAvailable())
+  {
+    while (!quitFlag && (indexHandle == NULL))
+    {
+      indexHandle = Index_open(NULL,10*MS_PER_SECOND);
+    }
+  }
+  else
   {
     String_delete(storageName);
     String_delete(printableStorageName);
@@ -16703,7 +16738,14 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   result = String_new();
 
   // init index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+  indexHandle = NULL;
+  if (Index_isAvailable())
+  {
+    while (!clientInfo->quitFlag && (indexHandle == NULL))
+    {
+      indexHandle = Index_open(NULL,2*MS_PER_SECOND);
+    }
+  }
 
   while (   !clientInfo->quitFlag
          && MsgQueue_get(&clientInfo->commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER)
