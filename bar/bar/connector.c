@@ -1494,6 +1494,11 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    return;
+  }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -1637,6 +1642,11 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    return;
+  }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -1751,6 +1761,11 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    return;
+  }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1874,6 +1889,11 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    return;
+  }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -2017,6 +2037,11 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    return;
+  }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -2164,6 +2189,11 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    return;
+  }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -2484,6 +2514,11 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    return;
+  }
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
   {
@@ -2555,6 +2590,11 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    return;
+  }
 
   if (indexHandle != NULL)
   {
@@ -2607,6 +2647,11 @@ LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, Ind
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    return;
+  }
+  if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
 
