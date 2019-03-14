@@ -250,7 +250,7 @@ endif
 SQLITE_FLAGS         = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
 SQLITE_FLAGS_RELEASE =
 SQLITE_FLAGS_DEBUG   = -DSQLITE_DEBUG
-#-DSQLITE_LOCK_TRACE 
+#-DSQLITE_LOCK_TRACE
 
 # xdelta3 flags
 XDELTA3_FLAGS =
@@ -507,7 +507,7 @@ DESTROYER_OBJECTS        = $(foreach z,$(filter %.c,  $(DESTROYER_SOURCES)),$(pa
                            errors.o \
                            $(foreach z,$(filter %.c,  $(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.c,  %.o,$z)) \
                            $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
-                           
+
 
 BAR_MINIDUMP_SOURCES     = bar-minidump.cc \
 
@@ -989,14 +989,31 @@ bar-sqlite3: \
 	$(MAKE) -C .. keys
 
 # run server
-.PHONY: run runserver run_slave runserver_slave run_en runserver_en run_de runserver_de run_ssl runserver_ssl
-.PHONY: rundev_slave rundevd_slave rundevgdb_slave rundevddd_slave
+.PHONY: rund runserverd run_ssl runserver_ssl
+.PHONY: run_slave runserver_slave rund_slave runserverd_slave
 run runserver: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D \
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          $(OPTIONS)
+
+rund runserverd: bar-debug@EXEEXT@
+	$(INSTALL) -d jobs
+	nice ./bar-debug@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          $(OPTIONS)
+
+run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=master \
+          --index-database=bar-index.db \
+          --jobs-directory=jobs \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           $(OPTIONS)
 
 run_slave runserver_slave: bar@EXEEXT@
@@ -1009,6 +1026,17 @@ run_slave runserver_slave: bar@EXEEXT@
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
+rund_slave runserverd_slave: bar-debug@EXEEXT@
+	$(INSTALL) -d jobs
+	nice ./bar-debug@EXEEXT@ --daemon -D \
+          --server-mode=slave \
+          --index-database=bar-index-slave.db \
+          --jobs-directory=jobs-slave \
+          --pairing-master-file=/tmp/pairing \
+          --log-file=/tmp/bar-slave.log --log=all \
+          $(OPTIONS)
+
+.PHONY: run_en runserver_en run_de runserver_de run_ssl runserver_ssl
 run_en runserver_en: bar@EXEEXT@
 	$(INSTALL) -d jobs
 	__BAR_LOCALE__=$(CURDIR)/po LANGUAGE=en_US nice ./bar@EXEEXT@ --daemon -D \
@@ -1033,16 +1061,9 @@ run_jp runserver_jp: bar@EXEEXT@
           --jobs-directory=jobs \
           $(OPTIONS)
 
-run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
-	$(INSTALL) -d jobs
-	nice ./bar@EXEEXT@ --daemon -D \
-          --server-mode=master \
-          --index-database=bar-index.db \
-          --jobs-directory=jobs \
-          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
-          $(OPTIONS)
 
 .PHONY: rundev rundevd rundevd1 rundevd2 rundevgdb rundevddd rundevvalgrind rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
+.PHONY: rundev_slave rundevd_slave rundevgdb_slave rundevddd_slave
 rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	nice ./bar@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
