@@ -629,6 +629,7 @@ help:
 	@$(ECHO) "  po"
 	@$(ECHO) ""
 	@$(ECHO) "  run                                       run server"
+	@$(ECHO) "  run_slave                                 run server slave"
 	@$(ECHO) "  run_en"
 	@$(ECHO) "  run_de"
 	@$(ECHO) "  run_jp"
@@ -988,7 +989,7 @@ bar-sqlite3: \
 	$(MAKE) -C .. keys
 
 # run server
-.PHONY: run runserver run_en runserver_en run_de runserver_de run_ssl runserver_ssl
+.PHONY: run runserver run_slave runserver_slave run_en runserver_en run_de runserver_de run_ssl runserver_ssl
 .PHONY: rundev_slave rundevd_slave rundevgdb_slave rundevddd_slave
 run runserver: bar@EXEEXT@
 	$(INSTALL) -d jobs
@@ -996,6 +997,16 @@ run runserver: bar@EXEEXT@
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          $(OPTIONS)
+
+run_slave runserver_slave: bar@EXEEXT@
+	$(INSTALL) -d jobs
+	nice ./bar@EXEEXT@ --daemon -D \
+          --server-mode=slave \
+          --index-database=bar-index-slave.db \
+          --jobs-directory=jobs-slave \
+          --pairing-master-file=/tmp/pairing \
+          --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
 run_en runserver_en: bar@EXEEXT@
