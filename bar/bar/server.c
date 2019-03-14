@@ -802,7 +802,7 @@ LOCAL void startPairingMaster(void)
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Start pairing master\n"
+               "Started pairing master\n"
               );
   }
 }
@@ -17517,7 +17517,7 @@ Errors Server_run(ServerModes       mode,
       Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Auto-start pairing master (%ds)\n",
+                 "Started auto-pairing master (%ds)\n",
                  PAIRING_MASTER_TIMEOUT
                 );
       printInfo(1,"Started auto-pairing\n");
