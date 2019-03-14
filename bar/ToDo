@@ -144,6 +144,7 @@ data then given volume size, e. g. 4*1G<=4G, do not write 5*1G
 - restore: ask for overwrite, skip, overwrite all, skip all
 - check: restore content work?
 - use libssh instead of libssh2 because newer releases/fixed memory leaks?
+- BARControl: password input field invisible number of characters
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
 Mon 02 Feb 2015 05:47:11 PM CET> Start job 'shares'
