@@ -1046,7 +1046,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
 LOCAL void createNewest(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  ulong  totalCount;
+  ulong  totalEntriesCount,totalEntriesNewestCount;
   ulong  n,m;
 
   // start transaction
@@ -1064,8 +1064,9 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
   // set entries offset/size
   if (verboseFlag) { fprintf(stderr,"Create newest entries..."); fflush(stderr); }
 
-  // get total count
-  totalCount = 0L;
+  // get total counts
+  totalEntriesCount       = 0L;
+  totalEntriesNewestCount = 0L;
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -1076,7 +1077,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(columns);
                              UNUSED_VARIABLE(userData);
 
-                             totalCount = (ulong)atol(values[0]);
+                             totalEntriesCount = (ulong)atol(values[0]);
 
                              return ERROR_NONE;
                            },NULL),
@@ -1089,6 +1090,31 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
     fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             assert(count == 1);
+                             assert(values != NULL);
+                             assert(values[0] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(userData);
+
+                             totalEntriesNewestCount = (ulong)atol(values[0]);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT COUNT(id) FROM entriesNewest \
+                           "
+                          );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+fprintf(stderr,"%s, %d: totalEntriesCount=%llu\n",__FILE__,__LINE__,totalEntriesCount);
+fprintf(stderr,"%s, %d: totalEntriesNewestCount=%llu\n",__FILE__,__LINE__,totalEntriesNewestCount);
 
   n = 0L;
 
@@ -1101,15 +1127,17 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              "DELETE FROM entriesNewest LIMIT 0,1000"
                             );
     n += m;
-    if (verboseFlag) printPercentage(n,2*totalCount);
+//fprintf(stderr,"%s, %d: m=%llu\n",__FILE__,__LINE__,m);
+    if (verboseFlag) printPercentage(n,totalEntriesCount+totalEntriesNewestCount);
   }
-  while ((error == ERROR_NONE) && (n > 0));
+  while ((error == ERROR_NONE) && (m > 0));
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
     fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
+fprintf(stderr,"%s, %d: n=%llu\n",__FILE__,__LINE__,n);
 
   // insert newest
   error = Database_execute(databaseHandle,
@@ -1232,7 +1260,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              }
 
                              n++;
-                             if (verboseFlag) printPercentage(n,2*totalCount);
+                             if (verboseFlag) printPercentage(n,totalEntriesCount+totalEntriesNewestCount);
 
                              return ERROR_NONE;
                            },NULL),
