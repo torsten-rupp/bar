@@ -73,8 +73,8 @@ AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
 ])
 
 dnl --- check if C compiler support option
-dnl usage: AC_COMPILER_OPTION(<option>,<variable>...)
-AC_DEFUN([AC_COMPILER_OPTION],
+dnl usage: AC_CC_OPTION(<option>,<variable>...)
+AC_DEFUN([AC_CC_OPTION],
 [
   AC_REQUIRE([AC_PROG_CC])
   AC_CACHE_CHECK(
@@ -99,6 +99,38 @@ EOF
       AS_VAR_SET(ac_cv_c_option_`echo $1|tr -c -d a-zA-Z0-9_`,$ac_supported)
 
       rm -f test.c test.o
+    ]
+  )dnl
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- check if C++ compiler support option
+dnl usage: AC_CXX_OPTION(<option>,<variable>...)
+AC_DEFUN([AC_CXX_OPTION],
+[
+  AC_REQUIRE([AC_PROG_CXX])
+  AC_CACHE_CHECK(
+    [if $CXX support option $1],
+    ac_cv_cxx_option_`echo $1|tr -c -d a-zA-Z0-9_`,
+    [
+      cat << \EOF > test.cpp
+int main(void)
+{
+  return 0;
+}
+EOF
+      if AC_TRY_COMMAND($CXX $1 test.cpp -o test.o); then
+        ac_supported=yes
+        for s in $2; do
+          eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
+          eval "$s=\"\$$s$1\""
+        done
+      else
+        ac_supported=no
+      fi
+      AS_VAR_SET(ac_cv_cxx_option_`echo $1|tr -c -d a-zA-Z0-9_`,$ac_supported)
+
+      rm -f test.cpp test.o
     ]
   )dnl
   AC_PROVIDE([$0])dnl
@@ -661,6 +693,10 @@ AC_SUBST(OBJDUMP)                           dnl objdump
 AC_SUBST(OBJCOPY)                           dnl objcopy
 
 AC_SUBST(CC_FLAGS)                          dnl C compiler flags
+AC_SUBST(CC_FLAGS_RELEASE)                  dnl additional C compiler flags for release version
+AC_SUBST(CC_FLAGS_DEBUG)                    dnl additional C compiler flags for debug version
+AC_SUBST(CC_FLAGS_GCOV)                     dnl additional C compiler flags for gcov version
+AC_SUBST(CC_FLAGS_VALGRIND)                 dnl additional C compiler flags for valgrind version
 AC_SUBST(CC_WARN_FLAGS)                     dnl C compiler warning flags
 AC_SUBST(CXX_FLAGS)                         dnl C++ compiler flags
 AC_SUBST(CXX_WARN_FLAGS)                    dnl C++ compiler warning flags
@@ -673,6 +709,10 @@ AC_SUBST(CC_DEFINES_DEBUG)                  dnl addtioonal C compiler defines fo
 AC_SUBST(CC_INCLUDES)                       dnl C compiler include paths
 
 AC_SUBST(LD_FLAGS)                          dnl linker flags
+AC_SUBST(LD_FLAGS_RELEASE)                  dnl additional linker flags for release version
+AC_SUBST(LD_FLAGS_DEBUG)                    dnl additional linker flags for debug version
+AC_SUBST(LD_FLAGS_GCOV)                     dnl additional linker flags for gcov version
+AC_SUBST(LD_FLAGS_VALGRIND)                 dnl additional linker flags for valgrind version
 
 AC_SUBST(LIBRARY_PATHS)                     dnl library paths
 AC_SUBST(LIBRARIES)                         dnl libraries to link
@@ -1140,21 +1180,24 @@ fi
 AC_PATH_PROGS(MD5SUM,md5sum)
 
 AC_PROG_CC_STDC
-AC_COMPILER_OPTION(-Wall,                        CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wpointer-arith,              CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wunused-label,               CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wunused-parameter,           CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wunused-variable,            CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wmissing-prototypes,         CC_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wmissing-declarations,       CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wstrict-aliasing,            CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wextra,                      CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wfloat-equal,                CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wdeclaration-after-statement,CC_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
-AC_COMPILER_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-fno-pie,                     CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG)
+AC_CC_OPTION(-Wall,                        CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wpointer-arith,              CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-label,               CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-parameter,           CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-variable,            CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wmissing-prototypes,         CC_WARN_FLAGS)
+AC_CC_OPTION(-Wmissing-declarations,       CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wstrict-aliasing,            CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wextra,                      CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wfloat-equal,                CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wdeclaration-after-statement,CC_WARN_FLAGS)
+AC_CC_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
+AC_CC_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
+AC_CC_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
+
+AC_CXX_OPTION(-no-pie,LD_FLAGS_DEBUG LD_FLAGS_GCOV LD_FLAGS_VALGRIND)
 
 CC_FLAGS_OPTIMIZE="$CC_FLAGS_OPTIMIZE"
 CC_DEFINES="$CC_DEFINES"
@@ -1162,7 +1205,7 @@ CC_DEFINES="$CC_DEFINES"
 CC_FLAGS_OPTIMIZE_RELEASE="$CC_FLAGS_OPTIMIZE_RELEASE -O2"
 dnl Check: bug in gcc with -fschedule-insns2? If -O2 is used and -fno-schedule-insns2 is
 dnl        not given, the program either crashes or parsing a string with %y seems to fail.
-AC_COMPILER_OPTION(-fno-schedule-insns2,CC_FLAGS_OPTIMIZE_RELEASE)
+AC_CC_OPTION(-fno-schedule-insns2,CC_FLAGS_OPTIMIZE_RELEASE)
 CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
 
 CC_FLAGS_OPTIMIZE_DEBUG="$CC_FLAGS_OPTIMIZE_DEBUG -O0"
@@ -1185,7 +1228,7 @@ case "$host_os" in
   linux-*)
     if test "$ENABLE_DEBUG" = "yes"; then
       # required for printing stacktraces
-      AC_COMPILER_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
+      AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
     fi
     ;;
   *)
@@ -3376,7 +3419,7 @@ fi
 # check mandatory extern software for full version
 AC_ARG_ENABLE(
   package-check,
-  AC_HELP_STRING([--enable-extern-check],[enable check exern software]),
+  AC_HELP_STRING([--enable-extern-check],[enable check extern software]),
   [
    AS_IF(test $HAVE_ICU    ,,AC_MSG_ERROR([icu missing]))
    AS_IF(test $HAVE_Z      ,,AC_MSG_ERROR([zlib missing]))
@@ -3428,6 +3471,7 @@ AC_CHECK_HEADERS(\
                  poll.h \
                  regex.h \
                  stdbool.h \
+                 libiberty/demangle.h \
                  sys/inotify.h \
                  sys/ioctl.h \
                  sys/mount.h \
