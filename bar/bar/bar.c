@@ -3732,6 +3732,8 @@ LOCAL void freeBandWidthNode(BandWidthNode *bandWidthNode, void *userData)
 
 LOCAL void initGlobalOptions(void)
 {
+  uint i;
+
   memset(&globalOptions,0,sizeof(GlobalOptions));
 
   // --- program options
@@ -3830,7 +3832,14 @@ LOCAL void initGlobalOptions(void)
   globalOptions.continuousMaxSize                               = 0LL;
   globalOptions.continuousMinTimeDelta                          = 0LL;
 
+  globalOptions.compressAlgorithms.delta                        = COMPRESS_ALGORITHM_NONE;
+  globalOptions.compressAlgorithms.byte                         = COMPRESS_ALGORITHM_NONE;
+
   globalOptions.cryptType                                       = CRYPT_TYPE_SYMMETRIC;
+  for (i = 0; i < 4; i++)
+  {
+    globalOptions.cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
+  }
   globalOptions.cryptPasswordMode                               = PASSWORD_MODE_DEFAULT;
   Password_init(&globalOptions.cryptPassword);
   Password_init(&globalOptions.cryptNewPassword);
@@ -7439,7 +7448,9 @@ void configValueFormatDoneCryptAlgorithms(void **formatUserData, void *userData)
 bool configValueFormatCryptAlgorithms(void **formatUserData, void *userData, String line)
 {
   CryptAlgorithms *cryptAlgorithms;
+#ifdef MULTI_CRYPT
   uint            i;
+#endif /* MULTI_CRYPT */
 
   assert(formatUserData != NULL);
   assert(line != NULL);
@@ -7449,6 +7460,7 @@ bool configValueFormatCryptAlgorithms(void **formatUserData, void *userData, Str
   cryptAlgorithms = (CryptAlgorithms*)(*formatUserData);
   if (cryptAlgorithms != NULL)
   {
+#ifdef MULTI_CRYPT
     i = 0;
     while ((i < 4) && (cryptAlgorithms[i] != CRYPT_ALGORITHM_NONE))
     {
@@ -7456,6 +7468,9 @@ bool configValueFormatCryptAlgorithms(void **formatUserData, void *userData, Str
       String_appendCString(line,Crypt_algorithmToString(cryptAlgorithms[i],NULL));
       i++;
     }
+#else /* not MULTI_CRYPT */
+    String_appendCString(line,Crypt_algorithmToString(cryptAlgorithms[0],NULL));
+#endif /* MULTI_CRYPT */
 
     (*formatUserData) = NULL;
 
