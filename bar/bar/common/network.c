@@ -1593,8 +1593,8 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
                           uint               keyLength
                          )
 {
-  struct sockaddr_in socketAddress;
   int                n;
+  struct sockaddr_in socketAddress;
   Errors             error;
 
   assert(serverSocketHandle != NULL);
