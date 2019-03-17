@@ -255,6 +255,8 @@ LOCAL void doneIO(ServerIO *serverIO)
   Crypt_doneKey(&serverIO->privateKey);
   Crypt_doneKey(&serverIO->publicKey);
   Semaphore_done(&serverIO->lock);
+
+  serverIO->type = SERVER_IO_TYPE_NONE;
 }
 
 /***********************************************************************\
@@ -632,6 +634,14 @@ void ServerIO_disconnect(ServerIO *serverIO)
     #endif /* NDEBUG */
   }
   serverIO->isConnected = FALSE;
+}
+
+void ServerIO_setEnd(ServerIO *serverIO)
+{
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+
+  Semaphore_setEnd(&serverIO->lock);
 }
 
 Errors ServerIO_startSession(ServerIO *serverIO)

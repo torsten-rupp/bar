@@ -272,7 +272,18 @@ void ServerIO_connectBatch(ServerIO *serverIO);
 void ServerIO_disconnect(ServerIO *serverIO);
 
 /***********************************************************************\
-* Name   : ServerIO_disconnect
+* Name   : ServerIO_setEnd
+* Purpose: end server network i/o
+* Input  : serverIO - server i/o
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void ServerIO_setEnd(ServerIO *serverIO);
+
+/***********************************************************************\
+* Name   : ServerIO_isConnected
 * Purpose: check if connected
 * Input  : serverIO - server i/o
 * Output : -
