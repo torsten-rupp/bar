@@ -279,8 +279,28 @@ help:
 	@$(ECHO) "  clean_deb"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test"
+	@$(ECHO) ""
 	@$(ECHO) "  install_test_rpm"
-	@$(ECHO) "  install_test_db"
+	@$(ECHO) "  install_test_rpm_centos6"
+	@$(ECHO) "  install_test_rpm_centos6-x86_64"
+	@$(ECHO) "  install_test_rpm_centos7"
+	@$(ECHO) "  install_test_rpm_centos7"
+	@$(ECHO) "  install_test_rpm_centos7-x86_64"
+	@$(ECHO) "  install_test_rpm_fedora28-x86_64"
+	@$(ECHO) "  install_test_rpm_fedora29-x86_64"
+	@$(ECHO) "  install_test_rpm_opensuse-tumbleweed-x86_64"
+	@$(ECHO) "  install_test_rpm_opensuse-leap-x86_64"
+	@$(ECHO) ""
+	@$(ECHO) "  install_test_deb"
+	@$(ECHO) "  install_test_deb_debian7"
+	@$(ECHO) "  install_test_deb_debian7-x86_64"
+	@$(ECHO) "  install_test_deb_debian8"
+	@$(ECHO) "  install_test_deb_ubuntu14.04-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu16.04-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu17.10-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu18.04-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu18.04-x86_64"
+	@$(ECHO) "  install_test_deb_ubuntu19.04-x86_64"
 	@$(ECHO) ""
 	@$(ECHO) "  gui"
 	@$(ECHO) "  clean_gui"
@@ -431,13 +451,6 @@ install_bar:
           sysconfdir=$(sysconfdir) \
           mandir=$(mandir) \
           DESTDIR=$(DESTDIR)
-	$(MAKE) -C bar install \
-          prefix=$(prefix) \
-          bindir=$(bindir) \
-          datadir=$(datadir) \
-          sysconfdir=$(sysconfdir) \
-          mandir=$(mandir) \
-          DESTDIR=$(DESTDIR)
 
 install_barcontrol:
 	$(MAKE) -C barcontrol install \
@@ -448,16 +461,9 @@ install_barcontrol:
           sysconfdir=$(sysconfdir) \
           mandir=$(mandir) \
           DESTDIR=$(DESTDIR)
-	$(MAKE) -C barcontrol install \
-          prefix=$(prefix) \
-          bindir=$(bindir) \
-          libdir=$(libdir) \
-          datadir=$(datadir) \
-          sysconfdir=$(sysconfdir) \
-          mandir=$(mandir) \
-          DESTDIR=$(DESTDIR)
 
 # install script files
+# move to post-install script
 install_scriptsold: \
   $(SCRIPTS)
 	if test "$(SYSTEM_INIT)" = "systemd" -o -d /lib/systemd; then \
@@ -465,7 +471,7 @@ install_scriptsold: \
             $(INSTALL) -d "$(DESTDIR)/lib/systemd/system"; \
             $(INSTALL) -m 644 scripts/barserver.service "$(DESTDIR)/lib/systemd/system/barserver.service"; \
           else \
-            echo "$(DESTDIR)/usr/lib/systemd/system/barserver.service NOT installed - file already exists!"; \
+            echo "$(DESTDIR)/lib/systemd/system/barserver.service NOT installed - file already exists!"; \
           fi; \
         fi
 	if test ! -f "$(DESTDIR)$(INSTALL_INITD_DIR)/barserver"; then \
@@ -493,6 +499,7 @@ install_scriptsold: \
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)"; \
 	$(INSTALL) -m 644 scripts/logrotate.conf "$(DESTDIR)$(INSTALL_LOGROTATED_DIR)/bar"; \
 
+#TODO: install all scripts in tmp
 install_scripts: \
   $(SCRIPTS)
 	$(INSTALL) -d "$(DESTDIR)/var/tmp/bar/etc/init.d"; \
@@ -889,7 +896,7 @@ update_docker:
 	# base images
 	(cd packages; $(DOCKER) build -f bar-centos6.dockerfile            -t bar-centos:6            .)
 	(cd packages; $(DOCKER) build -f bar-centos6-x86_64.dockerfile     -t bar-centos-x86_64:6     .)
-	(cd packages; $(DOCKER) build -f bar-debian7.dockerfile            -t bar-debian:7     .)
+	(cd packages; $(DOCKER) build -f bar-debian7.dockerfile            -t bar-debian:7            .)
 	(cd packages; $(DOCKER) build -f bar-debian7-x86_64.dockerfile     -t bar-debian-x86_64:7     .)
 	#
 	# test images
@@ -1091,12 +1098,12 @@ install_test_deb: \
 .PHONY: install_test_deb_debian7
 install_test_deb_debian7:
 	@$(call functionPrintInfo,Test install Debian 7)
-	@$(call functionInstallTestDEB,i386/debian:7,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,bar-debian:7,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian7-x86_64
 install_test_deb_debian7-x86_64:
 	@$(call functionPrintInfo,Test install Debian 7 64bit)
-	@$(call functionInstallTestDEB,debian:7,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,bar-debian-x86_64:7,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian8
 install_test_deb_debian8:
