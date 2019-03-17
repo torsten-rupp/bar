@@ -8,19 +8,12 @@ RUN useradd -g 1000 -u 1000 build
 # disable interactive installion
 ENV DEBIAN_FRONTEND noninteractive
 
-#autogen
-#libc6
-#libc6-dev
-#binutils
-#libssl-dev
-#openssl
-#subversion
-
 # install packages
 RUN apt-get -y update
 RUN apt-get -y install \
   bc \
   bzip2 \
+  curl \
   debhelper \
   devscripts \
   e2fsprogs \

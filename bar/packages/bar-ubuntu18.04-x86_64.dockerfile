@@ -21,6 +21,7 @@ RUN apt-get -y update
 RUN apt-get -y install \
   bc \
   bzip2 \
+  curl \
   debhelper \
   devscripts \
   e2fsprogs \

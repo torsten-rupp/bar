@@ -71,11 +71,11 @@ bar: build-bar
 	# Add here commands to install the package
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
 #	make \
-#          DESTDIR=/usr/src/packages/BUILD/debian/bar DIST=1 SYSTEM=Debian SYSTEM_INIT=systemd \
-#          install_bar
+#          DESTDIR=${PWD}/debian/bar DIST=1 SYSTEM=Debian SYSTEM_INIT=systemd \
+#          install_bar install_scripts
 	make \
-          DESTDIR=${PWD}/debian/bar DIST=1 SYSTEM=Debian SYSTEM_INIT=systemd \
-          install_bar
+          DESTDIR=${PWD}/debian/bar DIST=1 SYSTEM_INIT=systemd \
+          install_bar install_scripts
 	#           install_scripts install_man
 	# --- end custom part for installing
 	dh_installdocs -p$@
@@ -112,10 +112,10 @@ bar-gui: build-bar-gui
 	# Add here commands to install the package
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
 #	make \
-#          DESTDIR=/usr/src/packages/BUILD/debian/bar-gui DIST=1 SYSTEM=Debian SYSTEM_INIT=systemd \
+#          DESTDIR=${PWD}/debian/bar-gui DIST=1 SYSTEM=Debian SYSTEM_INIT=systemd \
 #          install_barcontrol
 	make \
-          DESTDIR=${PWD}/debian/bar-gui DIST=1 SYSTEM=Debian SYSTEM_INIT=systemd \
+          DESTDIR=${PWD}/debian/bar-gui DIST=1 SYSTEM_INIT=systemd \
           install_barcontrol
 	# --- end custom part for installing
 	dh_installdocs -p$@

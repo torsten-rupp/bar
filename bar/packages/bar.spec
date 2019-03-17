@@ -10,6 +10,7 @@ Group:         Tool
 License:       GPL-2.0
 BuildRoot:     %{_tmppath}/build-%{name}-%{version}
 
+BuildRequires: curl
 BuildRequires: bc
 BuildRequires: coreutils
 BuildRequires: e2fsprogs
@@ -75,7 +76,9 @@ fi
 %pre
 
 %post
-set -x
+chmod 700 %{_sysconfdir}/bar
+chmod 600 %{_sysconfdir}/bar/bar.cfg
+
 if test -d /lib/systemd; then
   if test ! -f /lib/systemd/system/barserver.service; then
     install -d /lib/systemd/system
@@ -100,7 +103,7 @@ if test ! -f %{_sysconfdir}/init.d/barserver; then
     install -m 755 %{_tmppath}/bar/etc/init.d/barserver-debian %{_sysconfdir}/init.d/barserver
   fi; \
 fi
-if test -d %{_prefix}/lib/systemd; then
+if test -d /lib/systemd; then
   if test -n "`ps -p1|grep systemd`"; then
     service barserver start 1>/dev/null
   else
@@ -113,10 +116,28 @@ rm -rf %{_tmppath}/bar
 
 %preun
 if test -d %{_prefix}/lib/systemd; then
-  service barserver stop 1>/dev/null
+  type chkconfig 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    chkconfig barserver off
+    chkconfig --del barserver
+  fi
+  type systemctl 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    systemctl stop barserver
+    systemctl disable barserver
+  fi
+  type service 1>/dev/null 2>/dev/null
+  if test $? -eq 0; then
+    service barserver stop
+  fi
 else
   %{_sysconfdir}/init.d/barserver stop 1>/dev/null
 fi
+
+if   test -d /lib/systemd/system; then
+  rm -f /lib/systemd/system/barserver.service
+fi
+rm -f /etc/init.d/barserver
 
 %postun
 
@@ -133,11 +154,11 @@ fi
 %{_bindir}/bar-keygen
 %{_bindir}/bar-sqlite3
 
-%{_tmppath}/bar/lib/systemd/system/barserver.service
+%config(missingok) %{_tmppath}/bar/etc/init.d/barserver-*
+%config(missingok) %{_tmppath}/bar/lib/systemd/system/barserver.service
 
 %dir %{_sysconfdir}/bar
 %dir %attr(0700,root,root) %{_sysconfdir}/bar/jobs
-%{_tmppath}/bar/etc/init.d/barserver-*
 
 %config(noreplace) %attr(0600,root,root) /etc/bar/bar.cfg
 %config(noreplace) %attr(0600,root,root) /etc/logrotate.d/bar

@@ -14,6 +14,7 @@ RUN useradd -g 1000 -u 1000 build
 RUN yum -y install \
   bc \
   bzip2 \
+  curl \
   e2fsprogs \
   gettext \
   initscripts \

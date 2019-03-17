@@ -105,7 +105,10 @@ install /media/home/packages/debian/changelog \
         /media/home/packages/debian/compat \
         /media/home/packages/debian/control \
         /media/home/packages/debian/copyright \
+        /media/home/packages/debian/preinst \
         /media/home/packages/debian/postinst \
+        /media/home/packages/debian/prerm \
+        /media/home/packages/debian/postrm \
         /media/home/packages/debian/rules \
         debian
 install /media/home/packages/debian/source/format \

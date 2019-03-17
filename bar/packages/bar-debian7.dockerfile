@@ -19,8 +19,12 @@ ENV DEBIAN_FRONTEND noninteractive
 # install packages
 RUN apt-get -y update
 RUN apt-get -y install \
+  systemd \
+  ;
+RUN apt-get -y install \
   bc \
   bzip2 \
+  curl \
   debhelper \
   devscripts \
   e2fsprogs \
@@ -47,6 +51,20 @@ RUN apt-get -y install \
   default-jre \
   make \
   ;
+
+# fix systemd
+RUN (cd /lib/systemd/system/sysinit.target.wants/; \
+     for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; \
+     done; \
+    ); \
+    rm -f /lib/systemd/system/multi-user.target.wants/*;\
+    rm -f /etc/systemd/system/*.wants/*;\
+    rm -f /lib/systemd/system/local-fs.target.wants/*; \
+    rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+    rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+    rm -f /lib/systemd/system/basic.target.wants/*;\
+    rm -f /lib/systemd/system/anaconda.target.wants/*;
+VOLUME [ "/sys/fs/cgroup" ]
 
 # mount /media/home
 RUN mkdir /media/home  && chown root /media/home

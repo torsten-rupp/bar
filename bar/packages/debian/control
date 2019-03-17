@@ -26,7 +26,7 @@ Description: Archiver program for compressed and encrypted archives.
  * support for several file systems on disk images (ext, fat,
    reiserfs)
  * can split archive files into pieces
- * compress of data with zlib, bzip2, lzma, lzo, l4z, or xdelta
+ * compress of data with zlib, bzip2, lzma, lzo, l4z, zstd or xdelta
    algorithms
  * encryption with gcrypt algrithms (AES,TWOFISH etc.)
  * asymmetric encryption with RSA
@@ -34,7 +34,7 @@ Description: Archiver program for compressed and encrypted archives.
    SSH (SCP or SFTP)
  * can store archives on CD,DVD,BD (with external tools)
    and on a generic device
- * support pre- and post-processing of CD,DVD,BD images
+ * support pre- and post-processing of CD, DVD, BD images
    (e. g. for including functions of dvdisaster)
  * daemon-mode with control over plain and TLS network
    connection

@@ -10,6 +10,7 @@ RUN yum -y update
 RUN yum -y install \
   bc \
   bzip2 \
+  curl \
   e2fsprogs \
   gettext \
   lua \
