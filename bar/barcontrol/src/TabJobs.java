@@ -10678,9 +10678,12 @@ throw new Error("NYI");
    */
   private void updateFileTreeImages()
   {
-    for (TreeItem treeItem : widgetFileTree.getItems())
+    if (!widgetFileTree.isDisposed())
     {
-      updateFileTreeImages(treeItem);
+      for (TreeItem treeItem : widgetFileTree.getItems())
+      {
+        updateFileTreeImages(treeItem);
+      }
     }
   }
 
