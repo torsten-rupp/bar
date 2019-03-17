@@ -83,6 +83,9 @@ for graphical frontend:
 optional for graphical frontend:
 * EPM
 
+for building packages:
+* docker
+
 --- Installation
 
 There are pre-compiled binary packages available for several
