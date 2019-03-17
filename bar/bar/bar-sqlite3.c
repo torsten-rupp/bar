@@ -1113,8 +1113,6 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
     fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-fprintf(stderr,"%s, %d: totalEntriesCount=%llu\n",__FILE__,__LINE__,totalEntriesCount);
-fprintf(stderr,"%s, %d: totalEntriesNewestCount=%llu\n",__FILE__,__LINE__,totalEntriesNewestCount);
 
   n = 0L;
 
@@ -1137,7 +1135,6 @@ fprintf(stderr,"%s, %d: totalEntriesNewestCount=%llu\n",__FILE__,__LINE__,totalE
     fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-fprintf(stderr,"%s, %d: n=%llu\n",__FILE__,__LINE__,n);
 
   // insert newest
   error = Database_execute(databaseHandle,
@@ -1179,7 +1176,7 @@ fprintf(stderr,"%s, %d: n=%llu\n",__FILE__,__LINE__,n);
                              groupId         = (uint)atol(values[6]);
                              permission      = (uint)atol(values[7]);
                              size            = (uint64)atoll(values[8]);
-      //fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
+//fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
 
                              // check if exists
                              existsFlag = FALSE;
@@ -1213,7 +1210,7 @@ fprintf(stderr,"%s, %d: n=%llu\n",__FILE__,__LINE__,n);
 
                              if (!existsFlag)
                              {
-      //fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
+//fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
                                // insert
                                error = Database_execute(databaseHandle,
                                                         CALLBACK(NULL,NULL),  // databaseRowFunction
