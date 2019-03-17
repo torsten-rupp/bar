@@ -64,6 +64,8 @@
   * fixed SFTP directory list
   * fixed parse numeric permissions
   * fixed parse owner
+  * fixed download-third-party.sh: use curl instead of wget,
+    because of a bug in wget under Debian (TLS error)
   * improved database delete: FTS entries
   * use C99
   * upgrade OpenSSL 1.1.1
@@ -74,6 +76,7 @@
   * upgrade libcdio 2.0.0
   * upgrade c-reas 1.15.0
   * upgrade curl 7.62.0
+  * upgraded SQLite 3.27: UPSERT
   * removed ftplib
   * BARControl: read keys from .pem files, JKS is now
     obsolete
