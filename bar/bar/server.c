@@ -16816,98 +16816,103 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : initClient
-* Purpose: initialize client
-* Input  : clientInfo - client info to initialize
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void initClient(ClientInfo *clientInfo)
-{
-  assert(clientInfo != NULL);
-
-  // initialize
-  Semaphore_init(&clientInfo->lock,SEMAPHORE_TYPE_BINARY);
-  clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
-  clientInfo->authorizationFailNode = NULL;
-
-  clientInfo->quitFlag              = FALSE;
-
-  List_init(&clientInfo->commandInfoList);
-  if (!RingBuffer_init(&clientInfo->abortedCommandIds,sizeof(uint),MAX_ABORT_COMMAND_IDS))
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  clientInfo->abortedCommandIdStart = 0;
-
-  EntryList_init(&clientInfo->includeEntryList);
-  PatternList_init(&clientInfo->excludePatternList);
-  Job_initOptions(&clientInfo->jobOptions);
-  List_init(&clientInfo->directoryInfoList);
-  Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-
-  DEBUG_ADD_RESOURCE_TRACE(clientInfo,ClientInfo);
-}
-
-/***********************************************************************\
 * Name   : initNetworkClient
 * Purpose: init network client
-* Input  : clientNode         - client node
+* Input  : clientInfo         - client info
 *          serverSocketHandle - server socket handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors initNetworkClient(ClientNode               *clientNode,
+LOCAL Errors initNetworkClient(ClientInfo               *clientInfo,
                                const ServerSocketHandle *serverSocketHandle
                               )
 {
   Errors error;
   uint   i;
 
-  assert(clientNode != NULL);
+  assert(clientInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
   assert(serverSocketHandle != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(clientNode);
-  DEBUG_CHECK_RESOURCE_TRACE(&clientNode->clientInfo);
 
   // init server i/o
-  ServerIO_initNetwork(&clientNode->clientInfo.io);
+  ServerIO_initNetwork(&clientInfo->io);
 
   // accept connection
-  error = Network_accept(&clientNode->clientInfo.io.network.socketHandle,
+  error = Network_accept(&clientInfo->io.network.socketHandle,
                          serverSocketHandle,
                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_done(&clientNode->clientInfo.io);
+    ServerIO_done(&clientInfo->io);
     return error;
   }
 
   // connect network server i/o
-  ServerIO_connectNetwork(&clientNode->clientInfo.io);
+  ServerIO_connectNetwork(&clientInfo->io);
 
-  // init client threads
-  if (!MsgQueue_init(&clientNode->clientInfo.commandQueue,0))
+  // init client command threads
+  if (!MsgQueue_init(&clientInfo->commandQueue,0))
   {
     HALT_FATAL_ERROR("Cannot initialize client command message queue!");
   }
   for (i = 0; i < MAX_NETWORK_CLIENT_THREADS; i++)
   {
-    if (!Thread_init(&clientNode->clientInfo.threads[i],"BAR client",0,networkClientThreadCode,&clientNode->clientInfo))
+    if (!Thread_init(&clientInfo->threads[i],"BAR client",0,networkClientThreadCode,clientInfo))
     {
       HALT_FATAL_ERROR("Cannot initialize client thread!");
     }
   }
 
   // start session
-  ServerIO_startSession(&clientNode->clientInfo.io);
+  ServerIO_startSession(&clientInfo->io);
 
   return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : doneNetworkClient
+* Purpose: deinitialize network client
+* Input  : clientInfo - client info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneNetworkClient(ClientInfo *clientInfo)
+{
+  int i;
+
+  assert(clientInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
+
+  // server i/o end
+  ServerIO_setEnd(&clientInfo->io);
+
+  // stop client command threads
+  MsgQueue_setEndOfMsg(&clientInfo->commandQueue);
+  for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
+  {
+    if (!Thread_join(&clientInfo->threads[i]))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop command threads!");
+    }
+  }
+
+  // free resources
+  for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
+  {
+    Thread_done(&clientInfo->threads[i]);
+  }
+  MsgQueue_done(&clientInfo->commandQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommand,NULL));
+
+  // disconnect
+  ServerIO_disconnect(&clientInfo->io);
+
+  // done server i/o
+  ServerIO_done(&clientInfo->io);
 }
 
 /***********************************************************************\
@@ -16957,6 +16962,64 @@ LOCAL Errors initBatchClient(ClientInfo *clientInfo,
 }
 
 /***********************************************************************\
+* Name   : doneBatchClient
+* Purpose: deinitialize batch client
+* Input  : clientInfo - client info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneBatchClient(ClientInfo *clientInfo)
+{
+  assert(clientInfo != NULL);
+
+  // done input/output
+  File_close(&clientInfo->io.file.outputHandle);
+  File_close(&clientInfo->io.file.inputHandle);
+
+  // done server i/o
+  ServerIO_done(&clientInfo->io);
+}
+
+/***********************************************************************\
+* Name   : initClient
+* Purpose: initialize client
+* Input  : clientInfo - client info to initialize
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initClient(ClientInfo *clientInfo)
+{
+  assert(clientInfo != NULL);
+
+  // initialize
+  Semaphore_init(&clientInfo->lock,SEMAPHORE_TYPE_BINARY);
+  clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
+  clientInfo->authorizationFailNode = NULL;
+
+  clientInfo->quitFlag              = FALSE;
+
+  List_init(&clientInfo->commandInfoList);
+  if (!RingBuffer_init(&clientInfo->abortedCommandIds,sizeof(uint),MAX_ABORT_COMMAND_IDS))
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  clientInfo->abortedCommandIdStart = 0;
+
+  EntryList_init(&clientInfo->includeEntryList);
+  PatternList_init(&clientInfo->excludePatternList);
+  Job_initOptions(&clientInfo->jobOptions);
+  List_init(&clientInfo->directoryInfoList);
+  Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+
+  DEBUG_ADD_RESOURCE_TRACE(clientInfo,ClientInfo);
+}
+
+/***********************************************************************\
 * Name   : doneClient
 * Purpose: deinitialize client
 * Input  : clientInfo - client info
@@ -16969,11 +17032,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
 {
   JobNode         *jobNode;
   CommandInfoNode *commandInfoNode;
-  int             i;
 
   assert(clientInfo != NULL);
-
-  DEBUG_REMOVE_RESOURCE_TRACE(clientInfo,ClientInfo);
 
   clientInfo->quitFlag = TRUE;
 
@@ -16996,35 +17056,16 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     Index_interrupt(commandInfoNode->indexHandle);
   }
 
-  // stop and disconnect network server i/o
+  // done client
   switch (clientInfo->io.type)
   {
     case SERVER_IO_TYPE_NONE:
       break;
     case SERVER_IO_TYPE_BATCH:
-//TODO
+      doneBatchClient(clientInfo);
       break;
     case SERVER_IO_TYPE_NETWORK:
-      // stop command threads
-      Semaphore_setEnd(&clientInfo->io.lock);
-      MsgQueue_setEndOfMsg(&clientInfo->commandQueue);
-      for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
-      {
-        if (!Thread_join(&clientInfo->threads[i]))
-        {
-          HALT_INTERNAL_ERROR("Cannot stop command threads!");
-        }
-      }
-
-      // disconnect
-      ServerIO_disconnect(&clientInfo->io);
-
-      // free resources
-      for (i = MAX_NETWORK_CLIENT_THREADS-1; i >= 0; i--)
-      {
-        Thread_done(&clientInfo->threads[i]);
-      }
-      MsgQueue_done(&clientInfo->commandQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommand,NULL));
+      doneNetworkClient(clientInfo);
       break;
     default:
       #ifndef NDEBUG
@@ -17033,6 +17074,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
       break;
   }
 
+  DEBUG_REMOVE_RESOURCE_TRACE(clientInfo,ClientInfo);
+
   // free resources
   Array_done(&clientInfo->entryIdArray);
   Array_done(&clientInfo->indexIdArray);
@@ -17040,7 +17083,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   Job_doneOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
-  ServerIO_done(&clientInfo->io);
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
   List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
   Semaphore_done(&clientInfo->lock);
@@ -17134,7 +17176,7 @@ LOCAL Errors newNetworkClient(ClientNode               **clientNode,
   assert((*clientNode) != NULL);
 
   // init network client
-  error = initNetworkClient(*clientNode,serverSocketHandle);
+  error = initNetworkClient(&(*clientNode)->clientInfo,serverSocketHandle);
   if (error != ERROR_NONE)
   {
     deleteClient(*clientNode);
@@ -17873,7 +17915,7 @@ Errors Server_run(ServerModes       mode,
         && (pollfds[pollServerTLSSocketIndex].revents == POLLIN)
        )
     {
-      error = newNetworkClient(&clientNode,&serverSocketHandle);
+      error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
       if (error == ERROR_NONE)
       {
         // start SSL
@@ -17893,6 +17935,7 @@ Errors Server_run(ServerModes       mode,
                        clientNode->clientInfo.io.network.port,
                        Error_getText(error)
                       );
+            deleteClient(clientNode);
             AutoFree_cleanup(&autoFreeList);
             return FALSE;
           }
@@ -17902,6 +17945,7 @@ Errors Server_run(ServerModes       mode,
                      clientNode->clientInfo.io.network.port,
                      Error_getText(error)
                     );
+          deleteClient(&clientNode);
           AutoFree_cleanup(&autoFreeList);
           return FALSE;
         #endif /* HAVE_GNU_TLS */
