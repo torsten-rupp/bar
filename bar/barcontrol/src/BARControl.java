@@ -2654,8 +2654,7 @@ assert jobData != null;
         }
       });
 
-      masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026");
-      masterMenuItem.setSelection(Settings.role == Roles.BASIC);
+      masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026",Settings.role == Roles.BASIC);
       masterMenuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -2682,8 +2681,8 @@ assert jobData != null;
         public void handleEvent(Event event)
         {
           MenuItem widget = (MenuItem)event.widget;
-
 Dprintf.dprintf("");
+
           widget.setText(BARServer.getMasterName());
         }
       });
