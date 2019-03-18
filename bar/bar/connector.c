@@ -838,7 +838,7 @@ LOCAL void connectorCommand_preProcess(ConnectorInfo *connectorInfo, IndexHandle
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-fprintf(stderr,"%s, %d: connectorCommand_preProcess\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: NYI connectorCommand_preProcess\n",__FILE__,__LINE__);
 UNUSED_VARIABLE(indexHandle);
 UNUSED_VARIABLE(argumentMap);
 
