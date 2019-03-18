@@ -2984,6 +2984,7 @@ Dprintf.dprintf("");
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
     shell.open();
     shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
+    shell.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
 
     // listeners
     shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
@@ -2992,7 +2993,7 @@ Dprintf.dprintf("");
       {
         Shell widget = (Shell)event.widget;
 
-        widget.setText("BAR control: "+BARServer.getInfo());
+        widget.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
 
         updateMaster();
       }
