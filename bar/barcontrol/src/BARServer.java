@@ -1452,7 +1452,23 @@ public class BARServer
   enum Modes
   {
     MASTER,
-    SLAVE
+    SLAVE;
+
+    /** get mode text
+     * @return mode text
+     */
+    public String toString()
+    {
+      String text = null;
+
+      switch (this)
+      {
+        case MASTER: text = BARControl.tr("Master"); break;
+        case SLAVE:  text = BARControl.tr("Slave");  break;
+      }
+
+      return text;
+    }
   };
 
   /** file types
@@ -2268,6 +2284,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static boolean isSlave()
   {
     return mode == Modes.SLAVE;
+  }
+
+  /** get mode
+   * @return mode
+   */
+  public static Modes getMode()
+  {
+    return mode;
   }
 
   /** get master name
