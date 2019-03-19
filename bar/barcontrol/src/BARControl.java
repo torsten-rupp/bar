@@ -2654,7 +2654,7 @@ assert jobData != null;
         }
       });
 
-      masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026",Settings.role == Roles.BASIC);
+      masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026",Settings.hasExpertRole());
       masterMenuItem.addSelectionListener(new SelectionListener()
       {
         @Override
