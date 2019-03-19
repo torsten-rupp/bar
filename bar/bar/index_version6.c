@@ -111,7 +111,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "%lld entities/%lld storages to import\n",
+              "%lld entities/%lld storages to import",
               entityCount,
               storageCount
              );
@@ -133,7 +133,6 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                // currently nothing special to do
 
-fprintf(stderr,"%s, %d: copy table entities\n",__FILE__,__LINE__);
                                return ERROR_NONE;
                              },NULL),
                              // post: transfer storage
@@ -170,7 +169,6 @@ fprintf(stderr,"%s, %d: copy table entities\n",__FILE__,__LINE__);
                                                             UNUSED_VARIABLE(userData);
 
                                                             (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
-fprintf(stderr,"%s, %d: copy table storage\n",__FILE__,__LINE__);
 
                                                             return ERROR_NONE;
                                                           },NULL),
@@ -187,7 +185,7 @@ fprintf(stderr,"%s, %d: copy table storage\n",__FILE__,__LINE__);
                                                             toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
                                                             assert(toStorageId != DATABASE_ID_NONE);
 
- //fprintf(stderr,"%s, %d: copy entries %llu %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
+//fprintf(stderr,"%s, %d: copy entries %llu %llu\n",__FILE__,__LINE__,fromStorageId,toStorageId);
                                                             return Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                       &newIndexHandle->databaseHandle,
                                                                                       "entries",
@@ -200,7 +198,6 @@ fprintf(stderr,"%s, %d: copy table storage\n",__FILE__,__LINE__);
                                                                                         UNUSED_VARIABLE(userData);
 
                                                                                         (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-fprintf(stderr,"%s, %d: copy table entries\n",__FILE__,__LINE__);
 
                                                                                         return ERROR_NONE;
                                                                                       },NULL),
@@ -221,7 +218,6 @@ fprintf(stderr,"%s, %d: copy table entries\n",__FILE__,__LINE__);
 
                                                                                         if (error == ERROR_NONE)
                                                                                         {
-fprintf(stderr,"%s, %d: copy entry %"PRIi64" -> %"PRIi64"\n",__FILE__,__LINE__,fromEntryId,toEntryId);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "fileEntries",
@@ -235,7 +231,6 @@ fprintf(stderr,"%s, %d: copy entry %"PRIi64" -> %"PRIi64"\n",__FILE__,__LINE__,f
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-fprintf(stderr,"%s, %d: copy table fileEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -247,7 +242,7 @@ fprintf(stderr,"%s, %d: copy table fileEntries\n",__FILE__,__LINE__);
                                                                                         }
                                                                                         if (error == ERROR_NONE)
                                                                                         {
- //fprintf(stderr,"%s, %d: copy i\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy i\n",__FILE__,__LINE__);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "imageEntries",
@@ -261,7 +256,6 @@ fprintf(stderr,"%s, %d: copy table fileEntries\n",__FILE__,__LINE__);
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-fprintf(stderr,"%s, %d: copy table imageEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -273,7 +267,7 @@ fprintf(stderr,"%s, %d: copy table imageEntries\n",__FILE__,__LINE__);
                                                                                         }
                                                                                         if (error == ERROR_NONE)
                                                                                         {
- //fprintf(stderr,"%s, %d: copy d\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy d\n",__FILE__,__LINE__);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "directoryEntries",
@@ -287,7 +281,6 @@ fprintf(stderr,"%s, %d: copy table imageEntries\n",__FILE__,__LINE__);
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-fprintf(stderr,"%s, %d: copy table directoryEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -299,7 +292,7 @@ fprintf(stderr,"%s, %d: copy table directoryEntries\n",__FILE__,__LINE__);
                                                                                         }
                                                                                         if (error == ERROR_NONE)
                                                                                         {
- //fprintf(stderr,"%s, %d: copy l\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy l\n",__FILE__,__LINE__);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "linkEntries",
@@ -313,7 +306,6 @@ fprintf(stderr,"%s, %d: copy table directoryEntries\n",__FILE__,__LINE__);
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-fprintf(stderr,"%s, %d: copy table linkEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -325,7 +317,7 @@ fprintf(stderr,"%s, %d: copy table linkEntries\n",__FILE__,__LINE__);
                                                                                         }
                                                                                         if (error == ERROR_NONE)
                                                                                         {
- //fprintf(stderr,"%s, %d: copy h\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy h\n",__FILE__,__LINE__);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "hardlinkEntries",
@@ -339,7 +331,6 @@ fprintf(stderr,"%s, %d: copy table linkEntries\n",__FILE__,__LINE__);
 
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
                                                                                                                        (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
-fprintf(stderr,"%s, %d: copy table hardlinkEntries\n",__FILE__,__LINE__);
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
@@ -351,8 +342,7 @@ fprintf(stderr,"%s, %d: copy table hardlinkEntries\n",__FILE__,__LINE__);
                                                                                         }
                                                                                         if (error == ERROR_NONE)
                                                                                         {
- //fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
                                                                                           error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
                                                                                                                      "specialEntries",
@@ -387,7 +377,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported entity #%"PRIi64": '%s' (%3d%%, %llus)\n",
+                                           "Imported entity #%"PRIi64": '%s' (%3d%%, %llus)",
                                            toEntityId,
                                            Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
                                            (step*100)/maxSteps,
@@ -520,7 +510,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
 
                                                             if (error == ERROR_NONE)
                                                             {
- //fprintf(stderr,"%s, %d: copy f\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy f\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "fileEntries",
@@ -545,7 +535,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                                             }
                                                             if (error == ERROR_NONE)
                                                             {
- //fprintf(stderr,"%s, %d: copy i\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy i\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "imageEntries",
@@ -570,7 +560,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                                             }
                                                             if (error == ERROR_NONE)
                                                             {
- //fprintf(stderr,"%s, %d: copy d\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy d\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "directoryEntries",
@@ -595,7 +585,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                                             }
                                                             if (error == ERROR_NONE)
                                                             {
- //fprintf(stderr,"%s, %d: copy l\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy l\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "linkEntries",
@@ -620,7 +610,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                                             }
                                                             if (error == ERROR_NONE)
                                                             {
- //fprintf(stderr,"%s, %d: copy h\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy h\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "hardlinkEntries",
@@ -645,7 +635,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                                             }
                                                             if (error == ERROR_NONE)
                                                             {
- //fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
                                                               error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                          &newIndexHandle->databaseHandle,
                                                                                          "specialEntries",
@@ -672,7 +662,7 @@ fprintf(stderr,"%s, %d: copy table specialEntries\n",__FILE__,__LINE__);
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported storage #"PRIi64": '%s' (%3d%%, %llus)\n",
+                                           "Imported storage #"PRIi64": '%s' (%3d%%, %llus)",
                                            toStorageId,
                                            Database_getTableColumnListCString(fromColumnList,"name",""),
                                            (step*100)/maxSteps,

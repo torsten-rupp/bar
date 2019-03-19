@@ -2246,7 +2246,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       if (error != ERROR_NONE)
       {
         printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
         SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -2286,7 +2286,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 }
                 else
                 {
-                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'\n",String_cString(name));
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
 
                   SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
@@ -2299,7 +2299,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             }
             else
             {
-              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
               SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
@@ -2346,7 +2346,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             }
             else
             {
-              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
               SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
@@ -2428,7 +2428,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 }
                 else
                 {
-                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'\n",String_cString(name));
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
 
                   SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
@@ -2441,7 +2441,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             }
             else
             {
-              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
               SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
@@ -2475,7 +2475,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             }
             else
             {
-              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
               SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
@@ -2487,7 +2487,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             break;
           default:
             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
-            logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
+            logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'",String_cString(fileName));
 
             SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
             {
@@ -2567,7 +2567,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         if (error != ERROR_NONE)
         {
           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
           SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
@@ -2623,7 +2623,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               }
               else
               {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                 {
@@ -2672,7 +2672,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 }
                 else
                 {
-                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
                   SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
@@ -2700,7 +2700,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
                       SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
@@ -2718,7 +2718,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
-                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
 
                       SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
@@ -2940,7 +2940,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             break;
                           default:
                             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
-                            logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(fileName));
+                            logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'",String_cString(fileName));
 
                             SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                             {
@@ -2955,7 +2955,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       }
                       else
                       {
-                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(fileName));
+                        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)",String_cString(fileName));
 
                         SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                         {
@@ -2967,7 +2967,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     }
                     else
                     {
-                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(fileName));
+                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(fileName));
 
                       SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                       {
@@ -2984,7 +2984,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 else
                 {
                   printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
                   SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                   {
@@ -2996,7 +2996,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               }
               else
               {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (.nobackup file)\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (.nobackup file)",String_cString(name));
               }
               break;
             case FILE_TYPE_LINK:
@@ -3039,7 +3039,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               }
               else
               {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                 {
@@ -3142,7 +3142,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               }
               else
               {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                 {
@@ -3189,7 +3189,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         if (error != ERROR_NONE)
                         {
                           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(name),Error_getText(error));
+                          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
                           SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                           {
@@ -3219,7 +3219,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               }
               else
               {
-                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'\n",String_cString(name));
+                logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
                 SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
                 {
@@ -3231,7 +3231,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               break;
             default:
               printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
-              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'\n",String_cString(name));
+              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'",String_cString(name));
 
               SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
@@ -3246,7 +3246,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         }
         else
         {
-          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)\n",String_cString(name));
+          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)",String_cString(name));
 
           SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
@@ -3263,7 +3263,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       }
       if (n <= 0)
       {
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_MISSING,"No matching entry found for '%s'\n",String_cString(includeEntryNode->string));
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_MISSING,"No matching entry found for '%s'",String_cString(includeEntryNode->string));
 
         SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -3654,7 +3654,6 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
     Index_doneList(&indexQueryHandle);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       Array_done(&storageIds);
       Array_done(&entityIds);
       Array_done(&uuidIds);
@@ -3671,7 +3670,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Index_deleteStorage(indexHandle,indexId);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     }
     DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
@@ -3682,7 +3680,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Index_pruneEntity(indexHandle,indexId);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     }
     DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
@@ -3693,14 +3690,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Index_pruneUUID(indexHandle,indexId);
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       break;
     }
     DEBUG_TESTCODE() { error = DEBUG_TESTCODE_ERROR(); break; }
   }
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     Array_done(&storageIds);
     Array_done(&entityIds);
     Array_done(&uuidIds);
@@ -3802,7 +3797,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       {
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Purging storage for job '%s' fail (error: %s)\n",
+                   "Purging storage for job '%s' fail (error: %s)",
                    String_cString(jobUUID),
                    Error_getText(error)
                   );
@@ -3828,7 +3823,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                  )
             )
       {
-  //fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
+//fprintf(stderr,"%s, %d: %llu %s: createdDateTime=%llu size=%llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime,size);
         if (createdDateTime < oldestCreatedDateTime)
         {
           oldestUUIDId          = uuidId;
@@ -3842,7 +3837,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       }
       Index_doneList(&indexQueryHandle);
 
-  //fprintf(stderr,"%s, %d: totalStorageSize=%llu limit=%llu oldestStorageId=%llu\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
+//fprintf(stderr,"%s, %d: totalStorageSize=%llu limit=%llu oldestStorageId=%llu\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
       if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
       {
         // delete oldest storage entry
@@ -3876,7 +3871,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
           {
             logMessage(logHandle,
                        LOG_TYPE_STORAGE,
-                       "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)\n",
+                       "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)",
                        String_cString(oldestStorageName),
                        BYTES_SHORT(oldestSize),
                        BYTES_UNIT(oldestSize),
@@ -3893,7 +3888,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
         {
           logMessage(logHandle,
                      LOG_TYPE_STORAGE,
-                     "Purging storage index #%llu fail (error: %s)\n",
+                     "Purging storage index #%llu fail (error: %s)",
                      oldestStorageId,
                      Error_getText(error)
                     );
@@ -3906,7 +3901,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
         Misc_formatDateTime(String_clear(dateTime),oldestCreatedDateTime,NULL);
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
+                   "Job size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes",
                    BYTES_SHORT(maxStorageSize),
                    BYTES_UNIT(maxStorageSize),
                    String_cString(oldestStorageName),
@@ -4010,7 +4005,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
       {
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Purging storage for server '%s' fail (error: %s)\n",
+                   "Purging storage for server '%s' fail (error: %s)",
                    String_cString(server->name),
                    Error_getText(error)
                   );
@@ -4036,7 +4031,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                  )
             )
       {
-  //fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
+//fprintf(stderr,"%s, %d: %llu %s: %llu\n",__FILE__,__LINE__,storageId,String_cString(storageName),createdDateTime);
         error = Storage_parseName(&storageSpecifier,storageName);
         if (   (error == ERROR_NONE)
             && String_equals(storageSpecifier.hostName,server->name)
@@ -4089,7 +4084,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
           {
             logMessage(logHandle,
                        LOG_TYPE_STORAGE,
-                       "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)\n",
+                       "Purging storage '%s', %.1f%s (%llu bytes) fail (error: %s)",
                        String_cString(oldestStorageName),
                        BYTES_SHORT(oldestSize),
                        BYTES_UNIT(oldestSize),
@@ -4106,7 +4101,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
         {
           logMessage(logHandle,
                      LOG_TYPE_STORAGE,
-                     "Purging storage index #%llu fail (error: %s)\n",
+                     "Purging storage index #%llu fail (error: %s)",
                      oldestStorageId,
                      Error_getText(error)
                     );
@@ -4119,7 +4114,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
         Misc_formatDateTime(dateTime,oldestCreatedDateTime,NULL);
         logMessage(logHandle,
                    LOG_TYPE_STORAGE,
-                   "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes\n",
+                   "Server size limit exceeded (max %.1f%s): purged storage '%s', created at %s, %llu bytes",
                    BYTES_SHORT(maxStorageSize),
                    BYTES_UNIT(maxStorageSize),
                    String_cString(oldestStorageName),
@@ -4456,7 +4451,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       printInfo(1,"OK (%llu bytes)\n",archiveSize);
       logMessage(createInfo->logHandle,
                  LOG_TYPE_STORAGE,
-                 "%s '%s' (%llu bytes)\n",
+                 "%s '%s' (%llu bytes)",
                  appendFlag ? "Appended to" : "Stored",
                  String_cString(printableStorageName),
                  archiveSize
@@ -4513,7 +4508,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           });
 
           // append index: assign storage index entries to existing storage index
-  //fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
+//fprintf(stderr,"%s, %d: append to storage %llu\n",__FILE__,__LINE__,storageId);
           error = Index_assignTo(createInfo->indexHandle,
                                  NULL,  // jobUUID
                                  INDEX_ID_NONE,  // entityId
@@ -4544,7 +4539,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
         else
         {
-  //fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: --- new storage \n",__FILE__,__LINE__);
           // replace index: keep new storage
           storageId = storageMsg.storageId;
           AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
@@ -4573,7 +4568,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           // append storage to existing entity which have the same storage directory
           if (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
           {
-  //fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
+//fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
             Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
             // find matching entity and assign storage to entity
@@ -4628,7 +4623,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                   && Storage_equalSpecifiers(&existingStorageSpecifier,directoryName,&existingStorageSpecifier,existingDirectoryName)
                  )
               {
-  //fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
+//fprintf(stderr,"%s, %d: assign to existingStorageName=%s\n",__FILE__,__LINE__,String_cString(existingStorageName));
                 error = Index_assignTo(createInfo->indexHandle,
                                        NULL,  // jobUUID
                                        INDEX_ID_NONE,  // entityId
@@ -5111,7 +5106,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -5138,7 +5133,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -5166,7 +5161,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -5326,7 +5321,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       if (createInfo->jobOptions->skipUnreadableFlag)
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(fileName),Error_getText(error));
         STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
         {
           createInfo->statusInfo.done.count++;
@@ -5408,7 +5403,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added file '%s' (%llu bytes%s%s)\n",
+                 "Added file '%s' (%llu bytes%s%s)",
                  String_cString(fileName),
                  fragmentSize,
                  s1,
@@ -5511,7 +5506,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(deviceName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(deviceName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,deviceName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -5559,7 +5554,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'\n",String_cString(deviceName));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'",String_cString(deviceName));
       STATUS_INFO_UPDATE(createInfo,deviceName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -5810,7 +5805,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added image '%s' (%s, %llu bytes%s%s)\n",
+                 "Added image '%s' (%s, %llu bytes%s%s)",
                  String_cString(deviceName),
                  (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
                  fragmentSize,
@@ -5970,7 +5965,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added directory '%s'\n",
+                 "Added directory '%s'",
                  String_cString(directoryName)
                 );
     }
@@ -6034,7 +6029,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)",String_cString(linkName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -6061,7 +6056,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(linkName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(linkName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -6092,7 +6087,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       if (createInfo->jobOptions->skipUnreadableFlag)
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(linkName));
+        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'",String_cString(linkName));
         STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
         {
           createInfo->statusInfo.done.count++;
@@ -6255,7 +6250,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
       SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
         createInfo->statusInfo.done.count += StringList_count(fileNameList);
@@ -6283,7 +6278,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -6311,7 +6306,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)\n",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
       {
         createInfo->statusInfo.done.count += StringList_count(fileNameList);
@@ -6528,7 +6523,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                );
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added hardlink '%s' (%llu bytes%s%s)\n",
+                 "Added hardlink '%s' (%llu bytes%s%s)",
                  String_cString(StringList_first(fileNameList,NULL)),
                  fragmentSize,
                  s1,
@@ -6608,7 +6603,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -6635,7 +6630,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
       {
         createInfo->statusInfo.done.count++;
@@ -6694,7 +6689,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
                  LOG_TYPE_ENTRY_OK,
-                 "Added special '%s'\n",
+                 "Added special '%s'",
                  String_cString(fileName)
                 );
     }
@@ -7445,7 +7440,7 @@ masterIO, // masterIO
               "OK (%lu entries)\n",
               Dictionary_count(&createInfo.namesDictionary)
              );
-    logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'\n",String_cString(incrementalListFileName));
+    logMessage(logHandle,LOG_TYPE_ALWAYS,"Updated incremental file '%s'",String_cString(incrementalListFileName));
   }
 
   // unmount devices
@@ -7483,7 +7478,7 @@ masterIO, // masterIO
              );
     logMessage(logHandle,
                LOG_TYPE_ALWAYS,
-               "%lu entries/%.1lf%s (%llu bytes) included, %lu entries skipped, %lu entries with errors\n",
+               "%lu entries/%.1lf%s (%llu bytes) included, %lu entries skipped, %lu entries with errors",
                createInfo.statusInfo.done.count,
                BYTES_SHORT(createInfo.statusInfo.done.size),
                BYTES_UNIT(createInfo.statusInfo.done.size),

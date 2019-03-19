@@ -802,7 +802,7 @@ LOCAL void startPairingMaster(void)
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Started pairing master\n"
+               "Started pairing master"
               );
   }
 }
@@ -824,7 +824,7 @@ LOCAL void stopPairingMaster(void)
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Stopped pairing master\n"
+               "Stopped pairing master"
               );
   }
 }
@@ -847,7 +847,7 @@ LOCAL void clearPairedMaster(void)
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Cleared paired master\n"
+               "Cleared paired master"
               );
   }
 }
@@ -1396,7 +1396,7 @@ LOCAL void jobThreadCode(void)
       case JOB_TYPE_CREATE:
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Started job '%s'%s %s%s%s\n",
+                   "Started job '%s'%s %s%s%s",
                    String_cString(jobName),
                    !String_isEmpty(s) ? String_cString(s) : "",
                    Archive_archiveTypeToString(archiveType,"UNKNOWN"),
@@ -1407,7 +1407,7 @@ LOCAL void jobThreadCode(void)
       case JOB_TYPE_RESTORE:
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Started restore%s%s%s\n",
+                   "Started restore%s%s%s",
                    !String_isEmpty(s) ? String_cString(s) : "",
                    !String_isEmpty(byName) ? " by " : "",
                    String_cString(byName)
@@ -1443,7 +1443,7 @@ LOCAL void jobThreadCode(void)
           {
             logMessage(&logHandle,
                        LOG_TYPE_ALWAYS,
-                       "Aborted job '%s': invalid storage '%s' (error: %s)\n",
+                       "Aborted job '%s': invalid storage '%s' (error: %s)",
                        String_cString(jobName),
                        String_cString(storageName),
                        Error_getText(jobNode->runningInfo.error)
@@ -1517,7 +1517,7 @@ LOCAL void jobThreadCode(void)
             {
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
-                         "Aborted job '%s': pre-command fail (error: %s)\n",
+                         "Aborted job '%s': pre-command fail (error: %s)",
                          String_cString(jobName),
                          Error_getText(jobNode->runningInfo.error)
                         );
@@ -1645,7 +1645,7 @@ NULL,//                                                        scheduleTitle,
             if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
             logMessage(&logHandle,
                        LOG_TYPE_ALWAYS,
-                       "Aborted job '%s': post-command fail (error: %s)\n",
+                       "Aborted job '%s': post-command fail (error: %s)",
                        String_cString(jobName),
                        Error_getText(jobNode->runningInfo.error)
                       );
@@ -1743,7 +1743,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
             {
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
-                         "Cannot insert history information for '%s' (error: %s)\n",
+                         "Cannot insert history information for '%s' (error: %s)",
                          String_cString(jobName),
                          Error_getText(error)
                         );
@@ -1774,7 +1774,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
             {
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
-                         "Cannot insert history information for '%s' (error: %s)\n",
+                         "Cannot insert history information for '%s' (error: %s)",
                          String_cString(jobName),
                          Error_getText(error)
                         );
@@ -1805,7 +1805,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
             {
               logMessage(&logHandle,
                          LOG_TYPE_ALWAYS,
-                         "Warning: cannot insert history information for '%s' (error: %s)\n",
+                         "Warning: cannot insert history information for '%s' (error: %s)",
                          String_cString(jobName),
                          Error_getText(error)
                         );
@@ -1833,7 +1833,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
           // aborted
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Aborted job '%s'%s%s\n",
+                     "Aborted job '%s'%s%s",
                      String_cString(jobName),
                      !String_isEmpty(jobNode->abortedByInfo) ? " by " : "",
                      String_cString(jobNode->abortedByInfo)
@@ -1844,7 +1844,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
           // error
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Done job '%s' (error: %s)\n",
+                     "Done job '%s' (error: %s)",
                      String_cString(jobName),
                      Error_getText(jobNode->runningInfo.error)
                     );
@@ -1854,7 +1854,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
           // success
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Done job '%s' (duration: %"PRIu64"h:%02umin:%02us)\n",
+                     "Done job '%s' (duration: %"PRIu64"h:%02umin:%02us)",
                      String_cString(jobName),
                      (executeEndDateTime-executeStartDateTime) / (60LL*60LL),
                      (uint)((executeEndDateTime-executeStartDateTime) / 60LL) % 60LL,
@@ -1867,7 +1867,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
         {
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Done restore archive (error: %s)\n",
+                     "Done restore archive (error: %s)",
                      Error_getText(jobNode->runningInfo.error)
                     );
         }
@@ -1875,7 +1875,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
         {
           logMessage(&logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Done restore archive\n"
+                     "Done restore archive"
                     );
         }
         break;
@@ -2236,7 +2236,7 @@ LOCAL void schedulerThreadCode(void)
   Errors  error = Continuous_open(&continuousDatabaseHandle);
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialise continuous database (error: %s)!\n",
+    printError("Cannot initialise continuous database (error: %s)!",
                Error_getText(error)
               );
     return;
@@ -2610,7 +2610,7 @@ NULL, // masterIO
   {
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Deleted storage #%lld: '%s', created at %s\n",
+               "Deleted storage #%lld: '%s', created at %s",
                Index_getDatabaseId(storageId),
                String_cString(storageName),
                String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
@@ -2768,7 +2768,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
 //TODO: better info?
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Deleted entity #%lld: job '%s', created at %s\n",
+             "Deleted entity #%lld: job '%s', created at %s",
              Index_getDatabaseId(entityId),
              String_cString(jobName),
              String_cString(Misc_formatDateTime(String_clear(string),createdDateTime,NULL))
@@ -2887,7 +2887,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
 //TODO: better info?
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Deleted UUID '%s'\n",
+             "Deleted UUID '%s'",
              String_cString(jobUUID)
             );
 
@@ -3181,7 +3181,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
     plogMessage(NULL,  // logHandle,
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Open index database fail - disabled purge expired\n"
+                "Open index database fail - disabled purge expired"
                );
     return;
   }
@@ -3299,9 +3299,9 @@ if (1
                         LOG_TYPE_INDEX,
                         "INDEX",
                         #ifdef SIMULATE_PURGE
-                          "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated)\n",
+                          "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated)",
                         #else /* not SIMULATE_PURGE */
-                          "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)\n",
+                          "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)",
                         #endif /* SIMULATE_PURGE */
                         String_cString(expiredJobName),
                         Archive_archiveTypeToString(expiredArchiveType,"NORMAL"),
@@ -3493,7 +3493,7 @@ LOCAL void indexThreadCode(void)
     plogMessage(NULL,  // logHandle,
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Open index database fail - disabled index update\n"
+                "Open index database fail - disabled index update"
                );
     return;
   }
@@ -3631,7 +3631,7 @@ NULL, // masterIO
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Created index for '%s', %"PRIu64" entries/%.1f%s (%"PRIu64" bytes), %lumin:%02lus\n",
+                      "Created index for '%s', %"PRIu64" entries/%.1f%s (%"PRIu64" bytes), %lumin:%02lus",
                       String_cString(printableStorageName),
                       totalEntryCount,
                       BYTES_SHORT(totalEntrySize),
@@ -3650,7 +3650,7 @@ NULL, // masterIO
           plogMessage(NULL,  // logHandle,
                       LOG_TYPE_INDEX,
                       "INDEX",
-                      "Cannot create index for '%s' (error: %s) %d %d\n",
+                      "Cannot create index for '%s' (error: %s) %d %d",
                       String_cString(printableStorageName),
                       Error_getText(error),
                       Error_getCode(error),
@@ -3770,7 +3770,7 @@ LOCAL void autoIndexThreadCode(void)
     plogMessage(NULL,  // logHandle,
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Open index database fail - disabled auto-index\n"
+                "Open index database fail - disabled auto-index"
                );
     return;
   }
@@ -3891,7 +3891,7 @@ LOCAL void autoIndexThreadCode(void)
                                                  plogMessage(NULL,  // logHandle,
                                                              LOG_TYPE_INDEX,
                                                              "INDEX",
-                                                             "Requested update index for '%s'\n",
+                                                             "Requested update index for '%s'",
                                                              String_cString(printableStorageName)
                                                             );
                                                }
@@ -3925,7 +3925,7 @@ LOCAL void autoIndexThreadCode(void)
                                                plogMessage(NULL,  // logHandle,
                                                            LOG_TYPE_INDEX,
                                                            "INDEX",
-                                                           "Requested add index for '%s'\n",
+                                                           "Requested add index for '%s'",
                                                            String_cString(printableStorageName)
                                                           );
                                              }
@@ -4013,7 +4013,7 @@ LOCAL void autoIndexThreadCode(void)
             plogMessage(NULL,  // logHandle,
                         LOG_TYPE_INDEX,
                         "INDEX",
-                        "Deleted index for '%s', last checked %s\n",
+                        "Deleted index for '%s', last checked %s",
                         String_cString(printableStorageName),
                         String_cString(Misc_formatDateTime(String_clear(string),lastCheckedDateTime,NULL))
                        );
@@ -4544,7 +4544,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
         {
           logMessage(NULL,  // logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Paired master '%s'\n",
+                     "Paired master '%s'",
                      String_cString(globalOptions.masterInfo.name)
                     );
         }
@@ -4552,7 +4552,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
         {
           logMessage(NULL,  // logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Pairing master '%s' fail (error: %s)\n",
+                     "Pairing master '%s' fail (error: %s)",
                      String_cString(globalOptions.masterInfo.name),
                      Error_getText(error)
                     );
@@ -4568,7 +4568,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   {
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Authorization client %s:%d fail (error: %s)\n",
+               "Authorization client %s:%d fail (error: %s)",
                String_cString(clientInfo->io.network.name),
                clientInfo->io.network.port,
                Error_getText(error)
@@ -5791,7 +5791,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     if (pauseFlags.indexUpdate) String_joinCString(modeMask,"indexUpdate",',');
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Pause server by '%s' for %dmin: %s\n",
+               "Pause server by '%s' for %dmin: %s",
                getClientInfo(clientInfo,buffer,sizeof(buffer)),
                pauseTime/60,
                String_cString(modeMask)
@@ -5872,7 +5872,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     }
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Suspended server by '%s'\n",
+               "Suspended server by '%s'",
                getClientInfo(clientInfo,buffer,sizeof(buffer))
               );
   }
@@ -5916,7 +5916,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     pauseFlags.indexUpdate = FALSE;
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Continued server by '%s'\n",
+               "Continued server by '%s'",
                getClientInfo(clientInfo,buffer,sizeof(buffer))
               );
   }
@@ -13460,7 +13460,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started restore%s%s: %d archives/%d entries\n",
+             "Started restore%s%s: %d archives/%d entries",
              !String_isEmpty(byName) ? " by " : "",
              String_cString(byName),
              List_count(&storageNameList),
@@ -13494,7 +13494,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Done restore%s%s\n",
+             "Done restore%s%s",
              !String_isEmpty(byName) ? " by " : "",
              String_cString(byName)
             );
@@ -17541,7 +17541,7 @@ Errors Server_run(ServerModes       mode,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started BAR server%s\n",
+             "Started BAR server%s",
              (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
             );
   printInfo(1,"Started BAR server%s\n",(serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
@@ -17551,6 +17551,7 @@ Errors Server_run(ServerModes       mode,
   {
     if (!String_isEmpty(globalOptions.masterInfo.name))
     {
+//TODO: log, remove?
       printInfo(1,"Master: %s\n",String_cString(globalOptions.masterInfo.name));
     }
     else
@@ -17559,10 +17560,9 @@ Errors Server_run(ServerModes       mode,
       Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Started auto-pairing master (%ds)\n",
+                 "Started auto-pairing master (%ds)",
                  PAIRING_MASTER_TIMEOUT
                 );
-      printInfo(1,"Started auto-pairing\n");
     }
   }
 
@@ -18286,7 +18286,7 @@ Connector_doneAll();
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Terminated BAR server\n"
+             "Terminated BAR server"
             );
 
   return ERROR_NONE;
@@ -18305,7 +18305,7 @@ Errors Server_batch(int inputDescriptor,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started BAR batch\n"
+             "Started BAR batch"
             );
 
   // initialize variables
@@ -18429,7 +18429,7 @@ processCommand(&clientInfo,commandString);
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Terminated BAR batch\n"
+             "Terminated BAR batch"
             );
 
   return ERROR_NONE;

@@ -781,7 +781,7 @@ return ERROR_NONE;
       {
         return error;
       }
-  //if (size > 0) fprintf(stderr,"%s, %d: sub %llu add %llu \n",__FILE__,__LINE__,newestSize,size);
+//if (size > 0) fprintf(stderr,"%s, %d: sub %llu add %llu \n",__FILE__,__LINE__,newestSize,size);
       switch (type)
       {
         case INDEX_TYPE_FILE     :
@@ -954,7 +954,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Imported index database '%s' (version %d)\n",
+                "Imported index database '%s' (version %d)",
                 String_cString(oldDatabaseFileName),
                 indexVersion
                );
@@ -964,7 +964,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Import index database '%s' (version %d) fail: %s\n",
+                "Import index database '%s' (version %d) fail: %s",
                 String_cString(oldDatabaseFileName),
                 indexVersion,
                 Error_getText(error)
@@ -1003,7 +1003,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Start clean-up duplicate meta data\n"
+              "Start clean-up duplicate meta data"
              );
 
   // init variables
@@ -1063,7 +1063,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Clean-up duplicate meta data\n"
+              "Clean-up duplicate meta data"
              );
 
   return ERROR_NONE;
@@ -1096,7 +1096,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Start clean-up incomplete updates\n"
+              "Start clean-up incomplete updates"
              );
 
   // init variables
@@ -1155,7 +1155,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Requested update index #%lld: %s\n",
+                    "Requested update index #%lld: %s",
                     indexId,
                     String_cString(printableStorageName)
                    );
@@ -1174,7 +1174,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Clean-up incomplete updates\n"
+              "Clean-up incomplete updates"
              );
 
   return ERROR_NONE;
@@ -1207,7 +1207,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Start clean-up incomplete created entries\n"
+              "Start clean-up incomplete created entries"
              );
 
   // init variables
@@ -1252,7 +1252,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_INDEX,
                   "INDEX",
-                  "Deleted incomplete index #%lld: '%s'\n",
+                  "Deleted incomplete index #%lld: '%s'",
                   indexId,
                   String_cString(printableStorageName)
                  );
@@ -1267,7 +1267,7 @@ LOCAL Errors cleanUpIncompleteCreate(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Clean-up incomplete created entries\n"
+              "Clean-up incomplete created entries"
              );
 
   return ERROR_NONE;
@@ -1303,7 +1303,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Start clean-up indizes without name\n"
+              "Start clean-up indizes without name"
              );
 
   // init variables
@@ -1365,7 +1365,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Cleaned %lu indizes without name\n",
+                "Cleaned %lu indizes without name",
                 n
                );
   }
@@ -1374,7 +1374,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Clean-up indizes without name\n"
+                "Clean-up indizes without name"
                );
   }
 
@@ -1419,7 +1419,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Start clean-up no entity-entries\n"
+              "Start clean-up no entity-entries"
              );
 
   // init variables
@@ -1592,7 +1592,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Clean-up no entity-entries\n"
+              "Clean-up no entity-entries"
              );
 #else
 UNUSED_VARIABLE(indexHandle);
@@ -1675,7 +1675,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Started prune storages\n"
+              "Started prune storages"
              );
 
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
@@ -1713,7 +1713,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Pruned storages\n"
+                "Pruned storages"
                );
   }
   else
@@ -1721,7 +1721,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Prune storages fail (error: %s)\n",
+                "Prune storages fail (error: %s)",
                 Error_getText(error)
                );
   }
@@ -1848,7 +1848,7 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Started prune entities\n"
+              "Started prune entities"
              );
 
   // Note: keep default entity!
@@ -1887,7 +1887,7 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Pruned entities\n"
+                "Pruned entities"
                );
   }
   else
@@ -1895,7 +1895,7 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Prune entities fail (error: %s)\n",
+                "Prune entities fail (error: %s)",
                 Error_getText(error)
                );
   }
@@ -2000,7 +2000,7 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Started prune UUIDs\n"
+              "Started prune UUIDs"
              );
 
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
@@ -2037,7 +2037,7 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Pruned UUIDs\n"
+                "Pruned UUIDs"
                );
   }
   else
@@ -2045,7 +2045,7 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Prune UUIDs failed (error: %s)\n",
+                "Prune UUIDs failed (error: %s)",
                 Error_getText(error)
                );
   }
@@ -2199,7 +2199,7 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Refreshed storages infos\n"
+                "Refreshed storages infos"
                );
   }
   else
@@ -2207,7 +2207,7 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Refreshed storages infos fail (error: %s)\n",
+                "Refreshed storages infos fail (error: %s)",
                 Error_getText(error)
                );
   }
@@ -2277,7 +2277,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Refreshed entities infos\n"
+                "Refreshed entities infos"
                );
   }
   else
@@ -2285,7 +2285,7 @@ LOCAL Errors refreshEntitiesInfos(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Refreshed entities infos fail (error: %s)\n",
+                "Refreshed entities infos fail (error: %s)",
                 Error_getText(error)
                );
   }
@@ -2346,7 +2346,7 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Refreshed UUID infos\n"
+                "Refreshed UUID infos"
                );
   }
   else
@@ -2354,7 +2354,7 @@ LOCAL Errors refreshUUIDsInfos(IndexHandle *indexHandle)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Refreshed UUID infos fail (error: %s)\n",
+                "Refreshed UUID infos fail (error: %s)",
                 Error_getText(error)
                );
   }
@@ -2473,7 +2473,7 @@ LOCAL void indexThreadCode(void)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
-                "Cannot open index database '$s' fail: %s\n",
+                "Cannot open index database '$s' fail: %s",
                 indexDatabaseFileName,
                 Error_getText(error)
                );
@@ -2493,7 +2493,7 @@ LOCAL void indexThreadCode(void)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
-                "Import index database '%s' fail: %s\n",
+                "Import index database '%s' fail: %s",
                 indexDatabaseFileName,
                 Error_getText(error)
                );
@@ -2518,7 +2518,7 @@ LOCAL void indexThreadCode(void)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
-                    "Started import old index databases\n"
+                    "Started import old index databases"
                    );
       }
       error = importIndex(&indexHandle,oldDatabaseFileName);
@@ -2536,7 +2536,7 @@ LOCAL void indexThreadCode(void)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Done import old index databases (%d)\n",
+                "Done import old index databases (%d)",
                 oldDatabaseCount
                );
   }
@@ -2757,7 +2757,7 @@ fprintf(stderr,"%s, %d: storageId=%lld done=%d x=%llu\n",__FILE__,__LINE__,datab
                   plogMessage(NULL,  // logHandle
                               LOG_TYPE_INDEX,
                               "INDEX",
-                              "Removed deleted storage #%llu from index: '%s'\n",
+                              "Removed deleted storage #%llu from index: '%s'",
                               databaseId,
                               String_cString(storageName)
                              );
@@ -4047,7 +4047,7 @@ Errors Index_init(const char *fileName)
           plogMessage(NULL,  // logHandle
                       LOG_TYPE_ERROR,
                       "INDEX",
-                      "Old index database version %d in '%s' - create new\n",
+                      "Old index database version %d in '%s' - create new",
                       indexVersion,
                       indexDatabaseFileName
                      );
@@ -4060,7 +4060,7 @@ Errors Index_init(const char *fileName)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
-                    "Unknown index database version in '%s' - create new\n",
+                    "Unknown index database version in '%s' - create new",
                     indexDatabaseFileName
                    );
       }
@@ -4112,7 +4112,7 @@ Errors Index_init(const char *fileName)
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_ERROR,
                     "INDEX",
-                    "Outdated or corrupt index database '%s' (error: %s) - create new\n",
+                    "Outdated or corrupt index database '%s' (error: %s) - create new",
                     indexDatabaseFileName,
                     Error_getText(error)
                    );
@@ -4129,7 +4129,7 @@ Errors Index_init(const char *fileName)
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
-                  "Create new index database '%s' fail: %s\n",
+                  "Create new index database '%s' fail: %s",
                   indexDatabaseFileName,
                   Error_getText(error)
                  );
@@ -4141,7 +4141,7 @@ Errors Index_init(const char *fileName)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Created new index database '%s' (version %d)\n",
+                "Created new index database '%s' (version %d)",
                 indexDatabaseFileName,
                 INDEX_VERSION
                );
@@ -4155,7 +4155,7 @@ Errors Index_init(const char *fileName)
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_ERROR,
                   "INDEX",
-                  "Cannot get index database version from '%s': %s\n",
+                  "Cannot get index database version from '%s': %s",
                   indexDatabaseFileName,
                   Error_getText(error)
                  );
@@ -4166,7 +4166,7 @@ Errors Index_init(const char *fileName)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Opened index database '%s' (version %d)\n",
+                "Opened index database '%s' (version %d)",
                 indexDatabaseFileName,
                 indexVersion
                );
@@ -4179,7 +4179,7 @@ Errors Index_init(const char *fileName)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_ERROR,
                 "INDEX",
-                "Cannot get index database version from '%s': %s\n",
+                "Cannot get index database version from '%s': %s",
                 indexDatabaseFileName,
                 Error_getText(error)
                );
@@ -4189,7 +4189,7 @@ Errors Index_init(const char *fileName)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Started initial clean-up index database\n"
+              "Started initial clean-up index database"
              );
 //TODO: remove
 //  BLOCK_DO(Database_lock(&indexHandle.databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
@@ -4208,7 +4208,7 @@ Errors Index_init(const char *fileName)
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "Done initial clean-up index database\n"
+              "Done initial clean-up index database"
              );
 
   // start clean-up thread

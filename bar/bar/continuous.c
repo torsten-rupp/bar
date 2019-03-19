@@ -533,7 +533,7 @@ LOCAL NotifyInfo *addNotify(ConstString name)
     {
       plogMessage(NULL,  // logHandle
                   LOG_TYPE_CONTINUOUS,
-                  "CONTINUOUS","Add notify watch for '%s' fail (error: %s)\n",
+                  "CONTINUOUS","Add notify watch for '%s' fail (error: %s)",
                   String_cString(name),strerror(errno)
                  );
       return NULL;
@@ -1026,7 +1026,7 @@ LOCAL void continuousInitThreadCode(void)
 //fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
-                    "CONTINUOUS","Start initialize watches for '%s'\n",
+                    "CONTINUOUS","Start initialize watches for '%s'",
                     String_cString(initNotifyMsg.name)
                    );
 
@@ -1064,7 +1064,7 @@ LOCAL void continuousInitThreadCode(void)
 
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
-                    "CONTINUOUS","%lu watches (max. %lu)\n",
+                    "CONTINUOUS","%lu watches (max. %lu)",
                     Dictionary_count(&notifyHandles),
                     getMaxNotifies()
                    );
@@ -1332,7 +1332,7 @@ fprintf(stderr,"\n");
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
                                 "CONTINUOUS",
-                                "Marked for storage '%s'\n",
+                                "Marked for storage '%s'",
                                 String_cString(absoluteName)
                                );
                   }
@@ -1341,7 +1341,7 @@ fprintf(stderr,"\n");
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
                                 "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)\n",
+                                "Store continuous entry fail (error: %s)",
                                 Error_getText(error)
                                );
                   }
@@ -1377,7 +1377,7 @@ fprintf(stderr,"\n");
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
                                 "CONTINUOUS",
-                                "Marked for storage '%s'\n",
+                                "Marked for storage '%s'",
                                 String_cString(absoluteName)
                                );
                   }
@@ -1386,7 +1386,7 @@ fprintf(stderr,"\n");
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
                                 "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)\n",
+                                "Store continuous entry fail (error: %s)",
                                 Error_getText(error)
                                );
                   }
@@ -1411,7 +1411,7 @@ fprintf(stderr,"\n");
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
                                 "CONTINUOUS",
-                                "Marked for storage '%s'\n",
+                                "Marked for storage '%s'",
                                 String_cString(absoluteName)
                                );
                   }
@@ -1420,7 +1420,7 @@ fprintf(stderr,"\n");
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
                                 "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)\n",
+                                "Store continuous entry fail (error: %s)",
                                 Error_getText(error)
                                );
                   }
@@ -1453,7 +1453,7 @@ fprintf(stderr,"\n");
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
                                 "CONTINUOUS",
-                                "Marked for storage '%s'\n",
+                                "Marked for storage '%s'",
                                 String_cString(absoluteName)
                                );
                   }
@@ -1462,7 +1462,7 @@ fprintf(stderr,"\n");
                     plogMessage(NULL,  // logHandle
                                 LOG_TYPE_CONTINUOUS,
                                 "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)\n",
+                                "Store continuous entry fail (error: %s)",
                                 Error_getText(error)
                                );
                   }

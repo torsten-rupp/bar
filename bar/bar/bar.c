@@ -5107,6 +5107,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
             va_copy(tmpArguments,arguments);
             (void)vfprintf(logHandle->logFile,text,tmpArguments);
             va_end(tmpArguments);
+            fputc('\n',logHandle->logFile);
           }
         }
 
@@ -5131,6 +5132,7 @@ void vlogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
           va_copy(tmpArguments,arguments);
           (void)vfprintf(logFile,text,tmpArguments);
           va_end(tmpArguments);
+          fputc('\n',logFile);
           fflush(logFile);
         }
 
