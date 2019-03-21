@@ -176,25 +176,46 @@ INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
 #ifndef WERROR
 #warning comment
 #endif
+
+/***********************************************************************\
+* Name   : Connector_authorize
+* Purpose: authorize
+* Input  : connectorInfo - connector info
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
 Errors Connector_authorize(ConnectorInfo *connectorInfo);
+
+/***********************************************************************\
+* Name   : Connector_initStorage
+* Purpose: init storage
+* Input  : connectorInfo - connector info
+*          storageName   - storage name
+*          jobOptions    - job options
+*          noStorage     - TRUE fo no storage
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
 
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                              ConstString   storageName,
                              JobOptions    *jobOptions,
                              bool          noStorage
                             );
-Errors Connector_doneStorage(ConnectorInfo *connectorInfo);
 
 /***********************************************************************\
-* Name   : Connector_ping
-* Purpose: check if slave is alive
+* Name   : Connector_doneStorage
+* Purpose: done storage
 * Input  : connectorInfo - connector info
 * Output : -
-* Return : TRUE iff connected
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-bool Connector_ping(ConnectorInfo *connectorInfo);
+Errors Connector_doneStorage(ConnectorInfo *connectorInfo);
 
 // ----------------------------------------------------------------------
 
