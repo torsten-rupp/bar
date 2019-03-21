@@ -484,8 +484,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
 
   p            = (const byte*)buffer;
   writtenBytes = 0L;
-#if 0
-//TODO: remove single block transmit
+  idCount      = 0;
   while (writtenBytes < bufferLength)
   {
     // encode data
@@ -493,37 +492,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     Misc_base64Encode(String_clear(encodedData),p,n);
 
     // send data
-    error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
-                                    MASTER_DEBUG_LEVEL_DATA,
-                                    MASTER_COMMAND_TIMEOUT,
-                                    NULL,  // resultMap
-                                    "STORAGE_WRITE offset=%llu length=%u data=%s",
-//TODO
-                                    storageHandle->master.index,
-                                    n,
-                                    String_cString(encodedData)
-                                   );
-    if (error != ERROR_NONE)
-    {
-fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
-      String_delete(encodedData);
-      return error;
-    }
-
-    // next part
-    p += n;
-    writtenBytes += n;
-    storageHandle->master.index += (uint64)n;
-  }
-#else
-  idCount = 0;
-  while (writtenBytes < bufferLength)
-  {
-    // encode data
-    n = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
-    Misc_base64Encode(String_clear(encodedData),p,n);
-
-    // send data
+fprintf(stderr,"%s, %d: n=%lld\n",__FILE__,__LINE__,n);
     error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
                                  MASTER_DEBUG_LEVEL_DATA,
                                  &ids[idCount],
@@ -583,7 +552,6 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
     ids[i] = ids[idCount-1];
     idCount--;
   }
-#endif
 
   if (storageHandle->master.index > storageHandle->master.size)
   {
@@ -691,7 +659,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     storageHandle->master.index += (uint64)n;
 
     // update status info
-    storageHandle->storageInfo->runningInfo.storageDoneBytes = (uint64)n;
+    storageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)n;
     if (!updateStorageStatusInfo(storageHandle->storageInfo))
     {
       String_delete(encodedData);
