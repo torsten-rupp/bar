@@ -621,11 +621,13 @@ void ServerIO_disconnect(ServerIO *serverIO)
     case SERVER_IO_TYPE_NONE:
       break;
     case SERVER_IO_TYPE_NETWORK:
-      Network_disconnect(&serverIO->network.socketHandle);
+//TODO: move Network_connect() to ServerIO_connectNetwork
+//      Network_disconnect(&serverIO->network.socketHandle);
       break;
     case SERVER_IO_TYPE_BATCH:
-      File_close(&serverIO->file.outputHandle);
-      File_close(&serverIO->file.inputHandle);
+//TODO: move open files to ServerIO_connectNetwork
+//      File_close(&serverIO->file.outputHandle);
+//      File_close(&serverIO->file.inputHandle);
       break;
     #ifndef NDEBUG
       default:
