@@ -1052,6 +1052,9 @@ LOCAL void updateStatusInfo(Errors           error,
   // Note: only try for 2s
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,2*MS_PER_SECOND)
   {
+    // store status
+    setStatusInfo(&jobNode->statusInfo,statusInfo);
+
     // calculate statics values
     Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     statusInfo->done.count);
     Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       statusInfo->done.size);
@@ -1060,16 +1063,18 @@ LOCAL void updateStatusInfo(Errors           error,
     bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
     storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
 
-    restFiles         = (statusInfo->total.count  > statusInfo->done.count      ) ? statusInfo->total.count -statusInfo->done.count       : 0L;
-    restBytes         = (statusInfo->total.size   > statusInfo->done.size       ) ? statusInfo->total.size  -statusInfo->done.size        : 0LL;
+    // rest rest values
+    restFiles         = (statusInfo->total.count       > statusInfo->done.count      ) ? statusInfo->total.count      -statusInfo->done.count       : 0L;
+    restBytes         = (statusInfo->total.size        > statusInfo->done.size       ) ? statusInfo->total.size       -statusInfo->done.size        : 0LL;
     restStorageBytes  = (statusInfo->storage.totalSize > statusInfo->storage.doneSize) ? statusInfo->storage.totalSize-statusInfo->storage.doneSize : 0LL;
+
+    // calculate estimated rest time
     estimatedRestTime = 0L;
     if (entriesPerSecondAverage      > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restFiles       /entriesPerSecondAverage     )); }
     if (bytesPerSecondAverage        > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restBytes       /bytesPerSecondAverage       )); }
     if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
 
-    setStatusInfo(&jobNode->statusInfo,statusInfo);
-
+    // calulcate performance values
     jobNode->runningInfo.entriesPerSecond      = Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecondFilter     ,10);
     jobNode->runningInfo.bytesPerSecond        = Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecondFilter       ,10);
     jobNode->runningInfo.storageBytesPerSecond = Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecondFilter,10);
