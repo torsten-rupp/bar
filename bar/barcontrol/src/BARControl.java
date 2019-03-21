@@ -2830,7 +2830,6 @@ Dprintf.dprintf("");
             final BusyDialog busyDialog = new BusyDialog(shell,"Print debug memory dump",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0);
             Background.run(new BackgroundRunnable(busyDialog)
             {
-//              @Override
               public void run(final BusyDialog busyDialog)
               {
                 // dump memory info
@@ -3618,7 +3617,6 @@ Dprintf.dprintf("");
       {
         try
         {
-//        final ProgressBar widgetProgressBar = (ProgressBar)((Object[])userData)[0];
           BARServer.executeCommand(StringParser.format("MASTER_SET"),
                                    1,  // debugLevel
                                    new Command.ResultHandler()
@@ -3658,12 +3656,24 @@ Dprintf.dprintf("");
                                      }
                                    }
                                   );
-          Dialogs.close(dialog,false);
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.close(dialog,false);
+            }
+          });
         }
-        catch (BARException exception)
+        catch (final BARException exception)
         {
-          Dialogs.close(dialog,false);
-          Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getText());
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.close(dialog,false);
+              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getText());
+            }
+          });
           return;
         }
       }
@@ -3688,7 +3698,7 @@ Dprintf.dprintf("");
       }
       else
       {
-        Dialogs.error(shell,"Pairing new master fail.");
+//        Dialogs.error(shell,"Pairing new master fail.");
         return false;
       }
     }
