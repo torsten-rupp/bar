@@ -84,69 +84,6 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo);
   extern "C" {
 #endif
 
-#if 0
-/***********************************************************************\
-* Name   : findConnector
-* Purpose: find connector by name/port
-* Input  : connectorInfo - connector info
-* Output : -
-* Return : connector or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ConnectorNode *findConnector(const ConnectorInfo *connectorInfo)
-{
-  ConnectorNode *connectorNode;
-
-  assert(connectorInfo != NULL);
-//  assert(Semaphore_isLocked(&connectorList.lock));
-
-  return LIST_FIND(&connectorList,
-                   connectorNode,
-                      (connectorNode->hostPort == connectorInfo->port)
-                   && String_equals(connectorNode->hostName,connectorInfo->name)
-                   && (!connectorInfo->forceSSL || connectorNode->sslFlag)
-                  );
-}
-
-/***********************************************************************\
-* Name   : findConnectorBySocket
-* Purpose: find connector by socket
-* Input  : fd - socket handle
-* Output : -
-* Return : connector or NULL if not found
-* Notes  : -
-\***********************************************************************/
-
-LOCAL ConnectorNode *findConnectorBySocket(int fd)
-{
-  ConnectorNode *connectorNode;
-
-  assert(fd != -1);
-//  assert(Semaphore_isLocked(&connectorList.lock));
-
-  return LIST_FIND(&connectorList,connectorNode,Network_getSocket(&connectorNode->socketHandle) == fd);
-}
-#endif
-
-#if 0
-/***********************************************************************\
-* Name   : doneSession
-* Purpose: done session
-* Input  : connectorInfo - connector info
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors doneSession(ConnectorInfo *connectorInfo)
-{
-  assert(connectorInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-}
-#endif
-
 /***********************************************************************\
 * Name   : connectorConnect
 * Purpose: connect to connector and get session id/public key
@@ -243,47 +180,6 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   // disconnect
   ServerIO_disconnect(&connectorInfo->io);
 }
-
-//TODO
-#if 0
-/***********************************************************************\
-* Name   : sendConnector
-* Purpose: send data to connector
-* Input  : connectorInfo - connector info
-*          data          - data string
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL uint sendConnector(ConnectorInfo *connectorInfo, ConstString data)
-{
-//TODO
-//  SemaphoreLock semaphoreLock;
-  uint          commandId;
-
-  assert(connectorInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
-  assert(data != NULL);
-
-  #ifdef CONNECTOR_DEBUG
-    fprintf(stderr,"DEBUG: result=%s",String_cString(data));
-  #endif /* CONNECTOR_DEBUG */
-
-  // new command id
-  commandId = atomicIncrement(&connectorInfo->io.commandId,1);
-
-  // format command
-
-  // send data
-//    SEMAPHORE_LOCKED_DO(semaphoreLock,&connectorInfo->network.writeLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    (void)Network_send(&connectorInfo->io.network.socketHandle,String_cString(data),String_length(data));
-  }
-
-  return commandId;
-}
-#endif
 
 /***********************************************************************\
 * Name   : Connector_setJobOptionInteger
@@ -617,7 +513,11 @@ UNUSED_VARIABLE(scheduleCustomText);
                                                               )
                       );
   SET_OPTION_CSTRING  ("crypt-algorithm",        Crypt_algorithmToString(jobOptions->cryptAlgorithms[0],NULL));
-  SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,jobOptions->cryptType,NULL));
+  SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,
+                                                                            Crypt_isEncrypted(jobOptions->cryptAlgorithms[0]) ? jobOptions->cryptType : CRYPT_TYPE_NONE,
+                                                                            NULL
+                                                                           )
+                      );
   SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
   SET_OPTION_PASSWORD ("crypt-password",         &jobOptions->cryptPassword              );
   SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length));
@@ -901,7 +801,6 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
                         );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %d %s\n",__FILE__,__LINE__,Error_getCode(error),Error_getText(error));
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
     String_delete(archiveName);
     return;
@@ -2950,13 +2849,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
     pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
     pollTimeout.tv_nsec = (long)((TIMEOUT%MS_PER_SECOND)*1000LL);
     n = ppoll(pollfds,1,&pollTimeout,&signalMask);
-    if      (n < 0)
-    {
-fprintf(stderr,"%s, %d: poll fail\n",__FILE__,__LINE__);
-//connectorDisconnect(connectorInfo);
-break;
-    }
-    else if (n > 0)
+    if (n > 0)
     {
       if      ((pollfds[0].revents & POLLIN) != 0)
       {
@@ -2987,15 +2880,13 @@ break;
         }
         else
         {
-fprintf(stderr,"%s, %d: disc\n",__FILE__,__LINE__);
-//connectorDisconnect(connectorInfo);
+          // disconnect
           break;
         }
       }
       else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
       {
-fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
-//connectorDisconnect(connectorInfo);
+        // error
         break;
       }
     }
