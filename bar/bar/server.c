@@ -7591,8 +7591,6 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
 
       // set master i/o
       jobNode->masterIO = &clientInfo->io;
-//TODO: remove
-fprintf(stderr,"%s, %d: set master i/o jobNode=%p: %p\n",__FILE__,__LINE__,jobNode,jobNode->masterIO);
     }
 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"jobUUID=%S",jobNode->job.uuid);
