@@ -2093,6 +2093,7 @@ LOCAL void pairingThreadCode(void)
                                    );
           if (error == ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: con\n",__FILE__,__LINE__);
             slaveState = SLAVE_STATE_ONLINE;
 
             // try authorize on slave
@@ -2108,6 +2109,7 @@ LOCAL void pairingThreadCode(void)
 
             // disconnect slave
             Connector_disconnect(&connectorInfo);
+fprintf(stderr,"%s, %d: discon\n",__FILE__,__LINE__);
           }
           else
           {
@@ -16841,22 +16843,14 @@ LOCAL Errors initNetworkClient(ClientInfo               *clientInfo,
   DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
   assert(serverSocketHandle != NULL);
 
-  // init server i/o
-  ServerIO_initNetwork(&clientInfo->io);
-
-  // accept connection
-  error = Network_accept(&clientInfo->io.network.socketHandle,
-                         serverSocketHandle,
-                         SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
-                        );
+  // connect network server i/o
+  error = ServerIO_acceptNetwork(&clientInfo->io,
+                                 serverSocketHandle
+                                );
   if (error != ERROR_NONE)
   {
-    ServerIO_done(&clientInfo->io);
     return error;
   }
-
-  // connect network server i/o
-  ServerIO_connectNetwork(&clientInfo->io);
 
   // init client command threads
   if (!MsgQueue_init(&clientInfo->commandQueue,0))
@@ -16870,9 +16864,6 @@ LOCAL Errors initNetworkClient(ClientInfo               *clientInfo,
       HALT_FATAL_ERROR("Cannot initialize client thread!");
     }
   }
-
-  // start session
-  ServerIO_startSession(&clientInfo->io);
 
   return ERROR_NONE;
 }
@@ -16915,9 +16906,6 @@ LOCAL void doneNetworkClient(ClientInfo *clientInfo)
 
   // disconnect
   ServerIO_disconnect(&clientInfo->io);
-
-  // done server i/o
-  ServerIO_done(&clientInfo->io);
 }
 
 /***********************************************************************\
@@ -16941,24 +16929,15 @@ LOCAL Errors initBatchClient(ClientInfo *clientInfo,
   assert(clientInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
-  // init server i/o
-  ServerIO_initBatch(&clientInfo->io);
-
-  // initialize input/output
-  error = File_openDescriptor(&clientInfo->io.file.inputHandle,inputDescriptor,FILE_OPEN_READ|FILE_STREAM);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = File_openDescriptor(&clientInfo->io.file.outputHandle,outputDescriptor,FILE_OPEN_APPEND|FILE_STREAM);
-  if (error != ERROR_NONE)
-  {
-    File_close(&clientInfo->io.file.inputHandle);
-    return error;
-  }
-
   // connect batch server i/o
-  ServerIO_connectBatch(&clientInfo->io);
+  error = ServerIO_connectBatch(&clientInfo->io,
+                                inputDescriptor,
+                                outputDescriptor
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   // batch client do not require authorization
   clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
@@ -16983,8 +16962,8 @@ LOCAL void doneBatchClient(ClientInfo *clientInfo)
   File_close(&clientInfo->io.file.outputHandle);
   File_close(&clientInfo->io.file.inputHandle);
 
-  // done server i/o
-  ServerIO_done(&clientInfo->io);
+  // disconnect
+  ServerIO_disconnect(&clientInfo->io);
 }
 
 /***********************************************************************\

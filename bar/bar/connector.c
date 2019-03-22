@@ -170,32 +170,12 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
 
   // init variables
 
-  // connect to connector
-  error = Network_connect(&connectorInfo->io.network.socketHandle,
-//TODO
-//                          forceSSL ? SOCKET_TYPE_TLS : SOCKET_TYPE_PLAIN,
-SOCKET_TYPE_PLAIN,
-                          hostName,
-                          hostPort,
-                          NULL,  // loginName
-                          NULL,  // password
-                          NULL,  // sshPublicKeyData
-                          0,     // sshPublicKeyLength
-                          NULL,  // sshPrivateKeyData
-                          0,     // sshPrivateKeyLength
-                          SOCKET_FLAG_NON_BLOCKING|SOCKET_FLAG_NO_DELAY
-                         );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
   // connect network server i/o
-  ServerIO_connectNetwork(&connectorInfo->io);
+  error = ServerIO_connectNetwork(&connectorInfo->io,
+                                  hostName,
+                                  hostPort
+                                 );
 //fprintf(stderr,"%s, %d: Network_getSocket(&connectorInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&connectorInfo->io.network.socketHandle));
-
-  // accept session data
-  error = ServerIO_acceptSession(&connectorInfo->io);
   if (error != ERROR_NONE)
   {
     return error;
@@ -266,7 +246,6 @@ fprintf(stderr,"%s, %d: thead done\n",__FILE__,__LINE__);
 
   // disconnect
   ServerIO_disconnect(&connectorInfo->io);
-  Network_disconnect(&connectorInfo->io.network.socketHandle);
 }
 
 //TODO
@@ -3105,7 +3084,7 @@ void Connector_doneAll(void)
 
 //TODO: remove
 //  connectorInfo->forceSSL        = forceSSL;
-  ServerIO_initNetwork(&connectorInfo->io);
+//  ServerIO_initNetwork(&connectorInfo->io);
   connectorInfo->storageOpenFlag = FALSE;
 
   #ifdef NDEBUG
@@ -3132,8 +3111,6 @@ void Connector_done(ConnectorInfo *connectorInfo)
   assert(connectorInfo != NULL);
 
   DEBUG_REMOVE_RESOURCE_TRACE(connectorInfo,ConnectorInfo);
-
-  ServerIO_done(&connectorInfo->io);
 }
 
 Errors Connector_connect(ConnectorInfo *connectorInfo,

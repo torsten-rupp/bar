@@ -150,10 +150,10 @@ typedef struct
 /****************************** Macros *********************************/
 
 #ifndef NDEBUG
-  #define ServerIO_init(...)        __ServerIO_init       (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define ServerIO_initNetwork(...) __ServerIO_initNetwork(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define ServerIO_initBatch(...)   __ServerIO_initBatch  (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define ServerIO_done(...)        __ServerIO_done       (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_connectNetwork(...) __ServerIO_connectNetwork(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_acceptNetwork(...)  __ServerIO_acceptNetwork (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_connectBatch(...)   __ServerIO_connectBatch  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define ServerIO_disconnect(...)     __ServerIO_disconnect    (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -195,59 +195,51 @@ bool ServerIO_parseEncryptType(const char           *encryptTypeText,
                               );
 
 /***********************************************************************\
-* Name   : ServerIO_initNetwork, ServerIO_initBatch
-* Purpose: init server i/o
-* Input  : serverIO - server i/o
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-void ServerIO_initNetwork(ServerIO *serverIO);
-#else /* not NDEBUG */
-void __ServerIO_initNetwork(const char *__fileName__,
-                            ulong      __lineNb__,
-                            ServerIO   *serverIO
-                           );
-#endif /* NDEBUG */
-#ifdef NDEBUG
-void ServerIO_initBatch(ServerIO   *serverIO);
-#else /* not NDEBUG */
-void __ServerIO_initBatch(const char *__fileName__,
-                          ulong      __lineNb__,
-                          ServerIO   *serverIO
-                         );
-#endif /* NDEBUG */
-
-/***********************************************************************\
-* Name   : ServerIO_done
-* Purpose: done server i/o
-* Input  : serverIO - server i/o
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-void ServerIO_done(ServerIO *serverIO);
-#else /* not NDEBUG */
-void __ServerIO_done(const char *__fileName__,
-                     ulong      __lineNb__,
-                     ServerIO   *serverIO
-                    );
-#endif /* NDEBUG */
-
-/***********************************************************************\
 * Name   : ServerIO_connectNetwork
 * Purpose: connect server network i/o
 * Input  : serverIO - server i/o
+*          hostName - slave host name
+*          hostPort - slave host port
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-void ServerIO_connectNetwork(ServerIO *serverIO);
+#ifdef NDEBUG
+  Errors ServerIO_connectNetwork(ServerIO    *serverIO,
+                                 ConstString hostName,
+                                 uint        hostPort
+                                );
+#else /* not NDEBUG */
+  Errors __ServerIO_connectNetwork(const char *__fileName__,
+                                   ulong      __lineNb__,
+                                   ServerIO    *serverIO,
+                                   ConstString hostName,
+                                   uint        hostPort
+                                  );
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : ServerIO_acceptNetwork
+* Purpose: accept server network i/o
+* Input  : serverIO           - server i/o
+*          serverSocketHandle - server socket handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  Errors ServerIO_acceptNetwork(ServerIO                 *serverIO,
+                                const ServerSocketHandle *serverSocketHandle
+                               );
+#else /* not NDEBUG */
+  Errors __ServerIO_acceptNetwork(const char *__fileName__,
+                                  ulong      __lineNb__,
+                                  ServerIO                 *serverIO,
+                                  const ServerSocketHandle *serverSocketHandle
+                                 );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : ServerIO_connectBatch
@@ -258,18 +250,37 @@ void ServerIO_connectNetwork(ServerIO *serverIO);
 * Notes  : -
 \***********************************************************************/
 
-void ServerIO_connectBatch(ServerIO *serverIO);
+#ifdef NDEBUG
+  Errors ServerIO_connectBatch(ServerIO *serverIO,
+                               int      inputDescriptor,
+                               int      outputDescriptor
+                              );
+#else /* not NDEBUG */
+  Errors __ServerIO_connectBatch(const char *__fileName__,
+                                 ulong      __lineNb__,
+                                 ServerIO   *serverIO,
+                                 int        inputDescriptor,
+                                 int        outputDescriptor
+                                );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : ServerIO_disconnect
 * Purpose: disconnect server i/o
 * Input  : serverIO - server i/o
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-void ServerIO_disconnect(ServerIO *serverIO);
+#ifdef NDEBUG
+  void ServerIO_disconnect(ServerIO *serverIO);
+#else /* not NDEBUG */
+  void __ServerIO_disconnect(const char *__fileName__,
+                             ulong      __lineNb__,
+                             ServerIO   *serverIO
+                            );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : ServerIO_setEnd
@@ -317,7 +328,7 @@ INLINE bool ServerIO_isConnected(ServerIO *serverIO)
 *            e=<n>
 \***********************************************************************/
 
-Errors ServerIO_startSession(ServerIO *serverIO);
+Errors xxxServerIO_startSession(ServerIO *serverIO);
 
 /***********************************************************************\
 * Name   : ServerIO_acceptSession
@@ -333,7 +344,7 @@ Errors ServerIO_startSession(ServerIO *serverIO);
 *            e=<n>
 \***********************************************************************/
 
-Errors ServerIO_acceptSession(ServerIO *serverIO);
+Errors xxxServerIO_acceptSession(ServerIO *serverIO);
 
 /***********************************************************************\
 * Name   : ServerIO_decryptData
