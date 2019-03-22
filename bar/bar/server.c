@@ -2093,7 +2093,6 @@ LOCAL void pairingThreadCode(void)
                                    );
           if (error == ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: con\n",__FILE__,__LINE__);
             slaveState = SLAVE_STATE_ONLINE;
 
             // try authorize on slave
@@ -2109,7 +2108,6 @@ fprintf(stderr,"%s, %d: con\n",__FILE__,__LINE__);
 
             // disconnect slave
             Connector_disconnect(&connectorInfo);
-fprintf(stderr,"%s, %d: discon\n",__FILE__,__LINE__);
           }
           else
           {
