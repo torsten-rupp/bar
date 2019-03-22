@@ -225,8 +225,6 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  printInfo(2,"Disconnect connector\n");
-
   // close storage
   if (connectorInfo->storageOpenFlag)
   {
@@ -235,14 +233,12 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   connectorInfo->storageOpenFlag = FALSE;
 
   // stop connector thread
-fprintf(stderr,"%s, %d: quit thead\n",__FILE__,__LINE__);
   Thread_quit(&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
   {
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
   Thread_done(&connectorInfo->thread);
-fprintf(stderr,"%s, %d: thead done\n",__FILE__,__LINE__);
 
   // disconnect
   ServerIO_disconnect(&connectorInfo->io);
@@ -3004,7 +3000,6 @@ fprintf(stderr,"%s, %d: error/disc\n",__FILE__,__LINE__);
       }
     }
   }
-fprintf(stderr,"%s, %d: now term threa\n",__FILE__,__LINE__);
 
   // done index
   Index_close(indexHandle);
