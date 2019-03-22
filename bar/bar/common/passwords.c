@@ -318,7 +318,7 @@ void Password_setString(Password *password, const String string)
   #else /* not HAVE_GCRYPT */
     for (i = 0; i < length; i++)
     {
-      password->data[i] = String_index(string,z)^obfuscator[i];
+      password->data[i] = String_index(string,i)^obfuscator[i];
     }
   #endif /* HAVE_GCRYPT */
   password->data[length] = '\0';
