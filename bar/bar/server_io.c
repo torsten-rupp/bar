@@ -927,9 +927,8 @@ SOCKET_TYPE_PLAIN,
       Network_disconnect(&serverIO->network.socketHandle);
       break;
     case SERVER_IO_TYPE_BATCH:
-//TODO: move open files to ServerIO_connectNetwork
-//      File_close(&serverIO->file.outputHandle);
-//      File_close(&serverIO->file.inputHandle);
+      File_close(&serverIO->file.outputHandle);
+      File_close(&serverIO->file.inputHandle);
       break;
     #ifndef NDEBUG
       default:
