@@ -1115,11 +1115,11 @@ public class TabStatus
         }
       });
 
-      menuTriggerJob = Widgets.addMenu(widgetJobTableBodyMenu,BARControl.tr("Trigger"));
+      menuTriggerJob = Widgets.addMenu(widgetJobTableBodyMenu,BARControl.tr("Trigger"),BARServer.isMaster());
       {
       }
 
-      Widgets.addMenuItemSeparator(widgetJobTableBodyMenu);
+      Widgets.addMenuItemSeparator(widgetJobTableBodyMenu,BARServer.isMaster());
 
       menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Volume"),BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
@@ -1233,7 +1233,7 @@ public class TabStatus
 
       Widgets.addMenuItemSeparator(widgetJobTableBodyMenu,BARServer.isMaster() && Settings.hasNormalRole());
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Info")+"\u2026");
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Info")+"\u2026",BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
