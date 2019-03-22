@@ -536,13 +536,6 @@ UNUSED_VARIABLE(scheduleCustomText);
 
   SET_OPTION_INTEGER64("max-storage-size",       jobOptions->maxStorageSize);
 
-//TODO
-#if 0
-  SET_OPTION_INTEGER  ("min-keep",               jobOptions->minKeep);
-  SET_OPTION_INTEGER  ("max-keep",               jobOptions->maxKeep);
-  SET_OPTION_INTEGER  ("max-age",                jobOptions->maxAge);
-#endif
-
   SET_OPTION_INTEGER64("volume-size",            jobOptions->volumeSize                  );
   SET_OPTION_BOOLEAN  ("ecc",                    jobOptions->errorCorrectionCodesFlag);
   SET_OPTION_BOOLEAN  ("blank",                  jobOptions->blankFlag);
