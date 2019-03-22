@@ -8872,7 +8872,6 @@ Dprintf.dprintf("");
     }
 
     // check/uncheck all entries
-Dprintf.dprintf("/////////////////////////////////////////////////");
     if (checked)
     {
       if (doit[0])
