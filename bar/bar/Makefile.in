@@ -914,6 +914,10 @@ errors.h: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
 	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -h $@
 errors.c: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
 	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -c $@
+release/errors.o: errors.c errors.h
+debug/errors.o: errors.c errors.h
+gcov/errors.o: errors.c errors.h
+valgrind/errors.o: errors.c errors.h
 
 # archive format definition
 archive_format.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
@@ -922,6 +926,10 @@ archive_format_const.h: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_fo
 	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -n $@
 archive_format.c: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def
 	$(PERL) $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.def -c $@ -i archive.h -i archive_format.h
+release/archive_format.o: archive_format.c archive_format.h
+debug/archive_format.o: archive_format.c archive_format.h
+gcov/archive_format.o: archive_format.c archive_format.h
+valgrind/archive_format.o: archive_format.c archive_format.h
 
 # index database definition
 index_definition.h: $(SOURCE_DIR)/index_definition.pl $(SOURCE_DIR)/index_definition.def
