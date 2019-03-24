@@ -4597,7 +4597,7 @@ Errors updateConfig(void)
     String_delete(line);
     StringList_done(&configLinesList);
     String_delete(configFileName);
-    return ERROR_NO_FILE_NAME;
+    return ERROR_NO_WRITABLE_CONFIG;
   }
 
   // read file
