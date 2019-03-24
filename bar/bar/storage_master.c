@@ -197,33 +197,33 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
                                       bool              initialFlag
                                      )
 {
-  Errors error;
+  TextMacro textMacros[2];
+  Errors    error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
-  // init variables
+  error = ERROR_NONE;
 
-  // pre-process command
-  error = ServerIO_executeCommand(storageInfo->master.io,
-                                  MASTER_DEBUG_LEVEL,
-                                  MASTER_COMMAND_TIMEOUT,
-                                  NULL,  // resultMap
-                                  "PREPROCESS archiveName=%S time=%llu initialFlag=%y",
-//TODO: if empty/NULL?
-                                  archiveName,
-                                  time,
-                                  initialFlag
-                                 );
-  if (error != ERROR_NONE)
+  if (!initialFlag)
   {
-fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
-    return error;
+    // init macros
+    TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+
+    if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
+    {
+      printInfo(1,"Write pre-processing...");
+      error = executeTemplate(String_cString(globalOptions.file.writePreProcessCommand),
+                              time,
+                              textMacros,
+                              SIZE_OF_ARRAY(textMacros)
+                             );
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+    }
   }
 
-  // free resources
-
-  return ERROR_NONE;
+  return error;
 }
 
 LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
@@ -232,33 +232,33 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
                                        bool              finalFlag
                                       )
 {
-  Errors error;
+  TextMacro textMacros[2];
+  Errors    error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_MASTER);
 
-  // init variables
+  error = ERROR_NONE;
 
-  // post-process command
-  error = ServerIO_executeCommand(storageInfo->master.io,
-                                  MASTER_DEBUG_LEVEL,
-                                  MASTER_COMMAND_TIMEOUT,
-                                  NULL,  // resultMap
-                                  "POSTPROCESS archiveName=%S time=%llu finalFlag=%y",
-//TODO: if empty/NULL?
-                                  archiveName,
-                                  time,
-                                  finalFlag
-                                 );
-  if (error != ERROR_NONE)
+  if (!finalFlag)
   {
-fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
-    return error;
+    // init macros
+    TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+
+    if (!String_isEmpty(globalOptions.file.writePostProcessCommand))
+    {
+      printInfo(1,"Write post-processing...");
+      error = executeTemplate(String_cString(globalOptions.file.writePostProcessCommand),
+                              time,
+                              textMacros,
+                              SIZE_OF_ARRAY(textMacros)
+                             );
+      printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
+    }
   }
 
-  // free resources
-
-  return ERROR_NONE;
+  return error;
 }
 
 //TODO: required?
