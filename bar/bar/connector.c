@@ -687,64 +687,6 @@ UNUSED_VARIABLE(scheduleCustomText);
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : connectorCommand_preProcess
-* Purpose: pre-process
-* Input  : connectorInfo - connector info
-*          indexHandle   - index handle
-*          id            - command id
-*          argumentMap   - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            archiveName=<name>
-*            time=<n>
-*            initialFlag=yes|no
-*          Result:
-\***********************************************************************/
-
-LOCAL void connectorCommand_preProcess(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  assert(connectorInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
-  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
-
-fprintf(stderr,"%s, %d: NYI connectorCommand_preProcess\n",__FILE__,__LINE__);
-UNUSED_VARIABLE(indexHandle);
-UNUSED_VARIABLE(argumentMap);
-
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
-* Name   : connectorCommand_postProcess
-* Purpose: post-process
-* Input  : connectorInfo - connector info
-*          indexHandle   - index handle
-*          id            - command id
-*          argumentMap   - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            archiveName=<name>
-*            time=<n>
-*            finalFlag=yes|no
-*          Result:
-\***********************************************************************/
-
-LOCAL void connectorCommand_postProcess(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  assert(connectorInfo != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
-  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
-
-fprintf(stderr,"%s, %d: connectorCommand_postProcess\n",__FILE__,__LINE__);
-UNUSED_VARIABLE(indexHandle);
-UNUSED_VARIABLE(argumentMap);
-
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
-}
-
-/***********************************************************************\
 * Name   : connectorCommand_storageCreate
 * Purpose: create storage
 * Input  : connectorInfo - connector info
@@ -2734,9 +2676,6 @@ const struct
 }
 CONNECTOR_COMMANDS[] =
 {
-  { "PREPROCESS",                connectorCommand_preProcess              },
-  { "POSTPROCESS",               connectorCommand_postProcess             },
-
   { "STORAGE_CREATE",            connectorCommand_storageCreate           },
   { "STORAGE_WRITE",             connectorCommand_storageWrite            },
   { "STORAGE_CLOSE",             connectorCommand_storageClose            },
