@@ -4462,6 +4462,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"encryptedPassword=<encrypted password> or encryptedUUID=<encrypted key>");
     String_delete(encryptedUUID);
     String_delete(encryptedPassword);
+    String_delete(name);
     return;
   }
 //fprintf(stderr,"%s, %d: encryptType=%d\n",__FILE__,__LINE__,encryptType);
@@ -4493,6 +4494,16 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       // Note: server in debug mode -> no password check
       error = ERROR_NONE;
     }
+    if (error != ERROR_NONE)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Authorization client %s:%d fail (error: %s)",
+                 String_cString(clientInfo->io.network.name),
+                 clientInfo->io.network.port,
+                 Error_getText(error)
+                );
+    }
   }
   else if (!String_isEmpty(encryptedUUID))
   {
@@ -4507,13 +4518,16 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                                 );
     if (error == ERROR_NONE)
     {
-//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
       // calculate hash from UUID
       (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
       Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
       if (!pairingMasterRequested)
       {
+        // not pairing -> verify master password
+
+//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+
         // verify master password (UUID hash)
 //fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
 //TODO: lock required?
@@ -4522,11 +4536,20 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
           error = ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
                     ? ERROR_NOT_PAIRED
                     : ERROR_INVALID_PASSWORD;
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Authorization client %s:%d fail (error: %s)",
+                     String_cString(clientInfo->io.network.name),
+                     clientInfo->io.network.port,
+                     Error_getText(error)
+                    );
         }
       }
       else
       {
         // pairing -> store master name+UUID hash
+
+        // store
 //fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
         if (setHash(&globalOptions.masterInfo.passwordHash,&uuidCryptHash))
         {
@@ -4535,16 +4558,24 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
         else
         {
           error = ERROR_INSUFFICIENT_MEMORY;
+          logMessage(NULL,  // logHandle,
+                     LOG_TYPE_ALWAYS,
+                     "Authorization client %s:%d fail (error: %s)",
+                     String_cString(clientInfo->io.network.name),
+                     clientInfo->io.network.port,
+                     Error_getText(error)
+                    );
         }
-
-        // stop pairing
-        stopPairingMaster();
 
         // update config file
         if (error == ERROR_NONE)
         {
           error = updateConfig();
         }
+
+        // stop pairing
+        stopPairingMaster();
+
         if (error == ERROR_NONE)
         {
           logMessage(NULL,  // logHandle,
@@ -4568,16 +4599,23 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       Crypt_doneHash(&uuidCryptHash);
       freeSecure(buffer);
     }
+    else
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Authorization client %s:%d fail (error: %s)",
+                 String_cString(clientInfo->io.network.name),
+                 clientInfo->io.network.port,
+                 Error_getText(error)
+                );
+    }
   }
   if (error != ERROR_NONE)
   {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Authorization client %s:%d fail (error: %s)",
-               String_cString(clientInfo->io.network.name),
-               clientInfo->io.network.port,
-               Error_getText(error)
-              );
+    String_delete(encryptedUUID);
+    String_delete(encryptedPassword);
+    String_delete(name);
+    return;
   }
 
   // set authorization state
