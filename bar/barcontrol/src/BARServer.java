@@ -2294,11 +2294,37 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     return mode;
   }
 
-  /** get master name
+  /** get master
    * @return master name
    */
-  public static String getMasterName()
+  public static String getMaster()
   {
+    return masterName;
+  }
+
+  /** clear master
+   */
+  public static void clearMaster()
+    throws BARException
+  {
+    BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0);
+
+    masterName = "";
+  }
+
+  /** update master
+   * @return master name
+   */
+  public static String updateMaster()
+    throws BARException
+  {
+    ValueMap valueMap = new ValueMap();
+    BARServer.executeCommand(StringParser.format("MASTER_GET"),
+                             1,  // debug level
+                             valueMap
+                            );
+    masterName = valueMap.getString("name");
+    
     return masterName;
   }
 

@@ -2205,8 +2205,6 @@ public class TabStatus
    */
   public void clearSelectedJob()
   {
-Dprintf.dprintf("");
-Dprintf.printStackTrace();
     Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,(JobData)null);
   }
 

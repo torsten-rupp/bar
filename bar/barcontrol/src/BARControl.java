@@ -2654,36 +2654,48 @@ assert jobData != null;
         }
       });
 
+Dprintf.dprintf("");
       masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026",Settings.hasExpertRole());
       masterMenuItem.addSelectionListener(new SelectionListener()
       {
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
+Dprintf.dprintf("");
         }
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem menuItem = (MenuItem)selectionEvent.widget;
+Dprintf.dprintf("%s",menuItem.getSelection());
 
           if (menuItem.getSelection())
           {
-            masterSet();
+            pairMaster();
           }
           else
           {
-            masterClear();
+            clearMaster();
           }
         }
       });
-      menuItem.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+      shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
       {
         public void handleEvent(Event event)
         {
-          MenuItem widget = (MenuItem)event.widget;
-Dprintf.dprintf("");
+          String name = BARServer.getMaster();
+Dprintf.dprintf("name=%s",name);
 
-          widget.setText(BARServer.getMasterName());
+          if (!name.isEmpty())
+          {
+            masterMenuItem.setText(BARControl.tr("Master")+": "+name);
+            masterMenuItem.setSelection(true);
+          }
+          else
+          {
+            masterMenuItem.setText(BARControl.tr("Master")+"\u2026");
+            masterMenuItem.setSelection(false);
+          }
         }
       });
 
@@ -2950,6 +2962,8 @@ Dprintf.dprintf("");
         });
       }
     }
+
+    updateServerMenu();
   }
 
   /** get terminal width
@@ -3550,7 +3564,7 @@ Dprintf.dprintf("");
   /** pair new master
    * @return true iff paired, false otherwise
    */
-  private boolean masterSet()
+  private boolean pairMaster()
   {
     class Data
     {
@@ -3687,35 +3701,37 @@ Dprintf.dprintf("");
       {
         if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
         {
-          updateMaster();
-          return true;
+          result = true;
         }
         else
         {
-          masterClear();
-          return false;
+          clearMaster();
+          result = false;
         }
       }
       else
       {
-//        Dialogs.error(shell,"Pairing new master fail.");
-        return false;
+        result = false;
       }
     }
     else
     {
-      return false;
+      result = false;
     }
+
+    updateMaster();
+    
+    return result;
   }
 
   /** clear paired master
    * @return true iff cleared, false otherwise
    */
-  private boolean masterClear()
+  private boolean clearMaster()
   {
     try
     {
-      BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0);
+      BARServer.clearMaster();
       updateMaster();
 
       return true;
@@ -3731,27 +3747,14 @@ Dprintf.dprintf("");
    */
   private void updateMaster()
   {
-    try
-    {
-      ValueMap valueMap = new ValueMap();
-      BARServer.executeCommand(StringParser.format("MASTER_GET"),
-                               1,  // debug level
-                               valueMap
-                              );
-      String name = valueMap.getString("name");
+    String name = BARServer.getMaster();
 
-      if (!name.isEmpty())
-      {
-        masterMenuItem.setText(BARControl.tr("Master")+": "+name);
-        masterMenuItem.setSelection(true);
-      }
-      else
-      {
-        masterMenuItem.setText(BARControl.tr("Master")+"\u2026");
-        masterMenuItem.setSelection(false);
-      }
+    if (!name.isEmpty())
+    {
+      masterMenuItem.setText(BARControl.tr("Master")+": "+name);
+      masterMenuItem.setSelection(true);
     }
-    catch (BARException exception)
+    else
     {
       masterMenuItem.setText(BARControl.tr("Master")+"\u2026");
       masterMenuItem.setSelection(false);
@@ -4792,8 +4795,6 @@ Dprintf.dprintf("still not supported");
             // try to connect to server with preset data
             try
             {
-Dprintf.dprintf("loginData.serverPort=%d",loginData.serverPort);
-Dprintf.dprintf("loginData.serverTLSPort=%d",loginData.serverTLSPort);
               BARServer.connect(display,
                                 loginData.serverName,
                                 loginData.serverPort,
@@ -4942,6 +4943,9 @@ Dprintf.dprintf("loginData.serverTLSPort=%d",loginData.serverTLSPort);
           createWindow();
           createTabs();
           createMenu();
+
+          // notify new server
+          Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
 
           // run
           run();
