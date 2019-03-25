@@ -511,26 +511,6 @@ bool ServerIO_parseEncryptType(const char           *encryptTypeText,
 }
 
 #ifdef NDEBUG
-void ServerIO_done(ServerIO *serverIO)
-#else /* not NDEBUG */
-void __ServerIO_done(const char *__fileName__,
-                     ulong      __lineNb__,
-                     ServerIO   *serverIO
-                    )
-#endif /* NDEBUG */
-{
-  assert(serverIO != NULL);
-
-  #ifdef NDEBUG
-    DEBUG_REMOVE_RESOURCE_TRACE(serverIO,ServerIO);
-  #else /* not NDEBUG */
-    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
-  #endif /* NDEBUG */
-
-  doneIO(serverIO);
-}
-
-#ifdef NDEBUG
   Errors ServerIO_connectNetwork(ServerIO    *serverIO,
                                  ConstString hostName,
                                  uint        hostPort
@@ -913,11 +893,11 @@ SOCKET_TYPE_PLAIN,
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
-//  #ifdef NDEBUG
+  #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(serverIO,ServerIO);
-//  #else /* not NDEBUG */
-//    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
-//  #endif /* NDEBUG */
+  #else /* not NDEBUG */
+    DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
+  #endif /* NDEBUG */
 
   switch (serverIO->type)
   {
@@ -947,214 +927,6 @@ void ServerIO_setEnd(ServerIO *serverIO)
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
 
   Semaphore_setEnd(&serverIO->lock);
-}
-
-Errors xxxxxxServerIO_startSession(ServerIO *serverIO)
-{
-  String encodedId;
-  String n,e;
-  String s;
-  Errors error;
-
-  assert(serverIO != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-
-  // init variables
-  encodedId = String_new();
-  n         = String_new();
-  e         = String_new();
-  s         = String_new();
-
-  // get encoded session id
-  encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
-
-  // create new session keys
-  error = Crypt_createPublicPrivateKeyPair(&serverIO->publicKey,
-                                           &serverIO->privateKey,
-                                           SESSION_KEY_SIZE,
-                                           CRYPT_KEY_MODE_TRANSIENT
-                                          );
-  if (   (error == ERROR_NONE)
-      && Crypt_getPublicKeyModulusExponent(&serverIO->publicKey,n,e)
-     )
-  {
-//fprintf(stderr,"%s, %d: create key pair\n",__FILE__,__LINE__); gcry_sexp_dump(serverIO->publicKey.key);
-    // format session data with RSA+none
-    String_format(s,
-                  "SESSION id=%S encryptTypes=%s n=%S e=%S",
-                  encodedId,
-                  "RSA,NONE",
-                  n,
-                  e
-                 );
-  }
-  else
-  {
-    // format session data with none
-    String_format(s,
-                  "SESSION id=%S encryptTypes=%s",
-                  encodedId,
-                  "NONE"
-                 );
-  }
-
-  // send session data
-  error = sendData(serverIO,s);
-  if (error != ERROR_NONE)
-  {
-    String_delete(s);
-    String_delete(e);
-    String_delete(n);
-    String_delete(encodedId);
-    return error;
-  }
-  #ifndef NDEBUG
-    if (globalOptions.serverDebugLevel >= 1)
-    {
-      fprintf(stderr,"DEBUG: send session data '%s'\n",String_cString(s));
-    }
-  #endif /* not DEBUG */
-
-  // free resources
-  String_delete(s);
-  String_delete(e);
-  String_delete(n);
-  String_delete(encodedId);
-
-  return ERROR_NONE;
-}
-
-Errors ServerIO_xxxacceptSession(ServerIO *serverIO)
-{
-  String          line;
-  StringMap       argumentMap;
-  Errors          error;
-  String          id;
-  String          encryptTypes;
-  String          n,e;
-  StringTokenizer stringTokenizer;
-  ConstString     token;
-
-  assert(serverIO != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
-
-  // init variables
-  line         = String_new();
-  argumentMap  = StringMap_new();
-  id           = String_new();
-  encryptTypes = String_new();
-  n            = String_new();
-  e            = String_new();
-
-  // read session data
-  error = Network_readLine(&serverIO->network.socketHandle,line,READ_TIMEOUT);
-  if (error != ERROR_NONE)
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-    return error;
-  }
-  if (!String_startsWithCString(line,"SESSION"))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-    return ERROR_INVALID_RESPONSE;
-  }
-  if (!StringMap_parse(argumentMap,line,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,7,NULL))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-    return ERROR_INVALID_RESPONSE;
-  }
-
-  // get id, encryptTypes, n, e
-  if (!StringMap_getString(argumentMap,"id",id,NULL))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-    return ERRORX_(EXPECTED_PARAMETER,0,"id");
-  }
-  if (!StringMap_getString(argumentMap,"encryptTypes",encryptTypes,NULL))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-    return ERRORX_(EXPECTED_PARAMETER,0,"encryptTypes");
-  }
-  StringMap_getString(argumentMap,"n",n,NULL);
-  StringMap_getString(argumentMap,"e",e,NULL);
-//fprintf(stderr,"%s, %d: connector public n=%s\n",__FILE__,__LINE__,String_cString(n));
-//fprintf(stderr,"%s, %d: connector public e=%s\n",__FILE__,__LINE__,String_cString(e));
-
-  // decode session id
-  if (!Misc_hexDecode(serverIO->sessionId,
-                      NULL,  // dataLength
-                      id,
-                      STRING_BEGIN,
-                      sizeof(serverIO->sessionId)
-                     )
-     )
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-    return ERROR_INVALID_RESPONSE;
-  }
-
-  // get first usable encryption type
-  String_initTokenizer(&stringTokenizer,encryptTypes,STRING_BEGIN,",",NULL,TRUE);
-  while (String_getNextToken(&stringTokenizer,&token,NULL))
-  {
-    if (ServerIO_parseEncryptType(String_cString(token),&serverIO->encryptType,NULL))
-    {
-      break;
-    }
-  }
-  String_doneTokenizer(&stringTokenizer);
-
-  // set public key
-  if (!Crypt_setPublicKeyModulusExponent(&serverIO->publicKey,n,e))
-  {
-    String_delete(e);
-    String_delete(n);
-    String_delete(encryptTypes);
-    String_delete(id);
-    StringMap_delete(argumentMap);
-    String_delete(line);
-    return ERROR_INVALID_KEY;
-  }
-
-  // free resources
-  String_delete(e);
-  String_delete(n);
-  String_delete(encryptTypes);
-  String_delete(id);
-  StringMap_delete(argumentMap);
-  String_delete(line);
-
-  return ERROR_NONE;
 }
 
 Errors ServerIO_decryptData(const ServerIO       *serverIO,

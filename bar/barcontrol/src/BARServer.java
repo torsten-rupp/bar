@@ -2305,11 +2305,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   /** set master
    * @return master name
    */
-  public static void setMaster(String name)
+  public static String setMaster()
+    throws BARException
   {
-    masterName = name;
-  }
+    ValueMap valueMap = new ValueMap();
+    BARServer.executeCommand(StringParser.format("MASTER_SET"),
+                             1,  // debug level
+                             valueMap
+                            );
+    masterName = valueMap.getString("name");
+Dprintf.dprintf("masterName=%s",masterName);
 
+    return masterName;
+  }
 
   /** update master
    * @return master name

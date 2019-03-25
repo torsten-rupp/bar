@@ -3627,7 +3627,7 @@ assert jobData != null;
       {
         try
         {
-          BARServer.executeCommand(StringParser.format("MASTER_SET"),
+          BARServer.executeCommand(StringParser.format("MASTER_WAIT"),
                                    1,  // debugLevel
                                    new Command.ResultHandler()
                                    {
@@ -3695,13 +3695,29 @@ assert jobData != null;
     {
       if (!data.masterName.isEmpty())
       {
-        if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
+        try
         {
-          BARServer.setMaster(data.masterName);
-          result = true;
+          if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
+          {
+            BARServer.setMaster();
+            result = true;
+          }
+          else
+          {
+            BARServer.clearMaster();
+            result = false;
+          }
         }
-        else
+        catch (final BARException exception)
         {
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.close(dialog,false);
+              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getText());
+            }
+          });
           result = false;
         }
       }

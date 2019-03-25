@@ -250,6 +250,13 @@ typedef struct
   Thread                threads[MAX_NETWORK_CLIENT_THREADS];
   MsgQueue              commandQueue;
 
+  // new master
+  struct
+  {
+    String    name;
+    CryptHash passwordHash;
+  } newMaster;
+
   // current list settings
   EntryList             includeEntryList;
   PatternList           excludePatternList;
@@ -4518,13 +4525,13 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                                 );
     if (error == ERROR_NONE)
     {
-      // calculate hash from UUID
-      (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
-      Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
-
       if (!pairingMasterRequested)
       {
         // not pairing -> verify master password
+
+        // calculate hash from UUID
+        (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
+        Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
 
 //fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
 
@@ -4544,59 +4551,28 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                      Error_getText(error)
                     );
         }
+
+        // free resources
+        Crypt_doneHash(&uuidCryptHash);
       }
       else
       {
         // pairing -> store master name+UUID hash
 
-        // store
-//fprintf(stderr,"%s, %d: hash \n",__FILE__,__LINE__); Crypt_dumpHash(&globalOptions.masterInfo.uuidHash);
-        if (setHash(&globalOptions.masterInfo.passwordHash,&uuidCryptHash))
-        {
-          String_set(globalOptions.masterInfo.name,name);
-        }
-        else
-        {
-          error = ERROR_INSUFFICIENT_MEMORY;
-          logMessage(NULL,  // logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Authorization client %s:%d fail (error: %s)",
-                     String_cString(clientInfo->io.network.name),
-                     clientInfo->io.network.port,
-                     Error_getText(error)
-                    );
-        }
+        // calculate hash from UUID
+        (void)Crypt_resetHash(&clientInfo->newMaster.passwordHash);
+        Crypt_updateHash(&clientInfo->newMaster.passwordHash,buffer,bufferLength);
 
-        // update config file
-        if (error == ERROR_NONE)
-        {
-          error = updateConfig();
-        }
+        // store name
+//TODO: lock?
+        String_set(clientInfo->newMaster.name,name);
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx %s\n",__FILE__,__LINE__,String_cString(clientInfo->newMaster.name));
 
         // stop pairing
         stopPairingMaster();
-
-        if (error == ERROR_NONE)
-        {
-          logMessage(NULL,  // logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Paired master '%s'",
-                     String_cString(globalOptions.masterInfo.name)
-                    );
-        }
-        else
-        {
-          logMessage(NULL,  // logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Pairing master '%s' fail (error: %s)",
-                     String_cString(globalOptions.masterInfo.name),
-                     Error_getText(error)
-                    );
-        }
       }
 
       // free resources
-      Crypt_doneHash(&uuidCryptHash);
       freeSecure(buffer);
     }
     else
@@ -5011,6 +4987,55 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 }
 
 /***********************************************************************\
+* Name   : serverCommand_masterWait
+* Purpose: wait for new master
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            name=<name>
+\***********************************************************************/
+
+LOCAL void serverCommand_masterWait(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  uint restTime;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(argumentMap);
+
+  // clear new master
+  String_clear(clientInfo->newMaster.name);
+
+  // wait for new master
+  startPairingMaster();
+  while (   String_isEmpty(clientInfo->newMaster.name)
+         && !Misc_isTimeout(&pairingMasterTimeoutInfo)
+         && !isCommandAborted(clientInfo,id)
+        )
+  {
+    // update rest time
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"name=\"\" restTime=%u totalTime=%u",Misc_getRestTimeout(&pairingMasterTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
+fprintf(stderr,"%s, %d: 22222xxxxxxxxxxxxxxxx %s\n",__FILE__,__LINE__,String_cString(clientInfo->newMaster.name));
+
+    // sleep a short time
+    Misc_udelay(1LL*US_PER_SECOND);
+    restTime--;
+  }
+  stopPairingMaster();
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S restTime=0 totalTime=%u",clientInfo->newMaster.name,PAIRING_MASTER_TIMEOUT);
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : serverCommand_masterSet
 * Purpose: set new master
 * Input  : clientInfo  - client info
@@ -5026,7 +5051,7 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 
 LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint restTime;
+  Errors error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5034,27 +5059,29 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  // clear master
-  String_clear(globalOptions.masterInfo.name);
-  clearHash(&globalOptions.masterInfo.passwordHash);
-
-  // wait for new master name
-  startPairingMaster();
-  while (   String_isEmpty(globalOptions.masterInfo.name)
-         && !Misc_isTimeout(&pairingMasterTimeoutInfo)
-         && !isCommandAborted(clientInfo,id)
-        )
+  // set new master
+  if (!setHash(&globalOptions.masterInfo.passwordHash,&clientInfo->newMaster.passwordHash))
   {
-    // update rest time
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"name=\"\" restTime=%u totalTime=%u",Misc_getRestTimeout(&pairingMasterTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
-
-    // sleep a short time
-    Misc_udelay(1LL*US_PER_SECOND);
-    restTime--;
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"");
+    return;
   }
-  stopPairingMaster();
+  String_set(globalOptions.masterInfo.name,clientInfo->newMaster.name);
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S restTime=0 totalTime=%u",globalOptions.masterInfo.name,PAIRING_MASTER_TIMEOUT);
+  // update config file
+  error = updateConfig();
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+    return;
+  }
+
+  logMessage(NULL,  // logHandle,
+            LOG_TYPE_ALWAYS,
+            "Paired master '%s'",
+            String_cString(globalOptions.masterInfo.name)
+           );
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
 }
@@ -5083,7 +5110,7 @@ LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexH
   String_clear(globalOptions.masterInfo.name);
   clearHash(&globalOptions.masterInfo.passwordHash);
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
 
   // free resources
 }
@@ -16477,6 +16504,7 @@ SERVER_COMMANDS[] =
   { "SERVER_OPTION_FLUSH",         serverCommand_serverOptionFlush,        AUTHORIZATION_STATE_OK      },
 
   { "MASTER_GET",                  serverCommand_masterGet,                AUTHORIZATION_STATE_OK      },
+  { "MASTER_WAIT",                 serverCommand_masterWait,               AUTHORIZATION_STATE_OK      },
   { "MASTER_SET",                  serverCommand_masterSet,                AUTHORIZATION_STATE_OK      },
   { "MASTER_CLEAR",                serverCommand_masterClear,              AUTHORIZATION_STATE_OK      },
 
@@ -17027,6 +17055,9 @@ LOCAL void initClient(ClientInfo *clientInfo)
   }
   clientInfo->abortedCommandIdStart = 0;
 
+  clientInfo->newMaster.name = String_new();
+  Crypt_initHash(&clientInfo->newMaster.passwordHash,PASSWORD_HASH_ALGORITHM);
+
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   Job_initOptions(&clientInfo->jobOptions);
@@ -17101,6 +17132,10 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   Job_doneOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
+
+  Crypt_doneHash(&clientInfo->newMaster.passwordHash);
+  String_delete(clientInfo->newMaster.name);
+
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
   List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
   Semaphore_done(&clientInfo->lock);
