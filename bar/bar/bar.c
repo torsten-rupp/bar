@@ -4600,7 +4600,7 @@ Errors updateConfig(void)
     return ERROR_NO_WRITABLE_CONFIG;
   }
 
-  // read file
+  // read config file lines
   error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
   if (error != ERROR_NONE)
   {
@@ -4637,7 +4637,7 @@ Errors updateConfig(void)
     {
       if (serverNode->server.type == SERVER_TYPE_FILE)
       {
-        // insert new server section
+        // insert new file server section
         String_format(line,"[file-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
@@ -4667,7 +4667,7 @@ Errors updateConfig(void)
     {
       if (serverNode->server.type == SERVER_TYPE_FTP)
       {
-        // insert new server section
+        // insert new ftp server section
         StringList_insertCString(&configLinesList,"",nextStringNode);
         StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
         StringList_insertCString(&configLinesList,"# FTP login settings",nextStringNode);
@@ -4700,7 +4700,7 @@ Errors updateConfig(void)
     {
       if (serverNode->server.type == SERVER_TYPE_SSH)
       {
-        // insert new server section
+        // insert new ssh-server section
         StringList_insertCString(&configLinesList,"",nextStringNode);
         StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
         StringList_insertCString(&configLinesList,"# SSH/SCP/SFTP login settings",nextStringNode);
@@ -4733,7 +4733,7 @@ Errors updateConfig(void)
     {
       if (serverNode->server.type == SERVER_TYPE_WEBDAV)
       {
-        // insert new schedule sections
+        // insert new webdav-server sections
         StringList_insertCString(&configLinesList,"",nextStringNode);
         StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
         StringList_insertCString(&configLinesList,"# WebDAV login settings",nextStringNode);
@@ -4786,7 +4786,7 @@ Errors updateConfig(void)
   StringList_insertCString(&configLinesList,"[end]",nextStringNode);
   StringList_insertCString(&configLinesList,"",nextStringNode);
 
-  // write file
+  // write config file lines
   error = ConfigValue_writeConfigFileLines(configFileName,&configLinesList);
   if (error != ERROR_NONE)
   {
