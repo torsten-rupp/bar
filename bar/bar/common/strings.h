@@ -608,6 +608,25 @@ INLINE ulong String_length(ConstString string)
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : String_isSet
+* Purpose: check if string is set (not NULL)
+* Input  : string - string
+* Output : -
+* Return : TRUE iff string is set, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool String_isSet(ConstString string);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+INLINE bool String_isSet(ConstString string)
+{
+  STRING_CHECK_VALID(string);
+
+  return (string != NULL);
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : String_isEmpty
 * Purpose: check if string is NULL or empty
 * Input  : string - string
