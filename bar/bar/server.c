@@ -5350,7 +5350,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
     List_append(&globalOptions.serverList,serverNode);
   }
 
-  // update config files
+  // update config file
   error = updateConfig();
   if (error != ERROR_NONE)
   {
@@ -5554,7 +5554,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     serverNode->server.maxConnectionCount = maxConnectionCount;
     serverNode->server.maxStorageSize     = maxStorageSize;
 
-    // update config files
+    // update config file
     error = updateConfig();
     if (error != ERROR_NONE)
     {
