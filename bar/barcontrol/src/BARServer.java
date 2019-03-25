@@ -2302,19 +2302,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     return masterName;
   }
 
-  /** clear master
+  /** set master
+   * @return master name
    */
-  public static void clearMaster()
-    throws BARException
+  public static void setMaster(String name)
   {
-    BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0);
-
-    masterName = "";
+    masterName = name;
   }
+
 
   /** update master
    * @return master name
    */
+/*TODO: obsolete?
   public static String updateMaster()
     throws BARException
   {
@@ -2324,8 +2324,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                              valueMap
                             );
     masterName = valueMap.getString("name");
-    
+
     return masterName;
+  }
+*/
+
+  /** clear master
+   */
+  public static void clearMaster()
+    throws BARException
+  {
+    BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0);
+
+    masterName = "";
   }
 
   /** quit BAR server (for debug only)

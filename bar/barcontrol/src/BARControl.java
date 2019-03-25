@@ -2654,20 +2654,17 @@ assert jobData != null;
         }
       });
 
-Dprintf.dprintf("");
       masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026",Settings.hasExpertRole());
       masterMenuItem.addSelectionListener(new SelectionListener()
       {
         @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
-Dprintf.dprintf("");
         }
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           MenuItem menuItem = (MenuItem)selectionEvent.widget;
-Dprintf.dprintf("%s",menuItem.getSelection());
 
           if (menuItem.getSelection())
           {
@@ -2684,7 +2681,6 @@ Dprintf.dprintf("%s",menuItem.getSelection());
         public void handleEvent(Event event)
         {
           String name = BARServer.getMaster();
-Dprintf.dprintf("name=%s",name);
 
           if (!name.isEmpty())
           {
@@ -3701,11 +3697,11 @@ Dprintf.dprintf("name=%s",name);
       {
         if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
         {
+          BARServer.setMaster(data.masterName);
           result = true;
         }
         else
         {
-          clearMaster();
           result = false;
         }
       }
@@ -3720,7 +3716,7 @@ Dprintf.dprintf("name=%s",name);
     }
 
     updateMaster();
-    
+
     return result;
   }
 
