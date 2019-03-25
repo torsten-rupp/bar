@@ -2697,13 +2697,13 @@ Errors Job_write(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  if (jobNode->fileName != NULL)
+  if (String_isSet(jobNode->fileName))
   {
     // init variables
     StringList_init(&jobLinesList);
     line = String_new();
 
-    // read file
+    // read config file lines
     error = ConfigValue_readConfigFileLines(jobNode->fileName,&jobLinesList);
     if (error != ERROR_NONE)
     {
@@ -2804,7 +2804,7 @@ Errors Job_write(JobNode *jobNode)
       }
     }
 
-    // write file
+    // write config file lines
     error = ConfigValue_writeConfigFileLines(jobNode->fileName,&jobLinesList);
     if (error != ERROR_NONE)
     {
