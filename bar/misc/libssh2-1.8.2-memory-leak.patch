@@ -1,0 +1,123 @@
+diff -u libssh2-1.8.2.org/src/global.c libssh2-1.8.2/src/global.c
+--- libssh2-1.8.2.org/src/global.c	2019-03-25 20:26:48.000000000 +0100
++++ libssh2-1.8.2/src/global.c	2019-03-26 15:10:35.035976773 +0100
+@@ -64,6 +64,7 @@
+     _libssh2_initialized--;
+ 
+     if (!(_libssh2_init_flags & LIBSSH2_INIT_NO_CRYPTO)) {
++        _libssh2_init_aes_ctr_done();
+         libssh2_crypto_exit();
+     }
+ 
+diff -u libssh2-1.8.2.org/src/openssl.c libssh2-1.8.2/src/openssl.c
+--- libssh2-1.8.2.org/src/openssl.c	2019-03-25 20:26:48.000000000 +0100
++++ libssh2-1.8.2/src/openssl.c	2019-03-26 15:19:00.611651040 +0100
+@@ -424,13 +424,19 @@
+     return aes_ctr_cipher;
+ }
+ 
++#ifdef HAVE_OPAQUE_STRUCTS
++    static const EVP_CIPHER * aes_128_ctr_cipher = NULL;
++    static const EVP_CIPHER * aes_192_ctr_cipher = NULL;
++    static const EVP_CIPHER * aes_256_ctr_cipher = NULL;
++#endif
++
+ const EVP_CIPHER *
+ _libssh2_EVP_aes_128_ctr(void)
+ {
+ #ifdef HAVE_OPAQUE_STRUCTS
+-    static EVP_CIPHER * aes_ctr_cipher;
+-    return !aes_ctr_cipher?
+-        make_ctr_evp (16, aes_ctr_cipher, NID_aes_128_ctr) : aes_ctr_cipher;
++    if (!aes_128_ctr_cipher)
++        aes_128_ctr_cipher = make_ctr_evp (16, NULL, NID_aes_128_ctr);
++    return aes_128_ctr_cipher;
+ #else
+     static EVP_CIPHER aes_ctr_cipher;
+     return !aes_ctr_cipher.key_len?
+@@ -438,13 +444,19 @@
+ #endif
+ }
+ 
++void
++_libssh2_EVP_aes_128_ctr_done(void)
++{
++  EVP_CIPHER_meth_free(aes_128_ctr_cipher);
++}
++
+ const EVP_CIPHER *
+ _libssh2_EVP_aes_192_ctr(void)
+ {
+ #ifdef HAVE_OPAQUE_STRUCTS
+-    static EVP_CIPHER * aes_ctr_cipher;
+-    return !aes_ctr_cipher?
+-        make_ctr_evp (24, aes_ctr_cipher, NID_aes_192_ctr) : aes_ctr_cipher;
++    if (!aes_192_ctr_cipher)
++        aes_192_ctr_cipher = make_ctr_evp (24, NULL, NID_aes_192_ctr);
++    return aes_192_ctr_cipher;
+ #else
+     static EVP_CIPHER aes_ctr_cipher;
+     return !aes_ctr_cipher.key_len?
+@@ -452,13 +464,19 @@
+ #endif
+ }
+ 
++void
++_libssh2_EVP_aes_192_ctr_done(void)
++{
++  EVP_CIPHER_meth_free(aes_192_ctr_cipher);
++}
++
+ const EVP_CIPHER *
+ _libssh2_EVP_aes_256_ctr(void)
+ {
+ #ifdef HAVE_OPAQUE_STRUCTS
+-    static EVP_CIPHER * aes_ctr_cipher;
+-    return !aes_ctr_cipher?
+-        make_ctr_evp (32, aes_ctr_cipher, NID_aes_256_ctr) : aes_ctr_cipher;
++    if (!aes_256_ctr_cipher)
++        aes_256_ctr_cipher = make_ctr_evp (32, NULL, NID_aes_256_ctr);
++    return aes_256_ctr_cipher;
+ #else
+     static EVP_CIPHER aes_ctr_cipher;
+     return !aes_ctr_cipher.key_len?
+@@ -466,6 +484,12 @@
+ #endif
+ }
+ 
++void
++_libssh2_EVP_aes_256_ctr_done(void)
++{
++  EVP_CIPHER_meth_free(aes_256_ctr_cipher);
++}
++
+ void _libssh2_init_aes_ctr(void)
+ {
+     _libssh2_EVP_aes_128_ctr();
+@@ -473,8 +497,16 @@
+     _libssh2_EVP_aes_256_ctr();
+ }
+ 
++void _libssh2_init_aes_ctr_done(void)
++{
++    _libssh2_EVP_aes_128_ctr_done();
++    _libssh2_EVP_aes_192_ctr_done();
++    _libssh2_EVP_aes_256_ctr_done();
++}
++
+ #else
+ void _libssh2_init_aes_ctr(void) {}
++void _libssh2_init_aes_ctr_done(void) {}
+ #endif /* LIBSSH2_AES_CTR */
+ 
+ /* TODO: Optionally call a passphrase callback specified by the
+diff -u libssh2-1.8.2.org/src/openssl.h libssh2-1.8.2/src/openssl.h
+--- libssh2-1.8.2.org/src/openssl.h	2019-03-25 20:26:48.000000000 +0100
++++ libssh2-1.8.2/src/openssl.h	2019-03-26 15:21:41.457009518 +0100
+@@ -291,3 +291,6 @@
+ const EVP_CIPHER *_libssh2_EVP_aes_192_ctr(void);
+ const EVP_CIPHER *_libssh2_EVP_aes_256_ctr(void);
+ 
++void _libssh2_EVP_aes_128_ctr_done(void);
++void _libssh2_EVP_aes_192_ctr_done(void);
++void _libssh2_EVP_aes_256_ctr_done(void);
