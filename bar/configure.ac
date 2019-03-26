@@ -2291,15 +2291,14 @@ if test $ENABLE_SSH = "yes"; then
       AC_MSG_COMPILE([libssh2])
       result=1
       if test $result -eq 1; then
-set -x
         # patch to support keep alive for libssh2 1.1 (ignore errors):
         #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
         #   diff -u libssh2-1.1.org/src/channel.c     libssh2-1.1/src/channel.c     >> libssh2-1.1-keepalive.patch
+#TODO: does not work anymore
 #        (cd libssh2; $PATCH --batch -N -p1 < $cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
         # patch for memory leak for libssh2 1.8.2 (ignore errors):
         #   diff -u libssh2-1.8.2.org/src libssh2-1.8.2/src > libssh2-1.8.2-memory-leak.patch
         (cd libssh2; $PATCH --batch -N -p1 < $cwd/misc/libssh2-1.8.2-memory-leak.patch) 1>/dev/null 2>/dev/null
-set +x
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
