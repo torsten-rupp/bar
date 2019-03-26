@@ -1967,6 +1967,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
   }
 
   // free resources
+  StringMap_delete(resultMap);
   String_delete(scheduleAggregateInfo.lastErrorMessage);
   String_delete(jobAggregateInfo.lastErrorMessage);
   String_delete(byName);
@@ -17503,16 +17504,24 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
 
 Errors Server_initAll(void)
 {
+  Errors error;
+
   #ifdef SIMULATE_PURGE
     Array_init(&simulatedPurgeEntityIdArray,sizeof(IndexId),128,NULL,NULL,NULL,NULL);
   #endif /* SIMULATE_PURGE */
+
+  error = Connector_initAll();
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return ERROR_NONE;
 }
 
 void Server_doneAll(void)
 {
-  Crypt_doneHash(&newMaster.passwordHash);
+  Connector_doneAll();
 
   #ifdef SIMULATE_PURGE
     Array_done(&simulatedPurgeEntityIdArray);
@@ -17574,7 +17583,7 @@ Errors Server_run(ServerModes       mode,
   pauseEndDateTime               = 0LL;
   newMaster.pairingRequested         = FALSE;
   Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
-  newMaster.name = String_new();
+  newMaster.name                 = String_new();
   Crypt_initHash(&newMaster.passwordHash,PASSWORD_HASH_ALGORITHM);
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
@@ -17790,12 +17799,6 @@ Errors Server_run(ServerModes       mode,
     {
       HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
     }
-  }
-//TODO
-  error = Connector_initAll();
-  if (error != ERROR_NONE)
-  {
-    HALT_FATAL_ERROR("Cannot initialize slaves (error: %s)!",Error_getText(error));
   }
 
   // run as server
@@ -18282,20 +18285,29 @@ Errors Server_run(ServerModes       mode,
   if (Index_isAvailable())
   {
     Thread_join(&purgeExpiredEntitiesThread);
+    Thread_done(&purgeExpiredEntitiesThread);
+
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       Thread_join(&autoIndexThread);
+      Thread_done(&autoIndexThread);
     }
     Thread_join(&indexThread);
+    Thread_done(&indexThread);
+
+    Semaphore_done(&indexThreadTrigger);
+
+    // done database pause callbacks
+    Index_setPauseCallback(CALLBACK(NULL,NULL));
   }
   Thread_join(&pairingThread);
   Thread_join(&pauseThread);
   Thread_join(&schedulerThread);
   Thread_join(&jobThread);
-
-//TODO
-  // done database pause callbacks
-  Index_setPauseCallback(CALLBACK(NULL,NULL));
+  Thread_done(&pairingThread);
+  Thread_done(&pauseThread);
+  Thread_done(&schedulerThread);
+  Thread_done(&jobThread);
 
   // done index
   Index_close(indexHandle);
@@ -18304,31 +18316,13 @@ Errors Server_run(ServerModes       mode,
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);
   if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
 
-  if (Index_isAvailable())
-  {
-    Thread_done(&purgeExpiredEntitiesThread);
-    if (globalOptions.indexDatabaseAutoUpdateFlag)
-    {
-      Thread_done(&autoIndexThread);
-    }
-    Thread_done(&indexThread);
-    Semaphore_done(&indexThreadTrigger);
-  }
-  Thread_done(&pauseThread);
-  Thread_done(&schedulerThread);
-  Thread_done(&jobThread);
-
   // free resources
-//TODO
-#warning TODO
-Connector_doneAll();
   Crypt_doneHash(&newMaster.passwordHash);
   String_delete(newMaster.name);
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
-//  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
   AutoFree_done(&autoFreeList);
