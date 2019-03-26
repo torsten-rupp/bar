@@ -10983,10 +10983,15 @@ $as_echo "#define HAVE_SSL 1" >>confdefs.h
 
       result=1
       if test $result -eq 1; then
-        # patch to support keep alive for libssh 2.1.1 (ignore errors):
+set -x
+        # patch to support keep alive for libssh2 1.1 (ignore errors):
         #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
         #   diff -u libssh2-1.1.org/src/channel.c     libssh2-1.1/src/channel.c     >> libssh2-1.1-keepalive.patch
-        (cd libssh; $PATCH --batch -N -p0 < ../misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
+#        (cd libssh2; $PATCH --batch -N -p1 < $cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
+        # patch for memory leak for libssh2 1.8.2 (ignore errors):
+        #   diff -u libssh2-1.8.2.org/src libssh2-1.8.2/src > libssh2-1.8.2-memory-leak.patch
+        (cd libssh2; $PATCH --batch -N -p1 < $cwd/misc/libssh2-1.8.2-memory-leak.patch) 1>/dev/null 2>/dev/null
+set +x
         case $host_os in
           mingw*)
             # patch to disable usage of lib-command when RANLIB is set
@@ -23415,4 +23420,3 @@ fi
 
 
 rm -f $tmpFile
-
