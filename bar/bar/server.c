@@ -250,13 +250,6 @@ typedef struct
   Thread                threads[MAX_NETWORK_CLIENT_THREADS];
   MsgQueue              commandQueue;
 
-  // new master
-  struct
-  {
-    String    name;
-    CryptHash passwordHash;
-  } newMaster;
-
   // current list settings
   EntryList             includeEntryList;
   PatternList           excludePatternList;
@@ -358,8 +351,13 @@ LOCAL struct
         bool indexUpdate;
       } pauseFlags;                                      // TRUE iff pause
 LOCAL uint64                pauseEndDateTime;            // pause end date/time [s]
-LOCAL bool                  pairingMasterRequested;      // TRUE if master pairing requested
-LOCAL TimeoutInfo           pairingMasterTimeoutInfo;    // master pairing timeout info
+LOCAL struct
+{
+  bool        pairingRequested;                          // TRUE if master pairing requested
+  TimeoutInfo pairingTimeoutInfo;                        // master pairing timeout info
+  String      name;                                      // new master name
+  CryptHash   passwordHash;                              // new master password hash
+} newMaster;
 LOCAL IndexHandle           *indexHandle;                // index handle
 LOCAL bool                  quitFlag;                    // TRUE iff quit requested
 
@@ -802,10 +800,11 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
 LOCAL void startPairingMaster(void)
 {
-  if (!pairingMasterRequested)
+  if (!newMaster.pairingRequested)
   {
-    pairingMasterRequested = TRUE;
-    Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
+    newMaster.pairingRequested = TRUE;
+    Misc_restartTimeout(&newMaster.pairingTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
+    String_clear(newMaster.name);
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
@@ -825,9 +824,9 @@ LOCAL void startPairingMaster(void)
 
 LOCAL void stopPairingMaster(void)
 {
-  if (pairingMasterRequested)
+  if (newMaster.pairingRequested)
   {
-    pairingMasterRequested = FALSE;
+    newMaster.pairingRequested = FALSE;
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
@@ -847,7 +846,7 @@ LOCAL void stopPairingMaster(void)
 
 LOCAL void clearPairedMaster(void)
 {
-  pairingMasterRequested = FALSE;
+  newMaster.pairingRequested = FALSE;
   if (!String_isEmpty(globalOptions.masterInfo.name))
   {
     String_clear(globalOptions.masterInfo.name);
@@ -2193,13 +2192,13 @@ LOCAL void pairingThreadCode(void)
         }
         else
         {
-          if (Misc_isTimeout(&pairingMasterTimeoutInfo))
+          if (Misc_isTimeout(&newMaster.pairingTimeoutInfo))
           {
             stopPairingMaster();
           }
         }
 
-        if (   pairingMasterRequested
+        if (   newMaster.pairingRequested
             || String_isEmpty(globalOptions.masterInfo.name)
            )
         {
@@ -4525,7 +4524,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                                 );
     if (error == ERROR_NONE)
     {
-      if (!pairingMasterRequested)
+      if (!newMaster.pairingRequested)
       {
         // not pairing -> verify master password
 
@@ -4560,13 +4559,12 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
         // pairing -> store master name+UUID hash
 
         // calculate hash from UUID
-        (void)Crypt_resetHash(&clientInfo->newMaster.passwordHash);
-        Crypt_updateHash(&clientInfo->newMaster.passwordHash,buffer,bufferLength);
+        (void)Crypt_resetHash(&newMaster.passwordHash);
+        Crypt_updateHash(&newMaster.passwordHash,buffer,bufferLength);
 
         // store name
 //TODO: lock?
-        String_set(clientInfo->newMaster.name,name);
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx %s\n",__FILE__,__LINE__,String_cString(clientInfo->newMaster.name));
+        String_set(newMaster.name,name);
 
         // stop pairing
         stopPairingMaster();
@@ -5010,19 +5008,15 @@ LOCAL void serverCommand_masterWait(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  // clear new master
-  String_clear(clientInfo->newMaster.name);
-
   // wait for new master
   startPairingMaster();
-  while (   String_isEmpty(clientInfo->newMaster.name)
-         && !Misc_isTimeout(&pairingMasterTimeoutInfo)
+  while (   String_isEmpty(newMaster.name)
+         && !Misc_isTimeout(&newMaster.pairingTimeoutInfo)
          && !isCommandAborted(clientInfo,id)
         )
   {
     // update rest time
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"name=\"\" restTime=%u totalTime=%u",Misc_getRestTimeout(&pairingMasterTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
-fprintf(stderr,"%s, %d: 22222xxxxxxxxxxxxxxxx %s\n",__FILE__,__LINE__,String_cString(clientInfo->newMaster.name));
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"name=\"\" restTime=%u totalTime=%u",Misc_getRestTimeout(&newMaster.pairingTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
 
     // sleep a short time
     Misc_udelay(1LL*US_PER_SECOND);
@@ -5030,7 +5024,7 @@ fprintf(stderr,"%s, %d: 22222xxxxxxxxxxxxxxxx %s\n",__FILE__,__LINE__,String_cSt
   }
   stopPairingMaster();
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S restTime=0 totalTime=%u",clientInfo->newMaster.name,PAIRING_MASTER_TIMEOUT);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S restTime=0 totalTime=%u",newMaster.name,PAIRING_MASTER_TIMEOUT);
 
   // free resources
 }
@@ -5060,12 +5054,12 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(argumentMap);
 
   // set new master
-  if (!setHash(&globalOptions.masterInfo.passwordHash,&clientInfo->newMaster.passwordHash))
+  if (!setHash(&globalOptions.masterInfo.passwordHash,&newMaster.passwordHash))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"");
     return;
   }
-  String_set(globalOptions.masterInfo.name,clientInfo->newMaster.name);
+  String_set(globalOptions.masterInfo.name,newMaster.name);
 
   // update config file
   error = updateConfig();
@@ -5081,7 +5075,7 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
             String_cString(globalOptions.masterInfo.name)
            );
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
 
   // free resources
 }
@@ -7625,7 +7619,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       error = Job_write(jobNode);
       if (error != ERROR_NONE)
       {
-        printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
+        printWarning("Cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
       }
 
       // add new job to list
@@ -7760,7 +7754,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     error = Job_write(newJobNode);
     if (error != ERROR_NONE)
     {
-      printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
+      printWarning("Cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
     }
 
     // write initial schedule info
@@ -17055,9 +17049,6 @@ LOCAL void initClient(ClientInfo *clientInfo)
   }
   clientInfo->abortedCommandIdStart = 0;
 
-  clientInfo->newMaster.name = String_new();
-  Crypt_initHash(&clientInfo->newMaster.passwordHash,PASSWORD_HASH_ALGORITHM);
-
   EntryList_init(&clientInfo->includeEntryList);
   PatternList_init(&clientInfo->excludePatternList);
   Job_initOptions(&clientInfo->jobOptions);
@@ -17132,9 +17123,6 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   Job_doneOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
-
-  Crypt_doneHash(&clientInfo->newMaster.passwordHash);
-  String_delete(clientInfo->newMaster.name);
 
   RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
   List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
@@ -17524,6 +17512,8 @@ Errors Server_initAll(void)
 
 void Server_doneAll(void)
 {
+  Crypt_doneHash(&newMaster.passwordHash);
+
   #ifdef SIMULATE_PURGE
     Array_done(&simulatedPurgeEntityIdArray);
   #endif /* SIMULATE_PURGE */
@@ -17582,15 +17572,19 @@ Errors Server_run(ServerModes       mode,
   pauseFlags.restore             = FALSE;
   pauseFlags.indexUpdate         = FALSE;
   pauseEndDateTime               = 0LL;
-  pairingMasterRequested         = FALSE;
-  Misc_initTimeout(&pairingMasterTimeoutInfo,0LL);
+  newMaster.pairingRequested         = FALSE;
+  Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
+  newMaster.name = String_new();
+  Crypt_initHash(&newMaster.passwordHash,PASSWORD_HASH_ALGORITHM);
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
-  AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Misc_doneTimeout(&pairingMasterTimeoutInfo); });
+  AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
+  AUTOFREE_ADD(&autoFreeList,newMaster.name,{ String_delete(newMaster.name); });
+  AUTOFREE_ADD(&autoFreeList,&newMaster.passwordHash,{ Crypt_doneHash(&newMaster.passwordHash); });
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
@@ -17609,8 +17603,8 @@ Errors Server_run(ServerModes       mode,
     }
     else
     {
-      pairingMasterRequested = TRUE;
-      Misc_restartTimeout(&pairingMasterTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
+      newMaster.pairingRequested = TRUE;
+      Misc_restartTimeout(&newMaster.pairingTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
                  "Started auto-pairing master (%ds)",
@@ -17629,7 +17623,7 @@ Errors Server_run(ServerModes       mode,
                               );
     if (error != ERROR_NONE)
     {
-      printError("Cannot create directory '%s' (error: %s)\n",
+      printError("Cannot create directory '%s' (error: %s)",
                  String_cString(globalOptions.jobsDirectory),
                  Error_getText(error)
                 );
@@ -17639,7 +17633,7 @@ Errors Server_run(ServerModes       mode,
   }
   if (!File_isDirectory(globalOptions.jobsDirectory))
   {
-    printError("'%s' is not a directory!\n",String_cString(globalOptions.jobsDirectory));
+    printError("'%s' is not a directory!",String_cString(globalOptions.jobsDirectory));
     AutoFree_cleanup(&autoFreeList);
     return ERROR_NOT_A_DIRECTORY;
   }
@@ -17652,7 +17646,7 @@ Errors Server_run(ServerModes       mode,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL!\n");
-      printError("Cannot init index database '%s' (error: %s)!\n",
+      printError("Cannot init index database '%s' (error: %s)!",
                  indexDatabaseFileName,
                  Error_getText(error)
                 );
@@ -17680,7 +17674,7 @@ Errors Server_run(ServerModes       mode,
                               );
     if (error != ERROR_NONE)
     {
-      printError("Cannot initialize server at port %u (error: %s)!\n",
+      printError("Cannot initialize server at port %u (error: %s)!",
                  port,
                  Error_getText(error)
                 );
@@ -17711,7 +17705,7 @@ Errors Server_run(ServerModes       mode,
                                   );
         if (error != ERROR_NONE)
         {
-          printError("Cannot initialize TLS/SSL server at port %u (error: %s)!\n",
+          printError("Cannot initialize TLS/SSL server at port %u (error: %s)!",
                      tlsPort,
                      Error_getText(error)
                     );
@@ -17726,32 +17720,32 @@ Errors Server_run(ServerModes       mode,
         UNUSED_VARIABLE(cert);
         UNUSED_VARIABLE(key);
 
-        printWarning("TLS/SSL is not supported!\n");
+        printWarning("TLS/SSL is not supported!");
       #endif /* HAVE_GNU_TLS */
     }
     else
     {
-      if (!isCertificateAvailable(ca)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started.\n");
-      if (!isCertificateAvailable(cert)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started.\n");
-      if (!isKeyAvailable(key)) printWarning("No key data (bar-server-key.pem file) - TLS server not started.\n");
+      if (!isCertificateAvailable(ca)) printWarning("No certificate authority data (bar-ca.pem file) - TLS server not started");
+      if (!isCertificateAvailable(cert)) printWarning("No certificate data (bar-server-cert.pem file) - TLS server not started");
+      if (!isKeyAvailable(key)) printWarning("No key data (bar-server-key.pem file) - TLS server not started");
     }
   }
   if (!serverFlag && !serverTLSFlag)
   {
     if ((port == 0) && (tlsPort == 0))
     {
-      printError("Cannot start any server (error: no port numbers specified)!\n");
+      printError("Cannot start any server (error: no port numbers specified)!");
     }
     else
     {
-      printError("Cannot start any server!\n");
+      printError("Cannot start any server!");
     }
     AutoFree_cleanup(&autoFreeList);
     return ERROR_INVALID_ARGUMENT;
   }
   if (serverPasswordHash->data == NULL)
   {
-    printWarning("No server password set!\n");
+    printWarning("No server password set!");
   }
 
   // init index
@@ -17807,7 +17801,7 @@ Errors Server_run(ServerModes       mode,
   // run as server
   if (globalOptions.serverDebugLevel >= 1)
   {
-    printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
+    printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!");
   }
 
   // Note: ignore SIGALRM in ppoll()
@@ -17956,7 +17950,7 @@ Errors Server_run(ServerModes       mode,
       }
       else
       {
-        printError("Cannot establish client connection (error: %s)!\n",
+        printError("Cannot establish client connection (error: %s)!",
                    Error_getText(error)
                   );
       }
@@ -17983,7 +17977,7 @@ Errors Server_run(ServerModes       mode,
                                   );
           if (error != ERROR_NONE)
           {
-            printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!\n",
+            printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
                        String_cString(clientNode->clientInfo.io.network.name),
                        clientNode->clientInfo.io.network.port,
                        Error_getText(error)
@@ -17993,7 +17987,7 @@ Errors Server_run(ServerModes       mode,
             return FALSE;
           }
         #else /* HAVE_GNU_TLS */
-          printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!\n",
+          printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!",
                      String_cString(clientNode->clientInfo.io.network.name),
                      clientNode->clientInfo.io.network.port,
                      Error_getText(error)
@@ -18036,7 +18030,7 @@ Errors Server_run(ServerModes       mode,
       }
       else
       {
-        printError("Cannot establish client TLS connection (error: %s)!\n",
+        printError("Cannot establish client TLS connection (error: %s)!",
                    Error_getText(error)
                   );
       }
@@ -18326,13 +18320,15 @@ Errors Server_run(ServerModes       mode,
 
   // free resources
 //TODO
+#warning TODO
 Connector_doneAll();
-  Misc_doneTimeout(&pairingMasterTimeoutInfo);
+  Crypt_doneHash(&newMaster.passwordHash);
+  String_delete(newMaster.name);
+  Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
 //  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
-//  Semaphore_done(&slaveList.lock);
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
   AutoFree_done(&autoFreeList);
@@ -18386,7 +18382,7 @@ Errors Server_batch(int inputDescriptor,
   // run in batch mode
   if (globalOptions.serverDebugLevel >= 1)
   {
-    printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!\n");
+    printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!");
   }
 
   // init client

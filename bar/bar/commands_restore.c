@@ -422,7 +422,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                                );
   if (error != ERROR_NONE)
   {
-    printError("Cannot read 'file' content of archive '%s' (error: %s)!\n",
+    printError("Cannot read 'file' content of archive '%s' (error: %",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -587,7 +587,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot create directory '%s' (error: %s)\n",
+          printError("Cannot create directory '%s' (error: %s)",
                      String_cString(parentDirectoryName),
                      Error_getText(error)
                     );
@@ -606,7 +606,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           if (!restoreInfo->jobOptions->noStopOnErrorFlag)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+            printError("Cannot set owner ship of directory '%s' (error: %s)",
                        String_cString(parentDirectoryName),
                        Error_getText(error)
                       );
@@ -616,7 +616,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           }
           else
           {
-            printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+            printWarning("Cannot set owner ship of directory '%s' (error: %s)",
                          String_cString(parentDirectoryName),
                          Error_getText(error)
                         );
@@ -637,7 +637,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot create/write to file '%s' (error: %s)\n",
+        printError("Cannot create/write to file '%s' (error: %s)",
                    String_cString(destinationFileName),
                    Error_getText(error)
                   );
@@ -651,7 +651,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot write content of file '%s' (error: %s)\n",
+        printError("Cannot write content of file '%s' (error: %s)",
                    String_cString(destinationFileName),
                    Error_getText(error)
                   );
@@ -679,7 +679,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot read content of file '%s' (error: %s)!\n",
+        printError("Cannot read content of file '%s' (error: %s)!",
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -691,7 +691,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot write content of file '%s' (error: %s)\n",
+          printError("Cannot write content of file '%s' (error: %s)",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -759,7 +759,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
              )
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot set file info of '%s' (error: %s)\n",
+            printError("Cannot set file info of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -768,7 +768,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           }
           else
           {
-            printWarning("Cannot set file info of '%s' (error: %s)\n",
+            printWarning("Cannot set file info of '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -786,7 +786,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
              )
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot set file owner/group of '%s' (error: %s)\n",
+            printError("Cannot set file owner/group of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -795,7 +795,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           }
           else
           {
-            printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+            printWarning("Cannot set file owner/group of '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -811,7 +811,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
              )
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot set file attributes of '%s' (error: %s)\n",
+            printError("Cannot set file attributes of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -820,7 +820,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           }
           else
           {
-            printWarning("Cannot set file attributes of '%s' (error: %s)\n",
+            printWarning("Cannot set file attributes of '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -871,7 +871,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         && !Compress_isCompressed(archiveEntryInfo.file.byteCompressAlgorithm)
         && !Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of file entry '%S'.\n",fileName);
+      printWarning("unexpected data at end of file entry '%S'",fileName);
     }
 
     // free resources
@@ -887,7 +887,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'file' entry fail (error: %s)\n",Error_getText(error));
+    printWarning("close 'file' entry fail (error: %s)",Error_getText(error));
   }
 
   // free resources
@@ -966,7 +966,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                                 );
   if (error != ERROR_NONE)
   {
-    printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
+    printError("Cannot read 'image' content of archive '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -976,7 +976,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   AUTOFREE_ADD(&autoFreeList,&archiveEntryInfo,{ (void)Archive_closeEntry(&archiveEntryInfo); });
   if (deviceInfo.blockSize > bufferSize)
   {
-    printError("Device block size %llu on '%s' is too big (max: %llu)\n",
+    printError("Device block size %llu on '%s' is too big (max: %llu)",
                deviceInfo.blockSize,
                String_cString(deviceName),
                bufferSize
@@ -1086,7 +1086,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot create directory '%s' (error: %s)\n",
+          printError("Cannot create directory '%s' (error: %s)",
                      String_cString(parentDirectoryName),
                      Error_getText(error)
                     );
@@ -1105,7 +1105,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
           if (!restoreInfo->jobOptions->noStopOnErrorFlag)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+            printError("Cannot set owner ship of directory '%s' (error: %s)",
                        String_cString(parentDirectoryName),
                        Error_getText(error)
                       );
@@ -1115,7 +1115,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
           }
           else
           {
-            printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+            printWarning("Cannot set owner ship of directory '%s' (error: %s)",
                          String_cString(parentDirectoryName),
                          Error_getText(error)
                         );
@@ -1135,7 +1135,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot open to device '%s' (error: %s)\n",
+          printError("Cannot open to device '%s' (error: %s)",
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
@@ -1154,7 +1154,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot open to file '%s' (error: %s)\n",
+          printError("Cannot open to file '%s' (error: %s)",
                      String_cString(destinationDeviceName),
                      Error_getText(error)
                     );
@@ -1176,7 +1176,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot write content to device '%s' (error: %s)\n",
+            printError("Cannot write content to device '%s' (error: %s)",
                        String_cString(destinationDeviceName),
                        Error_getText(error)
                       );
@@ -1187,7 +1187,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot write content of file '%s' (error: %s)\n",
+            printError("Cannot write content of file '%s' (error: %s)",
                        String_cString(destinationDeviceName),
                        Error_getText(error)
                       );
@@ -1226,7 +1226,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot read content of image '%s' (error: %s)!\n",
+        printError("Cannot read content of image '%s' (error: %s)!",
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
@@ -1243,7 +1243,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
             if (error != ERROR_NONE)
             {
               printInfo(1,"FAIL!\n");
-              printError("Cannot write content to device '%s' (error: %s)\n",
+              printError("Cannot write content to device '%s' (error: %s)",
                          String_cString(destinationDeviceName),
                          Error_getText(error)
                         );
@@ -1254,7 +1254,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
             if (error != ERROR_NONE)
             {
               printInfo(1,"FAIL!\n");
-              printError("Cannot write content of file '%s' (error: %s)\n",
+              printError("Cannot write content of file '%s' (error: %s)",
                          String_cString(destinationDeviceName),
                          Error_getText(error)
                         );
@@ -1360,7 +1360,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
         && !Compress_isCompressed(archiveEntryInfo.image.byteCompressAlgorithm)
         && !Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of image entry '%S'.\n",deviceName);
+      printWarning("unexpected data at end of image entry '%S'",deviceName);
     }
 
     // free resources
@@ -1376,7 +1376,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'image' entry fail (error: %s)\n",Error_getText(error));
+    printWarning("close 'image' entry fail (error: %s)",Error_getText(error));
   }
 
   // free resources
@@ -1439,7 +1439,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
                                     );
   if (error != ERROR_NONE)
   {
-    printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
+    printError("Cannot read 'directory' content of archive '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -1532,7 +1532,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot create directory '%s' (error: %s)\n",
+        printError("Cannot create directory '%s' (error: %s)",
                    String_cString(destinationFileName),
                    Error_getText(error)
                   );
@@ -1552,7 +1552,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
            )
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot set directory info of '%s' (error: %s)\n",
+          printError("Cannot set directory info of '%s' (error: %s)",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -1561,7 +1561,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
         }
         else
         {
-          printWarning("Cannot set directory info of '%s' (error: %s)\n",
+          printWarning("Cannot set directory info of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -1579,7 +1579,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
            )
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot set file owner/group of '%s' (error: %s)\n",
+          printError("Cannot set file owner/group of '%s' (error: %s)",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -1588,7 +1588,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
         }
         else
         {
-          printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+          printWarning("Cannot set file owner/group of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -1604,7 +1604,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
            )
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot set directory attributes of '%s' (error: %s)\n",
+          printError("Cannot set directory attributes of '%s' (error: %s)",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -1613,7 +1613,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
         }
         else
         {
-          printWarning("Cannot set directory attributes of '%s' (error: %s)\n",
+          printWarning("Cannot set directory attributes of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -1634,7 +1634,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of directory entry '%S'.\n",directoryName);
+      printWarning("unexpected data at end of directory entry '%S'",directoryName);
     }
 
     // free resources
@@ -1650,7 +1650,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'directory' entry fail (error: %s)\n",Error_getText(error));
+    printWarning("close 'directory' entry fail (error: %s)",Error_getText(error));
   }
 
   // free resources
@@ -1719,7 +1719,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
                                );
   if (error != ERROR_NONE)
   {
-    printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
+    printError("Cannot read 'link' content of archive '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -1761,7 +1761,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot create directory '%s' (error: %s)\n",
+          printError("Cannot create directory '%s' (error: %s)",
                      String_cString(parentDirectoryName),
                      Error_getText(error)
                     );
@@ -1780,7 +1780,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
           if (!restoreInfo->jobOptions->noStopOnErrorFlag)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+            printError("Cannot set owner ship of directory '%s' (error: %s)",
                        String_cString(parentDirectoryName),
                        Error_getText(error)
                       );
@@ -1790,7 +1790,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
           }
           else
           {
-            printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+            printWarning("Cannot set owner ship of directory '%s' (error: %s)",
                          String_cString(parentDirectoryName),
                          Error_getText(error)
                         );
@@ -1865,7 +1865,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot create link '%s' -> '%s' (error: %s)\n",
+        printError("Cannot create link '%s' -> '%s' (error: %s)",
                    String_cString(destinationFileName),
                    String_cString(fileName),
                    Error_getText(error)
@@ -1886,7 +1886,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
            )
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot set file info of '%s' (error: %s)\n",
+          printError("Cannot set file info of '%s' (error: %s)",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -1895,7 +1895,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
         }
         else
         {
-          printWarning("Cannot set file info of '%s' (error: %s)\n",
+          printWarning("Cannot set file info of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -1913,7 +1913,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
            )
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot set file owner/group of '%s' (error: %s)\n",
+          printError("Cannot set file owner/group of '%s' (error: %s)",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -1922,7 +1922,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
         }
         else
         {
-          printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+          printWarning("Cannot set file owner/group of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -1943,7 +1943,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of link entry '%S'.\n",linkName);
+      printWarning("unexpected data at end of link entry '%S'",linkName);
     }
 
     // free resources
@@ -1959,7 +1959,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'link' entry fail (error: %s)\n",Error_getText(error));
+    printWarning("close 'link' entry fail (error: %s)",Error_getText(error));
   }
 
   // free resources
@@ -2039,7 +2039,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                                    );
   if (error != ERROR_NONE)
   {
-    printError("Cannot read 'hard link' content of archive '%s' (error: %s)!\n",
+    printError("Cannot read 'hard link' content of archive '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2090,7 +2090,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot create directory '%s' (error: %s)\n",
+            printError("Cannot create directory '%s' (error: %s)",
                        String_cString(parentDirectoryName),
                        Error_getText(error)
                       );
@@ -2109,7 +2109,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             if (!restoreInfo->jobOptions->noStopOnErrorFlag)
             {
               printInfo(1,"FAIL!\n");
-              printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+              printError("Cannot set owner ship of directory '%s' (error: %s)",
                          String_cString(parentDirectoryName),
                          Error_getText(error)
                         );
@@ -2119,7 +2119,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             }
             else
             {
-              printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+              printWarning("Cannot set owner ship of directory '%s' (error: %s)",
                            String_cString(parentDirectoryName),
                            Error_getText(error)
                           );
@@ -2262,7 +2262,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot create/write to file '%s' (error: %s)\n",
+            printError("Cannot create/write to file '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2276,7 +2276,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot write content of hard link '%s' (error: %s)\n",
+            printError("Cannot write content of hard link '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2306,7 +2306,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot read content of hard link '%s' (error: %s)!\n",
+            printError("Cannot read content of hard link '%s' (error: %s)!",
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
@@ -2318,7 +2318,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             if (error != ERROR_NONE)
             {
               printInfo(1,"FAIL!\n");
-              printError("Cannot write content of hard link '%s' (error: %s)\n",
+              printError("Cannot write content of hard link '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -2394,7 +2394,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                  )
               {
                 printInfo(1,"FAIL!\n");
-                printError("Cannot set file info of '%s' (error: %s)\n",
+                printError("Cannot set file info of '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -2403,7 +2403,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               }
               else
               {
-                printWarning("Cannot set file info of '%s' (error: %s)\n",
+                printWarning("Cannot set file info of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -2421,7 +2421,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                  )
               {
                 printInfo(1,"FAIL!\n");
-                printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                printError("Cannot set file owner/group of '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -2430,7 +2430,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               }
               else
               {
-                printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                printWarning("Cannot set file owner/group of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -2446,7 +2446,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                  )
               {
                 printInfo(1,"FAIL!\n");
-                printError("Cannot set file attributes of '%s' (error: %s)\n",
+                printError("Cannot set file attributes of '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -2455,7 +2455,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
               }
               else
               {
-                printWarning("Cannot set file attributes of '%s' (error: %s)\n",
+                printWarning("Cannot set file attributes of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -2556,7 +2556,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot create/write to file '%s' (error: %s)\n",
+            printError("Cannot create/write to file '%s' (error: %",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2585,7 +2585,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
             && !Compress_isCompressed(archiveEntryInfo.hardLink.byteCompressAlgorithm)
             && !Archive_eofData(&archiveEntryInfo))
         {
-          printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
+          printWarning("unexpected data at end of hard link entry '%S'",fileName);
         }
       }
     }
@@ -2610,7 +2610,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'hard link' entry fail (error: %s)\n",Error_getText(error));
+    printWarning("close 'hard link' entry fail (error: %s)",Error_getText(error));
   }
 
   // free resources
@@ -2675,7 +2675,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
                                   );
   if (error != ERROR_NONE)
   {
-    printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
+    printError("Cannot read 'special' content of archive '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2717,7 +2717,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot create directory '%s' (error: %s)\n",
+          printError("Cannot create directory '%s' (error: %s)",
                      String_cString(parentDirectoryName),
                      Error_getText(error)
                     );
@@ -2736,7 +2736,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
           if (!restoreInfo->jobOptions->noStopOnErrorFlag)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+            printError("Cannot set owner ship of directory '%s' (error: %s)",
                        String_cString(parentDirectoryName),
                        Error_getText(error)
                       );
@@ -2746,7 +2746,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
           }
           else
           {
-            printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+            printWarning("Cannot set owner ship of directory '%s' (error: %s)",
                          String_cString(parentDirectoryName),
                          Error_getText(error)
                         );
@@ -2826,7 +2826,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL!\n");
-        printError("Cannot create special device '%s' (error: %s)\n",
+        printError("Cannot create special device '%s' (error: %s)",
                    String_cString(fileName),
                    Error_getText(error)
                   );
@@ -2846,7 +2846,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
            )
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot set file info of '%s' (error: %s)\n",
+          printError("Cannot set file info of '%s' (error: %s)",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -2855,7 +2855,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
         }
         else
         {
-          printWarning("Cannot set file info of '%s' (error: %s)\n",
+          printWarning("Cannot set file info of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2873,7 +2873,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
            )
         {
           printInfo(1,"FAIL!\n");
-          printError("Cannot set file owner/group of '%s' (error: %s)\n",
+          printError("Cannot set file owner/group of '%s' (error: %s)",
                      String_cString(destinationFileName),
                      Error_getText(error)
                     );
@@ -2882,7 +2882,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
         }
         else
         {
-          printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+          printWarning("Cannot set file owner/group of '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -2903,7 +2903,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
     {
-      printWarning("unexpected data at end of special entry '%S'.\n",fileName);
+      printWarning("unexpected data at end of special entry '%S'",fileName);
     }
 
     // free resources
@@ -2919,7 +2919,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
   error = Archive_closeEntry(&archiveEntryInfo);
   if (error != ERROR_NONE)
   {
-    printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
+    printWarning("close 'special' entry fail (error: %s)",Error_getText(error));
   }
 
   // free resources
@@ -2998,7 +2998,7 @@ NULL, // masterIO
                       );
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize storage '%s' (error: %s)!\n",
+    printError("Cannot initialize storage '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -3011,7 +3011,7 @@ NULL, // masterIO
   // check if storage exists
   if (!Storage_exists(&storageInfo,archiveName))
   {
-    printError("Archive not found '%s'!\n",
+    printError("Archive not found '%s'!",
                String_cString(printableStorageName)
               );
     AutoFree_cleanup(&autoFreeList);
@@ -3028,7 +3028,7 @@ NULL, // masterIO
                       );
   if (error != ERROR_NONE)
   {
-    printError("Cannot open storage '%s' (error: %s)!\n",
+    printError("Cannot open storage '%s' (error: %s)!",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -3063,7 +3063,7 @@ NULL, // masterIO
       if (restoreInfo->jobOptions->forceVerifySignaturesFlag)
       {
         // signature error
-        printError("Invalid signature in '%s'!\n",
+        printError("Invalid signature in '%s'!",
                    String_cString(printableStorageName)
                   );
         (void)handleError(restoreInfo,error);
@@ -3073,7 +3073,9 @@ NULL, // masterIO
       else
       {
         // print signature warning
-        printWarning("%s\n",Error_getText(error));
+        printWarning("Invalid signature in '%s'!",
+                     String_cString(printableStorageName)
+                    );
       }
     }
   }
@@ -3109,7 +3111,7 @@ NULL, // masterIO
                                        );
     if (error != ERROR_NONE)
     {
-      printError("Cannot read next entry in archive '%s' (error: %s)!\n",
+      printError("Cannot read next entry in archive '%s' (error: %s)!",
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
@@ -3292,7 +3294,7 @@ Errors Command_restore(const StringList                *storageNameList,
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
-      printError("Invalid storage '%s' (error: %s)!\n",
+      printError("Invalid storage '%s' (error: %",
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -3370,7 +3372,7 @@ Errors Command_restore(const StringList                *storageNameList,
   }
   if ((restoreInfo.failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
   {
-    printError("No matching storage files found!\n");
+    printError("No matching storage files found!");
     restoreInfo.failError = ERROR_FILE_NOT_FOUND_;
   }
 
@@ -3407,7 +3409,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   && !File_isNetworkFileSystem(fragmentNode->name)
                  )
               {
-                printError("Cannot set file info of '%s' (error: %s)\n",
+                printError("Cannot set file info of '%s' (error: %s)",
                            String_cString(fragmentNode->name),
                            Error_getText(error)
                           );
@@ -3415,7 +3417,7 @@ Errors Command_restore(const StringList                *storageNameList,
               }
               else
               {
-                printWarning("Cannot set file info of '%s' (error: %s)\n",
+                printWarning("Cannot set file info of '%s' (error: %s)",
                              String_cString(fragmentNode->name),
                              Error_getText(error)
                             );
@@ -3433,7 +3435,7 @@ Errors Command_restore(const StringList                *storageNameList,
                  )
               {
                 printInfo(1,"FAIL!\n");
-                printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                printError("Cannot set file owner/group of '%s' (error: %",
                            String_cString(fragmentNode->name),
                            Error_getText(error)
                           );
@@ -3441,7 +3443,7 @@ Errors Command_restore(const StringList                *storageNameList,
               }
               else
               {
-                printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                printWarning("Cannot set file owner/group of '%s' (error: %s)",
                              String_cString(fragmentNode->name),
                              Error_getText(error)
                             );
@@ -3456,7 +3458,7 @@ Errors Command_restore(const StringList                *storageNameList,
                   && !File_isNetworkFileSystem(fragmentNode->name)
                  )
               {
-                printError("Cannot set file attributes of '%s' (error: %s)\n",
+                printError("Cannot set file attributes of '%s' (error: %s)",
                            String_cString(fragmentNode->name),
                            Error_getText(error)
                           );
@@ -3464,7 +3466,7 @@ Errors Command_restore(const StringList                *storageNameList,
               }
               else
               {
-                printWarning("Cannot set file attributes of '%s' (error: %s)\n",
+                printWarning("Cannot set file attributes of '%s' (error: %s)",
                              String_cString(fragmentNode->name),
                              Error_getText(error)
                             );

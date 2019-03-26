@@ -423,7 +423,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type, co
                                               (name != NULL) ? name : "<none>",
                                               Thread_getIdString(debugThreadStackTraceThreads[debugThreadStackTraceThreadIndex].id)
                                              );
-                    debugDumpStackTraceOutput(stderr,0,type,"  not availble (terminate fail)\n");
+                    debugDumpStackTraceOutput(stderr,0,type,"  not available (terminate fail)\n");
                   }
                   pthread_mutex_unlock(&debugConsoleLock);
                 }

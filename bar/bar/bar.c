@@ -1265,7 +1265,7 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
       {
         fclose(logFile);
         logFile = fopen(logFileName,"a");
-        if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+        if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",logFileName,strerror(errno));
       }
     }
   }
@@ -1569,7 +1569,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   {
     if ((fileInfo.permission & (FILE_PERMISSION_GROUP_READ|FILE_PERMISSION_OTHER_READ)) != 0)
     {
-      printWarning(_("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600).\n"),
+      printWarning(_("Configuration file '%s' has wrong file permission %03o. Please make sure read permissions are limited to file owner (mode 600)"),
                    String_cString(fileName),
                    fileInfo.permission & FILE_PERMISSION_MASK
                   );
@@ -1577,7 +1577,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   }
   else
   {
-    printWarning(_("Cannot get file info for configuration file '%s' (error: %s)\n"),
+    printWarning(_("Cannot get file info for configuration file '%s' (error: %s)"),
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -1587,7 +1587,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot open configuration file '%s' (error: %s)!\n"),
+    printError(_("Cannot open configuration file '%s' (error: %s)!"),
                String_cString(fileName),
                Error_getText(error)
               );
@@ -1644,7 +1644,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
              )
           {
             if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n"),
+            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
                        String_cString(name),
                        "ftp-server",
                        String_cString(fileName),
@@ -1657,7 +1657,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'\n"),
+          printError(_("Syntax error in '%s', line %ld: '%s'"),
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1712,7 +1712,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
              )
           {
             if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n"),
+            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
                        String_cString(name),
                        "ftp-server",
                        String_cString(fileName),
@@ -1725,7 +1725,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'\n"),
+          printError(_("Syntax error in '%s', line %ld: '%s'"),
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1780,7 +1780,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
              )
           {
             if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n"),
+            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
                        String_cString(name),
                        "ssh-server",
                        String_cString(fileName),
@@ -1793,7 +1793,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'\n"),
+          printError(_("Syntax error in '%s', line %ld: '%s'"),
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1848,7 +1848,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
              )
           {
             if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n"),
+            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
                        String_cString(name),
                        "webdav-server",
                        String_cString(fileName),
@@ -1861,7 +1861,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'\n"),
+          printError(_("Syntax error in '%s', line %ld: '%s'"),
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1915,7 +1915,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
              )
           {
             if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n"),
+            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
                        String_cString(name),
                        "device",
                        String_cString(fileName),
@@ -1928,7 +1928,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'\n"),
+          printError(_("Syntax error in '%s', line %ld: '%s'"),
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -1972,7 +1972,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
              )
           {
             if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld\n"),
+            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
                        String_cString(name),
                        "master",
                        String_cString(fileName),
@@ -1985,7 +1985,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         else
         {
           if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'\n"),
+          printError(_("Syntax error in '%s', line %ld: '%s'"),
                      String_cString(fileName),
                      lineNb,
                      String_cString(line)
@@ -2017,7 +2017,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
          )
       {
         if (printInfoFlag) printf("FAIL!\n");
-        printError(_("Unknown or invalid config entry '%s' with value '%s' in %s, line %ld\n"),
+        printError(_("Unknown or invalid config entry '%s' with value '%s' in %s, line %ld"),
                    String_cString(name),
                    String_cString(value),
                    String_cString(fileName),
@@ -2030,7 +2030,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
     else
     {
       if (printInfoFlag) printf("FAIL!\n");
-      printError(_("Unknown config entry '%s' in %s, line %ld\n"),
+      printError(_("Unknown config entry '%s' in %s, line %ld"),
                  String_cString(line),
                  String_cString(fileName),
                  lineNb
@@ -4483,9 +4483,9 @@ LOCAL bool validateOptions(void)
 {
   if (!String_isEmpty(globalOptions.tmpDirectory))
   {
-    if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
-    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!\n"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+    if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
   }
 
   return TRUE;
@@ -4507,7 +4507,7 @@ LOCAL void openLog(void)
     if (logFileName != NULL)
     {
       logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!",logFileName,strerror(errno));
     }
   }
 }
@@ -4550,7 +4550,7 @@ LOCAL void reopenLog(void)
     {
       fclose(logFile);
       logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",logFileName,strerror(errno));
     }
   }
 }
@@ -4981,6 +4981,7 @@ void printWarning(const char *text, ...)
   va_start(arguments,text);
   String_appendCString(line,"Warning: ");
   String_appendVFormat(line,text,arguments);
+  String_appendChar(line,'\n');
   va_end(arguments);
 
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -5013,7 +5014,9 @@ void printError(const char *text, ...)
   va_start(arguments,text);
   String_appendCString(line,"ERROR: ");
   String_appendVFormat(line,text,arguments);
+  String_appendChar(line,'\n');
   va_end(arguments);
+
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     saveConsole(stderr,&saveLine);
@@ -5178,7 +5181,7 @@ void fatalLogMessage(const char *text, void *userData)
     if (logFile == NULL)
     {
       logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!\n",logFileName,strerror(errno));
+      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",logFileName,strerror(errno));
     }
 
     if (logFile != NULL)
@@ -5606,10 +5609,10 @@ void logPostProcess(LogHandle        *logHandle,
                                    );
         if (error != ERROR_NONE)
         {
-          printError(_("Cannot post-process log file (error: %s)\n"),Error_getText(error));
+          printError(_("Cannot post-process log file (error: %s)"),Error_getText(error));
           STRINGLIST_ITERATE(&stderrList,stringNode,string)
           {
-            printError("  %s\n",String_cString(string));
+            printError("  %s",String_cString(string));
           }
         }
         StringList_done(&stderrList);
@@ -5621,7 +5624,7 @@ void logPostProcess(LogHandle        *logHandle,
         logHandle->logFile = fopen(String_cString(logHandle->logFileName),"w");
         if (logHandle->logFile == NULL)
         {
-          printWarning("Cannot re-open log file '%s' (error: %s)\n",String_cString(logHandle->logFileName),strerror(errno));
+          printWarning("Cannot re-open log file '%s' (error: %s)",String_cString(logHandle->logFileName),strerror(errno));
         }
       }
 
@@ -6941,7 +6944,7 @@ Errors mountAll(const MountList *mountList)
       }
       else
       {
-        printWarning("Cannot mount '%s' (error: %s)\n",
+        printWarning("Cannot mount '%s' (error: %s)",
                      String_cString(mountNode->name),
                      Error_getText(error)
                     );
@@ -6993,7 +6996,7 @@ Errors unmountAll(const MountList *mountList)
         }
         else
         {
-          printWarning("Cannot unmount '%s' (error: %s)\n",
+          printWarning("Cannot unmount '%s' (error: %s)",
                        String_cString(mountNode->name),
                        Error_getText(error)
                       );
@@ -7077,7 +7080,7 @@ Errors getCryptPasswordFromConsole(String        name,
             }
             else
             {
-              printError(_("%s passwords are not equal!\n"),title);
+              printError(_("%s passwords are not equal!"),title);
               restoreConsole(stdout,&saveLine);
               String_delete(title);
               Semaphore_unlock(&consoleLock);
@@ -7096,7 +7099,7 @@ Errors getCryptPasswordFromConsole(String        name,
             // check password quality
             if (Password_getQualityLevel(password) < MIN_PASSWORD_QUALITY_LEVEL)
             {
-              printWarning(_("Low password quality!\n"));
+              printWarning(_("Low password quality!"));
             }
           }
 
@@ -9264,7 +9267,7 @@ LOCAL bool readFromJob(ConstString fileName)
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot open job file '%s' (error: %s)!\n"),
+    printError(_("Cannot open job file '%s' (error: %s)!"),
                String_cString(fileName),
                Error_getText(error)
               );
@@ -9326,7 +9329,7 @@ LOCAL bool readFromJob(ConstString fileName)
                             )
          )
       {
-        printError(_("Unknown or invalid config value '%s' in %s, line %ld - skipped\n"),
+        printError(_("Unknown or invalid config value '%s' in %s, line %ld - skipped"),
                    String_cString(name),
                    String_cString(fileName),
                    lineNb
@@ -9335,7 +9338,7 @@ LOCAL bool readFromJob(ConstString fileName)
     }
     else
     {
-      printError(_("Syntax error in '%s', line %ld: '%s' - skipped\n"),
+      printError(_("Syntax error in '%s', line %ld: '%s' - skipped"),
                  String_cString(fileName),
                  lineNb,
                  String_cString(line)
@@ -9377,7 +9380,7 @@ LOCAL Errors createPIDFile(void)
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      printError(_("Cannot create process id file '%s' (error: %s)\n"),pidFileName,Error_getText(error));
+      printError(_("Cannot create process id file '%s' (error: %s)"),pidFileName,Error_getText(error));
       return error;
     }
     File_printLine(&fileHandle,"%d",(int)getpid());
@@ -9475,14 +9478,14 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     // check if key files already exists
     if (File_exists(publicKeyFileName))
     {
-      printError(_("Public key file '%s' already exists!\n"),String_cString(publicKeyFileName));
+      printError(_("Public key file '%s' already exists!"),String_cString(publicKeyFileName));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
     }
     if (File_exists(privateKeyFileName))
     {
-      printError(_("Private key file '%s' already exists!\n"),String_cString(privateKeyFileName));
+      printError(_("Private key file '%s' already exists!"),String_cString(privateKeyFileName));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -9502,7 +9505,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                        );
     if (error != ERROR_NONE)
     {
-      printError(_("No password given for private key!\n"));
+      printError(_("No password given for private key!"));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return error;
@@ -9516,7 +9519,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot create encryption key pair (error: %s)!\n"),Error_getText(error));
+    printError(_("Cannot create encryption key pair (error: %s)!"),Error_getText(error));
     Crypt_doneKey(&privateKey);
     Crypt_doneKey(&publicKey);
     String_delete(privateKeyFileName);
@@ -9537,7 +9540,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
       error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
       if (error != ERROR_NONE)
       {
-        printError(_("Cannot create directory '%s' (error: %s)!\n"),String_cString(directoryName),Error_getText(error));
+        printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
         String_delete(directoryName);
         Crypt_doneKey(&privateKey);
         Crypt_doneKey(&publicKey);
@@ -9548,7 +9551,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     }
     else if (!File_isDirectory(directoryName))
     {
-      printError(_("'%s' is not a directory!\n"),String_cString(directoryName));
+      printError(_("'%s' is not a directory!"),String_cString(directoryName));
       String_delete(directoryName);
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
@@ -9568,7 +9571,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                            );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot write encryption public key file (error: %s)!\n"),Error_getText(error));
+      printError(_("Cannot write encryption public key file (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -9587,7 +9590,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                            );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot write encryption private key file (error: %s)!\n"),Error_getText(error));
+      printError(_("Cannot write encryption private key file (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(data);
@@ -9610,7 +9613,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                          );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get encryption public key (error: %s)!\n"),Error_getText(error));
+      printError(_("Cannot get encryption public key (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -9633,7 +9636,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
                                          );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get encryption private key (error: %s)!\n"),Error_getText(error));
+      printError(_("Cannot get encryption private key (error: %s)!"),Error_getText(error));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -9691,14 +9694,14 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     // check if key files already exists
     if (File_exists(publicKeyFileName))
     {
-      printError(_("Public key file '%s' already exists!\n"),String_cString(publicKeyFileName));
+      printError(_("Public key file '%s' already exists!"),String_cString(publicKeyFileName));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
     }
     if (File_exists(privateKeyFileName))
     {
-      printError(_("Private key file '%s' already exists!\n"),String_cString(privateKeyFileName));
+      printError(_("Private key file '%s' already exists!"),String_cString(privateKeyFileName));
       String_delete(privateKeyFileName);
       String_delete(publicKeyFileName);
       return ERROR_FILE_EXISTS_;
@@ -9712,7 +9715,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot create signature key pair (error: %s)!\n"),Error_getText(error));
+    printError(_("Cannot create signature key pair (error: %s)!"),Error_getText(error));
     Crypt_doneKey(&privateKey);
     Crypt_doneKey(&publicKey);
     String_delete(privateKeyFileName);
@@ -9731,7 +9734,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
       error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
       if (error != ERROR_NONE)
       {
-        printError(_("Cannot create directory '%s' (error: %s)!\n"),String_cString(directoryName),Error_getText(error));
+        printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
         String_delete(directoryName);
         Crypt_doneKey(&privateKey);
         Crypt_doneKey(&publicKey);
@@ -9742,7 +9745,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     }
     else if (!File_isDirectory(directoryName))
     {
-      printError(_("'%s' is not a directory!\n"),String_cString(directoryName));
+      printError(_("'%s' is not a directory!"),String_cString(directoryName));
       String_delete(directoryName);
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
@@ -9762,7 +9765,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                            );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot write signature public key file!\n"));
+      printError(_("Cannot write signature public key file!"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -9781,7 +9784,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                            );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot write signature private key file!\n"));
+      printError(_("Cannot write signature private key file!"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -9803,7 +9806,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                          );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get signature public key!\n"));
+      printError(_("Cannot get signature public key!"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -9826,7 +9829,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
                                          );
     if (error != ERROR_NONE)
     {
-      printError(_("Cannot get signature private key!\n"));
+      printError(_("Cannot get signature private key!"));
       Crypt_doneKey(&privateKey);
       Crypt_doneKey(&publicKey);
       String_delete(privateKeyFileName);
@@ -9885,7 +9888,7 @@ LOCAL Errors runDaemon(void)
   error = Continuous_init(continuousDatabaseFileName);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot initialise continuous (error: %s)!\n"),
+    printError(_("Cannot initialise continuous (error: %s)!"),
                Error_getText(error)
               );
     deletePIDFile();
@@ -10145,7 +10148,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         }
         else
         {
-          printError(_("No archive file name given!\n"));
+          printError(_("No archive file name given!"));
           error = ERROR_INVALID_ARGUMENT;
         }
 
@@ -10360,7 +10363,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
       }
       break;
     default:
-      printError(_("No command given!\n"));
+      printError(_("No command given!"));
       error = ERROR_INVALID_ARGUMENT;
       break;
   }
@@ -10507,7 +10510,7 @@ exit(1);
       }
       else
       {
-        printError(_("Cannot find job '%s'!\n"),
+        printError(_("Cannot find job '%s'!"),
                    String_cString(jobUUIDName)
                   );
         Job_listUnlock();
@@ -10558,7 +10561,7 @@ exit(1);
   error = File_getTmpDirectoryName(tmpDirectory,"bar",globalOptions.tmpDirectory);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot create temporary directory in '%s' (error: %s)!\n"),
+    printError(_("Cannot create temporary directory in '%s' (error: %s)!"),
                String_cString(globalOptions.tmpDirectory),
                Error_getText(error)
               );
@@ -10648,7 +10651,7 @@ int main(int argc, const char *argv[])
       error = File_changeDirectoryCString(changeToDirectory);
       if (error != ERROR_NONE)
       {
-        printError(_("Cannot change to directory '%s' (error: %s)!\n"),
+        printError(_("Cannot change to directory '%s' (error: %s)!"),
                    changeToDirectory,
                    Error_getText(error)
                   );

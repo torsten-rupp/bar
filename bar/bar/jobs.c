@@ -2851,7 +2851,7 @@ void Job_writeModifiedAll(void)
         error = Job_write(jobNode);
         if (error != ERROR_NONE)
         {
-          printWarning("Cannot update job '%s' (error: %s)\n",String_cString(jobNode->fileName),Error_getText(error));
+          printWarning("Cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
         }
       }
     }
@@ -2891,7 +2891,7 @@ bool Job_read(JobNode *jobNode)
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError("Cannot open job file '%s' (error: %s)!\n",
+    printError("Cannot open job file '%s' (error: %s)!",
                String_cString(jobNode->fileName),
                Error_getText(error)
               );
@@ -2938,7 +2938,7 @@ bool Job_read(JobNode *jobNode)
                                 )
              )
           {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped",
                        String_cString(name),
                        "schedule",
                        String_cString(jobNode->fileName),
@@ -2948,7 +2948,7 @@ bool Job_read(JobNode *jobNode)
         }
         else
         {
-          printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+          printError("Syntax error in %s, line %ld: '%s' - skipped",
                      String_cString(jobNode->fileName),
                      lineNb,
                      String_cString(line)
@@ -3066,7 +3066,7 @@ bool Job_read(JobNode *jobNode)
                                   )
                )
             {
-              printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped\n",
+              printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped",
                          String_cString(name),
                          "persistence",
                          String_cString(jobNode->fileName),
@@ -3076,7 +3076,7 @@ bool Job_read(JobNode *jobNode)
           }
           else
           {
-            printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+            printError("Syntax error in %s, line %ld: '%s' - skipped",
                        String_cString(jobNode->fileName),
                        lineNb,
                        String_cString(line)
@@ -3106,7 +3106,7 @@ bool Job_read(JobNode *jobNode)
       }
       else
       {
-        printError("Unknown archive type '%s' in section '%s' in %s, line %ld - skipped\n",
+        printError("Unknown archive type '%s' in section '%s' in %s, line %ld - skipped",
                    String_cString(s),
                    "persistence",
                    String_cString(jobNode->fileName),
@@ -3149,7 +3149,7 @@ bool Job_read(JobNode *jobNode)
                             )
          )
       {
-        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped\n",
+        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped",
                    String_cString(name),
                    String_cString(jobNode->fileName),
                    lineNb
@@ -3158,7 +3158,7 @@ bool Job_read(JobNode *jobNode)
     }
     else
     {
-      printError("Syntax error in %s, line %ld: '%s' - skipped\n",
+      printError("Syntax error in %s, line %ld: '%s' - skipped",
                  String_cString(jobNode->fileName),
                  lineNb,
                  String_cString(line)
@@ -3358,7 +3358,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
       {
         if (String_equals(jobNode1->job.uuid,jobNode2->job.uuid))
         {
-          printWarning("Duplicate UUID in jobs '%s' and '%s'!\n",String_cString(jobNode1->name),String_cString(jobNode2->name));
+          printWarning("Duplicate UUID in jobs '%s' and '%s'!",String_cString(jobNode1->name),String_cString(jobNode2->name));
         }
         jobNode2 = jobNode2->next;
       }

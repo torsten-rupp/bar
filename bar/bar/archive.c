@@ -6018,7 +6018,7 @@ UNUSED_VARIABLE(storageInfo);
     }
     else
     {
-      printWarning("No BAR header found! This may be a broken archive or not an archive.\n");
+      printWarning("No BAR header found! This may be a broken archive or not an archive");
     }
   }
   ungetNextChunkHeader(archiveHandle,&chunkHeader);
@@ -6551,7 +6551,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
           {
             if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
-              printWarning("Skipped unknown chunk '%s' at offset %llu in '%s'\n",
+              printWarning("Skipped unknown chunk '%s' at offset %llu in '%s'",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -6721,7 +6721,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     else
     {
       // no delta source -> print warning and disable delta compress
-      printWarning("File '%s' not delta compressed (no source file found)\n",String_cString(fileName));
+      printWarning("File '%s' not delta compressed (no source file found)",String_cString(fileName));
       logMessage(archiveHandle->logHandle,
                  LOG_TYPE_WARNING,
                  "File '%s' not delta compressed (no source file found)\n",
@@ -7131,7 +7131,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
     else
     {
       // no delta source -> print warning and disable delta compress
-      printWarning("Image of devicee '%s' not delta compressed (no source file found)\n",String_cString(deviceName));
+      printWarning("Image of devicee '%s' not delta compressed (no source file found)",String_cString(deviceName));
       logMessage(archiveHandle->logHandle,
                  LOG_TYPE_WARNING,
                  "Image of device '%s' not delta compressed (no source file found)\n",
@@ -7965,10 +7965,10 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
     else
     {
       // no delta source -> print warning and disable delta compress
-      printWarning("File '%s' not delta compressed (no source file found)\n",String_cString(StringList_first(fileNameList,NULL)));
+      printWarning("File '%s' not delta compressed (no source file found)",String_cString(StringList_first(fileNameList,NULL)));
       logMessage(archiveHandle->logHandle,
                  LOG_TYPE_WARNING,
-                 "File '%s' not delta compressed (no source file found)\n",
+                 "File '%s' not delta compressed (no source file found)",
                  String_cString(StringList_first(fileNameList,NULL))
                 );
       archiveEntryInfo->hardLink.deltaCompressAlgorithm = COMPRESS_ALGORITHM_NONE;
@@ -8848,7 +8848,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           {
             if (IS_SET(flags,ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS))
             {
-              printWarning("Skipped unknown chunk '%s' at offset %llu in '%s'\n",
+              printWarning("Skipped unknown chunk '%s' at offset %llu in '%s'",
                            Chunk_idToString(chunkHeader.id),
                            chunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -9222,7 +9222,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'.\n",
+              printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -9836,7 +9836,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'.\n",
+              printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -10392,7 +10392,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'.\n",
+              printWarning("Skipped unknown sub-chunk '%s' (offset %llu) in '%s'",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -10844,7 +10844,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %llu).\n",
+              printWarning("Skipped unknown sub-chunk '%s' (offset %llu)",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -11265,7 +11265,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %llu).\n",
+              printWarning("Skipped unknown sub-chunk '%s' (offset %llu)",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -11909,7 +11909,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %llu).\n",
+              printWarning("Skipped unknown sub-chunk '%s' (offset %llu)",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -12366,7 +12366,7 @@ NULL//                             password
             // unknown sub-chunk -> skip
             if (isPrintInfo(3))
             {
-              printWarning("Skipped unknown sub-chunk '%s' (offset %llu).\n",
+              printWarning("Skipped unknown sub-chunk '%s' (offset %llu)",
                            Chunk_idToString(subChunkHeader.id),
                            subChunkHeader.offset,
                            String_cString(archiveHandle->printableStorageName)
@@ -15454,7 +15454,7 @@ archiveHandle->archiveInitUserData              = NULL;
             if (error != ERROR_NONE)
             {
               printInfo(2,"FAIL!\n");
-              printError("Cannot write file '%s' (error: %s)\n",
+              printError("Cannot write file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -15490,7 +15490,7 @@ archiveHandle->archiveInitUserData              = NULL;
             if (error != ERROR_NONE)
             {
               printInfo(2,"FAIL!\n");
-              printError("Cannot read content of archive '%s' (error: %s)!\n",
+              printError("Cannot read content of archive '%s' (error: %s)!",
                          String_cString(printableArchiveName),
                          Error_getText(error)
                         );
@@ -15502,7 +15502,7 @@ archiveHandle->archiveInitUserData              = NULL;
             if (error != ERROR_NONE)
             {
               printInfo(2,"FAIL!\n");
-              printError("Cannot write file '%s' (error: %s)\n",
+              printError("Cannot write file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -15583,7 +15583,7 @@ archiveHandle->archiveInitUserData              = NULL;
                                         );
           if (error != ERROR_NONE)
           {
-            printError("Cannot read 'image' content of archive '%s' (error: %s)!\n",
+            printError("Cannot read 'image' content of archive '%s' (error: %s)!",
                        String_cString(printableArchiveName),
                        Error_getText(error)
                       );
@@ -15640,7 +15640,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
-                printError("Cannot write to device '%s' (error: %s)\n",
+                printError("Cannot write to device '%s' (error: %s)",
                            String_cString(destinationDeviceName),
                            Error_getText(error)
                           );
@@ -15657,7 +15657,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
-                printError("Cannot write to device '%s' (error: %s)\n",
+                printError("Cannot write to device '%s' (error: %s)",
                            String_cString(destinationDeviceName),
                            Error_getText(error)
                           );
@@ -15692,7 +15692,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
-                printError("Cannot read content of archive '%s' (error: %s)!\n",
+                printError("Cannot read content of archive '%s' (error: %s)!",
                            String_cString(printableArchiveName),
                            Error_getText(error)
                           );
@@ -15705,7 +15705,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot write to device '%s' (error: %s)\n",
+                  printError("Cannot write to device '%s' (error: %",
                              String_cString(destinationDeviceName),
                              Error_getText(error)
                             );
@@ -15761,7 +15761,7 @@ archiveHandle->archiveInitUserData              = NULL;
             if (   !Compress_isCompressed(archiveEntryInfo.image.compressAlgorithm)
                 && !Archive_eofData(&archiveEntryInfo))
             {
-              printWarning("unexpected data at end of image entry '%S'.\n",imageName);
+              printWarning("unexpected data at end of image entry '%S'",imageName);
             }
 
             // free resources
@@ -15777,7 +15777,7 @@ archiveHandle->archiveInitUserData              = NULL;
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'image' entry fail (error: %s)\n",Error_getText(error));
+            printWarning("close 'image' entry fail (error: %s)",Error_getText(error));
           }
 
           // free resources
@@ -15802,7 +15802,7 @@ archiveHandle->archiveInitUserData              = NULL;
                                             );
           if (error != ERROR_NONE)
           {
-            printError("Cannot read 'directory' content of archive '%s' (error: %s)!\n",
+            printError("Cannot read 'directory' content of archive '%s' (error: %s)!",
                        String_cString(printableArchiveName),
                        Error_getText(error)
                       );
@@ -15854,7 +15854,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
-                printError("Cannot create directory '%s' (error: %s)\n",
+                printError("Cannot create directory '%s' (error: %s)",
                            String_cString(destinationFileName),
                            Error_getText(error)
                           );
@@ -15878,7 +15878,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set directory info of '%s' (error: %s)\n",
+                  printError("Cannot set directory info of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -15893,7 +15893,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set directory info of '%s' (error: %s)\n",
+                  printWarning("Cannot set directory info of '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -15910,7 +15910,7 @@ archiveHandle->archiveInitUserData              = NULL;
                    )
                 {
                   printInfo(1,"FAIL!\n");
-                  printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                  printError("Cannot set file owner/group of '%s' (error: %s)",
                              String_cString(fragmentNode->name),
                              Error_getText(error)
                             );
@@ -15918,7 +15918,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                  printWarning("Cannot set file owner/group of '%s' (error: %s)",
                                String_cString(fragmentNode->name),
                                Error_getText(error)
                               );
@@ -15931,7 +15931,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set directory info of '%s' (error: %s)\n",
+                  printError("Cannot set directory info of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -15946,7 +15946,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set directory info of '%s' (error: %s)\n",
+                  printWarning("Cannot set directory info of '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -15966,7 +15966,7 @@ archiveHandle->archiveInitUserData              = NULL;
             // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
             {
-              printWarning("unexpected data at end of directory entry '%S'.\n",directoryName);
+              printWarning("unexpected data at end of directory entry '%S'",directoryName);
             }
 
             // free resources
@@ -15982,7 +15982,7 @@ archiveHandle->archiveInitUserData              = NULL;
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'directory' entry fail (error: %s)\n",Error_getText(error));
+            printWarning("close 'directory' entry fail (error: %s)",Error_getText(error));
           }
 
           // free resources
@@ -16011,7 +16011,7 @@ archiveHandle->archiveInitUserData              = NULL;
                                        );
           if (error != ERROR_NONE)
           {
-            printError("Cannot read 'link' content of archive '%s' (error: %s)!\n",
+            printError("Cannot read 'link' content of archive '%s' (error: %s)!",
                        String_cString(printableArchiveName),
                        Error_getText(error)
                       );
@@ -16052,7 +16052,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot create directory '%s' (error: %s)\n",
+                  printError("Cannot create directory '%s' (error: %",
                              String_cString(parentDirectoryName),
                              Error_getText(error)
                             );
@@ -16075,7 +16075,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   if (!jobOptions->noStopOnErrorFlag)
                   {
                     printInfo(2,"FAIL!\n");
-                    printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                    printError("Cannot set owner ship of directory '%s' (error: %s)",
                                String_cString(parentDirectoryName),
                                Error_getText(error)
                               );
@@ -16088,7 +16088,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   }
                   else
                   {
-                    printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                    printWarning("Cannot set owner ship of directory '%s' (error: %s)",
                                  String_cString(parentDirectoryName),
                                  Error_getText(error)
                                 );
@@ -16125,7 +16125,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
-                printError("Cannot create link '%s' -> '%s' (error: %s)\n",
+                printError("Cannot create link '%s' -> '%s' (error: %",
                            String_cString(destinationFileName),
                            String_cString(fileName),
                            Error_getText(error)
@@ -16151,7 +16151,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set file info of '%s' (error: %s)\n",
+                  printError("Cannot set file info of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -16167,7 +16167,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                  printWarning("Cannot set file info of '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -16184,7 +16184,7 @@ archiveHandle->archiveInitUserData              = NULL;
                    )
                 {
                   printInfo(1,"FAIL!\n");
-                  printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                  printError("Cannot set file owner/group of '%s' (error: %s)",
                              String_cString(fragmentNode->name),
                              Error_getText(error)
                             );
@@ -16192,7 +16192,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                  printWarning("Cannot set file owner/group of '%s' (error: %s)",
                                String_cString(fragmentNode->name),
                                Error_getText(error)
                               );
@@ -16205,7 +16205,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set file info of '%s' (error: %s)\n",
+                  printError("Cannot set file info of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -16221,7 +16221,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                  printWarning("Cannot set file info of '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -16241,7 +16241,7 @@ archiveHandle->archiveInitUserData              = NULL;
             // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
             {
-              printWarning("unexpected data at end of link entry '%S'.\n",linkName);
+              printWarning("unexpected data at end of link entry '%S'",linkName);
             }
 
             // free resources
@@ -16257,7 +16257,7 @@ archiveHandle->archiveInitUserData              = NULL;
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'link' entry fail (error: %s)\n",Error_getText(error));
+            printWarning("close 'link' entry fail (error: %s)",Error_getText(error));
           }
 
           // free resources
@@ -16296,7 +16296,7 @@ archiveHandle->archiveInitUserData              = NULL;
                                            );
           if (error != ERROR_NONE)
           {
-            printError("Cannot read 'hardlink' content of archive '%s' (error: %s)!\n",
+            printError("Cannot read 'hardlink' content of archive '%s' (error: %s)!",
                        String_cString(printableArchiveName),
                        Error_getText(error)
                       );
@@ -16343,7 +16343,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   if (error != ERROR_NONE)
                   {
                     printInfo(2,"FAIL!\n");
-                    printError("Cannot create directory '%s' (error: %s)\n",
+                    printError("Cannot create directory '%s' (error: %s)",
                                String_cString(parentDirectoryName),
                                Error_getText(error)
                               );
@@ -16369,7 +16369,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     if (!jobOptions->noStopOnErrorFlag)
                     {
                       printInfo(2,"FAIL!\n");
-                      printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                      printError("Cannot set owner ship of directory '%s' (error: %s)",
                                  String_cString(parentDirectoryName),
                                  Error_getText(error)
                                 );
@@ -16379,7 +16379,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     }
                     else
                     {
-                      printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                      printWarning("Cannot set owner ship of directory '%s' (error: %s)",
                                    String_cString(parentDirectoryName),
                                    Error_getText(error)
                                   );
@@ -16423,7 +16423,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   if (error != ERROR_NONE)
                   {
                     printInfo(2,"FAIL!\n");
-                    printError("Cannot create/write to file '%s' (error: %s)\n",
+                    printError("Cannot create/write to file '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -16443,7 +16443,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   if (error != ERROR_NONE)
                   {
                     printInfo(2,"FAIL!\n");
-                    printError("Cannot write file '%s' (error: %s)\n",
+                    printError("Cannot write file '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -16479,7 +16479,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   if (error != ERROR_NONE)
                   {
                     printInfo(2,"FAIL!\n");
-                    printError("Cannot read content of archive '%s' (error: %s)!\n",
+                    printError("Cannot read content of archive '%s' (error: %s)!",
                                String_cString(printableArchiveName),
                                Error_getText(error)
                               );
@@ -16492,7 +16492,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"FAIL!\n");
-                      printError("Cannot write file '%s' (error: %s)\n",
+                      printError("Cannot write file '%s' (error: %s)",
                                  String_cString(destinationFileName),
                                  Error_getText(error)
                                 );
@@ -16551,7 +16551,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     if (!jobOptions->noStopOnErrorFlag)
                     {
                       printInfo(2,"FAIL!\n");
-                      printError("Cannot set file info of '%s' (error: %s)\n",
+                      printError("Cannot set file info of '%s' (error: %s)",
                                  String_cString(destinationFileName),
                                  Error_getText(error)
                                 );
@@ -16560,7 +16560,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     }
                     else
                     {
-                      printWarning("Cannot set file info of '%s' (error: %s)\n",
+                      printWarning("Cannot set file info of '%s' (error: %s)",
                                    String_cString(destinationFileName),
                                    Error_getText(error)
                                   );
@@ -16577,7 +16577,7 @@ archiveHandle->archiveInitUserData              = NULL;
                        )
                     {
                       printInfo(1,"FAIL!\n");
-                      printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                      printError("Cannot set file owner/group of '%s' (error: %s)",
                                  String_cString(fragmentNode->name),
                                  Error_getText(error)
                                 );
@@ -16585,7 +16585,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     }
                     else
                     {
-                      printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                      printWarning("Cannot set file owner/group of '%s' (error: %s)",
                                    String_cString(fragmentNode->name),
                                    Error_getText(error)
                                   );
@@ -16598,7 +16598,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     if (!jobOptions->noStopOnErrorFlag)
                     {
                       printInfo(2,"FAIL!\n");
-                      printError("Cannot set file info of '%s' (error: %s)\n",
+                      printError("Cannot set file info of '%s' (error: %s)",
                                  String_cString(destinationFileName),
                                  Error_getText(error)
                                 );
@@ -16607,7 +16607,7 @@ archiveHandle->archiveInitUserData              = NULL;
                     }
                     else
                     {
-                      printWarning("Cannot set file info of '%s' (error: %s)\n",
+                      printWarning("Cannot set file info of '%s' (error: %s)",
                                    String_cString(destinationFileName),
                                    Error_getText(error)
                                   );
@@ -16648,7 +16648,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   if (error != ERROR_NONE)
                   {
                     printInfo(2,"FAIL!\n");
-                    printError("Cannot create/write to file '%s' (error: %s)\n",
+                    printError("Cannot create/write to file '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -16681,7 +16681,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (   !Compress_isCompressed(archiveEntryInfo.hardLink.compressAlgorithm)
                     && !Archive_eofData(&archiveEntryInfo))
                 {
-                  printWarning("unexpected data at end of hard link entry '%S'.\n",fileName);
+                  printWarning("unexpected data at end of hard link entry '%S'",fileName);
                 }
               }
             }
@@ -16704,7 +16704,7 @@ archiveHandle->archiveInitUserData              = NULL;
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'hardlink' entry fail (error: %s)\n",Error_getText(error));
+            printWarning("close 'hardlink' entry fail (error: %s)",Error_getText(error));
           }
 
           // free resources
@@ -16730,7 +16730,7 @@ archiveHandle->archiveInitUserData              = NULL;
                                           );
           if (error != ERROR_NONE)
           {
-            printError("Cannot read 'special' content of archive '%s' (error: %s)!\n",
+            printError("Cannot read 'special' content of archive '%s' (error: %s)!",
                        String_cString(printableArchiveName),
                        Error_getText(error)
                       );
@@ -16770,7 +16770,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot create directory '%s' (error: %s)\n",
+                  printError("Cannot create directory '%s' (error: %s)",
                              String_cString(parentDirectoryName),
                              Error_getText(error)
                             );
@@ -16792,7 +16792,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   if (!jobOptions->noStopOnErrorFlag)
                   {
                     printInfo(2,"FAIL!\n");
-                    printError("Cannot set owner ship of directory '%s' (error: %s)\n",
+                    printError("Cannot set owner ship of directory '%s' (error: %s)",
                                String_cString(parentDirectoryName),
                                Error_getText(error)
                               );
@@ -16805,7 +16805,7 @@ archiveHandle->archiveInitUserData              = NULL;
                   }
                   else
                   {
-                    printWarning("Cannot set owner ship of directory '%s' (error: %s)\n",
+                    printWarning("Cannot set owner ship of directory '%s' (error: %s)",
                                  String_cString(parentDirectoryName),
                                  Error_getText(error)
                                 );
@@ -16845,7 +16845,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
-                printError("Cannot create special device '%s' (error: %s)\n",
+                printError("Cannot create special device '%s' (error: %s)",
                            String_cString(fileName),
                            Error_getText(error)
                           );
@@ -16869,7 +16869,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set file info of '%s' (error: %s)\n",
+                  printError("Cannot set file info of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -16884,7 +16884,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                  printWarning("Cannot set file info of '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -16901,7 +16901,7 @@ archiveHandle->archiveInitUserData              = NULL;
                    )
                 {
                   printInfo(1,"FAIL!\n");
-                  printError("Cannot set file owner/group of '%s' (error: %s)\n",
+                  printError("Cannot set file owner/group of '%s' (error: %s)",
                              String_cString(fragmentNode->name),
                              Error_getText(error)
                             );
@@ -16909,7 +16909,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set file owner/group of '%s' (error: %s)\n",
+                  printWarning("Cannot set file owner/group of '%s' (error: %s)",
                                String_cString(fragmentNode->name),
                                Error_getText(error)
                               );
@@ -16922,7 +16922,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (!jobOptions->noStopOnErrorFlag)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot set file info of '%s' (error: %s)\n",
+                  printError("Cannot set file info of '%s' (error: %s)",
                              String_cString(destinationFileName),
                              Error_getText(error)
                             );
@@ -16937,7 +16937,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 }
                 else
                 {
-                  printWarning("Cannot set file info of '%s' (error: %s)\n",
+                  printWarning("Cannot set file info of '%s' (error: %s)",
                                String_cString(destinationFileName),
                                Error_getText(error)
                               );
@@ -16957,7 +16957,7 @@ archiveHandle->archiveInitUserData              = NULL;
             // check if all data read
             if (!Archive_eofData(&archiveEntryInfo))
             {
-              printWarning("unexpected data at end of special entry '%S'.\n",fileName);
+              printWarning("unexpected data at end of special entry '%S'",fileName);
             }
 
             // free resources
@@ -16973,7 +16973,7 @@ archiveHandle->archiveInitUserData              = NULL;
           error = Archive_closeEntry(&archiveEntryInfo);
           if (error != ERROR_NONE)
           {
-            printWarning("close 'special' entry fail (error: %s)\n",Error_getText(error));
+            printWarning("close 'special' entry fail (error: %s)",Error_getText(error));
           }
 
           // free resources

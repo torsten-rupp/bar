@@ -1243,7 +1243,7 @@ LOCAL void continuousThreadCode(void)
   error = Continuous_open(&databaseHandle);
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialise continuous database (error: %s)!\n",
+    printError("Cannot initialise continuous database (error: %s)!",
                Error_getText(error)
               );
     String_delete(absoluteName);
@@ -1530,7 +1530,7 @@ Errors Continuous_initAll(void)
 
   // check number of possible notifies
   n = getMaxNotifies();
-  if (n < MIN_NOTIFIES_WARNING) printWarning("Low number of notifies %lu. Please check settings in '%s'!\n",n,PROC_MAX_NOTIFIES_FILENAME);
+  if (n < MIN_NOTIFIES_WARNING) printWarning("Low number of notifies %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFIES_FILENAME);
 
   // init inotify
   inotifyHandle = inotify_init();
