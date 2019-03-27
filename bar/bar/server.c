@@ -3218,12 +3218,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           LIST_ITERATE(&jobList,jobNode)
           {
             List_init(&expirationEntityList);
-#ifndef WERROR
-#warning TODO
-#endif
-//TODO: revert
-//            if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
-if (1
+            if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
                 && getJobExpirationEntityList(&expirationEntityList,indexHandle,jobNode)
                )
             {

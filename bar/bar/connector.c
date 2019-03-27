@@ -110,7 +110,7 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   // connect network server i/o
   error = ServerIO_connectNetwork(&connectorInfo->io,
                                   hostName,
-                                  hostPort
+                                  (hostPort != 0) ? hostPort : DEFAULT_SERVER_PORT
                                  );
 //fprintf(stderr,"%s, %d: Network_getSocket(&connectorInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&connectorInfo->io.network.socketHandle));
   if (error != ERROR_NONE)

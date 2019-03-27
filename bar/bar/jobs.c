@@ -135,7 +135,6 @@ LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, 
 LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
-LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -244,7 +243,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",                                                           configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",                                                      configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",                                                               configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                   configValueParseDeprecatedSchedule,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                   NULL,NULL,NULL,FALSE),
 //TODO
   CONFIG_STRUCT_VALUE_IGNORE      ("overwrite-archive-files"                                                     ),
   // Note: shortcut for --restore-entries-mode=overwrite
@@ -1454,104 +1453,6 @@ LOCAL bool parseScheduleArchiveType(ConstString s, ArchiveTypes *archiveType)
 }
 
 /***********************************************************************\
-* Name   : parseSchedule
-* Purpose: parse schedule (old style)
-* Input  : s - schedule string
-* Output :
-* Return : scheduleNode or NULL on error
-* Notes  : string format
-*            <year|*>-<month|*>-<day|*> [<week day|*>] <hour|*>:<minute|*> <0|1> <archive type>
-*          month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
-*          nov, dec
-*          week day names: mon, tue, wed, thu, fri, sat, sun
-*          archive type names: normal, full, incremental, differential
-\***********************************************************************/
-
-LOCAL ScheduleNode *parseSchedule(ConstString s)
-{
-  ScheduleNode *scheduleNode;
-  bool         errorFlag;
-  String       s0,s1,s2;
-  bool         b;
-  long         nextIndex;
-
-  assert(s != NULL);
-
-  // allocate new schedule node
-  scheduleNode = newScheduleNode();
-  assert(scheduleNode != NULL);
-  Misc_getUUID(scheduleNode->uuid);
-
-  // parse schedule. Format: date [weekday] time enabled [type]
-  errorFlag = FALSE;
-  s0 = String_new();
-  s1 = String_new();
-  s2 = String_new();
-  nextIndex = STRING_BEGIN;
-  if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->date.year )) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->date.day  )) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
-  {
-    if (!parseWeekDaySet(String_cString(s0),&scheduleNode->weekDaySet)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->time.minute)) errorFlag = TRUE;
-  }
-  else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
-  {
-    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-  if (String_parse(s,nextIndex,"%y",&nextIndex,&b))
-  {
-/* It seems gcc has a bug in option -fno-schedule-insns2: if -O2 is used this
-   option is enabled. Then either the program crashes with a SigSegV or parsing
-   boolean values here fail. It seems the address of 'b' is not received in the
-   function. Because this problem disappear when -fno-schedule-insns2 is given
-   it looks like the gcc do some rearrangements in the generated machine code
-   which is not valid anymore. How can this be tracked down? Is this problem
-   known?
-*/
-if ((b != FALSE) && (b != TRUE)) HALT_INTERNAL_ERROR("parsing boolean string value fail - C compiler bug?");
-    scheduleNode->enabled = b;
-  }
-  else
-  {
-    errorFlag = TRUE;
-  }
-//fprintf(stderr,"%s,%d: scheduleNode->enabled=%d %p\n",__FILE__,__LINE__,scheduleNode->enabled,&b);
-  if (nextIndex != STRING_END)
-  {
-    if (String_parse(s,nextIndex,"%S",&nextIndex,s0))
-    {
-      if (!parseScheduleArchiveType(s0,&scheduleNode->archiveType)) errorFlag = TRUE;
-    }
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-
-  if (errorFlag || (nextIndex != STRING_END))
-  {
-    LIST_DELETE_NODE(scheduleNode);
-    return NULL;
-  }
-
-  return scheduleNode;
-}
-
-/***********************************************************************\
 * Name   : configValueParseDeprecatedRemoteHost
 * Purpose: config value option call back for deprecated remote host
 * Input  : userData              - user data
@@ -1659,89 +1560,6 @@ bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, co
   {
     return FALSE;
   }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedSchedule
-* Purpose: config value option call back for parsing deprecated schedule
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedSchedule(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  ScheduleNode *scheduleNode;
-  String       s;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse schedule (old style)
-  s = String_newCString(value);
-  scheduleNode = parseSchedule(s);
-  if (scheduleNode == NULL)
-  {
-    snprintf(errorMessage,errorMessageSize,"Cannot parse schedule '%s'",value);
-    String_delete(s);
-    return FALSE;
-  }
-  String_delete(s);
-
-  // get schedule info (if possible)
-  scheduleNode->lastExecutedDateTime = 0LL;
-  String_clear(scheduleNode->lastErrorMessage);
-  scheduleNode->executionCount       = 0L;
-  scheduleNode->averageDuration      = 0LL;
-  scheduleNode->totalEntityCount     = 0L;
-  scheduleNode->totalStorageCount    = 0L;
-  scheduleNode->totalStorageSize     = 0LL;
-  scheduleNode->totalEntryCount      = 0L;
-  scheduleNode->totalEntrySize       = 0LL;
-#ifndef WERROR
-#warning TODO
-#endif
-#if 0
-  if (indexHandle != NULL)
-  {
-    (void)Index_findUUID(indexHandle,
-                         NULL, // jobUUID
-                         scheduleNode->uuid,
-                         NULL,  // uuidId,
-                         &scheduleNode->lastExecutedDateTime,
-                         scheduleNode->lastErrorMessage,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->executionCount  : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->averageDuration : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->averageDuration : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->averageDuration : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->averageDuration : NULL,
-                         (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->averageDuration : NULL,
-                         &scheduleNode->totalEntityCount,
-                         &scheduleNode->totalStorageCount,
-                         &scheduleNode->totalStorageSize,
-                         &scheduleNode->totalEntryCount,
-                         &scheduleNode->totalEntrySize
-                        );
-  }
-#endif
-
-  // append to list
-  List_append((ScheduleList*)variable,scheduleNode);
 
   return TRUE;
 }
