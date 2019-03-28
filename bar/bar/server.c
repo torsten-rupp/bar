@@ -132,6 +132,7 @@ typedef struct
 // aggregate info
 typedef struct
 {
+  uint64 lastExecutedDateTime;
   String lastErrorMessage;
   struct
   {
@@ -463,8 +464,6 @@ LOCAL ScheduleNode *newScheduleNode(void)
 
   scheduleNode->lastExecutedDateTime      = 0LL;
   scheduleNode->lastErrorMessage          = String_new();
-  scheduleNode->executionCount            = 0L;
-  scheduleNode->averageDuration           = 0LL;
   scheduleNode->totalEntityCount          = 0L;
   scheduleNode->totalStorageCount         = 0L;
   scheduleNode->totalStorageSize          = 0LL;
@@ -930,7 +929,8 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
   assert(jobUUID != NULL);
 
   // init variables
-  String_clear(aggregateInfo->lastErrorMessage);
+  aggregateInfo->lastExecutedDateTime         = 0LL;
+  aggregateInfo->lastErrorMessage             = String_new();
   aggregateInfo->executionCount.normal        = 0L;
   aggregateInfo->executionCount.full          = 0L;
   aggregateInfo->executionCount.incremental   = 0L;
@@ -947,14 +947,14 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
   aggregateInfo->totalEntryCount              = 0L;
   aggregateInfo->totalEntrySize               = 0LL;
 
-  // update job info (if possible)
+  // get job info (if possible)
   if (indexHandle != NULL)
   {
     (void)Index_findUUID(indexHandle,
                          jobUUID,
                          scheduleUUID,
                          NULL,  // uuidIndexId
-                         NULL, // lastExecutedDateTime
+                         &aggregateInfo->lastExecutedDateTime,
                          aggregateInfo->lastErrorMessage,
                          &aggregateInfo->executionCount.normal,
                          &aggregateInfo->executionCount.full,
@@ -972,7 +972,30 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                          &aggregateInfo->totalEntryCount,
                          &aggregateInfo->totalEntrySize
                         );
+fprintf(stderr,"%s, %d: %d %d %d %d %d\n",__FILE__,__LINE__,
+aggregateInfo->executionCount.normal,
+                         aggregateInfo->executionCount.full,
+                         aggregateInfo->executionCount.incremental,
+                         aggregateInfo->executionCount.differential,
+                         aggregateInfo->executionCount.continuous
+);
   }
+}
+
+/***********************************************************************\
+* Name   : doneAggregateInfo
+* Purpose: done aggregate info
+* Input  : aggregateInfo - aggregate info variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneAggregateInfo(AggregateInfo *aggregateInfo)
+{
+  assert(aggregateInfo != NULL);
+
+  String_delete(aggregateInfo->lastErrorMessage);
 }
 
 /*---------------------------------------------------------------------*/
@@ -1267,7 +1290,6 @@ LOCAL void jobThreadCode(void)
   StaticString     (s,64);
   uint             n;
   Errors           error;
-  uint64           lastExecutedDateTime;
   ScheduleNode     *scheduleNode;
 
   // initialize variables
@@ -1904,7 +1926,9 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     doneLog(&logHandle);
 
     // get job execution date/time, aggregate info
+#if 0
     lastExecutedDateTime = Misc_getCurrentDateTime();
+//TODO: remove
     getAggregateInfo(&jobAggregateInfo,
                      jobNode->job.uuid,
                      NULL  // scheduleUUID
@@ -1913,6 +1937,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                      jobNode->job.uuid,
                      scheduleUUID
                     );
+#endif
 
     // done job
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -1921,7 +1946,9 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       Job_end(jobNode);
 
       // storage execution date/time, aggregate info
-      jobNode->lastExecutedDateTime         = lastExecutedDateTime;
+      jobNode->lastExecutedDateTime         = executeEndDateTime;
+#warning TODO remove
+#if 0
       String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
       jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
       jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
@@ -1938,14 +1965,12 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
       jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
       jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
+#endif
       scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
       if (scheduleNode != NULL)
       {
-        scheduleNode->lastExecutedDateTime        = lastExecutedDateTime;
+        scheduleNode->lastExecutedDateTime        = executeEndDateTime;
         String_set(scheduleNode->lastErrorMessage,scheduleAggregateInfo.lastErrorMessage);
-//TODO:
-//        scheduleNode->executionCount.normal       = scheduleAggregateInfo.executionCount.normal;
-//        scheduleNode->averageDuration             = scheduleAggregateInfo.averageDuration;
         scheduleNode->totalEntityCount            = scheduleAggregateInfo.totalEntityCount;
         scheduleNode->totalStorageCount           = scheduleAggregateInfo.totalStorageCount;
         scheduleNode->totalStorageSize            = scheduleAggregateInfo.totalStorageSize;
@@ -2542,7 +2567,7 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
           // try to init scp-storage first with sftp
           storageSpecifier.type = STORAGE_TYPE_SFTP;
           resultError = Storage_init(&storageInfo,
-NULL, // masterIO
+                                     NULL,  // masterIO
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->job.options : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
@@ -2559,7 +2584,7 @@ NULL, // masterIO
             // init scp-storage
             storageSpecifier.type = STORAGE_TYPE_SCP;
             resultError = Storage_init(&storageInfo,
-NULL, // masterIO
+                                       NULL,  // masterIO
                                        &storageSpecifier,
                                        (jobNode != NULL) ? &jobNode->job.options : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
@@ -2577,7 +2602,7 @@ NULL, // masterIO
         {
           // init other storage types
           resultError = Storage_init(&storageInfo,
-NULL, // masterIO
+                                     NULL,  // masterIO
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->job.options : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
@@ -3569,7 +3594,7 @@ LOCAL void indexThreadCode(void)
         endTimestamp   = 0LL;
         Job_initOptions(&jobOptions);
         error = Storage_init(&storageInfo,
-NULL, // masterIO
+                             NULL,  // masterIO
                              &storageSpecifier,
                              &jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4724,6 +4749,7 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 //TODO
+#warning TODO
 #if 0
   SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -7286,6 +7312,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   const JobNode *jobNode;
+  AggregateInfo aggregateInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7310,9 +7337,13 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
       return;
     }
 
+    // get aggregate info
+    getAggregateInfo(&aggregateInfo,jobNode->job.uuid,NULL);
+
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
+#if 0
                         jobNode->lastExecutedDateTime,
                         jobNode->lastErrorMessage,
                         jobNode->executionCount.normal,
@@ -7330,7 +7361,27 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
                         jobNode->totalStorageSize,
                         jobNode->totalEntryCount,
                         jobNode->totalEntrySize
+#endif
+                        aggregateInfo.lastExecutedDateTime,
+                        aggregateInfo.lastErrorMessage,
+                        aggregateInfo.executionCount.normal,
+                        aggregateInfo.executionCount.full,
+                        aggregateInfo.executionCount.incremental,
+                        aggregateInfo.executionCount.differential,
+                        aggregateInfo.executionCount.continuous,
+                        aggregateInfo.averageDuration.normal,
+                        aggregateInfo.averageDuration.full,
+                        aggregateInfo.averageDuration.incremental,
+                        aggregateInfo.averageDuration.differential,
+                        aggregateInfo.averageDuration.continuous,
+                        aggregateInfo.totalEntityCount,
+                        aggregateInfo.totalStorageCount,
+                        aggregateInfo.totalStorageSize,
+                        aggregateInfo.totalEntryCount,
+                        aggregateInfo.totalEntrySize
                        );
+
+    doneAggregateInfo(&aggregateInfo);
   }
 }
 
@@ -11779,7 +11830,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 
   // init storage
   error = Storage_init(&storageInfo,
-NULL, // masterIO
+                       NULL,  // masterIO
                        &storageSpecifier,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -14920,12 +14971,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   // init variables
   Storage_initSpecifier(&storageSpecifier);
 
-  // create index for matching files
-//TODO
-#ifndef WERROR
-#warning remove
-#endif
-
   error = ERROR_UNKNOWN;
 
   // try to open as storage file
@@ -14936,7 +14981,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
        )
     {
       if (Storage_init(&storageInfo,
-NULL, // masterIO
+                       NULL, // masterIO
                        &storageSpecifier,
                        NULL, // jobOptions
                        &globalOptions.indexDatabaseMaxBandWidthList,

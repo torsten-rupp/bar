@@ -219,28 +219,7 @@ typedef struct JobNode
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 
   uint64              lastExecutedDateTime;             // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
-  String              lastErrorMessage;                 // last error message
-  struct
-  {
-    ulong normal;
-    ulong full;
-    ulong incremental;
-    ulong differential;
-    ulong continuous;
-  }                   executionCount;                   // number of executions
-  struct
-  {
-    uint64 normal;
-    uint64 full;
-    uint64 incremental;
-    uint64 differential;
-    uint64 continuous;
-  }                   averageDuration;                  // average duration [s]
-  ulong               totalEntityCount;                 // total number of entities
-  ulong               totalStorageCount;                // total number of storage files
-  uint64              totalStorageSize;                 // total size of storage files
-  ulong               totalEntryCount;                  // total number of entries
-  uint64              totalEntrySize;                   // total size of entities
+//TODO: last error?
 
   // running info
   struct

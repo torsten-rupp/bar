@@ -354,10 +354,9 @@ typedef struct ScheduleNode
   bool               enabled;                           // TRUE iff enabled
 
   // run info
+//TODO: required?
   uint64             lastExecutedDateTime;              // last execution date/time (timestamp) (Note: rea
   String             lastErrorMessage;                  // last error message
-  ulong              executionCount;                    // number of executions
-  uint64             averageDuration;                   // average duration [s]
   ulong              totalEntityCount;                  // total number of entities
   ulong              totalStorageCount;                 // total number of storage files
   uint64             totalStorageSize;                  // total size of storage files

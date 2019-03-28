@@ -326,8 +326,6 @@ LOCAL ScheduleNode *newScheduleNode(void)
 
   scheduleNode->lastExecutedDateTime      = 0LL;
   scheduleNode->lastErrorMessage          = String_new();
-  scheduleNode->executionCount            = 0L;
-  scheduleNode->averageDuration           = 0LL;
   scheduleNode->totalEntityCount          = 0L;
   scheduleNode->totalStorageCount         = 0L;
   scheduleNode->totalStorageSize          = 0LL;
@@ -382,8 +380,6 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
 
   scheduleNode->lastExecutedDateTime      = fromScheduleNode->lastExecutedDateTime;
   scheduleNode->lastErrorMessage          = String_new();
-  scheduleNode->executionCount            = 0L;
-  scheduleNode->averageDuration           = 0LL;
   scheduleNode->totalEntityCount          = 0L;
   scheduleNode->totalStorageCount         = 0L;
   scheduleNode->totalStorageSize          = 0LL;
@@ -1803,7 +1799,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   doneStatusInfo(&jobNode->statusInfo);
 
-  String_delete(jobNode->lastErrorMessage);
+//TODO: remove  String_delete(jobNode->lastErrorMessage);
 
   String_delete(jobNode->volumeMessage);
 
@@ -1961,24 +1957,6 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->volumeMessage                             = String_new();
   jobNode->volumeUnloadFlag                          = FALSE;
 
-  jobNode->lastExecutedDateTime                      = 0LL;
-  jobNode->lastErrorMessage                          = String_new();
-  jobNode->executionCount.normal                     = 0L;
-  jobNode->executionCount.full                       = 0L;
-  jobNode->executionCount.incremental                = 0L;
-  jobNode->executionCount.differential               = 0L;
-  jobNode->executionCount.continuous                 = 0L;
-  jobNode->averageDuration.normal                    = 0LL;
-  jobNode->averageDuration.full                      = 0LL;
-  jobNode->averageDuration.incremental               = 0LL;
-  jobNode->averageDuration.differential              = 0LL;
-  jobNode->averageDuration.continuous                = 0LL;
-  jobNode->totalEntityCount                          = 0L;
-  jobNode->totalStorageCount                         = 0L;
-  jobNode->totalStorageSize                          = 0LL;
-  jobNode->totalEntryCount                           = 0L;
-  jobNode->totalEntrySize                            = 0LL;
-
   initStatusInfo(&jobNode->statusInfo);
 
   Misc_performanceFilterInit(&jobNode->runningInfo.entriesPerSecondFilter,     10*60);
@@ -2032,24 +2010,6 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->volumeNumber                              = 0;
   newJobNode->volumeMessage                             = String_new();
   newJobNode->volumeUnloadFlag                          = FALSE;
-
-  newJobNode->lastExecutedDateTime                      = 0LL;
-  newJobNode->lastErrorMessage                          = String_new();
-  newJobNode->executionCount.normal                     = 0L;
-  newJobNode->executionCount.full                       = 0L;
-  newJobNode->executionCount.incremental                = 0L;
-  newJobNode->executionCount.differential               = 0L;
-  newJobNode->executionCount.continuous                 = 0L;
-  newJobNode->averageDuration.normal                    = 0LL;
-  newJobNode->averageDuration.full                      = 0LL;
-  newJobNode->averageDuration.incremental               = 0LL;
-  newJobNode->averageDuration.differential              = 0LL;
-  newJobNode->averageDuration.continuous                = 0LL;
-  newJobNode->totalEntityCount                          = 0L;
-  newJobNode->totalStorageCount                         = 0L;
-  newJobNode->totalStorageSize                          = 0LL;
-  newJobNode->totalEntryCount                           = 0L;
-  newJobNode->totalEntrySize                            = 0LL;
 
   newJobNode->modifiedFlag                              = TRUE;
 
@@ -2329,7 +2289,9 @@ Errors Job_writeScheduleInfo(JobNode *jobNode)
     }
 
     // write file
-    error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
+#warning TODO
+//    error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
+error = 0;
     if (error != ERROR_NONE)
     {
       File_close(&fileHandle);
@@ -2387,7 +2349,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   assert(Semaphore_isLocked(&jobList.lock));
 
   // reset variables
-  jobNode->lastExecutedDateTime = 0LL;
+//TODO: remove  jobNode->lastExecutedDateTime = 0LL;
 
   // get filename
   fileName = String_new();
@@ -2415,7 +2377,7 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
       {
         jobNode->lastScheduleCheckDateTime = n;
-        jobNode->lastExecutedDateTime      = n;
+//TODO: remove        jobNode->lastExecutedDateTime      = n;
         LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
         {
           scheduleNode->lastExecutedDateTime = n;
@@ -2785,8 +2747,6 @@ bool Job_read(JobNode *jobNode)
       // get schedule info (if possible)
       scheduleNode->lastExecutedDateTime = 0LL;
       String_clear(scheduleNode->lastErrorMessage);
-      scheduleNode->executionCount       = 0L;
-      scheduleNode->averageDuration      = 0LL;
       scheduleNode->totalEntityCount     = 0L;
       scheduleNode->totalStorageCount    = 0L;
       scheduleNode->totalStorageSize     = 0LL;
@@ -3003,54 +2963,6 @@ bool Job_read(JobNode *jobNode)
     jobNode->modifiedFlag = TRUE;
   }
 
-  // get job info (if possible)
-  String_clear(jobNode->lastErrorMessage);
-  jobNode->executionCount.normal        = 0L;
-  jobNode->executionCount.full          = 0L;
-  jobNode->executionCount.incremental   = 0L;
-  jobNode->executionCount.differential  = 0L;
-  jobNode->executionCount.continuous    = 0L;
-  jobNode->averageDuration.normal       = 0LL;
-  jobNode->averageDuration.full         = 0LL;
-  jobNode->averageDuration.incremental  = 0LL;
-  jobNode->averageDuration.differential = 0LL;
-  jobNode->averageDuration.continuous   = 0LL;
-  jobNode->totalEntityCount             = 0L;
-  jobNode->totalStorageCount            = 0L;
-  jobNode->totalStorageSize             = 0LL;
-  jobNode->totalEntryCount              = 0L;
-  jobNode->totalEntrySize               = 0LL;
-#ifndef WERROR
-#warning TODO
-#endif
-#if 0
-  if (indexHandle != NULL)
-  {
-    (void)Index_findUUID(indexHandle,
-                         jobNode->job.uuid,
-                         NULL,  // scheduleUUID,
-                         NULL,  // uuidId,
-                         NULL,  // lastExecutedDateTime
-                         jobNode->lastErrorMessage,
-                         &jobNode->executionCount.normal,
-                         &jobNode->executionCount.full,
-                         &jobNode->executionCount.incremental,
-                         &jobNode->executionCount.differential,
-                         &jobNode->executionCount.continuous,
-                         &jobNode->averageDuration.normal,
-                         &jobNode->averageDuration.full,
-                         &jobNode->averageDuration.incremental,
-                         &jobNode->averageDuration.differential,
-                         &jobNode->averageDuration.continuous,
-                         &jobNode->totalEntityCount,
-                         &jobNode->totalStorageCount,
-                         &jobNode->totalStorageSize,
-                         &jobNode->totalEntryCount,
-                         &jobNode->totalEntrySize
-                        );
-  }
-#endif
-
   // read schedule info
   (void)Job_readScheduleInfo(jobNode);
 
@@ -3121,7 +3033,7 @@ Errors Job_rereadAll(ConstString jobsDirectory)
            )
         {
           // read job
-          Job_read(jobNode);
+          (void)Job_read(jobNode);
 
           // notify about changes
           Job_includeExcludeChanged(jobNode);
