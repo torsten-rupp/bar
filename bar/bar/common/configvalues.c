@@ -1308,7 +1308,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         if (sectionName != NULL)
         {
           fprintf(outputHandle,
-                  "%sConfiguration value '%s' in section '%s' is deprecated",
+                  "%sConfiguration value '%s' in section '%s' is deprecated - skipped",
                   (warningPrefix != NULL) ? warningPrefix:"",
                   configValue->name,
                   sectionName
@@ -1317,7 +1317,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         else
         {
           fprintf(outputHandle,
-                  "%sConfiguration value '%s' is deprecated",
+                  "%sConfiguration value '%s' is deprecated - skipped",
                   (warningPrefix != NULL) ? warningPrefix:"",
                   configValue->name
 
