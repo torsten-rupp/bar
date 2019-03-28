@@ -197,8 +197,6 @@ LOCAL void doneAll(void);
 LOCAL bool cmdOptionParseString(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseConfigFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-//TODO: remove
-//LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseDeltaSource(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -2299,97 +2297,6 @@ LOCAL bool cmdOptionParseEntryPattern(void *userData, void *variable, const char
 
   return TRUE;
 }
-
-//TODO: remove
-#if 0
-/***********************************************************************\
-* Name   : cmdOptionParseEntryPatternCommand
-* Purpose: command line option call back for parsing include
-*          patterns command
-* Input  : -
-* Output : -
-* Return : TRUE iff parsed, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool cmdOptionParseEntryPatternCommand(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
-{
-  EntryTypes entryType;
-  String     script;
-//  TextMacro  textMacros[5];
-  Errors     error;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(defaultValue);
-
-  // init variables
-  script = String_new();
-
-  // get entry type
-  entryType = ENTRY_TYPE_FILE;
-  switch (command)
-  {
-    case COMMAND_CREATE_FILES:
-    case COMMAND_LIST:
-    case COMMAND_TEST:
-    case COMMAND_COMPARE:
-    case COMMAND_RESTORE:
-    case COMMAND_CONVERT:
-    case COMMAND_INFO:
-    case COMMAND_CHECK_SIGNATURE:
-    case COMMAND_GENERATE_ENCRYPTION_KEYS:
-    case COMMAND_GENERATE_SIGNATURE_KEYS
-    case COMMAND_NEW_KEY_PASSWORD:
-      entryType = ENTRY_TYPE_FILE;
-      break;
-    case COMMAND_CREATE_IMAGES:
-      entryType = ENTRY_TYPE_IMAGE;
-      break;
-    default:
-      HALT_INTERNAL_ERROR("no valid command set");
-      break; // not reached
-  }
-
-  // expand template
-#warning TODO
-//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",Archive_typeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   Archive_typeToShortString(archiveType),".");
-//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
-  Misc_expandMacros(script,
-                    value,
-                    EXPAND_MACRO_MODE_STRING,
-NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
-                    TRUE
-                   );
-
-  // execute script and collect output
-  error = Misc_executeScript(String_cString(script),
-                             CALLBACK_INLINE(void,(ConstString line, void *userData),
-                             {
-                               UNUSED_VARIABLE(userData);
-
-                               EntryList_append((EntryList*)variable,entryType,line,PATTERN_TYPE_GLOB,NULL);
-                             },NULL),
-                             CALLBACK(NULL,NULL)
-                            );
-  if (error != ERROR_NONE)
-  {
-    stringSet(errorMessage,errorMessageSize,Error_getText(error));
-    String_delete(script);
-    return FALSE;
-  }
-
-  // free resources
-  String_delete(script);
-
-  return TRUE;
-}
-#endif
 
 /***********************************************************************\
 * Name   : cmdOptionParsePattern
