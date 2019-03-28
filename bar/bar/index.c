@@ -4490,12 +4490,15 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       }
   //Database_debugPrintQueryInfo(&databaseQueryHandle);
 
-      result = Database_getNextRow(&databaseQueryHandle,
-                                   "%lld",
-                                   &uuidDatabaseId
-                                  );
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lld",
+                               &uuidDatabaseId
+                              )
+         )
+      {
+        uuidDatabaseId = INDEX_ID_NONE;
+      }
 //fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
-
       Database_finalize(&databaseQueryHandle);
 
       // get storage create, last error message
@@ -4527,19 +4530,21 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 
       Database_finalize(&databaseQueryHandle);
 
-      // get storage history count, average execution time
+      // get storage history count/average execution time
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
                                "SELECT COUNT(id), \
-                                       AVG(duration) \
+                                       AVG(duration)\
                                 FROM history \
-                                WHERE id IN (SELECT history.id FROM history \
-                                                                 LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
-                                                                 LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                                                                 LEFT JOIN storage ON storage.entityId=entities.id \
-                                                               WHERE %S AND IFNULL(history.errorMessage,'')='' \
-                                            ) \
+                                WHERE     type=%d \
+                                      AND id IN (SELECT history.id FROM history \
+                                                                     LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                                                                     LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                                                     LEFT JOIN storage ON storage.entityId=entities.id \
+                                                                   WHERE %S AND IFNULL(history.errorMessage,'')='' \
+                                                ) \
                                ",
+                               ARCHIVE_TYPE_NORMAL,
                                filterString
                               );
       if (error != ERROR_NONE)
@@ -4547,16 +4552,148 @@ bool Index_findUUID(IndexHandle  *indexHandle,
         return error;
       }
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lu %llu",
+                               executionCountNormal,
+                               averageDurationNormal
+                              )
+         )
+      {
+        if (executionCountNormal  != NULL) (*executionCountNormal ) = 0L;
+        if (averageDurationNormal != NULL) (*averageDurationNormal) = 0LL;
+      }
+      Database_finalize(&databaseQueryHandle);
 
-      result = Database_getNextRow(&databaseQueryHandle,
-                                   "%lu %llu",
-                                   executionCountNormal,
-//TODO: executionCountFull, executionCountIncremental, executionCountDifferental, executionCountConitnous
-                                   averageDurationNormal
-//TODO: averageDurationFull, averageDurationIncremental, averageDurationDifferental, averageDurationConitnous
-                                  );
-//fprintf(stderr,"%s, %d: result=%d %llu\n",__FILE__,__LINE__,result,uuidId_);
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT COUNT(id), \
+                                       AVG(duration)\
+                                FROM history \
+                                WHERE     type=%d \
+                                      AND id IN (SELECT history.id FROM history \
+                                                                     LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                                                                     LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                                                     LEFT JOIN storage ON storage.entityId=entities.id \
+                                                                   WHERE %S AND IFNULL(history.errorMessage,'')='' \
+                                                ) \
+                               ",
+                               ARCHIVE_TYPE_FULL,
+                               filterString
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lu %llu",
+                               executionCountFull,
+                               averageDurationFull
+                              )
+         )
+      {
+        if (executionCountFull  != NULL) (*executionCountFull ) = 0L;
+        if (averageDurationFull != NULL) (*averageDurationFull) = 0LL;
+      }
+      Database_finalize(&databaseQueryHandle);
 
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT COUNT(id), \
+                                       AVG(duration)\
+                                FROM history \
+                                WHERE     type=%d \
+                                      AND id IN (SELECT history.id FROM history \
+                                                                     LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                                                                     LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                                                     LEFT JOIN storage ON storage.entityId=entities.id \
+                                                                   WHERE %S AND IFNULL(history.errorMessage,'')='' \
+                                                ) \
+                               ",
+                               ARCHIVE_TYPE_INCREMENTAL,
+                               filterString
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lu %llu",
+                               executionCountIncremental,
+                               averageDurationIncremental
+                              )
+         )
+      {
+        if (executionCountIncremental  != NULL) (*executionCountIncremental ) = 0L;
+        if (averageDurationIncremental != NULL) (*averageDurationIncremental) = 0LL;
+      }
+      Database_finalize(&databaseQueryHandle);
+
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT COUNT(id), \
+                                       AVG(duration)\
+                                FROM history \
+                                WHERE     type=%d \
+                                      AND id IN (SELECT history.id FROM history \
+                                                                     LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                                                                     LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                                                     LEFT JOIN storage ON storage.entityId=entities.id \
+                                                                   WHERE %S AND IFNULL(history.errorMessage,'')='' \
+                                                ) \
+                               ",
+                               ARCHIVE_TYPE_DIFFERENTIAL,
+                               filterString
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lu %llu",
+                               executionCountDifferential,
+                               averageDurationDifferential
+                              )
+         )
+      {
+        if (executionCountDifferential  != NULL) (*executionCountDifferential ) = 0L;
+        if (averageDurationDifferential != NULL) (*averageDurationDifferential) = 0LL;
+      }
+      Database_finalize(&databaseQueryHandle);
+
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT COUNT(id), \
+                                       AVG(duration)\
+                                FROM history \
+                                WHERE     type=%d \
+                                      AND id IN (SELECT history.id FROM history \
+                                                                     LEFT JOIN uuids ON uuids.jobUUID=history.jobUUID \
+                                                                     LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
+                                                                     LEFT JOIN storage ON storage.entityId=entities.id \
+                                                                   WHERE %S AND IFNULL(history.errorMessage,'')='' \
+                                                ) \
+                               ",
+                               ARCHIVE_TYPE_CONTINUOUS,
+                               filterString
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lu %llu",
+                               executionCountContinuous,
+                               averageDurationContinuous
+                              )
+         )
+      {
+        if (executionCountContinuous  != NULL) (*executionCountContinuous ) = 0L;
+        if (averageDurationContinuous != NULL) (*averageDurationContinuous) = 0LL;
+      }
       Database_finalize(&databaseQueryHandle);
 
       // get entities count, storage count/size/total count/total size
