@@ -2102,51 +2102,6 @@ const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags)
   return stateText;
 }
 
-JobNode *Job_find(ConstString name)
-{
-  JobNode *jobNode;
-
-  assert(name != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->name,name));
-
-  return jobNode;
-}
-
-bool Job_exists(ConstString name)
-{
-  JobNode *jobNode;
-
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  return LIST_CONTAINS(&jobList,jobNode,String_equals(jobNode->name,name));
-}
-
-JobNode *Job_findByUUID(ConstString uuid)
-{
-  JobNode *jobNode;
-
-  assert(uuid != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->job.uuid,uuid));
-
-  return jobNode;
-}
-
-JobNode *Job_findByName(ConstString name)
-{
-  JobNode *jobNode;
-
-  assert(uuid != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->name,name));
-
-  return jobNode;
-}
-
 ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID)
 {
   ScheduleNode *scheduleNode;

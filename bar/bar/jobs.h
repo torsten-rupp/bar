@@ -568,7 +568,20 @@ const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags);
 * Notes  : -
 \***********************************************************************/
 
-JobNode *Job_find(ConstString name);
+INLINE JobNode *Job_find(ConstString name);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE JobNode *Job_find(ConstString name)
+{
+  JobNode *jobNode;
+
+  assert(name != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->name,name));
+
+  return jobNode;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_exists
@@ -579,7 +592,17 @@ JobNode *Job_find(ConstString name);
 * Notes  : -
 \***********************************************************************/
 
-bool Job_exists(ConstString name);
+INLINE bool Job_exists(ConstString name);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE bool Job_exists(ConstString name)
+{
+  JobNode *jobNode;
+
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  return LIST_CONTAINS(&jobList,jobNode,String_equals(jobNode->name,name));
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_findByUUID
@@ -590,7 +613,20 @@ bool Job_exists(ConstString name);
 * Notes  : -
 \***********************************************************************/
 
-JobNode *Job_findByUUID(ConstString uuid);
+INLINE JobNode *Job_findByUUID(ConstString uuid);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE JobNode *Job_findByUUID(ConstString uuid)
+{
+  JobNode *jobNode;
+
+  assert(uuid != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->job.uuid,uuid));
+
+  return jobNode;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_findByName
@@ -601,7 +637,20 @@ JobNode *Job_findByUUID(ConstString uuid);
 * Notes  : -
 \***********************************************************************/
 
-JobNode *Job_findByName(ConstString name);
+INLINE JobNode *Job_findByName(ConstString name);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE JobNode *Job_findByName(ConstString name)
+{
+  JobNode *jobNode;
+
+  assert(name != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  jobNode = LIST_FIND(&jobList,jobNode,String_equals(jobNode->name,name));
+
+  return jobNode;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_findScheduleByUUID
