@@ -44,7 +44,7 @@ struct JobOptions
   String                      excludeListFileName;           // exclude entries list file name
   String                      excludeCommand;                // exclude entries command
 
-  MountList                            mountList;                  // mount list
+  MountList                   mountList;                     // mount list
   PatternList                 compressExcludePatternList;    // excluded compression patterns
 
   DeltaSourceList             deltaSourceList;               // delta sources
@@ -183,9 +183,6 @@ typedef struct JobNode
 
   // modified info
   bool                modifiedFlag;                     // TRUE iff job config modified
-//TODO: remove?
-//  uint64              lastIncludeExcludeModified;
-//  uint64              lastScheduleModified;
 
   // schedule info
   uint64              lastScheduleCheckDateTime;        // last check date/time (timestamp)
@@ -219,7 +216,6 @@ typedef struct JobNode
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 
   uint64              lastExecutedDateTime;             // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
-//TODO: last error?
 
   // running info
   struct

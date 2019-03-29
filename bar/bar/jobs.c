@@ -282,7 +282,7 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(scheduleNode->lastErrorMessage);
+//  String_delete(scheduleNode->lastErrorMessage);
   String_delete(scheduleNode->customText);
   String_delete(scheduleNode->parentUUID);
   String_delete(scheduleNode->uuid);
@@ -325,7 +325,6 @@ LOCAL ScheduleNode *newScheduleNode(void)
   scheduleNode->enabled                   = FALSE;
 
   scheduleNode->lastExecutedDateTime      = 0LL;
-  scheduleNode->lastErrorMessage          = String_new();
   scheduleNode->totalEntityCount          = 0L;
   scheduleNode->totalStorageCount         = 0L;
   scheduleNode->totalStorageSize          = 0LL;
@@ -379,7 +378,6 @@ LOCAL ScheduleNode *duplicateScheduleNode(ScheduleNode *fromScheduleNode,
   scheduleNode->enabled                   = fromScheduleNode->enabled;
 
   scheduleNode->lastExecutedDateTime      = fromScheduleNode->lastExecutedDateTime;
-  scheduleNode->lastErrorMessage          = String_new();
   scheduleNode->totalEntityCount          = 0L;
   scheduleNode->totalStorageCount         = 0L;
   scheduleNode->totalStorageSize          = 0LL;
@@ -1799,8 +1797,6 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   doneStatusInfo(&jobNode->statusInfo);
 
-//TODO: remove  String_delete(jobNode->lastErrorMessage);
-
   String_delete(jobNode->volumeMessage);
 
   String_delete(jobNode->abortedByInfo);
@@ -2746,42 +2742,11 @@ bool Job_read(JobNode *jobNode)
 
       // get schedule info (if possible)
       scheduleNode->lastExecutedDateTime = 0LL;
-      String_clear(scheduleNode->lastErrorMessage);
       scheduleNode->totalEntityCount     = 0L;
       scheduleNode->totalStorageCount    = 0L;
       scheduleNode->totalStorageSize     = 0LL;
       scheduleNode->totalEntryCount      = 0L;
       scheduleNode->totalEntrySize       = 0LL;
-#ifndef WERROR
-#warning TODO
-#endif
-#if 0
-      if (indexHandle != NULL)
-      {
-        (void)Index_findUUID(indexHandle,
-                             jobNode->job.uuid,
-                             scheduleNode->uuid,
-                             NULL,  // uuidId,
-                             &scheduleNode->lastExecutedDateTime,
-                             scheduleNode->lastErrorMessage,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->executionCount  : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_NORMAL      ) ? &scheduleNode->averageDuration : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_FULL        ) ? &scheduleNode->averageDuration : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_INCREMENTAL ) ? &scheduleNode->averageDuration : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_DIFFERENTIAL) ? &scheduleNode->averageDuration : NULL,
-                             (scheduleNode->archiveType == ARCHIVE_TYPE_CONTINUOUS  ) ? &scheduleNode->averageDuration : NULL,
-                             &scheduleNode->totalEntityCount,
-                             &scheduleNode->totalStorageCount,
-                             &scheduleNode->totalStorageSize,
-                             &scheduleNode->totalEntryCount,
-                             &scheduleNode->totalEntrySize
-                            );
-      }
-#endif
 
       // append to list (if not a duplicate)
       if (!LIST_CONTAINS(&jobNode->job.options.scheduleList,

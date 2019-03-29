@@ -420,7 +420,6 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  String_delete(scheduleNode->lastErrorMessage);
   String_delete(scheduleNode->customText);
   String_delete(scheduleNode->parentUUID);
   String_delete(scheduleNode->uuid);
@@ -463,7 +462,6 @@ LOCAL ScheduleNode *newScheduleNode(void)
   scheduleNode->enabled                   = FALSE;
 
   scheduleNode->lastExecutedDateTime      = 0LL;
-  scheduleNode->lastErrorMessage          = String_new();
   scheduleNode->totalEntityCount          = 0L;
   scheduleNode->totalStorageCount         = 0L;
   scheduleNode->totalStorageSize          = 0LL;
@@ -1946,36 +1944,16 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       Job_end(jobNode);
 
       // storage execution date/time, aggregate info
-      jobNode->lastExecutedDateTime         = executeEndDateTime;
-#warning TODO remove
-#if 0
-      String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
-      jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
-      jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
-      jobNode->executionCount.incremental   = jobAggregateInfo.executionCount.incremental;
-      jobNode->executionCount.differential  = jobAggregateInfo.executionCount.differential;
-      jobNode->executionCount.continuous    = jobAggregateInfo.executionCount.continuous;
-      jobNode->averageDuration.normal       = jobAggregateInfo.averageDuration.normal;
-      jobNode->averageDuration.full         = jobAggregateInfo.averageDuration.full;
-      jobNode->averageDuration.incremental  = jobAggregateInfo.averageDuration.incremental;
-      jobNode->averageDuration.differential = jobAggregateInfo.averageDuration.differential;
-      jobNode->averageDuration.continuous   = jobAggregateInfo.averageDuration.continuous;
-      jobNode->totalEntityCount             = jobAggregateInfo.totalEntityCount;
-      jobNode->totalStorageCount            = jobAggregateInfo.totalStorageCount;
-      jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
-      jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
-      jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
-#endif
+      jobNode->lastExecutedDateTime = executeEndDateTime;
       scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
       if (scheduleNode != NULL)
       {
-        scheduleNode->lastExecutedDateTime        = executeEndDateTime;
-        String_set(scheduleNode->lastErrorMessage,scheduleAggregateInfo.lastErrorMessage);
-        scheduleNode->totalEntityCount            = scheduleAggregateInfo.totalEntityCount;
-        scheduleNode->totalStorageCount           = scheduleAggregateInfo.totalStorageCount;
-        scheduleNode->totalStorageSize            = scheduleAggregateInfo.totalStorageSize;
-        scheduleNode->totalEntryCount             = scheduleAggregateInfo.totalEntryCount;
-        scheduleNode->totalEntrySize              = scheduleAggregateInfo.totalEntrySize;
+        scheduleNode->lastExecutedDateTime = executeEndDateTime;
+        scheduleNode->totalEntityCount     = scheduleAggregateInfo.totalEntityCount;
+        scheduleNode->totalStorageCount    = scheduleAggregateInfo.totalStorageCount;
+        scheduleNode->totalStorageSize     = scheduleAggregateInfo.totalStorageSize;
+        scheduleNode->totalEntryCount      = scheduleAggregateInfo.totalEntryCount;
+        scheduleNode->totalEntrySize       = scheduleAggregateInfo.totalEntrySize;
       }
 
       // free resources
@@ -7343,25 +7321,6 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
-#if 0
-                        jobNode->lastExecutedDateTime,
-                        jobNode->lastErrorMessage,
-                        jobNode->executionCount.normal,
-                        jobNode->executionCount.full,
-                        jobNode->executionCount.incremental,
-                        jobNode->executionCount.differential,
-                        jobNode->executionCount.continuous,
-                        jobNode->averageDuration.normal,
-                        jobNode->averageDuration.full,
-                        jobNode->averageDuration.incremental,
-                        jobNode->averageDuration.differential,
-                        jobNode->averageDuration.continuous,
-                        jobNode->totalEntityCount,
-                        jobNode->totalStorageCount,
-                        jobNode->totalStorageSize,
-                        jobNode->totalEntryCount,
-                        jobNode->totalEntrySize
-#endif
                         aggregateInfo.lastExecutedDateTime,
                         aggregateInfo.lastErrorMessage,
                         aggregateInfo.executionCount.normal,

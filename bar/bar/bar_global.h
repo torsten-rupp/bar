@@ -322,17 +322,17 @@ typedef struct
 // schedule date/time
 typedef struct
 {
-  int year;                                             // year or SCHEDULE_ANY
-  int month;                                            // month or SCHEDULE_ANY
-  int day;                                              // day or SCHEDULE_ANY
+  int year;                                                   // year or SCHEDULE_ANY
+  int month;                                                  // month or SCHEDULE_ANY
+  int day;                                                    // day or SCHEDULE_ANY
 } ScheduleDate;
 
 typedef WeekDaySet ScheduleWeekDaySet;
 
 typedef struct
 {
-  int hour;                                             // hour or SCHEDULE_ANY
-  int minute;                                           // minute or SCHEDULE_ANY
+  int hour;                                                   // hour or SCHEDULE_ANY
+  int minute;                                                 // minute or SCHEDULE_ANY
 } ScheduleTime;
 
 typedef struct ScheduleNode
@@ -340,33 +340,31 @@ typedef struct ScheduleNode
   LIST_NODE_HEADER(struct ScheduleNode);
 
   // settings
-  String             uuid;                              // unique id
-  String             parentUUID;                        // unique parent id or NULL
+  String             uuid;                                    // unique id
+  String             parentUUID;                              // unique parent id or NULL
   ScheduleDate       date;
   ScheduleWeekDaySet weekDaySet;
   ScheduleTime       time;
-  ArchiveTypes       archiveType;                       // archive type to create
-  uint               interval;                          // continuous interval [min]
-  String             customText;                        // custom text
-  String             preProcessScript;                  // script to execute before start of job
-  String             postProcessScript;                 // script to execute after after termination of jo
-  bool               noStorage;                         // TRUE to skip storage, only create incremental d
-  bool               enabled;                           // TRUE iff enabled
+  ArchiveTypes       archiveType;                             // archive type to create
+  uint               interval;                                // continuous interval [min]
+  String             customText;                              // custom text
+  String             preProcessScript;                        // script to execute before start of job
+  String             postProcessScript;                       // script to execute after after termination of job
+  bool               noStorage;                               // TRUE to skip storage, only create incremental data
+  bool               enabled;                                 // TRUE iff enabled
 
   // run info
-//TODO: required?
-  uint64             lastExecutedDateTime;              // last execution date/time (timestamp) (Note: rea
-  String             lastErrorMessage;                  // last error message
-  ulong              totalEntityCount;                  // total number of entities
-  ulong              totalStorageCount;                 // total number of storage files
-  uint64             totalStorageSize;                  // total size of storage files
-  ulong              totalEntryCount;                   // total number of entries
-  uint64             totalEntrySize;                    // total size of entities
+  uint64             lastExecutedDateTime;                    // last execution date/time (timestamp)
+  ulong              totalEntityCount;                        // total number of entities of last execution
+  ulong              totalStorageCount;                       // total number of storage files of last execution
+  uint64             totalStorageSize;                        // total size of storage files of last execution
+  ulong              totalEntryCount;                         // total number of entries of last execution
+  uint64             totalEntrySize;                          // total size of entities of last execution
 
   // deprecated
-  bool               deprecatedPersistenceFlag;         // TRUE iff deprecated persistance data is set
-  int                minKeep,maxKeep;                   // min./max keep count
-  int                maxAge;                            // max. age [days]
+  bool               deprecatedPersistenceFlag;               // TRUE iff deprecated persistance data is set
+  int                minKeep,maxKeep;                         // min./max keep count
+  int                maxAge;                                  // max. age [days]
 } ScheduleNode;
 
 typedef struct
@@ -380,15 +378,15 @@ typedef struct PersistenceNode
   LIST_NODE_HEADER(struct PersistenceNode);
 
   uint         id;
-  ArchiveTypes archiveType;                             // archive type to create
-  int          minKeep,maxKeep;                         // min./max keep count
-  int          maxAge;                                  // max. age [days]
+  ArchiveTypes archiveType;                                   // archive type to create
+  int          minKeep,maxKeep;                               // min./max keep count
+  int          maxAge;                                        // max. age [days]
 } PersistenceNode;
 
 typedef struct
 {
   LIST_HEADER(PersistenceNode);
-  uint64 lastModificationTimestamp;                     // last modification timestamp
+  uint64 lastModificationTimestamp;                           // last modification timestamp
 } PersistenceList;
 
 // band width usage
