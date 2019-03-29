@@ -1723,7 +1723,7 @@ public class TabJobs
      */
     PersistenceData()
     {
-      this(ArchiveTypes.NORMAL,0,0,0);
+      this(ArchiveTypes.NORMAL,0,Keep.ALL,Age.FOREVER);
     }
 
     /** clone persistence data object
@@ -9067,7 +9067,7 @@ widgetArchivePartSize.setListVisible(true);
             {
               if      (treeItem.getData() instanceof PersistenceData)
               {
-                // peristence context menu
+                // persistence context menu
                 final PersistenceData persistenceData = (PersistenceData)treeItem.getData();
 
                 menuItem = Widgets.addMenuItem(menu,BARControl.tr("Add")+"\u2026");
