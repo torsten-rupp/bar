@@ -3150,7 +3150,7 @@ public class TabStatus
         @Override
         public void mouseExit(MouseEvent mouseEvent)
         {
-          if ((widgetMessageToolTip != null) && !widgetMessageToolTip.isDisposed())
+          if ((widgetJobTableToolTip != null) && !widgetJobTableToolTip.isDisposed())
           {
             // check if inside sub-widget
             Point point = shell.toDisplay(new Point(mouseEvent.x,mouseEvent.y));
