@@ -3011,6 +3011,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
 //  expirationEntityList->totalEntityCount = 0;
 //  expirationEntityList->totalEntitySize  = 0L;
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
                                  INDEX_ID_ANY,  // uuidIndexId
@@ -3028,6 +3029,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
   {
     return FALSE;
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   now = Misc_getCurrentDateTime();
   while (Index_getNextEntity(&indexQueryHandle,
@@ -3070,6 +3072,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
       persistenceNode = LIST_HEAD(&jobNode->job.options.persistenceList);
       do
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // find persistence node for archive type
         while (   (persistenceNode != NULL)
                && (persistenceNode->archiveType != archiveType)
@@ -3106,11 +3109,14 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
         persistenceNode = nextPersistenceNode;
       }
       while (persistenceNode != NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       // add to list
       List_append(expirationEntityList,expirationEntityNode);
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   Index_doneList(&indexQueryHandle);
 
@@ -10346,6 +10352,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
       Semaphore_unlock(&jobList.lock);
       return;
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // get expiration entity list
     List_init(&expirationEntityList);
@@ -10353,6 +10360,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     {
       getJobExpirationEntityList(&expirationEntityList,indexHandle,jobNode);
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
 //TODO: totalStorageCount, totalStorageSize
     LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
@@ -10391,11 +10399,12 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
         }
       }
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // free resources
     List_done(&expirationEntityList,CALLBACK((ListNodeFreeFunction)freeExpirationNode,NULL));
   }
-
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -10537,11 +10546,13 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       return;
     }
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   persistenceId = ID_NONE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
+  persistenceId = ID_NONE;
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
@@ -10550,6 +10561,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       deletePersistenceNode(persistenceNode);
       return;
     }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     if (!LIST_CONTAINS(&jobNode->job.options.persistenceList,
                        persistenceNode,
@@ -10560,6 +10572,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
                       )
        )
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // insert into persistence list
       persistenceNode = newPersistenceNode(archiveType,minKeep,maxKeep,maxAge);
       assert(persistenceNode != NULL);
@@ -10567,17 +10580,21 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
 
       // set last-modified timestamp
       jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       // get id
       persistenceId = persistenceNode->id;
 
       // notify about changed schedule
       Job_scheduleChanged(jobNode);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
       // set modified
       Job_setModified(jobNode);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"id=%u",persistenceId);
 

@@ -5006,9 +5006,9 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
 
   // prepare SQL command execution
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
-//  DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString);
+DATABASE_DEBUG_QUERY_PLAN(databaseHandle,sqlString);
 
-//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(sqlString));
   #ifndef NDEBUG
     String_set(databaseHandle->current.sqlCommand,sqlString);
   #endif /* not NDEBUG */
