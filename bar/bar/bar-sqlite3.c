@@ -894,7 +894,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
                               );
     }
 
-    (void)sqlite3_wal_checkpoint_v2(databaseHandle,NULL,CHECKPOINT_MODE,NULL,NULL);
+    Database_flush(databaseHandle);
     sqlProgressHandler(NULL);
   }
   while ((error == ERROR_NONE) && !stringIsEmpty(name));
