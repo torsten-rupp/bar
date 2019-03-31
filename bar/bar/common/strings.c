@@ -701,6 +701,8 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
 
 LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatToken)
 {
+  const char *nextFormat;
+
   #define ADD_CHAR(formatToken,ch) \
     do \
     { \
@@ -723,23 +725,25 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
   formatToken->quoteChar        = NUL;
   formatToken->conversionChar   = NUL;
 
+  nextFormat = format;
+
   // format start character
-  assert((*format) == '%');
-  ADD_CHAR(formatToken,(*format));
-  format++;
+  assert((*nextFormat) == '%');
+  ADD_CHAR(formatToken,(*nextFormat));
+  nextFormat++;
 
   // flags
-  while (   ((*format) != NUL)
-         && (   ((*format) == '#')
-             || ((*format) == '0')
-             || ((*format) == '-')
-             || ((*format) == ' ')
-             || ((*format) == '+')
+  while (   ((*nextFormat) != NUL)
+         && (   ((*nextFormat) == '#')
+             || ((*nextFormat) == '0')
+             || ((*nextFormat) == '-')
+             || ((*nextFormat) == ' ')
+             || ((*nextFormat) == '+')
             )
         )
   {
-    ADD_CHAR(formatToken,(*format));
-    switch (*format)
+    ADD_CHAR(formatToken,(*nextFormat));
+    switch (*nextFormat)
     {
       case '#': formatToken->alternateFlag    = TRUE; break;
       case '0': formatToken->zeroPaddingFlag  = TRUE; break;
@@ -748,136 +752,136 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
       case '+': formatToken->blankFlag        = TRUE; break;
       #ifndef NDEBUG
         default:
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("format '%s': token '%c'",format,*nextFormat);
           break; /* not reached */
       #endif /* NDEBUG */
     }
-    format++;
+    nextFormat++;
   }
 
   // width, precision
-  while (   ((*format) != NUL)
-         && isdigit((int)(*format))
+  while (   ((*nextFormat) != NUL)
+         && isdigit((int)(*nextFormat))
         )
   {
-    ADD_CHAR(formatToken,(*format));
+    ADD_CHAR(formatToken,(*nextFormat));
 
-    formatToken->width=formatToken->width*10+((*format)-'0');
-    format++;
+    formatToken->width=formatToken->width*10+((*nextFormat)-'0');
+    nextFormat++;
   }
 
   // precision
-  if (   ((*format) != NUL)
-      && ((*format) == '.')
+  if (   ((*nextFormat) != NUL)
+      && ((*nextFormat) == '.')
      )
   {
-    ADD_CHAR(formatToken,(*format));
-    format++;
-    while (isdigit((int)(*format)))
+    ADD_CHAR(formatToken,(*nextFormat));
+    nextFormat++;
+    while (isdigit((int)(*nextFormat)))
     {
-      ADD_CHAR(formatToken,(*format));
+      ADD_CHAR(formatToken,(*nextFormat));
 
-      formatToken->precision=formatToken->precision*10+((*format)-'0');
-      format++;
+      formatToken->precision=formatToken->precision*10+((*nextFormat)-'0');
+      nextFormat++;
     }
   }
 
   // quoting character
-  if (   ((*format) != NUL)
-      && !isalpha(*format)
-      && ((*format) != '%')
-      && (   (*(format+1) == 's')
-          || (*((format+1)) == 'S')
+  if (   ((*nextFormat) != NUL)
+      && !isalpha(*nextFormat)
+      && ((*nextFormat) != '%')
+      && (   (*(nextFormat+1) == 's')
+          || (*((nextFormat+1)) == 'S')
          )
      )
   {
-    formatToken->quoteChar = (*format);
-    format++;
+    formatToken->quoteChar = (*nextFormat);
+    nextFormat++;
   }
 
   // length modifier
-  if ((*format) != NUL)
+  if ((*nextFormat) != NUL)
   {
-    if      (((*format) == 'h') && (*((format+1)) == 'h'))
+    if      (((*nextFormat) == 'h') && (*((nextFormat+1)) == 'h'))
     {
-      ADD_CHAR(formatToken,(*(format+0)));
-      ADD_CHAR(formatToken,(*(format+1)));
+      ADD_CHAR(formatToken,(*(nextFormat+0)));
+      ADD_CHAR(formatToken,(*(nextFormat+1)));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-      format += 2;
+      nextFormat += 2;
     }
-    else if ((*format) == 'h')
+    else if ((*nextFormat) == 'h')
     {
-      ADD_CHAR(formatToken,(*format));
+      ADD_CHAR(formatToken,(*nextFormat));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-      format++;
+      nextFormat++;
     }
-    else if (((*format) == 'l') && (*((format+1)) == 'l'))
+    else if (((*nextFormat) == 'l') && (*((nextFormat+1)) == 'l'))
     {
-      ADD_CHAR(formatToken,(*(format+0)));
-      ADD_CHAR(formatToken,(*(format+1)));
+      ADD_CHAR(formatToken,(*(nextFormat+0)));
+      ADD_CHAR(formatToken,(*(nextFormat+1)));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_LONGLONG;
-      format += 2;
+      nextFormat += 2;
     }
-    else if ((*format) == 'l')
+    else if ((*nextFormat) == 'l')
     {
-      ADD_CHAR(formatToken,(*format));
+      ADD_CHAR(formatToken,(*nextFormat));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_LONG;
-      format++;
+      nextFormat++;
     }
-    else if ((*format) == 'q')
+    else if ((*nextFormat) == 'q')
     {
-      ADD_CHAR(formatToken,(*format));
+      ADD_CHAR(formatToken,(*nextFormat));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_QUAD;
-      format++;
+      nextFormat++;
     }
-    else if ((*format) == 'j')
+    else if ((*nextFormat) == 'j')
     {
-      ADD_CHAR(formatToken,(*format));
+      ADD_CHAR(formatToken,(*nextFormat));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-      format++;
+      nextFormat++;
     }
-    else if ((*format) == 'z')
+    else if ((*nextFormat) == 'z')
     {
-      ADD_CHAR(formatToken,(*format));
+      ADD_CHAR(formatToken,(*nextFormat));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-      format++;
+      nextFormat++;
     }
-    else if ((*format) == 't')
+    else if ((*nextFormat) == 't')
     {
-      ADD_CHAR(formatToken,(*format));
+      ADD_CHAR(formatToken,(*nextFormat));
 
       formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
-      format++;
+      nextFormat++;
     }
   }
 
   // conversion character
-  if ((*format) != NUL)
+  if ((*nextFormat) != NUL)
   {
-    switch (*format)
+    switch (*nextFormat)
     {
       case 'S':
         ADD_CHAR(formatToken,'s');
         formatToken->conversionChar = 'S';
         break;
       default:
-        ADD_CHAR(formatToken,(*format));
-        formatToken->conversionChar = (*format);
+        ADD_CHAR(formatToken,(*nextFormat));
+        formatToken->conversionChar = (*nextFormat);
         break;
     }
-    format++;
+    nextFormat++;
   }
 
   ADD_CHAR(formatToken,NUL);
 
-  return format;
+  return nextFormat;
 
   #undef ADD_CHAR
 }
@@ -907,6 +911,7 @@ LOCAL void formatString(struct __String *string,
                         va_list         arguments
                        )
 {
+  const char   *nextFormat;
   FormatToken  formatToken;
   union
   {
@@ -938,15 +943,17 @@ LOCAL void formatString(struct __String *string,
   char          ch;
   uint          j;
 
+  assert(format != NULL);
   STRING_CHECK_VALID(string);
   STRING_CHECK_ASSIGNABLE(string);
 
-  while ((*format) != NUL)
+  nextFormat = format;
+  while ((*nextFormat) != NUL)
   {
-    if ((*format) == '%')
+    if ((*nextFormat) == '%')
     {
       // get format token
-      format = parseNextFormatToken(format,&formatToken);
+      nextFormat = parseNextFormatToken(nextFormat,&formatToken);
 
       // format and store string
       switch (formatToken.conversionChar)
@@ -1285,7 +1292,7 @@ LOCAL void formatString(struct __String *string,
           }
           else
           {
-            // non quoted string
+            // non quoted stringformat
             length = snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
             if (length < sizeof(buffer))
             {
@@ -1367,7 +1374,7 @@ LOCAL void formatString(struct __String *string,
           String_appendChar(string,'%');
           break;
         default:
-HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("format '%s': conversion '%c'",format,formatToken.conversionChar);
 #if 0
           length = snprintf(buffer,sizeof(buffer),formatToken.token);
           if (length < sizeof(buffer))
@@ -1387,8 +1394,8 @@ HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
     }
     else
     {
-      String_appendChar(string,(*format));
-      format++;
+      String_appendChar(string,(*nextFormat));
+      nextFormat++;
     }
   }
 }
@@ -1424,6 +1431,7 @@ LOCAL bool parseString(const char *string,
                        long       *nextIndex
                       )
 {
+  const char  *nextFormat;
   FormatToken formatToken;
   union
   {
@@ -1447,12 +1455,13 @@ LOCAL bool parseString(const char *string,
   const char  *stringQuote;
   bool        foundFlag;
 
-  while ((*format) != NUL)
+  nextFormat = format;
+  while ((*nextFormat) != NUL)
   {
     // skip white spaces in format
-    while (((*format) != NUL) && isspace(*format))
+    while (((*nextFormat) != NUL) && isspace(*nextFormat))
     {
-      format++;
+      nextFormat++;
     }
 
     // skip white-spaces in string
@@ -1461,12 +1470,12 @@ LOCAL bool parseString(const char *string,
       index++;
     }
 
-    if ((*format) != NUL)
+    if ((*nextFormat) != NUL)
     {
-      if ((*format) == '%')
+      if ((*nextFormat) == '%')
       {
         // get format token
-        format = parseNextFormatToken(format,&formatToken);
+        nextFormat = parseNextFormatToken(nextFormat,&formatToken);
 
         // parse string and store values
         switch (formatToken.conversionChar)
@@ -1763,7 +1772,7 @@ LOCAL bool parseString(const char *string,
             {
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
-                     && (string[index] != (*format))
+                     && (string[index] != (*nextFormat))
                     )
               {
                 if (   (string[index] == STRING_ESCAPE_CHARACTER)
@@ -1867,7 +1876,7 @@ LOCAL bool parseString(const char *string,
               while (   (index < length)
                      && (formatToken.blankFlag || !isspace(string[index]))
 // NUL in string here a problem?
-                     && (string[index] != (*format))
+                     && (string[index] != (*nextFormat))
                     )
               {
                 if (   (string[index] == STRING_ESCAPE_CHARACTER)
@@ -2052,7 +2061,7 @@ still not implemented
             // skip value
             while (   (index < length)
                    && !isspace(string[index])
-                   && (string[index] != (*format))
+                   && (string[index] != (*nextFormat))
                   )
             {
               index++;
@@ -2066,18 +2075,18 @@ still not implemented
             index++;
             break;
           default:
-            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("format '%s': token '%c'",format,*nextFormat);
             break;
         }
       }
       else
       {
-        if ((index >= length) || (string[index] != (*format)))
+        if ((index >= length) || (string[index] != (*nextFormat)))
         {
           return FALSE;
         }
         index++;
-        format++;
+        nextFormat++;
       }
     }
   }
