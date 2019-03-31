@@ -355,6 +355,8 @@ typedef struct ScheduleNode
 
   // run info
   uint64             lastExecutedDateTime;                    // last execution date/time (timestamp)
+
+  // cached statistics info
   ulong              totalEntityCount;                        // total number of entities of last execution
   ulong              totalStorageCount;                       // total number of storage files of last execution
   uint64             totalStorageSize;                        // total size of storage files of last execution
