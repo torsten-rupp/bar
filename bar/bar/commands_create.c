@@ -4272,7 +4272,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = File_getInfo(&fileInfo,storageMsg.fileName);
       if (error != ERROR_NONE)
       {
-        printError("Cannot get information for file '%s' (error: %",
+        printError("Cannot get information for file '%s' (error: %s)",
                    String_cString(storageMsg.fileName),
                    Error_getText(error)
                   );
@@ -5145,7 +5145,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot get extended attributes for '%s' (error: %",
+      printError("Cannot get extended attributes for '%s' (error: %s)",
                  String_cString(fileName),
                  Error_getText(error)
                 );
@@ -6123,7 +6123,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     if (error != ERROR_NONE)
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot create new archive link entry '%s' (error: %",
+      printError("Cannot create new archive link entry '%s' (error: %s)",
                  String_cString(linkName),
                  Error_getText(error)
                 );
@@ -6290,7 +6290,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     else
     {
       printInfo(1,"FAIL\n");
-      printError("Cannot get extended attributes for '%s' (error: %",
+      printError("Cannot get extended attributes for '%s' (error: %s)",
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
@@ -7078,7 +7078,7 @@ masterIO, // masterIO
                       );
   if (error != ERROR_NONE)
   {
-    printError("Cannot initialize storage '%s' (error: %",
+    printError("Cannot initialize storage '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
               );

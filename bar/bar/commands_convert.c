@@ -417,7 +417,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     if (error != ERROR_NONE)
     {
       printInfo(0,"FAIL!\n");
-      printError("Cannot store '%s' (error: %",
+      printError("Cannot store '%s' (error: %s)",
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
@@ -772,7 +772,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
                               );
   if (error != ERROR_NONE)
   {
-    printError("Cannot create new archive file entry '%s' (error: %",
+    printError("Cannot create new archive file entry '%s' (error: %s)",
                String_cString(sourceArchiveHandle->printableStorageName),
                Error_getText(error)
               );
@@ -2093,7 +2093,7 @@ CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertI
                         );
   if (error != ERROR_NONE)
   {
-    printError("Cannot create temporary storage for '%s' (error: %",
+    printError("Cannot create temporary storage for '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
               );

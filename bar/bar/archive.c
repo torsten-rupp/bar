@@ -15705,7 +15705,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot write to device '%s' (error: %",
+                  printError("Cannot write to device '%s' (error: %s)",
                              String_cString(destinationDeviceName),
                              Error_getText(error)
                             );
@@ -16052,7 +16052,7 @@ archiveHandle->archiveInitUserData              = NULL;
                 if (error != ERROR_NONE)
                 {
                   printInfo(2,"FAIL!\n");
-                  printError("Cannot create directory '%s' (error: %",
+                  printError("Cannot create directory '%s' (error: %s)",
                              String_cString(parentDirectoryName),
                              Error_getText(error)
                             );
@@ -16125,7 +16125,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (error != ERROR_NONE)
               {
                 printInfo(2,"FAIL!\n");
-                printError("Cannot create link '%s' -> '%s' (error: %",
+                printError("Cannot create link '%s' -> '%s' (error: %s)",
                            String_cString(destinationFileName),
                            String_cString(fileName),
                            Error_getText(error)

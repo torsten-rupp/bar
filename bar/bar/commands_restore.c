@@ -422,7 +422,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                                );
   if (error != ERROR_NONE)
   {
-    printError("Cannot read 'file' content of archive '%s' (error: %",
+    printError("Cannot read 'file' content of archive '%s' (error: %s)",
                String_cString(printableStorageName),
                Error_getText(error)
               );
@@ -2556,7 +2556,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           if (error != ERROR_NONE)
           {
             printInfo(1,"FAIL!\n");
-            printError("Cannot create/write to file '%s' (error: %",
+            printError("Cannot create/write to file '%s' (error: %s)",
                        String_cString(destinationFileName),
                        Error_getText(error)
                       );
@@ -3294,7 +3294,7 @@ Errors Command_restore(const StringList                *storageNameList,
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
     {
-      printError("Invalid storage '%s' (error: %",
+      printError("Invalid storage '%s' (error: %s)",
                  String_cString(storageName),
                  Error_getText(error)
                 );
@@ -3435,7 +3435,7 @@ Errors Command_restore(const StringList                *storageNameList,
                  )
               {
                 printInfo(1,"FAIL!\n");
-                printError("Cannot set file owner/group of '%s' (error: %",
+                printError("Cannot set file owner/group of '%s' (error: %s)",
                            String_cString(fragmentNode->name),
                            Error_getText(error)
                           );

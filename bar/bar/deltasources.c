@@ -463,7 +463,7 @@ NULL, // masterIO
             error = File_seek(&fileHandle,blockOffset*(uint64)deviceInfo.blockSize);
             if (error != ERROR_NONE)
             {
-              printError("Cannot write file '%s' (error: %",
+              printError("Cannot write file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
@@ -590,7 +590,7 @@ NULL, // masterIO
             error = File_seek(&fileHandle,fragmentOffset);
             if (error != ERROR_NONE)
             {
-              printError("Cannot write file '%s' (error: %",
+              printError("Cannot write file '%s' (error: %s)",
                          String_cString(destinationFileName),
                          Error_getText(error)
                         );
