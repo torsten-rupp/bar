@@ -216,6 +216,7 @@ typedef struct JobNode
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 
   uint64              lastExecutedDateTime;             // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
+  String              lastErrorMessage;
 
   // running info
   struct
@@ -231,6 +232,29 @@ typedef struct JobNode
     double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
     ulong             estimatedRestTime;                // estimated rest running time [s]
   }                   runningInfo;
+
+  // cached statistics info
+  struct
+  {
+    ulong normal;
+    ulong full;
+    ulong incremental;
+    ulong differential;
+    ulong continuous;
+  }                   executionCount;                   // number of executions
+  struct
+  {
+    uint64 normal;
+    uint64 full;
+    uint64 incremental;
+    uint64 differential;
+    uint64 continuous;
+  }                   averageDuration;                  // average duration [s]
+  ulong               totalEntityCount;                 // total number of entities
+  ulong               totalStorageCount;                // total number of storage files
+  uint64              totalStorageSize;                 // total size of storage files
+  ulong               totalEntryCount;                  // total number of entries
+  uint64              totalEntrySize;                   // total size of entities
 } JobNode;
 
 // list with jobs
@@ -842,13 +866,14 @@ void Job_start(JobNode *jobNode);
 /***********************************************************************\
 * Name   : Job_end
 * Purpose: end job (store running data, free job data, e. g. passwords)
-* Input  : jobNode - job node
+* Input  : jobNode            - job node
+*          executeEndDateTime - executed date/time (timestamp)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_end(JobNode *jobNode);
+void Job_end(JobNode *jobNode, uint64 executeEndDateTime);
 
 /***********************************************************************\
 * Name   : Job_abort

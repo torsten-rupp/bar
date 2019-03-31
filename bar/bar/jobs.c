@@ -1797,6 +1797,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   doneStatusInfo(&jobNode->statusInfo);
 
+  String_delete(jobNode->lastErrorMessage);
+
   String_delete(jobNode->volumeMessage);
 
   String_delete(jobNode->abortedByInfo);
@@ -1924,34 +1926,34 @@ JobNode *Job_new(JobTypes    jobType,
   {
     Misc_getUUID(jobNode->job.uuid);
   }
-  jobNode->name                                      = String_duplicate(name);
-  jobNode->jobType                                   = jobType;
-  jobNode->modifiedFlag                              = FALSE;
+  jobNode->name                         = String_duplicate(name);
+  jobNode->jobType                      = jobType;
+  jobNode->modifiedFlag                 = FALSE;
 
-  jobNode->lastScheduleCheckDateTime                 = 0LL;
+  jobNode->lastScheduleCheckDateTime    = 0LL;
 
-  jobNode->fileName                                  = String_duplicate(fileName);
-  jobNode->fileModified                              = 0LL;
+  jobNode->fileName                     = String_duplicate(fileName);
+  jobNode->fileModified                 = 0LL;
 
-  jobNode->masterIO                                  = NULL;
+  jobNode->masterIO                     = NULL;
 
   Connector_init(&jobNode->connectorInfo);
 
-  jobNode->state                                     = JOB_STATE_NONE;
-  jobNode->slaveState                                = SLAVE_STATE_OFFLINE;
+  jobNode->state                        = JOB_STATE_NONE;
+  jobNode->slaveState                   = SLAVE_STATE_OFFLINE;
 
-  jobNode->scheduleUUID                              = String_new();
-  jobNode->scheduleCustomText                        = String_new();
-  jobNode->archiveType                               = ARCHIVE_TYPE_NORMAL;
-  jobNode->storageFlags                              = STORAGE_FLAG_NONE;
-  jobNode->byName                                    = String_new();
+  jobNode->scheduleUUID                 = String_new();
+  jobNode->scheduleCustomText           = String_new();
+  jobNode->archiveType                  = ARCHIVE_TYPE_NORMAL;
+  jobNode->storageFlags                 = STORAGE_FLAG_NONE;
+  jobNode->byName                       = String_new();
 
-  jobNode->requestedAbortFlag                        = FALSE;
-  jobNode->abortedByInfo                             = String_new();
-  jobNode->requestedVolumeNumber                     = 0;
-  jobNode->volumeNumber                              = 0;
-  jobNode->volumeMessage                             = String_new();
-  jobNode->volumeUnloadFlag                          = FALSE;
+  jobNode->requestedAbortFlag           = FALSE;
+  jobNode->abortedByInfo                = String_new();
+  jobNode->requestedVolumeNumber        = 0;
+  jobNode->volumeNumber                 = 0;
+  jobNode->volumeMessage                = String_new();
+  jobNode->volumeUnloadFlag             = FALSE;
 
   initStatusInfo(&jobNode->statusInfo);
 
@@ -1959,7 +1961,26 @@ JobNode *Job_new(JobTypes    jobType,
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
+  jobNode->lastExecutedDateTime         = 0LL;
+  jobNode->lastErrorMessage             = String_new();
+
   Job_resetRunningInfo(jobNode);
+
+  jobNode->executionCount.normal        = 0L;
+  jobNode->executionCount.full          = 0L;
+  jobNode->executionCount.incremental   = 0L;
+  jobNode->executionCount.differential  = 0L;
+  jobNode->executionCount.continuous    = 0L;
+  jobNode->averageDuration.normal       = 0LL;
+  jobNode->averageDuration.full         = 0LL;
+  jobNode->averageDuration.incremental  = 0LL;
+  jobNode->averageDuration.differential = 0LL;
+  jobNode->averageDuration.continuous   = 0LL;
+  jobNode->totalEntityCount             = 0L;
+  jobNode->totalStorageCount            = 0L;
+  jobNode->totalStorageSize             = 0L;
+  jobNode->totalEntryCount              = 0L;
+  jobNode->totalEntrySize               = 0L;
 
   return jobNode;
 }
@@ -1979,35 +2000,35 @@ JobNode *Job_copy(const JobNode *jobNode,
 
   // init job node
   Job_initDuplicate(&newJobNode->job,&jobNode->job);
-  newJobNode->name                                      = File_getBaseName(String_new(),fileName);
-  newJobNode->jobType                                   = jobNode->jobType;
+  newJobNode->name                         = File_getBaseName(String_new(),fileName);
+  newJobNode->jobType                      = jobNode->jobType;
 
-  newJobNode->lastScheduleCheckDateTime                 = 0LL;
+  newJobNode->lastScheduleCheckDateTime    = 0LL;
 
-  newJobNode->fileName                                  = String_duplicate(fileName);
-  newJobNode->fileModified                              = 0LL;
+  newJobNode->fileName                     = String_duplicate(fileName);
+  newJobNode->fileModified                 = 0LL;
 
-  newJobNode->masterIO                                  = NULL;
+  newJobNode->masterIO                     = NULL;
 
   Connector_duplicate(&newJobNode->connectorInfo,&jobNode->connectorInfo);
 
-  newJobNode->state                                     = JOB_STATE_NONE;
-  newJobNode->slaveState                                = SLAVE_STATE_OFFLINE;
+  newJobNode->state                        = JOB_STATE_NONE;
+  newJobNode->slaveState                   = SLAVE_STATE_OFFLINE;
 
-  newJobNode->scheduleUUID                              = String_new();
-  newJobNode->scheduleCustomText                        = String_new();
-  newJobNode->archiveType                               = ARCHIVE_TYPE_NORMAL;
-  newJobNode->storageFlags                              = STORAGE_FLAG_NONE;
-  newJobNode->byName                                    = String_new();
+  newJobNode->scheduleUUID                 = String_new();
+  newJobNode->scheduleCustomText           = String_new();
+  newJobNode->archiveType                  = ARCHIVE_TYPE_NORMAL;
+  newJobNode->storageFlags                 = STORAGE_FLAG_NONE;
+  newJobNode->byName                       = String_new();
 
-  newJobNode->requestedAbortFlag                        = FALSE;
-  newJobNode->abortedByInfo                             = String_new();
-  newJobNode->requestedVolumeNumber                     = 0;
-  newJobNode->volumeNumber                              = 0;
-  newJobNode->volumeMessage                             = String_new();
-  newJobNode->volumeUnloadFlag                          = FALSE;
+  newJobNode->requestedAbortFlag           = FALSE;
+  newJobNode->abortedByInfo                = String_new();
+  newJobNode->requestedVolumeNumber        = 0;
+  newJobNode->volumeNumber                 = 0;
+  newJobNode->volumeMessage                = String_new();
+  newJobNode->volumeUnloadFlag             = FALSE;
 
-  newJobNode->modifiedFlag                              = TRUE;
+  newJobNode->modifiedFlag                 = TRUE;
 
   initStatusInfo(&newJobNode->statusInfo);
 
@@ -2015,7 +2036,26 @@ JobNode *Job_copy(const JobNode *jobNode,
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
+  newJobNode->lastExecutedDateTime         = 0LL;
+  newJobNode->lastErrorMessage             = String_new();
+
   Job_resetRunningInfo(newJobNode);
+
+  newJobNode->executionCount.normal        = 0L;
+  newJobNode->executionCount.full          = 0L;
+  newJobNode->executionCount.incremental   = 0L;
+  newJobNode->executionCount.differential  = 0L;
+  newJobNode->executionCount.continuous    = 0L;
+  newJobNode->averageDuration.normal       = 0LL;
+  newJobNode->averageDuration.full         = 0LL;
+  newJobNode->averageDuration.incremental  = 0LL;
+  newJobNode->averageDuration.differential = 0LL;
+  newJobNode->averageDuration.continuous   = 0LL;
+  newJobNode->totalEntityCount             = 0L;
+  newJobNode->totalStorageCount            = 0L;
+  newJobNode->totalStorageSize             = 0L;
+  newJobNode->totalEntryCount              = 0L;
+  newJobNode->totalEntrySize               = 0L;
 
   return newJobNode;
 }
@@ -3069,7 +3109,7 @@ void Job_start(JobNode *jobNode)
   jobList.activeCount++;
 }
 
-void Job_end(JobNode *jobNode)
+void Job_end(JobNode *jobNode, uint64 executeEndDateTime)
 {
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
@@ -3091,6 +3131,7 @@ void Job_end(JobNode *jobNode)
   {
     jobNode->state = JOB_STATE_DONE;
   }
+  jobNode->lastExecutedDateTime = executeEndDateTime;
   Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
   // decrement active counter
