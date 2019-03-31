@@ -1258,30 +1258,6 @@ const char *ConfigValue_selectToString(const ConfigValueSelect selects[],
                                       );
 
 /***********************************************************************\
-* Name   : ConfigValue_readConfigFileLines
-* Purpose: read config file lines
-* Input  : configFileName  - config file name
-*          configLinesList - line list variable
-* Output : configLinesList - line list
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *configLinesList);
-
-/***********************************************************************\
-* Name   : ConfigValue_writeConfigFileLines
-* Purpose: write config file lines
-* Input  : configFileName  - config file name
-*          configLinesList - line list
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const StringList *configLinesList);
-
-/***********************************************************************\
 * Name   : ConfigValue_deleteEntries
 * Purpose: delete all entries with given name in config line list
 * Input  : stringList - file string list to modify
@@ -1310,6 +1286,46 @@ StringNode *ConfigValue_deleteEntries(StringList *stringList,
 StringNode *ConfigValue_deleteSections(StringList *stringList,
                                        const char *section
                                       );
+
+/***********************************************************************\
+* Name   : ConfigValue_readConfigFileLines
+* Purpose: read config file lines
+* Input  : configFileName  - config file name
+*          configLinesList - line list variable
+* Output : configLinesList - line list
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *configLinesList);
+
+/***********************************************************************\
+* Name   : ConfigValue_writeConfigFileLines
+* Purpose: write config file lines
+* Input  : configFileName  - config file name
+*          configLinesList - line list
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const StringList *configLinesList);
+
+/***********************************************************************\
+* Name   : ConfigValue_updateConfigFile
+* Purpose: i[date config file from template
+* Input  : configFileName - config file name
+*          configValue    - config value definition
+*          configTemplate - config template
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ConfigValue_updateConfigFile(ConstString       configFileName,
+                                    const ConfigValue configValues[],
+                                    ConstString       configTemplate
+                                   );
 
 #ifdef __GNUG__
 }

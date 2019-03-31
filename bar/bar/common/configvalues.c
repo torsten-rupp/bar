@@ -2393,92 +2393,6 @@ const char *ConfigValue_selectToString(const ConfigValueSelect selects[],
   return defaultString;
 }
 
-Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *configLinesList)
-{
-  String     line;
-  Errors     error;
-  FileHandle fileHandle;
-
-  assert(configFileName != NULL);
-  assert(configLinesList != NULL);
-
-  StringList_clear(configLinesList);
-
-  // init variables
-  line = String_new();
-
-  // open file
-  error = File_open(&fileHandle,configFileName,FILE_OPEN_READ);
-  if (error != ERROR_NONE)
-  {
-    String_delete(line);
-    return error;
-  }
-
-  // read file
-  while (!File_eof(&fileHandle))
-  {
-    // read line
-    error = File_readLine(&fileHandle,line);
-    if (error != ERROR_NONE) break;
-
-    StringList_append(configLinesList,line);
-  }
-
-  // close file
-  File_close(&fileHandle);
-  if (error != ERROR_NONE)
-  {
-    String_delete(line);
-    return error;
-  }
-
-  // trim empty lines at begin/end
-  while (!StringList_isEmpty(configLinesList) && String_isEmpty(StringList_first(configLinesList,NULL)))
-  {
-    StringList_remove(configLinesList,configLinesList->head);
-  }
-  while (!StringList_isEmpty(configLinesList) && String_isEmpty(StringList_last(configLinesList,NULL)))
-  {
-    StringList_remove(configLinesList,configLinesList->tail);
-  }
-
-  // free resources
-  String_delete(line);
-
-  return ERROR_NONE;
-}
-
-Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const StringList *configLinesList)
-{
-  String     line;
-  Errors     error;
-  FileHandle fileHandle;
-  StringNode *stringNode;
-
-  assert(configFileName != NULL);
-  assert(configLinesList != NULL);
-
-  // open file
-  error = File_open(&fileHandle,configFileName,FILE_OPEN_CREATE);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // write lines
-  STRINGLIST_ITERATE(configLinesList,stringNode,line)
-  {
-    error = File_writeLine(&fileHandle,line);
-    if (error != ERROR_NONE) break;
-  }
-
-  // close file
-  File_close(&fileHandle);
-
-  return error;
-}
-
 StringNode *ConfigValue_deleteEntries(StringList *stringList,
                                       const char *section,
                                       const char *name
@@ -2680,6 +2594,142 @@ StringNode *ConfigValue_deleteSections(StringList *stringList,
   String_delete(line);
 
   return nextStringNode;
+}
+
+Errors ConfigValue_readConfigFileLines(ConstString configFileName, StringList *configLinesList)
+{
+  String     line;
+  Errors     error;
+  FileHandle fileHandle;
+
+  assert(configFileName != NULL);
+  assert(configLinesList != NULL);
+
+  StringList_clear(configLinesList);
+
+  // init variables
+  line = String_new();
+
+  // open file
+  error = File_open(&fileHandle,configFileName,FILE_OPEN_READ);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // read file
+  while (!File_eof(&fileHandle))
+  {
+    // read line
+    error = File_readLine(&fileHandle,line);
+    if (error != ERROR_NONE) break;
+
+    StringList_append(configLinesList,line);
+  }
+
+  // close file
+  File_close(&fileHandle);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    return error;
+  }
+
+  // trim empty lines at begin/end
+  while (!StringList_isEmpty(configLinesList) && String_isEmpty(StringList_first(configLinesList,NULL)))
+  {
+    StringList_remove(configLinesList,configLinesList->head);
+  }
+  while (!StringList_isEmpty(configLinesList) && String_isEmpty(StringList_last(configLinesList,NULL)))
+  {
+    StringList_remove(configLinesList,configLinesList->tail);
+  }
+
+  // free resources
+  String_delete(line);
+
+  return ERROR_NONE;
+}
+
+Errors ConfigValue_writeConfigFileLines(ConstString configFileName, const StringList *configLinesList)
+{
+  String     line;
+  Errors     error;
+  FileHandle fileHandle;
+  StringNode *stringNode;
+
+  assert(configFileName != NULL);
+  assert(configLinesList != NULL);
+
+  // open file
+  error = File_open(&fileHandle,configFileName,FILE_OPEN_CREATE);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // write lines
+  STRINGLIST_ITERATE(configLinesList,stringNode,line)
+  {
+    error = File_writeLine(&fileHandle,line);
+    if (error != ERROR_NONE) break;
+  }
+
+  // close file
+  File_close(&fileHandle);
+
+  return error;
+}
+
+//TODO: NYI
+Errors ConfigValue_updateConfigFile(ConstString       configFileName,
+                                    const ConfigValue configValues[],
+                                    ConstString       configTemplate
+                                   )
+{
+  StringList configLinesList;
+  String     line;
+  Errors     error;
+
+  // init variables
+  StringList_init(&configLinesList);
+  line = String_new();
+
+  // generate new config
+
+  // read config file lines
+  error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
+  if (error != ERROR_NONE)
+  {
+    StringList_done(&configLinesList);
+    String_delete(line);
+    return error;
+  }
+
+  // merge comments from old config
+
+  // write config file lines
+  error = ConfigValue_writeConfigFileLines(configFileName,&configLinesList);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    StringList_done(&configLinesList);
+    return error;
+  }
+  error = File_setPermission(configFileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
+  if (error != ERROR_NONE)
+  {
+    String_delete(line);
+    StringList_done(&configLinesList);
+    return error;
+  }
+
+  // free resources
+  String_delete(line);
+  StringList_done(&configLinesList);
+
+  return ERROR_NONE;
 }
 
 #ifdef __GNUC__
