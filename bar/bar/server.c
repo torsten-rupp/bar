@@ -17591,6 +17591,9 @@ Errors Server_run(ServerModes       mode,
   char                  buffer[256];
   String                name;
   uint                  id;
+  AggregateInfo         jobAggregateInfo,scheduleAggregateInfo;
+  JobNode               *jobNode;
+  ScheduleNode          *scheduleNode;
   StringMap             argumentMap;
   ClientNode            *disconnectClientNode;
 
@@ -17792,6 +17795,53 @@ Errors Server_run(ServerModes       mode,
 
   // init index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+
+  // update statics data
+  initAggregateInfo(&jobAggregateInfo);
+  initAggregateInfo(&scheduleAggregateInfo);
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    LIST_ITERATE(&jobList,jobNode)
+    {
+      getAggregateInfo(&jobAggregateInfo,
+                       jobNode->job.uuid,
+                       NULL  // scheduleUUID
+                      );
+      jobNode->lastExecutedDateTime         = jobAggregateInfo.lastExecutedDateTime;
+      jobNode->lastErrorMessage             = jobAggregateInfo.lastErrorMessage;
+      jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
+      jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
+      jobNode->executionCount.incremental   = jobAggregateInfo.executionCount.incremental;
+      jobNode->executionCount.differential  = jobAggregateInfo.executionCount.differential;
+      jobNode->executionCount.continuous    = jobAggregateInfo.executionCount.continuous;
+      jobNode->averageDuration.normal       = jobAggregateInfo.averageDuration.normal;
+      jobNode->averageDuration.full         = jobAggregateInfo.averageDuration.full;
+      jobNode->averageDuration.incremental  = jobAggregateInfo.averageDuration.incremental;
+      jobNode->averageDuration.differential = jobAggregateInfo.averageDuration.differential;
+      jobNode->averageDuration.continuous   = jobAggregateInfo.averageDuration.continuous;
+      jobNode->totalEntityCount             = jobAggregateInfo.totalEntityCount;
+      jobNode->totalStorageCount            = jobAggregateInfo.totalStorageCount;
+      jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
+      jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
+      jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
+
+      LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+      {
+        getAggregateInfo(&scheduleAggregateInfo,
+                         jobNode->job.uuid,
+                         scheduleNode->uuid
+                        );
+        scheduleNode->lastExecutedDateTime = scheduleAggregateInfo.lastExecutedDateTime;
+        scheduleNode->totalEntityCount     = scheduleAggregateInfo.totalEntityCount;
+        scheduleNode->totalStorageCount    = scheduleAggregateInfo.totalStorageCount;
+        scheduleNode->totalStorageSize     = scheduleAggregateInfo.totalStorageSize;
+        scheduleNode->totalEntryCount      = scheduleAggregateInfo.totalEntryCount;
+        scheduleNode->totalEntrySize       = scheduleAggregateInfo.totalEntrySize;
+      }
+    }
+  }
+  doneAggregateInfo(&scheduleAggregateInfo);
+  doneAggregateInfo(&jobAggregateInfo);
 
   // start threads
   if (!Thread_init(&jobThread,"BAR job",globalOptions.niceLevel,jobThreadCode,NULL))
