@@ -907,6 +907,38 @@ LOCAL const char *getSlaveStateText(SlaveStates slaveState)
 }
 
 /***********************************************************************\
+* Name   : initAggregateInfo
+* Purpose: init aggregate info
+* Input  : aggregateInfo - aggregate info variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initAggregateInfo(AggregateInfo *aggregateInfo)
+{
+  assert(aggregateInfo != NULL);
+
+  aggregateInfo->lastErrorMessage = String_new();
+}
+
+/***********************************************************************\
+* Name   : doneAggregateInfo
+* Purpose: done aggregate info
+* Input  : aggregateInfo - aggregate info variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneAggregateInfo(AggregateInfo *aggregateInfo)
+{
+  assert(aggregateInfo != NULL);
+
+  String_delete(aggregateInfo->lastErrorMessage);
+}
+
+/***********************************************************************\
 * Name   : getAggregateInfo
 * Purpose: get aggregate info for job/sched7ule
 * Input  : aggregateInfo - aggregate info variable
@@ -928,7 +960,7 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
 
   // init variables
   aggregateInfo->lastExecutedDateTime         = 0LL;
-  aggregateInfo->lastErrorMessage             = String_new();
+  String_clear(aggregateInfo->lastErrorMessage);
   aggregateInfo->executionCount.normal        = 0L;
   aggregateInfo->executionCount.full          = 0L;
   aggregateInfo->executionCount.incremental   = 0L;
@@ -970,30 +1002,7 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                          &aggregateInfo->totalEntryCount,
                          &aggregateInfo->totalEntrySize
                         );
-fprintf(stderr,"%s, %d: %d %d %d %d %d\n",__FILE__,__LINE__,
-aggregateInfo->executionCount.normal,
-                         aggregateInfo->executionCount.full,
-                         aggregateInfo->executionCount.incremental,
-                         aggregateInfo->executionCount.differential,
-                         aggregateInfo->executionCount.continuous
-);
   }
-}
-
-/***********************************************************************\
-* Name   : doneAggregateInfo
-* Purpose: done aggregate info
-* Input  : aggregateInfo - aggregate info variable
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void doneAggregateInfo(AggregateInfo *aggregateInfo)
-{
-  assert(aggregateInfo != NULL);
-
-  String_delete(aggregateInfo->lastErrorMessage);
 }
 
 /*---------------------------------------------------------------------*/
@@ -1302,8 +1311,8 @@ LOCAL void jobThreadCode(void)
   PatternList_init(&excludePatternList);
   scheduleCustomText                     = String_new();
   byName                                 = String_new();
-  jobAggregateInfo.lastErrorMessage      = String_new();
-  scheduleAggregateInfo.lastErrorMessage = String_new();
+  initAggregateInfo(&jobAggregateInfo);
+  initAggregateInfo(&scheduleAggregateInfo);
   resultMap                              = StringMap_new();
   if (resultMap == NULL)
   {
@@ -1923,10 +1932,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     // done log
     doneLog(&logHandle);
 
-    // get job execution date/time, aggregate info
-#if 0
-    lastExecutedDateTime = Misc_getCurrentDateTime();
-//TODO: remove
+    // get statistics data
     getAggregateInfo(&jobAggregateInfo,
                      jobNode->job.uuid,
                      NULL  // scheduleUUID
@@ -1935,16 +1941,30 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                      jobNode->job.uuid,
                      scheduleUUID
                     );
-#endif
 
     // done job
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // end job
-      Job_end(jobNode);
+      Job_end(jobNode,executeEndDateTime);
 
-      // storage execution date/time, aggregate info
-      jobNode->lastExecutedDateTime = executeEndDateTime;
+      // update statistics data
+      jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
+      jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
+      jobNode->executionCount.incremental   = jobAggregateInfo.executionCount.incremental;
+      jobNode->executionCount.differential  = jobAggregateInfo.executionCount.differential;
+      jobNode->executionCount.continuous    = jobAggregateInfo.executionCount.continuous;
+      jobNode->averageDuration.normal       = jobAggregateInfo.averageDuration.normal;
+      jobNode->averageDuration.full         = jobAggregateInfo.averageDuration.full;
+      jobNode->averageDuration.incremental  = jobAggregateInfo.averageDuration.incremental;
+      jobNode->averageDuration.differential = jobAggregateInfo.averageDuration.differential;
+      jobNode->averageDuration.continuous   = jobAggregateInfo.averageDuration.continuous;
+      jobNode->totalEntityCount             = jobAggregateInfo.totalEntityCount;
+      jobNode->totalStorageCount            = jobAggregateInfo.totalStorageCount;
+      jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
+      jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
+      jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
+
       scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
       if (scheduleNode != NULL)
       {
@@ -1971,8 +1991,8 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
 
   // free resources
   StringMap_delete(resultMap);
-  String_delete(scheduleAggregateInfo.lastErrorMessage);
-  String_delete(jobAggregateInfo.lastErrorMessage);
+  doneAggregateInfo(&scheduleAggregateInfo);
+  doneAggregateInfo(&jobAggregateInfo);
   String_delete(byName);
   String_delete(scheduleCustomText);
   PatternList_done(&excludePatternList);
@@ -3011,7 +3031,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
 //  expirationEntityList->totalEntityCount = 0;
 //  expirationEntityList->totalEntitySize  = 0L;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: ------------------------------\n",__FILE__,__LINE__);
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
                                  INDEX_ID_ANY,  // uuidIndexId
@@ -7210,6 +7230,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 *            cryptType=<crypt type> \
 *            cryptPasswordMode=<password mode> \
 *            lastExecutedDateTime=<timestamp> \
+*            lastErrorMessage=<test> \
 *            estimatedRestTime=<n [s]>
 \***********************************************************************/
 
@@ -7228,7 +7249,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
     LIST_ITERATEX(&jobList,jobNode,!isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" estimatedRestTime=%lu",
+                          "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S estimatedRestTime=%lu",
                           jobNode->job.uuid,
                           (jobNode->masterIO != NULL) ? jobNode->masterIO->network.name : NULL,
                           jobNode->name,
@@ -7253,6 +7274,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           (jobNode->job.options.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.options.cryptPasswordMode,NULL),
                           jobNode->lastExecutedDateTime,
+                          jobNode->lastErrorMessage,
                           jobNode->runningInfo.estimatedRestTime
                          );
     }
@@ -7296,7 +7318,6 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
 {
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   const JobNode *jobNode;
-  AggregateInfo aggregateInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7321,32 +7342,27 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
       return;
     }
 
-    // get aggregate info
-    getAggregateInfo(&aggregateInfo,jobNode->job.uuid,NULL);
-
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
-                        aggregateInfo.lastExecutedDateTime,
-                        aggregateInfo.lastErrorMessage,
-                        aggregateInfo.executionCount.normal,
-                        aggregateInfo.executionCount.full,
-                        aggregateInfo.executionCount.incremental,
-                        aggregateInfo.executionCount.differential,
-                        aggregateInfo.executionCount.continuous,
-                        aggregateInfo.averageDuration.normal,
-                        aggregateInfo.averageDuration.full,
-                        aggregateInfo.averageDuration.incremental,
-                        aggregateInfo.averageDuration.differential,
-                        aggregateInfo.averageDuration.continuous,
-                        aggregateInfo.totalEntityCount,
-                        aggregateInfo.totalStorageCount,
-                        aggregateInfo.totalStorageSize,
-                        aggregateInfo.totalEntryCount,
-                        aggregateInfo.totalEntrySize
+                        jobNode->lastExecutedDateTime,
+                        jobNode->lastErrorMessage,
+                        jobNode->executionCount.normal,
+                        jobNode->executionCount.full,
+                        jobNode->executionCount.incremental,
+                        jobNode->executionCount.differential,
+                        jobNode->executionCount.continuous,
+                        jobNode->averageDuration.normal,
+                        jobNode->averageDuration.full,
+                        jobNode->averageDuration.incremental,
+                        jobNode->averageDuration.differential,
+                        jobNode->averageDuration.continuous,
+                        jobNode->totalEntityCount,
+                        jobNode->totalStorageCount,
+                        jobNode->totalStorageSize,
+                        jobNode->totalEntryCount,
+                        jobNode->totalEntrySize
                        );
-
-    doneAggregateInfo(&aggregateInfo);
   }
 }
 
@@ -9965,7 +9981,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
         // send schedule info
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                            "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                             scheduleNode->uuid,
                             (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType,NULL) : "*",
                             date,
@@ -9981,6 +9997,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                             scheduleNode->enabled,
                             scheduleNode->lastExecutedDateTime,
                             scheduleNode->totalEntityCount,
+                            scheduleNode->totalStorageCount,
                             scheduleNode->totalEntryCount,
                             scheduleNode->totalEntrySize
                            );
