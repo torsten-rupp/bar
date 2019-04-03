@@ -14697,7 +14697,6 @@ throw new Error("NYI");
    */
   private void updatePersistenceTree(JobData jobData)
   {
-Dprintf.dprintf("xxxxxxxxx");
     final HashSet<TreeItem> removedTreeItems = Widgets.getAllTreeItems(widgetPersistenceTree);
     try
     {
@@ -14781,7 +14780,6 @@ Dprintf.dprintf("xxxxxxxxx");
                                                                                 Age.format(persistenceData.maxAge)
                                                                                );
                                      persistenceTreeItemMap.put(persistenceId,treeItem);
-Dprintf.dprintf("");
 
                                      removedTreeItems.remove(treeItem);
                                    }
@@ -14794,7 +14792,6 @@ Dprintf.dprintf("");
       Dialogs.error(shell,BARControl.tr("Cannot get persistence list (error: {0})",exception.getMessage()));
       return;
     }
-Dprintf.dprintf("");
     Widgets.removeTreeItems(widgetPersistenceTree,removedTreeItems);
   }
 
