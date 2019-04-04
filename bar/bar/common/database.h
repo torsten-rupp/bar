@@ -388,6 +388,8 @@ typedef bool(*DatabasePauseCallbackFunction)(void *userData);
   #define Database_rollbackTransaction(...) __Database_rollbackTransaction(__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_prepare(...)             __Database_prepare            (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_finalize(...)            __Database_finalize           (__FILE__,__LINE__, ## __VA_ARGS__)
+
+  #define Database_debugPrintQueryInfo(...) __Database_debugPrintQueryInfo(__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -1331,7 +1333,11 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle);
 * Notes  : For debugging only!
 \***********************************************************************/
 
-void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle);
+#ifdef NDEBUG
+void Database_debugPrintQueryInfo(const DatabaseQueryHandle *databaseQueryHandle);
+#else /* not NDEBUG */
+void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, const DatabaseQueryHandle *databaseQueryHandle);
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Database_debugDump

@@ -236,7 +236,7 @@ typedef struct
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   ArchiveTypes             archiveType;
   bool                     createMeta;                                 // TRUE to create meta chunks
-  bool                     dryRun;                                     // TRUE for dry-run
+  StorageFlags             storageFlags;                               // storage flags
 
   ArchiveInitFunction      archiveInitFunction;                        // call back to initialize archive file
   void                     *archiveInitUserData;                       // user data for call back to initialize archive file
@@ -669,9 +669,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 *          archiveType             - archive type
 *          password                - password
 *          createMeta              - TRUE to create meta-chunks
-*          dryRun                  - TRUE for dry-run (no storage, no
-*                                    incremental data, no update
-*                                    database)
+*          storageFlags            - storage flags
 *          archiveInitFunction     - call back to initialize archive
 *                                    file
 *          archiveInitUserData     - user data for call back
@@ -703,7 +701,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         ArchiveTypes            archiveType,
                         const Password          *password,
                         bool                    createMeta,
-                        bool                    dryRun,
+                        StorageFlags            storageFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -732,7 +730,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           ArchiveTypes            archiveType,
                           const Password          *password,
                           bool                    createMeta,
-                          bool                    dryRun,
+                          StorageFlags            storageFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,

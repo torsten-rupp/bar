@@ -5836,7 +5836,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
 
   // free resources
   String_delete(orderString);
@@ -10789,6 +10789,8 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
+
+if (Index_getType(storageIndexId) != INDEX_TYPE_STORAGE) abort();
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)

@@ -55,6 +55,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+const StorageFlags STORAGE_FLAGS_NONE = { FALSE, FALSE };
+
 /* file data buffer size */
 #define BUFFER_SIZE (64*1024)
 
@@ -3730,8 +3732,8 @@ NULL, // masterIO
                        storageSpecifier,
                        jobOptions,
                        maxBandWidthList,
-                       STORAGE_FLAG_NONE,
                        SERVER_CONNECTION_PRIORITY_HIGH,
+                       STORAGE_FLAGS_NONE,
                        CALLBACK(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),

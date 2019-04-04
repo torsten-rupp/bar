@@ -1320,7 +1320,7 @@ LOCAL void jobThreadCode(void)
   }
   jobNode       = NULL;
   archiveType   = ARCHIVE_ENTRY_TYPE_UNKNOWN;
-  storageFlags  = STORAGE_FLAG_NONE;
+  storageFlags  = STORAGE_FLAGS_NONE;
   startDateTime = 0LL;
   while (!quitFlag)
   {
@@ -1409,20 +1409,20 @@ LOCAL void jobThreadCode(void)
 
     // get info string
     String_clear(s);
-    if (IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN) || IS_SET(storageFlags,STORAGE_FLAG_NO_STORAGE))
+    if (storageFlags.noStorage || storageFlags.dryRun)
     {
       String_appendCString(s," (");
       n = 0;
-      if (IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN))
-      {
-        if (n > 0) String_appendCString(s,", ");
-        String_appendCString(s,"dry-run");
-        n++;
-      }
-      if (IS_SET(storageFlags,STORAGE_FLAG_NO_STORAGE))
+      if (storageFlags.noStorage)
       {
         if (n > 0) String_appendCString(s,", ");
         String_appendCString(s,"no-storage");
+        n++;
+      }
+      if (storageFlags.dryRun)
+      {
+        if (n > 0) String_appendCString(s,", ");
+        String_appendCString(s,"dry-run");
         n++;
       }
       String_appendCString(s,")");
@@ -1981,7 +1981,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       PatternList_clear(&excludePatternList);
       EntryList_clear(&includeEntryList);
 
-      if (!IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN))
+      if (!storageFlags.dryRun)
       {
         // store schedule info
         Job_writeScheduleInfo(jobNode);
@@ -2413,7 +2413,9 @@ LOCAL void schedulerThreadCode(void)
                         executeScheduleNode->uuid,
                         executeScheduleNode->customText,
                         executeScheduleNode->archiveType,
-                        executeScheduleNode->noStorage ? STORAGE_FLAG_NO_STORAGE : STORAGE_FLAG_NONE,
+//TODO                        executeScheduleNode->noStorage ? STORAGE_FLAG_NO_STORAGE : STORAGE_FLAGS_NONE,
+#warning TODO
+STORAGE_FLAGS_NONE,
                         executeScheduleDateTime,
                         "scheduler"
                        );
@@ -2569,8 +2571,8 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->job.options : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
-                                     FALSE,  // no storage
                                      SERVER_CONNECTION_PRIORITY_HIGH,
+                                     STORAGE_FLAGS_NONE,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
                                      CALLBACK(NULL,NULL),  // getNamePassword
                                      CALLBACK(NULL,NULL),  // requestVolume
@@ -2586,8 +2588,8 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                        &storageSpecifier,
                                        (jobNode != NULL) ? &jobNode->job.options : NULL,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
-                                       FALSE,  // no storage
                                        SERVER_CONNECTION_PRIORITY_HIGH,
+                                       STORAGE_FLAGS_NONE,
                                        CALLBACK(NULL,NULL),  // updateStatusInfo
                                        CALLBACK(NULL,NULL),  // getNamePassword
                                        CALLBACK(NULL,NULL),  // requestVolume
@@ -2604,8 +2606,8 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                      &storageSpecifier,
                                      (jobNode != NULL) ? &jobNode->job.options : NULL,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
-                                     FALSE,  // no storage
                                      SERVER_CONNECTION_PRIORITY_HIGH,
+                                     STORAGE_FLAGS_NONE,
                                      CALLBACK(NULL,NULL),  // updateStatusInfo
                                      CALLBACK(NULL,NULL),  // getNamePassword
                                      CALLBACK(NULL,NULL),  // requestVolume
@@ -3597,8 +3599,8 @@ LOCAL void indexThreadCode(void)
                              &storageSpecifier,
                              &jobOptions,
                              &globalOptions.indexDatabaseMaxBandWidthList,
-                             FALSE,  // no storage
                              SERVER_CONNECTION_PRIORITY_LOW,
+                             STORAGE_FLAGS_NONE,
                              CALLBACK(NULL,NULL),  // updateStatusInfo
                              CALLBACK(NULL,NULL),  // getNamePassword
                              CALLBACK(NULL,NULL),  // requestVolume
@@ -7384,9 +7386,10 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String       scheduleCustomText;
   ArchiveTypes archiveType;
   StorageFlags storageFlags;
-  String       scheduleCustomText;
+  bool         flag;
   JobNode      *jobNode;
   char         buffer[256];
 
@@ -7410,9 +7413,11 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     String_delete(scheduleCustomText);
     return;
   }
-  storageFlags = STORAGE_FLAG_NONE;
-  StringMap_getFlag(argumentMap,"noStorage",&storageFlags,STORAGE_FLAG_NO_STORAGE);
-  StringMap_getFlag(argumentMap,"dryRun",&storageFlags,STORAGE_FLAG_DRY_RUN);
+  storageFlags = STORAGE_FLAGS_NONE;
+  StringMap_getBool(argumentMap,"noStorage",&flag,FALSE);
+  if (flag) storageFlags.noStorage = TRUE;
+  StringMap_getBool(argumentMap,"dryRun",&flag,FALSE);
+  if (flag) storageFlags.dryRun = TRUE;
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -11239,7 +11244,10 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
                 scheduleNode->uuid,
                 scheduleNode->customText,
                 scheduleNode->archiveType,
-                scheduleNode->noStorage ? STORAGE_FLAG_NO_STORAGE : STORAGE_FLAG_NONE,
+//TODO:
+//                scheduleNode->noStorage ? STORAGE_FLAG_NO_STORAGE : STORAGE_FLAGS_NONE,
+#warning TODO
+STORAGE_FLAGS_NONE,
                 Misc_getCurrentDateTime(),
                 getClientInfo(clientInfo,buffer,sizeof(buffer))
                );
@@ -11812,8 +11820,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        &storageSpecifier,
                        &clientInfo->jobOptions,
                        &globalOptions.maxBandWidthList,
-                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_HIGH,
+                       STORAGE_FLAGS_NONE,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getNamePassword
                        CALLBACK(NULL,NULL),  // requestVolume
@@ -13559,7 +13567,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           &includeEntryList,
                           NULL,  // excludePatternList
                           &clientInfo->jobOptions,
-                          FALSE,  // dryRun
+                          STORAGE_FLAGS_NONE,
                           CALLBACK(restoreUpdateStatusInfo,&restoreCommandInfo),
                           CALLBACK(restoreHandleError,&restoreCommandInfo),
                           CALLBACK(getNamePassword,&restoreCommandInfo),
@@ -14963,8 +14971,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                        &storageSpecifier,
                        NULL, // jobOptions
                        &globalOptions.indexDatabaseMaxBandWidthList,
-                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_LOW,
+                       STORAGE_FLAGS_NONE,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getNamePassword
                        CALLBACK(NULL,NULL),  // requestVolume

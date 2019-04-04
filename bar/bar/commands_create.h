@@ -64,8 +64,7 @@
 *          scheduleTitle                - schedule title
 *          scheduleCustomText           - schedule custome text or NULL
 *          startDateTime                - date/time of start [s]
-*          storageFlags                 - storage flags; see
-*                                         STORAGE_FLAGS_...
+*          storageFlags                 - storage flags
 *          getNamePasswordFunction      - get password callback (can
 *                                         be NULL)
 *          getNamePasswordUserData      - user data for get password

@@ -839,7 +839,13 @@ ERROR DATABASE_TYPE_MISMATCH
 ERROR DATABASE_CREATE_INDEX            TR("error creating index")
 ERROR DATABASE_INDEX_NOT_FOUND         TR("index not found")
 ERROR DATABASE_INDEX_NOT_READY         TR("index still not initialized")
-ERROR DATABASE_INVALID_INDEX           TR("invalid index")
+ERROR DATABASE_INVALID_INDEX
+  stringSet(errorText,sizeof(errorText),TR("invalid index"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR DATABASE_TIMEOUT                 TR("timeout accessing index")
 
 // --- mastesr/slave ----------------------------------------------------

@@ -76,10 +76,12 @@
 /***************************** Datatypes *******************************/
 
 // storage flags
-typedef ulong StorageFlags;
-#define STORAGE_FLAG_NONE       0
-#define STORAGE_FLAG_NO_STORAGE (1 << 0)
-#define STORAGE_FLAG_DRY_RUN    (1 << 1)
+typedef struct
+{
+  bool noStorage : 1;
+  bool dryRun : 1;
+} StorageFlags;
+extern const StorageFlags STORAGE_FLAGS_NONE;
 
 // status info data
 typedef struct

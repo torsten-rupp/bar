@@ -135,8 +135,6 @@ LOCAL EntryList          includeEntryList;                 // included entries
 LOCAL PatternList        excludePatternList;               // excluded entry patterns
 
 LOCAL StorageFlags       storageFlags;
-//LOCAL bool               noStorage;
-//LOCAL bool               dryRun;
 
 LOCAL const char         *changeToDirectory;
 
@@ -212,6 +210,8 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseStorageFlagDryRun(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseStorageFlagNoStorage(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 
 // deprecated
 LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -722,8 +722,8 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("no-stop-on-error",                  0,  1,2,globalOptions.noStopOnErrorFlag,                 0,                                                             "do not immediately stop on error"                                         ),
   CMD_OPTION_BOOLEAN      ("no-stop-on-attribute-error",        0,  1,2,globalOptions.noStopOnAttributeErrorFlag,        0,                                                             "do not immediately stop on attribute error"                               ),
 
-  CMD_OPTION_FLAG         ("no-storage",                        0,  1,2,storageFlags,                                    0,STORAGE_FLAG_NO_STORAGE,                                     "do not store archives (skip storage, index database)"                     ),
-  CMD_OPTION_FLAG         ("dry-run",                           0,  1,2,storageFlags,                                    0,STORAGE_FLAG_DRY_RUN,                                        "do dry-run (skip storage/restore, incremental data, index database)"      ),
+  CMD_OPTION_SPECIAL      ("no-storage",                        0,  1,2,&storageFlags,                                   0,cmdOptionParseStorageFlagNoStorage,NULL,0,                   "do not store archives (skip storage, index database",""                   ),
+  CMD_OPTION_SPECIAL      ("dry-run",                           0,  1,2,&storageFlags,                                   0,cmdOptionParseStorageFlagDryRun,NULL,0,                      "do dry-run (skip storage/restore, incremental data, index database)",""   ),
 
   CMD_OPTION_BOOLEAN      ("no-default-config",                 0,  1,1,globalOptions.noDefaultConfigFlag,               0,                                                             "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                         0,                                                             "suppress any output"                                                      ),
@@ -3266,6 +3266,56 @@ LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variabl
   {
     (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_STOP;
   }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseStorageFlagNoStorage
+* Purpose: command line option call back for storage flag no-storage
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseStorageFlagNoStorage(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((StorageFlags*)variable)->noStorage = TRUE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseStorageFlagDryRun
+* Purpose: command line option call back for storage flag no-storage
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseStorageFlagDryRun(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  ((StorageFlags*)variable)->dryRun = TRUE;
 
   return TRUE;
 }

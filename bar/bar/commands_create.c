@@ -3849,8 +3849,8 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                &storageSpecifier,
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
-                               FALSE,  // no storage
                                SERVER_CONNECTION_PRIORITY_HIGH,
+                               STORAGE_FLAGS_NONE,
                                CALLBACK(NULL,NULL),  // updateStatusInfo
                                CALLBACK(NULL,NULL),  // getPassword
                                CALLBACK(NULL,NULL),  // requestVolume
@@ -4062,8 +4062,8 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                &storageSpecifier,
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
-                               FALSE,  // no storage
                                SERVER_CONNECTION_PRIORITY_HIGH,
+                               STORAGE_FLAGS_NONE,
                                CALLBACK(NULL,NULL),  // updateStatusInfo
                                CALLBACK(NULL,NULL),  // getPassword
                                CALLBACK(NULL,NULL),  // requestVolume
@@ -4197,7 +4197,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // initial storage pre-processing
   if (   (createInfo->failError == ERROR_NONE)
-      && !IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN)
+      && !createInfo->storageFlags.dryRun
       && !isAborted(createInfo)
      )
   {
@@ -4246,7 +4246,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                 );
 
     if (   (createInfo->failError == ERROR_NONE)
-        && !IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN)
+        && !createInfo->storageFlags.dryRun
         && !isAborted(createInfo)
        )
     {
@@ -4284,7 +4284,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
       // check storage size, purge old archives
-      if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN) && (createInfo->jobOptions->maxStorageSize > 0LL))
+      if (!createInfo->storageFlags.dryRun && (createInfo->jobOptions->maxStorageSize > 0LL))
       {
         // purge archives by max. job storage size
         purgeStorageByJobUUID(createInfo->indexHandle,
@@ -4757,7 +4757,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // final storage post-processing
   if (   (createInfo->failError == ERROR_NONE)
-      && !IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN)
+      && !createInfo->storageFlags.dryRun
       && !isAborted(createInfo)
      )
   {
@@ -5189,7 +5189,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
   offset = 0LL;
   size   = 0LL;
-  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
+  if (!createInfo->storageFlags.dryRun)
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -5270,7 +5270,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               {
                 doneSize         = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
-                compressionRatio = (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN) && (doneSize > 0))
+                compressionRatio = (!createInfo->storageFlags.dryRun && (doneSize > 0))
                                      ? 100.0-(archiveSize*100.0)/doneSize
                                      : 0.0;
 
@@ -5394,7 +5394,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       stringFormat(s2,sizeof(s2),", ratio %5.1f%%",compressionRatio);
     }
 
-    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
+    if (!createInfo->storageFlags.dryRun)
     {
       printInfo(1,"OK (%llu bytes%s%s)\n",
                 fragmentSize,
@@ -5592,7 +5592,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 
   blockOffset = 0LL;
   blockCount  = 0LL;
-  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
+  if (!createInfo->storageFlags.noStorage)
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -5692,7 +5692,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           {
             doneSize         = createInfo->statusInfo.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
-            compressionRatio = (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN) && (doneSize > 0))
+            compressionRatio = (!createInfo->storageFlags.dryRun && (doneSize > 0))
                                  ? 100.0-(archiveSize*100.0)/doneSize
                                  : 0.0;
 
@@ -5795,7 +5795,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
+    if (!createInfo->storageFlags.dryRun)
     {
       printInfo(1,"OK (%s, %llu bytes%s%s)\n",
                 (fileSystemFlag && (fileSystemHandle.type != FILE_SYSTEM_TYPE_UNKNOWN)) ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
@@ -5926,7 +5926,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     }
   }
 
-  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
+  if (!createInfo->storageFlags.noStorage)
   {
     // new directory
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
@@ -5960,7 +5960,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
+    if (!createInfo->storageFlags.dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -6077,7 +6077,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     }
   }
 
-  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
+  if (!createInfo->storageFlags.noStorage)
   {
     // read link
     fileName = String_new();
@@ -6152,7 +6152,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
+    if (!createInfo->storageFlags.dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -6332,7 +6332,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   // init fragment
   fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo.size);
 
-  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
+  if (!createInfo->storageFlags.noStorage)
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -6413,7 +6413,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               {
                 doneSize         = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
-                compressionRatio = (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN) && (doneSize > 0))
+                compressionRatio = (!createInfo->storageFlags.dryRun && (doneSize > 0))
                                      ? 100.0-(archiveSize*100.0)/doneSize
                                      : 0.0;
 
@@ -6514,7 +6514,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // output result
-    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
+    if (!createInfo->storageFlags.dryRun)
     {
       printInfo(1,"OK (%llu bytes%s%s)\n",
                 fragmentSize,
@@ -6651,7 +6651,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     }
   }
 
-  if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_NO_STORAGE))
+  if (!createInfo->storageFlags.noStorage)
   {
     // new special
     error = Archive_newSpecialEntry(&archiveEntryInfo,
@@ -6684,7 +6684,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     }
 
     // output result
-    if (!IS_SET(createInfo->storageFlags,STORAGE_FLAG_DRY_RUN))
+    if (!createInfo->storageFlags.dryRun)
     {
       printInfo(1,"OK\n");
       logMessage(createInfo->logHandle,
@@ -7068,8 +7068,8 @@ masterIO, // masterIO
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
-                       storageFlags,
                        SERVER_CONNECTION_PRIORITY_HIGH,
+                       storageFlags,
                        CALLBACK(updateStorageStatusInfo,&createInfo),
                        CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                        CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
@@ -7385,7 +7385,7 @@ masterIO, // masterIO
 
   // write incremental list
   if (   (createInfo.failError == ERROR_NONE)
-      && !IS_SET(createInfo.storageFlags,STORAGE_FLAG_DRY_RUN)
+      && !createInfo.storageFlags.dryRun
       && !isAborted(&createInfo)
       && createInfo.storeIncrementalFileInfoFlag
      )

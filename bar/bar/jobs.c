@@ -1945,7 +1945,7 @@ JobNode *Job_new(JobTypes    jobType,
   jobNode->scheduleUUID                 = String_new();
   jobNode->scheduleCustomText           = String_new();
   jobNode->archiveType                  = ARCHIVE_TYPE_NORMAL;
-  jobNode->storageFlags                 = STORAGE_FLAG_NONE;
+  jobNode->storageFlags                 = STORAGE_FLAGS_NONE;
   jobNode->byName                       = String_new();
 
   jobNode->requestedAbortFlag           = FALSE;
@@ -2018,7 +2018,7 @@ JobNode *Job_copy(const JobNode *jobNode,
   newJobNode->scheduleUUID                 = String_new();
   newJobNode->scheduleCustomText           = String_new();
   newJobNode->archiveType                  = ARCHIVE_TYPE_NORMAL;
-  newJobNode->storageFlags                 = STORAGE_FLAG_NONE;
+  newJobNode->storageFlags                 = STORAGE_FLAGS_NONE;
   newJobNode->byName                       = String_new();
 
   newJobNode->requestedAbortFlag           = FALSE;
@@ -2103,7 +2103,7 @@ const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags)
       stateText = "WAITING";
       break;
     case JOB_STATE_RUNNING:
-      stateText = IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN) ? "DRY_RUNNING" : "RUNNING";
+      stateText = storageFlags.dryRun ? "DRY_RUNNING" : "RUNNING";
       break;
     case JOB_STATE_REQUEST_FTP_PASSWORD:
       stateText = "REQUEST_FTP_PASSWORD";
@@ -2983,6 +2983,8 @@ Errors Job_rereadAll(ConstString jobsDirectory)
                            );
           assert(jobNode != NULL);
           List_append(&jobList,jobNode);
+//TODO: remove
+STRING_CHECK_VALID(jobNode->lastErrorMessage);
 
           // notify about changes
           Job_listChanged();
@@ -3485,7 +3487,6 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
   jobOptions->noFragmentsCheckFlag                          = fromJobOptions->noFragmentsCheckFlag;
   jobOptions->noIndexDatabaseFlag                           = fromJobOptions->noIndexDatabaseFlag;
   jobOptions->skipVerifySignaturesFlag                      = fromJobOptions->skipVerifySignaturesFlag;
-//  jobOptions->noStorageFlag                                 = fromJobOptions->noStorageFlag;
   jobOptions->noBAROnMediumFlag                             = fromJobOptions->noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag                             = fromJobOptions->noStopOnErrorFlag;
   jobOptions->noStopOnAttributeErrorFlag                    = fromJobOptions->noStopOnAttributeErrorFlag;

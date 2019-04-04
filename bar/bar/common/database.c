@@ -133,7 +133,7 @@ LOCAL DatabaseList databaseList;
       \
       if (databaseDebugCounter > 0) \
       { \
-        fprintf(stderr,"DEBUG database: execute command: %s: %s\n",(databaseHandle)->fileName,String_cString(sqlString)); \
+        fprintf(stderr,"DEBUG database %s, %d: execute command: %s: %s\n",__FILE__,__LINE__,(databaseHandle)->fileName,String_cString(sqlString)); \
       } \
     } \
     while (0)
@@ -145,7 +145,7 @@ LOCAL DatabaseList databaseList;
       \
       if (databaseDebugCounter > 0) \
       { \
-        fprintf(stderr,"DEBUG database: " text ": %s: %s\n",(databaseHandle)->fileName,String_cString(sqlString)); \
+        fprintf(stderr,"DEBUG database %s, %d: " text ": %s: %s\n",__FILE__,__LINE__,(databaseHandle)->fileName,String_cString(sqlString)); \
       } \
     } \
     while (0)
@@ -159,7 +159,7 @@ LOCAL DatabaseList databaseList;
       { \
         String s = String_new(); \
         String_format(s,"EXPLAIN QUERY PLAN %s",String_cString(sqlString)); \
-        fprintf(stderr,"DEBUG database: query plan\n"); \
+        fprintf(stderr,"DEBUG database %s, %d: query plan\n",__FILE__,__LINE__); \
         sqlite3_exec(databaseHandle->handle, \
                      String_cString(s), \
                      debugPrintQueryPlanCallback, \
@@ -194,7 +194,7 @@ LOCAL DatabaseList databaseList;
       \
       if (databaseDebugCounter > 0) \
       { \
-        fprintf(stderr,"DEBUG database: execution time=%llums\n",databaseQueryHandle->dt/1000ULL); \
+        fprintf(stderr,"DEBUG database %s, %d: execution time=%llums\n",__FILE__,__LINE__,databaseQueryHandle->dt/1000ULL); \
       } \
     } \
     while (0)
@@ -6695,12 +6695,12 @@ void Database_debugPrintLockInfo(const DatabaseHandle *databaseHandle)
   pthread_mutex_unlock(&debugDatabaseLock);
 }
 
-void Database_debugPrintQueryInfo(DatabaseQueryHandle *databaseQueryHandle)
+void __Database_debugPrintQueryInfo(const char *__fileName__, ulong __lineNb__, const DatabaseQueryHandle *databaseQueryHandle)
 {
   assert(databaseQueryHandle != NULL);
 
 //  DATABASE_DEBUG_SQLX(databaseQueryHandle->databaseHandle,"SQL query",databaseQueryHandle->sqlString);
-  fprintf(stderr,"DEBUG database: %s: %s\n",String_cString(databaseQueryHandle->databaseHandle->databaseNode->fileName),String_cString(databaseQueryHandle->sqlString)); \
+  fprintf(stderr,"DEBUG database %s, %d: %s: %s\n",__fileName__,__lineNb__,String_cString(databaseQueryHandle->databaseHandle->databaseNode->fileName),String_cString(databaseQueryHandle->sqlString)); \
 }
 
 /***********************************************************************\

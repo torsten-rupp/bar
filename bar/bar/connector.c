@@ -1307,7 +1307,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"a not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1455,7 +1455,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"b not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1576,7 +1576,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"c not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1704,7 +1704,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"d not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1852,7 +1852,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"e not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -2004,7 +2004,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"f not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -2327,7 +2327,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"g not a storage index id %llx",storageId);
     return;
   }
   storageName = String_new();
@@ -2403,7 +2403,7 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"h not a storage index id %llx",storageId);
     return;
   }
 
@@ -2462,7 +2462,7 @@ LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, Ind
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"i not a storage index id %llx",storageId);
     return;
   }
 
@@ -3041,7 +3041,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                              ConstString   storageName,
                              JobOptions    *jobOptions,
-                             bool          noStorage
+                             StorageFlags  storageFlags
                             )
 {
   String           printableStorageName;
@@ -3079,8 +3079,8 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
-                       noStorage,
                        SERVER_CONNECTION_PRIORITY_HIGH,
+                       storageFlags,
 //TODO
 CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,connectorInfo),
 CALLBACK(NULL,NULL),//                       CALLBACK(getPasswordFunction,getPasswordUserData),
@@ -3287,14 +3287,14 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    NULL,
-                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S noStorage=%y archiveType=%s noStorage=%y dryRun=%y",
+                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S noStorage=%y archiveType=%s dryRun=%y noStorage=%y",
                                    jobUUID,
                                    scheduleUUID,
                                    NULL,  // scheduleCustomText
                                    FALSE,  // noStorage
                                    Archive_archiveTypeToString(archiveType,NULL),
-                                   IS_SET(storageFlags,STORAGE_FLAG_NO_STORAGE),
-                                   IS_SET(storageFlags,STORAGE_FLAG_DRY_RUN)
+                                   storageFlags.dryRun,
+                                   storageFlags.noStorage
                                   );
   if (error != ERROR_NONE)
   {

@@ -194,7 +194,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo);
 * Input  : connectorInfo - connector info
 *          storageName   - storage name
 *          jobOptions    - job options
-*          noStorage     - TRUE fo no storage
+*          storageFlags  - storage flags
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -203,7 +203,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo);
 Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                              ConstString   storageName,
                              JobOptions    *jobOptions,
-                             bool          noStorage
+                             StorageFlags  storageFlags
                             );
 
 /***********************************************************************\

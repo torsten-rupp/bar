@@ -1793,6 +1793,11 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
 
+  assert(archiveHandle != NULL);
+//TODO: remove
+  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
+  assert(name != NULL);
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -1850,6 +1855,11 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
 
+  assert(archiveHandle != NULL);
+//TODO: remove
+  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
+  assert(name != NULL);
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -1904,6 +1914,11 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
+
+  assert(archiveHandle != NULL);
+//TODO: remove
+  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
+  assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
@@ -1962,6 +1977,12 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
+
+  assert(archiveHandle != NULL);
+//TODO: remove
+  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
+  assert(name != NULL);
+  assert(destinationName != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
@@ -2025,6 +2046,11 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
+
+  assert(archiveHandle != NULL);
+//TODO: remove
+  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
+  assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
@@ -2090,6 +2116,11 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
 
+  assert(archiveHandle != NULL);
+//TODO: remove
+  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
+  assert(name != NULL);
+
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
   {
@@ -2148,6 +2179,10 @@ LOCAL Errors indexAddMeta(ArchiveHandle *archiveHandle,
 {
   ArchiveIndexNode *archiveIndexNode;
   Errors           error;
+
+  assert(archiveHandle != NULL);
+//TODO: remove
+  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
@@ -2964,6 +2999,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
   assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(Semaphore_isOwned(&archiveHandle->lock));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
 
   if (!archiveHandle->create.openFlag)
   {
@@ -3046,8 +3083,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
 
       if (   (archiveHandle->indexHandle != NULL)
           && !archiveHandle->storageInfo->jobOptions->noIndexDatabaseFlag
-          && !IS_SET(archiveHandle->storageInfo->storageFlags,STORAGE_FLAG_DRY_RUN)
-          && !IS_SET(archiveHandle->storageInfo->storageFlags,STORAGE_FLAG_NO_STORAGE)
+          && !archiveHandle->storageInfo->storageFlags.noStorage
+          && !archiveHandle->storageInfo->storageFlags.dryRun
          )
       {
         // create storage index
@@ -3069,6 +3106,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: %lld\n",__FILE__,__LINE__,archiveHandle->storageId);
         }
         AUTOFREE_ADD(&autoFreeList,&archiveHandle->storageId,
         {
@@ -3081,7 +3120,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
       else
       {
         // no index
-        archiveHandle->storageId = DATABASE_ID_NONE;
+        archiveHandle->storageId = INDEX_ID_NONE;
       }
 
       // call-back for init archive
@@ -5574,7 +5613,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         ArchiveTypes            archiveType,
                         const Password          *password,
                         bool                    createMeta,
-                        bool                    dryRun,
+                        StorageFlags            storageFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
                         ArchiveDoneFunction     archiveDoneFunction,
@@ -5603,7 +5642,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           ArchiveTypes            archiveType,
                           const Password          *password,
                           bool                    createMeta,
-                          bool                    dryRun,
+                          StorageFlags            storageFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
                           ArchiveDoneFunction     archiveDoneFunction,
@@ -5653,7 +5692,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
   archiveHandle->createMeta              = createMeta;
-  archiveHandle->dryRun                  = dryRun;
+  archiveHandle->storageFlags            = storageFlags;
 
   archiveHandle->archiveInitFunction     = archiveInitFunction;
   archiveHandle->archiveInitUserData     = archiveInitUserData;
@@ -5695,7 +5734,7 @@ UNUSED_VARIABLE(storageInfo);
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->indexHandle             = NULL;
-  archiveHandle->storageId               = DATABASE_ID_NONE;
+  archiveHandle->storageId               = INDEX_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
@@ -5916,8 +5955,8 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->hostName                = NULL;
   archiveHandle->storageInfo             = storageInfo;
   archiveHandle->indexHandle             = NULL;
-  archiveHandle->uuidId                  = DATABASE_ID_NONE;
-  archiveHandle->entityId                = DATABASE_ID_NONE;
+  archiveHandle->uuidId                  = INDEX_ID_NONE;
+  archiveHandle->entityId                = INDEX_ID_NONE;
 
   archiveHandle->jobUUID                 = NULL;
   archiveHandle->scheduleUUID            = NULL;
@@ -5925,7 +5964,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->createMeta              = FALSE;
-  archiveHandle->dryRun                  = FALSE;
+  archiveHandle->storageFlags            = STORAGE_FLAGS_NONE;
 
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
@@ -5963,7 +6002,7 @@ UNUSED_VARIABLE(storageInfo);
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->indexHandle             = NULL;
-  archiveHandle->storageId               = DATABASE_ID_NONE;
+  archiveHandle->storageId               = INDEX_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
@@ -6062,8 +6101,8 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->hostName                = NULL;
   archiveHandle->storageInfo             = fromArchiveHandle->storageInfo;
   archiveHandle->indexHandle             = NULL;
-  archiveHandle->uuidId                  = DATABASE_ID_NONE;
-  archiveHandle->entityId                = DATABASE_ID_NONE;
+  archiveHandle->uuidId                  = INDEX_ID_NONE;
+  archiveHandle->entityId                = INDEX_ID_NONE;
 
   archiveHandle->jobUUID                 = NULL;
   archiveHandle->scheduleUUID            = NULL;
@@ -6071,7 +6110,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->deltaSourceList         = fromArchiveHandle->deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
   archiveHandle->createMeta              = FALSE;
-  archiveHandle->dryRun                  = FALSE;
+  archiveHandle->storageFlags            = STORAGE_FLAGS_NONE;
 
   archiveHandle->archiveInitFunction     = NULL;
   archiveHandle->archiveInitUserData     = NULL;
@@ -6109,7 +6148,7 @@ UNUSED_VARIABLE(storageInfo);
 
   Semaphore_init(&archiveHandle->indexLock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
-  archiveHandle->storageId               = DATABASE_ID_NONE;
+  archiveHandle->storageId               = INDEX_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
@@ -6987,7 +7026,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->dryRun)
+  if (!archiveHandle->storageFlags.dryRun)
   {
     // write header
     error = writeFileChunks(archiveEntryInfo);
@@ -7350,7 +7389,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->dryRun)
+  if (!archiveHandle->storageFlags.dryRun)
   {
     // write header
     error = writeImageChunks(archiveEntryInfo);
@@ -7531,7 +7570,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->dryRun)
+  if (!archiveHandle->storageFlags.dryRun)
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -7764,7 +7803,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   }
 
 
-  if (!archiveHandle->dryRun)
+  if (!archiveHandle->storageFlags.dryRun)
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -8259,7 +8298,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->dryRun)
+  if (!archiveHandle->storageFlags.dryRun)
   {
     // create new part
     error = writeHardLinkChunks(archiveEntryInfo);
@@ -8443,7 +8482,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->dryRun)
+  if (!archiveHandle->storageFlags.dryRun)
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -8641,7 +8680,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->dryRun)
+  if (!archiveHandle->storageFlags.dryRun)
   {
     // lock archive
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
@@ -12619,6 +12658,9 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   assert(archiveEntryInfo->archiveHandle->storageInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo->jobOptions != NULL);
 
+//TODO: remove
+assert(Index_getType(archiveEntryInfo->archiveHandle->storageId) == INDEX_TYPE_STORAGE);
+
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
@@ -12633,7 +12675,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
       {
         case ARCHIVE_ENTRY_TYPE_FILE:
           {
-            if (!archiveEntryInfo->archiveHandle->dryRun)
+            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->file.deltaCompressInfo);
@@ -12781,7 +12823,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_IMAGE:
           {
-            if (!archiveEntryInfo->archiveHandle->dryRun)
+            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->image.deltaCompressInfo);
@@ -12929,7 +12971,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_DIRECTORY:
           {
-            if (!archiveEntryInfo->archiveHandle->dryRun)
+            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->directory.chunkDirectoryEntry.info);
@@ -12971,7 +13013,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_LINK:
           {
-            if (!archiveEntryInfo->archiveHandle->dryRun)
+            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->link.chunkLinkEntry.info);
@@ -13017,7 +13059,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
             StringNode *stringNode;
             String     fileName;
 
-            if (!archiveEntryInfo->archiveHandle->dryRun)
+            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
             {
               // flush delta compress
               error = Compress_flush(&archiveEntryInfo->hardLink.deltaCompressInfo);
@@ -13170,7 +13212,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_SPECIAL:
           {
-            if (!archiveEntryInfo->archiveHandle->dryRun)
+            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->special.chunkSpecialEntry.info);
@@ -13215,7 +13257,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
           break;
         case ARCHIVE_ENTRY_TYPE_META:
           {
-            if (!archiveEntryInfo->archiveHandle->dryRun)
+            if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
             {
               // close chunks
               tmpError = Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info);
@@ -13493,7 +13535,7 @@ Errors Archive_writeData(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(elementSize > 0);
 
-  if (!archiveEntryInfo->archiveHandle->dryRun)
+  if (!archiveEntryInfo->archiveHandle->storageFlags.dryRun)
   {
     p            = (const byte*)buffer;
     writtenLength = 0L;
@@ -14345,7 +14387,7 @@ uint64 Archive_getSize(ArchiveHandle *archiveHandle)
   assert(archiveHandle->chunkIO->getSize != NULL);
 
   size = 0LL;
-  if (!archiveHandle->dryRun)
+  if (!archiveHandle->storageFlags.dryRun)
   {
     switch (archiveHandle->mode)
     {
@@ -14601,7 +14643,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   // create new storage index
   printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
   error = Index_newStorage(indexHandle,
-                           DATABASE_ID_NONE, // entityId
+                           INDEX_ID_NONE, // entityId
                            hostName,
                            printableStorageName,
                            0LL,  // created

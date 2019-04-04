@@ -1949,8 +1949,8 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                        storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
-                       FALSE,  // no storage
                        SERVER_CONNECTION_PRIORITY_HIGH,
+                       STORAGE_FLAGS_NONE,
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(NULL,NULL),  // getPassword
                        CALLBACK(NULL,NULL),  // requestVolume
@@ -2083,7 +2083,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                          ARCHIVE_TYPE_NONE,
                          &globalOptions.cryptNewPassword,
                          FALSE,  // createMeta
-                         FALSE,  // dryRun
+                         STORAGE_FLAGS_NONE,
                          CALLBACK(NULL,NULL),  // archiveInitFunction
                          CALLBACK(NULL,NULL),  // archiveDoneFunction
 CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertInfo),
