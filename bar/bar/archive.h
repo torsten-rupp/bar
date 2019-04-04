@@ -660,7 +660,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 *          hostName                - host name (can be NULL)
 *          storageInfo             - storage info
 *          archiveName             - archive name (can be NULL)
-*          indexHandle             - index handle or NULL
 *          uuidId                  - index UUID id or INDEX_ID_NONE
 *          entityId                - index entity id or INDEX_ID_NONE
 *          jobUUID                 - unique job id or NULL
@@ -692,7 +691,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         ConstString             hostName,
                         StorageInfo             *storageInfo,
                         ConstString             archiveName,
-//                        IndexHandle             *indexHandle,
                         IndexId                 uuidId,
                         IndexId                 entityId,
                         ConstString             jobUUID,
@@ -721,7 +719,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           ConstString             hostName,
                           StorageInfo             *storageInfo,
                           ConstString             archiveName,
-//                          IndexHandle             *indexHandle,
                           IndexId                 uuidId,
                           IndexId                 entityId,
                           ConstString             jobUUID,

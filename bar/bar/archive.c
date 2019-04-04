@@ -2999,8 +2999,6 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
   assert(archiveHandle->archiveCryptInfo != NULL);
   assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
   assert(Semaphore_isOwned(&archiveHandle->lock));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
 
   if (!archiveHandle->create.openFlag)
   {
@@ -5604,7 +5602,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         ConstString             hostName,
                         StorageInfo             *storageInfo,
                         ConstString             archiveName,
-//                        IndexHandle             *indexHandle,
                         IndexId                 uuidId,
                         IndexId                 entityId,
                         ConstString             jobUUID,
@@ -5633,7 +5630,6 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           ConstString             hostName,
                           StorageInfo             *storageInfo,
                           ConstString             archiveName,
-//                          IndexHandle             *indexHandle,
                           IndexId                 uuidId,
                           IndexId                 entityId,
                           ConstString             jobUUID,
