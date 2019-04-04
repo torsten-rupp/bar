@@ -1794,8 +1794,6 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
   Errors           error;
 
   assert(archiveHandle != NULL);
-//TODO: remove
-  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -1856,8 +1854,6 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
   Errors           error;
 
   assert(archiveHandle != NULL);
-//TODO: remove
-  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -1916,8 +1912,6 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
   Errors           error;
 
   assert(archiveHandle != NULL);
-//TODO: remove
-  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -1979,8 +1973,6 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
   Errors           error;
 
   assert(archiveHandle != NULL);
-//TODO: remove
-  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
   assert(destinationName != NULL);
 
@@ -2048,8 +2040,6 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
   Errors           error;
 
   assert(archiveHandle != NULL);
-//TODO: remove
-  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -2117,8 +2107,6 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
   Errors           error;
 
   assert(archiveHandle != NULL);
-//TODO: remove
-  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -2181,8 +2169,6 @@ LOCAL Errors indexAddMeta(ArchiveHandle *archiveHandle,
   Errors           error;
 
   assert(archiveHandle != NULL);
-//TODO: remove
-  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
   if (archiveIndexNode == NULL)
@@ -12653,9 +12639,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->archiveHandle->storageInfo != NULL);
   assert(archiveEntryInfo->archiveHandle->storageInfo->jobOptions != NULL);
-
-//TODO: remove
-assert(Index_getType(archiveEntryInfo->archiveHandle->storageId) == INDEX_TYPE_STORAGE);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
