@@ -42,7 +42,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define CONNECTOR_DEBUG
+#define _CONNECTOR_DEBUG
 
 /***************************** Constants *******************************/
 #define SLEEP_TIME_STATUS_UPDATE    2000  // [ms]
