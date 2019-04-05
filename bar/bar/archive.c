@@ -3090,8 +3090,6 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
             AutoFree_cleanup(&autoFreeList);
             return error;
           }
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: %lld\n",__FILE__,__LINE__,archiveHandle->storageId);
         }
         AUTOFREE_ADD(&autoFreeList,&archiveHandle->storageId,
         {
