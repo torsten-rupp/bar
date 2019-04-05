@@ -10413,7 +10413,6 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
         }
       }
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // free resources
     List_done(&expirationEntityList,CALLBACK((ListNodeFreeFunction)freeExpirationNode,NULL));
