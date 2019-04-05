@@ -5077,19 +5077,19 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         {
           STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
           {
-            error = indexAddFile(archiveEntryInfo->archiveHandle,
-                                 archiveEntryInfo->archiveHandle->storageId,
-                                 fileName,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
-                                 archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
-                                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
-                                 archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
-                                );
+            error = indexAddHardlink(archiveEntryInfo->archiveHandle,
+                                     archiveEntryInfo->archiveHandle->storageId,
+                                     fileName,
+                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
+                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
+                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
+                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
+                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
+                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
+                                     archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
+                                     archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
+                                     archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
+                                    );
             if (error != ERROR_NONE) break;
           }
           if (error != ERROR_NONE)
@@ -13139,19 +13139,19 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 {
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
-                    error = indexAddFile(archiveEntryInfo->archiveHandle,
-                                         archiveEntryInfo->archiveHandle->storageId,
-                                         fileName,
-                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
-                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
-                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
-                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
-                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
-                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
-                                         archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
-                                         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
-                                         archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
-                                        );
+                    error = indexAddHardlink(archiveEntryInfo->archiveHandle,
+                                             archiveEntryInfo->archiveHandle->storageId,
+                                             fileName,
+                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
+                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
+                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.timeModified,
+                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastChanged,
+                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.userId,
+                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.groupId,
+                                             archiveEntryInfo->hardLink.chunkHardLinkEntry.permission,
+                                             archiveEntryInfo->hardLink.chunkHardLinkData.fragmentOffset,
+                                             archiveEntryInfo->hardLink.chunkHardLinkData.fragmentSize
+                                            );
                   }
                 }
               }
