@@ -3092,7 +3092,6 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
       persistenceNode = LIST_HEAD(&jobNode->job.options.persistenceList);
       do
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         // find persistence node for archive type
         while (   (persistenceNode != NULL)
                && (persistenceNode->archiveType != archiveType)
@@ -17789,7 +17788,7 @@ Errors Server_run(ServerModes       mode,
   // init index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
-  // update statics data
+  // initial update statics data
   initAggregateInfo(&jobAggregateInfo);
   initAggregateInfo(&scheduleAggregateInfo);
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -17801,7 +17800,7 @@ Errors Server_run(ServerModes       mode,
                        NULL  // scheduleUUID
                       );
       jobNode->lastExecutedDateTime         = jobAggregateInfo.lastExecutedDateTime;
-      jobNode->lastErrorMessage             = jobAggregateInfo.lastErrorMessage;
+      String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
       jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
       jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
       jobNode->executionCount.incremental   = jobAggregateInfo.executionCount.incremental;
