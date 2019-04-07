@@ -28,6 +28,59 @@
 
 /***************************** Datatypes ******************************/
 
+/***********************************************************************\
+* Name   : ConfigParseFunction
+* Purpose: initialize jobs
+* Input  : userData         - user data
+*          variable         - config variable
+*          name             - config name
+*          value            - value
+*          errorMessage     - error message variable (can be NULL)
+*          errorMessageSize - error message size
+* Output : -
+* Return : TRUE if parsed, otherwise FALSE
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*ConfigParseFunction)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+
+/***********************************************************************\
+* Name   : ConfigFormatInitFunction
+* Purpose: initialize format
+* Input  : formatData - format data variable
+*          userData   - user data
+*          variable   - config variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*ConfigFormatInitFunction)(void **formatData, void *userData, void *variable);
+
+/***********************************************************************\
+* Name   : ConfigFormatDoneFunction
+* Purpose: done format
+* Input  : formatData - format data variable
+*          userData   - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*ConfigFormatDoneFunction)(void **formatData, void *userData);
+
+/***********************************************************************\
+* Name   : ConfigFormatFunction
+* Purpose: format line
+* Input  : formatData - format data
+*          userData   - user data
+* Output : line - line
+* Return : TRUE to format next line, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+typedef bool(*ConfigFormatFunction)(void **formatData, void *userData, String line);
+
 // config value data types
 typedef enum
 {
@@ -136,10 +189,10 @@ typedef struct
   } stringValue;
   struct
   {
-    bool(*parse)(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-    void(*formatInit)(void **formatUserData, void *userData, void *variable);
-    void(*formatDone)(void **formatUserData, void *userData);
-    bool(*format)(void **formatUserData, void *userData, String line);
+    ConfigParseFunction      parse;               // parse line
+    ConfigFormatInitFunction formatInit;          // format init
+    ConfigFormatDoneFunction formatDone;          // format done
+    ConfigFormatFunction     format;              // format line
     void *userData;                               // user data for parse special
   } specialValue;
   struct
