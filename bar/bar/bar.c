@@ -7239,8 +7239,11 @@ bool configValueFormatPasswordHash(void **formatUserData, void *userData, String
   passwordHash = (Hash*)(*formatUserData);
   if (passwordHash != NULL)
   {
-    String_appendFormat(line,"%s:",Crypt_hashAlgorithmToString(passwordHash->cryptHashAlgorithm,"plain"));
-    Misc_base64Encode(line,passwordHash->data,passwordHash->length);
+    if (isHashsAvaiable(passwordHash))
+    {
+      String_appendFormat(line,"%s:",Crypt_hashAlgorithmToString(passwordHash->cryptHashAlgorithm,"plain"));
+      Misc_base64Encode(line,passwordHash->data,passwordHash->length);
+    }
 
     (*formatUserData) = NULL;
 
@@ -7424,16 +7427,25 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
   UNUSED_VARIABLE(userData);
 
   bandWidthNode = (BandWidthNode*)(*formatUserData);
-  if (bandWidthNode->fileName != NULL)
+  if (bandWidthNode != NULL)
   {
-    String_appendFormat(line,"%s",bandWidthNode->fileName);
+    if (bandWidthNode->fileName != NULL)
+    {
+      String_appendFormat(line,"%s",bandWidthNode->fileName);
+    }
+    else
+    {
+      String_appendFormat(line,"%lu",bandWidthNode->n);
+    }
+
+    (*formatUserData) = bandWidthNode->next;
+
+    return TRUE;
   }
   else
   {
-    String_appendFormat(line,"%lu",bandWidthNode->n);
+    return FALSE;
   }
-
-  return TRUE;
 }
 
 bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
@@ -8220,6 +8232,7 @@ bool configValueFormatCompressAlgorithms(void **formatUserData, void *userData, 
                         CmdOption_selectToString(COMPRESS_ALGORITHMS_DELTA,compressAlgorithmsDeltaByte->delta,NULL),
                         CmdOption_selectToString(COMPRESS_ALGORITHMS_BYTE, compressAlgorithmsDeltaByte->byte, NULL)
                        );
+
     (*formatUserData) = NULL;
 
     return TRUE;
@@ -8458,11 +8471,15 @@ bool configValueFormatKeyData(void **formatUserData, void *userData, String line
 
   UNUSED_VARIABLE(userData);
 
-  key = (Key*)(*formatUserData);
-  if (key != NULL)
+  if ((*formatUserData) != NULL)
   {
-    String_appendCString(line,"base64:");
-    Misc_base64Encode(line,key->data,key->length);
+    key = (Key*)(*formatUserData);
+    if (isKeyAvailable(key))
+    {
+      String_appendCString(line,"base64:");
+      Misc_base64Encode(line,key->data,key->length);
+    }
+
     (*formatUserData) = NULL;
 
     return TRUE;
@@ -8638,9 +8655,8 @@ bool configValueFormatHashData(void **formatUserData, void *userData, String lin
   hash = (const Hash*)(*formatUserData);
   if (hash != NULL)
   {
-    if (hash->data != NULL)
+    if (isHashAvailable(hash))
     {
-      // format line
       String_appendFormat(line,"%s:",Crypt_hashAlgorithmToString(hash->cryptHashAlgorithm,NULL));
       Misc_base64Encode(line,hash->data,hash->length);
     }
