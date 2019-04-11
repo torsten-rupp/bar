@@ -1617,17 +1617,15 @@ public static BufferedWriter              output;
               && keyFile.exists()         && keyFile.isFile()         && keyFile.canRead()
              )
           {
-            Socket plainSocket = null;
+            Socket    plainSocket = null;
+            SSLSocket sslSocket   = null;
             try
             {
-              SSLSocketFactory sslSocketFactory;
-              SSLSocket        sslSocket;
-
-              sslSocketFactory = getSocketFactory(caFile,
-                                                  certificateFile,
-                                                  keyFile,
-                                                  ""
-                                                 );
+              SSLSocketFactory sslSocketFactory = getSocketFactory(caFile,
+                                                                   certificateFile,
+                                                                   keyFile,
+                                                                   ""
+                                                                  );
 
               // create plain socket
               plainSocket = new Socket(name,port);
@@ -1691,7 +1689,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (BARException exception)
             {
-              try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
               if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+exception.getMessage()+")";
             }
             catch (ConnectionError error)
@@ -1722,6 +1719,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
             }
+            finally
+            {
+              if (socket == null)
+              {
+                if (sslSocket   != null) try { sslSocket.close();   } catch (IOException dummyException) { /* ignored */ }
+                if (plainSocket != null) try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
+              }
+            }
           }
         }
       }
@@ -1745,16 +1750,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               && (keyFile         != null) && keyFile.exists()         && keyFile.isFile()         && keyFile.canRead()
              )
           {
+            SSLSocket sslSocket = null;
             try
             {
-              SSLSocketFactory sslSocketFactory;
-              SSLSocket        sslSocket;
-
-              sslSocketFactory = getSocketFactory(caFile,
-                                                  certificateFile,
-                                                  keyFile,
-                                                  ""
-                                                 );
+              SSLSocketFactory sslSocketFactory = getSocketFactory(caFile,
+                                                                   certificateFile,
+                                                                   keyFile,
+                                                                   ""
+                                                                  );
 
               // create TLS socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
@@ -1822,6 +1825,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
             }
+            finally
+            {
+              if (socket == null)
+              {
+                if (sslSocket != null) try { sslSocket.close(); } catch (IOException dummyException) { /* ignored */ }
+              }
+            }
           }
         }
       }
@@ -1837,12 +1847,10 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           File keyFile = new File(keyData.keyFileName);
           if ((keyFile != null) && keyFile.exists() && keyFile.isFile() && keyFile.canRead())
           {
-            Socket plainSocket = null;
+            Socket    plainSocket = null;
+            SSLSocket sslSocket   = null;
             try
             {
-              SSLSocketFactory sslSocketFactory;
-              SSLSocket        sslSocket;
-
               // check if valid Java key store
               KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
               keystore.load(new FileInputStream(keyFile),null);
@@ -1850,7 +1858,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               // set Java key store to use
               System.setProperty("javax.net.ssl.trustStore",keyFile.getAbsolutePath());
 
-              sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+              SSLSocketFactory sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
 
               // create plain socket
               plainSocket = new Socket(name,port);
@@ -1943,6 +1951,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
             }
+            finally
+            {
+              if (socket == null)
+              {
+                if (sslSocket   != null) try { sslSocket.close();   } catch (IOException dummyException) { /* ignored */ }
+                if (plainSocket != null) try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
+              }
+            }
           }
         }
       }
@@ -1958,11 +1974,9 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
           File keyFile = new File(keyData.keyFileName);
           if ((keyFile != null) && keyFile.exists() && keyFile.isFile() && keyFile.canRead())
           {
+            SSLSocket sslSocket = null;
             try
             {
-              SSLSocketFactory sslSocketFactory;
-              SSLSocket        sslSocket;
-
               // check if valid Java key store
               KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
               keystore.load(new FileInputStream(keyFile),null);
@@ -1970,7 +1984,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               // set Java key store to use
               System.setProperty("javax.net.ssl.trustStore",keyFile.getAbsolutePath());
 
-              sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
+              SSLSocketFactory sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
 
               // create TLS socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
@@ -2038,6 +2052,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             {
               if (connectErrorMessage == null) connectErrorMessage = exception.getMessage();
             }
+            finally
+            {
+              if (socket == null)
+              {
+                if (sslSocket != null) try { sslSocket.close(); } catch (IOException dummyException) { /* ignored */ }
+              }
+            }
           }
         }
       }
@@ -2045,10 +2066,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     if ((socket == null) && (port != 0) && !forceSSL)
     {
+      Socket plainSocket = null;
       try
       {
         // create plain socket
-        Socket plainSocket = new Socket(name,port);
+        plainSocket = new Socket(name,port);
         plainSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
 
         input  = new BufferedReader(new InputStreamReader(plainSocket.getInputStream(),"UTF-8"));
@@ -2079,6 +2101,13 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       catch (Exception exception)
       {
         connectErrorMessage = exception.getMessage();
+      }
+      finally
+      {
+        if (socket == null)
+        {
+          if (plainSocket != null) try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
+        }
       }
     }
 
