@@ -900,7 +900,7 @@ LOCAL_INLINE bool waitTriggerReadWrite(DatabaseNode *databaseNode,
 #else /* not NDEBUG */
 LOCAL_INLINE bool __waitTriggerReadWrite(const char   *__fileName__,
                                          ulong        __lineNb__,
-                                         DatabaseNode *databaseNode
+                                         DatabaseNode *databaseNode,
                                          long         timeout
                                         )
 #endif /* NDEBUG */
@@ -970,7 +970,7 @@ LOCAL_INLINE bool waitTriggerTransaction(DatabaseNode *databaseNode,
 #else /* not NDEBUG */
 LOCAL_INLINE bool __waitTriggerTransaction(const char   *__fileName__,
                                            ulong        __lineNb__,
-                                           DatabaseNode *databaseNode
+                                           DatabaseNode *databaseNode,
                                            long         timeout
                                           )
 #endif /* NDEBUG */
