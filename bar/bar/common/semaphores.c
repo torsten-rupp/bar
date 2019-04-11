@@ -214,18 +214,18 @@
     #define __SEMAPHORE_WAIT_TIMEOUT(semaphore,debugFlag,text,condition,mutex,timeout,lockedFlag) \
       do \
       { \
-        struct timespec __tp; \
+        struct timespec __timespec; \
         \
         assert(semaphore != NULL); \
         assert(timeout != WAIT_FOREVER); \
         \
-        clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
-        __tp.tv_nsec %= 1000000L; \
+        clock_gettime(CLOCK_REALTIME,&__timespec); \
+        __timespec.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __timespec.tv_sec  = __tp.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
+        __timespec.tv_nsec %= 1000000L; \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
-        if (pthread_cond_timedwait(condition,mutex,&__tp) != 0) \
+        if (pthread_cond_timedwait(condition,mutex,&__timespec) != 0) \
         { \
           lockedFlag = FALSE; \
         } \
@@ -325,17 +325,18 @@
     #define __SEMAPHORE_WAIT_TIMEOUT(semaphore,debugFlag,text,condition,mutex,timeout,lockedFlag) \
       do \
       { \
-        struct timespec __tp; \
+        struct timespec __timespec; \
         \
         assert(semaphore != NULL); \
+        assert(timeout != WAIT_FOREVER); \
         \
-        clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/10000000L)+(timeout))/1000L; \
+        clock_gettime(CLOCK_REALTIME,&__timespec); \
+        __timespec.tv_nsec = __timespec.tv_nsec+((timeout)%1000L)*1000000L; \
+        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
+        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/10000000L)+(timeout))/1000L; \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
-        if (pthread_cond_timedwait(condition,mutex,&__tp) != 0) \
+        if (pthread_cond_timedwait(condition,mutex,&__timespec) != 0) \
         { \
           lockedFlag = FALSE; \
         } \
@@ -419,17 +420,19 @@
     #define __SEMAPHORE_WAIT_TIMEOUT(semaphore,debugFlag,text,condition,mutex,timeout,lockedFlag) \
       do \
       { \
-        struct timespec __tp; \
+        struct timespec __timespec; \
+        \
+        assert(timeout != WAIT_FOREVER); \
         \
         UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
         \
-        clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
-        __tp.tv_nsec %= 1000000L; \
+        clock_gettime(CLOCK_REALTIME,&__timespec); \
+        __timespec.tv_nsec = __timespec.tv_nsec+((timeout)%1000L)*1000000L; \
+        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
+        __timespec.tv_nsec %= 1000000L; \
         \
-        if (pthread_cond_timedwait(condition,mutex,&__tp) != 0) lockedFlag = FALSE; \
+        if (pthread_cond_timedwait(condition,mutex,&__timespec) != 0) lockedFlag = FALSE; \
       } \
       while (0)
 
@@ -496,7 +499,14 @@
       { \
         UNUSED_VARIABLE(text); \
         \
-        if (pthread_cond_timedwait(condition,semaphore,timeout) == ETIMEDOUT) lockedFlag = FALSE; \
+        assert(timeout != WAIT_FOREVER); \
+        \
+        clock_gettime(CLOCK_REALTIME,&__timespec); \
+        __timespec.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __timespec.tv_sec  = __tp.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
+        __timespec.tv_nsec %= 1000000L; \
+        \
+        if (pthread_cond_timedwait(condition,semaphore,&__timespec) == ETIMEDOUT) lockedFlag = FALSE; \
       } \
       while (0)
 
