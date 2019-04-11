@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-03-25 12:06+0100\n"
+"POT-Creation-Date: 2019-04-09 16:21+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -848,23 +848,23 @@ msgstr ""
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.c:1360
+#: errors.c:1361
 msgid "invalid index"
 msgstr ""
 
-#: errors.c:1363
+#: errors.c:1369
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.c:1366
+#: errors.c:1372
 msgid "master disconnected"
 msgstr ""
 
-#: errors.c:1369
+#: errors.c:1375
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.c:1372
+#: errors.c:1378
 msgid "slave is not paired"
 msgstr ""
 
