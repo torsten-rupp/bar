@@ -220,8 +220,8 @@
         assert(timeout != WAIT_FOREVER); \
         \
         clock_gettime(CLOCK_REALTIME,&__timespec); \
-        __timespec.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
-        __timespec.tv_sec  = __tp.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
+        __timespec.tv_nsec = __timespec.tv_nsec+((timeout)%1000L)*1000000L; \
+        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
         __timespec.tv_nsec %= 1000000L; \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
