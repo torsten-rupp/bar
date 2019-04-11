@@ -812,17 +812,26 @@ LOCAL_INLINE void readWritesDecrement(DatabaseNode *databaseNode)
 * Name   : waitTriggerRead
 * Purpose: wait trigger database read unlock
 * Input  : databaseNode - database node
+*          timeout      - timeout [ms] or WAIT_FOREVER
 * Output : -
-* Return : -
+* Return : TRUE if triggered, FALSE on timeout
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL_INLINE void waitTriggerRead(DatabaseNode *databaseNode)
+LOCAL_INLINE bool waitTriggerRead(DatabaseNode *databaseNode,
+                                  long         timeout
+                                 )
 #else /* not NDEBUG */
-LOCAL_INLINE void __waitTriggerRead(const char *__fileName__, ulong __lineNb__, DatabaseNode *databaseNode)
+LOCAL_INLINE bool __waitTriggerRead(const char   *__fileName__,
+                                    ulong        __lineNb__,
+                                    DatabaseNode *databaseNode
+                                    long         timeout
+                                   )
 #endif /* NDEBUG */
 {
+  struct timespec timespec;
+
   assert(databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
@@ -838,9 +847,31 @@ LOCAL_INLINE void __waitTriggerRead(const char *__fileName__, ulong __lineNb__, 
   #endif /* not NDEBUG */
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
-    pthread_cond_wait(&databaseNode->readTrigger,databaseNode->lock);
+    if (timeout != WAIT_FOREVER)
+    {
+      clock_gettime(CLOCK_REALTIME,&timespec);
+      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
+      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
+      timespec.tv_nsec %= 1000000L;
+      if (pthread_cond_timedwait(&databaseNode->readTrigger,databaseNode->lock,&timespec) == ETIMEDOUT) return FALSE;
+    }
+    else
+    {
+      pthread_cond_wait(&databaseNode->readTrigger,databaseNode->lock);
+    }
   #else /* not DATABASE_LOCK_PER_INSTANCE */
-    pthread_cond_wait(&databaseNode->readTrigger,&databaseLock);
+    if (timeout != WAIT_FOREVER)
+    {
+      clock_gettime(CLOCK_REALTIME,&timespec);
+      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
+      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
+      timespec.tv_nsec %= 1000000L;
+      if (pthread_cond_timedwait(&databaseNode->readTrigger,&databaseLock,&timespec) == ETIMEDOUT) return FALSE;
+    }
+    else
+    {
+      pthread_cond_wait(&databaseNode->readTrigger,&databaseLock);
+    }
   #endif /* DATABASE_LOCK_PER_INSTANCE */
 
   #ifndef NDEBUG
@@ -848,23 +879,34 @@ LOCAL_INLINE void __waitTriggerRead(const char *__fileName__, ulong __lineNb__, 
       fprintf(stderr,"%s, %d: %s                wait rw #%3u %p done\n",__fileName__,__lineNb__,Thread_getCurrentIdString(),databaseNode->readWriteCount,&databaseNode->readWriteTrigger);
     #endif /* DATABASE_DEBUG_LOCK */
   #endif /* not NDEBUG */
+
+  return TRUE;
 }
 
 /***********************************************************************\
 * Name   : waitTriggerReadWrite
 * Purpose: wait trigger database read/write unlock
 * Input  : databaseNode - database node
+*          timeout      - timeout [ms] or WAIT_FOREVER
 * Output : -
-* Return : -
+* Return : TRUE if triggered, FALSE on timeout
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL_INLINE void waitTriggerReadWrite(DatabaseNode *databaseNode)
+LOCAL_INLINE bool waitTriggerReadWrite(DatabaseNode *databaseNode,
+                                       long         timeout
+                                      )
 #else /* not NDEBUG */
-LOCAL_INLINE void __waitTriggerReadWrite(const char *__fileName__, ulong __lineNb__, DatabaseNode *databaseNode)
+LOCAL_INLINE bool __waitTriggerReadWrite(const char   *__fileName__,
+                                         ulong        __lineNb__,
+                                         DatabaseNode *databaseNode
+                                         long         timeout
+                                        )
 #endif /* NDEBUG */
 {
+  struct timespec timespec;
+
   assert(databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
@@ -874,37 +916,67 @@ LOCAL_INLINE void __waitTriggerReadWrite(const char *__fileName__, ulong __lineN
   #endif /* not NDEBUG */
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
-    pthread_cond_wait(&databaseNode->readWriteTrigger,databaseNode->lock);
+    if (timeout != WAIT_FOREVER)
+    {
+      clock_gettime(CLOCK_REALTIME,&timespec);
+      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
+      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
+      timespec.tv_nsec %= 1000000L;
+      if (pthread_cond_timedwait(&databaseNode->readWriteTrigger,databaseNode->lock,&timespec) == ETIMEDOUT) return FALSE;
+    }
+    else
+    {
+      pthread_cond_wait(&databaseNode->readWriteTrigger,databaseNode->lock);
+    }
   #else /* not DATABASE_LOCK_PER_INSTANCE */
-    pthread_cond_wait(&databaseNode->readWriteTrigger,&databaseLock);
+    if (timeout != WAIT_FOREVER)
+    {
+      clock_gettime(CLOCK_REALTIME,&timespec);
+      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
+      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
+      timespec.tv_nsec %= 1000000L;
+      if (pthread_cond_timedwait(&databaseNode->readWriteTrigger,&databaseLock,&timespec) == ETIMEDOUT) return FALSE;
+    }
+    else
+    {
+      pthread_cond_wait(&databaseNode->readWriteTrigger,&databaseLock);
+    }
   #endif /* DATABASE_LOCK_PER_INSTANCE */
 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCK
     #endif /* DATABASE_DEBUG_LOCK */
   #endif /* not NDEBUG */
+
+  return TRUE;
 }
 
 /***********************************************************************\
 * Name   : waitTriggerTransaction
 * Purpose: wait trigger database transaction unlock
 * Input  : databaseNode - database node
+*          timeout      - timeout [ms] or WAIT_FOREVER
 * Output : -
-* Return : -
+* Return : TRUE if triggered, FALSE on timeout
 * Notes  : -
 \***********************************************************************/
 
 #if 0
 //TODO: not used - remove?
 #ifdef NDEBUG
-LOCAL_INLINE void waitTriggerTransaction(DatabaseNode *databaseNode)
+LOCAL_INLINE bool waitTriggerTransaction(DatabaseNode *databaseNode,
+                                         long         timeout
+                                        )
 #else /* not NDEBUG */
-LOCAL_INLINE void __waitTriggerTransaction(const char   *__fileName__,
+LOCAL_INLINE bool __waitTriggerTransaction(const char   *__fileName__,
                                            ulong        __lineNb__,
                                            DatabaseNode *databaseNode
+                                           long         timeout
                                           )
 #endif /* NDEBUG */
 {
+  struct timespec timespec;
+
   assert(databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseNode);
 
@@ -914,15 +986,39 @@ LOCAL_INLINE void __waitTriggerTransaction(const char   *__fileName__,
   #endif /* not NDEBUG */
 
   #ifdef DATABASE_LOCK_PER_INSTANCE
-    pthread_cond_wait(&databaseNode->transactionTrigger,databaseNode->lock);
+    if (timeout != WAIT_FOREVER)
+    {
+      clock_gettime(CLOCK_REALTIME,&timespec);
+      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
+      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
+      timespec.tv_nsec %= 1000000L;
+      if (pthread_cond_timedwait(&databaseNode->transactionTrigger,databaseNode->lock,&timespec) == ETIMEDOUT) return FALSE;
+    }
+    else
+    {
+      pthread_cond_wait(&databaseNode->transactionTrigger,databaseNode->lock);
+    }
   #else /* not DATABASE_LOCK_PER_INSTANCE */
-    pthread_cond_wait(&databaseNode->transactionTrigger,&databaseLock);
+    if (timeout != WAIT_FOREVER)
+    {
+      clock_gettime(CLOCK_REALTIME,&timespec);
+      timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
+      timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
+      timespec.tv_nsec %= 1000000L;
+      if (pthread_cond_timedwait(&databaseNode->transactionTrigger,&databaseLock,&timespec) == ETIMEDOUT) return FALSE;
+    }
+    else
+    {
+      pthread_cond_wait(&databaseNode->transactionTrigger,&databaseLock);
+    }
   #endif /* DATABASE_LOCK_PER_INSTANCE */
 
   #ifndef NDEBUG
     #ifdef DATABASE_DEBUG_LOCK
     #endif /* DATABASE_DEBUG_LOCK */
   #endif /* not NDEBUG */
+
+  return TRUE;
 }
 #endif // 0
 
@@ -2827,17 +2923,18 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
 }
 
 #ifdef NDEBUG
-  void Database_lock(DatabaseHandle    *databaseHandle,
+  bool Database_lock(DatabaseHandle    *databaseHandle,
                      DatabaseLockTypes lockType
                     )
 #else /* not NDEBUG */
-  void __Database_lock(const char        *__fileName__,
+  bool __Database_lock(const char        *__fileName__,
                        ulong             __lineNb__,
                        DatabaseHandle    *databaseHandle,
                        DatabaseLockTypes lockType
                       )
 #endif /* NDEBUG */
 {
+  bool lockedFlag;
   #ifdef DATABASE_DEBUG_LOCK
     ulong debugLockCounter = 0L;
   #endif /* DATABASE_DEBUG_LOCK */
@@ -2846,12 +2943,15 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
 
+  lockedFlag = FALSE;
+
   switch (lockType)
   {
     case DATABASE_LOCK_TYPE_NONE:
       break;
     case DATABASE_LOCK_TYPE_READ:
-      DATABASE_HANDLE_DO(databaseHandle,
+      DATABASE_HANDLE_DOX(lockedFlag,
+                          databaseHandle,
       {
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
@@ -2880,7 +2980,11 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
           do
           {
             assert(isReadWriteLock(databaseHandle->databaseNode));
-            waitTriggerRead(databaseHandle->databaseNode);
+            if (!waitTriggerRead(databaseHandle->databaseNode,databaseHandle->timeout))
+            {
+              pendingReadsDecrement(databaseHandle->databaseNode);
+              return FALSE;
+            }
           }
           while (isReadWriteLock(databaseHandle->databaseNode));
 
@@ -2905,10 +3009,13 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
                   __fileName__,__lineNb__
                  );
         #endif /* DATABASE_DEBUG_LOCK */
+
+        return TRUE;
       });
       break;
     case DATABASE_LOCK_TYPE_READ_WRITE:
-      DATABASE_HANDLE_DO(databaseHandle,
+      DATABASE_HANDLE_DOX(lockedFlag,
+                          databaseHandle,
       {
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
@@ -2937,7 +3044,11 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
           do
           {
             assert(isReadWriteLock(databaseHandle->databaseNode));
-            waitTriggerReadWrite(databaseHandle->databaseNode);
+            if (!waitTriggerReadWrite(databaseHandle->databaseNode,databaseHandle->timeout))
+            {
+              pendingReadWritesDecrement(databaseHandle->databaseNode);
+              return FALSE;
+            }
           }
           while (isReadWriteLock(databaseHandle->databaseNode));
           assert(Thread_equalThreads(databaseHandle->databaseNode->readWriteLockedBy,THREAD_ID_NONE));
@@ -2964,6 +3075,8 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
                   __fileName__,__lineNb__
                  );
         #endif /* DATABASE_DEBUG_LOCK */
+
+        return TRUE;
       });
       break;
   }
@@ -2974,6 +3087,8 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
     databaseHandle->locked.text[0]  = '\0';
     databaseHandle->locked.t0       = Misc_getTimestamp();
   #endif /* not NDEBUG */
+
+  return lockedFlag;
 }
 
 #ifdef NDEBUG

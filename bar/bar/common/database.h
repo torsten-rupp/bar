@@ -596,16 +596,16 @@ void Database_yield(DatabaseHandle *databaseHandle,
 * Purpose: lock database exclusive for this handle
 * Input  : databaseHandle - database handle
 * Output : -
-* Return : -
+* Return : TRUE iff locked
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-  void Database_lock(DatabaseHandle    *databaseHandle,
+  bool Database_lock(DatabaseHandle    *databaseHandle,
                      DatabaseLockTypes lockType
                     );
 #else /* not NDEBUG */
-  void __Database_lock(const char        *__fileName__,
+  bool __Database_lock(const char        *__fileName__,
                        ulong             __lineNb__,
                        DatabaseHandle    *databaseHandle,
                        DatabaseLockTypes lockType
