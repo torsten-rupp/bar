@@ -825,7 +825,7 @@ LOCAL_INLINE bool waitTriggerRead(DatabaseNode *databaseNode,
 #else /* not NDEBUG */
 LOCAL_INLINE bool __waitTriggerRead(const char   *__fileName__,
                                     ulong        __lineNb__,
-                                    DatabaseNode *databaseNode
+                                    DatabaseNode *databaseNode,
                                     long         timeout
                                    )
 #endif /* NDEBUG */
