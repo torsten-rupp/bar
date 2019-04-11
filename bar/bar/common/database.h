@@ -428,7 +428,7 @@ void Database_doneAll(void);
 * Input  : databaseHandle   - database handle variable
 *          fileName         - file name or NULL for "in memory"
 *          databaseOpenMode - open mode; see DatabaseOpenModes
-*          timeout          - timeout [ms]
+*          timeout          - timeout [ms] or WAIT_FOREVER
 * Output : databaseHandle - database handle
 * Return : ERROR_NONE or error code
 * Notes  : -
