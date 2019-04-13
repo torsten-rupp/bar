@@ -314,13 +314,15 @@ LOCAL DatabaseList databaseList;
   #define DATABASE_DO(databaseHandle,lockType,block) \
     do \
     { \
-      __begin(__FILE__,__LINE__,databaseHandle,lockType); \
-      ({ \
-        auto void __closure__(void); \
-        \
-        void __closure__(void)block; __closure__; \
-      })(); \
-      __end(__FILE__,__LINE__,databaseHandle,lockType); \
+      if (__begin(__FILE__,__LINE__,databaseHandle,lockType)) \
+      { \
+        ({ \
+          auto void __closure__(void); \
+          \
+          void __closure__(void)block; __closure__; \
+        })(); \
+        __end(__FILE__,__LINE__,databaseHandle,lockType); \
+      } \
     } \
     while (0)
 #else /* NDEBUG */
@@ -341,7 +343,8 @@ LOCAL DatabaseList databaseList;
 /***********************************************************************\
 * Name   : DATABASE_DOX
 * Purpose: database block-operation
-* Input  : databaseHandle - database handle
+* Input  : defaultResult  - default result
+*          databaseHandle - database handle
 *          lockType       - lock type; see DATABASE_LOCK_TYPE_*
 *          block          - code block
 * Output : result - result
@@ -350,42 +353,44 @@ LOCAL DatabaseList databaseList;
 \***********************************************************************/
 
 #ifndef NDEBUG
-  #define DATABASE_DOX(result,databaseHandle,lockType,block) \
+  #define DATABASE_DOX(result,defaultResult,databaseHandle,lockType,block) \
     do \
     { \
-      __begin(__FILE__,__LINE__,databaseHandle,lockType); \
-      result = ({ \
-                 auto typeof(result) __closure__(void); \
-                 \
-                 typeof(result) __closure__(void)block; __closure__; \
-               })(); \
-      __end(__FILE__,__LINE__,databaseHandle,lockType); \
+      if (__begin(__FILE__,__LINE__,databaseHandle,lockType)) \
+      { \
+        result = ({ \
+                   auto typeof(result) __closure__(void); \
+                   \
+                   typeof(result) __closure__(void)block; __closure__; \
+                 })(); \
+        __end(__FILE__,__LINE__,databaseHandle,lockType); \
+      } \
+      else \
+      { \
+        result = defaultResult; \
+      } \
     } \
     while (0)
 #else /* NDEBUG */
-  #define DATABASE_DOX(result,databaseHandle,lockType,block) \
+  #define DATABASE_DOX(result,defaultResult,ddatabaseHandle,lockType,block) \
     do \
     { \
-      begin(databaseHandle,lockType); \
-      result = ({ \
-                 auto typeof(result) __closure__(void); \
-                 \
-                 typeof(result) __closure__(void)block; __closure__; \
-               })(); \
-      end(databaseHandle,lockType); \
+      if (begin(databaseHandle,lockType)) \
+      { \
+        result = ({ \
+                   auto typeof(result) __closure__(void); \
+                   \
+                   typeof(result) __closure__(void)block; __closure__; \
+                 })(); \
+        end(databaseHandle,lockType); \
+      } \
+      else \
+      { \
+        result = defaultResult; \
+      } \
     } \
     while (0)
 #endif /* not NDEBUG */
-  #define DATABASE_DOXXX(result,databaseHandle,lockType,block) \
-    do \
-    { \
-      result = ({ \
-                 auto typeof(result) __closure__(void); \
-                 \
-                 typeof(result) __closure__(void)block; __closure__; \
-               })(); \
-    } \
-    while (0)
 
 #ifndef NDEBUG
   #define begin(...)                      __begin                     (__FILE__,__LINE__, ## __VA_ARGS__)
@@ -1142,30 +1147,38 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
 * Input  : databaseHandle - database handle
 *          lockType       - lock type; see DATABASE_LOCK_TYPE_*
 * Output : -
-* Return : -
+* Return : TRUE iff locked
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL_INLINE void begin(DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType)
+LOCAL_INLINE bool begin(DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType)
 #else /* not NDEBUG */
-LOCAL_INLINE void __begin(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType)
+LOCAL_INLINE bool __begin(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType)
 #endif /* NDEBUG */
 {
+  bool locked;
+
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   #ifndef NDEBUG
-    __Database_lock(__fileName__,__lineNb__,databaseHandle,lockType);
+    locked = __Database_lock(__fileName__,__lineNb__,databaseHandle,lockType);
   #else /* NDEBUG */
-    Database_lock(databaseHandle,lockType);
+    locked = Database_lock(databaseHandle,lockType);
   #endif /* not NDEBUG */
+  if (!locked)
+  {
+    return FALSE;
+  }
 
   #ifndef NDEBUG
     #ifdef HAVE_BACKTRACE
       BACKTRACE(databaseHandle->current.stackTrace,databaseHandle->current.stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   #endif /* not NDEBUG */
+
+  return TRUE;
 }
 
 /***********************************************************************\
@@ -2193,7 +2206,8 @@ LOCAL Errors getTableList(StringList     *tableList,
   StringList_init(tableList);
 
 //TODO: remove
-  DATABASE_DOXXX(error,
+  DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
   {
@@ -2250,7 +2264,8 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
   List_init(columnList);
 
 //TODO: remove
-  DATABASE_DOXXX(error,
+  DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
   {
@@ -4425,6 +4440,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     DATABASE_DOX(error,
+                 ERROR_DATABASE_TIMEOUT,
                  databaseHandle,
                  DATABASE_LOCK_TYPE_READ_WRITE,
     {
@@ -4527,6 +4543,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       // execute SQL command
       DATABASE_DEBUG_SQL(databaseHandle,sqlString);
       DATABASE_DOX(error,
+                   ERROR_DATABASE_TIMEOUT,
                    databaseHandle,
                    DATABASE_LOCK_TYPE_READ_WRITE,
       {
@@ -4709,7 +4726,11 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     }
 
     // lock
-    Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
+    if (!Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE))
+    {
+      String_delete(sqlString);
+      return ERROR_DATABASE_TIMEOUT;
+    }
 
     // begin transaction
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
@@ -5050,6 +5071,7 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
   // execute SQL command
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
   {
@@ -5117,7 +5139,14 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
   #endif /* not NDEBUG */
 
   // lock
-  Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ);
+  if (!Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ))
+  {
+    #ifndef NDEBUG
+      String_delete(databaseQueryHandle->sqlString);
+    #endif /* not NDEBUG */
+    String_delete(sqlString);
+    return ERROR_DATABASE_TIMEOUT;
+  }
 
   // prepare SQL command execution
   DATABASE_DEBUG_SQL(databaseHandle,sqlString);
@@ -5550,6 +5579,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
   DATABASE_DOX(existsFlag,
+               FALSE,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
   {
@@ -5669,6 +5699,7 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get id",sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
   {
@@ -5793,6 +5824,7 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get id",sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
   {
@@ -5916,6 +5948,7 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get int64",sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
   {
@@ -6035,6 +6068,7 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
   }
   DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
   {
@@ -6145,6 +6179,7 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get double",sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
   {
@@ -6264,6 +6299,7 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
   }
   DATABASE_DEBUG_SQLX(databaseHandle,"set double",sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
   {
@@ -6374,6 +6410,7 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"get string",sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
   {
@@ -6494,6 +6531,7 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
   // execute SQL command
   DATABASE_DEBUG_SQLX(databaseHandle,"set string",sqlString);
   DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
   {
