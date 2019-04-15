@@ -2413,9 +2413,7 @@ LOCAL void schedulerThreadCode(void)
                         executeScheduleNode->uuid,
                         executeScheduleNode->customText,
                         executeScheduleNode->archiveType,
-//TODO                        executeScheduleNode->noStorage ? STORAGE_FLAG_NO_STORAGE : STORAGE_FLAGS_NONE,
-#warning TODO
-STORAGE_FLAGS_NONE,
+                        executeScheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
                         executeScheduleDateTime,
                         "scheduler"
                        );
@@ -4718,8 +4716,8 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
 }
 
 /***********************************************************************\
-* Name   : serverCommand_quit
-* Purpose: quit server
+* Name   : serverCommand_actionResult
+* Purpose: set action result
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -11242,10 +11240,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
                 scheduleNode->uuid,
                 scheduleNode->customText,
                 scheduleNode->archiveType,
-//TODO:
-//                scheduleNode->noStorage ? STORAGE_FLAG_NO_STORAGE : STORAGE_FLAGS_NONE,
-#warning TODO
-STORAGE_FLAGS_NONE,
+                scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
                 Misc_getCurrentDateTime(),
                 getClientInfo(clientInfo,buffer,sizeof(buffer))
                );
@@ -18128,9 +18123,6 @@ Errors Server_run(ServerModes       mode,
           {
             if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
             {
-//TODO
-#warning TODO which impelementation?
-#if 1
               if (ServerIO_receiveData(&clientNode->clientInfo.io))
               {
                 // process all commands
@@ -18173,57 +18165,6 @@ Errors Server_run(ServerModes       mode,
                 // done client and free resources
                 deleteClient(disconnectClientNode);
               }
-#else
-              // receive data from client
-              Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-              if (receivedBytes > 0)
-              {
-                // received data -> process
-                do
-                {
-                  for (i = 0; i < receivedBytes; i++)
-                  {
-                    if (buffer[i] != '\n')
-                    {
-                      String_appendChar(clientNode->commandString,buffer[i]);
-                    }
-                    else
-                    {
-                      processCommand(&clientNode->clientInfo,clientNode->commandString);
-                      String_clear(clientNode->commandString);
-                    }
-                  }
-                  error = Network_receive(&clientNode->clientInfo.io.network.socketHandle,buffer,sizeof(buffer),NO_WAIT,&receivedBytes);
-                }
-                while ((error == ERROR_NONE) && (receivedBytes > 0));
-              }
-              else
-              {
-                // disconnect -> remove from client list
-                disconnectClientNode = clientNode;
-                List_remove(&clientList,disconnectClientNode);
-
-                // update authorization fail info
-                switch (disconnectClientNode->clientInfo.authorizationState)
-                {
-                  case AUTHORIZATION_STATE_WAITING:
-                    break;
-                  case AUTHORIZATION_STATE_OK:
-                    // reset authorization failure
-                    resetAuthorizationFail(disconnectClientNode);
-                    break;
-                  case AUTHORIZATION_STATE_FAIL:
-                    // increment authorization failure
-                    incrementAuthorizationFail(disconnectClientNode);
-                    break;
-                }
-
-                printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
-
-                // done client and free resources
-                deleteClient(disconnectClientNode);
-              }
-#endif
             }
             else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
             {
