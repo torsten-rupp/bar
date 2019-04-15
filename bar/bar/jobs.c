@@ -1418,35 +1418,6 @@ LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userD
 }
 
 /***********************************************************************\
-* Name   : parseScheduleArchiveType
-* Purpose: parse archive type
-* Input  : s - string to parse
-* Output : archiveType - archive type
-* Return : TRUE iff archive type parsed
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool parseScheduleArchiveType(ConstString s, ArchiveTypes *archiveType)
-{
-  assert(s != NULL);
-  assert(archiveType != NULL);
-
-  if (String_equalsCString(s,"*"))
-  {
-    (*archiveType) = ARCHIVE_TYPE_NORMAL;
-  }
-  else
-  {
-    if (!Archive_parseType(String_cString(s),archiveType,NULL))
-    {
-      return FALSE;
-    }
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
 * Name   : configValueParseDeprecatedRemoteHost
 * Purpose: config value option call back for deprecated remote host
 * Input  : userData              - user data
@@ -2280,9 +2251,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode)
     }
 
     // write file
-#warning TODO
-//    error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
-error = 0;
+    error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
     if (error != ERROR_NONE)
     {
       File_close(&fileHandle);
