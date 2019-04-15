@@ -492,7 +492,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     Misc_base64Encode(String_clear(encodedData),p,n);
 
     // send data
-fprintf(stderr,"%s, %d: n=%lld\n",__FILE__,__LINE__,n);
+//fprintf(stderr,"%s, %d: n=%llu\n",__FILE__,__LINE__,n);
     error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
                                  MASTER_DEBUG_LEVEL_DATA,
                                  &ids[idCount],

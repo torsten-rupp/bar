@@ -82,6 +82,7 @@ typedef struct
   bool dryRun : 1;
 } StorageFlags;
 extern const StorageFlags STORAGE_FLAGS_NONE;
+extern const StorageFlags STORAGE_FLAGS_NO_STORAGE;
 
 // status info data
 typedef struct

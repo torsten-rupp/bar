@@ -55,7 +55,8 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-const StorageFlags STORAGE_FLAGS_NONE = { FALSE, FALSE };
+const StorageFlags STORAGE_FLAGS_NONE       = { .noStorage=FALSE, .dryRun=FALSE };
+const StorageFlags STORAGE_FLAGS_NO_STORAGE = { .noStorage=TRUE, .dryRun=FALSE };
 
 /* file data buffer size */
 #define BUFFER_SIZE (64*1024)
