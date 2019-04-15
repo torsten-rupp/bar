@@ -42,6 +42,7 @@
 typedef struct
 {
   sem_t      lock;
+  Thread     *thread;
   const char *name;
   int        niceLevel;
   void       (*entryFunction)(void*);
@@ -621,6 +622,16 @@ LOCAL void debugThreadInit(void)
 }
 #endif /* NDEBUG */
 
+LOCAL void threadTerminated(void *userData)
+{
+  Thread *thread = (Thread*)userData;
+
+  assert(thread != NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+  thread->terminatedFlag = TRUE;
+}
+
 /***********************************************************************\
 * Name   : threadStartCode
 * Purpose: thread start code
@@ -638,34 +649,38 @@ LOCAL void *threadStartCode(void *userData)
 
   assert(startInfo != NULL);
 
-  // try to set thread name
-  if (startInfo->name != NULL)
+  pthread_cleanup_push(threadTerminated,startInfo->thread);
   {
-    (void)pthread_setname_np(pthread_self(),startInfo->name);
-  }
-
-  #ifndef NDEBUG
-    debugThreadStackTraceSetThreadName(pthread_self(),startInfo->name);
-  #endif /* NDEBUG */
-
-  #if   defined(PLATFORM_LINUX)
-    if (nice(startInfo->niceLevel) == -1)
+    // try to set thread name
+    if (startInfo->name != NULL)
     {
-      // ignore error
+      (void)pthread_setname_np(pthread_self(),startInfo->name);
     }
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
 
-  // get local copy of start data
-  entryFunction = startInfo->entryFunction;
-  argument      = startInfo->argument;
+    #ifndef NDEBUG
+      debugThreadStackTraceSetThreadName(pthread_self(),startInfo->name);
+    #endif /* NDEBUG */
 
-  // signal thread started
-  sem_post(&startInfo->lock);
+    #if   defined(PLATFORM_LINUX)
+      if (nice(startInfo->niceLevel) == -1)
+      {
+        // ignore error
+      }
+    #elif defined(PLATFORM_WINDOWS)
+    #endif /* PLATFORM_... */
 
-  // run thread code
-  assert(entryFunction != NULL);
-  entryFunction(argument);
+    // get local copy of start data
+    entryFunction = startInfo->entryFunction;
+    argument      = startInfo->argument;
+
+    // signal thread started
+    sem_post(&startInfo->lock);
+
+    // run thread code
+    assert(entryFunction != NULL);
+    entryFunction(argument);
+  }
+  pthread_cleanup_pop(1);
 
   return NULL;
 }
@@ -737,6 +752,7 @@ bool __Thread_init(const char *__fileName__,
   // init thread info
   result = sem_init(&startInfo.lock,0,0);
   assert(result == 0);
+  startInfo.thread        = thread;
   startInfo.name          = name;
   startInfo.niceLevel     = niceLevel;
   startInfo.entryFunction = entryFunction;
@@ -754,8 +770,8 @@ bool __Thread_init(const char *__fileName__,
   #endif /* HAVE_PTHREAD_ATTR_SETNAME */
 
   // start thread
-  thread->quitFlag       = FALSE;
-  thread->terminatedFlag = FALSE;
+  thread->quitFlag   = FALSE;
+  thread->joinedFlag = FALSE;
   if (pthread_create(&thread->handle,
                      &threadAttributes,
                      threadStartCode,
@@ -799,6 +815,7 @@ void __Thread_done(const char *__fileName__,
 {
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
+  assert(Thread_isTerminated(thread));
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(thread,Thread);
@@ -835,14 +852,14 @@ bool Thread_join(Thread *thread)
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
 
-  if (!thread->terminatedFlag)
+  if (!thread->joinedFlag)
   {
     // Note: pthread_join() can only be called once with success!
     if (pthread_join(thread->handle,NULL) != 0)
     {
       return FALSE;
     }
-    thread->terminatedFlag = TRUE;
+    thread->joinedFlag = TRUE;
   }
 
   return TRUE;

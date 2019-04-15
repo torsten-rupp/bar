@@ -39,7 +39,8 @@ typedef struct
 {
   pthread_t handle;
   bool      quitFlag;             // TRUE to request thread quit
-  bool      terminatedFlag;       // TRUE iff thread terminated/joined
+  bool      terminatedFlag;       // TRUE iff terminated
+  bool      joinedFlag;           // TRUE iff thread joined
 } Thread;
 
 // thread local storage
@@ -228,6 +229,26 @@ INLINE bool Thread_isQuit(const Thread *thread)
   DEBUG_CHECK_RESOURCE_TRACE(thread);
 
   return thread->quitFlag;
+}
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Thread_isTerminated
+* Purpose: check if thread terminated
+* Input  : thread - thread
+* Output : -
+* Return : TRUE iff quit thread requested
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Thread_isTerminated(const Thread *thread);
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
+INLINE bool Thread_isTerminated(const Thread *thread)
+{
+  assert(thread != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(thread);
+
+  return thread->terminatedFlag;
 }
 #endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
