@@ -304,6 +304,7 @@ LOCAL DatabaseList databaseList;
 * Purpose: database block-operation
 * Input  : databaseHandle - database handle
 *          lockType       - lock type; see DATABASE_LOCK_TYPE_*
+*          timeout        - timeout [ms] or WAIT_FOREVER
 *          block          - code block
 * Output : -
 * Return : -
@@ -311,10 +312,10 @@ LOCAL DatabaseList databaseList;
 \***********************************************************************/
 
 #ifndef NDEBUG
-  #define DATABASE_DO(databaseHandle,lockType,block) \
+  #define DATABASE_DO(databaseHandle,lockType,timeout,block) \
     do \
     { \
-      if (__begin(__FILE__,__LINE__,databaseHandle,lockType)) \
+      if (__begin(__FILE__,__LINE__,databaseHandle,lockType,timeout)) \
       { \
         ({ \
           auto void __closure__(void); \
@@ -326,16 +327,18 @@ LOCAL DatabaseList databaseList;
     } \
     while (0)
 #else /* NDEBUG */
-  #define DATABASE_DO(databaseHandle,lockType,block) \
+  #define DATABASE_DO(databaseHandle,lockType,timeout,block) \
     do \
     { \
-      begin(databaseHandle,lockType); \
-      ({ \
-        auto void __closure__(void); \
-        \
-        void __closure__(void)block; __closure__; \
-      })(); \
-      end(databaseHandle,lockType); \
+      if (begin(databaseHandle,lockType,timeout)) \
+      { \
+        ({ \
+          auto void __closure__(void); \
+          \
+          void __closure__(void)block; __closure__; \
+        })(); \
+        end(databaseHandle,lockType); \
+      } \
     } \
     while (0)
 #endif /* not NDEBUG */
@@ -346,6 +349,7 @@ LOCAL DatabaseList databaseList;
 * Input  : defaultResult  - default result
 *          databaseHandle - database handle
 *          lockType       - lock type; see DATABASE_LOCK_TYPE_*
+*          timeout        - timeout [ms] or WAIT_FOREVER
 *          block          - code block
 * Output : result - result
 * Return : -
@@ -353,10 +357,10 @@ LOCAL DatabaseList databaseList;
 \***********************************************************************/
 
 #ifndef NDEBUG
-  #define DATABASE_DOX(result,defaultResult,databaseHandle,lockType,block) \
+  #define DATABASE_DOX(result,defaultResult,databaseHandle,lockType,timeout,block) \
     do \
     { \
-      if (__begin(__FILE__,__LINE__,databaseHandle,lockType)) \
+      if (__begin(__FILE__,__LINE__,databaseHandle,lockType,timeout)) \
       { \
         result = ({ \
                    auto typeof(result) __closure__(void); \
@@ -372,10 +376,10 @@ LOCAL DatabaseList databaseList;
     } \
     while (0)
 #else /* NDEBUG */
-  #define DATABASE_DOX(result,defaultResult,ddatabaseHandle,lockType,block) \
+  #define DATABASE_DOX(result,defaultResult,ddatabaseHandle,lockType,timeout,block) \
     do \
     { \
-      if (begin(databaseHandle,lockType)) \
+      if (begin(databaseHandle,lockType,timeout)) \
       { \
         result = ({ \
                    auto typeof(result) __closure__(void); \
@@ -1146,15 +1150,16 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
 * Purpose: begin database write operation
 * Input  : databaseHandle - database handle
 *          lockType       - lock type; see DATABASE_LOCK_TYPE_*
+*          timeout        - timeout [ms] or WAIT_FOREVER
 * Output : -
 * Return : TRUE iff locked
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL_INLINE bool begin(DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType)
+LOCAL_INLINE bool begin(DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType, long timeout)
 #else /* not NDEBUG */
-LOCAL_INLINE bool __begin(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType)
+LOCAL_INLINE bool __begin(const char *__fileName__, ulong __lineNb__, DatabaseHandle *databaseHandle, SemaphoreLockTypes lockType, long timeout)
 #endif /* NDEBUG */
 {
   bool locked;
@@ -1735,6 +1740,7 @@ LOCAL void executeCheckpoint(DatabaseHandle *databaseHandle)
   {
     DATABASE_DO(databaseHandle,
                 DATABASE_LOCK_TYPE_READ_WRITE,
+                databaseHandle->timeout,
     {
       (void)sqlite3_wal_checkpoint_v2(databaseHandle->handle,NULL,CHECKPOINT_MODE,NULL,NULL);
     });
@@ -2210,6 +2216,7 @@ LOCAL Errors getTableList(StringList     *tableList,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
+               WAIT_FOREVER,
   {
     error = Database_prepare(&databaseQueryHandle,
                              databaseHandle,
@@ -2268,6 +2275,7 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
+               WAIT_FOREVER,
   {
     error = Database_prepare(&databaseQueryHandle1,
                              databaseHandle,
@@ -3577,8 +3585,8 @@ assert(Thread_isCurrentThread(toDatabaseHandle->threadId));
   // select rows in from-table and copy to to-table
   sqlInsertString = String_new();
   BLOCK_DOX(error,
-            { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
-              begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
+            { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ,WAIT_FOREVER);
+              begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
             },
             { end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
               end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
@@ -3726,7 +3734,7 @@ if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__L
       {
         BLOCK_DOX(error,
                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
-                  begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
+                  begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
         {
           return preCopyTableFunction(&fromColumnList,&toColumnList,preCopyTableUserData);
         });
@@ -3896,7 +3904,7 @@ if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__L
       {
         BLOCK_DOX(error,
                   end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
-                  begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
+                  begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
         {
           return postCopyTableFunction(&fromColumnList,&toColumnList,postCopyTableUserData);
         });
@@ -3931,8 +3939,8 @@ if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__L
         BLOCK_DO({ end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
                    end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
                  },
-                 { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
-                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
+                 { begin(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ,WAIT_FOREVER);
+                   begin(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
                  },
         {
           do
@@ -4420,7 +4428,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   sqlString = String_new();
   value     = String_new();
   BLOCK_DOX(error,
-            begin(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
+            begin(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER),
             end(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE),
   {
     // create new table
@@ -4443,6 +4451,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                  ERROR_DATABASE_TIMEOUT,
                  databaseHandle,
                  DATABASE_LOCK_TYPE_READ_WRITE,
+                 WAIT_FOREVER,
     {
       return sqliteExecute(databaseHandle,
                            String_cString(sqlString),
@@ -4546,6 +4555,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
                    ERROR_DATABASE_TIMEOUT,
                    databaseHandle,
                    DATABASE_LOCK_TYPE_READ_WRITE,
+                   WAIT_FOREVER,
       {
         return sqliteExecute(databaseHandle,
                              String_cString(sqlString),
@@ -5074,6 +5084,7 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
   {
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
@@ -5582,6 +5593,7 @@ bool Database_exists(DatabaseHandle *databaseHandle,
                FALSE,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
+               databaseHandle->timeout,
   {
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
@@ -5702,6 +5714,7 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
+               databaseHandle->timeout,
   {
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
@@ -5827,6 +5840,7 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
+               databaseHandle->timeout,
   {
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
@@ -5951,6 +5965,7 @@ Errors Database_vgetInteger64(DatabaseHandle *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
+               databaseHandle->timeout,
   {
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
@@ -6071,6 +6086,7 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
   {
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
@@ -6182,6 +6198,7 @@ Errors Database_vgetDouble(DatabaseHandle *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
+               databaseHandle->timeout,
   {
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
@@ -6302,6 +6319,7 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
   {
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
@@ -6413,6 +6431,7 @@ Errors Database_vgetString(DatabaseHandle *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ,
+               databaseHandle->timeout,
   {
     #ifndef NDEBUG
       String_set(databaseHandle->current.sqlCommand,sqlString);
@@ -6534,6 +6553,7 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
                ERROR_DATABASE_TIMEOUT,
                databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
+               databaseHandle->timeout,
   {
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
@@ -6918,6 +6938,7 @@ void Database_debugDump(DatabaseHandle *databaseHandle, const char *tableName)
   // execute SQL command
   DATABASE_DO(databaseHandle,
               DATABASE_LOCK_TYPE_READ,
+              databaseHandle->timeout,
   {
     sqliteResult = sqlite3_exec(databaseHandle->handle,
                                 String_cString(sqlString),
