@@ -1705,47 +1705,47 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
                                                          slaveHostName,
                                                          slaveHostPort
                                                         );
-        }
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          jobNode->runningInfo.error = Connector_authorize(&jobNode->connectorInfo);
-        }
-
-        if (jobNode->runningInfo.error == ERROR_NONE)
-        {
-          // init storage
-          jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
-                                                             jobNode->job.archiveName,
-                                                             &jobNode->job.options,
-                                                             storageFlags
-                                                            );
           if (jobNode->runningInfo.error == ERROR_NONE)
           {
-            // run create job
-            jobNode->runningInfo.error = Connector_create(&jobNode->connectorInfo,
-                                                          jobName,
-                                                          jobUUID,
-                                                          scheduleUUID,
-                                                          storageName,
-                                                          &includeEntryList,
-                                                          &excludePatternList,
-                                                          &jobOptions,
-                                                          archiveType,
-                                                          NULL,  // scheduleTitle,
-                                                          NULL,  // scheduleCustomText,
-                                                          storageFlags,
-                                                          CALLBACK(getCryptPasswordFromConfig,jobNode),
-                                                          CALLBACK(updateStatusInfo,jobNode),
-                                                          CALLBACK(storageRequestVolume,jobNode)
-                                                         );
-
-            // done storage
-            Connector_doneStorage(&jobNode->connectorInfo);
+            jobNode->runningInfo.error = Connector_authorize(&jobNode->connectorInfo);
           }
-        }
 
-        // disconnect slave
-        Connector_disconnect(&jobNode->connectorInfo);
+          if (jobNode->runningInfo.error == ERROR_NONE)
+          {
+            // init storage
+            jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
+                                                               jobNode->job.archiveName,
+                                                               &jobNode->job.options,
+                                                               storageFlags
+                                                              );
+            if (jobNode->runningInfo.error == ERROR_NONE)
+            {
+              // run create job
+              jobNode->runningInfo.error = Connector_create(&jobNode->connectorInfo,
+                                                            jobName,
+                                                            jobUUID,
+                                                            scheduleUUID,
+                                                            storageName,
+                                                            &includeEntryList,
+                                                            &excludePatternList,
+                                                            &jobOptions,
+                                                            archiveType,
+                                                            NULL,  // scheduleTitle,
+                                                            NULL,  // scheduleCustomText,
+                                                            storageFlags,
+                                                            CALLBACK(getCryptPasswordFromConfig,jobNode),
+                                                            CALLBACK(updateStatusInfo,jobNode),
+                                                            CALLBACK(storageRequestVolume,jobNode)
+                                                           );
+
+              // done storage
+              Connector_doneStorage(&jobNode->connectorInfo);
+            }
+          }
+
+          // disconnect slave
+          Connector_disconnect(&jobNode->connectorInfo);
+        }
       }
     }
     Index_endInUse();
