@@ -4477,8 +4477,7 @@ Errors updateConfig(void)
   line           = String_new();
 
   // get config file name
-  getConfigFileName(configFileName);
-  if (String_isEmpty(configFileName))
+  if (String_isEmpty(getConfigFileName(configFileName)))
   {
     String_delete(line);
     StringList_done(&configLinesList);
@@ -4681,6 +4680,11 @@ Errors updateConfig(void)
     String_delete(configFileName);
     return error;
   }
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             "Updated configuration file '%s'",
+             String_cString(configFileName)
+            );
 
   // free resources
   String_delete(line);
