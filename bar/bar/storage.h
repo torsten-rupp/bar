@@ -1153,6 +1153,36 @@ bool Storage_isServerAllocationPending(StorageInfo *storageInfo);
 const StorageSpecifier *Storage_getStorageSpecifier(const StorageInfo *storageInfo);
 
 /***********************************************************************\
+* Name   : Storage_isAborted
+* Purpose: check if aborted
+* Input  : storageInfo - storage info
+* Output : -
+* Return : TRUE iff aborted
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Storage_isAborted(const StorageInfo *storageInfo);
+#if defined(NDEBUG) || defined(__STORAGE_IMPLEMENTATION__)
+INLINE bool Storage_isAborted(const StorageInfo *storageInfo)
+{
+  assert(storageInfo != NULL);
+
+  return (storageInfo->isAbortedFunction != NULL) && storageInfo->isAbortedFunction(storageInfo->isAbortedUserData);
+}
+#endif /* NDEBUG || __STORAGE_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Storage_pause
+* Purpose: pause storage
+* Input  : storageInfo - storage info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Storage_pause(const StorageInfo *storageInfo);
+
+/***********************************************************************\
 * Name   : Storage_preProcess
 * Purpose: pre-process storage
 * Input  : storageInfo - storage info

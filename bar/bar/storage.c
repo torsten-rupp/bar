@@ -604,44 +604,6 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 #endif /* HAVE_SSH2 */
 
 /***********************************************************************\
-* Name   : isAborted
-* Purpose: check if aborted
-* Input  : storageInfo - storage info
-* Output : -
-* Return : TRUE iff aborted
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE bool isAborted(const StorageInfo *storageInfo)
-{
-  assert(storageInfo != NULL);
-
-  return (storageInfo->isAbortedFunction != NULL) && storageInfo->isAbortedFunction(storageInfo->isAbortedUserData);
-}
-
-
-/***********************************************************************\
-* Name   : pauseStorage
-* Purpose: pause storage
-* Input  : storageInfo - storage info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void pauseStorage(const StorageInfo *storageInfo)
-{
-  assert(storageInfo != NULL);
-
-  while (   ((storageInfo->isPauseFunction != NULL) && storageInfo->isPauseFunction(storageInfo->isPauseUserData))
-         && !isAborted(storageInfo)
-        )
-  {
-    Misc_udelay(500LL*US_PER_MS);
-  }
-}
-
-/***********************************************************************\
 * Name   : transferToStorage
 * Purpose: transfer file data from temporary file to storage
 * Input  : storageHandle  - storage handle
@@ -688,7 +650,7 @@ LOCAL Errors transferToStorage(StorageHandle *storageHandle,
 
   // transfer data
   transferedBytes = 0L;
-  while ((transferedBytes < size) && !isAborted(storageHandle->storageInfo))
+  while ((transferedBytes < size) && !Storage_isAborted(storageHandle->storageInfo))
   {
     // get block size
     n = (ulong)MIN(size-transferedBytes,TRANSFER_BUFFER_SIZE);
@@ -721,7 +683,7 @@ LOCAL Errors transferToStorage(StorageHandle *storageHandle,
     }
 
     // pause storage (if requested)
-    pauseStorage(storageHandle->storageInfo);
+    Storage_pause(storageHandle->storageInfo);
   }
 
   // free resources
@@ -1989,6 +1951,18 @@ const StorageSpecifier *Storage_getStorageSpecifier(const StorageInfo *storageIn
   assert(storageInfo != NULL);
 
   return &storageInfo->storageSpecifier;
+}
+
+void Storage_pause(const StorageInfo *storageInfo)
+{
+  assert(storageInfo != NULL);
+
+  while (   ((storageInfo->isPauseFunction != NULL) && storageInfo->isPauseFunction(storageInfo->isPauseUserData))
+         && !Storage_isAborted(storageInfo)
+        )
+  {
+    Misc_udelay(500LL*US_PER_MS);
+  }
 }
 
 Errors Storage_preProcess(StorageInfo *storageInfo,
