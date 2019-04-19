@@ -235,66 +235,82 @@ LOCAL DatabaseList databaseList;
   #define DATABASE_HANDLE_DO(databaseHandle,block) \
     do \
     { \
+      int __result; \
+      \
       assert(databaseHandle != NULL); \
       assert(databaseHandle->databaseNode != NULL); \
       \
-      pthread_mutex_lock(databaseHandle->databaseNode->lock); \
+      __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
+      assert(__result == 0); \
       ({ \
         auto void __closure__(void); \
         \
         void __closure__(void)block; __closure__; \
       })(); \
-      pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
+      __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
+      assert(__result == 0); \
     } \
     while (0)
   #define DATABASE_HANDLE_DOX(result,databaseHandle,block) \
     do \
     { \
+      int __result; \
+      \
       assert(databaseHandle != NULL); \
       assert(databaseHandle->databaseNode != NULL); \
       \
-      pthread_mutex_lock(databaseHandle->databaseNode->lock); \
+      __result = pthread_mutex_lock(databaseHandle->databaseNode->lock); \
+      assert(__result == 0); \
       result = ({ \
                  auto typeof(result) __closure__(void); \
                  \
                  typeof(result) __closure__(void)block; __closure__; \
                })(); \
-      pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
+      __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
+      assert(__result == 0); \
     } \
     while (0)
 #else /* not DATABASE_LOCK_PER_INSTANCE */
   #define DATABASE_HANDLE_DO(databaseHandle,block) \
     do \
     { \
+      int __result; \
+      \
       assert(databaseHandle != NULL); \
       assert(databaseHandle->databaseNode != NULL); \
       \
       UNUSED_VARIABLE(databaseHandle); \
       \
-      pthread_mutex_lock(&databaseLock); \
+      __result = pthread_mutex_lock(&databaseLock); \
+      assert(__result == 0); \
       ({ \
         auto void __closure__(void); \
         \
         void __closure__(void)block; __closure__; \
       })(); \
-      pthread_mutex_unlock(&databaseLock); \
+      __result = pthread_mutex_unlock(&databaseLock); \
+      assert(__result == 0); \
     } \
     while (0)
   #define DATABASE_HANDLE_DOX(result,databaseHandle,block) \
     do \
     { \
+      int __result; \
+      \
       assert(databaseHandle != NULL); \
       assert(databaseHandle->databaseNode != NULL); \
       \
       UNUSED_VARIABLE(databaseHandle); \
       \
-      pthread_mutex_lock(&databaseLock); \
+      __result = pthread_mutex_lock(&databaseLock); \
+      assert(__result == 0); \
       result = ({ \
                  auto typeof(result) __closure__(void); \
                  \
                  typeof(result) __closure__(void)block; __closure__; \
                })(); \
-      pthread_mutex_unlock(&databaseLock); \
+      __result = pthread_mutex_unlock(&databaseLock); \
+      assert(__result == 0); \
     } \
     while (0)
 #endif /* DATABASE_LOCK_PER_INSTANCE */
