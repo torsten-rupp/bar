@@ -1576,7 +1576,7 @@ public class ServerSettings
     Widgets.layout(composite,0,0,TableLayoutData.NSWE);
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
-      label = Widgets.newLabel(composite,BARControl.tr("Level")+":");
+      label = Widgets.newLabel(composite,BARControl.tr("Verbosity level")+":");
       Widgets.layout(label,0,0,TableLayoutData.NW);
       spinner = BARWidgets.newNumber(composite,
                                      BARControl.tr("Verbosity level."),
