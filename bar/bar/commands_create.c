@@ -127,6 +127,9 @@ typedef struct
 
   Errors                      failError;                            // failure error
 
+  IsPauseFunction             isPauseCreateFunction;                // pause create check callback (can be NULL)
+  void                        *isPauseCreateUserData;               // user data for pause create check
+
   StatusInfoFunction          statusInfoFunction;                   // status info callback
   void                        *statusInfoUserData;                  // user data for status info call back
   Semaphore                   statusInfoLock;                       // status info lock
@@ -134,13 +137,6 @@ typedef struct
   FragmentList                statusInfoFragmentList;               // status info fragment list
   FragmentNode                *statusInfoCurrentFragmentNode;       // current fragment node in status info
   uint64                      statusInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
-
-  IsPauseFunction             isPauseCreateFunction;                // is pause check callback (can be NULL)
-  void                        *isPauseCreateUserData;               // user data for is pause create check
-  IsPauseFunction             isPauseStorageFunction;               // is pause storage callback (can be NULL)
-  void                        *isPauseStorageUserData;              // user data for is pause storage check
-  IsAbortedFunction           isAbortedFunction;                    // is abort check callback (can be NULL)
-  void                        *isAbortedUserData;                   // user data for is aborted check
 } CreateInfo;
 
 // hard link info
@@ -259,21 +255,14 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *          storageNameCustomText      - storage name custome text or NULL
 *          startDateTime              - date/time of start [s]
 *          storageFlags               - storage flags; see STORAGE_FLAGS_...
-*          statusInfoFunction         - status info call back function
-*                                       (can be NULL)
-*          statusInfoUserData         - user data for status info
-*                                       function
 *          isPauseCreateFunction      - is pause check callback (can
 *                                       be NULL)
 *          isPauseCreateUserData      - user data for is pause create
 *                                       check
-*          isPauseStorageFunction     - is pause storage callback (can
-*                                       be NULL)
-*          isPauseStorageUserData     - user data for is pause storage
-*                                       check
-*          isAbortedFunction          - is abort check callback (can be
-*                                       NULL)
-*          isAbortedUserData          - user data for is aborted check
+*          statusInfoFunction         - status info call back function
+*                                       (can be NULL)
+*          statusInfoUserData         - user data for status info
+*                                       function
 *          logHandle                  - log handle (can be NULL)
 * Output : createInfo - initialized create info variable
 * Return : -
@@ -292,14 +281,10 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
                           ConstString        scheduleCustomText,
                           uint64             startDateTime,
                           StorageFlags       storageFlags,
-                          StatusInfoFunction statusInfoFunction,
-                          void               *statusInfoUserData,
                           IsPauseFunction    isPauseCreateFunction,
                           void               *isPauseCreateUserData,
-                          IsPauseFunction    isPauseStorageFunction,
-                          void               *isPauseStorageUserData,
-                          IsAbortedFunction  isAbortedFunction,
-                          void               *isAbortedUserData,
+                          StatusInfoFunction statusInfoFunction,
+                          void               *statusInfoUserData,
                           LogHandle          *logHandle
                          )
 {
@@ -338,10 +323,6 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
 
   createInfo->isPauseCreateFunction                = isPauseCreateFunction;
   createInfo->isPauseCreateUserData                = isPauseCreateUserData;
-  createInfo->isPauseStorageFunction               = isPauseStorageFunction;
-  createInfo->isPauseStorageUserData               = isPauseStorageUserData;
-  createInfo->isAbortedFunction                    = isAbortedFunction;
-  createInfo->isAbortedUserData                    = isAbortedUserData;
   initStatusInfo(&createInfo->statusInfo);
 
   // get archive type
@@ -7017,10 +6998,8 @@ Errors Command_create(ServerIO                     *masterIO,
                  scheduleCustomText,
                  startDateTime,
                  storageFlags,
-                 CALLBACK(statusInfoFunction,statusInfoUserData),
                  CALLBACK(isPauseCreateFunction,isPauseCreateUserData),
-                 CALLBACK(isPauseStorageFunction,isPauseStorageUserData),
-                 CALLBACK(isAbortedFunction,isAbortedUserData),
+                 CALLBACK(statusInfoFunction,statusInfoUserData),
                  logHandle
                 );
   AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
