@@ -1014,31 +1014,31 @@ typedef byte* BitSet;
 #define __HALT_STRING2(s) #s
 #undef HALT
 #ifdef NDEBUG
-#define HALT(errorLevel, format, args...) \
+#define HALT(errorLevel, format, ...) \
   do \
   { \
-    __halt(errorLevel,format, ## args); \
+    __halt(errorLevel,format, ## __VA_ARGS__); \
   } \
   while (0)
 
-#define HALT_INSUFFICIENT_MEMORY(args...) \
+#define HALT_INSUFFICIENT_MEMORY(...) \
   do \
   { \
-     __abort(HALT_PREFIX_FATAL_ERROR,"Insufficient memory", ## args); \
+     __abort(HALT_PREFIX_FATAL_ERROR,"Insufficient memory", ## __VA_ARGS__); \
   } \
  while (0)
 
-#define HALT_FATAL_ERROR(format, args...) \
+#define HALT_FATAL_ERROR(format, ...) \
   do \
   { \
-     __abort(HALT_PREFIX_FATAL_ERROR,format, ## args); \
+     __abort(HALT_PREFIX_FATAL_ERROR,format, ## __VA_ARGS__); \
   } \
  while (0)
 
-#define HALT_INTERNAL_ERROR(format, args...) \
+#define HALT_INTERNAL_ERROR(format, ...) \
   do \
   { \
-     __abort(HALT_PREFIX_INTERNAL_ERROR, format, ## args); \
+     __abort(HALT_PREFIX_INTERNAL_ERROR, format, ## __VA_ARGS__); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE() \
@@ -1047,38 +1047,38 @@ typedef byte* BitSet;
      __abort(HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case"); \
   } \
   while (0)
-#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX(format, args...) \
+#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX(format, ...) \
   do \
   { \
-     __abort(HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case " format, ## args); \
+     __abort(HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case " format, ## __VA_ARGS__); \
   } \
   while (0)
 #else /* not NDEBUG */
-#define HALT(errorLevel, format, args...) \
+#define HALT(errorLevel, format, ...) \
   do \
   { \
-    __halt(__FILE__,__LINE__,errorLevel,format, ## args); \
+    __halt(__FILE__,__LINE__,errorLevel,format, ## __VA_ARGS__); \
   } \
   while (0)
 
-#define HALT_INSUFFICIENT_MEMORY(args...) \
+#define HALT_INSUFFICIENT_MEMORY(...) \
   do \
   { \
-     __abort(__FILE__,__LINE__,HALT_PREFIX_FATAL_ERROR,"Insufficient memory", ## args); \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_FATAL_ERROR,"Insufficient memory", ## __VA_ARGS__); \
   } \
  while (0)
 
-#define HALT_FATAL_ERROR(format, args...) \
+#define HALT_FATAL_ERROR(format, ...) \
   do \
   { \
-     __abort(__FILE__,__LINE__,HALT_PREFIX_FATAL_ERROR,format, ## args); \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_FATAL_ERROR,format, ## __VA_ARGS__); \
   } \
  while (0)
 
-#define HALT_INTERNAL_ERROR(format, args...) \
+#define HALT_INTERNAL_ERROR(format, ...) \
   do \
   { \
-     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, format, ## args); \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, format, ## __VA_ARGS__); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE() \
@@ -1087,17 +1087,17 @@ typedef byte* BitSet;
      __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case"); \
   } \
   while (0)
-#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX(format, args...) \
+#define HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX(format, ...) \
   do \
   { \
-     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case " format, ## args); \
+     __abort(__FILE__,__LINE__,HALT_PREFIX_INTERNAL_ERROR, "Unhandled switch case " format, ## __VA_ARGS__); \
   } \
   while (0)
 #endif /* NDEBUG */
-#define HALT_INTERNAL_ERROR_AT(file, line, format, args...) \
+#define HALT_INTERNAL_ERROR_AT(file, line, format, ...) \
   do \
   { \
-     __abortAt(file,line,HALT_PREFIX_INTERNAL_ERROR,format, ## args); \
+     __abortAt(file,line,HALT_PREFIX_INTERNAL_ERROR,format, ## __VA_ARGS__); \
   } \
   while (0)
 #define HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED() \
@@ -1133,10 +1133,10 @@ typedef byte* BitSet;
 /* 2 macros necessary, because of "string"-construction */
 #define __FAIL_STRING1(s) __FAIL_STRING2(s)
 #define __FAIL_STRING2(s) #s
-#define FAIL(errorLevel, format, args...) \
+#define FAIL(errorLevel, format, ...) \
   do \
   { \
-   fprintf(stderr, format " - fail in file " __FILE__ ", line " __FAIL_STRING1(__LINE__) "\n" , ## args); \
+   fprintf(stderr, format " - fail in file " __FILE__ ", line " __FAIL_STRING1(__LINE__) "\n" , ## __VA_ARGS__); \
    exit(errorLevel);\
   } \
   while (0)
@@ -1170,6 +1170,40 @@ typedef byte* BitSet;
 #else
   #define _(text) text
 #endif /* HAVE_LIBINTL_H */
+
+/***********************************************************************\
+* Name   : assertx
+* Purpose: extended assert
+* Input  : condition - condition
+*          format    - format string
+*          ...       - option arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifndef NDEBUG
+  /* 2 macros necessary, because of "string"-construction */
+  #define __ASSERTX_STRING1(s) __ASSERTX_STRING2(s)
+  #define __ASSERTX_STRING2(s) #s
+  #define assertx(condition, format, ...) \
+    do \
+    { \
+      if (!(condition)) \
+      { \
+        fprintf(stderr, "%s:%d: %s: Assertion '%s' failed.\n",__FILE__,__LINE__,__FUNCTION__,__ASSERTX_STRING1(condition)); \
+        fprintf(stderr, "  " format "\n" , ## __VA_ARGS__); \
+        abort(); \
+      } \
+    } \
+    while (0)
+#else /* NDEBUG */
+  #define assertx(condition, format, ...) \
+    do \
+    { \
+    } \
+    while (0)
+#endif /* not NDEBUG */
 
 /***********************************************************************\
 * Name   : DEBUG_MEMORY_FENCE, DEBUG_MEMORY_FENCE_INIT,

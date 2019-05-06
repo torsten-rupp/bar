@@ -1,0 +1,13 @@
+--- xz-5.0.4.org/m4/libtool.m4	2012-06-22 13:55:58.000000000 +0200
++++ xz-5.0.4/m4/libtool.m4	2013-02-17 18:42:26.451150010 +0100
+@@ -5172,7 +5172,9 @@
+ 	# The linker will automatically build a .lib file if we build a DLL.
+ 	_LT_TAGVAR(old_archive_from_new_cmds, $1)='true'
+ 	# FIXME: Should let the user specify the lib program.
+-	_LT_TAGVAR(old_archive_cmds, $1)='lib -OUT:$oldlib$oldobjs$old_deplibs'
++	if test -z "$RANLIB"; then
++	  _LT_TAGVAR(old_archive_cmds, $1)='lib -OUT:$oldlib$oldobjs$old_deplibs'
++        fi
+ 	_LT_TAGVAR(enable_shared_with_static_runtimes, $1)=yes
+ 	;;
+       esac

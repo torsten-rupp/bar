@@ -16,6 +16,7 @@ BuildRequires: make
 BuildRequires: gcc gcc-c++ glibc-devel binutils
 BuildRequires: java-devel >= 1.6.0
 BuildRequires: jre >= 1.6.0
+BuildRequires: lua
 BuildRequires: m4
 BuildRequires: patch
 BuildRequires: tar

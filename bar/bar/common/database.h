@@ -95,6 +95,15 @@ typedef enum
   DATABASE_TRANSACTION_TYPE_EXCLUSIVE
 } DatabaseTransactionTypes;
 
+#ifndef NDEBUG
+typedef enum
+{
+  DATABASE_HISTORY_TYPE_LOCK_READ,
+  DATABASE_HISTORY_TYPE_LOCK_READ_WRITE,
+  DATABASE_HISTORY_TYPE_UNLOCK
+} DatabaseHistoryThreadInfoTypes;
+#endif /* NDEBUG */
+
 /***************************** Datatypes *******************************/
 
 /***********************************************************************\
@@ -155,6 +164,7 @@ typedef struct
   typedef struct
   {
     ThreadId   threadId;
+    uint       count;
     const char *fileName;
     uint       lineNb;
     uint64     cycleCounter;
@@ -163,6 +173,23 @@ typedef struct
       uint       stackTraceSize;
     #endif /* HAVE_BACKTRACE */
   } DatabaseThreadInfo;
+#endif /* not NDEBUG */
+
+#ifndef NDEBUG
+  typedef struct
+  {
+    ThreadId                       threadId;
+    const char                     *fileName;
+    uint                           lineNb;
+    uint64                         cycleCounter;
+    DatabaseHistoryThreadInfoTypes type;
+    #ifdef HAVE_BACKTRACE
+      void const *stackTrace[16];
+      uint       stackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+uint readCount;
+uint readWriteCount;
+  } DatabaseHistoryThreadInfo;
 #endif /* not NDEBUG */
 
 // database list
@@ -177,60 +204,63 @@ typedef struct DatabaseNode
   uint                        openCount;
 
   DatabaseLockTypes           type;
-  uint                        pendingReadCount;
-  uint                        readCount;
+volatile  uint                        pendingReadCount;
+volatile  uint                        readCount;
   pthread_cond_t              readTrigger;
 
-  uint                        pendingReadWriteCount;
-  uint                        readWriteCount;
+volatile  uint                        pendingReadWriteCount;
+volatile  uint                        readWriteCount;
   pthread_cond_t              readWriteTrigger;
   ThreadId                    readWriteLockedBy;
 
-  uint                        pendingTransactionCount;
-  uint                        transactionCount;
+volatile  uint                        pendingTransactionCount;
+volatile  uint                        transactionCount;
   pthread_cond_t              transactionTrigger;
 
   DatabaseBusyHandlerList     busyHandlerList;
   DatabaseProgressHandlerList progressHandlerList;
 
   #ifndef NDEBUG
-    // pending reads
-    DatabaseThreadInfo pendingReads[32];
-    // reads
-    DatabaseThreadInfo reads[32];
-    // pending read/writes
-    DatabaseThreadInfo pendingReadWrites[32];
-    // read/write
-    DatabaseThreadInfo readWrites[32];
     struct
     {
-      ThreadId          threadId;
-      const char        *fileName;
-      uint              lineNb;
-      uint64            cycleCounter;
-      DatabaseLockTypes type;
-      uint              pendingReadCount;
-      uint              readCount;
-      uint              pendingReadWriteCount;
-      uint              readWriteCount;
-      uint              pendingTransactionCount;
-      uint              transactionCount;
-      #ifdef HAVE_BACKTRACE
-        void const *stackTrace[16];
-        uint       stackTraceSize;
-      #endif /* HAVE_BACKTRACE */
-    }                     lastTrigger;
-    // running transaction
-    struct
-    {
-      ThreadId   threadId;
-      const char *fileName;
-      uint       lineNb;
-      #ifdef HAVE_BACKTRACE
-        void const *stackTrace[16];
-        uint       stackTraceSize;
-      #endif /* HAVE_BACKTRACE */
-    }                     transaction;
+      // pending reads
+      DatabaseThreadInfo pendingReads[32];
+      // reads
+      DatabaseThreadInfo reads[32];
+      // pending read/writes
+      DatabaseThreadInfo pendingReadWrites[32];
+      // read/write
+      DatabaseThreadInfo readWrites[32];
+      struct
+      {
+        DatabaseThreadInfo threadInfo;
+        DatabaseLockTypes  type;
+        uint               pendingReadCount;
+        uint               readCount;
+        uint               pendingReadWriteCount;
+        uint               readWriteCount;
+        uint               pendingTransactionCount;
+        uint               transactionCount;
+        #ifdef HAVE_BACKTRACE
+          void const *stackTrace[16];
+          uint       stackTraceSize;
+        #endif /* HAVE_BACKTRACE */
+      }                     lastTrigger;
+      // running transaction
+      struct
+      {
+        ThreadId   threadId;
+        const char *fileName;
+        uint       lineNb;
+        #ifdef HAVE_BACKTRACE
+          void const *stackTrace[16];
+          uint       stackTraceSize;
+        #endif /* HAVE_BACKTRACE */
+      }                     transaction;
+      // history
+      DatabaseHistoryThreadInfo history[32];
+      uint                      historyIndex;
+    } debug;
   #endif /* not NDEBUG */
 } DatabaseNode;
 
@@ -249,6 +279,7 @@ typedef struct DatabaseHandle
   #endif /* not NDEBUG */
 
   DatabaseNode                *databaseNode;
+  uint                        readLockCount;
   sqlite3                     *handle;                    // SQlite3 handle
   uint                        transcationCount;
   long                        timeout;                    // timeout [ms]
@@ -257,31 +288,33 @@ typedef struct DatabaseHandle
   sem_t                       wakeUp;                     // unlock wake-up
 
   #ifndef NDEBUG
-    ThreadId                  threadId;                   // id of thread who opened/created database
-    const char                *fileName;                  // open/create location
-    ulong                     lineNb;
-    #ifdef HAVE_BACKTRACE
-      void const              *stackTrace[16];
-      int                     stackTraceSize;
-    #endif /* HAVE_BACKTRACE */
-
     struct
     {
-      ThreadId   threadId;                                // thread who aquired lock
-      const char *fileName;
-      uint       lineNb;
-      char       text[8*1024];
-      uint64     t0,t1;                                   // lock start/end timestamp [s]
-    }                         locked;
-    struct
-    {
-//      Semaphore lock;
-      String    sqlCommand;                               // current SQL command
+      ThreadId                  threadId;                 // id of thread who opened/created database
+      const char                *fileName;                // open/create location
+      ulong                     lineNb;
       #ifdef HAVE_BACKTRACE
-        void const *stackTrace[16];
-        int        stackTraceSize;
+        void const              *stackTrace[16];
+        int                     stackTraceSize;
       #endif /* HAVE_BACKTRACE */
-    }                         current;
+
+      struct
+      {
+        ThreadId   threadId;                              // thread who aquired lock
+        const char *fileName;
+        uint       lineNb;
+        char       text[8*1024];
+        uint64     t0,t1;                                 // lock start/end timestamp [s]
+      }                         locked;
+      struct
+      {
+        String     sqlCommand;                            // current SQL command
+        #ifdef HAVE_BACKTRACE
+          void const *stackTrace[16];
+          int        stackTraceSize;
+        #endif /* HAVE_BACKTRACE */
+      }                         current;
+    } debug;
   #endif /* not NDEBUG */
 } DatabaseHandle;
 
@@ -595,6 +628,8 @@ void Database_yield(DatabaseHandle *databaseHandle,
 * Name   : Database_lock
 * Purpose: lock database exclusive for this handle
 * Input  : databaseHandle - database handle
+*          lockType       - lock type; see DATABASE_LOCK_TYPE_...
+*          timeout        - timeout [ms[ or WAIT_FOREVER
 * Output : -
 * Return : TRUE iff locked
 * Notes  : -
@@ -602,13 +637,15 @@ void Database_yield(DatabaseHandle *databaseHandle,
 
 #ifdef NDEBUG
   bool Database_lock(DatabaseHandle    *databaseHandle,
-                     DatabaseLockTypes lockType
+                     DatabaseLockTypes lockType,
+                     long              timeout
                     );
 #else /* not NDEBUG */
   bool __Database_lock(const char        *__fileName__,
                        ulong             __lineNb__,
                        DatabaseHandle    *databaseHandle,
-                       DatabaseLockTypes lockType
+                       DatabaseLockTypes lockType,
+                       long              timeout
                       );
 #endif /* NDEBUG */
 
@@ -661,7 +698,7 @@ INLINE bool Database_isLocked(DatabaseHandle    *databaseHandle,
     case DATABASE_LOCK_TYPE_NONE:
       break;
     case DATABASE_LOCK_TYPE_READ:
-      isLocked = (databaseHandle->databaseNode->readCount > 0);
+      isLocked = (databaseHandle->readLockCount > 0);
       break;
     case DATABASE_LOCK_TYPE_READ_WRITE:
       isLocked = (databaseHandle->databaseNode->readWriteCount > 0);

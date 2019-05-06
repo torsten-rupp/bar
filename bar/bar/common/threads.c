@@ -622,12 +622,20 @@ LOCAL void debugThreadInit(void)
 }
 #endif /* NDEBUG */
 
+/***********************************************************************\
+* Name   : threadTerminated
+* Purpose: request terminate thread callback
+* Input  : userData - thread
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void threadTerminated(void *userData)
 {
   Thread *thread = (Thread*)userData;
 
   assert(thread != NULL);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   thread->terminatedFlag = TRUE;
 }

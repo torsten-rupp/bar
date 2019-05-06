@@ -16,6 +16,7 @@ BuildRequires: make
 BuildRequires: gcc gcc-c++ glibc-devel
 BuildRequires: binutils binutils-devel
 BuildRequires: java-1.7.0-openjdk-devel
+BuildRequires: lua
 BuildRequires: m4
 BuildRequires: patch
 BuildRequires: tar

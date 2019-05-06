@@ -1503,17 +1503,21 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     error = Continuous_initList(&databaseQueryHandle,&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID);
     if (error == ERROR_NONE)
     {
+assert(continuousDatabaseHandle.readLockCount > 0);
       while (Continuous_getNext(&databaseQueryHandle,&databaseId,name))
       {
 //fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(name));
         // pause
         pauseCreate(createInfo);
+//TODO: remove
+assert(continuousDatabaseHandle.readLockCount > 0);
 
         // check if file still exists
         if (!File_exists(name))
         {
           continue;
         }
+assert(continuousDatabaseHandle.readLockCount > 0);
 
         // read file info
         error = File_getInfo(&fileInfo,name);
@@ -1521,12 +1525,14 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         {
           continue;
         }
+assert(continuousDatabaseHandle.readLockCount > 0);
 
         if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
         {
           switch (fileInfo.type)
           {
             case FILE_TYPE_FILE:
+assert(continuousDatabaseHandle.readLockCount > 0);
               if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                   && isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
@@ -1546,8 +1552,10 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   }
                 }
               }
+assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             case FILE_TYPE_DIRECTORY:
+assert(continuousDatabaseHandle.readLockCount > 0);
               // add to known names history
               Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
@@ -1556,8 +1564,10 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                 createInfo->statusInfo.total.count++;
                 updateStatusInfo(createInfo,FALSE);
               }
+assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             case FILE_TYPE_LINK:
+assert(continuousDatabaseHandle.readLockCount > 0);
               if (   isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                   && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
@@ -1575,8 +1585,10 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   }
                 }
               }
+assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             case FILE_TYPE_HARDLINK:
+assert(continuousDatabaseHandle.readLockCount > 0);
               if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                   && isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
@@ -1596,8 +1608,10 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   }
                 }
               }
+assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             case FILE_TYPE_SPECIAL:
+assert(continuousDatabaseHandle.readLockCount > 0);
               if (   isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                   && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
@@ -1615,14 +1629,17 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   }
                 }
               }
+assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             default:
               break;
           }
         }
+assert(continuousDatabaseHandle.readLockCount > 0);
 
         // free resources
       }
+assert(continuousDatabaseHandle.readLockCount > 0);
       Continuous_doneList(&databaseQueryHandle);
     }
   }
@@ -4890,51 +4907,23 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 /***********************************************************************\
 * Name   : statusInfoUpdateLock
 * Purpose: lock status info update
-* Input  : createInfo - create info structure
-*          name - name of entry
-* Output : -
+* Input  : createInfo   - create info structure
+*          name         - name of entry
+*          fragmentNode - fragment node variable (can be NULL)
+* Output : fragmentNode - fragment node
 * Return : always TRUE
 * Notes  : -
 \***********************************************************************/
 
-LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString name, uint64 offset, uint64 length)
+LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString name, FragmentNode **fragmentNode)
 {
-  FragmentNode *fragmentNode;
-
   assert(createInfo != NULL);
 
   // lock
   Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
-  // update fragment node
-  fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
-  if (fragmentNode != NULL)
-  {
-    FragmentList_addRange(fragmentNode,offset,length);
-  }
-
-  // update status (if possible)
-  if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-      || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
-     )
-  {
-    // set new current status
-    createInfo->statusInfoCurrentFragmentNode = fragmentNode;
-    createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
-
-    // update status
-    String_set(createInfo->statusInfo.entry.name,name);
-    if (fragmentNode != NULL)
-    {
-      createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-      createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
-    }
-  }
-  else
-  {
-    // clear current status info
-//      createInfo->statusInfoCurrentFragmentNode = NULL;
-  }
+  // get fragment
+  if (fragmentNode != NULL) (*fragmentNode) = FragmentList_find(&createInfo->statusInfoFragmentList,name);
 
   return TRUE;
 }
@@ -4957,22 +4946,40 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 
   assert(createInfo != NULL);
 
-  // get fragment node (if possible)
   fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
-
-  // check if fragment complete
-  if (   (fragmentNode != NULL)
-      && FragmentList_isComplete(fragmentNode)
-     )
+  if (fragmentNode != NULL)
   {
-    if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+    if (FragmentList_isComplete(fragmentNode))
     {
-      // clear current status info
-      createInfo->statusInfoCurrentFragmentNode = NULL;
-    }
+      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      {
+        // clear current status info
+        createInfo->statusInfoCurrentFragmentNode = NULL;
+      }
 
-    // free resources
-    FragmentList_discard(&createInfo->statusInfoFragmentList,fragmentNode);
+      // free resources
+      FragmentList_discard(&createInfo->statusInfoFragmentList,fragmentNode);
+    }
+    else
+    {
+      // update status (if possible)
+      if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+          || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+         )
+      {
+        // set new current status info
+        createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
+        createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+
+        // update current status info
+        String_set(createInfo->statusInfo.entry.name,name);
+        if (fragmentNode != NULL)
+        {
+          createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+          createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+        }
+      }
+    }
   }
 
   // update
@@ -4980,7 +4987,6 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
   {
     updateStatusInfo(createInfo,TRUE);
   }
-
 
   // unlock
   Semaphore_unlock(&createInfo->statusInfoLock);
@@ -4996,17 +5002,16 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 /***********************************************************************\
 * Name   : STATUS_INFO_UPDATE
 * Purpose: update status info
-* Input  : createInfo - create info structure
-*          name       - name of entry
-*          offset     - offset [bytes]
-*          size       - size of entry [bytes] or 0
-* Output : -
+* Input  : createInfo   - create info structure
+*          name         - name of entry
+*          fragmentNode - fragment node variable (can be NULL)
+* Output : fragmentNode - fragment node 
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define STATUS_INFO_UPDATE(createInfo,name,offset,length) \
-  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name,offset,length); \
+#define STATUS_INFO_UPDATE(createInfo,name,fragmentNode) \
+  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name,fragmentNode); \
        semaphoreLock; \
        statusInfoUpdateUnlock(createInfo,name,TRUE), semaphoreLock = FALSE \
       )
@@ -5046,6 +5051,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   uint64                    offset;
   uint64                    size;
   ulong                     bufferLength;
+  FragmentNode              *fragmentNode;
   uint64                    archiveSize;
   uint64                    doneSize;
   uint                      percentageDone;
@@ -5068,7 +5074,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -5095,7 +5101,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -5123,7 +5129,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.done.size += (uint64)fileInfo.size;
@@ -5227,8 +5233,14 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
               // update status info
-              STATUS_INFO_UPDATE(createInfo,fileName,offset,bufferLength)
+              STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
               {
+                // add fragment
+                if (fragmentNode != NULL)
+                {
+                  FragmentList_addRange(fragmentNode,offset,bufferLength);
+                }
+
                 doneSize         = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
                 compressionRatio = (!createInfo->storageFlags.dryRun && (doneSize > 0))
@@ -5283,7 +5295,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(fileName),Error_getText(error));
-        STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
+        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
         {
           createInfo->statusInfo.done.count++;
           createInfo->statusInfo.done.size += fragmentSize;
@@ -5388,9 +5400,12 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   }
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,fileName,offset,0LL)
+  STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
   {
-    createInfo->statusInfo.done.count++;
+    if ((fragmentNode != NULL) && FragmentList_isComplete(fragmentNode))
+    {
+      createInfo->statusInfo.done.count++;
+    }
   }
 
   // close file
@@ -5446,6 +5461,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   uint64           blockOffset;
   uint64           blockCount;
   uint             bufferBlockCount;
+  FragmentNode     *fragmentNode;
   uint64           archiveSize;
   uint64           doneSize;
   uint             percentageDone;
@@ -5468,7 +5484,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(deviceName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,deviceName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -5516,7 +5532,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'",String_cString(deviceName));
-      STATUS_INFO_UPDATE(createInfo,deviceName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.done.size += (uint64)deviceInfo.size;
@@ -5649,8 +5665,14 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
           // update status info
-          STATUS_INFO_UPDATE(createInfo,deviceName,blockOffset*(uint64)deviceInfo.blockSize,(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize)
+          STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
           {
+            // add fragment
+            if (fragmentNode != NULL)
+            {
+              FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize);
+            }
+
             doneSize         = createInfo->statusInfo.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
             compressionRatio = (!createInfo->storageFlags.dryRun && (doneSize > 0))
@@ -5793,9 +5815,12 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   }
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,deviceName,blockOffset*(uint64)deviceInfo.blockSize,0LL)
+  STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
   {
-    createInfo->statusInfo.done.count++;
+    if ((fragmentNode != NULL) && FragmentList_isComplete(fragmentNode))
+    {
+      createInfo->statusInfo.done.count++;
+    }
   }
 
   // close device
@@ -5840,7 +5865,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,directoryName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -5867,7 +5892,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,directoryName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -5941,7 +5966,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
   }
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,directoryName,0LL,0LL)
+  STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
   {
     createInfo->statusInfo.done.count++;
   }
@@ -5991,7 +6016,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)",String_cString(linkName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,linkName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6018,7 +6043,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(linkName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,linkName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6049,7 +6074,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'",String_cString(linkName));
-        STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
+        STATUS_INFO_UPDATE(createInfo,linkName,NULL)
         {
           createInfo->statusInfo.done.count++;
           createInfo->statusInfo.done.size += (uint64)fileInfo.size;
@@ -6094,7 +6119,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     }
 
     // update status info
-    STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
+    STATUS_INFO_UPDATE(createInfo,linkName,NULL)
     {
       // no additional values
     }
@@ -6136,7 +6161,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   }
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,linkName,0LL,0LL)
+  STATUS_INFO_UPDATE(createInfo,linkName,NULL)
   {
     createInfo->statusInfo.done.count++;
   }
@@ -6188,6 +6213,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   uint64                    offset;
   uint64                    size;
   ulong                     bufferLength;
+  FragmentNode              *fragmentNode;
   uint64                    archiveSize;
   uint64                    doneSize;
   uint                      percentageDone;
@@ -6240,7 +6266,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6268,7 +6294,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
         createInfo->statusInfo.done.count += StringList_count(fileNameList);
         createInfo->statusInfo.done.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
@@ -6370,8 +6396,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
               // update status info
-              STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),offset,bufferLength)
+              STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
               {
+                if (fragmentNode != NULL)
+                {
+                  FragmentList_addRange(fragmentNode,offset,bufferLength);
+                }
+
                 doneSize         = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 archiveSize      = createInfo->statusInfo.storage.totalSize+archiveSize;
                 compressionRatio = (!createInfo->storageFlags.dryRun && (doneSize > 0))
@@ -6508,9 +6539,12 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),0LL,0LL)
+  STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
   {
-    createInfo->statusInfo.done.count += StringList_count(fileNameList);
+    if ((fragmentNode != NULL) && FragmentList_isComplete(fragmentNode))
+    {
+      createInfo->statusInfo.done.count += StringList_count(fileNameList);
+    }
   }
 
   // close file
@@ -6565,7 +6599,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6592,7 +6626,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
-      STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
+      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
@@ -6665,7 +6699,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   }
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,fileName,0LL,0LL)
+  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
   {
     createInfo->statusInfo.done.count++;
   }

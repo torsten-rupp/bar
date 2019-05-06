@@ -102,7 +102,8 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle);
 * Name   : FileSystem_fileSystemTypeToString
 * Purpose: get name of file system
 * Input  : fileSystemType - file system type
-*          defaultValue   - default value
+*          defaultValue   - default value for not supported file system
+*                           types
 * Output : -
 * Return : file system name
 * Notes  : -

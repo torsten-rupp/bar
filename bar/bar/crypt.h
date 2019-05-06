@@ -409,7 +409,8 @@ INLINE bool Crypt_isValidSignatureState(CryptSignatureStates cryptSignatureState
 * Name   : Crypt_algorithmToString
 * Purpose: get name of crypt algorithm
 * Input  : cryptAlgorithm - crypt algorithm
-*          defaultValue   - default value
+*          defaultValue   - default value for not supported crypt
+*                           algorithms
 * Output : -
 * Return : algorithm name
 * Notes  : -

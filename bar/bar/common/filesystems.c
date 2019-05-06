@@ -201,7 +201,9 @@ Errors FileSystem_done(FileSystemHandle *fileSystemHandle)
 
 const char *FileSystem_fileSystemTypeToString(FileSystemTypes fileSystemType, const char *defaultValue)
 {
-  return ((ARRAY_FIRST(FILESYTEM_TYPES).fileSystemType <= fileSystemType) && (fileSystemType <= ARRAY_LAST(FILESYTEM_TYPES).fileSystemType))
+  return (   (ARRAY_FIRST(FILESYTEM_TYPES).fileSystemType <= fileSystemType)
+          && (fileSystemType <= ARRAY_LAST(FILESYTEM_TYPES).fileSystemType)
+         )
            ? FILESYTEM_TYPES[fileSystemType-ARRAY_FIRST(FILESYTEM_TYPES).fileSystemType].name
            : defaultValue;
 }

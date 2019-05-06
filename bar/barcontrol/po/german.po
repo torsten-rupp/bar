@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-04-11 12:34+0200\n"
+"POT-Creation-Date: 2019-05-05 18:23+0200\n"
 "PO-Revision-Date: 2017-12-06 16:43+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2127,8 +2127,9 @@ msgid "Output && Log"
 msgstr "Ausgaben && Logging"
 
 #: src/ServerSettings.java:1579
-msgid "Level"
-msgstr "Detailierungsgrad"
+#, fuzzy
+msgid "Verbosity level"
+msgstr "Detailierungsgrad für Ausgaben."
 
 #: src/ServerSettings.java:1582
 msgid "Verbosity level."
@@ -5441,9 +5442,8 @@ msgstr "Durchschnittliche Ausführungszeit"
 msgid "differental"
 msgstr "differentiell"
 
-#, fuzzy
-#~ msgid "Verbosity level"
-#~ msgstr "Detailierungsgrad für Ausgaben."
+#~ msgid "Level"
+#~ msgstr "Detailierungsgrad"
 
 #, fuzzy
 #~ msgid "StartX"

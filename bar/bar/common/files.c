@@ -2565,18 +2565,20 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
                                      const char          *directoryName
                                     )
 {
-  const char *s;
-  #ifdef HAVE_O_NOATIME
-    int    handle;
-  #else /* not HAVE_O_NOATIME */
-    struct stat stat;
-  #endif /* HAVE_O_NOATIME */
+  #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+    const char *s;
+    #ifdef HAVE_O_NOATIME
+      int    handle;
+    #else /* not HAVE_O_NOATIME */
+      struct stat stat;
+    #endif /* HAVE_O_NOATIME */
+  #endif /* defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY) */
 
   assert(directoryListHandle != NULL);
   assert(directoryName != NULL);
 
-  s = !stringIsEmpty(directoryName) ? directoryName : ".";
   #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+    s = !stringIsEmpty(directoryName) ? directoryName : ".";
     #ifdef HAVE_O_NOATIME
       // open directory (try first with O_NOATIME)
       handle = open(s,O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
@@ -3990,11 +3992,14 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
     int    handle;
     Errors error;
   #endif /* FS_IOC_GETFLAGS */
-  #ifndef HAVE_O_NOATIME
-    struct stat stat;
-    bool   atimeFlag;
-    struct timespec atime;
-  #endif /* not HAVE_O_NOATIME */
+  #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
+    #ifndef HAVE_O_NOATIME
+//TODO: remove
+//      struct stat     stat;
+//      bool            atimeFlag;
+//      struct timespec atime;
+    #endif /* not HAVE_O_NOATIME */
+  #endif /* defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS) */
 
   assert(fileName != NULL);
 
@@ -4022,11 +4027,11 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
       return error;
     }
     attributes &= ~(FILE_ATTRIBUTE_COMPRESS|FILE_ATTRIBUTE_NO_COMPRESS|FILE_ATTRIBUTE_IMMUTABLE|FILE_ATTRIBUTE_APPEND|FILE_ATTRIBUTE_NO_DUMP);
-    if ((fileAttributes & FILE_ATTRIBUTE_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_COMPRESS;
+    if ((fileAttributes & FILE_ATTRIBUTE_COMPRESS   ) != 0LL) attributes |= FILE_ATTRIBUTE_COMPRESS;
     if ((fileAttributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0LL) attributes |= FILE_ATTRIBUTE_NO_COMPRESS;
-    if ((fileAttributes & FILE_ATTRIBUTE_IMMUTABLE) != 0LL) attributes |= FILE_ATTRIBUTE_IMMUTABLE;
-    if ((fileAttributes & FILE_ATTRIBUTE_APPEND) != 0LL) attributes |= FILE_ATTRIBUTE_APPEND;
-    if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
+    if ((fileAttributes & FILE_ATTRIBUTE_IMMUTABLE  ) != 0LL) attributes |= FILE_ATTRIBUTE_IMMUTABLE;
+    if ((fileAttributes & FILE_ATTRIBUTE_APPEND     ) != 0LL) attributes |= FILE_ATTRIBUTE_APPEND;
+    if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
     if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
     {
       error = ERRORX_(IO,errno,"%s",fileName);
@@ -4128,13 +4133,15 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
                                   ConstString               fileName
                                  )
 {
-  int                       n;
-  char                      *names;
-  uint                      namesLength;
-  const char                *name;
-  void                      *data;
-  uint                      dataLength;
-  FileExtendedAttributeNode *fileExtendedAttributeNode;
+  #ifdef HAVE_LLISTXATTR
+    int                       n;
+    char                      *names;
+    uint                      namesLength;
+    const char                *name;
+    void                      *data;
+    uint                      dataLength;
+    FileExtendedAttributeNode *fileExtendedAttributeNode;
+  #endif
 
   assert(fileExtendedAttributeList != NULL);
   assert(fileName != NULL);
@@ -4142,73 +4149,82 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
   // init variables
   List_init(fileExtendedAttributeList);
 
-  // allocate buffer for attribute names
-  n = llistxattr(String_cString(fileName),NULL,0);
-  if (n < 0)
-  {
-    return ERRORX_(IO,errno,"%s",String_cString(fileName));
-  }
-  namesLength = (uint)n;
-  names = (char*)malloc(namesLength);
-  if (names == NULL)
-  {
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
+  #ifdef HAVE_LLISTXATTR
+    // allocate buffer for attribute names
+    n = llistxattr(String_cString(fileName),NULL,0);
+    if (n < 0)
+    {
+      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+      return ERRORX_(IO,errno,"%s",String_cString(fileName));
+    }
+    namesLength = (uint)n;
+    names = (char*)malloc(namesLength);
+    if (names == NULL)
+    {
+      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
 
-  // get attribute names
-  if (llistxattr(String_cString(fileName),names,namesLength) < 0)
-  {
+    // get attribute names
+    if (llistxattr(String_cString(fileName),names,namesLength) < 0)
+    {
+      free(names);
+      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+      return ERRORX_(IO,errno,"%s",String_cString(fileName));
+    }
+
+    // get attributes
+    name = names;
+    while ((uint)(name-names) < namesLength)
+    {
+      // allocate buffer for data
+      n = lgetxattr(String_cString(fileName),name,NULL,0);
+      if (n < 0)
+      {
+        free(names);
+        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+        return ERRORX_(IO,errno,"%s",String_cString(fileName));
+      }
+      dataLength = (uint)n;
+      data = malloc(dataLength);
+      if (data == NULL)
+      {
+        free(names);
+        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+        return ERROR_INSUFFICIENT_MEMORY;
+      }
+
+      // get extended attribute
+      n = lgetxattr(String_cString(fileName),name,data,dataLength);
+      if (n < 0)
+      {
+        free(data);
+        free(names);
+        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+        return ERRORX_(IO,errno,"%s",String_cString(fileName));
+      }
+
+      // store in attribute list
+      fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
+      if (fileExtendedAttributeNode == NULL)
+      {
+        free(data);
+        free(names);
+        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+        return ERROR_INSUFFICIENT_MEMORY;
+      }
+      fileExtendedAttributeNode->name       = String_newCString(name);
+      fileExtendedAttributeNode->data       = data;
+      fileExtendedAttributeNode->dataLength = dataLength;
+      List_append(fileExtendedAttributeList,fileExtendedAttributeNode);
+
+      // next attribute
+      name += stringLength(name)+1;
+    }
+
+    // free resources
     free(names);
-    return ERRORX_(IO,errno,"%s",String_cString(fileName));
-  }
-
-  // get attributes
-  name = names;
-  while ((uint)(name-names) < namesLength)
-  {
-    // allocate buffer for data
-    n = lgetxattr(String_cString(fileName),name,NULL,0);
-    if (n < 0)
-    {
-      free(names);
-      return ERRORX_(IO,errno,"%s",String_cString(fileName));
-    }
-    dataLength = (uint)n;
-    data = malloc(dataLength);
-    if (data == NULL)
-    {
-      free(names);
-      return ERROR_INSUFFICIENT_MEMORY;
-    }
-
-    // get extended attribute
-    n = lgetxattr(String_cString(fileName),name,data,dataLength);
-    if (n < 0)
-    {
-      free(data);
-      free(names);
-      return ERRORX_(IO,errno,"%s",String_cString(fileName));
-    }
-
-    // store in attribute list
-    fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
-    if (fileExtendedAttributeNode == NULL)
-    {
-      free(data);
-      free(names);
-      return ERROR_INSUFFICIENT_MEMORY;
-    }
-    fileExtendedAttributeNode->name       = String_newCString(name);
-    fileExtendedAttributeNode->data       = data;
-    fileExtendedAttributeNode->dataLength = dataLength;
-    List_append(fileExtendedAttributeList,fileExtendedAttributeNode);
-
-    // next attribute
-    name += stringLength(name)+1;
-  }
-
-  // free resources
-  free(names);
+  #endif /* HAVE_LLISTXATTR */
 
   return ERROR_NONE;
 }
@@ -4217,24 +4233,28 @@ Errors File_setExtendedAttributes(ConstString                     fileName,
                                   const FileExtendedAttributeList *fileExtendedAttributeList
                                  )
 {
-  FileExtendedAttributeNode *fileExtendedAttributeNode;
+  #ifdef HAVE_LSETXATTR
+    FileExtendedAttributeNode *fileExtendedAttributeNode;
+  #endif /* HAVE_LSETXATTR */
 
   assert(fileName != NULL);
   assert(fileExtendedAttributeList != NULL);
 
-  LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
-  {
-    if (lsetxattr(String_cString(fileName),
-                  String_cString(fileExtendedAttributeNode->name),
-                  fileExtendedAttributeNode->data,
-                  fileExtendedAttributeNode->dataLength,
-                  0
-                 ) != 0
-       )
+  #ifdef HAVE_LSETXATTR
+    LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
     {
-      return ERRORX_(IO,errno,"%s",String_cString(fileName));
+      if (lsetxattr(String_cString(fileName),
+                    String_cString(fileExtendedAttributeNode->name),
+                    fileExtendedAttributeNode->data,
+                    fileExtendedAttributeNode->dataLength,
+                    0
+                   ) != 0
+         )
+      {
+        return ERRORX_(IO,errno,"%s",String_cString(fileName));
+      }
     }
-  }
+  #endif /* HAVE_LSETXATTR */
 
   return ERROR_NONE;
 }

@@ -1106,7 +1106,7 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
   assert(name != NULL);
-  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
+//  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   // purge all stored entries
 //fprintf(stderr,"%s, %d: --- jobUUID=%s scheduleUUID=%s delta=%d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,globalOptions.continuousMinTimeDelta);
@@ -1171,7 +1171,7 @@ LOCAL Errors removeEntry(DatabaseHandle *databaseHandle,
                          DatabaseId     databaseId
                         )
 {
-  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
+//  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   return Database_execute(databaseHandle,
                           CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -1195,7 +1195,7 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
                              DatabaseId     databaseId
                             )
 {
-  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
+//  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   return Database_execute(databaseHandle,
                           CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -1320,9 +1320,9 @@ fprintf(stderr,"\n");
             if      (IS_INOTIFY(inotifyEvent->mask,IN_CREATE))
             {
               // add directory and sub-directories to notify
-              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-              {
+//              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle.timeout),
+//                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//              {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
                   // store into notify database
@@ -1349,7 +1349,7 @@ fprintf(stderr,"\n");
                   // add directory and sub-directories to notify
                   addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
                 }
-              });
+//              });
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
             {
@@ -1365,9 +1365,9 @@ fprintf(stderr,"\n");
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_TO))
             {
               // add directory and sub-directories to notify
-              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-              {
+//              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle.timeout),
+//                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//              {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
                   // store into notify database
@@ -1394,14 +1394,14 @@ fprintf(stderr,"\n");
                   // add directory and sub-directories to notify
                   addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
                 }
-              });
+//              });
             }
             else
             {
-              // add directory and sub-directories to notify
-              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-              {
+//              // add directory and sub-directories to notify
+//              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle.timeout),
+//                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//              {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
                   // store into notify database
@@ -1425,7 +1425,7 @@ fprintf(stderr,"\n");
                                );
                   }
                 }
-              });
+//              });
             }
           }
           else
@@ -1442,9 +1442,9 @@ fprintf(stderr,"\n");
             else
             {
               // file move or changed -> store into notify database
-              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-              {
+//              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle.timeout),
+//                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//              {
                 LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
                 {
                   error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
@@ -1467,7 +1467,7 @@ fprintf(stderr,"\n");
                                );
                   }
                 }
-              });
+//              });
             }
           }
         }
@@ -1726,14 +1726,14 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
   assert(!String_isEmpty(scheduleUUID));
   assert(!String_isEmpty(name));
 
-  BLOCK_DOX(error,
-            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-  {
+//  BLOCK_DOX(error,
+//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
+//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//  {
     return addEntry(databaseHandle,String_cString(jobUUID),String_cString(scheduleUUID),name);
-  });
+//  });
 
-  return error;
+//  return error;
 }
 
 Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
@@ -1742,14 +1742,14 @@ Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
 {
   Errors error;
 
-  BLOCK_DOX(error,
-            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-  {
+//  BLOCK_DOX(error,
+//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
+//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//  {
     return removeEntry(databaseHandle,databaseId);
-  });
+//  });
 
-  return error;
+//  return error;
 }
 
 bool Continuous_getEntry(DatabaseHandle *databaseHandle,
@@ -1766,10 +1766,10 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
   assert(jobUUID != NULL);
   assert(name != NULL);
 
-  BLOCK_DOX(result,
-            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-  {
+//  BLOCK_DOX(result,
+//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
+//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//  {
     // prepare list
     if (Database_prepare(&databaseQueryHandle,
                          databaseHandle,
@@ -1779,6 +1779,7 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
                                 AND DATETIME('now','-%u seconds')>=dateTime \
                                 AND jobUUID=%'S \
                                 AND scheduleUUID=%'S \
+                          LIMIT 0,1 \
                          ",
                          globalOptions.continuousMinTimeDelta,
                          jobUUID,
@@ -1810,8 +1811,9 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
       return FALSE;
     }
 
-    return TRUE;
-  });
+//    return TRUE;
+//  });
+result = TRUE;
 
   if (databaseId != NULL) (*databaseId) = databaseId_;
 
@@ -1828,10 +1830,10 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
-  BLOCK_DOX(result,
-            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-  {
+//  BLOCK_DOX(result,
+//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
+//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
+//  {
     return Database_exists(databaseHandle,
                            "names",
                            "id",
@@ -1844,9 +1846,9 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                            jobUUID,
                            scheduleUUID
                           );
-  });
+//  });
 
-  return result;
+//  return result;
 }
 
 Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
@@ -1860,9 +1862,6 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
   assert(databaseQueryHandle != NULL);
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
-
-  // lock
-  Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ);
 
   // prepare list
   error = Database_prepare(databaseQueryHandle,
@@ -1880,7 +1879,6 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
                           );
   if (error != ERROR_NONE)
   {
-    Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
     return error;
   }
 
@@ -1893,9 +1891,6 @@ void Continuous_doneList(DatabaseQueryHandle *databaseQueryHandle)
 
   // done list
   Database_finalize(databaseQueryHandle);
-
-  // unlock
-  Database_unlock(databaseQueryHandle->databaseHandle,DATABASE_LOCK_TYPE_READ);
 }
 
 bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
@@ -1926,7 +1921,6 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
 
     name = String_new();
 
-    Database_lock(databaseHandle,DATABASE_LOCK_TYPE_READ);
     Database_prepare(&databaseQueryHandle,
                            databaseHandle,
                            "SELECT id,UNIXTIMESTAMP(dateTime),name,storedFlag \
@@ -1949,7 +1943,6 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
        fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
     }
     Database_finalize(&databaseQueryHandle);
-    Database_unlock(databaseHandle,DATABASE_LOCK_TYPE_READ);
 
     String_delete(name);
 }

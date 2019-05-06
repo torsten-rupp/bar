@@ -1005,6 +1005,7 @@ run runserver: bar@EXEEXT@
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           $(OPTIONS)
 
 rund runserverd: bar-debug@EXEEXT@
@@ -1013,6 +1014,7 @@ rund runserverd: bar-debug@EXEEXT@
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           $(OPTIONS)
 
 run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
@@ -1021,6 +1023,7 @@ run_ssl runserver_ssl: bar@EXEEXT@ ../bar-ca.pem ../bar-server-cert.pem ../bar-s
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           $(OPTIONS)
 
@@ -1030,6 +1033,7 @@ run_slave runserver_slave: bar@EXEEXT@
           --server-mode=slave \
           --index-database=bar-index-slave.db \
           --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
           --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
@@ -1040,6 +1044,7 @@ rund_slave runserverd_slave: bar-debug@EXEEXT@
           --server-mode=slave \
           --index-database=bar-index-slave.db \
           --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
           --pairing-master-file=/tmp/pairing \
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
@@ -1051,6 +1056,7 @@ run_en runserver_en: bar@EXEEXT@
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           $(OPTIONS)
 
 run_de runserver_de: bar@EXEEXT@
@@ -1059,6 +1065,7 @@ run_de runserver_de: bar@EXEEXT@
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           $(OPTIONS)
 
 run_jp runserver_jp: bar@EXEEXT@
@@ -1067,6 +1074,7 @@ run_jp runserver_jp: bar@EXEEXT@
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           $(OPTIONS)
 
 
@@ -1078,6 +1086,7 @@ rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
           --server-mode=master \
           --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
           --log-file=/tmp/bar.log --log=all \
@@ -1089,6 +1098,7 @@ rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1100,6 +1110,7 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
           --server-mode=master \
           --continuous-database=bar-continuous2.db --index-database=bar-index2.db --index-database-keep-time=365days \
           --jobs-directory=jobs2 \
+          --incremental-data-directory=/tmp \
           --server-port=39999 --server-tls-port=0 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar2.log --log=all --server-debug \
@@ -1111,6 +1122,7 @@ rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
           --log-file=/tmp/bar.log --log=all \
@@ -1122,6 +1134,7 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
           --log-file=/tmp/bar.log --log=all \
@@ -1133,6 +1146,7 @@ rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1144,6 +1158,7 @@ rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pe
           --server-mode=slave \
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
@@ -1156,6 +1171,7 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
           --server-mode=slave \
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
@@ -1168,6 +1184,7 @@ rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-mode=slave \
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
@@ -1180,6 +1197,7 @@ rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-mode=slave \
           --continuous-database=bar-continuous-slave.db --index-database=bar-index-slave.db --index-database-keep-time=365days \
           --jobs-directory=jobs-slave \
+          --incremental-data-directory=/tmp \
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
@@ -1192,6 +1210,7 @@ rundev_en: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --server-mode=master \
           --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1203,6 +1222,7 @@ rundev_de: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --server-mode=master \
           --index-database=bar-index.db \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1214,6 +1234,7 @@ rundev_jp: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-
           --server-mode=master \
           --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1225,6 +1246,7 @@ rundev_ssl: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar
           --server-mode=master \
           --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --log-file=/tmp/bar.log --log=all \
@@ -1236,6 +1258,7 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
           --server-mode=master \
           --index-database=intermediate/index.db \
           --jobs-directory=intermediate/jobs \
+          --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
           --verbose=0 \

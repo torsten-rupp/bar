@@ -15150,7 +15150,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     error = flushArchiveIndexList(&archiveHandle,0);
     if (error != ERROR_NONE)
     {
-      return error;
+      break;
     }
 
     // update temporary entries, size (ignore error)
@@ -15163,14 +15163,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 #if 1
     if ((isPauseFunction != NULL) && isPauseFunction(isPauseUserData))
     {
-/*
-      error = doneTransaction(&archiveHandle);
-      if (error != ERROR_NONE)
-      {
-        break;
-      }
-*/
-
 #if 0
       // temporarly close storage
       error = Archive_storageInterrupt(&archiveHandle);
@@ -15209,22 +15201,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String_delete(imageName);
   String_delete(fileName);
 
-/*
-  error = doneTransaction(&archiveHandle);
-  if      (error != ERROR_NONE)
-  {
-    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
-
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_ERROR,
-                   0LL, // lastCheckedTimestamp
-                   "%s (error code: %d)",
-                   Error_getText(error),
-                   Error_getCode(error)
-                  );
-  }
-  else */if (abortedFlag)
+  if     (abortedFlag)
   {
     printInfo(4,"Aborted create index for '%s'\n",String_cString(printableStorageName));
 

@@ -625,26 +625,11 @@ void Compress_doneAll(void)
 
 const char *Compress_algorithmToString(CompressAlgorithms compressAlgorithm, const char *defaultValue)
 {
-  uint       i;
-  const char *s;
-
-  i = 0;
-  while (   (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
-         && (COMPRESS_ALGORITHMS[i].compressAlgorithm != compressAlgorithm)
-        )
-  {
-    i++;
-  }
-  if (i < SIZE_OF_ARRAY(COMPRESS_ALGORITHMS))
-  {
-    s = COMPRESS_ALGORITHMS[i].name;
-  }
-  else
-  {
-    s = defaultValue;
-  }
-
-  return s;
+  return (   (ARRAY_FIRST(COMPRESS_ALGORITHMS).compressAlgorithm <= compressAlgorithm)
+          && (compressAlgorithm <= ARRAY_LAST(COMPRESS_ALGORITHMS).compressAlgorithm)
+         )
+           ? COMPRESS_ALGORITHMS[compressAlgorithm-ARRAY_FIRST(COMPRESS_ALGORITHMS).compressAlgorithm].name
+           : defaultValue;
 }
 
 bool Compress_parseAlgorithm(const char *name, CompressAlgorithms *compressAlgorithm)

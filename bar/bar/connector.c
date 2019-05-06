@@ -1420,6 +1420,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
 * Notes  : Arguments:
 *            storageId=<n>
 *            name=<name>
+*            fileSystemType=<text>
 *            size=<n>
 *            timeLastAccess=<n>
 *            timeModified=<n>

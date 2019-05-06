@@ -2285,6 +2285,7 @@ LOCAL void indexThreadCode(void)
             {
               databaseId = DATABASE_ID_NONE;
             }
+
             Database_finalize(&databaseQueryHandle);
           }
           else
@@ -4205,6 +4206,7 @@ Database_prepare(&databaseQueryHandle2,
                                    totalEntrySize
                                   );
 
+//TODO
 Database_finalize(&databaseQueryHandle2);
       Database_finalize(&databaseQueryHandle);
 
@@ -10682,7 +10684,6 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                 VALUES \
                                   ( \
                                    %lld, \
-                                   %lld, \
                                    %d, \
                                    %'S, \
                                    %llu, \
@@ -10717,9 +10718,11 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   ( \
                                    storageId, \
                                    entryId, \
+                                   fileSystemType, \
                                    size, \
-                                   fragmentOffset, \
-                                   fragmentSize\
+                                   blockSize, \
+                                   blockOffset, \
+                                   blockCount \
                                   ) \
                                 VALUES \
                                   ( \
@@ -10759,9 +10762,10 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     NULL,  // resultMap
-                                    "INDEX_ADD_IMAGE storageId=%llu type=IMAGE name=%'S size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
+                                    "INDEX_ADD_IMAGE storageId=%llu type=IMAGE name=%'S fileSystemType=%'s size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
                                     storageIndexId,
                                     name,
+                                    FileSystem_fileSystemTypeToString(fileSystemType,"unknown"),
                                     size,
                                     blockSize,
                                     blockOffset,

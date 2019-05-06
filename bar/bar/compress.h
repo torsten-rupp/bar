@@ -366,7 +366,8 @@ void Compress_doneAll(void);
 * Name   : Compress_algorithmToString
 * Purpose: get name of compress algorithm
 * Input  : compressAlgorithm - compress algorithm
-*          defaultValue      - default value
+*          defaultValue      - default value for not supported compress
+*                              algorithms
 * Output : -
 * Return : compress algorithm name
 * Notes  : -
