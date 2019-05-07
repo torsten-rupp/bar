@@ -4075,8 +4075,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
   DatabaseId          uuidDatabaseId;
   StringMap           resultMap;
 
-  DatabaseQueryHandle databaseQueryHandle2;
-
   assert(indexHandle != NULL);
 
   // check init error
@@ -4097,6 +4095,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
+//TODO: explain
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
                                "SELECT uuids.id, \
@@ -4137,47 +4136,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                filterString,
                                INDEX_STATE_DELETED
                               );
-//TODO: remove
-Database_prepare(&databaseQueryHandle2,
-                         &indexHandle->databaseHandle,
-                         "SELECT uuids.id, \
-                                 (SELECT UNIXTIMESTAMP(storage.created) FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
-                                 (SELECT storage.errorMessage FROM entities LEFT JOIN storage ON storage.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storage.created DESC LIMIT 0,1), \
-                                 (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
-                                 (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
-                                 (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
-                                 (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
-                                 (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%d), \
-                                 (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
-                                 (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
-                                 (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
-                                 (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
-                                 (SELECT AVG(history.duration) FROM history WHERE history.jobUUID=uuids.jobUUID AND IFNULL(history.errorMessage,'')='' AND history.type=%d), \
-                                 COUNT(entities.id), \
-                                 COUNT(storage.id), \
-                                 TOTAL(storage.size), \
-                                 TOTAL(storage.totalEntryCount) , \
-                                 TOTAL(storage.totalEntrySize) \
-                          FROM uuids \
-                            LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                            LEFT JOIN storage ON storage.entityId=entities.id \
-                          WHERE     %S \
-                                AND (storage.state ISNULL OR (storage.state!=%d)) \
-                          GROUP BY uuids.id \
-                         ",
-                         ARCHIVE_TYPE_NORMAL,
-                         ARCHIVE_TYPE_FULL,
-                         ARCHIVE_TYPE_INCREMENTAL,
-                         ARCHIVE_TYPE_DIFFERENTIAL,
-                         ARCHIVE_TYPE_CONTINUOUS,
-                         ARCHIVE_TYPE_NORMAL,
-                         ARCHIVE_TYPE_FULL,
-                         ARCHIVE_TYPE_INCREMENTAL,
-                         ARCHIVE_TYPE_DIFFERENTIAL,
-                         ARCHIVE_TYPE_CONTINUOUS,
-                         filterString,
-                         INDEX_STATE_DELETED
-                        );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (error != ERROR_NONE)
       {
@@ -4206,8 +4164,6 @@ Database_prepare(&databaseQueryHandle2,
                                    totalEntrySize
                                   );
 
-//TODO
-Database_finalize(&databaseQueryHandle2);
       Database_finalize(&databaseQueryHandle);
 
       return ERROR_NONE;
