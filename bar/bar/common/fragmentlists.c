@@ -187,6 +187,7 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
     fragmentNode->userData     = NULL;
     fragmentNode->userDataSize = 0;
   }
+  fragmentNode->lockCount    = 0;
   List_init(&fragmentNode->rangeList);
   fragmentNode->rangeListSum = 0LL;
 }
@@ -196,6 +197,21 @@ void FragmentList_doneNode(FragmentNode *fragmentNode)
   assert(fragmentNode != NULL);
 
   freeFragmentNode(fragmentNode,NULL);
+}
+
+void FragmentList_lockNode(FragmentNode *fragmentNode)
+{
+  assert(fragmentNode != NULL);
+
+  ATOMIC_INCREMENT(fragmentNode->lockCount);
+}
+
+void FragmentList_unlockNode(FragmentNode *fragmentNode)
+{
+  assert(fragmentNode != NULL);
+  assert(fragmentNode->lockCount > 0);
+
+  ATOMIC_DECREMENT(fragmentNode->lockCount);
 }
 
 FragmentNode *FragmentList_add(FragmentList *fragmentList,
@@ -378,10 +394,12 @@ bool FragmentList_isComplete(const FragmentNode *fragmentNode)
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
-  return    (fragmentNode->size == 0)
-         || (   (List_count(&fragmentNode->rangeList) == 1)
-             && (fragmentNode->rangeList.head->offset == 0)
-             && (fragmentNode->rangeList.head->length >= fragmentNode->size)
+  return    (fragmentNode->lockCount <= 1)
+         && (   (fragmentNode->size == 0)
+             || (   (List_count(&fragmentNode->rangeList) == 1)
+                 && (fragmentNode->rangeList.head->offset == 0)
+                 && (fragmentNode->rangeList.head->length >= fragmentNode->size)
+                )
             );
 }
 
@@ -400,7 +418,6 @@ void FragmentList_print(FILE               *outputHandle,
 
   lastOffset = 0LL;
   LIST_ITERATE(&fragmentNode->rangeList,fragmentRangeNode)
-//  for (fragmentRangeNode = fragmentNode->rangeList.head; fragmentRangeNode != NULL; fragmentRangeNode = fragmentRangeNode->next)
   {
     offset0 = F0(fragmentRangeNode);
     offset1 = F1(fragmentRangeNode);

@@ -51,6 +51,7 @@ typedef struct FragmentNode
   uint64            size;               // size of fragment
   void              *userData;
   uint              userDataSize;
+  uint              lockCount;
 
   FragmentRangeList rangeList;
   uint64            rangeListSum;
@@ -167,6 +168,28 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
 \***********************************************************************/
 
 void FragmentList_doneNode(FragmentNode *fragmentNode);
+
+/***********************************************************************\
+* Name   : FragmentList_lockNode
+* Purpose: lock fragment node
+* Input  : fragmentNode - fragment node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void FragmentList_lockNode(FragmentNode *fragmentNode);
+
+/***********************************************************************\
+* Name   : FragmentList_unlockNode
+* Purpose: unlock fragment node
+* Input  : fragmentNode - fragment node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void FragmentList_unlockNode(FragmentNode *fragmentNode);
 
 /***********************************************************************\
 * Name   : FragmentList_add
