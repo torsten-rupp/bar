@@ -866,12 +866,13 @@ LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
   assert(createInfo != NULL);
   assert(storageStatusInfo != NULL);
 
-  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+//  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
   {
     createInfo->statusInfo.storage.doneSize = storageStatusInfo->storageDoneBytes;
     createInfo->statusInfo.volume.number    = storageStatusInfo->volumeNumber;
     createInfo->statusInfo.volume.progress  = storageStatusInfo->volumeProgress;
-    updateStatusInfo(createInfo,TRUE);
+//    updateStatusInfo(createInfo,TRUE);
   }
 
   return !Storage_isAborted(&createInfo->storageInfo);
@@ -1544,11 +1545,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                   {
                     createInfo->statusInfo.total.count++;
                     createInfo->statusInfo.total.size += fileInfo.size;
-                    updateStatusInfo(createInfo,FALSE);
+//                    updateStatusInfo(createInfo,FALSE);
                   }
                 }
               }
@@ -1560,9 +1562,10 @@ assert(continuousDatabaseHandle.readLockCount > 0);
               Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
               SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              STATUS_INFO_UPDATE(createInfo,fileName,NULL)
               {
                 createInfo->statusInfo.total.count++;
-                updateStatusInfo(createInfo,FALSE);
+//                updateStatusInfo(createInfo,FALSE);
               }
 assert(continuousDatabaseHandle.readLockCount > 0);
               break;
@@ -1578,10 +1581,11 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                   {
                     createInfo->statusInfo.total.count++;
-                    updateStatusInfo(createInfo,FALSE);
+//                    updateStatusInfo(createInfo,FALSE);
                   }
                 }
               }
@@ -1600,11 +1604,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                   {
                     createInfo->statusInfo.total.count++;
                     createInfo->statusInfo.total.size += fileInfo.size;
-                    updateStatusInfo(createInfo,FALSE);
+//                    updateStatusInfo(createInfo,FALSE);
                   }
                 }
               }
@@ -1622,10 +1627,11 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                   {
                     createInfo->statusInfo.total.count++;
-                    updateStatusInfo(createInfo,FALSE);
+//                    updateStatusInfo(createInfo,FALSE);
                   }
                 }
               }
@@ -1726,11 +1732,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                         || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                        )
                     {
-                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
                         createInfo->statusInfo.total.count++;
                         createInfo->statusInfo.total.size += fileInfo.size;
-                        updateStatusInfo(createInfo,FALSE);
+//                        updateStatusInfo(createInfo,FALSE);
                       }
                     }
                     break;
@@ -1761,10 +1768,11 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                           || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                          )
                       {
-                        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                         {
                           createInfo->statusInfo.total.count++;
-                          updateStatusInfo(createInfo,FALSE);
+//                          updateStatusInfo(createInfo,FALSE);
                         }
                       }
                       break;
@@ -1826,11 +1834,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                                       || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                       )
                                   {
-                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       createInfo->statusInfo.total.size += fileInfo.size;
-                                      updateStatusInfo(createInfo,FALSE);
+//                                      updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
                                   break;
@@ -1861,10 +1870,11 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                                       || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                      )
                                   {
-                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                     {
                                       createInfo->statusInfo.total.count++;
-                                      updateStatusInfo(createInfo,FALSE);
+//                                      updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
                                   break;
@@ -1891,11 +1901,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                                       || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                       )
                                   {
-                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       createInfo->statusInfo.total.size += fileInfo.size;
-                                      updateStatusInfo(createInfo,FALSE);
+//                                      updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
                                   break;
@@ -1922,7 +1933,8 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                                       || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                       )
                                   {
-                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
@@ -1931,18 +1943,19 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                                       {
                                         createInfo->statusInfo.total.size += fileInfo.size;
                                       }
-                                      updateStatusInfo(createInfo,FALSE);
+//                                      updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
                                   break;
                                 case ENTRY_TYPE_IMAGE:
                                   if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                                   {
-                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                                    SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                                    STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                     {
                                       createInfo->statusInfo.total.count++;
                                       createInfo->statusInfo.total.size += fileInfo.size;
-                                      updateStatusInfo(createInfo,FALSE);
+//                                      updateStatusInfo(createInfo,FALSE);
                                     }
                                   }
                                   break;
@@ -1982,10 +1995,11 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                         || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                         )
                     {
-                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
                         createInfo->statusInfo.total.count++;
-                        updateStatusInfo(createInfo,FALSE);
+//                        updateStatusInfo(createInfo,FALSE);
                       }
                     }
                     break;
@@ -2015,11 +2029,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                         || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                         )
                     {
-                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
                         createInfo->statusInfo.total.count++;
                         createInfo->statusInfo.total.size += fileInfo.size;
-                        updateStatusInfo(createInfo,FALSE);
+//                        updateStatusInfo(createInfo,FALSE);
                       }
                     }
                     break;
@@ -2049,10 +2064,11 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                         || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
                         )
                     {
-                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
                         createInfo->statusInfo.total.count++;
-                        updateStatusInfo(createInfo,FALSE);
+//                        updateStatusInfo(createInfo,FALSE);
                       }
                     }
                     break;
@@ -2067,11 +2083,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                       }
                       UNUSED_VARIABLE(deviceInfo);
 
-                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
                         createInfo->statusInfo.total.count++;
                         createInfo->statusInfo.total.size += fileInfo.size;
-                        updateStatusInfo(createInfo,FALSE);
+//                        updateStatusInfo(createInfo,FALSE);
                       }
                     }
                     break;
@@ -2102,10 +2119,11 @@ assert(continuousDatabaseHandle.readLockCount > 0);
   }
 
   // done
-  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
   {
     createInfo->statusInfo.collectTotalSumDone = TRUE;
-    updateStatusInfo(createInfo,TRUE);
+//    updateStatusInfo(createInfo,TRUE);
   }
 
   // close continuous database
@@ -2209,11 +2227,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
-        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
         {
-          createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//          createInfo->statusInfo.done.count++;
           createInfo->statusInfo.error.count++;
-          updateStatusInfo(createInfo,FALSE);
+//          updateStatusInfo(createInfo,FALSE);
         }
         continue;
       }
@@ -2249,11 +2269,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
 
-                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                   {
                     createInfo->statusInfo.skipped.count++;
                     createInfo->statusInfo.skipped.size += fileInfo.size;
-                    updateStatusInfo(createInfo,FALSE);
+//                    updateStatusInfo(createInfo,FALSE);
                   }
                 }
               }
@@ -2262,11 +2283,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             {
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              STATUS_INFO_UPDATE(createInfo,fileName,NULL)
               {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                 createInfo->statusInfo.skipped.count++;
                 createInfo->statusInfo.skipped.size += fileInfo.size;
-                updateStatusInfo(createInfo,FALSE);
+//                updateStatusInfo(createInfo,FALSE);
               }
             }
             break;
@@ -2309,11 +2332,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             {
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              STATUS_INFO_UPDATE(createInfo,fileName,NULL)
               {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                 createInfo->statusInfo.skipped.count++;
                 createInfo->statusInfo.skipped.size += fileInfo.size;
-                updateStatusInfo(createInfo,FALSE);
+//                updateStatusInfo(createInfo,FALSE);
               }
             }
             break;
@@ -2391,11 +2416,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Size exceeded limit '%s'",String_cString(name));
 
-                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                   {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                     createInfo->statusInfo.skipped.count++;
                     createInfo->statusInfo.skipped.size += fileInfo.size;
-                    updateStatusInfo(createInfo,FALSE);
+//                    updateStatusInfo(createInfo,FALSE);
                   }
                 }
               }
@@ -2404,11 +2431,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             {
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              STATUS_INFO_UPDATE(createInfo,fileName,NULL)
               {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                 createInfo->statusInfo.skipped.count++;
                 createInfo->statusInfo.skipped.size += fileInfo.size;
-                updateStatusInfo(createInfo,FALSE);
+//                updateStatusInfo(createInfo,FALSE);
               }
             }
             break;
@@ -2438,11 +2467,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             {
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              STATUS_INFO_UPDATE(createInfo,fileName,NULL)
               {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                 createInfo->statusInfo.skipped.count++;
                 createInfo->statusInfo.skipped.size += fileInfo.size;
-                updateStatusInfo(createInfo,FALSE);
+//                updateStatusInfo(createInfo,FALSE);
               }
             }
             break;
@@ -2450,13 +2481,15 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
             logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'",String_cString(fileName));
 
-            SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//            SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            STATUS_INFO_UPDATE(createInfo,fileName,NULL)
             {
-              createInfo->statusInfo.done.count++;
-              createInfo->statusInfo.done.size += (uint64)fileInfo.size;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//              createInfo->statusInfo.done.count++;
+//              createInfo->statusInfo.done.size += (uint64)fileInfo.size;
               createInfo->statusInfo.error.count++;
               createInfo->statusInfo.error.size += (uint64)fileInfo.size;
-              updateStatusInfo(createInfo,FALSE);
+//              updateStatusInfo(createInfo,FALSE);
             }
             break;
         }
@@ -2527,15 +2560,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {
-          printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
-
-          SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-          {
-            createInfo->statusInfo.done.count++;
-            createInfo->statusInfo.error.count++;
-            updateStatusInfo(createInfo,FALSE);
-          }
           continue;
         }
 
@@ -2586,11 +2610,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                 {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                   createInfo->statusInfo.skipped.count++;
                   createInfo->statusInfo.skipped.size += fileInfo.size;
-                  updateStatusInfo(createInfo,FALSE);
+//                  updateStatusInfo(createInfo,FALSE);
                 }
               }
               break;
@@ -2635,11 +2661,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                   {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                     createInfo->statusInfo.skipped.count++;
                     createInfo->statusInfo.skipped.size += fileInfo.size;
-                    updateStatusInfo(createInfo,FALSE);
+//                    updateStatusInfo(createInfo,FALSE);
                   }
                 }
 
@@ -2663,13 +2691,15 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
                       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
-                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
-                        createInfo->statusInfo.done.count++;
-                        createInfo->statusInfo.done.size += (uint64)fileInfo.size;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//                        createInfo->statusInfo.done.count++;
+//                        createInfo->statusInfo.done.size += (uint64)fileInfo.size;
                         createInfo->statusInfo.error.count++;
                         createInfo->statusInfo.error.size += (uint64)fileInfo.size;
-                        updateStatusInfo(createInfo,FALSE);
+//                        updateStatusInfo(createInfo,FALSE);
                       }
                       continue;
                     }
@@ -2681,11 +2711,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
                       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
 
-                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
-                        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//                        createInfo->statusInfo.done.count++;
                         createInfo->statusInfo.error.count++;
-                        updateStatusInfo(createInfo,FALSE);
+//                        updateStatusInfo(createInfo,FALSE);
                       }
                       continue;
                     }
@@ -2903,13 +2935,15 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(fileName));
                             logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'",String_cString(fileName));
 
-                            SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                            SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                            STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                             {
-                              createInfo->statusInfo.done.count++;
-                              createInfo->statusInfo.done.size += (uint64)fileInfo.size;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//                              createInfo->statusInfo.done.count++;
+//                              createInfo->statusInfo.done.size += (uint64)fileInfo.size;
                               createInfo->statusInfo.error.count++;
                               createInfo->statusInfo.error.size += (uint64)fileInfo.size;
-                              updateStatusInfo(createInfo,FALSE);
+//                              updateStatusInfo(createInfo,FALSE);
                             }
                             break;
                         }
@@ -2918,11 +2952,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       {
                         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)",String_cString(fileName));
 
-                        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                         {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                           createInfo->statusInfo.skipped.count++;
                           createInfo->statusInfo.skipped.size += fileInfo.size;
-                          updateStatusInfo(createInfo,FALSE);
+//                          updateStatusInfo(createInfo,FALSE);
                         }
                       }
                     }
@@ -2930,11 +2966,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     {
                       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(fileName));
 
-                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                         createInfo->statusInfo.skipped.count++;
                         createInfo->statusInfo.skipped.size += fileInfo.size;
-                        updateStatusInfo(createInfo,FALSE);
+//                        updateStatusInfo(createInfo,FALSE);
                       }
                     }
                   }
@@ -2947,11 +2985,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
                   logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
-                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                   {
-                    createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//                    createInfo->statusInfo.done.count++;
                     createInfo->statusInfo.error.count++;
-                    updateStatusInfo(createInfo,FALSE);
+//                    updateStatusInfo(createInfo,FALSE);
                   }
                 }
               }
@@ -3002,11 +3042,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                 {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                   createInfo->statusInfo.skipped.count++;
                   createInfo->statusInfo.skipped.size += fileInfo.size;
-                  updateStatusInfo(createInfo,FALSE);
+//                  updateStatusInfo(createInfo,FALSE);
                 }
               }
               break;
@@ -3105,11 +3147,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                 {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                   createInfo->statusInfo.skipped.count++;
                   createInfo->statusInfo.skipped.size += fileInfo.size;
-                  updateStatusInfo(createInfo,FALSE);
+//                  updateStatusInfo(createInfo,FALSE);
                 }
               }
               break;
@@ -3152,11 +3196,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
                           logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
 
-                          SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                          SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                          STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                           {
-                            createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//                            createInfo->statusInfo.done.count++;
                             createInfo->statusInfo.error.count++;
-                            updateStatusInfo(createInfo,FALSE);
+//                            updateStatusInfo(createInfo,FALSE);
                           }
                           continue;
                         }
@@ -3182,11 +3228,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               {
                 logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s'",String_cString(name));
 
-                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//                SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+                STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                 {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
                   createInfo->statusInfo.skipped.count++;
                   createInfo->statusInfo.skipped.size += fileInfo.size;
-                  updateStatusInfo(createInfo,FALSE);
+//                  updateStatusInfo(createInfo,FALSE);
                 }
               }
               break;
@@ -3194,13 +3242,15 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               printInfo(2,"Unknown type of file '%s' - skipped\n",String_cString(name));
               logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_TYPE_UNKNOWN,"Unknown type '%s'",String_cString(name));
 
-              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//              SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+              STATUS_INFO_UPDATE(createInfo,fileName,NULL)
               {
-                createInfo->statusInfo.done.count++;
-                createInfo->statusInfo.done.size += (uint64)fileInfo.size;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//                createInfo->statusInfo.done.count++;
+//                createInfo->statusInfo.done.size += (uint64)fileInfo.size;
                 createInfo->statusInfo.error.count++;
                 createInfo->statusInfo.error.size += (uint64)fileInfo.size;
-                updateStatusInfo(createInfo,FALSE);
+//                updateStatusInfo(createInfo,FALSE);
               }
               break;
           }
@@ -3209,11 +3259,13 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_EXCLUDED,"Excluded '%s' (no dump attribute)",String_cString(name));
 
-          SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//          SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          STATUS_INFO_UPDATE(createInfo,fileName,NULL)
           {
+fprintf(stderr,"%s, %d: eeeeeeeeeeeeee\n",__FILE__,__LINE__);
             createInfo->statusInfo.skipped.count++;
             createInfo->statusInfo.skipped.size += fileInfo.size;
-            updateStatusInfo(createInfo,FALSE);
+//            updateStatusInfo(createInfo,FALSE);
           }
         }
 
@@ -3224,26 +3276,28 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       }
       if (n <= 0)
       {
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_MISSING,"No matching entry found for '%s'",String_cString(includeEntryNode->string));
-
-        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          createInfo->statusInfo.skipped.count++;
-          updateStatusInfo(createInfo,FALSE);
-        }
-
         if (createInfo->jobOptions->skipUnreadableFlag)
         {
           printWarning("No matching entry found for '%s' - skipped",
                        String_cString(includeEntryNode->string)
                       );
+          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_MISSING,"No matching entry found for '%s' - skipped",String_cString(includeEntryNode->string));
         }
         else
         {
           printError("No matching entry found for '%s'!",
                      String_cString(includeEntryNode->string)
                     );
+          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_MISSING,"No matching entry found for '%s'",String_cString(includeEntryNode->string));
           createInfo->failError = ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(includeEntryNode->string));
+        }
+
+//        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+        {
+fprintf(stderr,"%s, %d: err\n",__FILE__,__LINE__);
+          createInfo->statusInfo.error.count++;
+//          updateStatusInfo(createInfo,FALSE);
         }
       }
 
@@ -3512,10 +3566,11 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   }
 
   // update status info
-  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
   {
     createInfo->statusInfo.storage.totalSize += fileInfo.size;
-    updateStatusInfo(createInfo,FALSE);
+//    updateStatusInfo(createInfo,FALSE);
   }
 
   return ERROR_NONE;
@@ -4348,10 +4403,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
 
         // update status info
-        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+//        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
+        STATUS_INFO_UPDATE(createInfo,NULL,NULL)
         {
           String_set(createInfo->statusInfo.storage.name,printableStorageName);
-          updateStatusInfo(createInfo,FALSE);
+//          updateStatusInfo(createInfo,FALSE);
         }
 
         // pause, check abort
@@ -4839,7 +4895,8 @@ LOCAL FragmentNode* fragmentInit(CreateInfo *createInfo, ConstString name, uint6
 {
   FragmentNode *fragmentNode;
 
-  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  STATUS_INFO_UPDATE(createInfo,name,NULL)
   {
     // get/create fragment node
     fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
@@ -4868,7 +4925,7 @@ LOCAL FragmentNode* fragmentInit(CreateInfo *createInfo, ConstString name, uint6
       createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
       createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
 
-      updateStatusInfo(createInfo,TRUE);
+//      updateStatusInfo(createInfo,TRUE);
     }
     assert(createInfo->statusInfoCurrentFragmentNode != NULL);
   }
@@ -5074,7 +5131,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       return ERROR_NONE;
@@ -5101,7 +5159,8 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5129,8 +5188,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.done.count++;
-        createInfo->statusInfo.done.size += (uint64)fileInfo.size;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
+//        createInfo->statusInfo.done.size += (uint64)fileInfo.size;
         createInfo->statusInfo.error.count++;
         createInfo->statusInfo.error.size += (uint64)fileInfo.size;
       }
@@ -5295,8 +5355,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(fileName),Error_getText(error));
         STATUS_INFO_UPDATE(createInfo,fileName,NULL)
         {
-          createInfo->statusInfo.done.count++;
-          createInfo->statusInfo.done.size += fragmentSize;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//          createInfo->statusInfo.done.count++;
+//          createInfo->statusInfo.done.size += fragmentSize;
           createInfo->statusInfo.error.count++;
           createInfo->statusInfo.error.size += fragmentSize;
         }
@@ -5402,6 +5463,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   {
     if ((fragmentNode != NULL) && FragmentList_isComplete(fragmentNode))
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       createInfo->statusInfo.done.count++;
     }
   }
@@ -5484,7 +5546,8 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(deviceName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       return ERROR_NONE;
@@ -5532,8 +5595,9 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'",String_cString(deviceName));
       STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
-        createInfo->statusInfo.done.count++;
-        createInfo->statusInfo.done.size += (uint64)deviceInfo.size;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
+//        createInfo->statusInfo.done.size += (uint64)deviceInfo.size;
         createInfo->statusInfo.error.count++;
         createInfo->statusInfo.error.size += (uint64)deviceInfo.size;
       }
@@ -5818,6 +5882,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   {
     if ((fragmentNode != NULL) && FragmentList_isComplete(fragmentNode))
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       createInfo->statusInfo.done.count++;
     }
   }
@@ -5866,7 +5931,8 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       return ERROR_NONE;
@@ -5893,7 +5959,8 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5967,6 +6034,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
   // update status info
   STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     createInfo->statusInfo.done.count++;
   }
 
@@ -6017,7 +6085,8 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)",String_cString(linkName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,linkName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       return ERROR_NONE;
@@ -6044,7 +6113,8 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(linkName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,linkName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6075,8 +6145,9 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
         logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'",String_cString(linkName));
         STATUS_INFO_UPDATE(createInfo,linkName,NULL)
         {
-          createInfo->statusInfo.done.count++;
-          createInfo->statusInfo.done.size += (uint64)fileInfo.size;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//          createInfo->statusInfo.done.count++;
+//          createInfo->statusInfo.done.size += (uint64)fileInfo.size;
           createInfo->statusInfo.error.count++;
           createInfo->statusInfo.error.size += (uint64)fileInfo.size;
         }
@@ -6162,6 +6233,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   // update status info
   STATUS_INFO_UPDATE(createInfo,linkName,NULL)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     createInfo->statusInfo.done.count++;
   }
 
@@ -6237,11 +6309,13 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
-      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.done.count += StringList_count(fileNameList);
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count += StringList_count(fileNameList);
         createInfo->statusInfo.error.count += StringList_count(fileNameList);
-        updateStatusInfo(createInfo,FALSE);
+//        updateStatusInfo(createInfo,FALSE);
       }
       return ERROR_NONE;
     }
@@ -6267,7 +6341,8 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6295,8 +6370,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
-        createInfo->statusInfo.done.count += StringList_count(fileNameList);
-        createInfo->statusInfo.done.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count += StringList_count(fileNameList);
+//        createInfo->statusInfo.done.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
         createInfo->statusInfo.error.count += StringList_count(fileNameList);
         createInfo->statusInfo.error.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
       }
@@ -6544,6 +6620,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   {
     if ((fragmentNode != NULL) && FragmentList_isComplete(fragmentNode))
     {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       createInfo->statusInfo.done.count += StringList_count(fileNameList);
     }
   }
@@ -6602,7 +6679,8 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       return ERROR_NONE;
@@ -6629,7 +6707,8 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
       logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
-        createInfo->statusInfo.done.count++;
+fprintf(stderr,"%s, %d: errr\n",__FILE__,__LINE__);
+//        createInfo->statusInfo.done.count++;
         createInfo->statusInfo.error.count++;
       }
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -6702,6 +6781,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   // update status info
   STATUS_INFO_UPDATE(createInfo,fileName,NULL)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     createInfo->statusInfo.done.count++;
   }
 
@@ -6893,10 +6973,11 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
     {
       printInfo(1,"Add '%s'...skipped (reason: own created file)\n",String_cString(entryMsg.name));
 
-      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+//      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      STATUS_INFO_UPDATE(createInfo,entryMsg.name,NULL)
       {
         createInfo->statusInfo.skipped.count++;
-        updateStatusInfo(createInfo,FALSE);
+//        updateStatusInfo(createInfo,FALSE);
       }
     }
 
