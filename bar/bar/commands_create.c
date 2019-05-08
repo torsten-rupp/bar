@@ -848,6 +848,112 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 }
 
 /***********************************************************************\
+* Name   : statusInfoUpdateLock
+* Purpose: lock status info update
+* Input  : createInfo   - create info structure
+*          fragmentNode - fragment node (can be NULL)
+* Output : -
+* Return : always TRUE
+* Notes  : -
+\***********************************************************************/
+
+LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, FragmentNode *fragmentNode)
+{
+  assert(createInfo != NULL);
+
+  // lock
+  Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+
+  // set new current status info
+  if (fragmentNode != NULL)
+  {
+    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+       )
+    {
+      createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
+      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+    }
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : statusInfoUpdateUnlock
+* Purpose: status info update unlock
+* Input  : createInfo - create info structure
+*          name       - name of entry
+*          size       - size of entry
+*          updateFlag - TRUE for status update
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool updateFlag)
+{
+  FragmentNode *fragmentNode;
+
+  assert(createInfo != NULL);
+
+  fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+  if (fragmentNode != NULL)
+  {
+    // update status (if possible)
+    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+       )
+    {
+      // set new current status info
+      createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
+      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+
+      // update current status info
+      String_set(createInfo->statusInfo.entry.name,name);
+      if (fragmentNode != NULL)
+      {
+        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+      }
+    }
+  }
+
+  // update
+  if (updateFlag)
+  {
+    updateStatusInfo(createInfo,TRUE);
+  }
+
+  // unlock
+  Semaphore_unlock(&createInfo->statusInfoLock);
+}
+
+//TODO: comment
+#define STATUS_INFO_GET(createInfo,name) \
+  for (SemaphoreLock semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
+       semaphoreLock; \
+       Semaphore_unlock(&createInfo->statusInfoLock), semaphoreLock = FALSE \
+      )
+
+/***********************************************************************\
+* Name   : STATUS_INFO_UPDATE
+* Purpose: update status info
+* Input  : createInfo   - create info structure
+*          name         - name of entry
+*          fragmentNode - fragment node (can be NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define STATUS_INFO_UPDATE(createInfo,name,fragmentNode) \
+  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,fragmentNode); \
+       semaphoreLock; \
+       statusInfoUpdateUnlock(createInfo,name,TRUE), semaphoreLock = FALSE \
+      )
+
+/***********************************************************************\
 * Name   : updateStorageStatusInfo
 * Purpose: update storage info data
 * Input  : userData          - user data: create info
@@ -867,7 +973,7 @@ LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
   assert(storageStatusInfo != NULL);
 
 //  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,2000)
-  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+  STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
     createInfo->statusInfo.storage.doneSize = storageStatusInfo->storageDoneBytes;
     createInfo->statusInfo.volume.number    = storageStatusInfo->volumeNumber;
@@ -1546,7 +1652,7 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
 //                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
                     createInfo->statusInfo.total.count++;
                     createInfo->statusInfo.total.size += fileInfo.size;
@@ -1562,7 +1668,7 @@ assert(continuousDatabaseHandle.readLockCount > 0);
               Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
               SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-              STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+              STATUS_INFO_UPDATE(createInfo,name,NULL)
               {
                 createInfo->statusInfo.total.count++;
 //                updateStatusInfo(createInfo,FALSE);
@@ -1582,7 +1688,7 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
 //                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
                     createInfo->statusInfo.total.count++;
 //                    updateStatusInfo(createInfo,FALSE);
@@ -1605,7 +1711,7 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
 //                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
                     createInfo->statusInfo.total.count++;
                     createInfo->statusInfo.total.size += fileInfo.size;
@@ -1628,7 +1734,7 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
 //                  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-                  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                  STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
                     createInfo->statusInfo.total.count++;
 //                    updateStatusInfo(createInfo,FALSE);
@@ -1733,7 +1839,7 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                        )
                     {
 //                      SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                      STATUS_INFO_UPDATE(createInfo,name,NULL)
                       {
                         createInfo->statusInfo.total.count++;
                         createInfo->statusInfo.total.size += fileInfo.size;
@@ -1769,7 +1875,7 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                          )
                       {
 //                        SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                        STATUS_INFO_UPDATE(createInfo,name,NULL)
                         {
                           createInfo->statusInfo.total.count++;
 //                          updateStatusInfo(createInfo,FALSE);
@@ -2120,7 +2226,7 @@ assert(continuousDatabaseHandle.readLockCount > 0);
 
   // done
 //  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+  STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
     createInfo->statusInfo.collectTotalSumDone = TRUE;
 //    updateStatusInfo(createInfo,TRUE);
@@ -3567,7 +3673,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
 
   // update status info
 //  SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+  STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
     createInfo->statusInfo.storage.totalSize += fileInfo.size;
 //    updateStatusInfo(createInfo,FALSE);
@@ -4964,112 +5070,6 @@ LOCAL void fragmentDone(CreateInfo *createInfo, FragmentNode *fragmentNode)
     }
   }
 }
-
-/***********************************************************************\
-* Name   : statusInfoUpdateLock
-* Purpose: lock status info update
-* Input  : createInfo   - create info structure
-*          fragmentNode - fragment node (can be NULL)
-* Output : -
-* Return : always TRUE
-* Notes  : -
-\***********************************************************************/
-
-LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, FragmentNode *fragmentNode)
-{
-  assert(createInfo != NULL);
-
-  // lock
-  Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-
-  // set new current status info
-  if (fragmentNode != NULL)
-  {
-    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
-       )
-    {
-      createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
-      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
-    }
-  }
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : statusInfoUpdateUnlock
-* Purpose: status info update unlock
-* Input  : createInfo - create info structure
-*          name       - name of entry
-*          size       - size of entry
-*          updateFlag - TRUE for status update
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool updateFlag)
-{
-  FragmentNode *fragmentNode;
-
-  assert(createInfo != NULL);
-
-  fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
-  if (fragmentNode != NULL)
-  {
-    // update status (if possible)
-    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
-       )
-    {
-      // set new current status info
-      createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
-      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
-
-      // update current status info
-      String_set(createInfo->statusInfo.entry.name,name);
-      if (fragmentNode != NULL)
-      {
-        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
-      }
-    }
-  }
-
-  // update
-  if (updateFlag)
-  {
-    updateStatusInfo(createInfo,TRUE);
-  }
-
-  // unlock
-  Semaphore_unlock(&createInfo->statusInfoLock);
-}
-
-//TODO: comment
-#define STATUS_INFO_GET(createInfo,name) \
-  for (SemaphoreLock semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
-       semaphoreLock; \
-       Semaphore_unlock(&createInfo->statusInfoLock), semaphoreLock = FALSE \
-      )
-
-/***********************************************************************\
-* Name   : STATUS_INFO_UPDATE
-* Purpose: update status info
-* Input  : createInfo   - create info structure
-*          name         - name of entry
-*          fragmentNode - fragment node (can be NULL)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-#define STATUS_INFO_UPDATE(createInfo,name,fragmentNode) \
-  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,fragmentNode); \
-       semaphoreLock; \
-       statusInfoUpdateUnlock(createInfo,name,TRUE), semaphoreLock = FALSE \
-      )
 
 /***********************************************************************\
 * Name   : storeFileEntry
