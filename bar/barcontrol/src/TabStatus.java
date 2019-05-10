@@ -2165,10 +2165,9 @@ public class TabStatus
       {
         // ignored
       }
-      catch (CommunicationError error)
+      catch (ConnectionError error)
       {
         // ignored
-        return;
       }
     }
   }
