@@ -2692,6 +2692,9 @@ Errors ConfigValue_updateConfigFile(ConstString       configFileName,
   String     line;
   Errors     error;
 
+UNUSED_VARIABLE(configValues);
+UNUSED_VARIABLE(configTemplate);
+
   // init variables
   StringList_init(&configLinesList);
   line = String_new();
