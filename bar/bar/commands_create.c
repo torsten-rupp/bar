@@ -882,40 +882,33 @@ LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, FragmentNode *f
 /***********************************************************************\
 * Name   : statusInfoUpdateUnlock
 * Purpose: status info update unlock
-* Input  : createInfo - create info structure
-*          name       - name of entry
-*          size       - size of entry
-*          updateFlag - TRUE for status update
+* Input  : createInfo   - create info structure
+*          name         - name of entry
+*          fragmentNode - fragment node (can be NULL)
+*          updateFlag   - TRUE for status update
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool updateFlag)
+LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, FragmentNode *fragmentNode, bool updateFlag)
 {
-  FragmentNode *fragmentNode;
-
   assert(createInfo != NULL);
 
-  fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
-  if (fragmentNode != NULL)
+  if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+      || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+     )
   {
-    // update status (if possible)
-    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
-       )
-    {
-      // set new current status info
-      createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
-      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+    // set new current status info
+    createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
+    createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
 
-      // update current status info
-      String_set(createInfo->statusInfo.entry.name,name);
-      if (fragmentNode != NULL)
-      {
-        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
-      }
+    // update current status info
+    String_set(createInfo->statusInfo.entry.name,name);
+    if (fragmentNode != NULL)
+    {
+      createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+      createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
     }
   }
 
@@ -950,7 +943,7 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 #define STATUS_INFO_UPDATE(createInfo,name,fragmentNode) \
   for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,fragmentNode); \
        semaphoreLock; \
-       statusInfoUpdateUnlock(createInfo,name,TRUE), semaphoreLock = FALSE \
+       statusInfoUpdateUnlock(createInfo,name,fragmentNode,TRUE), semaphoreLock = FALSE \
       )
 
 /***********************************************************************\
