@@ -309,11 +309,26 @@ bool Crypt_isValidMACAlgorithm(uint16 n)
 
 const char *Crypt_algorithmToString(CryptAlgorithms cryptAlgorithm, const char *defaultValue)
 {
-  return (   (ARRAY_FIRST(CRYPT_ALGORITHMS).cryptAlgorithm <= cryptAlgorithm)
-          && (cryptAlgorithm <= ARRAY_LAST(CRYPT_ALGORITHMS).cryptAlgorithm)
-         )
-           ? CRYPT_ALGORITHMS[cryptAlgorithm-ARRAY_FIRST(CRYPT_ALGORITHMS).cryptAlgorithm].name
-           : defaultValue;
+ uint       i;
+  const char *name;
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+         && (CRYPT_ALGORITHMS[i].cryptAlgorithm != cryptAlgorithm)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(CRYPT_ALGORITHMS))
+  {
+    name = CRYPT_ALGORITHMS[i].name;
+  }
+  else
+  {
+    name = defaultValue;
+  }
+
+  return name;
 }
 
 bool Crypt_parseAlgorithm(const char *name, CryptAlgorithms *cryptAlgorithm)
@@ -1213,7 +1228,7 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
   return ERROR_NONE;
 }
 
-//TODO	: remove
+//TODO    : remove
 Errors Crypt_encryptBytes(CryptInfo *cryptInfo,
                           void      *buffer,
                           ulong     bufferLength
