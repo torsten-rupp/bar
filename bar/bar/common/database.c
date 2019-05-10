@@ -3455,19 +3455,12 @@ isOwnReadLock(databaseHandle),!isReadLock(databaseHandle)
           }
           DATABASE_DEBUG_LOCK_ASSERTX(databaseHandle,
                                       isOwnReadWriteLock(databaseHandle) || !isReadWriteLock(databaseHandle),
-                                      "isOwnReadWriteLock=%d !isReadWriteLock=%d",
+                                      "e isOwnReadWriteLock=%d !isReadWriteLock=%d",
                                       isOwnReadWriteLock(databaseHandle),
                                       !isReadWriteLock(databaseHandle)
                                      );
 
           // read/write lock aquired
-//          DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,isOwnReadLock(databaseHandle) || isOwnWriteReadLock(databaseHandle) || !isReadLock(databaseHandle));
-          DATABASE_DEBUG_LOCK_ASSERTX(databaseHandle,
-                                      isOwnReadLock(databaseHandle) || !isReadLock(databaseHandle),
-                                      "e isOwnReadLock=%d !isReadLock=%d",
-                                      isOwnReadLock(databaseHandle),
-                                      !isReadLock(databaseHandle)
-                                     );
           readWritesIncrement(databaseHandle);
         }
         pendingReadWritesDecrement(databaseHandle);
