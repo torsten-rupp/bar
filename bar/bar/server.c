@@ -7219,7 +7219,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 *            archiveType=<type> \
 *            archivePartSize=<n> \
 *            deltaCompressAlgorithm=<delta compress algorithm> \
-*            byteCompressAlgorithm=<byte compress alrogithm> \
+*            byteCompressAlgorithm=<byte compress algorithm> \
 *            cryptAlgorithm=<crypt algorithm> \
 *            cryptType=<crypt type> \
 *            cryptPasswordMode=<password mode> \
@@ -7263,7 +7263,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                                                     ),
                           jobNode->job.options.archivePartSize,
                           Compress_algorithmToString(jobNode->job.options.compressAlgorithms.delta,NULL),
-                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.byte, NULL),
+                          Compress_algorithmToString(jobNode->job.options.compressAlgorithms.byte,NULL),
                           Crypt_algorithmToString(jobNode->job.options.cryptAlgorithms[0],"unknown"),
                           (jobNode->job.options.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.options.cryptPasswordMode,NULL),
