@@ -2984,6 +2984,119 @@ assert jobData != null;
     return width;
   }
 
+  /** try reconnect
+   * @param message error message
+   * @return TRUE iff reconnected
+   */
+  private boolean tryReconnect(String message)
+  {
+    boolean connectOkFlag = false;
+
+    // try to reconnect
+    if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection lost"),BARControl.tr("Error: ")+message,BARControl.tr("Try again"),BARControl.tr("Cancel")))
+    {
+      // try to connect to last server
+      while (!connectOkFlag)
+      {
+        try
+        {
+          BARServer.connect(display,
+                            loginData.serverName,
+                            loginData.serverPort,
+                            loginData.serverTLSPort,
+                            loginData.forceSSL,
+                            loginData.password,
+                            Settings.serverCAFileName,
+                            Settings.serverCertificateFileName,
+                            Settings.serverKeyFileName
+                           );
+          connectOkFlag = true;
+        }
+        catch (ConnectionError reconnectError)
+        {
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          {
+            quitFlag = true;
+            break;
+          }
+        }
+        catch (CommunicationError reconnectError)
+        {
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          {
+            quitFlag = true;
+            break;
+          }
+        }
+      }
+
+      // try to connect to new server
+      while (   !connectOkFlag
+             && getLoginData(loginData,false)
+             && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0))
+            )
+      {
+        // try to connect to server
+        try
+        {
+          BARServer.connect(display,
+                            loginData.serverName,
+                            loginData.serverPort,
+                            loginData.serverTLSPort,
+                            loginData.forceSSL,
+                            loginData.password,
+                            Settings.serverCAFileName,
+                            Settings.serverCertificateFileName,
+                            Settings.serverKeyFileName
+                           );
+          connectOkFlag = true;
+        }
+        catch (ConnectionError reconnectError)
+        {
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          {
+            quitFlag = true;
+            break;
+          }
+        }
+        catch (CommunicationError reconnectError)
+        {
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          {
+            quitFlag = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // refresh or stop if not connected
+    if (connectOkFlag)
+    {
+      // SWT bug/limitation work-around: current tab is not refreshed, force refresh by switching tabs
+      int currentTabItemIndex = tabFolder.getSelectionIndex();
+      if (currentTabItemIndex == 0)
+      {
+        tabFolder.setSelection(1);
+      }
+      else
+      {
+        tabFolder.setSelection(0);
+      }
+      tabFolder.setSelection(currentTabItemIndex);
+
+      // notifiy new server
+      Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+    }
+    else
+    {
+      // stop
+      quitFlag = true;
+    }
+
+    return connectOkFlag;
+  }
+
   /** run application
    */
   private void run()
@@ -3039,116 +3152,25 @@ assert jobData != null;
       }
       catch (ConnectionError error)
       {
-        // disconnected -> try to reconnect
-        connectOkFlag = false;
-
-        // try to reconnect
-        if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection lost"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
-        {
-          // try to connect to last server
-          while (!connectOkFlag)
-          {
-            try
-            {
-              BARServer.connect(display,
-                                loginData.serverName,
-                                loginData.serverPort,
-                                loginData.serverTLSPort,
-                                loginData.forceSSL,
-                                loginData.password,
-                                Settings.serverCAFileName,
-                                Settings.serverCertificateFileName,
-                                Settings.serverKeyFileName
-                               );
-              connectOkFlag = true;
-            }
-            catch (ConnectionError reconnectError)
-            {
-              if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
-              {
-                quitFlag = true;
-                break;
-              }
-            }
-            catch (CommunicationError reconnectError)
-            {
-              if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
-              {
-                quitFlag = true;
-                break;
-              }
-            }
-          }
-
-          // try to connect to new server
-          while (   !connectOkFlag
-                 && getLoginData(loginData,false)
-                 && ((loginData.serverPort != 0) || (loginData.serverTLSPort != 0))
-                )
-          {
-            // try to connect to server
-            try
-            {
-              BARServer.connect(display,
-                                loginData.serverName,
-                                loginData.serverPort,
-                                loginData.serverTLSPort,
-                                loginData.forceSSL,
-                                loginData.password,
-                                Settings.serverCAFileName,
-                                Settings.serverCertificateFileName,
-                                Settings.serverKeyFileName
-                               );
-              connectOkFlag = true;
-            }
-            catch (ConnectionError reconnectError)
-            {
-              if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
-              {
-                quitFlag = true;
-                break;
-              }
-            }
-            catch (CommunicationError reconnectError)
-            {
-              if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
-              {
-                quitFlag = true;
-                break;
-              }
-            }
-          }
-        }
-
-        // refresh or stop if not connected
-        if (connectOkFlag)
-        {
-          // SWT bug/limitation work-around: current tab is not refreshed, force refresh by switching tabs
-          int currentTabItemIndex = tabFolder.getSelectionIndex();
-          if (currentTabItemIndex == 0)
-          {
-            tabFolder.setSelection(1);
-          }
-          else
-          {
-            tabFolder.setSelection(0);
-          }
-          tabFolder.setSelection(currentTabItemIndex);
-
-          // notifiy new server
-          Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
-        }
-        else
-        {
-          // stop
-          quitFlag = true;
-        }
+        connectOkFlag = tryReconnect(error.getMessage());
       }
       catch (SWTException exception)
       {
-        printInternalError(exception);
-        showFatalError(exception);
-        System.exit(EXITCODE_INTERNAL_ERROR);
+        Throwable connectionError = exception.getCause();
+        while ((connectionError != null) && !(connectionError instanceof ConnectionError))
+        {
+          connectionError = connectionError.getCause();
+        }
+        if (connectionError != null)
+        {
+          connectOkFlag = tryReconnect(exception.getCause().getMessage());
+        }
+        else
+        {
+          printInternalError(exception);
+          showFatalError(exception);
+          System.exit(EXITCODE_INTERNAL_ERROR);
+        }
       }
       catch (AssertionError error)
       {
