@@ -190,6 +190,7 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
   fragmentNode->lockCount    = 0;
   List_init(&fragmentNode->rangeList);
   fragmentNode->rangeListSum = 0LL;
+FRAGMENTNODE_VALID(fragmentNode);
 }
 
 void FragmentList_doneNode(FragmentNode *fragmentNode)
@@ -262,8 +263,10 @@ FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString na
 void FragmentList_clearRanges(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
 
   List_done(&fragmentNode->rangeList,NULL,NULL);
+  fragmentNode->rangeListSum = 0LL;
 }
 
 void FragmentList_addRange(FragmentNode *fragmentNode,
