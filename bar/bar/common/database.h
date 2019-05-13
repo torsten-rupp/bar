@@ -280,6 +280,7 @@ typedef struct DatabaseHandle
 
   DatabaseNode                *databaseNode;
   uint                        readLockCount;
+  uint                        readWriteLockCount;
   sqlite3                     *handle;                    // SQlite3 handle
   uint                        transcationCount;
   long                        timeout;                    // timeout [ms]

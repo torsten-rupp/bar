@@ -57,7 +57,9 @@
 #define PROC_MAX_NOTIFIES_FILENAME "/proc/sys/fs/inotify/max_user_watches"
 #define MIN_NOTIFIES_WARNING       (64*1024)
 
+#define DATABASE_TIMEOUT (30L*MS_PER_SECOND)      // database timeout [ms]
 
+// database version
 #define CONTINOUS_VERSION 1
 
 #define CONTINUOUS_TABLE_DEFINITION \
@@ -230,16 +232,34 @@ LOCAL void printNotifies(void)
 
   // open continuous database
   #ifdef NDEBUG
-    error = Database_open(databaseHandle,continuousDatabaseFileName,continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,NO_WAIT);
+    error = Database_open(databaseHandle,
+                          continuousDatabaseFileName,
+                          continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,
+                          DATABASE_TIMEOUT
+                         );
   #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,databaseHandle,continuousDatabaseFileName,continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,NO_WAIT);
+    error = __Database_open(__fileName__,__lineNb__,
+                            databaseHandle,
+                            continuousDatabaseFileName,
+                            continuousDatabaseOpenMode|DATABASE_OPENMODE_READWRITE,
+                            DATABASE_TIMEOUT
+                           );
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {
     #ifdef NDEBUG
-      error = Database_open(databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+      error = Database_open(databaseHandle,
+                            continuousDatabaseFileName,
+                            DATABASE_OPENMODE_CREATE,
+                            DATABASE_TIMEOUT
+                           );
     #else /* not NDEBUG */
-      error = __Database_open(__fileName__,__lineNb__,databaseHandle,continuousDatabaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+      error = __Database_open(__fileName__,__lineNb__,
+                              databaseHandle,
+                              continuousDatabaseFileName,
+                              DATABASE_OPENMODE_CREATE,
+                              DATABASE_TIMEOUT
+                             );
     #endif /* NDEBUG */
     if (error != ERROR_NONE)
     {
@@ -279,9 +299,18 @@ LOCAL void printNotifies(void)
   // create continuous database
   if (!stringIsEmpty(continuousDatabaseFileName)) (void)File_deleteCString(continuousDatabaseFileName,FALSE);
   #ifdef NDEBUG
-    error = Database_open(databaseHandle,continuousDatabaseFileName,continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,NO_WAIT);
+    error = Database_open(databaseHandle,
+                          continuousDatabaseFileName,
+                          continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,
+                          DATABASE_TIMEOUT
+                         );
   #else /* not NDEBUG */
-    error = __Database_open(__fileName__,__lineNb__,databaseHandle,continuousDatabaseFileName,continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,NO_WAIT);
+    error = __Database_open(__fileName__,__lineNb__,
+                            databaseHandle,
+                            continuousDatabaseFileName,
+                            continuousDatabaseOpenMode|DATABASE_OPENMODE_CREATE,
+                            DATABASE_TIMEOUT
+                           );
   #endif /* NDEBUG */
   if (error != ERROR_NONE)
   {

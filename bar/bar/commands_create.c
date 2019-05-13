@@ -1700,14 +1700,70 @@ assert(continuousDatabaseHandle.readLockCount > 0);
               {
                 if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name)))
                 {
+                  union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                  HardLinkInfo                                       hardLinkInfo;
+
                   // add to known names history
                   Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-                  STATUS_INFO_UPDATE(createInfo,name,NULL)
+                  if (  !createInfo->partialFlag
+                      || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                      )
                   {
-fprintf(stderr,"%s, %d: mmm hardlink %s %ld\n",__FILE__,__LINE__,String_cString(name),fileInfo.size);
-                    createInfo->statusInfo.total.count++;
-                    createInfo->statusInfo.total.size += fileInfo.size;
+                    if (Dictionary_find(&hardLinksDictionary,
+                                        &fileInfo.id,
+                                        sizeof(fileInfo.id),
+                                        &data.value,
+                                        NULL
+                                       )
+                        )
+                    {
+                      // append name to hard link name list
+                      StringList_append(&data.hardLinkInfo->nameList,name);
+
+                      if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                      {
+                        // found last hardlink -> clear entry
+                        Dictionary_remove(&hardLinksDictionary,
+                                          &fileInfo.id,
+                                          sizeof(fileInfo.id)
+                                         );
+                      }
+                    }
+                    else
+                    {
+                      // create hard link name list
+                      if (createInfo->partialFlag && isPrintInfo(2))
+                      {
+                        printIncrementalInfo(&createInfo->namesDictionary,
+                                              name,
+                                              &fileInfo.cast
+                                            );
+                      }
+
+                      hardLinkInfo.count = fileInfo.linkCount;
+                      StringList_init(&hardLinkInfo.nameList);
+                      StringList_append(&hardLinkInfo.nameList,name);
+                      hardLinkInfo.size  = fileInfo.size;
+
+                      if (!Dictionary_add(&hardLinksDictionary,
+                                          &fileInfo.id,
+                                          sizeof(fileInfo.id),
+                                          &hardLinkInfo,
+                                          sizeof(hardLinkInfo)
+                                         )
+                          )
+                      {
+                        HALT_INSUFFICIENT_MEMORY();
+                      }
+
+                      // update status
+                      STATUS_INFO_UPDATE(createInfo,name,NULL)
+                      {
+                        createInfo->statusInfo.total.count++;
+                        createInfo->statusInfo.total.size += fileInfo.size;
+                      }
+                    }
                   }
                 }
               }
@@ -2174,14 +2230,68 @@ fprintf(stderr,"%s, %d: mmm spec %s %ld\n",__FILE__,__LINE__,String_cString(name
                   switch (includeEntryNode->type)
                   {
                     case ENTRY_TYPE_FILE:
-                      if (   !createInfo->partialFlag
-                          || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
-                          )
                       {
-                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                        union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                        HardLinkInfo                                       hardLinkInfo;
+
+                        if (   !createInfo->partialFlag
+                            || isFileChanged(&createInfo->namesDictionary,name,&fileInfo)
+                            )
                         {
-                          createInfo->statusInfo.total.count++;
-                          createInfo->statusInfo.total.size += fileInfo.size;
+                          if (Dictionary_find(&hardLinksDictionary,
+                                              &fileInfo.id,
+                                              sizeof(fileInfo.id),
+                                              &data.value,
+                                              NULL
+                                             )
+                              )
+                          {
+                            // append name to hard link name list
+                            StringList_append(&data.hardLinkInfo->nameList,fileName);
+
+                            if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
+                            {
+                              // found last hardlink -> clear entry
+                              Dictionary_remove(&hardLinksDictionary,
+                                                &fileInfo.id,
+                                                sizeof(fileInfo.id)
+                                               );
+                            }
+                          }
+                          else
+                          {
+                            // create hard link name list
+                            if (createInfo->partialFlag && isPrintInfo(2))
+                            {
+                              printIncrementalInfo(&createInfo->namesDictionary,
+                                                    fileName,
+                                                    &fileInfo.cast
+                                                  );
+                            }
+
+                            hardLinkInfo.count = fileInfo.linkCount;
+                            StringList_init(&hardLinkInfo.nameList);
+                            StringList_append(&hardLinkInfo.nameList,fileName);
+                            hardLinkInfo.size  = fileInfo.size;
+
+                            if (!Dictionary_add(&hardLinksDictionary,
+                                                &fileInfo.id,
+                                                sizeof(fileInfo.id),
+                                                &hardLinkInfo,
+                                                sizeof(hardLinkInfo)
+                                               )
+                                )
+                            {
+                              HALT_INSUFFICIENT_MEMORY();
+                            }
+
+                            // update status
+                            STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                            {
+                              createInfo->statusInfo.total.count++;
+                              createInfo->statusInfo.total.size += fileInfo.size;
+                            }
+                          }
                         }
                       }
                       break;
@@ -5167,6 +5277,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
   // init fragment
   fragmentNode = fragmentInit(createInfo,fileName,fileInfo.size);
+assert(fragmentNode->lockCount > 0);
 
   offset = 0LL;
   size   = 0LL;
@@ -5214,6 +5325,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
+assert(fragmentNode->lockCount > 0);
 
     // seek to start offset
     error = File_seek(&fileHandle,fragmentOffset);
@@ -5232,6 +5344,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 //fprintf(stderr,"%s, %d: fragmentOffset=%llu size=%llu\n",__FILE__,__LINE__,fragmentOffset,size);
         // pause
         Storage_pause(&createInfo->storageInfo);
+assert(fragmentNode->lockCount > 0);
 
         // read file data
         error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
@@ -5285,6 +5398,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
             size = 0;
           }
         }
+assert(fragmentNode->lockCount > 0);
 
         // wait for temporary file space
         waitForTemporaryFileSpace(createInfo);
@@ -5299,6 +5413,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         return FALSE;
       }
     }
+assert(fragmentNode->lockCount > 0);
     if (error != ERROR_NONE)
     {
       if (createInfo->jobOptions->skipUnreadableFlag)
@@ -5330,6 +5445,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       }
     }
     printInfo(2,"    \b\b\b\b");
+assert(fragmentNode->lockCount > 0);
 
     // close archive entry
     error = Archive_closeEntry(&archiveEntryInfo);
@@ -5344,6 +5460,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
+assert(fragmentNode->lockCount > 0);
 
     // get final compression ratio
     if (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
@@ -5365,6 +5482,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
       stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
     }
+assert(fragmentNode->lockCount > 0);
 
     // ratio info
     stringClear(s2);
@@ -5406,6 +5524,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               fragmentSize
              );
   }
+assert(fragmentNode->lockCount > 0);
 
   // update status info
   STATUS_INFO_UPDATE(createInfo,fileName,fragmentNode)
@@ -5425,6 +5544,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   (void)File_close(&fileHandle);
 
   // free resources
+assert(fragmentNode->lockCount > 0);
   fragmentDone(createInfo,fragmentNode);
   File_doneExtendedAttributes(&fileExtendedAttributeList);
 

@@ -41,6 +41,8 @@
 #define INDEX_SUPPORT_DELETE  // for debugging only!
 
 /***************************** Constants *******************************/
+#define DATABASE_TIMEOUT (30L*MS_PER_SECOND)
+
 LOCAL const struct
 {
   const char  *name;
@@ -316,9 +318,9 @@ LOCAL void busyHandler(void *userData)
               indexHandle,
     {
       #ifdef NDEBUG
-        return Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+        return Database_open(&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,DATABASE_TIMEOUT);
       #else /* not NDEBUG */
-        return __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,NO_WAIT);
+        return __Database_open(__fileName__,__lineNb__,&indexHandle->databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,DATABASE_TIMEOUT);
       #endif /* NDEBUG */
     });
     if (error != ERROR_NONE)

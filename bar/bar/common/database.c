@@ -53,6 +53,7 @@
 
 #define DATABASE_USE_ATOMIC_INCREMENT
 #define _DATABASE_DEBUG_LOCK
+#define _DATABASE_DEBUG_TIMEOUT
 
 /***************************** Constants *******************************/
 #define MAX_FORCE_CHECKPOINT_TIME (10LL*60LL*1000LL) // timeout for force execution of a checkpoint [ms]
@@ -888,6 +889,7 @@ LOCAL_INLINE bool isReadWriteLock(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
+  assert(databaseHandle->databaseNode->readWriteCount >= databaseHandle->readWriteLockCount);
 
   return (databaseHandle->databaseNode->readWriteCount > 0);
 }
@@ -940,9 +942,11 @@ LOCAL_INLINE bool isOwnReadWriteLock(DatabaseHandle *databaseHandle)
 {
   assert(databaseHandle != NULL);
   assert(databaseHandle->databaseNode != NULL);
+  assert(databaseHandle->databaseNode->readWriteCount >= databaseHandle->readWriteLockCount);
 
-  return    (databaseHandle->databaseNode->readWriteCount > 0)
-         && Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy);
+//  return    (databaseHandle->databaseNode->readWriteCount > 0)
+//         && Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy);
+  return    (databaseHandle->readWriteLockCount > 0);
 }
 
 /***********************************************************************\
@@ -1143,6 +1147,7 @@ LOCAL_INLINE void __readWritesIncrement(const char *__fileName__, ulong __lineNb
 #ifdef DATABASE_USE_ATOMIC_INCREMENT
 #else /* not DATABASE_USE_ATOMIC_INCREMENT */
 #endif /* DATABASE_USE_ATOMIC_INCREMENT */
+  databaseHandle->readWriteLockCount++;
   databaseHandle->databaseNode->readWriteCount++;
   #ifndef NDEBUG
     assert(   Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy)
@@ -1178,6 +1183,7 @@ LOCAL_INLINE void readWritesDecrement(DatabaseHandle *databaseHandle)
 #else /* not DATABASE_USE_ATOMIC_INCREMENT */
 #endif /* DATABASE_USE_ATOMIC_INCREMENT */
   databaseHandle->databaseNode->readWriteCount--;
+  databaseHandle->readWriteLockCount--;
   #ifndef NDEBUG
     if (databaseHandle->databaseNode->readWriteCount == 0)
     {
@@ -1234,7 +1240,13 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT) return FALSE;
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
+      {
+        #ifdef DATABASE_DEBUG_TIMEOUT
+          HALT_INTERNAL_ERROR("database timeout %ums",timeout);
+        #endif
+        return FALSE;
+      }
     }
     else
     {
@@ -1247,7 +1259,13 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,&databaseLock,&timespec) == ETIMEDOUT) return FALSE;
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readTrigger,&databaseLock,&timespec) == ETIMEDOUT)
+      {
+        #ifdef DATABASE_DEBUG_TIMEOUT
+          HALT_INTERNAL_ERROR("database timeout %lums",timeout);
+        #endif
+        return FALSE;
+      }
     }
     else
     {
@@ -1305,7 +1323,13 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT) return FALSE;
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
+      {
+        #ifdef DATABASE_DEBUG_TIMEOUT
+          HALT_INTERNAL_ERROR("database timeout %lums",timeout);
+        #endif
+        return FALSE;
+      }
     }
     else
     {
@@ -1318,7 +1342,13 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,&databaseLock,&timespec) == ETIMEDOUT) return FALSE;
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->readWriteTrigger,&databaseLock,&timespec) == ETIMEDOUT)
+      {
+        #ifdef DATABASE_DEBUG_TIMEOUT
+          HALT_INTERNAL_ERROR("database timeout %lums",timeout);
+        #endif
+        return FALSE;
+      }
     }
     else
     {
@@ -1377,7 +1407,13 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT) return FALSE;
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,databaseHandle->databaseNode->lock,&timespec) == ETIMEDOUT)
+      {
+        #ifdef DATABASE_DEBUG_TIMEOUT
+          HALT_INTERNAL_ERROR("database timeout %lums",timeout);
+        #endif
+        return FALSE;
+      }
     }
     else
     {
@@ -1390,7 +1426,13 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
-      if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,&databaseLock,&timespec) == ETIMEDOUT) return FALSE;
+      if (pthread_cond_timedwait(&databaseHandle->databaseNode->transactionTrigger,&databaseLock,&timespec) == ETIMEDOUT)
+      {
+        #ifdef DATABASE_DEBUG_TIMEOUT
+          HALT_INTERNAL_ERROR("database timeout %lums",timeout);
+        #endif
+        return FALSE;
+      }
     }
     else
     {
@@ -1444,7 +1486,10 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
       BACKTRACE(databaseHandle->databaseNode->debug.lastTrigger.stackTrace,databaseHandle->databaseNode->debug.lastTrigger.stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   #endif /* not NDEBUG */
-  pthread_cond_broadcast(&databaseHandle->databaseNode->readTrigger);
+  if (pthread_cond_broadcast(&databaseHandle->databaseNode->readTrigger) != 0)
+  {
+    HALT_INTERNAL_ERROR("read trigger fail: %s",strerror(errno));
+  }
 }
 
 /***********************************************************************\
@@ -1484,7 +1529,10 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
       BACKTRACE(databaseHandle->databaseNode->debug.lastTrigger.stackTrace,databaseHandle->databaseNode->debug.lastTrigger.stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   #endif /* not NDEBUG */
-  pthread_cond_broadcast(&databaseHandle->databaseNode->readWriteTrigger);
+  if (pthread_cond_broadcast(&databaseHandle->databaseNode->readWriteTrigger) != 0)
+  {
+    HALT_INTERNAL_ERROR("read/write trigger fail: %s",strerror(errno));
+  }
 }
 
 /***********************************************************************\
@@ -1524,7 +1572,10 @@ LOCAL_INLINE void __triggerUnlockTransaction(const char *__fileName__, ulong __l
       BACKTRACE(databaseHandle->databaseNode->debug.lastTrigger.stackTrace,databaseHandle->databaseNode->debug.lastTrigger.stackTraceSize);
     #endif /* HAVE_BACKTRACE */
   #endif /* not NDEBUG */
-  pthread_cond_broadcast(&databaseHandle->databaseNode->transactionTrigger);
+  if (pthread_cond_broadcast(&databaseHandle->databaseNode->transactionTrigger) != 0)
+  {
+    HALT_INTERNAL_ERROR("transaction trigger fail: %s",strerror(errno));
+  }
 }
 
 /***********************************************************************\
@@ -2805,6 +2856,7 @@ void Database_doneAll(void)
 
   // init variables
   databaseHandle->readLockCount           = 0;
+  databaseHandle->readWriteLockCount      = 0;
   databaseHandle->handle                  = NULL;
   databaseHandle->timeout                 = timeout;
   databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
@@ -3043,6 +3095,7 @@ void Database_doneAll(void)
 
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->readWriteLockCount == 0);
   assert(databaseHandle->readLockCount == 0);
   assert(databaseHandle->handle != NULL);
 
@@ -3287,6 +3340,11 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
       DATABASE_HANDLE_DOX(lockedFlag,
                           databaseHandle,
       {
+        assertx(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle) || ((databaseHandle->databaseNode->pendingReadCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount == 0)),
+                "readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u",
+                databaseHandle->databaseNode->readCount,databaseHandle->databaseNode->readWriteCount,databaseHandle->databaseNode->pendingReadCount,databaseHandle->databaseNode->pendingReadWriteCount
+               );
+
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
                   "%s, %d: %s LOCK   init: r  -- pending r %2d, r %2d, pending rw %2d, rw %2d, rw current locked by %s, transaction %2d at %s %d\n",
@@ -3306,6 +3364,8 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
         pendingReadsIncrement(databaseHandle);
         {
           // check if there is no writer
+volatile uint xo = databaseHandle->readWriteLockCount;
+volatile uint xrw = databaseHandle->databaseNode->readWriteCount;
           if (   !isOwnReadWriteLock(databaseHandle)
               && isReadWriteLock(databaseHandle)
              )
@@ -3372,6 +3432,11 @@ databaseHandle->databaseNode->readWriteCount
       DATABASE_HANDLE_DOX(lockedFlag,
                           databaseHandle,
       {
+        assertx(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle) || ((databaseHandle->databaseNode->pendingReadCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount == 0)),
+                "readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u",
+                databaseHandle->databaseNode->readCount,databaseHandle->databaseNode->readWriteCount,databaseHandle->databaseNode->pendingReadCount,databaseHandle->databaseNode->pendingReadWriteCount
+               );
+
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
                   "%s, %d: %s LOCK   init: rw -- pending r %2d, r %2d, pending rw %2d, rw %2d, rw current locked by %s, transaction %2d at %s %d\n",
@@ -3585,6 +3650,7 @@ databaseHandle->databaseNode->readWriteCount
           DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,databaseHandle->databaseNode->pendingReadWriteCount == 0);
         }
 #else
+        triggerUnlockReadWrite(databaseHandle);
         triggerUnlockRead(databaseHandle);
 #endif
 
@@ -3653,6 +3719,7 @@ databaseHandle->databaseNode->readWriteCount
 
         if (databaseHandle->databaseNode->readWriteCount == 0)
         {
+#if 0
           if      (!isTransactionLock(databaseHandle) && (databaseHandle->databaseNode->pendingReadCount > 0))
           {
             triggerUnlockRead(databaseHandle);
@@ -3671,6 +3738,10 @@ databaseHandle->databaseNode->readWriteCount
             DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,databaseHandle->databaseNode->pendingReadCount == 0);
             DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,databaseHandle->databaseNode->pendingReadWriteCount == 0);
           }
+#else
+        triggerUnlockReadWrite(databaseHandle);
+        triggerUnlockRead(databaseHandle);
+#endif
         }
 
         #ifdef DATABASE_DEBUG_LOCK
@@ -7211,20 +7282,21 @@ void Database_debugPrintInfo(void)
           s = "-";
           switch (databaseNode->debug.lastTrigger.type)
           {
-            case DATABASE_LOCK_TYPE_NONE      : s = "NONE"; break;
-            case DATABASE_LOCK_TYPE_READ      : s = "R";    break;
-            case DATABASE_LOCK_TYPE_READ_WRITE: s = "RW";   break;
+            case DATABASE_LOCK_TYPE_NONE      : s = "- "; break;
+            case DATABASE_LOCK_TYPE_READ      : s = "R "; break;
+            case DATABASE_LOCK_TYPE_READ_WRITE: s = "RW"; break;
           }
           fprintf(stderr,
-                  "  last trigger: %s thread '%s' (%s) at %s, %u\n",
+                  "  last trigger %s %16lu thread '%s' (%s) at %s, %u\n",
                   s,
+                  databaseNode->debug.lastTrigger.threadInfo.cycleCounter,
                   Thread_getName(databaseNode->debug.lastTrigger.threadInfo.threadId),
                   Thread_getIdString(databaseNode->debug.lastTrigger.threadInfo.threadId),
                   databaseNode->debug.lastTrigger.threadInfo.fileName,
                   databaseNode->debug.lastTrigger.threadInfo.lineNb
                  );
           fprintf(stderr,
-                  "                r %u %u, rw %u %u, trans %u %u\n",
+                  "                r %2u %2u, rw %2u %2u, transactions %2u %2u\n",
 databaseNode->debug.lastTrigger.pendingReadCount,
 databaseNode->debug.lastTrigger.readCount              ,
 databaseNode->debug.lastTrigger.pendingReadWriteCount  ,

@@ -79,6 +79,9 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
   uint64                  size;
   const FragmentRangeNode *fragmentRangeNode;
 
+  assert(fragmentNode != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fragmentNode);
+
   size = 0LL;
   LIST_ITERATE(&fragmentNode->rangeList,fragmentRangeNode)
   {
@@ -152,11 +155,16 @@ void FragmentList_init(FragmentList *fragmentList)
   assert(fragmentList != NULL);
 
   List_init(fragmentList);
+
+  DEBUG_ADD_RESOURCE_TRACE(fragmentList,FragmentList);
 }
 
 void FragmentList_done(FragmentList *fragmentList)
 {
   assert(fragmentList != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(fragmentList,FragmentList);
 
   List_done(fragmentList,(ListNodeFreeFunction)freeFragmentNode,NULL);
 }
@@ -190,12 +198,16 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
   fragmentNode->lockCount    = 0;
   List_init(&fragmentNode->rangeList);
   fragmentNode->rangeListSum = 0LL;
-FRAGMENTNODE_VALID(fragmentNode);
+
+  DEBUG_ADD_RESOURCE_TRACE(fragmentNode,FragmentNode);
 }
 
 void FragmentList_doneNode(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
 
   freeFragmentNode(fragmentNode,NULL);
 }
@@ -203,6 +215,7 @@ void FragmentList_doneNode(FragmentNode *fragmentNode)
 void FragmentList_lockNode(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
 
   ATOMIC_INCREMENT(fragmentNode->lockCount);
 }
@@ -210,6 +223,7 @@ void FragmentList_lockNode(FragmentNode *fragmentNode)
 void FragmentList_unlockNode(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
   assert(fragmentNode->lockCount > 0);
 
   ATOMIC_DECREMENT(fragmentNode->lockCount);
@@ -225,6 +239,7 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
   FragmentNode *fragmentNode;
 
   assert(fragmentList != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
   assert(name != NULL);
 
   fragmentNode = LIST_NEW_NODE(FragmentNode);
@@ -242,6 +257,7 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
 void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode)
 {
   assert(fragmentList != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
@@ -255,6 +271,7 @@ FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString na
   FragmentNode *fragmentNode;
 
   assert(fragmentList != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
   assert(name != NULL);
 
   return LIST_FIND(fragmentList,fragmentNode,String_equals(fragmentNode->name,name));
