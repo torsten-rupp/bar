@@ -112,7 +112,7 @@
 #ifndef NDEBUG
 
   #if   defined(PLATFORM_LINUX)
-    #define __SEMAPHORE_LOCK(semaphore,lockType,debugFlag,text) \
+    #define xxx__SEMAPHORE_LOCK(semaphore,lockType,debugFlag,text) \
       do \
       { \
         bool __locked; \
@@ -135,8 +135,24 @@
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
       } \
       while (0)
+    #define __SEMAPHORE_LOCK(semaphore,lockType,debugFlag,text) \
+      do \
+      { \
+        bool __locked; \
+        \
+        assert(semaphore != NULL); \
+        \
+        pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit); \
+        \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
+        \
+        pthread_mutex_lock(&semaphore->lock); \
+        \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
+      } \
+      while (0)
 
-    #define __SEMAPHORE_LOCK_TIMEOUT(semaphore,lockType,debugFlag,text,timeout,lockedFlag) \
+    #define xxx__SEMAPHORE_LOCK_TIMEOUT(semaphore,lockType,debugFlag,text,timeout,lockedFlag) \
       do \
       { \
         struct timespec __tp; \
@@ -158,8 +174,33 @@
         __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
         __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
         __tp.tv_nsec %= 1000000L; \
+        if (pthread_mutex_timedlock(&semaphore->lock,&__tp) != 0) \
+        { \
+          lockedFlag = FALSE; \
+        } \
+        else \
+        { \
+          debugCheckForDeadLock(semaphore,lockType,__FILE__,__LINE__); \
+        } \
+        if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) locked %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
+      } \
+      while (0)
+    #define __SEMAPHORE_LOCK_TIMEOUT(semaphore,lockType,debugFlag,text,timeout,lockedFlag) \
+      do \
+      { \
+        struct timespec __tp; \
+        \
+        assert(semaphore != NULL); \
+        assert(timeout != WAIT_FOREVER); \
+        \
+        pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) wait lock %s (timeout %ldms)\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text,timeout); \
+        \
+        clock_gettime(CLOCK_REALTIME,&__tp); \
+        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
+        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
+        __tp.tv_nsec %= 1000000L; \
         if (pthread_mutex_timedlock(&semaphore->lock,&__tp) != 0) \
         { \
           lockedFlag = FALSE; \
