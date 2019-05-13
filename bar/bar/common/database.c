@@ -3400,7 +3400,7 @@ volatile uint xrw = 0;
                           databaseHandle,
       {
         assertx(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle) || ((databaseHandle->databaseNode->pendingReadCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount == 0)),
-                "readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u",
+                "R: readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u",
                 databaseHandle->databaseNode->readCount,databaseHandle->databaseNode->readWriteCount,databaseHandle->databaseNode->pendingReadCount,databaseHandle->databaseNode->pendingReadWriteCount
                );
 
@@ -3492,7 +3492,7 @@ databaseHandle->databaseNode->readWriteCount
                           databaseHandle,
       {
         assertx(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle) || ((databaseHandle->databaseNode->pendingReadCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount == 0)),
-                "readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u",
+                "RW: readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u",
                 databaseHandle->databaseNode->readCount,databaseHandle->databaseNode->readWriteCount,databaseHandle->databaseNode->pendingReadCount,databaseHandle->databaseNode->pendingReadWriteCount
                );
 
@@ -3568,13 +3568,20 @@ isOwnReadLock(databaseHandle),!isReadLock(databaseHandle)
             do
             {
               DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,isReadWriteLock(databaseHandle));
+fprintf(stderr,"%s, %d: a RW: readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u\n",__FILE__,__LINE__,
+databaseHandle->databaseNode->readCount,databaseHandle->databaseNode->readWriteCount,databaseHandle->databaseNode->pendingReadCount,databaseHandle->databaseNode->pendingReadWriteCount
+);
               if (!waitTriggerReadWrite(databaseHandle,timeout))
               {
                 pendingReadWritesDecrement(databaseHandle);
                 return FALSE;
               }
+fprintf(stderr,"%s, %d: b RW: readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u\n",__FILE__,__LINE__,
+databaseHandle->databaseNode->readCount,databaseHandle->databaseNode->readWriteCount,databaseHandle->databaseNode->pendingReadCount,databaseHandle->databaseNode->pendingReadWriteCount
+);
             }
             while (isReadWriteLock(databaseHandle));
+fprintf(stderr,"%s, %d: ---\n",__FILE__,__LINE__);
             assert(Thread_equalThreads(databaseHandle->databaseNode->readWriteLockedBy,THREAD_ID_NONE));
           }
           DATABASE_DEBUG_LOCK_ASSERTX(databaseHandle,
