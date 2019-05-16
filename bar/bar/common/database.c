@@ -109,7 +109,14 @@ typedef union
 
 LOCAL DatabaseList databaseList;
 #ifndef DATABASE_LOCK_PER_INSTANCE
-  LOCAL pthread_mutex_t databaseLock;
+  LOCAL pthread_mutexattr_t databaseLockAttribute;
+  LOCAL pthread_mutex_t     databaseLock;
+  LOCAL struct
+  {
+    ThreadId    threadId;
+    const char  *fileName;
+    ulong       lineNb;
+  } databaseLockBy;
 #endif /* DATABASE_LOCK_PER_INSTANCE */
 
 #ifndef NDEBUG
@@ -326,11 +333,17 @@ LOCAL DatabaseList databaseList;
       \
       __result = pthread_mutex_lock(&databaseLock); \
       assert(__result == 0); \
+      databaseLockBy.threadId = Thread_getCurrentId(); \
+      databaseLockBy.fileName = __FILE__; \
+      databaseLockBy.lineNb   = __LINE__; \
       ({ \
         auto void __closure__(void); \
         \
         void __closure__(void)block; __closure__; \
       })(); \
+      databaseLockBy.threadId = THREAD_ID_NONE; \
+      databaseLockBy.fileName = NULL; \
+      databaseLockBy.lineNb   = 0; \
       __result = pthread_mutex_unlock(&databaseLock); \
       assert(__result == 0); \
     } \
@@ -347,11 +360,17 @@ LOCAL DatabaseList databaseList;
       \
       __result = pthread_mutex_lock(&databaseLock); \
       assert(__result == 0); \
+      databaseLockBy.threadId = Thread_getCurrentId(); \
+      databaseLockBy.fileName = __FILE__; \
+      databaseLockBy.lineNb   = __LINE__; \
       result = ({ \
                  auto typeof(result) __closure__(void); \
                  \
                  typeof(result) __closure__(void)block; __closure__; \
                })(); \
+      databaseLockBy.threadId = THREAD_ID_NONE; \
+      databaseLockBy.fileName = NULL; \
+      databaseLockBy.lineNb   = 0; \
       __result = pthread_mutex_unlock(&databaseLock); \
       assert(__result == 0); \
     } \
@@ -581,7 +600,10 @@ LOCAL void debugDatabaseInit(void)
   List_init(&debugDatabaseHandleList);
 
   // init lock
-  pthread_mutexattr_init(&debugDatabaseLockAttribute);
+  if (pthread_mutexattr_init(&debugDatabaseLockAttribute) != 0)
+  {
+    HALT_INTERNAL_ERROR("Cannot initialize database debug lock!");
+  }
   pthread_mutexattr_settype(&debugDatabaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
   if (pthread_mutex_init(&debugDatabaseLock,&debugDatabaseLockAttribute) != 0)
   {
@@ -2855,7 +2877,19 @@ Errors Database_initAll(void)
 
   #ifndef DATABASE_LOCK_PER_INSTANCE
     // init global lock
-    pthread_mutex_init(&databaseLock,NULL);
+    if (pthread_mutexattr_init(&databaseLockAttribute) != 0)
+    {
+      return ERRORX_(DATABASE,0,"init locking");
+    }
+    pthread_mutexattr_settype(&databaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
+    if (pthread_mutex_init(&databaseLock,&databaseLockAttribute) != 0)
+    {
+      pthread_mutexattr_destroy(&databaseLockAttribute);
+      return ERRORX_(DATABASE,0,"init locking");
+    }
+    databaseLockBy.threadId = THREAD_ID_NONE;
+    databaseLockBy.fileName = NULL;
+    databaseLockBy.lineNb   = 0;
   #endif /* not DATABASE_LOCK_PER_INSTANCE */
 
   // init database list
@@ -2865,6 +2899,10 @@ Errors Database_initAll(void)
   sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
   if (sqliteResult != SQLITE_OK)
   {
+    Semaphore_done(&databaseList.lock);
+    List_done(&databaseList,CALLBACK((ListNodeFreeFunction)freeDatabaseNode,NULL));
+    pthread_mutex_destroy(&databaseLock);
+    pthread_mutexattr_destroy(&databaseLockAttribute);
     return ERRORX_(DATABASE,sqliteResult,"enable multi-threading");
   }
 
@@ -2880,6 +2918,7 @@ void Database_doneAll(void)
   #ifndef DATABASE_LOCK_PER_INSTANCE
     // done global lock
     pthread_mutex_destroy(&databaseLock);
+    pthread_mutexattr_destroy(&databaseLockAttribute);
   #endif /* not DATABASE_LOCK_PER_INSTANCE */
 }
 
@@ -2917,7 +2956,10 @@ void Database_doneAll(void)
   databaseHandle->handle                  = NULL;
   databaseHandle->timeout                 = timeout;
   databaseHandle->lastCheckpointTimestamp = Misc_getTimestamp();
-  sem_init(&databaseHandle->wakeUp,0,0);
+  if (sem_init(&databaseHandle->wakeUp,0,0) != 0)
+  {
+    return ERRORX_(DATABASE,0,"init locking");
+  }
 
   // create directory if needed
   if (!stringIsEmpty(fileName))
@@ -2998,7 +3040,22 @@ void Database_doneAll(void)
       databaseNode->fileName                = String_duplicate(databaseFileName);
       databaseNode->openCount               = 1;
       #ifdef DATABASE_LOCK_PER_INSTANCE
-        pthread_mutex_init(&databaseNode->lock,NULL);
+        if (pthread_mutexattr_init(&databaseNode->lockAttribute) != 0)
+        {
+          sqlite3_close(databaseHandle->handle);
+          String_delete(databaseFileName);
+          sem_destroy(&databaseHandle->wakeUp);
+          return ERRORX_(DATABASE,0,"init locking");
+        }
+        pthread_mutexattr_settype(&databaseLockAttribute,PTHREAD_MUTEX_RECURSIVE);
+        if (pthread_mutex_init(&databaseNode->lock,&databaseNode->lockAttribute) != 0)
+        {
+          pthread_mutexattr_destroy(&databaseNode->lockAttribute);
+          sqlite3_close(databaseHandle->handle);
+          String_delete(databaseFileName);
+          sem_destroy(&databaseHandle->wakeUp);
+          return ERRORX_(DATABASE,0,"init locking");
+        }
       #endif /* DATABASE_LOCK_PER_INSTANCE */
       databaseNode->type                    = DATABASE_LOCK_TYPE_NONE;
 
@@ -3399,10 +3456,12 @@ volatile uint xrw = 0;
       DATABASE_HANDLE_DOX(lockedFlag,
                           databaseHandle,
       {
+#if 0
         assertx(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle) || ((databaseHandle->databaseNode->pendingReadCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount == 0)),
                 "R: readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u",
                 databaseHandle->databaseNode->readCount,databaseHandle->databaseNode->readWriteCount,databaseHandle->databaseNode->pendingReadCount,databaseHandle->databaseNode->pendingReadWriteCount
                );
+#endif
 
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
@@ -3491,10 +3550,12 @@ databaseHandle->databaseNode->readWriteCount
       DATABASE_HANDLE_DOX(lockedFlag,
                           databaseHandle,
       {
+#if 0
         assertx(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle) || ((databaseHandle->databaseNode->pendingReadCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount == 0)),
                 "RW: readCount=%u readWriteCount=%u pendingReadCount=%u pendingReadWriteCount=%u",
                 databaseHandle->databaseNode->readCount,databaseHandle->databaseNode->readWriteCount,databaseHandle->databaseNode->pendingReadCount,databaseHandle->databaseNode->pendingReadWriteCount
                );
+#endif
 
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
