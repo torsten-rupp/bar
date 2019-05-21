@@ -160,7 +160,7 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
 
 /***********************************************************************\
 * Name   : FragmentList_doneNode
-* Purpose: free fragment node
+* Purpose: done fragment node
 * Input  : fragmentNode - fragment node
 * Output : -
 * Return : -

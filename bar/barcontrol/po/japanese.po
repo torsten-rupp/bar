@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-05-10 03:36+0200\n"
+"POT-Creation-Date: 2019-05-10 03:45+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -5471,10 +5471,21 @@ msgstr "タスク中止"
 msgid "Cannot abort job (error: {0})"
 msgstr "タスクを中止できません（エラー: {0}）"
 
-#: src/TabStatus.java:2833 src/TabStatus.java:2844
+#: src/TabStatus.java:2833
 #, fuzzy, java-format
 msgid ""
 "Communication error while abort job\n"
+"\n"
+"(error: {0})"
+msgstr ""
+"保存データ削除中に通信エラー\n"
+"\n"
+"(エラー: {0})"
+
+#: src/TabStatus.java:2844
+#, fuzzy, java-format
+msgid ""
+"Connection error while abort job\n"
 "\n"
 "(error: {0})"
 msgstr ""
@@ -5548,16 +5559,6 @@ msgstr "現存エントリの上書き"
 #, fuzzy
 msgid "differental"
 msgstr "差分"
-
-#, fuzzy
-#~ msgid ""
-#~ "Connection error while abort job\n"
-#~ "\n"
-#~ "(error: {0})"
-#~ msgstr ""
-#~ "保存データ削除中に通信エラー\n"
-#~ "\n"
-#~ "(エラー: {0})"
 
 #, fuzzy
 #~ msgid "StartX"

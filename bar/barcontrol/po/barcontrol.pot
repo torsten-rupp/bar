@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-05-10 03:36+0200\n"
+"POT-Creation-Date: 2019-05-10 03:45+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -4807,10 +4807,18 @@ msgstr ""
 msgid "Cannot abort job (error: {0})"
 msgstr ""
 
-#: src/TabStatus.java:2833 src/TabStatus.java:2844
+#: src/TabStatus.java:2833
 #, java-format
 msgid ""
 "Communication error while abort job\n"
+"\n"
+"(error: {0})"
+msgstr ""
+
+#: src/TabStatus.java:2844
+#, java-format
+msgid ""
+"Connection error while abort job\n"
 "\n"
 "(error: {0})"
 msgstr ""

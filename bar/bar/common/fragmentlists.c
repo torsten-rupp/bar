@@ -92,26 +92,51 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : freeFragmentNode
-* Purpose: free fragment node
+* Name   : newFragmentNode
+* Purpose: new fragment node
+* Input  : name         - name of fragment
+*          size         - size of fragment
+*          userData     - user data to store with fragment (will be
+*                         copied!)
+*          userDataSize - size of user data
+* Output : -
+* Return : new fragment node or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL FragmentNode* newFragmentNode(ConstString  name,
+                                    uint64       size,
+                                    const void   *userData,
+                                    uint         userDataSize
+                                   )
+{
+  FragmentNode *fragmentNode;
+
+  fragmentNode = LIST_NEW_NODE(FragmentNode);
+  if (fragmentNode != NULL)
+  {
+    FragmentList_initNode(fragmentNode,name,size,userData,userDataSize);
+  }
+  
+  return fragmentNode;
+}
+
+/***********************************************************************\
+* Name   : deleteFragmentNode
+* Purpose: delete fragment node
 * Input  : fragmentNode - fragment node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void freeFragmentNode(FragmentNode *fragmentNode, void *userData)
+LOCAL void deleteFragmentNode(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
 
-  UNUSED_VARIABLE(userData);
-
-  List_done(&fragmentNode->rangeList,NULL,NULL);
-  if (fragmentNode->userData != NULL)
-  {
-    free(fragmentNode->userData);
-  }
-  String_delete(fragmentNode->name);
+  FragmentList_doneNode(fragmentNode);
+  LIST_DELETE_NODE(fragmentNode);  
 }
 
 /***********************************************************************\
@@ -166,7 +191,7 @@ void FragmentList_done(FragmentList *fragmentList)
 
   DEBUG_REMOVE_RESOURCE_TRACE(fragmentList,FragmentList);
 
-  List_done(fragmentList,(ListNodeFreeFunction)freeFragmentNode,NULL);
+  List_done(fragmentList,(ListNodeFreeFunction)FragmentList_doneNode,NULL);
 }
 
 void FragmentList_initNode(FragmentNode *fragmentNode,
@@ -209,7 +234,12 @@ void FragmentList_doneNode(FragmentNode *fragmentNode)
 
   DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
 
-  freeFragmentNode(fragmentNode,NULL);
+  List_done(&fragmentNode->rangeList,CALLBACK(NULL,NULL));
+  if (fragmentNode->userData != NULL)
+  {
+    free(fragmentNode->userData);
+  }
+  String_delete(fragmentNode->name);
 }
 
 void FragmentList_lockNode(FragmentNode *fragmentNode)
@@ -242,12 +272,11 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
   DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
   assert(name != NULL);
 
-  fragmentNode = LIST_NEW_NODE(FragmentNode);
+  fragmentNode = newFragmentNode(name,size,userData,userDataSize);
   if (fragmentNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  FragmentList_initNode(fragmentNode,name,size,userData,userDataSize);
 
   List_append(fragmentList,fragmentNode);
 
@@ -262,8 +291,7 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
   FRAGMENTNODE_VALID(fragmentNode);
 
   List_remove(fragmentList,fragmentNode);
-  FragmentList_doneNode(fragmentNode);
-  LIST_DELETE_NODE(fragmentNode);
+  deleteFragmentNode(fragmentNode);
 }
 
 FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name)
@@ -332,21 +360,21 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
     fragmentRangeNode = fragmentRangeNode->prev;
   }
 
-  // check if existing fragment can be extended or new fragment have to be inserted
+  // check if existing fragment range can be extended or new fragment range have to be inserted
   if (   ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
       || ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
      )
   {
     if      ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
     {
-      // combine with previous existing fragment
+      // combine with previous existing fragment range
       prevFragmentRangeNode->length = (offset+length)-prevFragmentRangeNode->offset;
       prevFragmentRangeNode->offset = prevFragmentRangeNode->offset;
       fragmentNode->rangeListSum += length;
     }
     else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
     {
-      // combine with next existing fragment
+      // combine with next existing fragment range
       nextFragmentRangeNode->length = (nextFragmentRangeNode->offset+nextFragmentRangeNode->length)-offset;
       nextFragmentRangeNode->offset = offset;
       fragmentNode->rangeListSum += length;
@@ -354,18 +382,18 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
 
     if ((prevFragmentRangeNode != NULL) && (nextFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= F0(nextFragmentRangeNode)))
     {
-      // combine previous and next fragment
+      // combine previous and next fragment range
       prevFragmentRangeNode->length += nextFragmentRangeNode->length;
       List_remove(&fragmentNode->rangeList,nextFragmentRangeNode);
       LIST_DELETE_NODE(nextFragmentRangeNode);
     }
   }
-  else
-//  else if (   ((prevFragmentRangeNode == NULL) || (F1(prevFragmentRangeNode)+1 < I0(offset,length)))
-//           && ((nextFragmentRangeNode == NULL) || (F0(nextFragmentRangeNode)-1 > I1(offset,length)))
-//          )
+  else /* if (   ((prevFragmentRangeNode == NULL) || (F1(prevFragmentRangeNode)+1 < I0(offset,length)))
+              && ((nextFragmentRangeNode == NULL) || (F0(nextFragmentRangeNode)-1 > I1(offset,length)))
+             )
+       */
   {
-    // insert new fragment
+    // insert new fragment range
     fragmentRangeNode = LIST_NEW_NODE(FragmentRangeNode);
     if (fragmentRangeNode == NULL)
     {

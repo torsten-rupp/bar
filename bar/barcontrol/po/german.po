@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-05-10 03:36+0200\n"
+"POT-Creation-Date: 2019-05-10 03:45+0200\n"
 "PO-Revision-Date: 2017-12-06 16:43+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5357,7 +5357,7 @@ msgstr "Auftrag abbrechen"
 msgid "Cannot abort job (error: {0})"
 msgstr "Auftrag kann nicht abgebrochen werden (Fehler: {0})"
 
-#: src/TabStatus.java:2833 src/TabStatus.java:2844
+#: src/TabStatus.java:2833
 #, fuzzy, java-format
 msgid ""
 "Communication error while abort job\n"
@@ -5365,6 +5365,17 @@ msgid ""
 "(error: {0})"
 msgstr ""
 "Kommunikationsfehler beim Löschen eines Archives\n"
+"\n"
+"(Fehler: {0})"
+
+#: src/TabStatus.java:2844
+#, fuzzy, java-format
+msgid ""
+"Connection error while abort job\n"
+"\n"
+"(error: {0})"
+msgstr ""
+"Kommunikationsfehler beim Wiederherstellen\n"
 "\n"
 "(Fehler: {0})"
 
@@ -5430,16 +5441,6 @@ msgstr "Durchschnittliche Ausführungszeit"
 #: src/TabStatus.java:3135
 msgid "differental"
 msgstr "differentiell"
-
-#, fuzzy
-#~ msgid ""
-#~ "Connection error while abort job\n"
-#~ "\n"
-#~ "(error: {0})"
-#~ msgstr ""
-#~ "Kommunikationsfehler beim Wiederherstellen\n"
-#~ "\n"
-#~ "(Fehler: {0})"
 
 #~ msgid "Level"
 #~ msgstr "Detailierungsgrad"
