@@ -155,7 +155,7 @@ typedef struct
   String     name;                                                // file/image/directory/link/special name
   StringList nameList;                                            // list of hard link names
   uint       fragmentNumber;                                      // fragment number [0..n-1]
-  uint       maxFragmentNumber;                                   // max. fragment number [0..n-1]
+  uint       fragmentCount;                                       // fragment count
   uint64     fragmentOffset;
   uint64     fragmentSize;
 } EntryMsg;
@@ -993,7 +993,7 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
                                  uint64      size
                                 )
 {
-  uint     maxFragmentNumber;
+  uint     fragmentCount;
   uint     fragmentNumber;
   uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
@@ -1001,11 +1001,11 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
 
-  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
-                        ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
-                        : 0;
-  fragmentNumber    = 0;
-  fragmentOffset    = 0LL;
+  fragmentCount  = (globalOptions.fragmentSize > 0LL)
+                     ? 1+size/globalOptions.fragmentSize
+                     : 1;
+  fragmentNumber = 0;
+  fragmentOffset = 0LL;
   do
   {
     // calculate fragment size
@@ -1019,7 +1019,7 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
     entryMsg.name              = String_duplicate(name);
     StringList_init(&entryMsg.nameList);
     entryMsg.fragmentNumber    = fragmentNumber;
-    entryMsg.maxFragmentNumber = maxFragmentNumber;
+    entryMsg.fragmentCount     = fragmentCount;
     entryMsg.fragmentOffset    = fragmentOffset;
     entryMsg.fragmentSize      = fragmentSize;
 
@@ -1058,14 +1058,14 @@ LOCAL void appendDirectoryToEntryList(MsgQueue    *entryMsgQueue,
   assert(name != NULL);
 
   // init
-  entryMsg.entryType         = entryType;
-  entryMsg.fileType          = FILE_TYPE_DIRECTORY;
-  entryMsg.name              = String_duplicate(name);
+  entryMsg.entryType      = entryType;
+  entryMsg.fileType       = FILE_TYPE_DIRECTORY;
+  entryMsg.name           = String_duplicate(name);
   StringList_init(&entryMsg.nameList);
-  entryMsg.fragmentNumber    = 0;
-  entryMsg.maxFragmentNumber = 0;
-  entryMsg.fragmentOffset    = 0LL;
-  entryMsg.fragmentSize      = 0LL;
+  entryMsg.fragmentNumber = 0;
+  entryMsg.fragmentCount  = 0;
+  entryMsg.fragmentOffset = 0LL;
+  entryMsg.fragmentSize   = 0LL;
 
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -1097,14 +1097,14 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
   assert(name != NULL);
 
   // init
-  entryMsg.entryType         = entryType;
-  entryMsg.fileType          = FILE_TYPE_LINK;
-  entryMsg.name              = String_duplicate(name);
+  entryMsg.entryType      = entryType;
+  entryMsg.fileType       = FILE_TYPE_LINK;
+  entryMsg.name           = String_duplicate(name);
   StringList_init(&entryMsg.nameList);
-  entryMsg.fragmentNumber    = 0;
-  entryMsg.maxFragmentNumber = 0;
-  entryMsg.fragmentOffset    = 0LL;
-  entryMsg.fragmentSize      = 0LL;
+  entryMsg.fragmentNumber = 0;
+  entryMsg.fragmentCount  = 0;
+  entryMsg.fragmentOffset = 0LL;
+  entryMsg.fragmentSize   = 0LL;
 
   // put into message queue
   if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -1131,7 +1131,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
                                      uint64     size
                                     )
 {
-  uint     maxFragmentNumber;
+  uint     fragmentCount;
   uint     fragmentNumber;
   uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
@@ -1140,9 +1140,9 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   assert(nameList != NULL);
   assert(!StringList_isEmpty(nameList));
 
-  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
-                        ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
-                        : 0;
+  fragmentCount     = (globalOptions.fragmentSize > 0LL)
+                        ? 1+size/globalOptions.fragmentSize
+                        : 1;
   fragmentNumber    = 0;
   fragmentOffset    = 0LL;
   do
@@ -1153,14 +1153,14 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
                      : size-fragmentOffset;
 
     // init
-    entryMsg.entryType         = entryType;
-    entryMsg.fileType          = FILE_TYPE_HARDLINK;
-    entryMsg.name              = NULL;
+    entryMsg.entryType      = entryType;
+    entryMsg.fileType       = FILE_TYPE_HARDLINK;
+    entryMsg.name           = NULL;
     StringList_initDuplicate(&entryMsg.nameList,nameList);
-    entryMsg.fragmentNumber    = fragmentNumber;
-    entryMsg.maxFragmentNumber = maxFragmentNumber;
-    entryMsg.fragmentOffset    = fragmentOffset;
-    entryMsg.fragmentSize      = fragmentSize;
+    entryMsg.fragmentNumber = fragmentNumber;
+    entryMsg.fragmentCount  = fragmentCount;
+    entryMsg.fragmentOffset = fragmentOffset;
+    entryMsg.fragmentSize   = fragmentSize;
 
     // put into message queue
     if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -1193,7 +1193,7 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
                                     uint64      size
                                    )
 {
-  uint     maxFragmentNumber;
+  uint     fragmentCount;
   uint     fragmentNumber;
   uint64   fragmentOffset,fragmentSize;
   EntryMsg entryMsg;
@@ -1201,11 +1201,11 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
 
-  maxFragmentNumber = ((globalOptions.fragmentSize > 0LL) && (size > globalOptions.fragmentSize))
-                        ? (size+globalOptions.fragmentSize-1)/globalOptions.fragmentSize
-                        : 0;
-  fragmentNumber    = 0;
-  fragmentOffset    = 0LL;
+  fragmentCount  = (globalOptions.fragmentSize > 0LL)
+                     ? 1+size/globalOptions.fragmentSize
+                     : 1;
+  fragmentNumber = 0;
+  fragmentOffset = 0LL;
   do
   {
     // calculate fragment size
@@ -1214,14 +1214,14 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
                      : size-fragmentOffset;
 
     // init
-    entryMsg.entryType         = entryType;
-    entryMsg.fileType          = FILE_TYPE_SPECIAL;
-    entryMsg.name              = String_duplicate(name);
+    entryMsg.entryType      = entryType;
+    entryMsg.fileType       = FILE_TYPE_SPECIAL;
+    entryMsg.name           = String_duplicate(name);
     StringList_init(&entryMsg.nameList);
-    entryMsg.fragmentNumber    = fragmentNumber;
-    entryMsg.maxFragmentNumber = maxFragmentNumber;
-    entryMsg.fragmentOffset    = fragmentOffset;
-    entryMsg.fragmentSize      = fragmentSize;
+    entryMsg.fragmentNumber = fragmentNumber;
+    entryMsg.fragmentCount  = fragmentCount;
+    entryMsg.fragmentOffset = fragmentOffset;
+    entryMsg.fragmentSize   = fragmentSize;
 
     // put into message queue
     if (!MsgQueue_put(entryMsgQueue,&entryMsg,sizeof(entryMsg)))
@@ -5066,15 +5066,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 /***********************************************************************\
 * Name   : fragmentInit
 * Purpose: init fragment
-* Input  : createInfo - create info structure
-*          name       - name of entry
-*          size       - total size of entry [bytes] or 0
+* Input  : createInfo    - create info structure
+*          name          - name of entry
+*          size          - total size of entry [bytes] or 0
+*          fragmentCount - fragment count
 * Output : -
 * Return : fragment node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL FragmentNode* fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size)
+LOCAL FragmentNode* fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, uint fragmentCount)
 {
   FragmentNode *fragmentNode;
 
@@ -5084,16 +5085,13 @@ LOCAL FragmentNode* fragmentInit(CreateInfo *createInfo, ConstString name, uint6
     fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
     if (fragmentNode == NULL)
     {
-      fragmentNode = FragmentList_add(&createInfo->statusInfoFragmentList,name,size,NULL,0);
+      fragmentNode = FragmentList_add(&createInfo->statusInfoFragmentList,name,size,NULL,0,fragmentCount);
       if (fragmentNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
     }
     assert(fragmentNode != NULL);
-
-    // lock
-    FragmentList_lockNode(fragmentNode);
 
     // status update
     if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
@@ -5148,14 +5146,14 @@ LOCAL void fragmentDone(CreateInfo *createInfo, FragmentNode *fragmentNode)
 /***********************************************************************\
 * Name   : storeFileEntry
 * Purpose: store a file entry into archive
-* Input  : createInfo        - create info structure
-*          fileName          - file name to store
-*          fragmentNumber    - fragment number [0..n-1]
-*          maxFragmentNumber - max. fragment number [0..n-1]
-*          fragmentOffset    - fragment offset [bytes]
-*          fragmentSize      - fragment size [bytes]
-*          buffer            - buffer for temporary data
-*          bufferSize        - size of data buffer
+* Input  : createInfo     - create info structure
+*          fileName       - file name to store
+*          fragmentNumber - fragment number [0..n-1]
+*          fragmentCount  - fragment count
+*          fragmentOffset - fragment offset [bytes]
+*          fragmentSize   - fragment size [bytes]
+*          buffer         - buffer for temporary data
+*          bufferSize     - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -5164,7 +5162,7 @@ LOCAL void fragmentDone(CreateInfo *createInfo, FragmentNode *fragmentNode)
 LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                             ConstString fileName,
                             uint        fragmentNumber,
-                            uint        maxFragmentNumber,
+                            uint        fragmentCount,
                             uint64      fragmentOffset,
                             uint64      fragmentSize,
                             byte        *buffer,
@@ -5276,7 +5274,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   }
 
   // init fragment
-  fragmentNode = fragmentInit(createInfo,fileName,fileInfo.size);
+  fragmentNode = fragmentInit(createInfo,fileName,fileInfo.size,fragmentCount);
 assert(fragmentNode->lockCount > 0);
 
   offset = 0LL;
@@ -5476,7 +5474,7 @@ assert(fragmentNode->lockCount > 0);
     stringClear(s1);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(t1,sizeof(t1),"%u",maxFragmentNumber);
+      stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
       stringAppend(s1,sizeof(s1),", fragment #");
       stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
@@ -5560,14 +5558,14 @@ assert(fragmentNode->lockCount > 0);
 /***********************************************************************\
 * Name   : storeImageEntry
 * Purpose: store an image entry into archive
-* Input  : createInfo        - create info structure
-*          deviceName        - device name
-*          fragmentNumber    - fragment number [0..n-1]
-*          maxFragmentNumber - max. fragment number [0..n-1]
-*          fragmentOffset    - fragment offset [blocks]
-*          fragmentSize      - fragment count [blocks]
-*          buffer            - buffer for temporary data
-*          bufferSize        - size of data buffer
+* Input  : createInfo     - create info structure
+*          deviceName     - device name
+*          fragmentNumber - fragment number [0..n-1]
+*          fragmentCount  - fragment count
+*          fragmentOffset - fragment offset [blocks]
+*          fragmentSize   - fragment count [blocks]
+*          buffer         - buffer for temporary data
+*          bufferSize     - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -5576,7 +5574,7 @@ assert(fragmentNode->lockCount > 0);
 LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                              ConstString deviceName,
                              uint        fragmentNumber,
-                             uint        maxFragmentNumber,
+                             uint        fragmentCount,
                              uint64      fragmentOffset,
                              uint64      fragmentSize,
                              byte        *buffer,
@@ -5694,7 +5692,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   }
 
   // init fragment
-  fragmentNode = fragmentInit(createInfo,deviceName,deviceInfo.size);
+  fragmentNode = fragmentInit(createInfo,deviceName,deviceInfo.size,fragmentCount);
 
   blockOffset = 0LL;
   blockCount  = 0LL;
@@ -5887,7 +5885,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     stringClear(s1);
     if (fragmentSize < deviceInfo.size)
     {
-      stringFormat(t1,sizeof(t1),"%u",maxFragmentNumber);
+      stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
       stringAppend(s1,sizeof(s1),", fragment #");
       stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
@@ -6307,14 +6305,14 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 /***********************************************************************\
 * Name   : storeHardLinkEntry
 * Purpose: store a hard link entry into archive
-* Input  : createInfo        - create info structure
-*          fileNameList      - hard link filename list to store
-*          fragmentNumber    - fragment number [0..n-1]
-*          maxFragmentNumber - max. fragment number [0..n-1]
-*          fragmentOffset    - fragment offset [bytes]
-*          fragmentSize      - fragment size [bytes]
-*          buffer            - buffer for temporary data
-*          bufferSize        - size of data buffer
+* Input  : createInfo     - create info structure
+*          fileNameList   - hard link filename list to store
+*          fragmentNumber - fragment number [0..n-1]
+*          fragmentCount  - fragment count
+*          fragmentOffset - fragment offset [bytes]
+*          fragmentSize   - fragment size [bytes]
+*          buffer         - buffer for temporary data
+*          bufferSize     - size of data buffer
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -6323,7 +6321,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                 const StringList *fileNameList,
                                 uint             fragmentNumber,
-                                uint             maxFragmentNumber,
+                                uint             fragmentCount,
                                 uint64           fragmentOffset,
                                 uint64           fragmentSize,
                                 byte             *buffer,
@@ -6437,7 +6435,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // init fragment
-  fragmentNode = fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo.size);
+  fragmentNode = fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo.size,fragmentCount);
 
   if (!createInfo->storageFlags.noStorage)
   {
@@ -6607,7 +6605,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     stringClear(s1);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(t1,sizeof(t1),"%u",maxFragmentNumber);
+      stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
       stringAppend(s1,sizeof(s1),", fragment #");
       stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
@@ -6898,7 +6896,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeFileEntry(createInfo,
                                      entryMsg.name,
                                      entryMsg.fragmentNumber,
-                                     entryMsg.maxFragmentNumber,
+                                     entryMsg.fragmentCount,
                                      entryMsg.fragmentOffset,
                                      entryMsg.fragmentSize,
                                      buffer,
@@ -6961,7 +6959,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeHardLinkEntry(createInfo,
                                          &entryMsg.nameList,
                                          entryMsg.fragmentNumber,
-                                         entryMsg.maxFragmentNumber,
+                                         entryMsg.fragmentCount,
                                          entryMsg.fragmentOffset,
                                          entryMsg.fragmentSize,
                                          buffer,
@@ -6992,7 +6990,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
               error = storeImageEntry(createInfo,
                                       entryMsg.name,
                                       entryMsg.fragmentNumber,
-                                      entryMsg.maxFragmentNumber,
+                                      entryMsg.fragmentCount,
                                       entryMsg.fragmentOffset,
                                       entryMsg.fragmentSize,
                                       buffer,

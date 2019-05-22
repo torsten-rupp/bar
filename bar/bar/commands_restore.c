@@ -561,7 +561,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
               break;
           }
         }
-        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
+        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,destinationFileName,fileInfo.size,&fileInfo,sizeof(FileInfo),0);
       }
       assert(fragmentNode != NULL);
     }
@@ -1060,7 +1060,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
       else
       {
-        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,deviceName,deviceInfo.size,NULL,0);
+        fragmentNode = FragmentList_add(&restoreInfo->fragmentList,deviceName,deviceInfo.size,NULL,0,0);
       }
       assert(fragmentNode != NULL);
     }
@@ -2242,7 +2242,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                   break;
               }
             }
-            fragmentNode = FragmentList_add(&restoreInfo->fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo));
+            fragmentNode = FragmentList_add(&restoreInfo->fragmentList,fileName,fileInfo.size,&fileInfo,sizeof(FileInfo),0);
           }
           assert(fragmentNode != NULL);
         }

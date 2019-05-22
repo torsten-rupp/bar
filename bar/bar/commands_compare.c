@@ -441,7 +441,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         fragmentNode = FragmentList_find(fragmentList,fileName);
         if (fragmentNode == NULL)
         {
-          fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+          fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
         }
         assert(fragmentNode != NULL);
 //FragmentList_print(fragmentNode,String_cString(fileName),FALSE);
@@ -810,7 +810,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
         fragmentNode = FragmentList_find(fragmentList,deviceName);
         if (fragmentNode == NULL)
         {
-          fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
+          fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0,0);
         }
         assert(fragmentNode != NULL);
 
@@ -1433,7 +1433,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
             fragmentNode = FragmentList_find(fragmentList,fileName);
             if (fragmentNode == NULL)
             {
-              fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+              fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
             }
             assert(fragmentNode != NULL);
 

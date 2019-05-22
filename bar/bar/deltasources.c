@@ -810,7 +810,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
       if (error == ERROR_NONE)
       {
         // init variables
-        FragmentList_initNode(&fragmentNode,name,size,NULL,0);
+        FragmentList_initNode(&fragmentNode,name,size,NULL,0,0);
 
         SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
@@ -899,7 +899,7 @@ Errors DeltaSource_openEntry(DeltaSourceHandle *deltaSourceHandle,
       if (error == ERROR_NONE)
       {
         // init variables
-        FragmentList_initNode(&fragmentNode,name,size,NULL,0);
+        FragmentList_initNode(&fragmentNode,name,size,NULL,0,0);
 
         SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {

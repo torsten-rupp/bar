@@ -297,7 +297,7 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
         fragmentNode = FragmentList_find(fragmentList,fileName);
         if (fragmentNode == NULL)
         {
-          fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+          fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
         }
         assert(fragmentNode != NULL);
 
@@ -497,7 +497,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
         fragmentNode = FragmentList_find(fragmentList,deviceName);
         if (fragmentNode == NULL)
         {
-          fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0);
+          fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0,0);
         }
 //FragmentList_print(fragmentNode,String_cString(deviceName),FALSE);
         assert(fragmentNode != NULL);
@@ -879,7 +879,7 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
             fragmentNode = FragmentList_find(fragmentList,fileName);
             if (fragmentNode == NULL)
             {
-              fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0);
+              fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
             }
             assert(fragmentNode != NULL);
 //FragmentList_print(fragmentNode,String_cString(fileName),FALSE);

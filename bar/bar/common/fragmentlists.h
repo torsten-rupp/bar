@@ -146,6 +146,7 @@ void FragmentList_done(FragmentList *fragmentList);
 *          userData     - user data to store with fragment (will be
 *                         copied!)
 *          userDataSize - size of user data
+*          lockCount    - lock count
 * Output : -
 * Return : -
 * Notes  : -
@@ -155,7 +156,8 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
                            ConstString  name,
                            uint64       size,
                            const void   *userData,
-                           uint         userDataSize
+                           uint         userDataSize,
+                           uint         lockCount
                           );
 
 /***********************************************************************\
@@ -200,6 +202,7 @@ void FragmentList_unlockNode(FragmentNode *fragmentNode);
 *          userData     - user data to store with fragment (will be
 *                         copied!)
 *          userDataSize - size of user data
+*          lockCount    - lock count
 * Output : -
 * Return : fragment node or NULL on error
 * Notes  :
@@ -209,7 +212,8 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
                                ConstString  name,
                                uint64       size,
                                const void   *userData,
-                               uint         userDataSize
+                               uint         userDataSize,
+                               uint         lockCount
                               );
 
 /***********************************************************************\

@@ -99,6 +99,7 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
 *          userData     - user data to store with fragment (will be
 *                         copied!)
 *          userDataSize - size of user data
+*          lockCount    - lock count
 * Output : -
 * Return : new fragment node or NULL
 * Notes  : -
@@ -107,7 +108,8 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
 LOCAL FragmentNode* newFragmentNode(ConstString  name,
                                     uint64       size,
                                     const void   *userData,
-                                    uint         userDataSize
+                                    uint         userDataSize,
+                                    uint         lockCount
                                    )
 {
   FragmentNode *fragmentNode;
@@ -115,9 +117,9 @@ LOCAL FragmentNode* newFragmentNode(ConstString  name,
   fragmentNode = LIST_NEW_NODE(FragmentNode);
   if (fragmentNode != NULL)
   {
-    FragmentList_initNode(fragmentNode,name,size,userData,userDataSize);
+    FragmentList_initNode(fragmentNode,name,size,userData,userDataSize,lockCount);
   }
-  
+
   return fragmentNode;
 }
 
@@ -136,7 +138,7 @@ LOCAL void deleteFragmentNode(FragmentNode *fragmentNode)
   FRAGMENTNODE_VALID(fragmentNode);
 
   FragmentList_doneNode(fragmentNode);
-  LIST_DELETE_NODE(fragmentNode);  
+  LIST_DELETE_NODE(fragmentNode);
 }
 
 /***********************************************************************\
@@ -198,7 +200,8 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
                            ConstString  name,
                            uint64       size,
                            const void   *userData,
-                           uint         userDataSize
+                           uint         userDataSize,
+                           uint         lockCount
                           )
 {
   assert(fragmentNode != NULL);
@@ -220,7 +223,7 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
     fragmentNode->userData     = NULL;
     fragmentNode->userDataSize = 0;
   }
-  fragmentNode->lockCount    = 0;
+  fragmentNode->lockCount    = lockCount;
   List_init(&fragmentNode->rangeList);
   fragmentNode->rangeListSum = 0LL;
 
@@ -263,7 +266,8 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
                                ConstString  name,
                                uint64       size,
                                const void   *userData,
-                               uint         userDataSize
+                               uint         userDataSize,
+                               uint         lockCount
                               )
 {
   FragmentNode *fragmentNode;
@@ -272,7 +276,7 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
   DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
   assert(name != NULL);
 
-  fragmentNode = newFragmentNode(name,size,userData,userDataSize);
+  fragmentNode = newFragmentNode(name,size,userData,userDataSize,lockCount);
   if (fragmentNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
