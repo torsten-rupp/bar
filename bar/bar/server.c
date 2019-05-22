@@ -67,10 +67,11 @@
 #define SESSION_KEY_SIZE                         1024     // number of session key bits
 
 #define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
-#define LOCK_TIMEOUT                             (10*60*1000)  // general lock timeout [ms]
+#define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
+#define CLIENT_TIMEOUT                           (30L*MS_PER_SECOND)  // client timeout [ms]
 
 #define SLAVE_DEBUG_LEVEL                        1
-#define SLAVE_COMMAND_TIMEOUT                    (10LL*MS_PER_SECOND)
+#define SLAVE_COMMAND_TIMEOUT                    (10L*MS_PER_SECOND)
 
 #define AUTHORIZATION_PENALITY_TIME              500      // delay processing by failCount^2*n [ms]
 #define MAX_AUTHORIZATION_PENALITY_TIME          30000    // max. penality time [ms]
@@ -82,7 +83,7 @@
 
 #define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
-// sleep times [s]
+// sleep times
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*60)  // [s]
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
@@ -16825,7 +16826,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   {
     while (!clientInfo->quitFlag && (indexHandle == NULL))
     {
-      indexHandle = Index_open(NULL,2*MS_PER_SECOND);
+      indexHandle = Index_open(NULL,CLIENT_TIMEOUT);
     }
   }
 
