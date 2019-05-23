@@ -4748,9 +4748,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             continue;
           }
 
-          // delete index of storage (have to be empty now)
-          assert(Index_isEmptyStorage(createInfo->indexHandle,storageMsg.storageId));
-          (void)Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+          // prune storage (maybe empty now)
+          (void)Index_pruneStorage(createInfo->indexHandle,storageMsg.storageId);
 
           // prune entity (maybe empty now)
           (void)Index_pruneEntity(createInfo->indexHandle,storageMsg.entityId);
