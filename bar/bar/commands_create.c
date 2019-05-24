@@ -876,16 +876,14 @@ LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString nam
 /***********************************************************************\
 * Name   : statusInfoUpdateUnlock
 * Purpose: status info update unlock
-* Input  : createInfo   - create info structure
-*          name         - name of entry
-*          fragmentNode - fragment node (can be NULL)
-*          updateFlag   - TRUE for status update
+* Input  : createInfo - create info structure
+*          name       - name of entry
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool updateFlag)
+LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
 {
   const FragmentNode *fragmentNode;
 
@@ -920,11 +918,8 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
     }
   }
 
-  // update
-  if (updateFlag)
-  {
-    updateStatusInfo(createInfo,TRUE);
-  }
+  // update status info
+  updateStatusInfo(createInfo,TRUE);
 
   // unlock
   Semaphore_unlock(&createInfo->statusInfoLock);
@@ -951,7 +946,7 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 #define STATUS_INFO_UPDATE(createInfo,name,fragmentNode) \
   for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name,fragmentNode); \
        semaphoreLock; \
-       statusInfoUpdateUnlock(createInfo,name,TRUE), semaphoreLock = FALSE \
+       statusInfoUpdateUnlock(createInfo,name), semaphoreLock = FALSE \
       )
 
 /***********************************************************************\
