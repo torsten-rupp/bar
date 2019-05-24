@@ -5104,8 +5104,6 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 {
   FragmentNode *fragmentNode;
 
-  assert(fragmentNode != NULL);
-
   SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // get fragment node
