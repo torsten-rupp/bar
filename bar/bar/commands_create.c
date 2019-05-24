@@ -6463,7 +6463,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  Error_getText(error)
                 );
       (void)File_close(&fileHandle);
-      fragmentDone(createInfo,fileName);
+      fragmentDone(createInfo,StringList_first(fileNameList,NULL));
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
@@ -6547,7 +6547,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         printInfo(1,"ABORTED\n");
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
-        fragmentDone(createInfo,fileName);
+        fragmentDone(createInfo,StringList_first(fileNameList,NULL));
         File_doneExtendedAttributes(&fileExtendedAttributeList);
         return error;
       }
@@ -6560,7 +6560,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
       (void)File_close(&fileHandle);
-      fragmentDone(createInfo,fileName);
+      fragmentDone(createInfo,StringList_first(fileNameList,NULL));
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
@@ -6575,7 +6575,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  Error_getText(error)
                 );
       (void)File_close(&fileHandle);
-      fragmentDone(createInfo,fileName);
+      fragmentDone(createInfo,StringList_first(fileNameList,NULL));
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
@@ -6665,7 +6665,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   (void)File_close(&fileHandle);
 
   // free resources
-  fragmentDone(createInfo,fileName);
+  fragmentDone(createInfo,StringList_first(fileNameList,NULL));
   File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
