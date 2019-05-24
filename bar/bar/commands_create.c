@@ -135,7 +135,7 @@ typedef struct
   Semaphore                   statusInfoLock;                       // status info lock
   StatusInfo                  statusInfo;                           // status info
   FragmentList                statusInfoFragmentList;               // status info fragment list
-  FragmentNode                *statusInfoCurrentFragmentNode;       // current fragment node in status info
+  const FragmentNode          *statusInfoCurrentFragmentNode;       // current fragment node in status info
   uint64                      statusInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
 } CreateInfo;
 
@@ -857,23 +857,19 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, FragmentNode *fragmentNode)
+LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString name, FragmentNode **foundFragmentNode)
 {
+  FragmentNode *fragmentNode;
+
   assert(createInfo != NULL);
 
   // lock
   Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
 
-  // set new current status info
-  if (fragmentNode != NULL)
+  if (foundFragmentNode != NULL)
   {
-    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
-       )
-    {
-      createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
-      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
-    }
+    // find fragment node
+    (*foundFragmentNode) = FragmentList_find(&createInfo->statusInfoFragmentList,name);
   }
 
   return TRUE;
@@ -891,24 +887,33 @@ LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, FragmentNode *f
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, FragmentNode *fragmentNode, bool updateFlag)
+LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool updateFlag)
 {
+  const FragmentNode *fragmentNode;
+
   assert(createInfo != NULL);
 
-  if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
-      || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
-     )
+  if (name != NULL)
   {
-    // set new current status info
-    createInfo->statusInfoCurrentFragmentNode        = fragmentNode;
-    createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
-
-    // update current status info
-    String_set(createInfo->statusInfo.entry.name,name);
-    if (fragmentNode != NULL)
+    // update current status info if not set or timeout
+    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+       )
     {
-      createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
-      createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+      // find fragment node
+      fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+
+      // set new current status info
+      String_set(createInfo->statusInfo.entry.name,name);
+      createInfo->statusInfoCurrentFragmentNode = fragmentNode;
+      if (fragmentNode != NULL)
+      {
+        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+      }
+
+      // save last update time
+      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
     }
   }
 
@@ -934,16 +939,16 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, Frag
 * Purpose: update status info
 * Input  : createInfo   - create info structure
 *          name         - name of entry
-*          fragmentNode - fragment node (can be NULL)
+*          fragmentNode - fragment node variable (can be NULL)
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #define STATUS_INFO_UPDATE(createInfo,name,fragmentNode) \
-  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,fragmentNode); \
+  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name,fragmentNode); \
        semaphoreLock; \
-       statusInfoUpdateUnlock(createInfo,name,fragmentNode,TRUE), semaphoreLock = FALSE \
+       statusInfoUpdateUnlock(createInfo,name,TRUE), semaphoreLock = FALSE \
       )
 
 /***********************************************************************\
@@ -1605,23 +1610,18 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     error = Continuous_initList(&databaseQueryHandle,&continuousDatabaseHandle,createInfo->jobUUID,createInfo->scheduleUUID);
     if (error == ERROR_NONE)
     {
-assert(continuousDatabaseHandle.readLockCount > 0);
       while (Continuous_getNext(&databaseQueryHandle,&databaseId,name))
       {
         FileInfo fileInfo;
 
-//fprintf(stderr,"%s, %d: jobUUID=%s name='%s'\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(name));
         // pause
         pauseCreate(createInfo);
-//TODO: remove
-assert(continuousDatabaseHandle.readLockCount > 0);
 
         // check if file still exists
         if (!File_exists(name))
         {
           continue;
         }
-assert(continuousDatabaseHandle.readLockCount > 0);
 
         // read file info
         error = File_getInfo(&fileInfo,name);
@@ -1629,14 +1629,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
         {
           continue;
         }
-assert(continuousDatabaseHandle.readLockCount > 0);
 
         if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
         {
           switch (fileInfo.type)
           {
             case FILE_TYPE_FILE:
-assert(continuousDatabaseHandle.readLockCount > 0);
               if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                   && isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
@@ -1650,28 +1648,22 @@ assert(continuousDatabaseHandle.readLockCount > 0);
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-fprintf(stderr,"%s, %d: mmm file %s %ld\n",__FILE__,__LINE__,String_cString(name),fileInfo.size);
                     createInfo->statusInfo.total.count++;
                     createInfo->statusInfo.total.size += fileInfo.size;
                   }
                 }
               }
-assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             case FILE_TYPE_DIRECTORY:
-assert(continuousDatabaseHandle.readLockCount > 0);
               // add to known names history
               Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
               STATUS_INFO_UPDATE(createInfo,name,NULL)
               {
-fprintf(stderr,"%s, %d: mmm dir %s %d\n",__FILE__,__LINE__,String_cString(name),0);
                 createInfo->statusInfo.total.count++;
               }
-assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             case FILE_TYPE_LINK:
-assert(continuousDatabaseHandle.readLockCount > 0);
               if (   isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                   && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
@@ -1684,15 +1676,12 @@ assert(continuousDatabaseHandle.readLockCount > 0);
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-fprintf(stderr,"%s, %d: mmm link %s %d\n",__FILE__,__LINE__,String_cString(name),0);
                     createInfo->statusInfo.total.count++;
                   }
                 }
               }
-assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             case FILE_TYPE_HARDLINK:
-assert(continuousDatabaseHandle.readLockCount > 0);
               if (   ((globalOptions.continuousMaxSize == 0LL) || fileInfo.size <= globalOptions.continuousMaxSize)
                   && isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
@@ -1767,10 +1756,8 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                   }
                 }
               }
-assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             case FILE_TYPE_SPECIAL:
-assert(continuousDatabaseHandle.readLockCount > 0);
               if (   isInIncludedList(createInfo->includeEntryList,name)
                   && !isInExcludedList(createInfo->excludePatternList,name)
                   && !Dictionary_contains(&duplicateNamesDictionary,String_cString(name),String_length(name))
@@ -1783,22 +1770,18 @@ assert(continuousDatabaseHandle.readLockCount > 0);
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
-fprintf(stderr,"%s, %d: mmm spec %s %d\n",__FILE__,__LINE__,String_cString(name),0);
                     createInfo->statusInfo.total.count++;
                   }
                 }
               }
-assert(continuousDatabaseHandle.readLockCount > 0);
               break;
             default:
               break;
           }
         }
-assert(continuousDatabaseHandle.readLockCount > 0);
 
         // free resources
       }
-assert(continuousDatabaseHandle.readLockCount > 0);
       Continuous_doneList(&databaseQueryHandle);
     }
   }
@@ -2141,7 +2124,6 @@ assert(continuousDatabaseHandle.readLockCount > 0);
                                   {
                                     STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                     {
-fprintf(stderr,"%s, %d: mmm spec %s %ld\n",__FILE__,__LINE__,String_cString(name),fileInfo.size);
                                       createInfo->statusInfo.total.count++;
                                       if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
                                           && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
@@ -5070,11 +5052,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 *          size          - total size of entry [bytes] or 0
 *          fragmentCount - fragment count
 * Output : -
-* Return : fragment node
+* Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL FragmentNode* fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, uint fragmentCount)
+LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, uint fragmentCount)
 {
   FragmentNode *fragmentNode;
 
@@ -5106,8 +5088,6 @@ LOCAL FragmentNode* fragmentInit(CreateInfo *createInfo, ConstString name, uint6
     }
     assert(createInfo->statusInfoCurrentFragmentNode != NULL);
   }
-
-  return fragmentNode;
 }
 
 /***********************************************************************\
@@ -5120,24 +5100,31 @@ LOCAL FragmentNode* fragmentInit(CreateInfo *createInfo, ConstString name, uint6
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void fragmentDone(CreateInfo *createInfo, FragmentNode *fragmentNode)
+LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 {
+  FragmentNode *fragmentNode;
+
   assert(fragmentNode != NULL);
 
   SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    // unlock
-    FragmentList_unlockNode(fragmentNode);
-
-    // check if fragment complete
-    if (FragmentList_isComplete(fragmentNode))
+    // get fragment node
+    fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+    if (fragmentNode == NULL)
     {
-      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
-      {
-        createInfo->statusInfoCurrentFragmentNode = NULL;
-      }
+      // unlock
+      FragmentList_unlockNode(fragmentNode);
 
-      FragmentList_discard(&createInfo->statusInfoFragmentList,fragmentNode);
+      // check if fragment complete
+      if (FragmentList_isComplete(fragmentNode))
+      {
+        if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+        {
+          createInfo->statusInfoCurrentFragmentNode = NULL;
+        }
+
+        FragmentList_discard(&createInfo->statusInfoFragmentList,fragmentNode);
+      }
     }
   }
 }
@@ -5273,8 +5260,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   }
 
   // init fragment
-  fragmentNode = fragmentInit(createInfo,fileName,fileInfo.size,fragmentCount);
-assert(fragmentNode->lockCount > 0);
+  fragmentInit(createInfo,fileName,fileInfo.size,fragmentCount);
 
   offset = 0LL;
   size   = 0LL;
@@ -5318,11 +5304,10 @@ assert(fragmentNode->lockCount > 0);
                  Error_getText(error)
                 );
       (void)File_close(&fileHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
-assert(fragmentNode->lockCount > 0);
 
     // seek to start offset
     error = File_seek(&fileHandle,fragmentOffset);
@@ -5341,7 +5326,6 @@ assert(fragmentNode->lockCount > 0);
 //fprintf(stderr,"%s, %d: fragmentOffset=%llu size=%llu\n",__FILE__,__LINE__,fragmentOffset,size);
         // pause
         Storage_pause(&createInfo->storageInfo);
-assert(fragmentNode->lockCount > 0);
 
         // read file data
         error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
@@ -5356,16 +5340,19 @@ assert(fragmentNode->lockCount > 0);
               // get current archive size
               archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
-              STATUS_INFO_UPDATE(createInfo,fileName,fragmentNode)
+              STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
               {
-                // add fragment
-                FragmentList_addRange(fragmentNode,offset,bufferLength);
-
-                // update status info
-                if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+                if (fragmentNode != NULL)
                 {
-                  createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-                  createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+                  // add fragment
+                  FragmentList_addRange(fragmentNode,offset,bufferLength);
+
+                  // update status info
+                  if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+                  {
+                    createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+                    createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+                  }
                 }
                 createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
@@ -5395,7 +5382,6 @@ assert(fragmentNode->lockCount > 0);
             size = 0;
           }
         }
-assert(fragmentNode->lockCount > 0);
 
         // wait for temporary file space
         waitForTemporaryFileSpace(createInfo);
@@ -5405,12 +5391,11 @@ assert(fragmentNode->lockCount > 0);
         printInfo(1,"ABORTED\n");
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
-        fragmentDone(createInfo,fragmentNode);
+        fragmentDone(createInfo,fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
         return FALSE;
       }
     }
-assert(fragmentNode->lockCount > 0);
     if (error != ERROR_NONE)
     {
       if (createInfo->jobOptions->skipUnreadableFlag)
@@ -5424,7 +5409,7 @@ assert(fragmentNode->lockCount > 0);
         }
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
-        fragmentDone(createInfo,fragmentNode);
+        fragmentDone(createInfo,fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
         return ERROR_NONE;
       }
@@ -5436,13 +5421,12 @@ assert(fragmentNode->lockCount > 0);
                   );
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
-        fragmentDone(createInfo,fragmentNode);
+        fragmentDone(createInfo,fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
         return error;
       }
     }
     printInfo(2,"    \b\b\b\b");
-assert(fragmentNode->lockCount > 0);
 
     // close archive entry
     error = Archive_closeEntry(&archiveEntryInfo);
@@ -5453,11 +5437,10 @@ assert(fragmentNode->lockCount > 0);
                  Error_getText(error)
                 );
       (void)File_close(&fileHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
-assert(fragmentNode->lockCount > 0);
 
     // get final compression ratio
     if (archiveEntryInfo.file.chunkFileData.fragmentSize > 0LL)
@@ -5479,7 +5462,6 @@ assert(fragmentNode->lockCount > 0);
       stringFill(s1,sizeof(s1),stringLength(t1)-stringLength(t2),' ');
       stringFormatAppend(s1,sizeof(s1),"%s/%s",t2,t1);
     }
-assert(fragmentNode->lockCount > 0);
 
     // ratio info
     stringClear(s2);
@@ -5521,19 +5503,21 @@ assert(fragmentNode->lockCount > 0);
               fragmentSize
              );
   }
-assert(fragmentNode->lockCount > 0);
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,fileName,fragmentNode)
+  STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
   {
-    if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+    if (fragmentNode != NULL)
     {
-      createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-      createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
-    }
-    if (FragmentList_isComplete(fragmentNode))
-    {
-      createInfo->statusInfo.done.count++;
+      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      {
+        createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+        createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+      }
+      if (FragmentList_isComplete(fragmentNode))
+      {
+        createInfo->statusInfo.done.count++;
+      }
     }
   }
 
@@ -5541,8 +5525,7 @@ assert(fragmentNode->lockCount > 0);
   (void)File_close(&fileHandle);
 
   // free resources
-assert(fragmentNode->lockCount > 0);
-  fragmentDone(createInfo,fragmentNode);
+  fragmentDone(createInfo,fileName);
   File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list
@@ -5691,7 +5674,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   }
 
   // init fragment
-  fragmentNode = fragmentInit(createInfo,deviceName,deviceInfo.size,fragmentCount);
+  fragmentInit(createInfo,deviceName,deviceInfo.size,fragmentCount);
 
   blockOffset = 0LL;
   blockCount  = 0LL;
@@ -5736,7 +5719,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                 );
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,deviceName);
       return error;
     }
 
@@ -5791,16 +5774,19 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
           // update status info
-          STATUS_INFO_UPDATE(createInfo,deviceName,fragmentNode)
+          STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
           {
-            // add fragment
-            FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize);
-
-            // update status info
-            if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+            if (fragmentNode != NULL)
             {
-              createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-              createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+              // add fragment
+              FragmentList_addRange(fragmentNode,blockOffset*(uint64)deviceInfo.blockSize,(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize);
+
+              // update status info
+              if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+              {
+                createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+                createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+              }
             }
             createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferBlockCount*(uint64)deviceInfo.blockSize;
             createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
@@ -5833,7 +5819,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       (void)Archive_closeEntry(&archiveEntryInfo);
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,deviceName);
       return error;
     }
     if (error != ERROR_NONE)
@@ -5845,7 +5831,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       (void)Archive_closeEntry(&archiveEntryInfo);
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,deviceName);
       return error;
     }
     printInfo(2,"    \b\b\b\b");
@@ -5860,7 +5846,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                 );
       if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
       Device_close(&deviceHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,deviceName);
       return error;
     }
 
@@ -5938,17 +5924,20 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   }
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,deviceName,fragmentNode)
+  STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
   {
-    if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+    if (fragmentNode != NULL)
     {
-      createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-      createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
-    }
+      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      {
+        createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+        createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+      }
 
-    if (FragmentList_isComplete(fragmentNode))
-    {
-      createInfo->statusInfo.done.count++;
+      if (FragmentList_isComplete(fragmentNode))
+      {
+        createInfo->statusInfo.done.count++;
+      }
     }
   }
 
@@ -5956,7 +5945,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   Device_close(&deviceHandle);
 
   // free resources
-  fragmentDone(createInfo,fragmentNode);
+  fragmentDone(createInfo,deviceName);
 
   return ERROR_NONE;
 }
@@ -6434,7 +6423,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // init fragment
-  fragmentNode = fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo.size,fragmentCount);
+  fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo.size,fragmentCount);
 
   if (!createInfo->storageFlags.noStorage)
   {
@@ -6476,7 +6465,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  Error_getText(error)
                 );
       (void)File_close(&fileHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
@@ -6513,16 +6502,19 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               archiveSize = Archive_getSize(&createInfo->archiveHandle);
 
               // update status info
-              STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),fragmentNode)
+              STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
               {
-                // add fragment
-                FragmentList_addRange(fragmentNode,offset,bufferLength);
-
-                // update status info
-                if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+                if (fragmentNode != NULL)
                 {
-                  createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-                  createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+                  // add fragment
+                  FragmentList_addRange(fragmentNode,offset,bufferLength);
+
+                  // update status info
+                  if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+                  {
+                    createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+                    createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+                  }
                 }
                 createInfo->statusInfo.done.size        = createInfo->statusInfo.done.size+(uint64)bufferLength;
                 createInfo->statusInfo.archiveSize      = archiveSize+createInfo->statusInfo.storage.totalSize;
@@ -6557,7 +6549,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         printInfo(1,"ABORTED\n");
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
-        fragmentDone(createInfo,fragmentNode);
+        fragmentDone(createInfo,fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
         return error;
       }
@@ -6570,7 +6562,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                 );
       (void)Archive_closeEntry(&archiveEntryInfo);
       (void)File_close(&fileHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
@@ -6585,7 +6577,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  Error_getText(error)
                 );
       (void)File_close(&fileHandle);
-      fragmentDone(createInfo,fragmentNode);
+      fragmentDone(createInfo,fileName);
       File_doneExtendedAttributes(&fileExtendedAttributeList);
       return error;
     }
@@ -6654,17 +6646,20 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // update status info
-  STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),fragmentNode)
+  STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
   {
-    if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+    if (fragmentNode != NULL)
     {
-      createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
-      createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
-    }
+      if (fragmentNode == createInfo->statusInfoCurrentFragmentNode)
+      {
+        createInfo->statusInfo.entry.doneSize   = FragmentList_getSize(createInfo->statusInfoCurrentFragmentNode);
+        createInfo->statusInfo.entry.totalSize  = FragmentList_getTotalSize(createInfo->statusInfoCurrentFragmentNode);
+      }
 
-    if (FragmentList_isComplete(fragmentNode))
-    {
-      createInfo->statusInfo.done.count += StringList_count(fileNameList);
+      if (FragmentList_isComplete(fragmentNode))
+      {
+        createInfo->statusInfo.done.count += StringList_count(fileNameList);
+      }
     }
   }
 
@@ -6672,7 +6667,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   (void)File_close(&fileHandle);
 
   // free resources
-  fragmentDone(createInfo,fragmentNode);
+  fragmentDone(createInfo,fileName);
   File_doneExtendedAttributes(&fileExtendedAttributeList);
 
   // add to incremental list

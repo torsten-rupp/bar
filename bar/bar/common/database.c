@@ -3771,30 +3771,6 @@ databaseHandle->databaseNode->readWriteCount
         // decrement read count
         readsDecrement(databaseHandle);
 
-#if 0
-        if      (!isTransactionLock(databaseHandle) && (databaseHandle->databaseNode->pendingReadCount > 0))
-        {
-          triggerUnlockRead(databaseHandle);
-        }
-//TODO: do else always even none wait for rw
-        else if (databaseHandle->databaseNode->pendingReadWriteCount > 0)
-        {
-          triggerUnlockReadWrite(databaseHandle);
-        }
-        else if (isTransactionLock(databaseHandle) && (databaseHandle->databaseNode->pendingReadCount > 0))
-        {
-          triggerUnlockRead(databaseHandle);
-        }
-        else
-        {
-          DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,databaseHandle->databaseNode->pendingReadCount == 0);
-          DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,databaseHandle->databaseNode->pendingReadWriteCount == 0);
-        }
-#else
-//        triggerUnlockReadWrite(databaseHandle,DATABASE_LOCK_TYPE_READ);
-//        triggerUnlockRead(databaseHandle,DATABASE_LOCK_TYPE_READ);
-#endif
-
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
                   "%s, %d: %s          UNLOCK done: r  -- pending r %2d, r %2d, pending rw %2d, rw %2d, rw current locked by %s at %s %d\n",
@@ -3816,6 +3792,10 @@ if (   (databaseHandle->databaseNode->pendingReadCount == 0)
    )
 fprintf(stderr,"%s, %d: --------------------------------------------------------------------------------------------------\n",__FILE__,__LINE__);
 #endif
+fprintf(stderr,"%s, %d: %x trigger R %p %llu %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter(),databaseLock.__data.__lock);
+        if (databaseHandle->databaseNode->readCount == 0)
+        {
+        }
         triggerUnlockReadWrite(databaseHandle,DATABASE_LOCK_TYPE_READ);
         triggerUnlockRead(databaseHandle,DATABASE_LOCK_TYPE_READ);
       });
@@ -3823,7 +3803,6 @@ fprintf(stderr,"%s, %d: --------------------------------------------------------
     case DATABASE_LOCK_TYPE_READ_WRITE:
       DATABASE_HANDLE_DO(databaseHandle,
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         assert(isReadWriteLock(databaseHandle));
         assert(!Thread_equalThreads(databaseHandle->databaseNode->readWriteLockedBy,THREAD_ID_NONE));
 
@@ -3861,33 +3840,6 @@ databaseHandle->databaseNode->readWriteCount
         // decrement read/write count
         readWritesDecrement(databaseHandle);
 
-        if (databaseHandle->databaseNode->readWriteCount == 0)
-        {
-#if 0
-          if      (!isTransactionLock(databaseHandle) && (databaseHandle->databaseNode->pendingReadCount > 0))
-          {
-            triggerUnlockRead(databaseHandle);
-          }
-//TODO: do else always even none wait for rw
-          else if (databaseHandle->databaseNode->pendingReadWriteCount > 0)
-          {
-            triggerUnlockReadWrite(databaseHandle);
-          }
-          else if  (isTransactionLock(databaseHandle) && (databaseHandle->databaseNode->pendingReadCount > 0))
-          {
-            triggerUnlockRead(databaseHandle);
-          }
-          else
-          {
-            DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,databaseHandle->databaseNode->pendingReadCount == 0);
-            DATABASE_DEBUG_LOCK_ASSERT(databaseHandle,databaseHandle->databaseNode->pendingReadWriteCount == 0);
-          }
-#else
-//          triggerUnlockReadWrite(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
-//          triggerUnlockRead(databaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
-#endif
-        }
-
         #ifdef DATABASE_DEBUG_LOCK
           fprintf(stderr,
                   "%s, %d: %s          UNLOCK done: rw -- pending r %2d, r %2d, pending rw %2d, rw %2d, rw current locked by %s, transaction %2d at %s %d\n",
@@ -3912,6 +3864,9 @@ fprintf(stderr,"%s, %d: --------------------------------------------------------
 #endif
 
 fprintf(stderr,"%s, %d: %x trigger RW %p %llu %d\n",__FILE__,__LINE__,Thread_getCurrentId(),&databaseHandle->databaseNode->readWriteTrigger,getCycleCounter(),databaseLock.__data.__lock);
+        if (databaseHandle->databaseNode->readWriteCount == 0)
+        {
+        }
         triggerUnlockReadWrite(databaseHandle,DATABASE_LOCK_TYPE_READ);
         triggerUnlockRead(databaseHandle,DATABASE_LOCK_TYPE_READ);
       });
