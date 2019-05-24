@@ -905,11 +905,16 @@ LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name, bool
 
       // set new current status info
       String_set(createInfo->statusInfo.entry.name,name);
-      createInfo->statusInfoCurrentFragmentNode = fragmentNode;
       if (fragmentNode != NULL)
       {
         createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
         createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+
+        createInfo->statusInfoCurrentFragmentNode = !FragmentList_isComplete(fragmentNode) ? fragmentNode : NULL;
+      }
+      else
+      {
+        createInfo->statusInfoCurrentFragmentNode = NULL;
       }
 
       // save last update time
