@@ -859,8 +859,6 @@ LOCAL void updateStatusInfo(CreateInfo *createInfo, bool forceUpdate)
 
 LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString name, FragmentNode **foundFragmentNode)
 {
-  FragmentNode *fragmentNode;
-
   assert(createInfo != NULL);
 
   // lock
