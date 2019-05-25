@@ -755,7 +755,6 @@ public class TabJobs
 
                   fileTreeData.size = size;
 
-//Dprintf.dprintf("update %s\n",treeItem.isDisposed());
                   treeItem.setText(2,Units.formatByteSize(size));
                   treeItem.setForeground(2,timedOut ? COLOR_RED : COLOR_BLACK);
                 }
@@ -9435,6 +9434,7 @@ widgetArchivePartSize.setListVisible(true);
               {
                 // insert new item
                 Widgets.insertOptionMenuItem(widgetJobList,
+//TODO
 //                                             Widgets.getListItemIndex(widgetJobList,String.CASE_INSENSITIVE_ORDER,name),
                                              xxxfindJobListIndex(jobData_.name),
                                              (Object)jobData_,
@@ -9451,6 +9451,90 @@ widgetArchivePartSize.setListVisible(true);
         }
       }
     });
+  }
+
+  /** update selected job data
+   */
+  public void updateJobData()
+  {
+    final JobData jobData = selectedJobData;
+
+    if (jobData != null)
+    {
+      // get job data
+      BARServer.getJobOption(jobData.uuid,slaveHostName);
+      BARServer.getJobOption(jobData.uuid,slaveHostPort);
+      BARServer.getJobOption(jobData.uuid,slaveHostForceSSL);
+      BARServer.getJobOption(jobData.uuid,includeFileCommand);
+      BARServer.getJobOption(jobData.uuid,includeImageCommand);
+      BARServer.getJobOption(jobData.uuid,excludeCommand);
+      BARServer.getJobOption(jobData.uuid,archiveName);
+      BARServer.getJobOption(jobData.uuid,archiveType);
+//TODO: use widgetVairable+getJobOption
+      archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
+      archivePartSizeFlag.set(archivePartSize.getLong() > 0);
+
+      String[] compressAlgorithms = StringUtils.splitArray(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"),"+");
+      deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
+      byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
+      cryptAlgorithm.set(BARServer.getStringJobOption(jobData.uuid,"crypt-algorithm"));
+      cryptType.set(BARServer.getStringJobOption(jobData.uuid,"crypt-type"));
+      BARServer.getJobOption(jobData.uuid,cryptPublicKeyFileName);
+      cryptPasswordMode.set(BARServer.getStringJobOption(jobData.uuid,"crypt-password-mode"));
+      BARServer.getJobOption(jobData.uuid,cryptPassword);
+      BARServer.getJobOption(jobData.uuid,incrementalListFileName);
+      archiveFileMode.set(BARServer.getStringJobOption(jobData.uuid,"archive-file-mode"));
+      BARServer.getJobOption(jobData.uuid,sshPublicKeyFileName);
+      BARServer.getJobOption(jobData.uuid,sshPrivateKeyFileName);
+/* NYI ???
+      maxBandWidth.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-band-width")));
+      maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
+*/
+      volumeSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"volume-size"),0));
+      BARServer.getJobOption(jobData.uuid,ecc);
+      BARServer.getJobOption(jobData.uuid,blank);
+      BARServer.getJobOption(jobData.uuid,waitFirstVolume);
+      BARServer.getJobOption(jobData.uuid,skipUnreadable);
+      BARServer.getJobOption(jobData.uuid,rawImages);
+      BARServer.getJobOption(jobData.uuid,overwriteFiles);
+      BARServer.getJobOption(jobData.uuid,preCommand);
+      BARServer.getJobOption(jobData.uuid,postCommand);
+//      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
+      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
+      BARServer.getJobOption(jobData.uuid,maxStorageSize);
+      BARServer.getJobOption(jobData.uuid,comment);
+
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          // update trees/tables
+          updateIncludeList(jobData);
+          updateExcludeList(jobData);
+          updateMountList(jobData);
+          updateSourceList(jobData);
+          updateCompressExcludeList(jobData);
+          updateScheduleTable(jobData);
+          updatePersistenceTree(jobData);
+
+          // update images
+          updateFileTreeImages();
+          updateDeviceImages();
+        }
+      });
+    }
+    else
+    {
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          clearJobData();
+        }
+      });
+    }
   }
 
   /** set selected job by UUID
@@ -10016,7 +10100,7 @@ throw new Error("NYI");
 
   /** update selected job data
    */
-  private void updateJobData()
+  private void xxxupdateJobData()
   {
     final JobData jobData = selectedJobData;
 

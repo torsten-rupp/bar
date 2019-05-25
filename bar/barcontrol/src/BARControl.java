@@ -2334,6 +2334,7 @@ if (false) {
     tabStatus.setTabJobs(tabJobs);
     tabJobs.setTabStatus(tabStatus);
     tabRestore.setTabStatus(tabStatus);
+    tabRestore.setTabJobs(tabJobs);
 
     // start auto update
     tabStatus.startUpdate();

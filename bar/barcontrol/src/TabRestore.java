@@ -4165,6 +4165,7 @@ Dprintf.dprintf("");
   private WidgetEvent                           checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
 
   private UpdateStorageTreeTableThread          updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
+  private TabJobs                               tabJobs;
   private IndexData                             selectedIndexData = null;
 
   private UpdateEntryTableThread                updateEntryTableThread = new UpdateEntryTableThread();
@@ -6711,6 +6712,14 @@ Dprintf.dprintf("");
     this.tabStatus = tabStatus;
   }
 
+  /** set jobs tab
+   * @param tabJobs jobs tab
+   */
+  void setTabJobs(TabJobs tabJobs)
+  {
+    this.tabJobs = tabJobs;
+  }
+
   //-----------------------------------------------------------------------
 
   /** set/clear index list
@@ -8661,6 +8670,7 @@ Dprintf.dprintf("");
               });
 
               updateStorageTreeTableThread.triggerUpdate();
+              tabJobs.updateJobData();
             }
 //TODO: pass to caller?
             catch (CommunicationError error)
