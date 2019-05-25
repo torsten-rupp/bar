@@ -249,19 +249,19 @@ public class TabRestore
      */
     abstract class TreeItemUpdateRunnable
     {
-      public abstract void update(TreeItem treeItem, IndexData indexData);
+      protected abstract void update(TreeItem treeItem, IndexData indexData);
     }
     /** table item update runnable
      */
     abstract class TableItemUpdateRunnable
     {
-      public abstract void update(TableItem tableItem, IndexData indexData);
+      protected abstract void update(TableItem tableItem, IndexData indexData);
     }
     /** menu item update runnable
      */
     abstract class MenuItemUpdateRunnable
     {
-      public abstract void update(MenuItem menuItem, IndexData indexData);
+      protected abstract void update(MenuItem menuItem, IndexData indexData);
     }
 
     public long                     id;
@@ -277,17 +277,15 @@ public class TabRestore
      */
     IndexData(long indexId)
     {
-      this.id        = indexId;
-//      this.treeItem  = null;
-//      this.tableItem = null;
-      this.subMenu   = null;
-      this.menuItem  = null;
+      this.id       = indexId;
+      this.subMenu  = null;
+      this.menuItem = null;
     }
 
     /** get sub-menu reference
      * @return sub-menu
      */
-    public Menu getSubMenu()
+    protected Menu getSubMenu()
     {
       return this.subMenu;
     }
@@ -295,14 +293,14 @@ public class TabRestore
     /** set sub-menu reference
      * @param setSubMenu sub-menu
      */
-    public void setSubMenu(Menu subMenu)
+    protected void setSubMenu(Menu subMenu)
     {
       this.subMenu = subMenu;
     }
 
     /** clear sub-menu reference
      */
-    public void clearSubMenu()
+    protected void clearSubMenu()
     {
       this.subMenu = null;
     }
@@ -311,7 +309,7 @@ public class TabRestore
      * @param menuItem menu item
      * @param menuItemUpdateRunnable menu item update runnable
      */
-    public void setMenuItem(MenuItem menuItem, MenuItemUpdateRunnable menuItemUpdateRunnable)
+    protected void setMenuItem(MenuItem menuItem, MenuItemUpdateRunnable menuItemUpdateRunnable)
     {
       this.menuItem               = menuItem;
       this.menuItemUpdateRunnable = menuItemUpdateRunnable;
@@ -319,7 +317,7 @@ public class TabRestore
 
     /** clear table item reference
      */
-    public void clearMenuItem()
+    protected void clearMenuItem()
     {
       this.menuItem = null;
     }
@@ -327,7 +325,7 @@ public class TabRestore
     /** get name
      * @return name
      */
-    public String getName()
+    protected String getName()
     {
       return "";
     }
@@ -335,7 +333,7 @@ public class TabRestore
     /** get date/time
      * @return date/time [s]
      */
-    public long getDateTime()
+    protected long getDateTime()
     {
       return 0;
     }
@@ -343,7 +341,7 @@ public class TabRestore
     /** get total size
      * @return size [bytes]
      */
-    public long getTotalSize()
+    protected long getTotalSize()
     {
       return 0;
     }
@@ -351,7 +349,7 @@ public class TabRestore
     /** get total number of entries
      * @return total entries
      */
-    public long getTotalEntryCount()
+    protected long getTotalEntryCount()
     {
       return 0;
     }
@@ -359,7 +357,7 @@ public class TabRestore
     /** get total size of entries
      * @return total entries size
      */
-    public long getTotalEntrySize()
+    protected long getTotalEntrySize()
     {
       return 0;
     }
@@ -367,7 +365,7 @@ public class TabRestore
     /** get index state
      * @return index state
      */
-    public IndexStates getState()
+    protected IndexStates getState()
     {
       return IndexStates.OK;
     }
@@ -375,7 +373,7 @@ public class TabRestore
     /** set index state
      * @param indexState index state
      */
-    public void setState(IndexStates indexState)
+    protected void setState(IndexStates indexState)
     {
       // nothing to do
     }
@@ -383,7 +381,7 @@ public class TabRestore
     /** get info string
      * @return info string
      */
-    public String getInfo()
+    protected String getInfo()
     {
       return "";
     }
@@ -797,7 +795,7 @@ public class TabRestore
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
-      public void update(TreeItem treeItem, IndexData indexData)
+      protected void update(TreeItem treeItem, IndexData indexData)
       {
         UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
 
@@ -813,7 +811,7 @@ public class TabRestore
 
     private final MenuItemUpdateRunnable menuItemUpdateRunnable = new MenuItemUpdateRunnable()
     {
-      public void update(MenuItem menuItem, IndexData indexData)
+      protected void update(MenuItem menuItem, IndexData indexData)
       {
         UUIDIndexData uuidIndexData = (UUIDIndexData)indexData;
 
@@ -1010,7 +1008,7 @@ public class TabRestore
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
-      public void update(TreeItem treeItem, IndexData indexData)
+      protected void update(TreeItem treeItem, IndexData indexData)
       {
         EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
@@ -1026,7 +1024,7 @@ public class TabRestore
 
     private final MenuItemUpdateRunnable menuItemUpdateRunnable = new MenuItemUpdateRunnable()
     {
-      public void update(MenuItem menuItem, IndexData indexData)
+      protected void update(MenuItem menuItem, IndexData indexData)
       {
         EntityIndexData entityIndexData = (EntityIndexData)indexData;
 
@@ -1237,7 +1235,7 @@ Dprintf.dprintf("");
 
     private final TreeItemUpdateRunnable treeItemUpdateRunnable = new TreeItemUpdateRunnable()
     {
-      public void update(TreeItem treeItem, IndexData indexData)
+      protected void update(TreeItem treeItem, IndexData indexData)
       {
         StorageIndexData storageIndexData = (StorageIndexData)indexData;
 
@@ -1253,7 +1251,7 @@ Dprintf.dprintf("");
 
     private final TableItemUpdateRunnable tableItemUpdateRunnable = new TableItemUpdateRunnable()
     {
-      public void update(TableItem tableItem, IndexData indexData)
+      protected void update(TableItem tableItem, IndexData indexData)
       {
          StorageIndexData storageIndexData = (StorageIndexData)indexData;
 
@@ -1964,7 +1962,7 @@ Dprintf.dprintf("");
     /** get storage count
      * @return storage count
      */
-    public int getStorageCount()
+    private int getStorageCount()
     {
       return storageCount;
     }
@@ -1972,7 +1970,7 @@ Dprintf.dprintf("");
     /** get storage name
      * @return storage name
      */
-    public String getStorageName()
+    private String getStorageName()
     {
       return storageName;
     }
@@ -1980,7 +1978,7 @@ Dprintf.dprintf("");
     /** get storage index state set
      * @return storage index state set
      */
-    public IndexStateSet getStorageIndexStateSet()
+    private IndexStateSet getStorageIndexStateSet()
     {
       return storageIndexStateSet;
     }
@@ -1991,7 +1989,7 @@ Dprintf.dprintf("");
      * @param storageEntityState new storage entity state
      * @param force true to force update
      */
-    public void triggerUpdate(String storageName, IndexStateSet storageIndexStateSet, EntityStates storageEntityState, boolean force)
+    private void triggerUpdate(String storageName, IndexStateSet storageIndexStateSet, EntityStates storageEntityState, boolean force)
     {
       assert storageName != null;
 
@@ -2016,7 +2014,7 @@ Dprintf.dprintf("");
     /** trigger update of storage list
      * @param storageName new storage name
      */
-    public void triggerUpdateStorageName(String storageName)
+    private void triggerUpdateStorageName(String storageName)
     {
       assert storageName != null;
 
@@ -2041,7 +2039,7 @@ Dprintf.dprintf("");
      * @param storageIndexStateSet new storage index state set
      * @param storageEntityState new storage entity state
      */
-    public void triggerUpdateStorageState(String jobUUID, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
+    private void triggerUpdateStorageState(String jobUUID, IndexStateSet storageIndexStateSet, EntityStates storageEntityState)
     {
       synchronized(trigger)
       {
@@ -2063,7 +2061,7 @@ Dprintf.dprintf("");
     /** trigger update of storage list item
      * @param index index in list to update
      */
-    public void triggerUpdate(int index)
+    private void triggerUpdate(int index)
     {
       synchronized(trigger)
       {
@@ -2078,7 +2076,7 @@ Dprintf.dprintf("");
 
     /** trigger update of storage list
      */
-    public void triggerUpdate()
+    private void triggerUpdate()
     {
       synchronized(trigger)
       {
@@ -3433,7 +3431,7 @@ Dprintf.dprintf("");
     /** get total count
      * @return total count
      */
-    public long getTotalEntryCount()
+    private long getTotalEntryCount()
     {
       return totalEntryCount;
     }
@@ -3441,7 +3439,7 @@ Dprintf.dprintf("");
     /** get entry type
      * @return entry type
      */
-    public EntryTypes getEntryType()
+    private EntryTypes getEntryType()
     {
       return entryType;
     }
@@ -3449,7 +3447,7 @@ Dprintf.dprintf("");
     /** get entry name
      * @return entry name
      */
-    public String getEntryName()
+    private String getEntryName()
     {
       return entryName;
     }
@@ -3457,7 +3455,7 @@ Dprintf.dprintf("");
     /** get newest-only
      * @return true for newest entries only
      */
-    public boolean getNewestOnly()
+    private boolean getNewestOnly()
     {
       return newestOnly;
     }
@@ -3468,7 +3466,7 @@ Dprintf.dprintf("");
      * @param newestOnly flag for newest entries only
      * @param force true to force update
      */
-    public void triggerUpdate(String entryName, String type, boolean newestOnly, boolean force)
+    private void triggerUpdate(String entryName, String type, boolean newestOnly, boolean force)
     {
       synchronized(trigger)
       {
@@ -3493,7 +3491,7 @@ Dprintf.dprintf("");
     /** trigger update of entry list
      * @param entryName new entry pattern or null
      */
-    public void triggerUpdateEntryName(String entryName)
+    private void triggerUpdateEntryName(String entryName)
     {
       assert entryName != null;
 
@@ -3516,7 +3514,7 @@ Dprintf.dprintf("");
     /** trigger update of entry list
      * @param entryType entry type
      */
-    public void triggerUpdateEntryType(EntryTypes entryType)
+    private void triggerUpdateEntryType(EntryTypes entryType)
     {
       synchronized(trigger)
       {
@@ -3534,7 +3532,7 @@ Dprintf.dprintf("");
     /** trigger update of entry list
      * @param newestOnly flag for newest entries only or null
      */
-    public void triggerUpdateNewestOnly(boolean newestOnly)
+    private void triggerUpdateNewestOnly(boolean newestOnly)
     {
       synchronized(trigger)
       {
@@ -3551,7 +3549,7 @@ Dprintf.dprintf("");
     /** trigger update entry list item
      * @param index index in list to start update
      */
-    public void triggerUpdateTableItem(int index)
+    private void triggerUpdateTableItem(int index)
     {
       synchronized(trigger)
       {
@@ -3566,7 +3564,7 @@ Dprintf.dprintf("");
 
     /** trigger update of entry list
      */
-    public void triggerUpdate()
+    private void triggerUpdate()
     {
       synchronized(trigger)
       {
