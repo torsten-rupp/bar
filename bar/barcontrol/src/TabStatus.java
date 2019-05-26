@@ -1257,8 +1257,7 @@ public class TabStatus
               JobData jobData = (JobData)tableItems[0].getData();
               if (jobData != null)
               {
-//TODO
-                Point point = display.getCursorLocation();//widgetJobTable.toDisplay(selectionEvent.x+16,selectionEvent.y);
+                Point point = display.getCursorLocation();
                 if (point.x > 16) point.x -= 16;
                 if (point.y > 16) point.y -= 16;
                 showJobToolTip(jobData,point.x,point.y);
@@ -1994,71 +1993,72 @@ public class TabStatus
       try
       {
         // get job list
-//TODO: handler
-        HashMap<String,JobData> newJobDataMap = new HashMap<String,JobData>();
-        final ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+        final HashMap<String,JobData> newJobDataMap = new HashMap<String,JobData>();
         BARServer.executeCommand(StringParser.format("JOB_LIST"),
                                  3,  // debugLevel
-                                 valueMapList
-                                );
-        for (ValueMap valueMap : valueMapList)
-        {
-          // get data
-          String              jobUUID                = valueMap.getString("jobUUID"                             );
-          String              master                 = valueMap.getString("master",""                           );
-          String              name                   = valueMap.getString("name"                                );
-          JobData.States      state                  = valueMap.getEnum  ("state",JobData.States.class          );
-          String              slaveHostName          = valueMap.getString("slaveHostName",""                    );
-          JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
-          ArchiveTypes        archiveType            = valueMap.getEnum  ("archiveType",ArchiveTypes.class      );
-          long                archivePartSize        = valueMap.getLong  ("archivePartSize"                     );
-          String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"              );
-          String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"               );
-          String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"                      );
-          String              cryptType              = valueMap.getString("cryptType"                           );
-          String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"                   );
-          long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"                );
-          long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"                   );
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     // get data
+                                     String              jobUUID                = valueMap.getString("jobUUID"                             );
+                                     String              master                 = valueMap.getString("master",""                           );
+                                     String              name                   = valueMap.getString("name"                                );
+                                     JobData.States      state                  = valueMap.getEnum  ("state",JobData.States.class          );
+                                     String              slaveHostName          = valueMap.getString("slaveHostName",""                    );
+                                     JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
+                                     ArchiveTypes        archiveType            = valueMap.getEnum  ("archiveType",ArchiveTypes.class      );
+                                     long                archivePartSize        = valueMap.getLong  ("archivePartSize"                     );
+                                     String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"              );
+                                     String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"               );
+                                     String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"                      );
+                                     String              cryptType              = valueMap.getString("cryptType"                           );
+                                     String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"                   );
+                                     long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"                );
+                                     long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"                   );
 
-          JobData jobData = jobDataMap.get(jobUUID);
-          if (jobData != null)
-          {
-            jobData.name                   = name;
-            jobData.master                 = master;
-            jobData.state                  = state;
-            jobData.slaveHostName          = slaveHostName;
-            jobData.slaveState             = slaveState;
-            jobData.archiveType            = archiveType;
-            jobData.archivePartSize        = archivePartSize;
-            jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
-            jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
-            jobData.cryptAlgorithm         = cryptAlgorithm;
-            jobData.cryptType              = cryptType;
-            jobData.cryptPasswordMode      = cryptPasswordMode;
-            jobData.lastExecutedDateTime   = lastExecutedDateTime;
-            jobData.estimatedRestTime      = estimatedRestTime;
-          }
-          else
-          {
-            jobData = new JobData(jobUUID,
-                                  master,
-                                  name,
-                                  state,
-                                  slaveHostName,
-                                  slaveState,
-                                  archiveType,
-                                  archivePartSize,
-                                  deltaCompressAlgorithm,
-                                  byteCompressAlgorithm,
-                                  cryptAlgorithm,
-                                  cryptType,
-                                  cryptPasswordMode,
-                                  lastExecutedDateTime,
-                                  estimatedRestTime
-                                 );
-          }
-          newJobDataMap.put(jobUUID,jobData);
-        }
+                                     JobData jobData = jobDataMap.get(jobUUID);
+                                     if (jobData != null)
+                                     {
+                                       jobData.name                   = name;
+                                       jobData.master                 = master;
+                                       jobData.state                  = state;
+                                       jobData.slaveHostName          = slaveHostName;
+                                       jobData.slaveState             = slaveState;
+                                       jobData.archiveType            = archiveType;
+                                       jobData.archivePartSize        = archivePartSize;
+                                       jobData.deltaCompressAlgorithm = deltaCompressAlgorithm;
+                                       jobData.byteCompressAlgorithm  = byteCompressAlgorithm;
+                                       jobData.cryptAlgorithm         = cryptAlgorithm;
+                                       jobData.cryptType              = cryptType;
+                                       jobData.cryptPasswordMode      = cryptPasswordMode;
+                                       jobData.lastExecutedDateTime   = lastExecutedDateTime;
+                                       jobData.estimatedRestTime      = estimatedRestTime;
+                                     }
+                                     else
+                                     {
+                                       jobData = new JobData(jobUUID,
+                                                             master,
+                                                             name,
+                                                             state,
+                                                             slaveHostName,
+                                                             slaveState,
+                                                             archiveType,
+                                                             archivePartSize,
+                                                             deltaCompressAlgorithm,
+                                                             byteCompressAlgorithm,
+                                                             cryptAlgorithm,
+                                                             cryptType,
+                                                             cryptPasswordMode,
+                                                             lastExecutedDateTime,
+                                                             estimatedRestTime
+                                                            );
+                                     }
+                                     newJobDataMap.put(jobUUID,jobData);
+                                   }
+                                 }
+                                );
         jobDataMap = newJobDataMap;
 
         // update job table
@@ -2670,25 +2670,20 @@ public class TabStatus
       {
         if (dryRunFlag)
         {
-          BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",selectedJobData.uuid),0);
+          BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",
+                                                       selectedJobData.uuid
+                                                      ),
+                                   0  // debugLevel
+                                  );
         }
         else
         {
-          switch (archiveType)
-          {
-            case NORMAL:
-              BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=no",selectedJobData.uuid),0);
-              break;
-            case FULL:
-              BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=full dryRun=no",selectedJobData.uuid),0);
-              break;
-            case INCREMENTAL:
-              BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=incremental dryRun=no",selectedJobData.uuid),0);
-              break;
-            case DIFFERENTIAL:
-              BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=differential dryRun=no",selectedJobData.uuid),0);
-              break;
-          }
+          BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
+                                                       selectedJobData.uuid,
+                                                       archiveType.toString()
+                                                      ),
+                                   0  // debugLevel
+                                  );
         }
       }
       catch (BARException exception)
@@ -2927,13 +2922,26 @@ public class TabStatus
              )
       {
         case 0:
-          BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobUUID=%s volumeNumber=%d",selectedJobData.uuid,volumeNumber),0);
+          BARServer.executeCommand(StringParser.format("VOLUME_LOAD jobUUID=%s volumeNumber=%d",
+                                                       selectedJobData.uuid,
+                                                       volumeNumber
+                                                      ),
+                                   0  // debugLevel
+                                  );
           break;
         case 1:
-          BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobUUID=%s",selectedJobData.uuid),0);
+          BARServer.executeCommand(StringParser.format("VOLUME_UNLOAD jobUUID=%s",
+                                                       selectedJobData.uuid
+                                                      ),
+                                   0  // debugLevel
+                                  );
           break;
         case 2:
-          BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",selectedJobData.uuid),0);
+          BARServer.executeCommand(StringParser.format("JOB_ABORT jobUUID=%s",
+                                                       selectedJobData.uuid
+                                                      ),
+                                   0  // debugLevel
+                                  );
           break;
         case 3:
           break;
