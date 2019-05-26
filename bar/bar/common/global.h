@@ -3262,7 +3262,7 @@ void debugResourcePrintInfo(ResourceDumpInfoFunction resourceDumpInfoFunction,
 
 /***********************************************************************\
 * Name   : debugResourcePrintStatistics
-* Purpose: done resource debug trace statistics
+* Purpose: print resource statistics
 * Input  : -
 * Output : -
 * Return : -
@@ -3270,6 +3270,17 @@ void debugResourcePrintInfo(ResourceDumpInfoFunction resourceDumpInfoFunction,
 \***********************************************************************/
 
 void debugResourcePrintStatistics(void);
+
+/***********************************************************************\
+* Name   : debugResourcePrintHistogram
+* Purpose: print resource histogram
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void debugResourcePrintHistogram(void);
 
 /***********************************************************************\
 * Name   : debugResourceCheck

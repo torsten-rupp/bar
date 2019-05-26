@@ -1176,6 +1176,11 @@ void debugResourcePrintStatistics(void)
   pthread_mutex_unlock(&debugResourceLock);
 }
 
+void debugResourcePrintHistogram(void)
+{
+  debugResourceDumpInfo(stderr,CALLBACK(NULL,NUL),DUMP_INFO_TYPE_HISTOGRAM);
+}
+
 void debugResourceCheck(void)
 {
   DebugResourceNode *debugResourceNode;
