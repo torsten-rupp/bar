@@ -5106,7 +5106,7 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
   {
     // get fragment node
     fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
-    if (fragmentNode == NULL)
+    if (fragmentNode != NULL)
     {
       // unlock
       FragmentList_unlockNode(fragmentNode);
