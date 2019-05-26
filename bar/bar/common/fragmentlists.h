@@ -108,6 +108,12 @@ typedef struct
        (variable) = (variable)->next \
       )
 
+#ifndef NDEBUG
+  #define FragmentList_init(...)     __FragmentList_init    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define FragmentList_initNode(...) __FragmentList_initNode(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define FragmentList_add(...)      __FragmentList_add     (__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 
 /***************************** Functions *******************************/
@@ -125,7 +131,14 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void FragmentList_init(FragmentList *fragmentList);
+#else /* not NDEBUG */
+void __FragmentList_init(const char   *__fileName__,
+                         ulong        __lineNb__,
+                         FragmentList *fragmentList
+                        );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : FragmentList_done
@@ -152,6 +165,7 @@ void FragmentList_done(FragmentList *fragmentList);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 void FragmentList_initNode(FragmentNode *fragmentNode,
                            ConstString  name,
                            uint64       size,
@@ -159,6 +173,17 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
                            uint         userDataSize,
                            uint         lockCount
                           );
+#else /* not NDEBUG */
+void __FragmentList_initNode(const char   *__fileName__,
+                             ulong        __lineNb__,
+                             FragmentNode *fragmentNode,
+                             ConstString  name,
+                             uint64       size,
+                             const void   *userData,
+                             uint         userDataSize,
+                             uint         lockCount
+                            );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : FragmentList_doneNode
@@ -208,6 +233,7 @@ void FragmentList_unlockNode(FragmentNode *fragmentNode);
 * Notes  :
 \***********************************************************************/
 
+#ifdef NDEBUG
 FragmentNode *FragmentList_add(FragmentList *fragmentList,
                                ConstString  name,
                                uint64       size,
@@ -215,6 +241,17 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
                                uint         userDataSize,
                                uint         lockCount
                               );
+#else /* not NDEBUG */
+FragmentNode *__FragmentList_add(const char   *__fileName__,
+                                 ulong        __lineNb__,
+                                 FragmentList *fragmentList,
+                                 ConstString  name,
+                                 uint64       size,
+                                 const void   *userData,
+                                 uint         userDataSize,
+                                 uint         lockCount
+                                );
+#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : FragmentList_discard

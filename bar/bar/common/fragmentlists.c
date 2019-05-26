@@ -92,56 +92,6 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : newFragmentNode
-* Purpose: new fragment node
-* Input  : name         - name of fragment
-*          size         - size of fragment
-*          userData     - user data to store with fragment (will be
-*                         copied!)
-*          userDataSize - size of user data
-*          lockCount    - lock count
-* Output : -
-* Return : new fragment node or NULL
-* Notes  : -
-\***********************************************************************/
-
-LOCAL FragmentNode* newFragmentNode(ConstString  name,
-                                    uint64       size,
-                                    const void   *userData,
-                                    uint         userDataSize,
-                                    uint         lockCount
-                                   )
-{
-  FragmentNode *fragmentNode;
-
-  fragmentNode = LIST_NEW_NODE(FragmentNode);
-  if (fragmentNode != NULL)
-  {
-    FragmentList_initNode(fragmentNode,name,size,userData,userDataSize,lockCount);
-  }
-
-  return fragmentNode;
-}
-
-/***********************************************************************\
-* Name   : deleteFragmentNode
-* Purpose: delete fragment node
-* Input  : fragmentNode - fragment node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteFragmentNode(FragmentNode *fragmentNode)
-{
-  assert(fragmentNode != NULL);
-  FRAGMENTNODE_VALID(fragmentNode);
-
-  FragmentList_doneNode(fragmentNode);
-  LIST_DELETE_NODE(fragmentNode);
-}
-
-/***********************************************************************\
 * Name   : printSpaces
 * Purpose: print spaces
 * Input  : outputHandle - output file handle
@@ -177,13 +127,24 @@ LOCAL void printSpaces(FILE *outputHandle, uint n)
 
 /*---------------------------------------------------------------------*/
 
+#ifdef NDEBUG
 void FragmentList_init(FragmentList *fragmentList)
+#else /* not NDEBUG */
+void __FragmentList_init(const char   *__fileName__,
+                         ulong        __lineNb__,
+                         FragmentList *fragmentList
+                        )
+#endif /* NDEBUG */
 {
   assert(fragmentList != NULL);
 
   List_init(fragmentList);
 
-  DEBUG_ADD_RESOURCE_TRACE(fragmentList,FragmentList);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(fragmentList,FragmentList);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,fragmentList,FragmentList);
+  #endif /* NDEBUG */
 }
 
 void FragmentList_done(FragmentList *fragmentList)
@@ -196,6 +157,7 @@ void FragmentList_done(FragmentList *fragmentList)
   List_done(fragmentList,(ListNodeFreeFunction)FragmentList_doneNode,NULL);
 }
 
+#ifdef NDEBUG
 void FragmentList_initNode(FragmentNode *fragmentNode,
                            ConstString  name,
                            uint64       size,
@@ -203,6 +165,17 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
                            uint         userDataSize,
                            uint         lockCount
                           )
+#else /* not NDEBUG */
+void __FragmentList_initNode(const char   *__fileName__,
+                             ulong        __lineNb__,
+                             FragmentNode *fragmentNode,
+                             ConstString  name,
+                             uint64       size,
+                             const void   *userData,
+                             uint         userDataSize,
+                             uint         lockCount
+                            )
+#endif /* NDEBUG */
 {
   assert(fragmentNode != NULL);
 
@@ -227,7 +200,11 @@ void FragmentList_initNode(FragmentNode *fragmentNode,
   List_init(&fragmentNode->rangeList);
   fragmentNode->rangeListSum = 0LL;
 
-  DEBUG_ADD_RESOURCE_TRACE(fragmentNode,FragmentNode);
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(fragmentNode,FragmentNode);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,fragmentNode,FragmentNode);
+  #endif /* NDEBUG */
 }
 
 void FragmentList_doneNode(FragmentNode *fragmentNode)
@@ -262,6 +239,7 @@ void FragmentList_unlockNode(FragmentNode *fragmentNode)
   ATOMIC_DECREMENT(fragmentNode->lockCount);
 }
 
+#ifdef NDEBUG
 FragmentNode *FragmentList_add(FragmentList *fragmentList,
                                ConstString  name,
                                uint64       size,
@@ -269,6 +247,17 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
                                uint         userDataSize,
                                uint         lockCount
                               )
+#else /* not NDEBUG */
+FragmentNode *__FragmentList_add(const char   *__fileName__,
+                                 ulong        __lineNb__,
+                                 FragmentList *fragmentList,
+                                 ConstString  name,
+                                 uint64       size,
+                                 const void   *userData,
+                                 uint         userDataSize,
+                                 uint         lockCount
+                                )
+#endif /* NDEBUG */
 {
   FragmentNode *fragmentNode;
 
@@ -276,13 +265,17 @@ FragmentNode *FragmentList_add(FragmentList *fragmentList,
   DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
   assert(name != NULL);
 
-  fragmentNode = newFragmentNode(name,size,userData,userDataSize,lockCount);
-  if (fragmentNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
 
-  List_append(fragmentList,fragmentNode);
+  fragmentNode = LIST_NEW_NODE(FragmentNode);
+  if (fragmentNode != NULL)
+  {
+    #ifdef NDEBUG
+      FragmentList_initNode(fragmentNode,name,size,userData,userDataSize,lockCount);
+    #else /* not NDEBUG */
+      __FragmentList_initNode(__fileName__,__lineNb__,fragmentNode,name,size,userData,userDataSize,lockCount);
+    #endif /* NDEBUG */
+    List_append(fragmentList,fragmentNode);
+  }
 
   return fragmentNode;
 }
@@ -295,7 +288,8 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
   FRAGMENTNODE_VALID(fragmentNode);
 
   List_remove(fragmentList,fragmentNode);
-  deleteFragmentNode(fragmentNode);
+  FragmentList_doneNode(fragmentNode);
+  LIST_DELETE_NODE(fragmentNode);
 }
 
 FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name)
