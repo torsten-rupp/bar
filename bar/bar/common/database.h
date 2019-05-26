@@ -187,8 +187,6 @@ typedef struct
       void const *stackTrace[16];
       uint       stackTraceSize;
     #endif /* HAVE_BACKTRACE */
-uint readCount;
-uint readWriteCount;
   } DatabaseHistoryThreadInfo;
 #endif /* not NDEBUG */
 
