@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-05-26 13:11+0200\n"
+"POT-Creation-Date: 2019-05-28 12:49+0200\n"
 "PO-Revision-Date: 2017-12-06 16:43+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -250,8 +250,13 @@ msgstr ""
 msgid "Server settings"
 msgstr "Server Einstellungen"
 
-#: src/BARControl.java:2658 src/BARControl.java:2688 src/BARControl.java:2693
-#: src/BARControl.java:3789 src/BARControl.java:3794 src/BARServer.java:1466
+#: src/BARControl.java:2658 src/BARControl.java:2693
+#, fuzzy
+msgid "Pair master"
+msgstr "Auftrag ''{0}'' starten?"
+
+#: src/BARControl.java:2688 src/BARControl.java:3789 src/BARControl.java:3794
+#: src/BARServer.java:1466
 msgid "Master"
 msgstr "Master"
 

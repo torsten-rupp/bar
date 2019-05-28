@@ -2655,7 +2655,7 @@ assert jobData != null;
         }
       });
 
-      masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Master")+"\u2026",Settings.hasExpertRole());
+      masterMenuItem = Widgets.addMenuItemCheckbox(menu,BARControl.tr("Pair master")+"\u2026",Settings.hasExpertRole());
       masterMenuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -2690,7 +2690,7 @@ assert jobData != null;
           }
           else
           {
-            masterMenuItem.setText(BARControl.tr("Master")+"\u2026");
+            masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
             masterMenuItem.setSelection(false);
           }
         }
@@ -3791,7 +3791,7 @@ assert jobData != null;
     }
     else
     {
-      masterMenuItem.setText(BARControl.tr("Master")+"\u2026");
+      masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
       masterMenuItem.setSelection(false);
     }
   }
