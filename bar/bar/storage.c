@@ -797,6 +797,7 @@ void Storage_doneAll(void)
 {
   assert(storageSpecifier != NULL);
 
+  storageSpecifier->type                 = STORAGE_TYPE_NONE;
   storageSpecifier->hostName             = String_new();
   storageSpecifier->hostPort             = 0;
   storageSpecifier->loginName            = String_new();
