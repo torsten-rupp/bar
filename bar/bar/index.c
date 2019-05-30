@@ -3850,7 +3850,10 @@ void Index_done(void)
 {
   // stop threads
   quitFlag = TRUE;
-  Thread_join(&indexThread);
+  if (!Thread_join(&indexThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop index thread!");
+  }
 
   // free resources
   Thread_done(&indexThread);
