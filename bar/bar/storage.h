@@ -537,7 +537,6 @@ typedef struct
     // master storage
     struct
     {
-      void       *buffer;                                    // buffer
       uint64     index;                                      // current read/write index in file [0..n-1]
       uint64     size;                                       // size of file [bytes]
     } master;

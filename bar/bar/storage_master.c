@@ -343,11 +343,6 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   UNUSED_VARIABLE(fileSize);
 
   // init variables
-  storageHandle->master.buffer = malloc(BUFFER_SIZE);
-  if (storageHandle->master.buffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
   storageHandle->master.index = 0LL;
   storageHandle->master.size  = 0LL;
 
@@ -382,11 +377,6 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
   assert(!String_isEmpty(fileName));
 
   // init variables
-  storageHandle->master.buffer = malloc(BUFFER_SIZE);
-  if (storageHandle->master.buffer == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
   storageHandle->master.index = 0LL;
 UNUSED_VARIABLE(fileName);
 
@@ -417,7 +407,6 @@ fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
   }
 
   // free resources
-  free(storageHandle->master.buffer);
 }
 
 //TODO: required?
@@ -461,14 +450,14 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                 )
 {
   const uint MAX_BLOCK_SIZE = 32*1024;
-  const uint MAX_BLOCKS     = 4;
+  const uint MAX_BLOCKS     = 16;  // max. number of pending transfer blocks
 
   String     encodedData;
   const byte *p;
   uint       ids[MAX_BLOCKS];
   uint       idCount;
   ulong      writtenBytes;
-  ulong      n;
+  ulong      length;
   Errors     error;
   uint       i;
 
@@ -487,9 +476,10 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   idCount      = 0;
   while (writtenBytes < bufferLength)
   {
+    length = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
+
     // encode data
-    n = MIN(bufferLength-writtenBytes,MAX_BLOCK_SIZE);
-    Misc_base64Encode(String_clear(encodedData),p,n);
+    Misc_base64Encode(String_clear(encodedData),p+writtenBytes,length);
 
     // send data
 //fprintf(stderr,"%s, %d: n=%llu\n",__FILE__,__LINE__,n);
@@ -499,7 +489,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
                                  "STORAGE_WRITE offset=%llu length=%u data=%s",
 //TODO
                                  storageHandle->master.index,
-                                 n,
+                                 length,
                                  String_cString(encodedData)
                                 );
     if (error != ERROR_NONE)
@@ -530,9 +520,8 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     }
 
     // next part
-    p += n;
-    writtenBytes += n;
-    storageHandle->master.index += (uint64)n;
+    writtenBytes += length;
+    storageHandle->master.index += (uint64)length;
   }
   while (idCount > 0)
   {
@@ -568,14 +557,16 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
                                     FileHandle    *fileHandle
                                    )
 {
-  const uint MAX_BLOCKS = 16;  // max. number of pending transfer blocks
+  const uint MAX_BLOCK_SIZE = 32*1024;
+  const uint MAX_BLOCKS     = 16;  // max. number of pending transfer blocks
 
+  void   *buffer;
   String encodedData;
   uint64 size;
   ulong  transferedBytes;
   uint   ids[MAX_BLOCKS];
   uint   idCount;
-  ulong  n;
+  ulong  length;
   Errors error;
   uint   i;
 
@@ -586,12 +577,18 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
 
   // init variables
+  buffer = malloc(MAX_BLOCK_SIZE);
+  if (buffer == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
   encodedData = String_new();
 
   // seek to begin of file
   error = File_seek(fileHandle,0LL);
   if (error != ERROR_NONE)
   {
+    free(buffer);
     return error;
   }
 
@@ -602,18 +599,19 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   idCount         = 0;
   while (transferedBytes < size)
   {
-    n = (ulong)MIN(size-transferedBytes,BUFFER_SIZE);
+    length = (ulong)MIN(size-transferedBytes,MAX_BLOCK_SIZE);
 
     // read data
-    error = File_read(fileHandle,storageHandle->master.buffer,n,NULL);
+    error = File_read(fileHandle,buffer,length,NULL);
     if (error != ERROR_NONE)
     {
       String_delete(encodedData);
+      free(buffer);
       return error;
     }
 
     // encode data
-    Misc_base64Encode(String_clear(encodedData),storageHandle->master.buffer,n);
+    Misc_base64Encode(String_clear(encodedData),buffer,length);
 
     // send data
     error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
@@ -622,12 +620,13 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
                                  "STORAGE_WRITE offset=%llu length=%u data=%s",
 //TODO
                                  storageHandle->master.index,
-                                 n,
+                                 length,
                                  String_cString(encodedData)
                                 );
     if (error != ERROR_NONE)
     {
       String_delete(encodedData);
+      free(buffer);
       return error;
     }
 //fprintf(stderr,"%s, %d: sent %d\n",__FILE__,__LINE__,ids[idCount]);
@@ -647,6 +646,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
       if (error != ERROR_NONE)
       {
         String_delete(encodedData);
+        free(buffer);
         return error;
       }
 //fprintf(stderr,"%s, %d: ack %d\n",__FILE__,__LINE__,ids[i]);
@@ -655,14 +655,15 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     }
 
     // next part
-    transferedBytes += (uint64)n;
-    storageHandle->master.index += (uint64)n;
+    transferedBytes += (uint64)length;
+    storageHandle->master.index += (uint64)length;
 
     // update status info
-    storageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)n;
+    storageHandle->storageInfo->runningInfo.storageDoneBytes += (uint64)length;
     if (!updateStorageStatusInfo(storageHandle->storageInfo))
     {
       String_delete(encodedData);
+      free(buffer);
       return ERROR_ABORTED;
     }
   }
@@ -679,6 +680,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     if (error != ERROR_NONE)
     {
       String_delete(encodedData);
+      free(buffer);
       return error;
     }
 //fprintf(stderr,"%s, %d: ack %d\n",__FILE__,__LINE__,ids[i]);
@@ -693,6 +695,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
 
   // free resources
   String_delete(encodedData);
+  free(buffer);
 
   return ERROR_NONE;
 }
