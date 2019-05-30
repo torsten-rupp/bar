@@ -1472,7 +1472,7 @@ LOCAL void jobThreadCode(void)
     // execute job
     Index_beginInUse();
     {
-      if (!Job_isRemote(jobNode))
+      if      (!Job_isRemote(jobNode))
       {
         // local job -> run on this machine
 
@@ -1693,59 +1693,43 @@ NULL,//                                                        scheduleTitle,
           }
         }
       }
-      else
+      else if (Connector_isAuthorized(&jobNode->connectorInfo))
       {
         // slave job -> send to slave and run on slave machine
 //TODO: remove
 fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
 
-        // connect slave
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
-          jobNode->runningInfo.error = Connector_connect(&jobNode->connectorInfo,
-                                                         slaveHostName,
-                                                         slaveHostPort
-                                                        );
+          // init storage
+          jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
+                                                             jobNode->job.archiveName,
+                                                             &jobNode->job.options,
+                                                             storageFlags
+                                                            );
           if (jobNode->runningInfo.error == ERROR_NONE)
           {
-            jobNode->runningInfo.error = Connector_authorize(&jobNode->connectorInfo);
+            // run create job
+            jobNode->runningInfo.error = Connector_create(&jobNode->connectorInfo,
+                                                          jobName,
+                                                          jobUUID,
+                                                          scheduleUUID,
+                                                          storageName,
+                                                          &includeEntryList,
+                                                          &excludePatternList,
+                                                          &jobOptions,
+                                                          archiveType,
+                                                          NULL,  // scheduleTitle,
+                                                          NULL,  // scheduleCustomText,
+                                                          storageFlags,
+                                                          CALLBACK(getCryptPasswordFromConfig,jobNode),
+                                                          CALLBACK(updateStatusInfo,jobNode),
+                                                          CALLBACK(storageRequestVolume,jobNode)
+                                                         );
+
+            // done storage
+            Connector_doneStorage(&jobNode->connectorInfo);
           }
-
-          if (jobNode->runningInfo.error == ERROR_NONE)
-          {
-            // init storage
-            jobNode->runningInfo.error = Connector_initStorage(&jobNode->connectorInfo,
-                                                               jobNode->job.archiveName,
-                                                               &jobNode->job.options,
-                                                               storageFlags
-                                                              );
-            if (jobNode->runningInfo.error == ERROR_NONE)
-            {
-              // run create job
-              jobNode->runningInfo.error = Connector_create(&jobNode->connectorInfo,
-                                                            jobName,
-                                                            jobUUID,
-                                                            scheduleUUID,
-                                                            storageName,
-                                                            &includeEntryList,
-                                                            &excludePatternList,
-                                                            &jobOptions,
-                                                            archiveType,
-                                                            NULL,  // scheduleTitle,
-                                                            NULL,  // scheduleCustomText,
-                                                            storageFlags,
-                                                            CALLBACK(getCryptPasswordFromConfig,jobNode),
-                                                            CALLBACK(updateStatusInfo,jobNode),
-                                                            CALLBACK(storageRequestVolume,jobNode)
-                                                           );
-
-              // done storage
-              Connector_doneStorage(&jobNode->connectorInfo);
-            }
-          }
-
-          // disconnect slave
-          Connector_disconnect(&jobNode->connectorInfo);
         }
       }
     }
@@ -2053,12 +2037,12 @@ LOCAL void pairingThreadCode(void)
     String_delete(slaveNode->name);
   }
 
-  ConnectorInfo connectorInfo;
+//  ConnectorInfo connectorInfo;
   SlaveList     slaveList;
   JobNode       *jobNode;
   SlaveNode     *slaveNode;
   Errors        error;
-  SlaveStates   slaveState;
+//  SlaveStates   slaveState;
   bool          anyOfflineFlag,anyUnpairedFlag;
   FileHandle    fileHandle;
   FileInfo      fileInfo;
@@ -2066,7 +2050,7 @@ LOCAL void pairingThreadCode(void)
   uint64        pairingStopTimestamp;
   bool          clearPairing;
 
-  Connector_init(&connectorInfo);
+//  Connector_init(&connectorInfo);
   List_init(&slaveList);
   line = String_new();
   while (!quitFlag)
@@ -2074,95 +2058,55 @@ LOCAL void pairingThreadCode(void)
     switch (serverMode)
     {
       case SERVER_MODE_MASTER:
-        // get slave names/ports for pairing
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           LIST_ITERATE(&jobList,jobNode)
           {
             if (Job_isRemote(jobNode))
             {
-//fprintf(stderr,"%s, %d: xxx %s\n",__FILE__,__LINE__,String_cString(jobNode->slaveHost.name));
-              slaveNode = LIST_FIND(&slaveList,
-                                    slaveNode,
-                                       String_equals(slaveNode->name,jobNode->job.slaveHost.name)
-                                    && (slaveNode->port == jobNode->job.slaveHost.port)
-//TODO: only check offline?
-//                                    && (jobNode->slaveState == SLAVE_STATE_OFFLINE)
-                                   );
-              if (slaveNode == NULL)
+              // disconnect lost slave connection
+              if (Connector_isDisconnected(&jobNode->connectorInfo))
               {
-                slaveNode = LIST_NEW_NODE(SlaveNode);
-                if (slaveNode == NULL)
+                Connector_disconnect(&jobNode->connectorInfo);
+              }
+
+              // try connect to slave
+              if (!Connector_isConnected(&jobNode->connectorInfo))
+              {
+                error = Connector_connect(&jobNode->connectorInfo,
+                                          jobNode->job.slaveHost.name,
+                                          jobNode->job.slaveHost.port
+                                         );
+                if (error == ERROR_NONE)
                 {
-                  HALT_INSUFFICIENT_MEMORY();
+                  jobNode->slaveState = SLAVE_STATE_ONLINE;
                 }
-                slaveNode->name = String_duplicate(jobNode->job.slaveHost.name);
-                slaveNode->port = jobNode->job.slaveHost.port;
-//TODO: ssl?
-                List_append(&slaveList,slaveNode);
+                else
+                {
+                  jobNode->slaveState = SLAVE_STATE_OFFLINE;
+                  anyOfflineFlag = TRUE;
+                }
               }
-              if (Job_isRunning(jobNode->state)) slaveNode->jobRunningFlag = TRUE;
-            }
-          }
-        }
+//fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port,jobNode->slaveState);
 
-        // check if slaves online/paired
-        anyOfflineFlag  = FALSE;
-        anyUnpairedFlag = FALSE;
-        while (!List_isEmpty(&slaveList))
-        {
-          // get next slave node
-          slaveNode = (SlaveNode*)List_removeFirst(&slaveList);
-          assert(slaveNode != NULL);
-//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
-
-          // try connect to slave
-          slaveState = SLAVE_STATE_OFFLINE;
-          error = Connector_connect(&connectorInfo,
-                                    slaveNode->name,
-                                    slaveNode->port
-                                   );
-          if (error == ERROR_NONE)
-          {
-            slaveState = SLAVE_STATE_ONLINE;
-
-            // try authorize on slave
-            error = Connector_authorize(&connectorInfo);
-            if (error == ERROR_NONE)
-            {
-              slaveState = SLAVE_STATE_PAIRED;
-            }
-            else
-            {
-              anyUnpairedFlag = TRUE;
-            }
-
-            // disconnect slave
-            Connector_disconnect(&connectorInfo);
-          }
-          else
-          {
-            anyOfflineFlag = TRUE;
-          }
-//fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cString(slaveNode->name),slaveNode->port,slaveState);
-
-          // store slave state
-          JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-          {
-            LIST_ITERATE(&jobList,jobNode)
-            {
-              if (String_equals(slaveNode->name,jobNode->job.slaveHost.name) && (slaveNode->port == jobNode->job.slaveHost.port))
+              // try authorize on slave
+              if (   Connector_isConnected(&jobNode->connectorInfo)
+                  && !Connector_isAuthorized(&jobNode->connectorInfo)
+                 )
               {
-                jobNode->slaveState = slaveState;
+                error = Connector_authorize(&jobNode->connectorInfo);
+                if (error == ERROR_NONE)
+                {
+                  jobNode->slaveState = SLAVE_STATE_PAIRED;
+                }
+                else
+                {
+                  anyUnpairedFlag = TRUE;
+                }
               }
             }
           }
-
-          // free resources
-          freeSlaveNode(slaveNode,NULL);
-          LIST_DELETE_NODE(slaveNode);
         }
-//fprintf(stderr,"%s, %d: anyOfflineFlag=%d anyUnpairedFlag=%d\n",__FILE__,__LINE__,anyOfflineFlag,anyUnpairedFlag);
 
         if (!anyOfflineFlag && !anyUnpairedFlag)
         {
@@ -2240,7 +2184,7 @@ LOCAL void pairingThreadCode(void)
   }
   String_delete(line);
   List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
-  Connector_done(&connectorInfo);
+//  Connector_done(&connectorInfo);
 }
 
 /*---------------------------------------------------------------------*/
@@ -18300,15 +18244,24 @@ Errors Server_run(ServerModes       mode,
   Semaphore_setEnd(&jobList.lock);
   if (Index_isAvailable())
   {
-    Thread_join(&purgeExpiredEntitiesThread);
+    if (!Thread_join(&purgeExpiredEntitiesThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop purge expired entities thread!");
+    }
     Thread_done(&purgeExpiredEntitiesThread);
 
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
-      Thread_join(&autoIndexThread);
+      if (!Thread_join(&autoIndexThread))
+      {
+        HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
+      }
       Thread_done(&autoIndexThread);
     }
-    Thread_join(&indexThread);
+    if (!Thread_join(&indexThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop index thread!");
+    }
     Thread_done(&indexThread);
 
     Semaphore_done(&indexThreadTrigger);
@@ -18316,13 +18269,25 @@ Errors Server_run(ServerModes       mode,
     // done database pause callbacks
     Index_setPauseCallback(CALLBACK(NULL,NULL));
   }
-  Thread_join(&pairingThread);
-  Thread_join(&pauseThread);
-  Thread_join(&schedulerThread);
-  Thread_join(&jobThread);
+  if (!Thread_join(&pairingThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop pairing thread!");
+  }
   Thread_done(&pairingThread);
+  if (!Thread_join(&pauseThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop pause thread!");
+  }
   Thread_done(&pauseThread);
+  if (!Thread_join(&schedulerThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");
+  }
   Thread_done(&schedulerThread);
+  if (!Thread_join(&jobThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop job thread!");
+  }
   Thread_done(&jobThread);
 
   // done index
