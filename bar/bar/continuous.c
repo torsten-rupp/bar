@@ -1660,10 +1660,15 @@ void Continuous_done(void)
 {
   quitFlag = TRUE;
   MsgQueue_setEndOfMsg(&initDoneNotifyMsgQueue);
-  Thread_join(&continuousThread);
-  Thread_join(&continuousInitThread);
-
+  if (!Thread_join(&continuousThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop continuous thread!");
+  }
   Thread_done(&continuousThread);
+  if (!Thread_join(&continuousInitThread))
+  {
+    HALT_INTERNAL_ERROR("Cannot stop continuous init thread!");
+  }
   Thread_done(&continuousInitThread);
 
   (void)closeContinuous(&continuousDatabaseHandle);
