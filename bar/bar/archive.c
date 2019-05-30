@@ -5756,18 +5756,25 @@ UNUSED_VARIABLE(storageInfo);
   error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
   assert(archiveHandle->blockLength > 0);
   if (archiveHandle->blockLength > MAX_BUFFER_SIZE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_UNSUPPORTED_BLOCK_LENGTH;
   }
   error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0],&keyLength);
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
 
@@ -5782,6 +5789,8 @@ UNUSED_VARIABLE(storageInfo);
       error = initCryptPassword(archiveHandle,password);
       if (error !=  ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -5795,6 +5804,8 @@ UNUSED_VARIABLE(storageInfo);
                              );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -5814,6 +5825,8 @@ UNUSED_VARIABLE(storageInfo);
         }
         else
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
           AutoFree_cleanup(&autoFreeList);
           return ERROR_NO_PUBLIC_CRYPT_KEY;
         }
@@ -6187,6 +6200,7 @@ UNUSED_VARIABLE(storageInfo);
                         )
 #endif /* NDEBUG */
 {
+  Errors  result;
   Errors  error;
   IndexId storageId;
   String  intermediateFileName;
@@ -6196,11 +6210,13 @@ UNUSED_VARIABLE(storageInfo);
   assert(archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
 
+  result = ERROR_NONE;
+
   // flush index list
   error = flushArchiveIndexList(archiveHandle,0);
   if (error != ERROR_NONE)
   {
-    return error;
+    if (result == ERROR_NONE) result = error;
   }
 
   // close file/storage, store archive file (if created)
@@ -6225,8 +6241,7 @@ UNUSED_VARIABLE(storageInfo);
   }
   if (error != ERROR_NONE)
   {
-    String_delete(intermediateFileName);
-    return error;
+    if (result == ERROR_NONE) result = error;
   }
   if (   (archiveHandle->mode == ARCHIVE_MODE_CREATE)
       && !String_isEmpty(intermediateFileName)
@@ -6235,8 +6250,7 @@ UNUSED_VARIABLE(storageInfo);
     error = storeArchiveFile(archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
     if (error != ERROR_NONE)
     {
-      String_delete(intermediateFileName);
-      return error;
+      if (result == ERROR_NONE) result = error;
     }
   }
   String_delete(intermediateFileName);
@@ -6277,6 +6291,7 @@ UNUSED_VARIABLE(storageInfo);
   String_delete(archiveHandle->printableStorageName);
   String_delete(archiveHandle->archiveName);
   Semaphore_done(&archiveHandle->lock);
+  if (archiveHandle->signatureKeyData != NULL) free(archiveHandle->signatureKeyData);
   if (archiveHandle->encryptedKeyData != NULL) free(archiveHandle->encryptedKeyData);
   if (archiveHandle->cryptPassword != NULL) Password_delete(archiveHandle->cryptPassword);
   Semaphore_done(&archiveHandle->passwordLock);
@@ -6285,7 +6300,7 @@ UNUSED_VARIABLE(storageInfo);
   if (archiveHandle->jobUUID != NULL) String_delete(archiveHandle->jobUUID);
   String_delete(archiveHandle->hostName);
 
-  return error;
+  return result;
 }
 
 const ArchiveCryptInfo *Archive_getCryptInfo(const ArchiveHandle *archiveHandle)
