@@ -110,9 +110,10 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
   }
 
   // create entry
-  newEntryNode->id     = getNewId();
-  newEntryNode->type   = entryNode->type;
-  newEntryNode->string = String_duplicate(entryNode->string);
+  newEntryNode->id          = getNewId();
+  newEntryNode->type        = entryNode->type;
+  newEntryNode->string      = String_duplicate(entryNode->string);
+  newEntryNode->patternType = entryNode->patternType;
   #if   defined(PLATFORM_LINUX)
     error = Pattern_init(&newEntryNode->pattern,
                          entryNode->string,
@@ -243,21 +244,25 @@ void EntryList_initDuplicate(EntryList       *entryList,
   assert(entryList != NULL);
 
   EntryList_init(entryList);
-  EntryList_copy(entryList,fromEntryList,fromEntryListFromNode,fromEntryListToNode);
+  EntryList_copy(entryList,
+                 fromEntryList,
+                 fromEntryListFromNode,
+                 fromEntryListToNode
+                );
 }
 
 void EntryList_done(EntryList *entryList)
 {
   assert(entryList != NULL);
 
-  List_done(entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+  List_done(entryList,CALLBACK((ListNodeFreeFunction)freeEntryNode,NULL));
 }
 
 EntryList *EntryList_clear(EntryList *entryList)
 {
   assert(entryList != NULL);
 
-  return (EntryList*)List_clear(entryList,(ListNodeFreeFunction)freeEntryNode,NULL);
+  return (EntryList*)List_clear(entryList,CALLBACK((ListNodeFreeFunction)freeEntryNode,NULL));
 }
 
 void EntryList_copy(EntryList       *toEntryList,
@@ -269,7 +274,13 @@ void EntryList_copy(EntryList       *toEntryList,
   assert(fromEntryList != NULL);
   assert(toEntryList != NULL);
 
-  List_copy(toEntryList,NULL,fromEntryList,fromEntryListFromNode,fromEntryListToNode,(ListNodeDuplicateFunction)duplicateEntryNode,NULL);
+  List_copy(toEntryList,
+            NULL,  // toEntryNode
+            fromEntryList,
+            fromEntryListFromNode,
+            fromEntryListToNode,
+            CALLBACK((ListNodeDuplicateFunction)duplicateEntryNode,NULL)
+           );
 }
 
 void EntryList_move(EntryList       *toEntryList,
