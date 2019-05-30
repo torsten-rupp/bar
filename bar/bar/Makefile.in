@@ -1188,7 +1188,7 @@ rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
-          --log-file=/tmp/bar-slave.log --log=all --server-debug \
+          --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
 rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
