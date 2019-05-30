@@ -14700,7 +14700,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
 
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
-  if (storageSpecifier.type == STORAGE_TYPE_SCP)
+  if (storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP)
   {
     // try to open scp-storage first with sftp
     storageSpecifier.type = STORAGE_TYPE_SFTP;
