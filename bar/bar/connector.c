@@ -571,7 +571,6 @@ UNUSED_VARIABLE(scheduleCustomText);
       case ENTRY_TYPE_UNKNOWN:
       default:                 entryTypeText = "UNKNOWN"; break;
     }
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,entryNode->patternType);
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
