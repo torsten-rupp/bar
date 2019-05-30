@@ -860,6 +860,8 @@ bool Thread_join(Thread *thread)
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
 
+  thread->quitFlag = TRUE;
+
   if (!thread->joinedFlag)
   {
     // Note: pthread_join() can only be called once with success!
