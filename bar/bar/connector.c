@@ -118,6 +118,9 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
     return error;
   }
 
+  // set state
+  connectorInfo->state = CONNECTOR_STATE_CONNECTED;
+
 //TODO
   // start SSL
 #ifndef WERROR
@@ -179,6 +182,9 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 
   // disconnect
   ServerIO_disconnect(&connectorInfo->io);
+
+  // set state
+  connectorInfo->state = CONNECTOR_STATE_NONE;
 }
 
 /***********************************************************************\
@@ -565,6 +571,7 @@ UNUSED_VARIABLE(scheduleCustomText);
       case ENTRY_TYPE_UNKNOWN:
       default:                 entryTypeText = "UNKNOWN"; break;
     }
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,entryNode->patternType);
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
@@ -2773,9 +2780,10 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // process client requests
-  while (!Thread_isQuit(&connectorInfo->thread))
+  while (   (connectorInfo->state != CONNECTOR_STATE_DISCONNECTED)
+         && !Thread_isQuit(&connectorInfo->thread)
+        )
   {
-//fprintf(stderr,"%s, %d: connector thread wiat command\n",__FILE__,__LINE__);
     // wait for disconnect, command, or result
     pollfds[0].fd     = Network_getSocket(&connectorInfo->io.network.socketHandle);
     pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
@@ -2786,6 +2794,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
     {
       if      ((pollfds[0].revents & POLLIN) != 0)
       {
+        // process commands
         if (ServerIO_receiveData(&connectorInfo->io))
         {
           while (ServerIO_getCommand(&connectorInfo->io,
@@ -2814,12 +2823,14 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
         else
         {
           // disconnect
+          connectorInfo->state = CONNECTOR_STATE_DISCONNECTED;
           break;
         }
       }
       else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
       {
-        // error
+        // error -> disconnect
+        connectorInfo->state = CONNECTOR_STATE_DISCONNECTED;
         break;
       }
     }
@@ -2903,7 +2914,7 @@ void Connector_doneAll(void)
 
 //TODO: remove
 //  connectorInfo->forceSSL        = forceSSL;
-//  ServerIO_initNetwork(&connectorInfo->io);
+  connectorInfo->state           = CONNECTOR_STATE_NONE;
   connectorInfo->storageOpenFlag = FALSE;
 
   #ifdef NDEBUG
@@ -2928,6 +2939,11 @@ UNUSED_VARIABLE(fromConnectorInfo);
 void Connector_done(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
+
+  if (connectorInfo->state == CONNECTOR_STATE_CONNECTED)
+  {
+    connectorDisconnect(connectorInfo);
+  }
 
   DEBUG_REMOVE_RESOURCE_TRACE(connectorInfo,ConnectorInfo);
 }
@@ -3029,6 +3045,9 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
     String_delete(hostName);
     return error;
   }
+
+  // set state
+  connectorInfo->state = CONNECTOR_STATE_AUTHORIZED;
 
   // free resources
   String_delete(e);
