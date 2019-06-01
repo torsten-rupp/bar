@@ -3684,7 +3684,7 @@ SlaveNode *Job_removeSlave(SlaveNode *slaveNode)
     Connector_disconnect(&slaveNode->connectorInfo);
   }
 
-  return List_removeAndFree(&slaveList,slaveNode,CALLBACK(freeSlaveNode,NULL));
+  return List_removeAndFree(&slaveList,slaveNode,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
 }
 
 ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)
@@ -3720,10 +3720,10 @@ void Job_connectorUnlock(ConnectorInfo *connectorInfo)
 //TODO: timeout
   JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,5*MS_PER_SECOND)
   {
-    connectorInfo = LIST_FIND(&slaveList,
-                              slaveNode,
-                              &slaveNode->connectorInfo == connectorInfo
-                             );
+    slaveNode = LIST_FIND(&slaveList,
+                          slaveNode,
+                          &slaveNode->connectorInfo == connectorInfo
+                         );
     if (slaveNode != NULL)
     {
       slaveNode->lockCount--;

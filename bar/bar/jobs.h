@@ -793,9 +793,9 @@ INLINE bool Job_isLocal(const JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Job_listAppend(JobNode *jobNode);
+INLINE void Job_listAppend(JobNode *jobNode);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE bool Job_listAppend(JobNode *jobNode)
+INLINE void Job_listAppend(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
@@ -812,9 +812,9 @@ INLINE bool Job_listAppend(JobNode *jobNode)
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Job_listRemove(JobNode *jobNode);
+INLINE void Job_listRemove(JobNode *jobNode);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
-INLINE bool Job_listRemove(JobNode *jobNode)
+INLINE void Job_listRemove(JobNode *jobNode)
 {
   assert(jobNode != NULL);
 
