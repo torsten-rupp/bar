@@ -2681,17 +2681,26 @@ assert jobData != null;
       {
         public void handleEvent(Event event)
         {
-          String name = BARServer.getMaster();
+          switch (BARServer.getMode())
+          {
+            case MASTER:
+              masterMenuItem.setEnabled(false);
+              break;
+            case SLAVE:
+              masterMenuItem.setEnabled(true);
 
-          if (!name.isEmpty())
-          {
-            masterMenuItem.setText(BARControl.tr("Master")+": "+name);
-            masterMenuItem.setSelection(true);
-          }
-          else
-          {
-            masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
-            masterMenuItem.setSelection(false);
+              String name = BARServer.getMaster();
+              if (!name.isEmpty())
+              {
+                masterMenuItem.setText(BARControl.tr("Master")+": "+name);
+                masterMenuItem.setSelection(true);
+              }
+              else
+              {
+                masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
+                masterMenuItem.setSelection(false);
+              }
+              break;
           }
         }
       });
