@@ -7398,7 +7398,7 @@ databaseNode->debug.lastTrigger.transactionCount
               case DATABASE_HISTORY_TYPE_UNLOCK:          s = "unlocked"; break;
             }
             fprintf(stderr,
-                    "    %-18s %16lu thread '%s' (%s) at %s, %u -- %u %u\n",
+                    "    %-18s %16lu thread '%s' (%s) at %s, %u\n",
                     s,
                     databaseNode->debug.history[index].cycleCounter,
                     Thread_getName(databaseNode->debug.history[index].threadId),
