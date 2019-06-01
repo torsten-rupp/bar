@@ -950,7 +950,7 @@ bool Storage_parseDeviceSpecifier(ConstString deviceSpecifier,
                                  );
 
 /***********************************************************************\
-* Name   : Storage_getType
+* Name   : Storage_parseType
 * Purpose: get storage type from storage name
 * Input  : storageName - storage name
 * Output : -
@@ -959,7 +959,7 @@ bool Storage_parseDeviceSpecifier(ConstString deviceSpecifier,
 *            <type>://<storage specifier>/<archiveName>
 \***********************************************************************/
 
-StorageTypes Storage_getType(ConstString storageName);
+StorageTypes Storage_parseType(ConstString storageName);
 
 /***********************************************************************\
 * Name   : Storage_parseName
@@ -1127,6 +1127,25 @@ Errors Storage_prepare(const String     storageName,
                         StorageInfo *storage
                        );
 #endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Storage_getType
+* Purpose: get storage type
+* Input  : storageInfo - storage info
+* Output : -
+* Return : storage type
+* Notes  : -
+\***********************************************************************/
+
+INLINE StorageTypes Storage_getType(const StorageInfo *storageInfo);
+#if defined(NDEBUG) || defined(__STORAGE_IMPLEMENTATION__)
+INLINE StorageTypes Storage_getType(const StorageInfo *storageInfo)
+{
+  assert(storageInfo != NULL);
+
+  return storageInfo->type;
+}
+#endif /* NDEBUG || __STORAGE_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Storage_isServerAllocationPending

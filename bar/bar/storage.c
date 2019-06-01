@@ -1081,7 +1081,7 @@ bool Storage_parseDeviceSpecifier(ConstString deviceSpecifier,
   return StorageDevice_parseSpecifier(deviceSpecifier,defaultDeviceName,deviceName);
 }
 
-StorageTypes Storage_getType(ConstString storageName)
+StorageTypes Storage_parseType(ConstString storageName)
 {
   StorageSpecifier storageSpecifier;
   StorageTypes     type;
