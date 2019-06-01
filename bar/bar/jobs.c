@@ -1,4 +1,4 @@
-  /***********************************************************************\
+/***********************************************************************\
 *
 * $Revision: 8947 $
 * $Date: 2018-11-29 13:04:59 +0100 (Thu, 29 Nov 2018) $
@@ -64,10 +64,10 @@
 #define SESSION_KEY_SIZE                         1024     // number of session key bits
 
 #define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
-#define LOCK_TIMEOUT                             (10*60*1000)  // general lock timeout [ms]
+#define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
 
 #define SLAVE_DEBUG_LEVEL                        1
-#define SLAVE_COMMAND_TIMEOUT                    (10LL*MS_PER_SECOND)
+#define SLAVE_COMMAND_TIMEOUT                    (10L*MS_PER_SECOND)
 
 #define AUTHORIZATION_PENALITY_TIME              500      // delay processing by failCount^2*n [ms]
 #define MAX_AUTHORIZATION_PENALITY_TIME          30000    // max. penality time [ms]
@@ -252,7 +252,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 );
 
 /***************************** Variables *******************************/
-JobList jobList;                // job list
+SlaveList slaveList;
+JobList   jobList;
 
 /****************************** Macros *********************************/
 
@@ -1779,17 +1780,36 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   String_delete(jobNode->byName);
 
-  Connector_done(&jobNode->connectorInfo);
-
   Job_done(&jobNode->job);
   String_delete(jobNode->name);
   String_delete(jobNode->fileName);
+}
+
+/***********************************************************************\
+* Name   : freeSlaveNode
+* Purpose: free slave node
+* Input  : slaveNode - slave node
+*          userData  - user data (no used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeSlaveNode(SlaveNode *slaveNode, void *userData)
+{
+  assert(slaveNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  Connector_done(&slaveNode->connectorInfo);
+  String_delete(slaveNode->name);
 }
 
 /*---------------------------------------------------------------------*/
 
 Errors Job_initAll(void)
 {
+  Semaphore_init(&slaveList.lock,SEMAPHORE_TYPE_BINARY);
   Semaphore_init(&jobList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&jobList);
 
@@ -1800,6 +1820,8 @@ void Job_doneAll(void)
 {
   List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
   Semaphore_done(&jobList.lock);
+  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
+  Semaphore_done(&slaveList.lock);
 }
 
 void Job_init(Job *job)
@@ -1908,9 +1930,7 @@ JobNode *Job_new(JobTypes    jobType,
 
   jobNode->masterIO                     = NULL;
 
-  Connector_init(&jobNode->connectorInfo);
-
-  jobNode->state                        = JOB_STATE_NONE;
+  jobNode->jobState                     = JOB_STATE_NONE;
   jobNode->slaveState                   = SLAVE_STATE_OFFLINE;
 
   jobNode->scheduleUUID                 = String_new();
@@ -1981,9 +2001,7 @@ JobNode *Job_copy(const JobNode *jobNode,
 
   newJobNode->masterIO                     = NULL;
 
-  Connector_duplicate(&newJobNode->connectorInfo,&jobNode->connectorInfo);
-
-  newJobNode->state                        = JOB_STATE_NONE;
+  newJobNode->jobState                     = JOB_STATE_NONE;
   newJobNode->slaveState                   = SLAVE_STATE_OFFLINE;
 
   newJobNode->scheduleUUID                 = String_new();
@@ -2049,7 +2067,7 @@ bool Job_isSomeRunning(void)
   {
     LIST_ITERATE(&jobList,jobNode)
     {
-      if (Job_isRunning(jobNode->state))
+      if (Job_isRunning(jobNode->jobState))
       {
         runningFlag = TRUE;
         break;
@@ -2959,7 +2977,7 @@ STRING_CHECK_VALID(jobNode->lastErrorMessage);
           Job_listChanged();
         }
 
-        if (   !Job_isActive(jobNode->state)
+        if (   !Job_isActive(jobNode->jobState)
             && (File_getFileTimeModified(fileName) > jobNode->fileModified)
            )
         {
@@ -2983,7 +3001,7 @@ STRING_CHECK_VALID(jobNode->lastErrorMessage);
     jobNode = jobList.head;
     while (jobNode != NULL)
     {
-      if (jobNode->state == JOB_STATE_NONE)
+      if (jobNode->jobState == JOB_STATE_NONE)
       {
         File_setFileName(fileName,jobsDirectory);
         File_appendFileName(fileName,jobNode->name);
@@ -3046,7 +3064,7 @@ void Job_trigger(JobNode      *jobNode,
   assert(Semaphore_isLocked(&jobList.lock));
 
   // set job state
-  jobNode->state                 = JOB_STATE_WAITING;
+  jobNode->jobState              = JOB_STATE_WAITING;
   String_set(jobNode->scheduleUUID,scheduleUUID);
   String_set(jobNode->scheduleCustomText,scheduleCustomText);
   jobNode->archiveType           = archiveType;
@@ -3072,7 +3090,7 @@ void Job_start(JobNode *jobNode)
   assert(Semaphore_isLocked(&jobList.lock));
 
   // set job state, reset last error
-  jobNode->state             = JOB_STATE_RUNNING;
+  jobNode->jobState          = JOB_STATE_RUNNING;
   jobNode->runningInfo.error = ERROR_NONE;
   Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
@@ -3092,15 +3110,15 @@ void Job_end(JobNode *jobNode, uint64 executeEndDateTime)
   // set state
   if      (jobNode->requestedAbortFlag)
   {
-    jobNode->state = JOB_STATE_ABORTED;
+    jobNode->jobState = JOB_STATE_ABORTED;
   }
   else if (jobNode->runningInfo.error != ERROR_NONE)
   {
-    jobNode->state = JOB_STATE_ERROR;
+    jobNode->jobState = JOB_STATE_ERROR;
   }
   else
   {
-    jobNode->state = JOB_STATE_DONE;
+    jobNode->jobState = JOB_STATE_DONE;
   }
   jobNode->lastExecutedDateTime = executeEndDateTime;
   Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
@@ -3115,7 +3133,7 @@ void Job_abort(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  if      (Job_isRunning(jobNode->state))
+  if      (Job_isRunning(jobNode->jobState))
   {
     // request abort job
     jobNode->requestedAbortFlag = TRUE;
@@ -3124,7 +3142,7 @@ void Job_abort(JobNode *jobNode)
     if (Job_isLocal(jobNode))
     {
       // wait until local job terminated
-      while (Job_isRunning(jobNode->state))
+      while (Job_isRunning(jobNode->jobState))
       {
         Semaphore_waitModified(&jobList.lock,LOCK_TIMEOUT);
       }
@@ -3132,14 +3150,17 @@ void Job_abort(JobNode *jobNode)
     else
     {
       // abort slave job
-      jobNode->runningInfo.error = Connector_jobAbort(&jobNode->connectorInfo,
-                                                      jobNode->job.uuid
-                                                     );
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        jobNode->runningInfo.error = Connector_jobAbort(connectorInfo,
+                                                        jobNode->job.uuid
+                                                       );
+      }
     }
   }
-  else if (Job_isActive(jobNode->state))
+  else if (Job_isActive(jobNode->jobState))
   {
-    jobNode->state = JOB_STATE_NONE;
+    jobNode->jobState = JOB_STATE_NONE;
   }
 
   // store schedule info
@@ -3151,9 +3172,9 @@ void Job_reset(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  if (!Job_isActive(jobNode->state))
+  if (!Job_isActive(jobNode->jobState))
   {
-    jobNode->state = JOB_STATE_NONE;
+    jobNode->jobState = JOB_STATE_NONE;
     Job_resetRunningInfo(jobNode);
   }
 }
@@ -3629,6 +3650,85 @@ void Job_doneOptions(JobOptions *jobOptions)
   String_delete(jobOptions->includeFileListFileName);
 
   String_delete(jobOptions->uuid);
+}
+
+SlaveNode *Job_addSlave(ConstString name, uint port)
+{
+  SlaveNode *slaveNode;
+
+  assert(name != NULL);
+  assert(Semaphore_isLocked(&slaveList.lock));
+
+  slaveNode = LIST_NEW_NODE(SlaveNode);
+  if (slaveNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  slaveNode->name  = String_duplicate(name);
+  slaveNode->port  = port;
+  slaveNode->state = SLAVE_STATE_OFFLINE;
+  Connector_init(&slaveNode->connectorInfo);
+
+  List_append(&slaveList,slaveNode);
+
+  return slaveNode;
+}
+
+SlaveNode *Job_removeSlave(SlaveNode *slaveNode)
+{
+  assert(slaveNode != NULL);
+  assert(Semaphore_isLocked(&slaveList.lock));
+
+  if (Connector_isDisconnected(&slaveNode->connectorInfo))
+  {
+    Connector_disconnect(&slaveNode->connectorInfo);
+  }
+
+  return List_removeAndFree(&slaveList,slaveNode,CALLBACK(freeSlaveNode,NULL));
+}
+
+ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)
+{
+  ConnectorInfo *connectorInfo;
+  SlaveNode     *slaveNode;
+
+  assert(jobNode != NULL);
+
+  JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,timeout)
+  {
+    slaveNode = LIST_FIND(&slaveList,
+                              slaveNode,
+                                 (slaveNode->port == jobNode->job.slaveHost.port)
+                              && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
+                             );
+    if (slaveNode != NULL)
+    {
+      connectorInfo = &slaveNode->connectorInfo;
+      slaveNode->lockCount++;
+    }
+  }
+
+  return connectorInfo;
+}
+
+void Job_connectorUnlock(ConnectorInfo *connectorInfo)
+{
+  SlaveNode *slaveNode;
+
+  assert(connectorInfo != NULL);
+
+//TODO: timeout
+  JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,5*MS_PER_SECOND)
+  {
+    connectorInfo = LIST_FIND(&slaveList,
+                              slaveNode,
+                              &slaveNode->connectorInfo == connectorInfo
+                             );
+    if (slaveNode != NULL)
+    {
+      slaveNode->lockCount--;
+    }
+  }
 }
 
 #ifdef __cplusplus

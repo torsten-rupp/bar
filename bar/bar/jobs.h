@@ -194,9 +194,7 @@ typedef struct JobNode
   ServerIO            *masterIO;                        // master i/o or NULL if not a slave job
 
   // job running state
-  ConnectorInfo       connectorInfo;
-
-  JobStates           state;                            // current state of job
+  JobStates           jobState;
   SlaveStates         slaveState;
 
   StatusInfo          statusInfo;
@@ -266,8 +264,28 @@ typedef struct
   uint      activeCount;
 } JobList;
 
+// slave list
+typedef struct SlaveNode
+{
+  LIST_NODE_HEADER(struct SlaveNode);
+
+  String        name;
+  uint          port;
+  ConnectorInfo connectorInfo;
+  SlaveStates   state;
+  uint          lockCount;
+} SlaveNode;
+
+typedef struct
+{
+  LIST_HEADER(SlaveNode);
+
+  Semaphore lock;
+} SlaveList;
+
 /***************************** Variables *******************************/
-extern JobList jobList;                // job list
+extern SlaveList slaveList;
+extern JobList   jobList;
 
 /****************************** Macros *********************************/
 
@@ -291,6 +309,227 @@ extern JobList jobList;                // job list
   for (SemaphoreLock semaphoreLock = Job_listLock(semaphoreLockType,timeout); \
        semaphoreLock; \
        Job_listUnlock(), semaphoreLock = FALSE \
+      )
+
+/***********************************************************************\
+* Name   : JOB_LIST_ITERATE
+* Purpose: iterated over list and execute block
+* Input  : variable - iteration variable
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            JOB_LIST_ITERATE(variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define JOB_LIST_ITERATE(variable) \
+  for ((variable) = jobList.head; \
+       (variable) != NULL; \
+       (variable) = (variable)->next \
+      )
+
+/***********************************************************************\
+* Name   : JOB_LIST_ITERATEX
+* Purpose: lock and iterated over list and execute block
+* Input  : variable  - iteration variable
+*          condition - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            JOB_LIST_ITERATEX(variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define JOB_LIST_ITERATEX(variable,condition) \
+  for ((variable) = jobList.head; \
+       ((variable) != NULL) && (condition); \
+       (variable) = (variable)->next \
+      )
+
+/***********************************************************************\
+* Name   : JOB_LIST_FIND
+* Purpose: find job in job list
+* Input  : variable  - variable name
+*          condition - condition code
+* Output : -
+* Return : slave node or NULL if not found
+* Notes  : usage:
+*          slaveNode = LIST_FIND(variable,variable->...)
+\***********************************************************************/
+
+#define JOB_LIST_FIND(variable,condition) \
+  ({ \
+    auto typeof(variable) __closure__ (void); \
+    typeof(variable) __closure__ (void) \
+    { \
+      variable = (typeof(variable))jobList.head; \
+      while ((variable != NULL) && !(condition)) \
+      { \
+        variable = variable->next; \
+      } \
+      \
+      return variable; \
+    } \
+    __closure__(); \
+  })
+
+/***********************************************************************\
+* Name   : JOB_LIST_CONTAINS
+* Purpose: check if job is in job list
+* Input  : list      - list
+*          variable  - variable name
+*          condition - condition code
+* Output : -
+* Return : TRUE iff in list
+* Notes  : usage:
+*          boolean = JOB_LIST_CONTAINS(variable,variable->... == ...)
+\***********************************************************************/
+
+#define JOB_LIST_CONTAINS(variable,condition) (JOB_LIST_FIND(variable,condition) != NULL)
+
+
+/***********************************************************************\
+* Name   : JOB_SLAVE_LIST_HEAD
+* Purpose: get job slave list head (first node)
+* Input  : -
+* Output : -
+* Return : slave list head
+* Notes  : -
+\***********************************************************************/
+
+#define JOB_SLAVE_LIST_HEAD() slaveList.head
+
+/***********************************************************************\
+* Name   : JOB_SLAVE_LIST_LOCKED_DO
+* Purpose: execute block with slave list locked
+* Input  : semaphoreLockType - lock type; see SemaphoreLockTypes
+*          timeout           - timeout [ms] or NO_WAIT, WAIT_FOREVER
+* Output : -
+* Return : -
+* Notes  : usage:
+*            SLAVE_LIST_LOCKED_DO(semaphoreLockType,timeout)
+*            {
+*              ...
+*            }
+*
+*          semaphore must be unlocked manually if 'break' is used!
+\***********************************************************************/
+
+#define JOB_SLAVE_LIST_LOCKED_DO(semaphoreLockType,timeout) \
+  for (SemaphoreLock semaphoreLock = Semaphore_lock(&slaveList.lock,semaphoreLockType,timeout); \
+       semaphoreLock; \
+       Semaphore_unlock(&slaveList.lock), semaphoreLock = FALSE \
+      )
+
+/***********************************************************************\
+* Name   : JOB_SLAVE_LIST_ITERATE
+* Purpose: iterated over slave list and execute block
+* Input  : variable - iteration variable
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            SLAVE_LIST_ITERATE(variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define JOB_SLAVE_LIST_ITERATE(variable) \
+  for ((variable) = slaveList.head; \
+       (variable) != NULL; \
+       (variable) = (variable)->next \
+      )
+
+/***********************************************************************\
+* Name   : JOB_SLAVE_LIST_ITERATEX
+* Purpose: lock and iterated over list and execute block
+* Input  : variable  - iteration variable
+*          condition - additional condition
+* Output : -
+* Return : -
+* Notes  : variable will contain all entries in list
+*          usage:
+*            SLAVE_LIST_ITERATEX(variable,TRUE)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define JOB_SLAVE_LIST_ITERATEX(variable,condition) \
+  for ((variable) = slaveList.head; \
+       ((variable) != NULL) && (condition); \
+       (variable) = (variable)->next \
+      )
+
+/***********************************************************************\
+* Name   : JOB_SLAVE_LIST_FIND
+* Purpose: find slave in job slave list
+* Input  : variable  - variable name
+*          condition - condition code
+* Output : -
+* Return : slave node or NULL if not found
+* Notes  : usage:
+*          slaveNode = LIST_FIND(variable,variable->...)
+\***********************************************************************/
+
+#define JOB_SLAVE_LIST_FIND(variable,condition) \
+  ({ \
+    auto typeof(variable) __closure__ (void); \
+    typeof(variable) __closure__ (void) \
+    { \
+      variable = (typeof(variable))slaveList.head; \
+      while ((variable != NULL) && !(condition)) \
+      { \
+        variable = variable->next; \
+      } \
+      \
+      return variable; \
+    } \
+    __closure__(); \
+  })
+
+/***********************************************************************\
+* Name   : JOB_SLAVE_LIST_CONTAINS
+* Purpose: check if slave is in job slave list
+* Input  : list      - list
+*          variable  - variable name
+*          condition - condition code
+* Output : -
+* Return : TRUE iff in list
+* Notes  : usage:
+*          boolean = JOB_SLAVE_LIST_CONTAINS(variable,variable->... == ...)
+\***********************************************************************/
+
+#define JOB_SLAVE_LIST_CONTAINS(variable,condition) (JOB_SLAVE_LIST_FIND(variable,condition) != NULL)
+
+/***********************************************************************\
+* Name   : JOB_CONNECTOR_LOCKED_DO
+* Purpose: execute block with job connector locked
+* Input  : jobNode           - job node
+*          semaphoreLockType - lock type; see SemaphoreLockTypes
+*          timeout           - timeout [ms] or NO_WAIT, WAIT_FOREVER
+* Output : -
+* Return : -
+* Notes  : usage:
+*            JOB_LIST_LOCKED_DO(semaphoreLockType,timeout)
+*            {
+*              ...
+*            }
+*
+*          semaphore must be unlocked manually if 'break' is used!
+\***********************************************************************/
+
+#define JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,timeout) \
+  for (ConnectorInfo *connectorInfo = Job_connectorLock(jobNode,timeout); \
+       connectorInfo != NULL; \
+       Job_connectorUnlock(connectorInfo), connectorInfo = NULL \
       )
 
 /***************************** Forwards ********************************/
@@ -397,6 +636,93 @@ INLINE void Job_listUnlock(void)
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : Job_isListLocked
+* Purpose: check if job list locked
+* Input  : -
+* Output : -
+* Return : TRUE iff locked
+* Notes  : debug only
+\***********************************************************************/
+
+#ifndef NDEBUG
+INLINE bool Job_isListLocked(void);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE bool Job_isListLocked(void)
+{
+  return Semaphore_isLocked(&jobList.lock);
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+#endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : Job_listSignalModifed
+* Purpose: check if job list lock pending
+* Input  : -
+* Output : -
+* Return : TRUE iff pendind
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Job_isListLockPending(void);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE bool Job_isListLockPending(void)
+{
+  return Semaphore_isLockPending(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Job_listSignalModifed
+* Purpose: signal job list modified
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Job_listSignalModifed(void);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE void Job_listSignalModifed(void)
+{
+  Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Job_listWaitModifed
+* Purpose: wait job list modified
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Job_listWaitModifed(long timeout);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE void Job_listWaitModifed(long timeout)
+{
+  Semaphore_waitModified(&jobList.lock,timeout);
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Job_listSetEnd
+* Purpose: set end-flag in job list
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE void Job_listSetEnd(void);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE void Job_listSetEnd(void)
+{
+  Semaphore_setEnd(&jobList.lock);
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Job_new
 * Purpose: create new job
 * Input  : jobType  - job type
@@ -455,6 +781,44 @@ INLINE bool Job_isLocal(const JobNode *jobNode)
   assert(jobNode != NULL);
 
   return String_isEmpty(jobNode->job.slaveHost.name);
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Job_listAppend
+* Purpose: append job to job list
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Job_listAppend(JobNode *jobNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE bool Job_listAppend(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  List_append(&jobList,jobNode);
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Job_listRemove
+* Purpose: remove job from job list
+* Input  : jobNode - job node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Job_listRemove(JobNode *jobNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE bool Job_listRemove(JobNode *jobNode)
+{
+  assert(jobNode != NULL);
+
+  List_remove(&jobList,jobNode);
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -990,6 +1354,52 @@ void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
 \***********************************************************************/
 
 void Job_doneOptions(JobOptions *jobOptions);
+
+/***********************************************************************\
+* Name   : Job_addSlave
+* Purpose: add slave
+* Input  : name - host name
+*          port - host port
+* Output : -
+* Return : slave node
+* Notes  : -
+\***********************************************************************/
+
+SlaveNode *Job_addSlave(ConstString name, uint port);
+
+/***********************************************************************\
+* Name   : Job_removeSlave
+* Purpose: remove slave
+* Input  : slaveNode - slave node
+* Output : -
+* Return : next slave node
+* Notes  : -
+\***********************************************************************/
+
+SlaveNode *Job_removeSlave(SlaveNode *slaveNode);
+
+/***********************************************************************\
+* Name   : Job_connectorLock
+* Purpose: lock connector info
+* Input  : jobNode - job node
+*          timeout - timeout or NO_WAIT/WAIT_FOREVER
+* Output : -
+* Return : connector info or NULL
+* Notes  : -
+\***********************************************************************/
+
+ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout);
+
+/***********************************************************************\
+* Name   : Job_connectorUnlock
+* Purpose: unlock connector info
+* Input  : connectorInfo - connector info
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_connectorUnlock(ConnectorInfo *connectorInfo);
 
 #ifdef __cplusplus
   }
