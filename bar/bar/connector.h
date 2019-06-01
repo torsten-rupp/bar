@@ -111,18 +111,6 @@ void Connector_doneAll(void);
 #endif /* NDEBUG */
 
 /***********************************************************************\
-* Name   : Connector_duplicate
-* Purpose: init duplicate connector info
-* Input  : connectorInfo     - connector info
-*          fromConnectorInfo - from connector info
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Connector_duplicate(ConnectorInfo *connectorInfo, const ConnectorInfo *fromConnectorInfo);
-
-/***********************************************************************\
 * Name   : Connector_done
 * Purpose: done connector info
 * Input  : connectorInfo - connector info

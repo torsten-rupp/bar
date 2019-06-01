@@ -2923,18 +2923,6 @@ void Connector_doneAll(void)
   #endif /* NDEBUG */
 }
 
-void Connector_duplicate(ConnectorInfo *connectorInfo, const ConnectorInfo *fromConnectorInfo)
-{
-  assert(connectorInfo != NULL);
-  assert(fromConnectorInfo != NULL);
-
-  Connector_init(connectorInfo);
-#ifndef WERROR
-#warning TODO: copy
-#endif
-UNUSED_VARIABLE(fromConnectorInfo);
-}
-
 void Connector_done(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
