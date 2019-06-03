@@ -784,9 +784,27 @@ LOCAL void startPairingMaster(void)
 {
   if (!newMaster.pairingRequested)
   {
+    // request new master pairing
     newMaster.pairingRequested = TRUE;
     Misc_restartTimeout(&newMaster.pairingTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
     String_clear(newMaster.name);
+
+    // disconnect current master
+    SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    {
+      clientNode = LIST_FIND(&clientList,
+                             clientNode
+                                clientInfo->serverIO.type == SERVER_IO_NETWORK)
+                             && String_equals(clientInfo->serverIO.network.name,globalOptions.masterInfo.name)
+                            )
+fprintf(stderr,"%s, %d: globalOptions.masterInfo.name=%s\n",__FILE__,__LINE__,String_cString(globalOptions.masterInfo.name));
+      if (clientNode != NULL)
+      {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        clientNode = List_remove(&clientList,disconnectClientNode);
+        deleteClient(disconnectClientNode);
+      }
+    }
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
@@ -4992,6 +5010,7 @@ LOCAL void serverCommand_masterWait(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(argumentMap);
 
   // wait for new master
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   startPairingMaster();
   while (   String_isEmpty(newMaster.name)
          && !Misc_isTimeout(&newMaster.pairingTimeoutInfo)
@@ -5036,6 +5055,7 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   // set new master
   if (!setHash(&globalOptions.masterInfo.passwordHash,&newMaster.passwordHash))
   {
@@ -17565,7 +17585,7 @@ Errors Server_run(ServerModes       mode,
   pauseFlags.restore             = FALSE;
   pauseFlags.indexUpdate         = FALSE;
   pauseEndDateTime               = 0LL;
-  newMaster.pairingRequested         = FALSE;
+  newMaster.pairingRequested     = FALSE;
   Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
   newMaster.name                 = String_new();
   Crypt_initHash(&newMaster.passwordHash,PASSWORD_HASH_ALGORITHM);

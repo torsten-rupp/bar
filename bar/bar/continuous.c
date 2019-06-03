@@ -1754,36 +1754,18 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                            ConstString    name
                           )
 {
-  Errors error;
-
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
   assert(!String_isEmpty(name));
 
-//  BLOCK_DOX(error,
-//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
-//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//  {
-    return addEntry(databaseHandle,String_cString(jobUUID),String_cString(scheduleUUID),name);
-//  });
-
-//  return error;
+  return addEntry(databaseHandle,String_cString(jobUUID),String_cString(scheduleUUID),name);
 }
 
 Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
                               DatabaseId     databaseId
                              )
 {
-  Errors error;
-
-//  BLOCK_DOX(error,
-//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
-//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//  {
-    return removeEntry(databaseHandle,databaseId);
-//  });
-
-//  return error;
+  return removeEntry(databaseHandle,databaseId);
 }
 
 bool Continuous_getEntry(DatabaseHandle *databaseHandle,
@@ -1859,30 +1841,21 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                                  ConstString    scheduleUUID
                                 )
 {
-  bool result;
-
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
-//  BLOCK_DOX(result,
-//            Database_lock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle->timeout),
-//            Database_unlock(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//  {
-    return Database_exists(databaseHandle,
-                           "names",
-                           "id",
-                           "WHERE     DATETIME('now','-%u seconds')>=dateTime \
-                                  AND jobUUID=%'S \
-                                  AND scheduleUUID=%'S \
-                                  AND storedFlag=0 \
-                           ",
-                           globalOptions.continuousMinTimeDelta,
-                           jobUUID,
-                           scheduleUUID
-                          );
-//  });
-
-//  return result;
+  return Database_exists(databaseHandle,
+                         "names",
+                         "id",
+                         "WHERE     DATETIME('now','-%u seconds')>=dateTime \
+                                AND jobUUID=%'S \
+                                AND scheduleUUID=%'S \
+                                AND storedFlag=0 \
+                         ",
+                         globalOptions.continuousMinTimeDelta,
+                         jobUUID,
+                         scheduleUUID
+                        );
 }
 
 Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,

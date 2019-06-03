@@ -699,6 +699,13 @@ SOCKET_TYPE_PLAIN,
   // set connected
   serverIO->isConnected = TRUE;
 
+  #ifndef NDEBUG
+    if (globalOptions.serverDebugLevel >= 1)
+    {
+      fprintf(stderr,"DEBUG: connected to %s:%d\n",String_cString(hostName),hostPort);
+    }
+  #endif /* not DEBUG */
+
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(serverIO,ServerIO);
   #else /* NDEBUG */
@@ -713,8 +720,8 @@ SOCKET_TYPE_PLAIN,
                                 const ServerSocketHandle *serverSocketHandle
                                )
 #else /* not NDEBUG */
-  Errors __ServerIO_acceptNetwork(const char *__fileName__,
-                                  ulong      __lineNb__,
+  Errors __ServerIO_acceptNetwork(const char               *__fileName__,
+                                  ulong                    __lineNb__,
                                   ServerIO                 *serverIO,
                                   const ServerSocketHandle *serverSocketHandle
                                  )
@@ -899,6 +906,17 @@ SOCKET_TYPE_PLAIN,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
   #endif /* NDEBUG */
 
+//TODO
+#if 0
+  // signal disconnect to wait result
+  SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,10*MS_PER_SECOND)
+  {
+    serverIO->isConnected = FALSE;
+    Semaphore_signalModified(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+  }
+#endif
+
+  // disconnect
   switch (serverIO->type)
   {
     case SERVER_IO_TYPE_NONE:
@@ -916,8 +934,8 @@ SOCKET_TYPE_PLAIN,
         break;
     #endif /* NDEBUG */
   }
-  serverIO->isConnected = FALSE;
 
+  // free resources
   doneIO(serverIO);
 }
 
@@ -1542,10 +1560,6 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   assert(id != NULL);
   assert(format != NULL);
 
-  #ifdef NDEBUG
-    UNUSED_VARIABLE(debugLevel);
-  #endif /* not DEBUG */
-
   // init variables
   s = String_new();
 
@@ -1572,6 +1586,8 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
     {
       fprintf(stderr,"DEBUG: sent command %s\n",String_cString(s));
     }
+  #else
+    UNUSED_VARIABLE(debugLevel);
   #endif /* not DEBUG */
 
   // free resources
@@ -1766,7 +1782,8 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
         }
       }
     }
-    while (   (resultNode == NULL)
+    while (   serverIO->isConnected
+           && (resultNode == NULL)
            && !Misc_isTimeout(&timeoutInfo)
           );
   }

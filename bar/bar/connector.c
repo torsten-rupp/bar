@@ -42,7 +42,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define _CONNECTOR_DEBUG
+#define CONNECTOR_DEBUG
 
 /***************************** Constants *******************************/
 #define SLEEP_TIME_STATUS_UPDATE    2000  // [ms]
@@ -112,7 +112,6 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
                                   hostName,
                                   (hostPort != 0) ? hostPort : DEFAULT_SERVER_PORT
                                  );
-//fprintf(stderr,"%s, %d: Network_getSocket(&connectorInfo->io.network.socketHandle)=%d\n",__FILE__,__LINE__,Network_getSocket(&connectorInfo->io.network.socketHandle));
   if (error != ERROR_NONE)
   {
     return error;
@@ -2784,6 +2783,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
         )
   {
     // wait for disconnect, command, or result
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     pollfds[0].fd     = Network_getSocket(&connectorInfo->io.network.socketHandle);
     pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
     pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
@@ -2806,7 +2806,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
             // find command
             #ifdef CONNECTOR_DEBUG
 //TODO: enable
-//              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
+              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
             #endif
             if (!findConnectorCommand(name,&connectorCommandFunction))
             {
