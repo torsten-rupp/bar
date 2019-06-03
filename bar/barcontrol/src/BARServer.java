@@ -2343,7 +2343,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                              valueMap
                             );
     masterName = valueMap.getString("name");
-Dprintf.dprintf("masterName=%s",masterName);
 
     return masterName;
   }

@@ -191,7 +191,7 @@ public class ProgressBar extends Canvas
 
   /** set progress value
    * @param format format string
-   * @param n value [minimum..maximum]
+   * @param newValue new value
    */
   public void setSelection(String format, double n)
   {
@@ -206,7 +206,7 @@ public class ProgressBar extends Canvas
                                          ),
                                  1.0
                                 );
-      String newText  = String.format(format,newValue*100.0);
+      String newText = String.format(format,n);
 
       if (isRedrawRequired(newValue,newText))
       {
@@ -228,7 +228,33 @@ public class ProgressBar extends Canvas
    */
   public void setSelection(double n)
   {
-    setSelection("%.1f%%",n);
+    GC gc;
+
+    if (!isDisposed())
+    {
+      double newValue = Math.min(Math.max(((maximum-minimum) > 0.0)
+                                            ? (n-minimum)/(maximum-minimum)
+                                            : 0.0,
+                                          0.0
+                                         ),
+                                 1.0
+                                );
+      String newText = String.format("%.1f%%",newValue*100.0);
+
+      if (isRedrawRequired(newValue,newText))
+      {
+        value    = newValue;
+        subValue = 0.0;
+        text     = newText;
+
+        gc = new GC(this);
+        textSize = gc.stringExtent(text);
+        gc.dispose();
+
+        redraw();
+      }
+    }
+
   }
 
   /** get progress sub-value

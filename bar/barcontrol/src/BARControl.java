@@ -3614,27 +3614,76 @@ assert jobData != null;
 
     final Shell dialog = Dialogs.openModal(new Shell(),BARControl.tr("Pair new master"),250,SWT.DEFAULT);
 
+    final BackgroundRunnable pairMasterRunnable[] = {null};
+
     final ProgressBar widgetProgressBar;
-    composite = new Composite(dialog,SWT.NONE);
+    final Label       widgetMasterName;
+    final Button      widgetRestartButton;
+    final Button      widgetOKButton;
+
+    composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
     composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
     {
-      label = new Label(composite,SWT.LEFT);
+      label = Widgets.newLabel(composite);
       label.setText(BARControl.tr("Wait for pairing")+":");
       label.setLayoutData(new TableLayoutData(0,0,TableLayoutData.W));
 
       widgetProgressBar = new ProgressBar(composite);
-      widgetProgressBar.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE,0,0,4));
+      widgetProgressBar.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
+
+      label = Widgets.newLabel(composite);
+      label.setText(BARControl.tr("Master")+":");
+      label.setLayoutData(new TableLayoutData(1,0,TableLayoutData.W));
+
+      widgetMasterName = Widgets.newView(composite);
+      widgetMasterName.setLayoutData(new TableLayoutData(1,1,TableLayoutData.WE));
     }
 
     // buttons
-    composite = new Composite(dialog,SWT.NONE);
+    composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(0.0,1.0));
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE));
     {
+      widgetOKButton = Widgets.newButton(composite);
+      widgetOKButton.setText(BARControl.tr("OK"));
+      widgetOKButton.setEnabled(false);
+      Widgets.layout(widgetOKButton,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      widgetOKButton.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          Dialogs.close(dialog,true);
+        }
+      });
+
+      widgetRestartButton = Widgets.newButton(composite);
+      widgetRestartButton.setText(BARControl.tr("Restart"));
+      widgetRestartButton.setEnabled(false);
+      Widgets.layout(widgetRestartButton,0,1,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT);
+      widgetRestartButton.addSelectionListener(new SelectionListener()
+      {
+        @Override
+        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        {
+        }
+        @Override
+        public void widgetSelected(SelectionEvent selectionEvent)
+        {
+          widgetOKButton.setEnabled(false);
+          widgetRestartButton.setEnabled(false);
+          Background.run(pairMasterRunnable[0]);
+        }
+      });
+
       button = Widgets.newButton(composite);
       button.setText(BARControl.tr("Cancel"));
-      Widgets.layout(button,0,0,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,2,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -3644,7 +3693,6 @@ assert jobData != null;
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          Button widget = (Button)selectionEvent.widget;
           Dialogs.close(dialog,false);
         }
       });
@@ -3653,12 +3701,13 @@ assert jobData != null;
     // install handlers
 
     // set new master
-    Background.run(new BackgroundRunnable(dialog,widgetProgressBar)
+    pairMasterRunnable[0] = new BackgroundRunnable(dialog,widgetProgressBar)
     {
       public void run(final Shell dialog, final ProgressBar widgetProgressBar)
       {
         try
         {
+Dprintf.dprintf("starafsf");
           BARServer.executeCommand(StringParser.format("MASTER_WAIT"),
                                    1,  // debugLevel
                                    new Command.ResultHandler()
@@ -3687,24 +3736,22 @@ assert jobData != null;
                                      {
                                        data.masterName = valueMap.getString("name");
 
-                                       // close dialog
+                                       // enable/disable OK button
                                        display.syncExec(new Runnable()
                                        {
                                          public void run()
                                          {
-                                           Dialogs.close(dialog,true);
+                                           widgetMasterName.setText(data.masterName);
+
+                                           if (!widgetOKButton.isDisposed() && !data.masterName.isEmpty())
+                                           {
+                                             widgetOKButton.setEnabled(true);
+                                           }
                                          }
                                        });
                                      }
                                    }
                                   );
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              Dialogs.close(dialog,false);
-            }
-          });
         }
         catch (final BARException exception)
         {
@@ -3718,8 +3765,21 @@ assert jobData != null;
           });
           return;
         }
+
+        // enable/disable restart button
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            if (!widgetRestartButton.isDisposed())
+            {
+              widgetRestartButton.setEnabled(true);
+            }
+          }
+        });
       }
-    });
+    };
+    Background.run(pairMasterRunnable[0]);
 
     // run dialog
     Boolean result = (Boolean)Dialogs.run(dialog);
@@ -3729,16 +3789,8 @@ assert jobData != null;
       {
         try
         {
-          if (Dialogs.confirm(shell,"Confirm master pairing",BARControl.tr("Pair master ''{0}''?",data.masterName)))
-          {
-            BARServer.setMaster();
-            result = true;
-          }
-          else
-          {
-            BARServer.clearMaster();
-            result = false;
-          }
+          BARServer.setMaster();
+          result = true;
         }
         catch (final BARException exception)
         {

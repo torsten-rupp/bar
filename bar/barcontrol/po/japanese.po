@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-01 13:05+0200\n"
+"POT-Creation-Date: 2019-06-02 08:03+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -185,8 +185,8 @@ msgstr "接続ミス"
 #: src/BARControl.java:2416 src/BARControl.java:2420 src/BARControl.java:3027
 #: src/BARControl.java:3035 src/BARControl.java:3066 src/BARControl.java:3074
 #: src/BARControl.java:3505 src/BARControl.java:3579 src/BARControl.java:3583
-#: src/BARControl.java:4919 src/BARControl.java:4931 src/BARControl.java:4953
-#: src/BARControl.java:4972
+#: src/BARControl.java:4971 src/BARControl.java:4983 src/BARControl.java:5005
+#: src/BARControl.java:5024
 #, fuzzy
 msgid "Connection fail"
 msgstr "接続ミス"
@@ -254,12 +254,13 @@ msgstr ""
 msgid "Server settings"
 msgstr ""
 
-#: src/BARControl.java:2658 src/BARControl.java:2700 src/BARControl.java:3803
+#: src/BARControl.java:2658 src/BARControl.java:2700 src/BARControl.java:3855
 #, fuzzy
 msgid "Pair master"
 msgstr "タスク''{0}''をスタートしますか？"
 
-#: src/BARControl.java:2695 src/BARControl.java:3798 src/BARServer.java:1466
+#: src/BARControl.java:2695 src/BARControl.java:3636 src/BARControl.java:3850
+#: src/BARServer.java:1466
 msgid "Master"
 msgstr ""
 
@@ -302,21 +303,21 @@ msgid "Connection lost"
 msgstr "接続ミス"
 
 #: src/BARControl.java:3006 src/BARControl.java:3027 src/BARControl.java:3035
-#: src/BARControl.java:3066 src/BARControl.java:3074 src/BARControl.java:4919
-#: src/BARControl.java:4953 src/BARControl.java:4972
+#: src/BARControl.java:3066 src/BARControl.java:3074 src/BARControl.java:4971
+#: src/BARControl.java:5005 src/BARControl.java:5024
 msgid "Error: "
 msgstr "エラー："
 
 #: src/BARControl.java:3006 src/BARControl.java:3027 src/BARControl.java:3035
-#: src/BARControl.java:3066 src/BARControl.java:3074 src/BARControl.java:4919
-#: src/BARControl.java:4953 src/BARControl.java:4972
+#: src/BARControl.java:3066 src/BARControl.java:3074 src/BARControl.java:4971
+#: src/BARControl.java:5005 src/BARControl.java:5024
 msgid "Try again"
 msgstr "再試行"
 
 #: src/BARControl.java:3006 src/BARControl.java:3027 src/BARControl.java:3035
 #: src/BARControl.java:3066 src/BARControl.java:3074 src/BARControl.java:3347
-#: src/BARControl.java:3505 src/BARControl.java:3636 src/BARControl.java:4919
-#: src/BARControl.java:4931 src/BARControl.java:4953 src/BARControl.java:4972
+#: src/BARControl.java:3505 src/BARControl.java:3685 src/BARControl.java:4971
+#: src/BARControl.java:4983 src/BARControl.java:5005 src/BARControl.java:5024
 #: src/Dialogs.java:2265 src/Dialogs.java:2364 src/Dialogs.java:3470
 #: src/Dialogs.java:3486 src/Dialogs.java:3683 src/Dialogs.java:3948
 #: src/Dialogs.java:4576 src/Dialogs.java:5581 src/Dialogs.java:5772
@@ -344,7 +345,7 @@ msgstr "サーバ"
 msgid "SSL"
 msgstr ""
 
-#: src/BARControl.java:3276 src/BARControl.java:4713 src/BARControl.java:4737
+#: src/BARControl.java:3276 src/BARControl.java:4765 src/BARControl.java:4789
 #: src/BARServer.java:1334 src/BARServer.java:1361 src/Dialogs.java:3554
 #: src/Dialogs.java:3807 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6516 src/TabJobs.java:6872
@@ -357,11 +358,11 @@ msgstr "パスワード"
 msgid "Login"
 msgstr "ログイン"
 
-#: src/BARControl.java:3505 src/BARControl.java:4931
+#: src/BARControl.java:3505 src/BARControl.java:4983
 msgid "Connection fail. Try to connect without TLS/SSL?"
 msgstr ""
 
-#: src/BARControl.java:3505 src/BARControl.java:4931
+#: src/BARControl.java:3505 src/BARControl.java:4983
 msgid "Try without TLS/SSL"
 msgstr ""
 
@@ -369,11 +370,22 @@ msgstr ""
 msgid "Pair new master"
 msgstr ""
 
-#: src/BARControl.java:3623
+#: src/BARControl.java:3629
 msgid "Wait for pairing"
 msgstr ""
 
-#: src/BARControl.java:3716 src/BARControl.java:3750
+#: src/BARControl.java:3649 src/Dialogs.java:3470 src/Dialogs.java:3486
+#: src/Dialogs.java:3683 src/Dialogs.java:3948 src/Dialogs.java:5581
+#: src/Dialogs.java:6126 src/TabStatus.java:2915
+msgid "OK"
+msgstr "OK"
+
+#: src/BARControl.java:3666
+#, fuzzy
+msgid "Restart"
+msgstr "復元"
+
+#: src/BARControl.java:3763 src/BARControl.java:3802
 #, fuzzy
 msgid ""
 "Cannot set new master:\n"
@@ -382,12 +394,7 @@ msgstr ""
 "サーバ上のパスワードを消去できません:\n"
 "\n"
 
-#: src/BARControl.java:3732
-#, fuzzy, java-format
-msgid "Pair master ''{0}''?"
-msgstr "タスク''{0}''をスタートしますか？"
-
-#: src/BARControl.java:3785
+#: src/BARControl.java:3837
 #, fuzzy
 msgid ""
 "Cannot clear master:\n"
@@ -396,12 +403,12 @@ msgstr ""
 "サーバ上のパスワードを消去できません:\n"
 "\n"
 
-#: src/BARControl.java:4711 src/BARServer.java:1332
+#: src/BARControl.java:4763 src/BARServer.java:1332
 #, fuzzy, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/BARControl.java:4712 src/Dialogs.java:3542 src/Dialogs.java:3798
+#: src/BARControl.java:4764 src/Dialogs.java:3542 src/Dialogs.java:3798
 #: src/Dialogs.java:4479 src/Dialogs.java:4539 src/ServerSettings.java:608
 #: src/ServerSettings.java:2441 src/TabJobs.java:2314 src/TabJobs.java:4077
 #: src/TabJobs.java:9587 src/TabJobs.java:9729 src/TabJobs.java:11820
@@ -411,12 +418,12 @@ msgstr "次の項目のFTPログインパスワードを入力してください
 msgid "Name"
 msgstr "名前"
 
-#: src/BARControl.java:4736 src/BARServer.java:1360
+#: src/BARControl.java:4788 src/BARServer.java:1360
 #, fuzzy, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
 
-#: src/BARControl.java:4763
+#: src/BARControl.java:4815
 #, fuzzy, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""
@@ -1515,12 +1522,6 @@ msgstr "はい"
 #: src/Dialogs.java:2381 src/Dialogs.java:2412
 msgid "No"
 msgstr "いいえ"
-
-#: src/Dialogs.java:3470 src/Dialogs.java:3486 src/Dialogs.java:3683
-#: src/Dialogs.java:3948 src/Dialogs.java:5581 src/Dialogs.java:6126
-#: src/TabStatus.java:2915
-msgid "OK"
-msgstr "OK"
 
 #: src/Dialogs.java:4403
 msgid "Path"
@@ -5563,6 +5564,10 @@ msgstr "現存エントリの上書き"
 #, fuzzy
 msgid "differental"
 msgstr "差分"
+
+#, fuzzy
+#~ msgid "Pair master ''{0}''?"
+#~ msgstr "タスク''{0}''をスタートしますか？"
 
 #, fuzzy
 #~ msgid "StartX"
