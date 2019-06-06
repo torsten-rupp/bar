@@ -1567,6 +1567,28 @@ LOCAL String getIncrementalFileNameFromJobUUID(String fileName, ConstString jobU
 
 LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 {
+  /***********************************************************************\
+  * Name   : freeHardlinkInfo
+  * Purpose: free hardlink info
+  * Input  : data     - data
+  *          length   - data length
+  *          userData - user data (not used)
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeHardlinkInfo(const void *data, ulong length, void *userData);
+  void freeHardlinkInfo(const void *data, ulong length, void *userData)
+  {
+    HardLinkInfo *hardLinkInfo = (HardLinkInfo*)data;
+
+    UNUSED_VARIABLE(length);
+    UNUSED_VARIABLE(userData);
+
+    StringList_done(&hardLinkInfo->nameList);
+  }
+
   Dictionary     duplicateNamesDictionary;
   String         name;
   Dictionary     hardLinksDictionary;
@@ -1584,7 +1606,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     HALT_INSUFFICIENT_MEMORY();
   }
   name = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK_NULL,CALLBACK_NULL))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK(freeHardlinkInfo,NULL),CALLBACK_NULL))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -2389,6 +2411,28 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
 
 LOCAL void collectorThreadCode(CreateInfo *createInfo)
 {
+  /***********************************************************************\
+  * Name   : freeHardlinkInfo
+  * Purpose: free hardlink info
+  * Input  : data     - data
+  *          length   - data length
+  *          userData - user data (not used)
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeHardlinkInfo(const void *data, ulong length, void *userData);
+  void freeHardlinkInfo(const void *data, ulong length, void *userData)
+  {
+    HardLinkInfo *hardLinkInfo = (HardLinkInfo*)data;
+
+    UNUSED_VARIABLE(length);
+    UNUSED_VARIABLE(userData);
+
+    StringList_done(&hardLinkInfo->nameList);
+  }
+
   AutoFreeList       autoFreeList;
   Dictionary         duplicateNamesDictionary;
   String             name;
@@ -2412,7 +2456,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     HALT_INSUFFICIENT_MEMORY();
   }
   name = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK_NULL,CALLBACK_NULL))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK(freeHardlinkInfo,NULL),CALLBACK_NULL))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
