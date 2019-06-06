@@ -5979,6 +5979,7 @@ asm("int3");
   archiveHandle->cryptPasswordReadFlag   = FALSE;
   archiveHandle->encryptedKeyData        = NULL;
   archiveHandle->encryptedKeyDataLength  = 0;
+  archiveHandle->signatureKeyData        = NULL;
   archiveHandle->signatureKeyDataLength  = 0;
 
   archiveHandle->mode                    = ARCHIVE_MODE_READ;
