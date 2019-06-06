@@ -1094,6 +1094,13 @@ void Dictionary_remove(Dictionary *dictionary,
       assert(dictionaryEntryTable->entries != NULL);
       assert(dictionaryEntryTable->entryCount > 0);
 
+      if (dictionary->dictionaryFreeFunction != NULL)
+      {
+        dictionary->dictionaryFreeFunction(dictionaryEntryTable->entries[entryIndex].data,
+                                           dictionaryEntryTable->entries[entryIndex].length,
+                                           dictionary->dictionaryFreeUserData
+                                          );
+      }
       if (dictionaryEntryTable->entries[entryIndex].allocatedFlag)
       {
         assert(dictionaryEntryTable->entries[entryIndex].data != NULL);
