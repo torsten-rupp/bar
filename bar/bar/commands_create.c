@@ -2756,6 +2756,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
   {
     StringList          nameList;
     String              basePath;
+    String              fileName;
     EntryNode           *includeEntryNode;
     StringTokenizer     fileNameTokenizer;
     ConstString         token;
@@ -2764,6 +2765,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     // initialize variables
     StringList_init(&nameList);
     basePath = String_new();
+    fileName = String_new();
     AUTOFREE_ADD(&autoFreeList,&nameList,{ StringList_done(&nameList); });
     AUTOFREE_ADD(&autoFreeList,basePath,{ String_delete(basePath); });
 
@@ -2774,7 +2776,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
            && (includeEntryNode != NULL)
           )
     {
-      ulong  n;
+      ulong n;
 
       // pause
       pauseCreate(createInfo);
@@ -2935,7 +2937,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                          && !File_endOfDirectoryList(&directoryListHandle)
                         )
                   {
-String fileName = String_new();
                     // pause
                     pauseCreate(createInfo);
 
@@ -3518,6 +3519,7 @@ String fileName = String_new();
     }
 
     // free resoures
+    String_delete(fileName);
     String_delete(basePath);
     StringList_done(&nameList);
   }
