@@ -1,0 +1,6 @@
+test/archives
+*.bar
+*.db
+*-shm
+*-wal
+bar-log-*
