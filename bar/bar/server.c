@@ -355,6 +355,8 @@ LOCAL bool                  quitFlag;                    // TRUE iff quit reques
 
 /***************************** Forwards ********************************/
 
+LOCAL void deleteClient(ClientNode *clientNode);
+
 /***************************** Functions *******************************/
 
 #ifdef __cplusplus
@@ -782,6 +784,8 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
 LOCAL void startPairingMaster(void)
 {
+  ClientNode *clientNode;
+
   if (!newMaster.pairingRequested)
   {
     // request new master pairing
@@ -793,16 +797,16 @@ LOCAL void startPairingMaster(void)
     SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       clientNode = LIST_FIND(&clientList,
-                             clientNode
-                                clientInfo->serverIO.type == SERVER_IO_NETWORK)
-                             && String_equals(clientInfo->serverIO.network.name,globalOptions.masterInfo.name)
-                            )
+                             clientNode,
+                                (clientNode->clientInfo.io.type == SERVER_IO_TYPE_NETWORK)
+                             && String_equals(clientNode->clientInfo.io.network.name,globalOptions.masterInfo.name)
+                            );
 fprintf(stderr,"%s, %d: globalOptions.masterInfo.name=%s\n",__FILE__,__LINE__,String_cString(globalOptions.masterInfo.name));
       if (clientNode != NULL)
       {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-        clientNode = List_remove(&clientList,disconnectClientNode);
-        deleteClient(disconnectClientNode);
+        List_remove(&clientList,clientNode);
+        deleteClient(clientNode);
       }
     }
 
