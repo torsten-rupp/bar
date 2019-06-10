@@ -78,6 +78,10 @@
 #define DEFAULT_VERBOSE_LEVEL_INTERACTIVE         1
 #define DEFAULT_SERVER_DEBUG_LEVEL                0
 
+#define MOUNT_COMMAND                             "mount -p 0 %directory"
+#define MOUNT_DEVICE_COMMAND                      "mount -p 0 %device %directory"
+#define UNMOUNT_COMMAND                           "umount %directory"
+
 #define CD_UNLOAD_VOLUME_COMMAND                  "eject %device"
 #define CD_LOAD_VOLUME_COMMAND                    "eject -t %device"
 #define CD_IMAGE_COMMAND                          "nice mkisofs -V Backup -volset %number -r -o %image %directory"
@@ -687,6 +691,10 @@ typedef struct
   String                      excludeCommand;                 // exclude entries command
 
   MountList                   mountList;                      // mount list
+  String                      mountCommand;                   // mount command
+  String                      mountDeviceCommand;             // mount device command
+  String                      unmountCommand;                 // unmount command
+
   PatternList                 compressExcludePatternList;     // excluded compression patterns
 
   DeltaSourceList             deltaSourceList;                // delta sources
