@@ -970,6 +970,7 @@ String File_getAbsoluteFileNameCString(String absoluteFileName, const char *file
   #if   defined(PLATFORM_LINUX)
     char *buffer;
   #elif defined(PLATFORM_WINDOWS)
+    char *buffer;
   #endif /* PLATFORM_... */
 
   assert(absoluteFileName != NULL);
