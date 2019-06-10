@@ -1511,7 +1511,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
 
     // expand command line
     Misc_expandMacros(commandLine,commandTemplate,EXPAND_MACRO_MODE_STRING,macros,macroCount,TRUE);
-//    printInfo(3,"Execute command '%s'...",String_cString(commandLine));
+//fprintf(stderr,"%s, %d: execute command: %s\n",__FILE__,__LINE__,String_cString(commandLine));
 
     // parse command line
     String_initTokenizer(&stringTokenizer,commandLine,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,FALSE);
