@@ -1315,6 +1315,7 @@ LOCAL void jobThreadCode(void)
   PatternList_init(&excludePatternList);
   scheduleCustomText = String_new();
   byName             = String_new();
+  connectorInfo      = NULL;
   initAggregateInfo(&jobAggregateInfo);
   initAggregateInfo(&scheduleAggregateInfo);
   resultMap          = StringMap_new();
