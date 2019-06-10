@@ -450,7 +450,11 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("exclude",                           '!',0,3,&excludePatternList,                             0,cmdOptionParsePattern,NULL,1,                                "exclude pattern","pattern"                                                ),
   CMD_OPTION_STRING       ("exclude-list",                      0,  1,3,globalOptions.excludeListFileName,               0,                                                             "exclude pattern list file name","file name"                               ),
   CMD_OPTION_STRING       ("exclude-command",                   0,  1,3,globalOptions.excludeCommand,                    0,                                                             "exclude pattern command","command"                                        ),
-  CMD_OPTION_SPECIAL      ("mount",                             0  ,1,3,&globalOptions.mountList,                        0,cmdOptionParseMount,NULL,1,                                  "mount device","name"                                                      ),
+
+  CMD_OPTION_SPECIAL      ("mount",                             0  ,1,3,&globalOptions.mountList,                        0,cmdOptionParseMount,NULL,1,                                  "mount device","name[,[device][,yes]"                                      ),
+  CMD_OPTION_STRING       ("mount-command",                     0,  1,3,globalOptions.mountCommand,                      0,                                                             "mount command","command"                                                  ),
+  CMD_OPTION_STRING       ("mount-device-command",              0,  1,3,globalOptions.mountDeviceCommand,                0,                                                             "mount device command","command"                                           ),
+  CMD_OPTION_STRING       ("unmount-command",                   0,  1,3,globalOptions.unmountCommand,                    0,                                                             "unmount command","command"                                                ),
 
   CMD_OPTION_SPECIAL      ("delta-source",                      0,  0,3,&globalOptions.deltaSourceList,                  0,cmdOptionParseDeltaSource,NULL,1,                            "source pattern","pattern"                                                 ),
 
@@ -466,6 +470,10 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("destination",                       0,  0,2,globalOptions.destination,                       0,                                                             "destination to restore entries","path"                                    ),
   CMD_OPTION_SPECIAL      ("owner",                             0,  0,2,&globalOptions.owner,                            0,cmdOptionParseOwner,NULL,1,                                  "user and group of restored files","user:group"                            ),
   CMD_OPTION_SPECIAL      ("permissions",                       0,  0,2,&globalOptions.permissions,                      0,cmdOptionParsePermissions,NULL,1,                            "permissions of restored files","<owner>:<group>:<world>|<number>"         ),
+
+  CMD_OPTION_STRING       ("comment",                           0,  1,1,globalOptions.comment,                           GLOBAL_OPTION_SET_COMMENT,                                        "comment","text"                                                           ),
+
+  CMD_OPTION_CSTRING      ("directory",                         'C',1,0,changeToDirectory,                               0,                                                             "change to directory","path"                                               ),
 
   CMD_OPTION_SPECIAL      ("compress-algorithm",                'z',0,2,&globalOptions.compressAlgorithms,               GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS,cmdOptionParseCompressAlgorithms,NULL,1,"select compress algorithms to use\n"
                                                                                                                                                                                            "  none         : no compression (default)\n"
@@ -521,10 +529,6 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
                                                                                                                                                                                            #endif
                                                                                                                                                                                            ,
                                                                                                                                                                                            "algorithm"                                                                ),
-  CMD_OPTION_STRING       ("comment",                           0,  1,1,globalOptions.comment,                           GLOBAL_OPTION_SET_COMMENT,                                        "comment","text"                                                           ),
-
-  CMD_OPTION_CSTRING      ("directory",                         'C',1,0,changeToDirectory,                               0,                                                             "change to directory","path"                                               ),
-
   CMD_OPTION_SELECT       ("crypt-type",                        0,  0,2,globalOptions.cryptType,                         0,COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",                    0,  0,2,&globalOptions.cryptPassword,                    0,cmdOptionParsePassword,NULL,1,                               "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-new-password",                0,  0,2,&globalOptions.cryptNewPassword,                 0,cmdOptionParsePassword,NULL,1,                               "new crypt password (use with care!)","password"                           ),
@@ -921,7 +925,11 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("exclude",                          &excludePatternList,-1,                                        configValueParsePattern,NULL,NULL,NULL,&globalOptions.patternType),
   CONFIG_VALUE_STRING            ("exclude-list",                     &globalOptions.excludeListFileName,-1                          ),
   CONFIG_VALUE_STRING            ("exclude-command",                  &globalOptions.excludeCommand,-1                               ),
+
   CONFIG_VALUE_SPECIAL           ("mount",                            &globalOptions.mountList,-1,                                   configValueParseMount,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_STRING            ("mount-command",                    &globalOptions.mountCommand,-1                                 ),
+  CONFIG_VALUE_STRING            ("mount-device-command",             &globalOptions.mountDeviceCommand,-1                           ),
+  CONFIG_VALUE_STRING            ("unmount-command",                  &globalOptions.unmountCommand,-1                               ),
 
   CONFIG_VALUE_STRING            ("comment",                          &globalOptions.comment,-1                                      ),
 
@@ -2348,6 +2356,7 @@ LOCAL bool cmdOptionParsePattern(void *userData, void *variable, const char *nam
 LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   String    mountName;
+  String    deviceName;
   bool      alwaysUnmount;
   MountNode *mountNode;
 
@@ -2362,11 +2371,21 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
 
   // init variables
   mountName     = String_new();
+  deviceName    = String_new();
   alwaysUnmount = FALSE;
 
   // get name, alwaysUnmount
-  if      (String_parseCString(value,"%S,%y",NULL,mountName,&alwaysUnmount))
+  if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,&alwaysUnmount))
   {
+    alwaysUnmount = FALSE;
+  }
+  if      (String_parseCString(value,"%S,,%y",NULL,mountName,&alwaysUnmount))
+  {
+    alwaysUnmount = FALSE;
+  }
+  else if (String_parseCString(value,"%S,%S",NULL,mountName,deviceName))
+  {
+    alwaysUnmount = FALSE;
   }
   else if (String_parseCString(value,"%S",NULL,mountName))
   {
@@ -2382,7 +2401,7 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   {
     // add to mount list
     mountNode = newMountNode(mountName,
-                             NULL,  // deviceName
+                             deviceName,
                              alwaysUnmount
                             );
     assert(mountNode != NULL);
@@ -2390,6 +2409,7 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   }
 
   // free resources
+  String_delete(deviceName);
   String_delete(mountName);
 
   return TRUE;
@@ -3695,6 +3715,10 @@ LOCAL void initGlobalOptions(void)
   globalOptions.excludeCommand                                  = String_new();
 
   List_init(&globalOptions.mountList);
+  globalOptions.mountCommand                                    = String_newCString(MOUNT_COMMAND);
+  globalOptions.mountDeviceCommand                              = String_newCString(MOUNT_DEVICE_COMMAND);
+  globalOptions.unmountCommand                                  = String_newCString(UNMOUNT_COMMAND);
+
   PatternList_init(&globalOptions.compressExcludePatternList);
   DeltaSourceList_init(&globalOptions.deltaSourceList);
 
@@ -3916,6 +3940,10 @@ LOCAL void doneGlobalOptions(void)
 
   DeltaSourceList_done(&globalOptions.deltaSourceList);
   PatternList_done(&globalOptions.compressExcludePatternList);
+
+  String_delete(globalOptions.unmountCommand);
+  String_delete(globalOptions.mountDeviceCommand);
+  String_delete(globalOptions.mountCommand);
   List_done(&globalOptions.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
 
   String_delete(globalOptions.excludeCommand);
@@ -6827,7 +6855,14 @@ Errors mountAll(const MountList *mountList)
   {
     if (!Device_isMounted(mountNode->name))
     {
-      error = Device_mount(mountNode->name);
+      if (!String_isEmpty(mountNode->device))
+      {
+        error = Device_mount(globalOptions.mountDeviceCommand,mountNode->name,mountNode->device);
+      }
+      else
+      {
+        error = Device_mount(globalOptions.mountCommand,mountNode->name,NULL);
+      }
       if (error == ERROR_NONE)
       {
         mountNode->mounted = TRUE;
@@ -6844,12 +6879,16 @@ Errors mountAll(const MountList *mountList)
         {
           assert(mountNode->mountCount > 0);
           mountNode->mountCount--;
-
-          if (mountNode->mounted && ((mountNode->mountCount == 0) || mountNode->alwaysUnmount))
+          if (mountNode->mountCount == 0)
           {
-            (void)Device_umount(mountNode->name);
-            mountNode->mounted    = FALSE;
-            mountNode->mountCount = 0;
+            if (Device_isMounted(mountNode->name))
+            {
+              if (mountNode->mounted || mountNode->alwaysUnmount)
+              {
+                (void)Device_umount(globalOptions.unmountCommand,mountNode->name);
+              }
+              mountNode->mounted = FALSE;
+            }
           }
         }
 
@@ -6857,6 +6896,8 @@ Errors mountAll(const MountList *mountList)
       }
     }
     mountNode->mountCount++;
+
+    assert(Device_isMounted(mountNode->name));
   }
 
   return ERROR_NONE;
@@ -6873,23 +6914,24 @@ Errors unmountAll(const MountList *mountList)
   {
     assert(mountNode->mountCount > 0);
     mountNode->mountCount--;
-
-    if (Device_isMounted(mountNode->name))
+    if (mountNode->mountCount == 0)
     {
-      if (mountNode->mounted && ((mountNode->mountCount == 0) || mountNode->alwaysUnmount))
+      if (Device_isMounted(mountNode->name))
       {
-        error = Device_umount(mountNode->name);
-        if (error == ERROR_NONE)
+        if (mountNode->mounted || mountNode->alwaysUnmount)
         {
-          mountNode->mounted    = FALSE;
-          mountNode->mountCount = 0;
-        }
-        else
-        {
-          printWarning("Cannot unmount '%s' (error: %s)",
-                       String_cString(mountNode->name),
-                       Error_getText(error)
-                      );
+          error = Device_umount(globalOptions.unmountCommand,mountNode->name);
+          if (error == ERROR_NONE)
+          {
+            mountNode->mounted = FALSE;
+          }
+          else
+          {
+            printWarning("Cannot unmount '%s' (error: %s)",
+                         String_cString(mountNode->name),
+                         Error_getText(error)
+                        );
+          }
         }
       }
     }
@@ -10152,31 +10194,15 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         switch (command)
         {
           case COMMAND_NONE:
-            if      (globalOptions.metaInfoFlag)
-            {
-              // default: show meta-info only
-              error = Command_list(&storageNameList,
-                                   &includeEntryList,
-                                   &excludePatternList,
-                                      globalOptions.longFormatFlag  // showContentFlag
-                                   || globalOptions.humanFormatFlag,
-                                   &jobOptions,
-                                   CALLBACK(getCryptPasswordFromConsole,NULL),
-                                   NULL  // logHandle
-                                  );
-            }
-            else
-            {
-              // default: list archives content
-              error = Command_list(&storageNameList,
-                                   &includeEntryList,
-                                   &excludePatternList,
-                                   TRUE,  // showContentFlag
-                                   &jobOptions,
-                                   CALLBACK(getCryptPasswordFromConsole,NULL),
-                                   NULL  // logHandle
-                                  );
-            }
+            // default: info/list content
+            error = Command_list(&storageNameList,
+                                 &includeEntryList,
+                                 &excludePatternList,
+                                 !globalOptions.metaInfoFlag,  // showContentFlag
+                                 &jobOptions,
+                                 CALLBACK(getCryptPasswordFromConsole,NULL),
+                                 NULL  // logHandle
+                                );
             break;
           case COMMAND_LIST:
             error = Command_list(&storageNameList,
