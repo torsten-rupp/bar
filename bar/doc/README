@@ -160,6 +160,10 @@ Cmnd_Alias BAR_CP=\
   /bin/cp -r -p test/data/* test/dev[01]
 Cmnd_Alias BAR_DIFF=\
   /usr/bin/diff -r test/dev0 test/dev1
+Cmnd_Alias BAR_MOUNT_TEST_DEV=\
+  /bin/mount -p 0 /dev/loop0 test/dev0
+Cmnd_Alias BAR_UMOUNT_TEST_DEV=\
+  /bin/umount test/dev
 
 ALL ALL=NOPASSWD:\
   BAR_LOSETUP,\
