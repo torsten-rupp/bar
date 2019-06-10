@@ -230,35 +230,43 @@ bool Device_getUsedBlocks(DeviceHandle *deviceHandle,
 /***********************************************************************\
 * Name   : Device_mount
 * Purpose: mount device
-* Input  : deviceName - device name
+* Input  : mountCommand   - mount command or NULL
+*          mountPointName - mount point name
+*          deviceName     - device name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Device_mount(ConstString deviceName);
+Errors Device_mount(ConstString mountCommand,
+                    ConstString mountPointName,
+                    ConstString deviceName
+                   );
 
 /***********************************************************************\
 * Name   : Device_umount
 * Purpose: unmount device
-* Input  : deviceName - device name
+* Input  : umountCommand  - umount command or NULL
+*          mountPointName - mount point name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Device_umount(ConstString deviceName);
+Errors Device_umount(ConstString umountCommand,
+                     ConstString mountPointName
+                    );
 
 /***********************************************************************\
 * Name   : Device_isMounted
 * Purpose: check if device is mounted
-* Input  : deviceName - device name
+* Input  : mountPointName - mount point name
 * Output : -
 * Return : TRUE iff device is currently mounted
 * Notes  : -
 \***********************************************************************/
 
-bool Device_isMounted(ConstString deviceName);
+bool Device_isMounted(ConstString mountPointName);
 
 /*---------------------------------------------------------------------*/
 

@@ -42,6 +42,7 @@
 #include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/files.h"
+#include "common/misc.h"
 
 #include "errors.h"
 
@@ -438,86 +439,93 @@ Errors Device_seek(DeviceHandle *deviceHandle,
   return ERROR_NONE;
 }
 
-Errors Device_mount(ConstString deviceName)
+Errors Device_mount(ConstString mountCommand,
+                    ConstString mountPointName,
+                    ConstString deviceName
+                   )
 {
-  String     command;
-  const char *arguments[5];
-  Errors     error;
+  const char *command;
+  TextMacro  textMacros[2];
 
-  assert(deviceName != NULL);
+  assert(mountPointName != NULL);
 
-  // init variables
-  command = String_new();
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",   deviceName,    NULL);
+  TEXT_MACRO_N_STRING (textMacros[1],"%directory",mountPointName,NULL);
 
-  // find mount command
-  if (!findCommandInPath(command,"mount"))
+  if      (mountCommand != NULL)
   {
-    String_delete(command);
-    return ERROR_MOUNT;
+    command = String_cString(mountCommand);
+  }
+  else if (!String_isEmpty(deviceName))
+  {
+    command = "/bin/mount -p 0 %device %directory";
+  }
+  else
+  {
+    command = "/bin/mount -p 0 %directory";
   }
 
-  // mount
-  arguments[0] = String_cString(command);
-  arguments[1] = "-p";
-  arguments[2] = "0";
-  arguments[3] = String_cString(deviceName);
-  arguments[4] = NULL;
-  error = execute(String_cString(command),arguments);
-
-  // free resources
-  String_delete(command);
-
-  return error;
+  return Misc_executeCommand(command,
+                             textMacros,SIZE_OF_ARRAY(textMacros),
+                             CALLBACK_NULL,
+                             CALLBACK_NULL
+                            );
 }
 
-Errors Device_umount(ConstString deviceName)
+Errors Device_umount(ConstString umountCommand,
+                     ConstString mountPointName
+                    )
 {
-  String     command;
-  const char *arguments[3];
-  Errors     error;
+  TextMacro textMacros[1];
 
-  assert(deviceName != NULL);
+  assert(mountPointName != NULL);
 
-  // init variables
-  command = String_new();
+  TEXT_MACRO_N_STRING (textMacros[0],"%directory",mountPointName,NULL);
 
-  // find mount command
-  if (!findCommandInPath(command,"umount"))
-  {
-    String_delete(command);
-    return ERROR_MOUNT;
-  }
-
-  // mount
-  arguments[0] = String_cString(command);
-  arguments[1] = String_cString(deviceName);
-  arguments[2] = NULL;
-  error = execute(String_cString(command),arguments);
-
-  // free resources
-  String_delete(command);
-
-  return error;
+  return Misc_executeCommand((umountCommand != NULL) ? String_cString(umountCommand) : "/bin/umount %directory",
+                             textMacros,SIZE_OF_ARRAY(textMacros),
+                             CALLBACK_NULL,
+                             CALLBACK_NULL
+                            );
 }
 
-bool Device_isMounted(ConstString deviceName)
+bool Device_isMounted(ConstString mountPointName)
 {
   bool          mounted;
+  String        absoluteName;
   FILE          *mtab;
   struct mntent mountEntry;
   char          buffer[4096];
+  #if   defined(PLATFORM_LINUX)
+    char *s;
+  #elif defined(PLATFORM_WINDOWS)
+    char *s;
+  #endif /* PLATFORM_... */
 
-  assert(deviceName != NULL);
+  assert(mountPointName != NULL);
 
   mounted = FALSE;
+
+  // get absolute name
+  #if   defined(PLATFORM_LINUX)
+    s = realpath(String_cString(mountPointName),NULL);
+    absoluteName = String_newCString(s);
+    free(s);
+  #elif defined(PLATFORM_WINDOWS)
+    s = _fullpath(NULL,String_cString(mountPointName),0);
+    absoluteName = String_newCString(s);
+    free(s);
+  #endif /* PLATFORM_... */
 
   mtab = setmntent("/etc/mtab","r");
   if (mtab != NULL)
   {
     while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
     {
-      if (   String_equalsCString(deviceName,mountEntry.mnt_fsname)
-          || String_equalsCString(deviceName,mountEntry.mnt_dir)
+      if (   String_equalsCString(mountPointName,mountEntry.mnt_fsname)
+          || String_equalsCString(mountPointName,mountEntry.mnt_dir)
+          || String_equalsCString(absoluteName,mountEntry.mnt_fsname)
+          || String_equalsCString(absoluteName,mountEntry.mnt_dir)
          )
       {
         mounted = TRUE;
@@ -526,6 +534,7 @@ bool Device_isMounted(ConstString deviceName)
     }
     endmntent(mtab);
   }
+  String_delete(absoluteName);
 
   return mounted;
 }
