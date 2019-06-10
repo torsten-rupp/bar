@@ -3338,20 +3338,23 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->maxStorageSize                  = globalOptions.maxStorageSize;
   jobOptions->volumeSize                      = globalOptions.volumeSize;
   jobOptions->comment                         = String_duplicate(globalOptions.comment);
+
   jobOptions->skipUnreadableFlag              = globalOptions.skipUnreadableFlag;
   jobOptions->forceDeltaCompressionFlag       = globalOptions.forceDeltaCompressionFlag;
   jobOptions->ignoreNoDumpAttributeFlag       = globalOptions.ignoreNoDumpAttributeFlag;
   jobOptions->archiveFileMode                 = globalOptions.archiveFileMode;
   jobOptions->restoreEntryMode                = globalOptions.restoreEntryMode;
   jobOptions->errorCorrectionCodesFlag        = globalOptions.errorCorrectionCodesFlag;
-  jobOptions->blankFlag                       = globalOptions.blankFlag;
   jobOptions->alwaysCreateImageFlag           = globalOptions.alwaysCreateImageFlag;
+  jobOptions->blankFlag                       = globalOptions.blankFlag;
   jobOptions->waitFirstVolumeFlag             = globalOptions.waitFirstVolumeFlag;
   jobOptions->rawImagesFlag                   = globalOptions.rawImagesFlag;
   jobOptions->noFragmentsCheckFlag            = globalOptions.noFragmentsCheckFlag;
 //TODO: job option or better global option only?
   jobOptions->noIndexDatabaseFlag             = globalOptions.noIndexDatabaseFlag;
+  jobOptions->forceVerifySignaturesFlag       = globalOptions.forceVerifySignaturesFlag;
   jobOptions->skipVerifySignaturesFlag        = globalOptions.skipVerifySignaturesFlag;
+  jobOptions->noSignatureFlag                 = globalOptions.noSignatureFlag;
 //TODO: job option or better global option only?
   jobOptions->noBAROnMediumFlag               = globalOptions.noBAROnMediumFlag;
   jobOptions->noStopOnErrorFlag               = globalOptions.noStopOnErrorFlag;
