@@ -54,8 +54,11 @@
 //#define NOTIFY_EVENTS IN_ALL_EVENTS
 #define NOTIFY_EVENTS (IN_CREATE|IN_MODIFY|IN_ATTRIB|IN_CLOSE_WRITE|IN_DELETE|IN_DELETE_SELF|IN_MODIFY|IN_MOVE_SELF|IN_MOVED_FROM|IN_MOVED_TO)
 
-#define PROC_MAX_NOTIFIES_FILENAME "/proc/sys/fs/inotify/max_user_watches"
-#define MIN_NOTIFIES_WARNING       (64*1024)
+#define PROC_MAX_NOTIFY_WATCHES_FILENAME   "/proc/sys/fs/inotify/max_user_watches"
+#define PROC_MAX_NOTIFY_INSTANCES_FILENAME "/proc/sys/fs/inotify/max_user_instances"
+
+#define MIN_NOTIFY_WATCHES_WARNING   (64*1024)
+#define MIN_NOTIFY_INSTANCES_WARNING 256
 
 #define DATABASE_TIMEOUT (30L*MS_PER_SECOND)      // database timeout [ms]
 
@@ -409,15 +412,15 @@ LOCAL Errors getContinuousVersion(int64 *continuousVersion)
 }
 
 /***********************************************************************\
-* Name   : getMaxNotifies
-* Purpose: get max. number of notifies
+* Name   : getMaxNotifyWatches
+* Purpose: get max. number of notify watches
 * Input  : -
 * Output : -
-* Return : max. number of notifies or 0
+* Return : max. number of watches or 0
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ulong getMaxNotifies(void)
+LOCAL ulong getMaxNotifyWatches(void)
 {
   ulong maxNotifies;
   FILE  *handle;
@@ -425,7 +428,37 @@ LOCAL ulong getMaxNotifies(void)
 
   maxNotifies = 0;
 
-  handle = fopen(PROC_MAX_NOTIFIES_FILENAME,"r");
+  handle = fopen(PROC_MAX_NOTIFY_WATCHES_FILENAME,"r");
+  if (handle != NULL)
+  {
+    if (fgets(line,sizeof(line),handle) != NULL)
+    {
+      maxNotifies = (ulong)atol(line);
+    }
+    fclose(handle);
+  }
+
+  return maxNotifies;
+}
+
+/***********************************************************************\
+* Name   : getMaxNotifyInstances
+* Purpose: get max. number of notify instances
+* Input  : -
+* Output : -
+* Return : max. number of instances or 0
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong getMaxNotifyInstances(void)
+{
+  ulong maxNotifies;
+  FILE  *handle;
+  char  line[256];
+
+  maxNotifies = 0;
+
+  handle = fopen(PROC_MAX_NOTIFY_INSTANCES_FILENAME,"r");
   if (handle != NULL)
   {
     if (fgets(line,sizeof(line),handle) != NULL)
@@ -557,6 +590,7 @@ LOCAL NotifyInfo *addNotify(ConstString name)
   if (notifyInfo == NULL)
   {
     // create notify
+//fprintf(stderr,"%s, %d: inotify_add_watch %s\n",__FILE__,__LINE__,String_cString(name));
     watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
     if (watchHandle == -1)
     {
@@ -1034,9 +1068,10 @@ LOCAL void freeInitNotifyMsg(InitNotifyMsg *initNotifyMsg, void *userData)
 
 LOCAL void continuousInitThreadCode(void)
 {
-  InitNotifyMsg   initNotifyMsg;
   StringList      nameList;
   String          baseName;
+  ulong           maxWatches,maxInstances;
+  InitNotifyMsg   initNotifyMsg;
   EntryNode       *includeEntryNode;
   StringTokenizer fileNameTokenizer;
   ConstString     token;
@@ -1044,6 +1079,9 @@ LOCAL void continuousInitThreadCode(void)
   // init variables
   StringList_init(&nameList);
   baseName = String_new();
+
+  maxWatches   = getMaxNotifyWatches();
+  maxInstances = getMaxNotifyInstances();
 
   while (   !quitFlag
          && MsgQueue_get(&initDoneNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
@@ -1093,9 +1131,10 @@ LOCAL void continuousInitThreadCode(void)
 
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
-                    "CONTINUOUS","%lu watches (max. %lu)",
+                    "CONTINUOUS","%lu watches (max. %lu/%lu)",
                     Dictionary_count(&notifyHandles),
-                    getMaxNotifies()
+                    maxWatches,
+                    maxInstances
                    );
         break;
       case DONE:
@@ -1547,7 +1586,8 @@ Errors Continuous_initAll(void)
                     free(notifyInfo);
                   },NULL),
 #else
-                  CALLBACK(freeNotifyDictionary,NULL),
+//                  CALLBACK(freeNotifyDictionary,NULL),
+                  CALLBACK_NULL,  // dictionaryFreeFunction
 #endif
                   CALLBACK_NULL  // dictionaryCompareFunction
                  );
@@ -1558,8 +1598,10 @@ Errors Continuous_initAll(void)
                  );
 
   // check number of possible notifies
-  n = getMaxNotifies();
-  if (n < MIN_NOTIFIES_WARNING) printWarning("Low number of notifies %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFIES_FILENAME);
+  n = getMaxNotifyWatches();
+  if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("Low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
+  n = getMaxNotifyInstances();
+  if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("Low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
 
   // init inotify
   inotifyHandle = inotify_init();
@@ -1582,10 +1624,41 @@ Errors Continuous_initAll(void)
 
 void Continuous_doneAll(void)
 {
+  DictionaryIterator dictionaryIterator;
+  void               *data;
+  ulong              length;
+  NotifyInfo         *notifyInfo;
+
+  assert(inotifyHandle != -1);
+
   MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
   close(inotifyHandle);
+
+  Dictionary_initIterator(&dictionaryIterator,&notifyNames);
+  while (Dictionary_getNext(&dictionaryIterator,
+                            NULL,  // keyData,
+                            NULL,  // keyLength,
+                            &data,
+                            &length
+                           )
+        )
+  {
+    assert(data != NULL);
+    assert(length == sizeof(NotifyInfo*));
+
+    notifyInfo = (NotifyInfo*)data;
+
+    // delete notify
+    (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+
+    // free resources
+    freeNotifyInfo(notifyInfo,NULL);
+    free(notifyInfo);
+  }
+  Dictionary_doneIterator(&dictionaryIterator);
   Dictionary_done(&notifyNames);
   Dictionary_done(&notifyHandles);
+
   Semaphore_done(&notifyLock);
 }
 
