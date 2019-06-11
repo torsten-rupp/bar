@@ -1149,7 +1149,7 @@ rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
-          --log-file=/tmp/bar.log --log=all \
+          --log-file=/tmp/bar.log --log=all --server-debug \
           $(OPTIONS)
 
 rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
