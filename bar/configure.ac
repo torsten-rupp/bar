@@ -1529,15 +1529,6 @@ if test -d icu -o -d "`readlink icu`"; then
     STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
     AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
   fi
-
-  # get ICU version (build)
-  AC_TRY_LINK([#include <stdio.h>
-               #include "unicode/uvernum.h"
-              ],
-              [printf("%s\n",U_ICU_VERSION);],
-              VERSION_ICU=`./conftest$ac_exeext`,
-              VERSION_ICU=unknown
-             )
 else
   dnl search for installed icuuc, icui18n, icudata library
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
@@ -1570,15 +1561,6 @@ else
       AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
     fi
   fi
-
-  # get ICU version
-  AC_TRY_LINK([#include <stdio.h>
-               #include "unicode/uvernum.h"
-              ],
-              [printf("%s\n",U_ICU_VERSION);],
-              VERSION_ICU=`./conftest$ac_exeext`,
-              VERSION_ICU=unknown
-             )
 fi
 
 # compile/use zlib
@@ -3722,13 +3704,30 @@ AC_DEFINE_UNQUOTED(CONFIG_DIR, "$CONFIG_DIR", [configuration directory])
 AC_DEFINE_UNQUOTED(RUNTIME_DIR,"$RUNTIME_DIR",[runtime directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,    "$TLS_DIR",    [TLS directory])
 
-# get version numbers
+# get and check version numbers
+AC_TRY_LINK([#include <stdio.h>
+             #include "sqlite3.h"
+            ],
+            [printf("%d\n",SQLITE_VERSION_NUMBER);],
+            VERSION_SQLITE_NUMBER=`./conftest$ac_exeext`,
+            VERSION_SQLITE_NUMBER=
+           )
 AC_TRY_LINK([#include <stdio.h>
              #include "sqlite3.h"
             ],
             [printf("%s\n",SQLITE_VERSION);],
             VERSION_SQLITE=`./conftest$ac_exeext`,
             VERSION_SQLITE=
+           )
+if test $VERSION_SQLITE_NUMBER -lt 3024000; then
+  AC_ERROR([Required SQLite 3.24 or newer - found $VERSION_SQLITE])
+fi
+AC_TRY_LINK([#include <stdio.h>
+             #include "unicode/uvernum.h"
+            ],
+            [printf("%s\n",U_ICU_VERSION);],
+            VERSION_ICU=`./conftest$ac_exeext`,
+            VERSION_ICU=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "zlib.h"

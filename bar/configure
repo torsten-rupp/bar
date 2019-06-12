@@ -8047,29 +8047,6 @@ $as_echo "done" >&6; }
 $as_echo "#define HAVE_ICU 1" >>confdefs.h
 
   fi
-
-  # get ICU version (build)
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdio.h>
-               #include "unicode/uvernum.h"
-
-int
-main ()
-{
-printf("%s\n",U_ICU_VERSION);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  VERSION_ICU=`./conftest$ac_exeext`
-else
-  VERSION_ICU=unknown
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
 else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
@@ -8638,29 +8615,6 @@ fi
 
     fi
   fi
-
-  # get ICU version
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdio.h>
-               #include "unicode/uvernum.h"
-
-int
-main ()
-{
-printf("%s\n",U_ICU_VERSION);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  VERSION_ICU=`./conftest$ac_exeext`
-else
-  VERSION_ICU=unknown
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
 fi
 
 # compile/use zlib
@@ -21628,7 +21582,28 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-# get version numbers
+# get and check version numbers
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "sqlite3.h"
+
+int
+main ()
+{
+printf("%d\n",SQLITE_VERSION_NUMBER);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_SQLITE_NUMBER=`./conftest$ac_exeext`
+else
+  VERSION_SQLITE_NUMBER=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -21646,6 +21621,30 @@ if ac_fn_c_try_link "$LINENO"; then :
   VERSION_SQLITE=`./conftest$ac_exeext`
 else
   VERSION_SQLITE=
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+if test $VERSION_SQLITE_NUMBER -lt 3024000; then
+  as_fn_error $? "Required SQLite 3.24 or newer - found $VERSION_SQLITE" "$LINENO" 5
+fi
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdio.h>
+             #include "unicode/uvernum.h"
+
+int
+main ()
+{
+printf("%s\n",U_ICU_VERSION);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  VERSION_ICU=`./conftest$ac_exeext`
+else
+  VERSION_ICU=unknown
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -23419,3 +23418,4 @@ fi
 
 
 rm -f $tmpFile
+
