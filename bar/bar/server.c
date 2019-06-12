@@ -5015,7 +5015,6 @@ LOCAL void serverCommand_masterWait(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(argumentMap);
 
   // wait for new master
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   startPairingMaster();
   while (   String_isEmpty(newMaster.name)
          && !Misc_isTimeout(&newMaster.pairingTimeoutInfo)
