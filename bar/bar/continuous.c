@@ -487,8 +487,8 @@ LOCAL void freeNotifyInfo(NotifyInfo *notifyInfo, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-  List_done(&notifyInfo->uuidList,CALLBACK_NULL);
   String_delete(notifyInfo->name);
+  List_done(&notifyInfo->uuidList,CALLBACK_NULL);
 }
 
 /***********************************************************************\
@@ -1070,7 +1070,7 @@ LOCAL void continuousInitThreadCode(void)
 {
   StringList      nameList;
   String          baseName;
-  ulong           maxWatches,maxInstances;
+  ulong           maxWatches;//,maxInstances;
   InitNotifyMsg   initNotifyMsg;
   EntryNode       *includeEntryNode;
   StringTokenizer fileNameTokenizer;
@@ -1081,7 +1081,7 @@ LOCAL void continuousInitThreadCode(void)
   baseName = String_new();
 
   maxWatches   = getMaxNotifyWatches();
-  maxInstances = getMaxNotifyInstances();
+//  maxInstances = getMaxNotifyInstances();
 
   while (   !quitFlag
          && MsgQueue_get(&initDoneNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
@@ -1131,10 +1131,9 @@ LOCAL void continuousInitThreadCode(void)
 
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
-                    "CONTINUOUS","%lu watches (max. %lu/%lu)",
+                    "CONTINUOUS","%lu watches (max. %lu)",
                     Dictionary_count(&notifyHandles),
-                    maxWatches,
-                    maxInstances
+                    maxWatches
                    );
         break;
       case DONE:
@@ -1631,9 +1630,11 @@ void Continuous_doneAll(void)
 
   assert(inotifyHandle != -1);
 
+  // done notify event message queue
   MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
   close(inotifyHandle);
 
+  // done dictionaries
   Dictionary_initIterator(&dictionaryIterator,&notifyNames);
   while (Dictionary_getNext(&dictionaryIterator,
                             NULL,  // keyData,
