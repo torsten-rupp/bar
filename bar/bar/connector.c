@@ -42,7 +42,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define CONNECTOR_DEBUG
+#define _CONNECTOR_DEBUG
 
 /***************************** Constants *******************************/
 #define SLEEP_TIME_STATUS_UPDATE    2000  // [ms]
@@ -1994,8 +1994,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   uint32           userId;
   uint32           groupId;
   uint32           permission;
-  uint64           fragmentOffset;
-  uint64           fragmentSize;
+  uint32           major,minor;
   Errors           error;
 
   assert(connectorInfo != NULL);
@@ -2062,15 +2061,15 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
     String_delete(name);
     return;
   }
-  if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
+  if (!StringMap_getUInt(argumentMap,"major",&major,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentOffset=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"major=<n>");
     String_delete(name);
     return;
   }
-  if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
+  if (!StringMap_getUInt(argumentMap,"minor",&minor,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentSize=<n>");
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minor=<n>");
     String_delete(name);
     return;
   }
@@ -2088,8 +2087,8 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
                              userId,
                              groupId,
                              permission,
-                             fragmentOffset,
-                             fragmentSize
+                             major,
+                             minor
                             );
     if (error != ERROR_NONE)
     {
