@@ -592,14 +592,15 @@ bool StringMap_parseEnumNumber(const char *name, uint *value);
 * Name   : StringMap_debugDump, StringMap_debugPrintInfo
 * Purpose: string map debug function: print content
 * Input  : handle    - output channel
+*          indent    - indent
 *          stringMap - string map
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void StringMap_debugDump(FILE *handle, const StringMap stringMap);
-void StringMap_debugPrint(const StringMap stringMap);
+void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap);
+void StringMap_debugPrint(uint indent, const StringMap stringMap);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus

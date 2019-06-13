@@ -2783,7 +2783,6 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
         )
   {
     // wait for disconnect, command, or result
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     pollfds[0].fd     = Network_getSocket(&connectorInfo->io.network.socketHandle);
     pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
     pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
@@ -2807,6 +2806,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             #ifdef CONNECTOR_DEBUG
 //TODO: enable
               fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
+              #ifndef NDEBUG
+                StringMap_debugPrint(2,argumentMap);
+              #endif
             #endif
             if (!findConnectorCommand(name,&connectorCommandFunction))
             {

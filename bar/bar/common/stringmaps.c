@@ -1742,9 +1742,9 @@ bool StringMap_parseEnumNumber(const char *name, uint *value)
 }
 
 #ifndef NDEBUG
-void StringMap_debugDump(FILE *handle, const StringMap stringMap)
+void StringMap_debugDump(FILE *handle, uint indent, const StringMap stringMap)
 {
-  uint i;
+  uint i,j;
 
   assert(stringMap != NULL);
   assert(stringMap->entries != NULL);
@@ -1754,8 +1754,9 @@ void StringMap_debugDump(FILE *handle, const StringMap stringMap)
     if (stringMap->entries[i].name != NULL)
     {
       assert(stringMap->entries[i].type < SIZE_OF_ARRAY(STRING_MAP_TYPE_NAMES));
+      for (j = 0; j < indent; j++) fputc(' ',handle);
       fprintf(handle,
-              "DEBUG string map #%3u (%-8s): %s = '%s' (0x%"PRIuPTR")\n",
+              "#%3u (%-8s): %s = '%s' (0x%"PRIuPTR")\n",
               i,
               STRING_MAP_TYPE_NAMES[stringMap->entries[i].type],
               stringMap->entries[i].name,
@@ -1766,9 +1767,9 @@ void StringMap_debugDump(FILE *handle, const StringMap stringMap)
   }
 }
 
-void StringMap_debugPrint(const StringMap stringMap)
+void StringMap_debugPrint(uint indent, const StringMap stringMap)
 {
-  StringMap_debugDump(stderr,stringMap);
+  StringMap_debugDump(stderr,indent,stringMap);
 }
 #endif /* not NDEBUG */
 
