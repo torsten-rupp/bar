@@ -4674,29 +4674,18 @@ widgetArchivePartSize.setListVisible(true);
             {
               String fileName;
 
-              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-              {
-                fileName = Dialogs.file(shell,
-                                        Dialogs.FileDialogTypes.SAVE,
-                                        BARControl.tr("Select source file"),
-                                        deltaSource.getString(),
-                                        new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                    },
-                                        "*",
-                                        BARServer.remoteListDirectory
-                                       );
-              }
-              else
-              {
-                fileName = Dialogs.fileSave(shell,
-                                            BARControl.tr("Select source file"),
-                                            deltaSource.getString(),
-                                            new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                         BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                        }
-                                           );
-              }
+              fileName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.SAVE,
+                                      BARControl.tr("Select source file"),
+                                      deltaSource.getString(),
+                                      new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                        ? BARServer.remoteListDirectory
+                                        : BARControl.listDirectory
+                                     );
               if (fileName != null)
               {
                 deltaSource.set(fileName);
@@ -5209,29 +5198,18 @@ widgetArchivePartSize.setListVisible(true);
             {
               String fileName;
 
-              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-              {
-                fileName = Dialogs.file(shell,
-                                        Dialogs.FileDialogTypes.OPEN,
-                                        BARControl.tr("Select public key file"),
-                                        cryptPublicKeyFileName.getString(),
-                                        new String[]{BARControl.tr("Public key"),"*.public",
-                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                    },
-                                        "*",
-                                        BARServer.remoteListDirectory
-                                       );
-              }
-              else
-              {
-                fileName = Dialogs.fileOpen(shell,
-                                            BARControl.tr("Select public key file"),
-                                            cryptPublicKeyFileName.getString(),
-                                            new String[]{BARControl.tr("Public key"),"*.public",
-                                                         BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                        }
-                                           );
-              }
+              fileName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.OPEN,
+                                      BARControl.tr("Select public key file"),
+                                      cryptPublicKeyFileName.getString(),
+                                      new String[]{BARControl.tr("Public key"),"*.public",
+                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                        ? BARServer.remoteListDirectory
+                                        : BARControl.listDirectory
+                                     );
               if (fileName != null)
               {
                 cryptPublicKeyFileName.set(fileName);
@@ -5736,29 +5714,18 @@ widgetArchivePartSize.setListVisible(true);
               {
                 String fileName;
 
-                if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                {
-                  fileName = Dialogs.file(shell,
-                                          Dialogs.FileDialogTypes.SAVE,
-                                          BARControl.tr("Select storage file name"),
-                                          storageFileName.getString(),
-                                          new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                       BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      },
-                                          "*",
-                                          BARServer.remoteListDirectory
-                                         );
-                }
-                else
-                {
-                  fileName = Dialogs.fileSave(shell,
-                                              BARControl.tr("Select storage file name"),
-                                              storageFileName.getString(),
-                                              new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                           BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                          }
-                                             );
-                }
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.SAVE,
+                                        BARControl.tr("Select storage file name"),
+                                        storageFileName.getString(),
+                                        new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                          ? BARServer.remoteListDirectory
+                                          : BARControl.listDirectory
+                                       );
                 if (fileName != null)
                 {
                   storageFileName.set(fileName);
@@ -5842,29 +5809,18 @@ widgetArchivePartSize.setListVisible(true);
             {
               String fileName;
 
-              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-              {
-                fileName = Dialogs.file(shell,
-                                        Dialogs.FileDialogTypes.SAVE,
-                                        BARControl.tr("Select incremental file"),
-                                        incrementalListFileName.getString(),
-                                        new String[]{BARControl.tr("BAR incremental data"),"*.bid",
-                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                    },
-                                        "*",
-                                        BARServer.remoteListDirectory
-                                       );
-              }
-              else
-              {
-                fileName = Dialogs.fileSave(shell,
-                                            BARControl.tr("Select incremental file"),
-                                            incrementalListFileName.getString(),
-                                            new String[]{BARControl.tr("BAR incremental data"),"*.bid",
-                                                         BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                        }
-                                           );
-              }
+              fileName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.SAVE,
+                                      BARControl.tr("Select incremental file"),
+                                      incrementalListFileName.getString(),
+                                      new String[]{BARControl.tr("BAR incremental data"),"*.bid",
+                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                        ? BARServer.remoteListDirectory
+                                        : BARControl.listDirectory
+                                     );
               if (fileName != null)
               {
                 incrementalListFileName.set(fileName);
@@ -6993,29 +6949,18 @@ widgetArchivePartSize.setListVisible(true);
               {
                 String fileName;
 
-                if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                {
-                  fileName = Dialogs.file(shell,
-                                          Dialogs.FileDialogTypes.OPEN,
-                                          BARControl.tr("Select SSH public key file"),
-                                          sshPublicKeyFileName.getString(),
-                                          new String[]{BARControl.tr("Public key files"),"*.pub",
-                                                       BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      },
-                                          "*",
-                                          BARServer.remoteListDirectory
-                                         );
-                }
-                else
-                {
-                  fileName = Dialogs.fileOpen(shell,
-                                              BARControl.tr("Select SSH public key file"),
-                                              sshPublicKeyFileName.getString(),
-                                              new String[]{BARControl.tr("Public key files"),"*.pub",
-                                                           BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                          }
-                                             );
-                }
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select SSH public key file"),
+                                        sshPublicKeyFileName.getString(),
+                                        new String[]{BARControl.tr("Public key files"),"*.pub",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                          ? BARServer.remoteListDirectory
+                                          : BARControl.listDirectory
+                                       );
                 if (fileName != null)
                 {
                   sshPublicKeyFileName.set(fileName);
@@ -7097,27 +7042,17 @@ widgetArchivePartSize.setListVisible(true);
               {
                 String fileName;
 
-                if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                {
-                  fileName = Dialogs.file(shell,
-                                          Dialogs.FileDialogTypes.OPEN,
-                                          BARControl.tr("Select SSH private key file"),
-                                          sshPrivateKeyFileName.getString(),
-                                          new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      },
-                                          "*",
-                                          BARServer.remoteListDirectory
-                                         );
-                }
-                else
-                {
-                  fileName = Dialogs.fileOpen(shell,
-                                              BARControl.tr("Select SSH private key file"),
-                                              sshPrivateKeyFileName.getString(),
-                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                          }
-                                             );
-                }
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select SSH private key file"),
+                                        sshPrivateKeyFileName.getString(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                          ? BARServer.remoteListDirectory
+                                          : BARControl.listDirectory
+                                       );
                 if (fileName != null)
                 {
                   sshPrivateKeyFileName.set(fileName);
@@ -7558,29 +7493,18 @@ widgetArchivePartSize.setListVisible(true);
               {
                 String fileName;
 
-                if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                {
-                  fileName = Dialogs.file(shell,
-                                          Dialogs.FileDialogTypes.OPEN,
-                                          BARControl.tr("Select SSH public key file"),
-                                          sshPublicKeyFileName.getString(),
-                                          new String[]{BARControl.tr("Public key files"),"*.pub",
-                                                       BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      },
-                                          "*",
-                                          BARServer.remoteListDirectory
-                                         );
-                }
-                else
-                {
-                  fileName = Dialogs.fileOpen(shell,
-                                              BARControl.tr("Select SSH public key file"),
-                                              sshPublicKeyFileName.getString(),
-                                              new String[]{BARControl.tr("Public key files"),"*.pub",
-                                                           BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                          }
-                                             );
-                }
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select SSH public key file"),
+                                        sshPublicKeyFileName.getString(),
+                                        new String[]{BARControl.tr("Public key files"),"*.pub",
+                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                          ? BARServer.remoteListDirectory
+                                          : BARControl.listDirectory
+                                       );
                 if (fileName != null)
                 {
                   sshPublicKeyFileName.set(fileName);
@@ -7662,27 +7586,17 @@ widgetArchivePartSize.setListVisible(true);
               {
                 String fileName;
 
-                if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                {
-                  fileName = Dialogs.file(shell,
-                                          Dialogs.FileDialogTypes.OPEN,
-                                          BARControl.tr("Select SSH private key file"),
-                                          sshPrivateKeyFileName.getString(),
-                                          new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      },
-                                          "*",
-                                          BARServer.remoteListDirectory
-                                         );
-                }
-                else
-                {
-                  fileName = Dialogs.fileOpen(shell,
-                                              BARControl.tr("Select SSH private key file"),
-                                              sshPrivateKeyFileName.getString(),
-                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                          }
-                                             );
-                }
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select SSH private key file"),
+                                        sshPrivateKeyFileName.getString(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                          ? BARServer.remoteListDirectory
+                                          : BARControl.listDirectory
+                                       );
                 if (fileName != null)
                 {
                   sshPrivateKeyFileName.set(fileName);
@@ -7881,27 +7795,17 @@ widgetArchivePartSize.setListVisible(true);
               {
                 String fileName;
 
-                if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                {
-                  fileName = Dialogs.file(shell,
-                                          Dialogs.FileDialogTypes.OPEN,
-                                          BARControl.tr("Select device name"),
-                                          storageDeviceName.getString(),
-                                          new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      },
-                                          "*",
-                                          BARServer.remoteListDirectory
-                                         );
-                }
-                else
-                {
-                  fileName = Dialogs.fileOpen(shell,
-                                              BARControl.tr("Select device name"),
-                                              storageDeviceName.getString(),
-                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                          }
-                                             );
-                }
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select device name"),
+                                        storageDeviceName.getString(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                          ? BARServer.remoteListDirectory
+                                          : BARControl.listDirectory
+                                       );
                 if (fileName != null)
                 {
                   storageDeviceName.set(fileName);
@@ -8225,27 +8129,17 @@ widgetArchivePartSize.setListVisible(true);
               {
                 String fileName;
 
-                if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                {
-                  fileName = Dialogs.file(shell,
-                                          Dialogs.FileDialogTypes.OPEN,
-                                          BARControl.tr("Select device name"),
-                                          storageDeviceName.getString(),
-                                          new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      },
-                                          "*",
-                                          BARServer.remoteListDirectory
-                                         );
-                }
-                else
-                {
-                  fileName = Dialogs.fileOpen(shell,
-                                              BARControl.tr("Select device name"),
-                                              storageDeviceName.getString(),
-                                              new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                          }
-                                             );
-                }
+                fileName = Dialogs.file(shell,
+                                        Dialogs.FileDialogTypes.OPEN,
+                                        BARControl.tr("Select device name"),
+                                        storageDeviceName.getString(),
+                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                    },
+                                        "*",
+                                        ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                          ? BARServer.remoteListDirectory
+                                          : BARControl.listDirectory
+                                       );
                 if (fileName != null)
                 {
                   storageDeviceName.set(fileName);
@@ -10958,27 +10852,18 @@ throw new Error("NYI");
           {
             String pathName;
 
-            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-            {
-              pathName = Dialogs.file(shell,
-                                      Dialogs.FileDialogTypes.ENTRY,
-                                      BARControl.tr("Select entry"),
-                                      widgetPattern.getText(),
-                                      new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                  },
-                                      "*",
-                                      BARServer.remoteListDirectory
-                                     );
-            }
-            else
-            {
-              pathName = Dialogs.fileOpen(shell,
-                                          BARControl.tr("Select entry"),
-                                          widgetPattern.getText(),
-                                          new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                      }
-                                         );
-            }
+            pathName = Dialogs.file(shell,
+                                    Dialogs.FileDialogTypes.ENTRY,
+                                    BARControl.tr("Select entry"),
+                                    widgetPattern.getText(),
+                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                },
+                                    "*",
+                                    ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                      ? BARServer.remoteListDirectory
+                                      : BARControl.listDirectory
+                                   );
+
             if (pathName != null)
             {
               widgetPattern.setText(pathName.trim());
@@ -11397,27 +11282,17 @@ throw new Error("NYI");
         {
           String pathName;
 
-          if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-          {
-            pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.ENTRY,
-                                    BARControl.tr("Select entry"),
-                                    widgetPattern.getText(),
-                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                },
-                                    "*",
-                                    BARServer.remoteListDirectory
-                                   );
-          }
-          else
-          {
-            pathName = Dialogs.fileOpen(shell,
-                                        BARControl.tr("Select entry"),
-                                        widgetPattern.getText(),
-                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                    }
-                                       );
-          }
+          pathName = Dialogs.file(shell,
+                                  Dialogs.FileDialogTypes.ENTRY,
+                                  BARControl.tr("Select entry"),
+                                  widgetPattern.getText(),
+                                  new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                              },
+                                  "*",
+                                  ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                    ? BARServer.remoteListDirectory
+                                    : BARControl.listDirectory
+                                 );
           if (pathName != null)
           {
             widgetPattern.setText(pathName.trim());
@@ -11843,22 +11718,14 @@ throw new Error("NYI");
           {
             String pathName;
 
-            if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-            {
-              pathName = Dialogs.file(shell,
-                                      Dialogs.FileDialogTypes.DIRECTORY,
-                                      BARControl.tr("Select name"),
-                                      widgetName.getText(),
-                                      BARServer.remoteListDirectory
-                                     );
-            }
-            else
-            {
-              pathName = Dialogs.directory(shell,
-                                           BARControl.tr("Select name"),
-                                           widgetName.getText()
-                                          );
-            }
+            pathName = Dialogs.file(shell,
+                                    Dialogs.FileDialogTypes.DIRECTORY,
+                                    BARControl.tr("Select name"),
+                                    widgetName.getText(),
+                                    ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                      ? BARServer.remoteListDirectory
+                                      : BARControl.listDirectory
+                                   );
             if (pathName != null)
             {
               widgetName.setText(pathName.trim());
@@ -12487,27 +12354,17 @@ abort();
         {
           String pathName;
 
-          if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-          {
-            pathName = Dialogs.file(shell,
-                                    Dialogs.FileDialogTypes.OPEN,
-                                    BARControl.tr("Select entry"),
-                                    widgetPattern.getText(),
-                                    new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                },
-                                    "*",
-                                    BARServer.remoteListDirectory
-                                   );
-          }
-          else
-          {
-            pathName = Dialogs.fileOpen(shell,
-                                        BARControl.tr("Select entry"),
-                                        widgetPattern.getText(),
-                                        new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                    }
-                                       );
-          }
+          pathName = Dialogs.file(shell,
+                                  Dialogs.FileDialogTypes.OPEN,
+                                  BARControl.tr("Select entry"),
+                                  widgetPattern.getText(),
+                                  new String[]{BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                              },
+                                  "*",
+                                  ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                    ? BARServer.remoteListDirectory
+                                    : BARControl.listDirectory
+                                 );
           if (pathName != null)
           {
             widgetPattern.setText(pathName);
@@ -13206,29 +13063,19 @@ throw new Error("NYI");
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               String fileName;
-              if ((selectionEvent.stateMask & SWT.CTRL) == 0)
-              {
-                fileName = Dialogs.file(shell,
-                                        Dialogs.FileDialogTypes.ENTRY,
-                                        BARControl.tr("Select source file"),
-                                        widgetText.getText(),
-                                        new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                     BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                    },
-                                        "*",
-                                        BARServer.remoteListDirectory
-                                       );
-              }
-              else
-              {
-                fileName = Dialogs.fileSave(shell,
-                                            BARControl.tr("Select source file"),
-                                            widgetText.getText(),
-                                            new String[]{BARControl.tr("BAR files"),"*.bar",
-                                                         BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
-                                                        }
-                                           );
-              }
+
+              fileName = Dialogs.file(shell,
+                                      Dialogs.FileDialogTypes.ENTRY,
+                                      BARControl.tr("Select source file"),
+                                      widgetText.getText(),
+                                      new String[]{BARControl.tr("BAR files"),"*.bar",
+                                                   BARControl.tr("All files"),BARControl.ALL_FILE_EXTENSION
+                                                  },
+                                      "*",
+                                      ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                        ? BARServer.remoteListDirectory
+                                        : BARControl.listDirectory
+                                     );
               if (fileName != null)
               {
                 widgetText.setText(fileName);

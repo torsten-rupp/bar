@@ -3897,9 +3897,6 @@ throw new Error("NYI");
    */
   public static ListDirectory<RemoteFile> remoteListDirectory = new ListDirectory<RemoteFile>()
   {
-    private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
-    private Iterator<ValueMap>  iterator;
-
     /** get new file instance
      * @param name name
      * @return file
@@ -4123,6 +4120,9 @@ throw new Error("NYI");
 
       return file;
     }
+
+    private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+    private Iterator<ValueMap>  iterator;
   };
 
   //-----------------------------------------------------------------------

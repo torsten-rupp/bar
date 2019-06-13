@@ -35,6 +35,7 @@ import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -1412,6 +1413,109 @@ public class BARControl
       return "LoginData {"+serverName+", "+serverPort+", "+serverTLSPort+", "+(forceSSL ? "SSL" : "plain")+"}";
     }
   }
+
+  /** list remote directory
+   */
+  public static ListDirectory<File> listDirectory = new ListDirectory<File>()
+  {
+    /** get new file instance
+     * @param name name
+     * @return file
+     */
+    @Override
+    public File newFileInstance(String name)
+    {
+      return new File(name);
+    }
+
+    /** get shortcut files
+     * @return shortcut files
+     */
+    @Override
+    public void getShortcuts(java.util.List<File> shortcutList)
+    {
+      final HashMap<String,File> shortcutMap = new HashMap<String,File>();
+
+      // add manual shortcuts
+      for (String name : Settings.shortcuts)
+      {
+        shortcutMap.put(name,new File(name));
+      }
+
+      // add root shortcuts
+      shortcutMap.put("/",new File("/"));
+
+      // create sorted list
+      shortcutList.clear();
+      for (File shortcut : shortcutMap.values())
+      {
+        shortcutList.add(shortcut);
+      }
+      Collections.sort(shortcutList,this);
+    }
+
+    /** remove shortcut file
+     * @param name shortcut name
+     */
+    @Override
+    public void addShortcut(File shortcut)
+    {
+      Settings.shortcuts.add(shortcut.getAbsolutePath());
+    }
+
+    /** remove shortcut file
+     * @param shortcut shortcut file
+     */
+    @Override
+    public void removeShortcut(File shortcut)
+    {
+      Settings.shortcuts.remove(shortcut.getAbsolutePath());
+    }
+
+    /** open list files in directory
+     * @param pathName path name
+     * @return true iff open
+     */
+    @Override
+    public boolean open(File path)
+    {
+      files = path.listFiles();
+      index = 0;
+
+      return files != null;
+    }
+
+    /** close list files in directory
+     */
+    @Override
+    public void close()
+    {
+    }
+
+    /** get next entry in directory
+     * @return entry
+     */
+    @Override
+    public File getNext()
+    {
+      File file;
+
+      if (index < files.length)
+      {
+        file = files[index];
+        index++;
+      }
+      else
+      {
+        file = null;
+      }
+
+      return file;
+    }
+
+    private File files[];
+    private int  index;
+  };
 
   // --------------------------- constants --------------------------------
 
