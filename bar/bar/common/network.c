@@ -2003,15 +2003,17 @@ void Network_getLocalInfo(SocketHandle  *socketHandle,
     if (name != NULL)
     {
       #if   defined(HAVE_GETHOSTBYADDR_R)
-        if (gethostbyaddr_r(&sockAddrIn.sin_addr,
-                            sizeof(sockAddrIn.sin_addr),
-                            AF_INET,
-                            &bufferAddressEntry,
-                            buffer,
-                            sizeof(buffer),
-                            &hostAddressEntry,
-                            &getHostByAddrError
-                           ) == 0
+        if (   (gethostbyaddr_r(&sockAddrIn.sin_addr,
+                                sizeof(sockAddrIn.sin_addr),
+                                AF_INET,
+                                &bufferAddressEntry,
+                                buffer,
+                                sizeof(buffer),
+                                &hostAddressEntry,
+                                &getHostByAddrError
+                               ) == 0
+               )
+            && (hostAddressEntry != NULL)
            )
         {
           String_setCString(name,hostAddressEntry->h_name);
@@ -2099,15 +2101,17 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
     if (name != NULL)
     {
       #if   defined(HAVE_GETHOSTBYADDR_R)
-        if (gethostbyaddr_r(&sockAddrIn.sin_addr,
-                            sizeof(sockAddrIn.sin_addr),
-                            AF_INET,
-                            &bufferAddressEntry,
-                            buffer,
-                            sizeof(buffer),
-                            &hostAddressEntry,
-                            &getHostByAddrError
-                           ) == 0
+        if (   (gethostbyaddr_r(&sockAddrIn.sin_addr,
+                                sizeof(sockAddrIn.sin_addr),
+                                AF_INET,
+                                &bufferAddressEntry,
+                                buffer,
+                                sizeof(buffer),
+                                &hostAddressEntry,
+                                &getHostByAddrError
+                               ) == 0
+               )
+            && (hostAddressEntry != NULL)
            )
         {
           String_setCString(name,hostAddressEntry->h_name);
