@@ -5306,7 +5306,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
   offset = 0LL;
   size   = 0LL;
-  if (!createInfo->storageFlags.dryRun)
+  if (!createInfo->storageFlags.noStorage)
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
@@ -5416,11 +5416,13 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               }
               printInfo(2,"%3d%%\b\b\b\b",percentageDone);
             }
+
+            assert(size >= bufferLength);
             size -= bufferLength;
           }
           else
           {
-            // file size changed -> done
+            // read nohting -> file size changed -> done
             size = 0;
           }
         }
@@ -6531,7 +6533,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         pauseCreate(createInfo);
 
         // read file data
-        error = File_read(&fileHandle,buffer,bufferSize,&bufferLength);
+        error = File_read(&fileHandle,buffer,MIN(size,bufferSize),&bufferLength);
         if (error == ERROR_NONE)
         {
           // write data to archive
@@ -6578,9 +6580,15 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               }
               printInfo(2,"%3d%%\b\b\b\b",percentageDone);
             }
-          }
 
-          size -= bufferLength;
+            assert(size >= bufferLength);
+            size -= bufferLength;
+          }
+          else
+          {
+            // read nohting -> file size changed -> done
+            size = 0;
+          }
         }
 
         // wait for temporary file space
