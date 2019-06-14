@@ -1842,7 +1842,6 @@ LOCAL void compareThreadCode(CompareInfo *compareInfo)
     if (failError != ERROR_NONE)
     {
       if (compareInfo->failError == ERROR_NONE) compareInfo->failError = failError;
-      if (!compareInfo->jobOptions->noStopOnErrorFlag) MsgQueue_setEndOfMsg(&compareInfo->entryMsgQueue);
     }
 
     // free resources

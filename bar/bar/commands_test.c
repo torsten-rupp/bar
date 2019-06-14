@@ -1232,7 +1232,6 @@ LOCAL void testThreadCode(TestInfo *testInfo)
     if (failError != ERROR_NONE)
     {
       if (testInfo->failError == ERROR_NONE) testInfo->failError = failError;
-      if (!testInfo->jobOptions->noStopOnErrorFlag) MsgQueue_setEndOfMsg(&testInfo->entryMsgQueue);
     }
 
     // free resources
