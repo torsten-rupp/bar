@@ -39,8 +39,16 @@
 typedef enum
 {
   SERVER_IO_ENCRYPT_TYPE_NONE,
-  SERVER_IO_ENCRYPT_TYPE_RSA,
+  SERVER_IO_ENCRYPT_TYPE_RSA
 } ServerIOEncryptTypes;
+
+// server actions
+typedef enum
+{
+  SERVER_IO_ACTION_NONE,
+  SERVER_IO_ACTION_SKIP,
+  SERVER_IO_ACTION_ABORT
+} ServerIOActions;
 
 /***************************** Datatypes *******************************/
 
@@ -193,6 +201,22 @@ bool ServerIO_parseEncryptType(const char           *encryptTypeText,
                                ServerIOEncryptTypes *encryptType,
                                void                 *userData
                               );
+
+/***********************************************************************\
+* Name   : ServerIO_parseAction
+* Purpose: parse ation text
+* Input  : actionText - action text
+*          action     - action variable
+*          userData   - user data (not used)
+* Output : action - action
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool ServerIO_parseAction(const char      *actionText,
+                          ServerIOActions *action,
+                          void            *userData
+                         );
 
 /***********************************************************************\
 * Name   : ServerIO_connectNetwork

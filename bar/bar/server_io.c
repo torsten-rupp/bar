@@ -510,6 +510,23 @@ bool ServerIO_parseEncryptType(const char           *encryptTypeText,
   return TRUE;
 }
 
+bool ServerIO_parseAction(const char      *actionText,
+                          ServerIOActions *action,
+                          void            *userData
+                         )
+{
+  assert(actionText != NULL);
+  assert(action != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  if      (stringEqualsIgnoreCase(actionText,"SKIP" )) (*action) = SERVER_IO_ACTION_SKIP;
+  else if (stringEqualsIgnoreCase(actionText,"ABORT")) (*action) = SERVER_IO_ACTION_ABORT;
+  else                                                 (*action) = SERVER_IO_ACTION_NONE;
+
+  return TRUE;
+}
+
 #ifdef NDEBUG
   Errors ServerIO_connectNetwork(ServerIO    *serverIO,
                                  ConstString hostName,
