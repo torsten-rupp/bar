@@ -4784,17 +4784,9 @@ Dprintf.dprintf("starafsf");
             BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),
                                      1  // debug level
                                     );
-          }
-          catch (BARException exception)
-          {
-            printError("cannot set restore list (error: %s)",exception.getText());
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
 
-          try
-          {
-            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s storagePattern=%'S offset=%ld",
+            final ArrayList<Long> indexIds = new ArrayList<Long>();
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S offset=%ld",
                                                          "*",
                                                          "*",
                                                          "*",
@@ -4810,30 +4802,33 @@ Dprintf.dprintf("starafsf");
                                        {
                                          long   storageId   = valueMap.getLong  ("storageId");
                                          String storageName = valueMap.getString("name"     );
-//Dprintf.dprintf("storageId=%d: %s",storageId,storageName);
 
-                                         BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexId=%ld",
-                                                                                      storageId
-                                                                                     ),
-                                                                  1  // debugLevel
-                                                                 );
+                                         indexIds.add(storageId);
                                        }
                                      }
+                                    );
+
+            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%s",
+                                                         StringUtils.join(indexIds,',')
+                                                        ),
+                                     1  // debugLevel
                                     );
           }
           catch (BARException exception)
           {
-            printError("cannot list storages index (error: %s)",exception.getText());
+            printError("cannot set restore list (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
 
+
           // restore
           try
           {
-            BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S overwriteFiles=%y",
+            BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S directoryContent=%y restoreEntryMode=%s",
                                                          Settings.destination,
-false//                                                                   Settings.overwriteFilesFlag
+                                                         true,
+                                                         Settings.overwriteEntriesFlag ? "OVERWRITE" : "STOP"
                                                         ),
                                      1,  // debugLevel
                                      new Command.ResultHandler()
@@ -4952,7 +4947,7 @@ Dprintf.dprintf("still not supported");
           }
           catch (BARException exception)
           {
-            printError("cannot list storages index (error: %s)",exception.getText());
+            printError("cannot restore storages (error: %s)",exception.getText());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }

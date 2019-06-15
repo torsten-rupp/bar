@@ -2751,7 +2751,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param resultHandler result handler
    * @param handler handler
    * @param busyIndicator busy indicator or null
-   * @return BARException.NONE or error code
    */
   public static void executeCommand(String                commandString,
                                     int                   debugLevel,
