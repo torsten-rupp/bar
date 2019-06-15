@@ -5756,24 +5756,18 @@ UNUSED_VARIABLE(storageInfo);
   error = Crypt_getBlockLength(storageInfo->jobOptions->cryptAlgorithms[0],&archiveHandle->blockLength);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
   assert(archiveHandle->blockLength > 0);
   if (archiveHandle->blockLength > MAX_BUFFER_SIZE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
     AutoFree_cleanup(&autoFreeList);
     return ERROR_UNSUPPORTED_BLOCK_LENGTH;
   }
   error = Crypt_getKeyLength(storageInfo->jobOptions->cryptAlgorithms[0],&keyLength);
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
@@ -5789,8 +5783,6 @@ asm("int3");
       error = initCryptPassword(archiveHandle,password);
       if (error !=  ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -5804,8 +5796,6 @@ asm("int3");
                              );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
         AutoFree_cleanup(&autoFreeList);
         return error;
       }
@@ -5825,8 +5815,6 @@ asm("int3");
         }
         else
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
           AutoFree_cleanup(&autoFreeList);
           return ERROR_NO_PUBLIC_CRYPT_KEY;
         }
