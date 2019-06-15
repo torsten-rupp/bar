@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-15 10:40+0200\n"
+"POT-Creation-Date: 2019-06-15 13:42+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -195,7 +195,7 @@ msgstr "接続ミス"
 msgid "Start"
 msgstr "スタート"
 
-#: src/BARControl.java:2570 src/BARServer.java:1277 src/BusyDialog.java:275
+#: src/BARControl.java:2570 src/BARServer.java:1281 src/BusyDialog.java:275
 #: src/Dialogs.java:169 src/TabRestore.java:8632 src/TabStatus.java:1060
 #: src/TabStatus.java:1835 src/TabStatus.java:2790 src/TabStatus.java:2917
 msgid "Abort"
@@ -260,7 +260,7 @@ msgid "Pair master"
 msgstr "タスク''{0}''をスタートしますか？"
 
 #: src/BARControl.java:2799 src/BARControl.java:3740 src/BARControl.java:3954
-#: src/BARServer.java:1466
+#: src/BARServer.java:1503
 msgid "Master"
 msgstr ""
 
@@ -346,7 +346,7 @@ msgid "SSL"
 msgstr ""
 
 #: src/BARControl.java:3380 src/BARControl.java:4864 src/BARControl.java:4888
-#: src/BARServer.java:1334 src/BARServer.java:1361 src/Dialogs.java:3554
+#: src/BARServer.java:1355 src/BARServer.java:1382 src/Dialogs.java:3554
 #: src/Dialogs.java:3807 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6472 src/TabJobs.java:6828
 #: src/TabJobs.java:7370
@@ -403,7 +403,7 @@ msgstr ""
 "サーバ上のパスワードを消去できません:\n"
 "\n"
 
-#: src/BARControl.java:4862 src/BARServer.java:1332
+#: src/BARControl.java:4862 src/BARServer.java:1353
 #, fuzzy, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
@@ -418,7 +418,7 @@ msgstr "次の項目のFTPログインパスワードを入力してください
 msgid "Name"
 msgstr "名前"
 
-#: src/BARControl.java:4887 src/BARServer.java:1360
+#: src/BARControl.java:4887 src/BARServer.java:1381
 #, fuzzy, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "次の項目のFTPログインパスワードを入力してください: {0}。"
@@ -1397,12 +1397,12 @@ msgstr "接続ミス"
 msgid "slave is not paired"
 msgstr "接続ミス"
 
-#: src/BARServer.java:1272 src/Dialogs.java:2441 src/Dialogs.java:2544
+#: src/BARServer.java:1276 src/Dialogs.java:2441 src/Dialogs.java:2544
 #: src/Dialogs.java:2618 src/TabRestore.java:8630 src/TabStatus.java:2750
 msgid "Confirmation"
 msgstr "確定"
 
-#: src/BARServer.java:1273
+#: src/BARServer.java:1277
 #, fuzzy, java-format
 msgid ""
 "Cannot restore:\n"
@@ -1417,22 +1417,22 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/BARServer.java:1277
+#: src/BARServer.java:1281
 #, fuzzy
 msgid "Skip"
 msgstr "スキップ"
 
-#: src/BARServer.java:1277
+#: src/BARServer.java:1281
 #, fuzzy
 msgid "Skip all"
 msgstr "すべてマークアップする"
 
-#: src/BARServer.java:1331 src/BARServer.java:1359
+#: src/BARServer.java:1352 src/BARServer.java:1380
 #, fuzzy, java-format
 msgid "{0} login password"
 msgstr "FTPログインパスワード"
 
-#: src/BARServer.java:1467 src/TabJobs.java:2445 src/TabStatus.java:685
+#: src/BARServer.java:1504 src/TabJobs.java:2445 src/TabStatus.java:685
 #: src/TabStatus.java:750
 msgid "Slave"
 msgstr ""

@@ -969,7 +969,7 @@ class ReadThread extends Thread
             // get command id, name, data
             long    commandId = (Long)arguments[0];
             String  name      = ((String)arguments[1]);
-            String  data          = ((String)arguments[2]).trim();
+            String  data      = ((String)arguments[2]).trim();
 
             // parse data
             ValueMap valueMap = new ValueMap();
@@ -1250,149 +1250,186 @@ class CommandThread extends Thread
       if (quitFlag) break;
 
       // process
-      if      (command.name.equals("CONFIRM"))
+      try
       {
-        String type = command.valueMap.getString("type");
-
-        if      (type.equals("RESTORE"))
+        if      (command.name.equals("CONFIRM"))
         {
-          // get confirm data
-          final String storageName = command.valueMap.getString("storageName","");
-          final String entryName   = command.valueMap.getString("entryName","");
-          final String errorData   = command.valueMap.getString("errorData","");
+          String type = command.valueMap.getString("type");
 
-          // confirm dialog
-          final String  action[]      = new String[]{"ABORT"};
-          final boolean skipAllFlag[] = new boolean[]{false};
-          display.syncExec(new Runnable()
+          if      (type.equals("RESTORE"))
           {
-            public void run()
+            // get confirm data
+            final String storageName = command.valueMap.getString("storageName","");
+            final String entryName   = command.valueMap.getString("entryName","");
+            final String errorData   = command.valueMap.getString("errorData","");
+
+            // confirm dialog
+            final String  action[]      = new String[]{"ABORT"};
+            final boolean skipAllFlag[] = new boolean[]{false};
+            if (display != null)
             {
-              switch (Dialogs.select(new Shell(),
-                                     BARControl.tr("Confirmation"),
-                                     BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
-                                                   !entryName.isEmpty() ? entryName : storageName,
-                                                   errorData
-                                                  ),
-                                     new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
-                                     0
-                                    )
-                     )
+              display.syncExec(new Runnable()
               {
-                case 0:
-                  action[0]      = "SKIP";
-                  skipAllFlag[0] = false;
-                  break;
-                case 1:
-                  action[0]      = "SKIP";
-                  skipAllFlag[0] = true;
-                  break;
-                case 2:
-                  action[0]      = "ABORT";
-                  skipAllFlag[0] = false;
-                  break;
+                public void run()
+                {
+                  switch (Dialogs.select(new Shell(),
+                                         BARControl.tr("Confirmation"),
+                                         BARControl.tr("Cannot restore:\n\n {0}\n\nReason: {1}",
+                                                       !entryName.isEmpty() ? entryName : storageName,
+                                                       errorData
+                                                      ),
+                                         new String[]{BARControl.tr("Skip"),BARControl.tr("Skip all"),BARControl.tr("Abort")},
+                                         0
+                                        )
+                         )
+                  {
+                    case 0:
+                      action[0]      = "SKIP";
+                      skipAllFlag[0] = false;
+                      break;
+                    case 1:
+                      action[0]      = "SKIP";
+                      skipAllFlag[0] = true;
+                      break;
+                    case 2:
+                      action[0]      = "ABORT";
+                      skipAllFlag[0] = false;
+                      break;
+                  }
+                }
+              });
+
+              // send result
+              try
+              {
+                BARServer.sendResult(command.id,1,true,0,"action=%s skipAll=%y",action[0],skipAllFlag[0]);
+              }
+              catch (BARException exception)
+              {
+                // ignored
               }
             }
-          });
-
-          // send result
-          try
-          {
-            BARServer.sendResult(command.id,1,true,0,"action=%s skipAll=%s",action[0],skipAllFlag[0] ? "yes" : "no");
+            else
+            {
+              // send result
+              try
+              {
+                BARServer.sendResult(command.id,1,true,0,"action=ABORT skipAll=no");
+              }
+              catch (BARException exception)
+              {
+                // ignored
+              }
+            }
           }
-          catch (BARException exception)
+          else
           {
-            // ignored
+            BARServer.sendResult(command.id,1,true,0,"action=ABORT");
           }
         }
-      }
-      else if (command.name.equals("REQUEST_PASSWORD"))
-      {
-//        if      (type.equals("LOGIN"))
-//        {
-          final String        name         = command.valueMap.getString("name","");
-          final PasswordTypes passwordType = command.valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
-          final String        passwordText = command.valueMap.getString("passwordText","");
-//          final String        volume       = command.valueMap.getString("volume","");
-//          final int           errorCode    = command.valueMap.getInt   ("errorCode",BARException.NONE);
-//          final String        errorData    = command.valueMap.getString("errorData","");
-//          final String        storageName  = command.valueMap.getString("storageName","");
-//          final String        entryName    = command.valueMap.getString("entryName","");
+        else if (command.name.equals("REQUEST_PASSWORD"))
+        {
+  //        if      (type.equals("LOGIN"))
+  //        {
+            final String        name         = command.valueMap.getString("name","");
+            final PasswordTypes passwordType = command.valueMap.getEnum  ("passwordType",PasswordTypes.class,PasswordTypes.NONE);
+            final String        passwordText = command.valueMap.getString("passwordText","");
+  //          final String        volume       = command.valueMap.getString("volume","");
+  //          final int           errorCode    = command.valueMap.getInt   ("errorCode",BARException.NONE);
+  //          final String        errorData    = command.valueMap.getString("errorData","");
+  //          final String        storageName  = command.valueMap.getString("storageName","");
+  //          final String        entryName    = command.valueMap.getString("entryName","");
 
-          // get password
-          display.syncExec(new Runnable()
-          {
-            @Override
-            public void run()
+            // get password
+            display.syncExec(new Runnable()
             {
-              if (passwordType.isLogin())
+              @Override
+              public void run()
               {
-                String[] data = Dialogs.login(new Shell(),
-                                              BARControl.tr("{0} login password",passwordType),
-                                              BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
-                                              name,
-                                              BARControl.tr("Password")+":"
-                                             );
-                if (data != null)
+                if (passwordType.isLogin())
                 {
-                  BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d name=%S encryptType=%s encryptedPassword=%S",
-                                                                    BARException.NONE,
-                                                                    data[0],
-                                                                    BARServer.getPasswordEncryptType(),
-                                                                    BARServer.encryptPassword(data[1])
-                                                                   ),
-                                                0  // debugLevel
+                  String[] data = Dialogs.login(new Shell(),
+                                                BARControl.tr("{0} login password",passwordType),
+                                                BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
+                                                name,
+                                                BARControl.tr("Password")+":"
                                                );
+                  if (data != null)
+                  {
+                    BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                                      BARException.NONE,
+                                                                      data[0],
+                                                                      BARServer.getPasswordEncryptType(),
+                                                                      BARServer.encryptPassword(data[1])
+                                                                     ),
+                                                  0  // debugLevel
+                                                 );
+                  }
+                  else
+                  {
+                    BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
+                                                                      BARException.NO_PASSWORD
+                                                                     ),
+                                                  0  // debugLevel
+                                                 );
+                  }
                 }
                 else
                 {
-                  BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
-                                                                    BARException.NO_PASSWORD
-                                                                   ),
-                                                0  // debugLevel
-                                               );
+                  String password = Dialogs.password(new Shell(),
+                                                     BARControl.tr("{0} login password",passwordType),
+                                                     BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                     BARControl.tr("Password")+":"
+                                                    );
+                  if (password != null)
+                  {
+                    BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d encryptType=%s encryptedPassword=%S",
+                                                                      BARException.NONE,
+                                                                      BARServer.getPasswordEncryptType(),
+                                                                      BARServer.encryptPassword(password)
+                                                                     ),
+                                                  0  // debugLevel
+                                                 );
+                  }
+                  else
+                  {
+                    BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
+                                                                      BARException.NO_PASSWORD
+                                                                     ),
+                                                  0  // debugLevel
+                                                 );
+                  }
                 }
               }
-              else
-              {
-                String password = Dialogs.password(new Shell(),
-                                                   BARControl.tr("{0} login password",passwordType),
-                                                   BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
-                                                   BARControl.tr("Password")+":"
-                                                  );
-                if (password != null)
-                {
-                  BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d encryptType=%s encryptedPassword=%S",
-                                                                    BARException.NONE,
-                                                                    BARServer.getPasswordEncryptType(),
-                                                                    BARServer.encryptPassword(password)
-                                                                   ),
-                                                0  // debugLevel
-                                               );
-                }
-                else
-                {
-                  BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
-                                                                    BARException.NO_PASSWORD
-                                                                   ),
-                                                0  // debugLevel
-                                               );
-                }
-              }
-            }
-          });
-//        }
-      }
-      else if (command.name.equals("REQUEST_VOLUME"))
-      {
+            });
+  //        }
+        }
+        else if (command.name.equals("REQUEST_VOLUME"))
+        {
 //TODO
 Dprintf.dprintf("REQUEST_VOLUME");
 System.exit(1);
-      }
-      else
-      {
+        }
+        else
+        {
+//TODO
 Dprintf.dprintf("unknown command %s",command.name);
 Dprintf.halt();
+        }
+      }
+      catch (Throwable throwable)
+      {
+        // try to send abort result
+        try
+        {
+          BARServer.sendResult(command.id,1,true,0,"action=ABORT");
+        }
+        catch (Throwable unused)
+        {
+        }
+
+        BARControl.printInternalError(throwable);
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
     }
   }
@@ -2982,11 +3019,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       try
       {
         // format result
-        String data = String.format(format,arguments);
+        String data = StringParser.format(format,arguments);
 
         // send result
-        String line = String.format("%d %d %d %s\n",commandId,completedFlag ? 1 : 0,error,data);
-        output.write(line); output.flush();
+        String line = String.format("%d %d %d %s",commandId,completedFlag ? 1 : 0,error,data);
+        output.write(line); output.write('\n'); output.flush();
         logSent(debugLevel,"%s",line);
       }
       catch (IOException exception)
@@ -4694,7 +4731,7 @@ throw new Error("NYI");
     logTime0 = new Date();
     if (Settings.debugLevel > debugLevel)
     {
-      String timeInfo = String.format("%s      ",LOG_TIME_FORMAT.format(logTime0));
+      String timeInfo = String.format("%s       ",LOG_TIME_FORMAT.format(logTime0));
       System.err.println("Network sent     "+timeInfo+": '"+String.format(format,arguments)+"'");
     }
   }

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-15 10:40+0200\n"
+"POT-Creation-Date: 2019-06-15 13:42+0200\n"
 "PO-Revision-Date: 2017-12-06 16:43+0100\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -191,7 +191,7 @@ msgstr "Verbindung fehlgeschlagen"
 msgid "Start"
 msgstr "Start"
 
-#: src/BARControl.java:2570 src/BARServer.java:1277 src/BusyDialog.java:275
+#: src/BARControl.java:2570 src/BARServer.java:1281 src/BusyDialog.java:275
 #: src/Dialogs.java:169 src/TabRestore.java:8632 src/TabStatus.java:1060
 #: src/TabStatus.java:1835 src/TabStatus.java:2790 src/TabStatus.java:2917
 msgid "Abort"
@@ -256,7 +256,7 @@ msgid "Pair master"
 msgstr "Auftrag ''{0}'' starten?"
 
 #: src/BARControl.java:2799 src/BARControl.java:3740 src/BARControl.java:3954
-#: src/BARServer.java:1466
+#: src/BARServer.java:1503
 msgid "Master"
 msgstr "Master"
 
@@ -341,7 +341,7 @@ msgid "SSL"
 msgstr "SSL"
 
 #: src/BARControl.java:3380 src/BARControl.java:4864 src/BARControl.java:4888
-#: src/BARServer.java:1334 src/BARServer.java:1361 src/Dialogs.java:3554
+#: src/BARServer.java:1355 src/BARServer.java:1382 src/Dialogs.java:3554
 #: src/Dialogs.java:3807 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6472 src/TabJobs.java:6828
 #: src/TabJobs.java:7370
@@ -398,7 +398,7 @@ msgstr ""
 "Gespeicherte Passworte auf Server löschen:\n"
 "\n"
 
-#: src/BARControl.java:4862 src/BARServer.java:1332
+#: src/BARControl.java:4862 src/BARServer.java:1353
 #, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr "Bitte {0} Passwort eingeben für: {1}"
@@ -413,7 +413,7 @@ msgstr "Bitte {0} Passwort eingeben für: {1}"
 msgid "Name"
 msgstr "Name"
 
-#: src/BARControl.java:4887 src/BARServer.java:1360
+#: src/BARControl.java:4887 src/BARServer.java:1381
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr "Bitte {0} Passwort eingeben für: {1}"
@@ -1358,12 +1358,12 @@ msgstr "Verbinden"
 msgid "slave is not paired"
 msgstr "Verbinden"
 
-#: src/BARServer.java:1272 src/Dialogs.java:2441 src/Dialogs.java:2544
+#: src/BARServer.java:1276 src/Dialogs.java:2441 src/Dialogs.java:2544
 #: src/Dialogs.java:2618 src/TabRestore.java:8630 src/TabStatus.java:2750
 msgid "Confirmation"
 msgstr "Bestätigung"
 
-#: src/BARServer.java:1273
+#: src/BARServer.java:1277
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -1378,20 +1378,20 @@ msgstr ""
 "\n"
 "(Fehler: {1})"
 
-#: src/BARServer.java:1277
+#: src/BARServer.java:1281
 msgid "Skip"
 msgstr "Überspringen"
 
-#: src/BARServer.java:1277
+#: src/BARServer.java:1281
 msgid "Skip all"
 msgstr "Alle überspringen"
 
-#: src/BARServer.java:1331 src/BARServer.java:1359
+#: src/BARServer.java:1352 src/BARServer.java:1380
 #, java-format
 msgid "{0} login password"
 msgstr "{0} Login Passwort"
 
-#: src/BARServer.java:1467 src/TabJobs.java:2445 src/TabStatus.java:685
+#: src/BARServer.java:1504 src/TabJobs.java:2445 src/TabStatus.java:685
 #: src/TabStatus.java:750
 msgid "Slave"
 msgstr "Slave"
