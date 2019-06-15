@@ -820,7 +820,7 @@ typedef struct
     uint      number;                                         // current volume number
     double    progress;                                       // current volume progress [0..100]
   } volume;
-  String message;
+  String message;                                             // last message
 } StatusInfo;
 
 /***********************************************************************\
