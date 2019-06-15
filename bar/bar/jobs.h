@@ -287,6 +287,10 @@ typedef struct
 extern SlaveList slaveList;
 extern JobList   jobList;
 
+#ifndef NDEBUG
+extern uint64 jobListLockTimestamp;
+#endif /* NDEBUG */
+
 /****************************** Macros *********************************/
 
 /***********************************************************************\
@@ -614,7 +618,15 @@ INLINE bool Job_listLock(SemaphoreLockTypes semaphoreLockType,
                          long               timeout
                         )
 {
-  return Semaphore_lock(&jobList.lock,semaphoreLockType,timeout);
+  bool locked;
+
+  locked = Semaphore_lock(&jobList.lock,semaphoreLockType,timeout);
+
+  #ifndef NDEBUG
+    jobListLockTimestamp = Misc_getTimestamp();
+  #endif /* NDEBUG */
+
+  return locked;
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -631,6 +643,15 @@ INLINE void Job_listUnlock(void);
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
 INLINE void Job_listUnlock(void)
 {
+  #ifndef NDEBUG
+    uint64 dt;
+  #endif /* NDEBUG */
+
+  #ifndef NDEBUG
+    dt = Misc_getTimestamp()-jobListLockTimestamp;
+    if (dt > 2*US_PER_S) fprintf(stderr,"%s, %d: Warning job list lock: %llums\n",__FILE__,__LINE__,dt/US_PER_MS);
+  #endif /* NDEBUG */
+
   Semaphore_unlock(&jobList.lock);
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */

@@ -255,6 +255,10 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 SlaveList slaveList;
 JobList   jobList;
 
+#ifndef NDEBUG
+uint64 jobListLockTimestamp;
+#endif /* NDEBUG */
+
 /****************************** Macros *********************************/
 
 /***************************** Forwards ********************************/
