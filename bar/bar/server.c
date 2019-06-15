@@ -4731,6 +4731,8 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
 
 //TODO
 #warning TODO
@@ -13062,7 +13064,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
 *            type=ARCHIVES|ENTRIES
 *            destination=<name>
 *            directoryContent=yes|no
-*            restoreEntryMode=stop|rename|overwrite
+*            restoreEntryMode=STOP|RENAME|OVERWRITE
 *          Result:
 \***********************************************************************/
 
@@ -13182,8 +13184,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                         restoreCommandInfo->id,
                         FALSE,
                         ERROR_NONE,
-                        "state=%s storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64"",
-                        "RESTORED",
+                        "state=RUNNING storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64"",
                         statusInfo->storage.name,
                         statusInfo->storage.doneSize,
                         statusInfo->storage.totalSize,
@@ -13215,6 +13216,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   {
     RestoreCommandInfo *restoreCommandInfo = (RestoreCommandInfo*)userData;
     StringMap          resultMap;
+    ServerIOActions    action;
 
     assert(restoreCommandInfo != NULL);
     assert(restoreCommandInfo->clientInfo != NULL);
@@ -13226,44 +13228,64 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     resultMap = StringMap_new();
 
     // show error
-    error = ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
-                                  3*60*MS_PER_SECOND,
-                                  NULL,  // resultMap,
-                                  "CONFIRM",
-                                  "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S",
-                                  error,
-                                  Error_getText(error),
-                                  statusInfo->storage.name,
-                                  statusInfo->entry.name
-                                 );
-    if (error != ERROR_NONE)
+    if (ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
+                              1*60*MS_PER_SECOND,
+                              resultMap,
+                              "CONFIRM",
+                              "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S message=%'S",
+                              error,
+                              Error_getText(error),
+                              statusInfo->storage.name,
+                              statusInfo->entry.name,
+                              statusInfo->message
+                             ) != ERROR_NONE
+       )
     {
       StringMap_delete(resultMap);
       return error;
     }
-
-//TODO: resultMap
-//    if (!StringMap_getEnum(resultMap,"action",&action,(StringMapParseEnumFunction)ServerIO_parseEncryptType,SERVER_IO_ENCRYPT_TYPE_NONE))
-//    {
-//      StringMap_delete(resultMap);
-//      return ERROR_EXPECTED_PARAMETER;
-//    }
+    if (!StringMap_getEnum(resultMap,"action",&action,(StringMapParseEnumFunction)ServerIO_parseAction,SERVER_IO_ACTION_NONE))
+    {
+      ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,restoreCommandInfo->id,TRUE,ERROR_EXPECTED_PARAMETER,"action=SKIP|ABORT");
+      StringMap_delete(resultMap);
+      return error;
+    }
 
     // update state
-    ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
-                        restoreCommandInfo->id,
-                        FALSE,
-                        ERROR_NONE,
-                        "state=%s storageName=%'S entryName=%'S",
-                        "FAILED",
-                        statusInfo->storage.name,
-                        statusInfo->entry.name
-                       );
+    switch (action)
+    {
+      case SERVER_IO_ACTION_SKIP:
+        ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
+                            restoreCommandInfo->id,
+                            FALSE,
+                            ERROR_NONE,
+                            "state=SKIPPED storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" message=%'S",
+                            statusInfo->storage.name,
+                            statusInfo->storage.doneSize,
+                            statusInfo->storage.totalSize,
+                            statusInfo->entry.name,
+                            statusInfo->entry.doneSize,
+                            statusInfo->entry.totalSize,
+                            statusInfo->message
+                           );
+        error = ERROR_NONE;
+        break;
+      case SERVER_IO_ACTION_ABORT:
+        ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
+                            restoreCommandInfo->id,
+                            FALSE,
+                            error,
+                            "%s",
+                            Error_getData(error)
+                           );
+        break;
+    }
+
 
     // free resources
     StringMap_delete(resultMap);
 
-    return ERROR_NONE;
+    return error;
   }
 
   /***********************************************************************\
@@ -13561,7 +13583,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                          );
   if (error == ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=%s","RESTORED");
   }
   else
   {
@@ -14191,6 +14213,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
   StringMap_getEnum(argumentMap,"sortMode",&sortMode,(StringMapParseEnumFunction)Index_parseStorageSortMode,INDEX_STORAGE_SORT_MODE_NAME);
   StringMap_getEnum(argumentMap,"ordering",&ordering,(StringMapParseEnumFunction)Index_parseOrdering,DATABASE_ORDERING_NONE);
+
 
   // check if index database is available
   if (indexHandle == NULL)

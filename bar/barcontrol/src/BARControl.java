@@ -1581,6 +1581,15 @@ public class BARControl
     SOCKET;
   };
 
+  /** restore states
+   */
+  enum RestoreStates
+  {
+    RUNNING,
+    RESTORED,
+    FAILED;
+  };
+
   // user events
   final static int USER_EVENT_NEW_SERVER = 0xFFFF+0;
   final static int USER_EVENT_NEW_JOB    = 0xFFFF+1;
@@ -4922,15 +4931,23 @@ Dprintf.dprintf("still not supported");
                                            }
                                            else
                                            {
-//                                                   RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
-                                             String        storageName      = valueMap.getString("storageName");
-                                             long          storageDoneSize  = valueMap.getLong  ("storageDoneSize");
-                                             long          storageTotalSize = valueMap.getLong  ("storageTotalSize");
-                                             String        entryName        = valueMap.getString("entryName");
-                                             long          entryDoneSize    = valueMap.getLong  ("entryDoneSize");
-                                             long          entryTotalSize   = valueMap.getLong  ("entryTotalSize");
+                                             RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
+                                             String        storageName      = valueMap.getString("storageName","");
+                                             long          storageDoneSize  = valueMap.getLong  ("storageDoneSize",0L);
+                                             long          storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
+                                             String        entryName        = valueMap.getString("entryName","");
+                                             long          entryDoneSize    = valueMap.getLong  ("entryDoneSize",0L);
+                                             long          entryTotalSize   = valueMap.getLong  ("entryTotalSize",0L);
 
-                                             //TODO
+                                             switch (state)
+                                             {
+                                               case RESTORED:
+                                                 printError("Restored storage '%s', %d bytes",storageName,storageDoneSize);
+                                                 break;
+                                               case FAILED:
+                                                 printError("cannot restore storage '%s'",storageName);
+                                                 break;
+                                             }
                                            }
                                          }
                                          catch (IllegalArgumentException exception)

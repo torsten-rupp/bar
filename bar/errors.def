@@ -647,7 +647,16 @@ ERROR UMOUNT
 // --- archive ----------------------------------------------------------
 ERROR NO_ARCHIVE_FILE_NAME             TR("no archive file name given")
 ERROR NOT_AN_ARCHIVE_FILE              TR("not an archive file")
-ERROR ARCHIVE_NOT_FOUND                TR("archive not found")
+ERROR ARCHIVE_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),TR("archive '%s' not found"),ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("archive not found"));
+  }
+
 ERROR END_OF_ARCHIVE                   TR("end of archive")
 ERROR NO_META_ENTRY                    TR("no meta entry")
 ERROR NO_FILE_ENTRY                    TR("no file entry")
