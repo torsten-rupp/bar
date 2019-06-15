@@ -3014,8 +3014,9 @@ NULL, // masterIO
     printError("Archive not found '%s'!",
                String_cString(printableStorageName)
               );
+    error = handleError(restoreInfo,ERROR_ARCHIVE_NOT_FOUND);
     AutoFree_cleanup(&autoFreeList);
-    return ERROR_ARCHIVE_NOT_FOUND;
+    return error;
   }
 
   // open archive
