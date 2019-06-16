@@ -3014,8 +3014,6 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
   assert(indexHandle != NULL);
 
   List_clear(expirationEntityList,CALLBACK(NULL,NULL));
-//  expirationEntityList->totalEntityCount = 0;
-//  expirationEntityList->totalEntitySize  = 0L;
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
@@ -3124,6 +3122,31 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
 }
 
 /***********************************************************************\
+* Name   : hasPersistence
+* Purpose: has persistence for specified archive type
+* Input  : jobNode     - job node
+*          archiveType - archive type
+* Output : -
+* Return : TRUE iff persistence for archive type
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool hasPersistence(const JobNode *jobNode,
+                          ArchiveTypes  archiveType
+                         )
+{
+  const PersistenceNode *persistenceNode;
+
+  assert(jobNode != NULL);
+  assert(Job_isListLocked());
+
+  return LIST_CONTAINS(&jobNode->job.options.persistenceList,
+                       persistenceNode,
+                       persistenceNode->archiveType == archiveType
+                      );
+}
+
+/***********************************************************************\
 * Name   : isInTransit
 * Purpose: check if entity is "in-transit"
 * Input  : expirationEntityNode - expiration entity node
@@ -3183,6 +3206,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   bool                       inTransit;
   uint                       totalEntityCount;
   uint64                     totalEntitySize;
+  const PersistenceNode      *persistenceNode;
 
   // init variables
   expiredJobName = String_new();
@@ -3227,12 +3251,13 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           JOB_LIST_ITERATE(jobNode)
           {
             List_init(&expirationEntityList);
+
             if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
                 && getJobExpirationEntityList(&expirationEntityList,indexHandle,jobNode)
+                && !List_isEmpty(&expirationEntityList)  // only expire if persistence list is not empty
                )
             {
-//LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalSize); }
-
+//LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalEntrySize); }
               // mount devices
               error = mountAll(&jobNode->job.options.mountList);
               if (error == ERROR_NONE)
@@ -3263,6 +3288,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
 
                   // check if expired, keep one "in-transit" entity
                   if (   !inTransit
+                      && hasPersistence(jobNode,expirationEntityNode->archiveType)
                       && (   (expirationEntityNode->persistenceNode == NULL)
                           || ((   (expirationEntityNode->persistenceNode->maxKeep > 0)
                                && (expirationEntityNode->persistenceNode->maxKeep >= expirationEntityNode->persistenceNode->minKeep)
