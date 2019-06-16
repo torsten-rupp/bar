@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-15 15:51+0200\n"
+"POT-Creation-Date: 2019-06-15 17:54+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -180,8 +180,8 @@ msgstr ""
 #: src/BARControl.java:2529 src/BARControl.java:2533 src/BARControl.java:3140
 #: src/BARControl.java:3148 src/BARControl.java:3179 src/BARControl.java:3187
 #: src/BARControl.java:3618 src/BARControl.java:3692 src/BARControl.java:3696
-#: src/BARControl.java:5087 src/BARControl.java:5099 src/BARControl.java:5121
-#: src/BARControl.java:5140
+#: src/BARControl.java:5091 src/BARControl.java:5103 src/BARControl.java:5125
+#: src/BARControl.java:5144
 msgid "Connection fail"
 msgstr ""
 
@@ -251,7 +251,7 @@ msgid "Pair master"
 msgstr ""
 
 #: src/BARControl.java:2808 src/BARControl.java:3749 src/BARControl.java:3963
-#: src/BARServer.java:1503
+#: src/BARServer.java:1513
 msgid "Master"
 msgstr ""
 
@@ -293,21 +293,21 @@ msgid "Connection lost"
 msgstr ""
 
 #: src/BARControl.java:3119 src/BARControl.java:3140 src/BARControl.java:3148
-#: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:5087
-#: src/BARControl.java:5121 src/BARControl.java:5140
+#: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:5091
+#: src/BARControl.java:5125 src/BARControl.java:5144
 msgid "Error: "
 msgstr ""
 
 #: src/BARControl.java:3119 src/BARControl.java:3140 src/BARControl.java:3148
-#: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:5087
-#: src/BARControl.java:5121 src/BARControl.java:5140
+#: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:5091
+#: src/BARControl.java:5125 src/BARControl.java:5144
 msgid "Try again"
 msgstr ""
 
 #: src/BARControl.java:3119 src/BARControl.java:3140 src/BARControl.java:3148
 #: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:3460
-#: src/BARControl.java:3618 src/BARControl.java:3798 src/BARControl.java:5087
-#: src/BARControl.java:5099 src/BARControl.java:5121 src/BARControl.java:5140
+#: src/BARControl.java:3618 src/BARControl.java:3798 src/BARControl.java:5091
+#: src/BARControl.java:5103 src/BARControl.java:5125 src/BARControl.java:5144
 #: src/Dialogs.java:2265 src/Dialogs.java:2364 src/Dialogs.java:3470
 #: src/Dialogs.java:3486 src/Dialogs.java:3683 src/Dialogs.java:3948
 #: src/Dialogs.java:4576 src/Dialogs.java:5581 src/Dialogs.java:5772
@@ -335,8 +335,8 @@ msgstr ""
 msgid "SSL"
 msgstr ""
 
-#: src/BARControl.java:3389 src/BARControl.java:4873 src/BARControl.java:4897
-#: src/BARServer.java:1355 src/BARServer.java:1382 src/Dialogs.java:3554
+#: src/BARControl.java:3389 src/BARControl.java:4877 src/BARControl.java:4901
+#: src/BARServer.java:1357 src/BARServer.java:1384 src/Dialogs.java:3554
 #: src/Dialogs.java:3807 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6472 src/TabJobs.java:6828
 #: src/TabJobs.java:7370
@@ -348,11 +348,11 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/BARControl.java:3618 src/BARControl.java:5099
+#: src/BARControl.java:3618 src/BARControl.java:5103
 msgid "Connection fail. Try to connect without TLS/SSL?"
 msgstr ""
 
-#: src/BARControl.java:3618 src/BARControl.java:5099
+#: src/BARControl.java:3618 src/BARControl.java:5103
 msgid "Try without TLS/SSL"
 msgstr ""
 
@@ -386,12 +386,12 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/BARControl.java:4871 src/BARServer.java:1353
+#: src/BARControl.java:4875 src/BARServer.java:1355
 #, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr ""
 
-#: src/BARControl.java:4872 src/Dialogs.java:3542 src/Dialogs.java:3798
+#: src/BARControl.java:4876 src/Dialogs.java:3542 src/Dialogs.java:3798
 #: src/Dialogs.java:4479 src/Dialogs.java:4539 src/ServerSettings.java:608
 #: src/ServerSettings.java:2441 src/TabJobs.java:2314 src/TabJobs.java:4077
 #: src/TabJobs.java:9481 src/TabJobs.java:9623 src/TabJobs.java:11695
@@ -401,12 +401,12 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: src/BARControl.java:4896 src/BARServer.java:1381
+#: src/BARControl.java:4900 src/BARServer.java:1383
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr ""
 
-#: src/BARControl.java:4923
+#: src/BARControl.java:4927
 #, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""
@@ -1278,12 +1278,12 @@ msgstr ""
 msgid "Skip all"
 msgstr ""
 
-#: src/BARServer.java:1352 src/BARServer.java:1380
+#: src/BARServer.java:1354 src/BARServer.java:1382
 #, java-format
 msgid "{0} login password"
 msgstr ""
 
-#: src/BARServer.java:1504 src/TabJobs.java:2445 src/TabStatus.java:685
+#: src/BARServer.java:1514 src/TabJobs.java:2445 src/TabStatus.java:685
 #: src/TabStatus.java:750
 msgid "Slave"
 msgstr ""

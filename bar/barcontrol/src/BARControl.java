@@ -4816,6 +4816,10 @@ Dprintf.dprintf("starafsf");
                                        }
                                      }
                                     );
+            if (indexIds.isEmpty())
+            {
+              throw new BARException(BARException.ARCHIVE_NOT_FOUND,Settings.restoreStorageName);
+            }
 
             BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%s",
                                                          StringUtils.join(indexIds,',')
