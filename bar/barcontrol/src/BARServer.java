@@ -1341,68 +1341,78 @@ class CommandThread extends Thread
   //          final String        entryName    = command.valueMap.getString("entryName","");
 
             // get password
-            display.syncExec(new Runnable()
+            if (display != null)
             {
-              @Override
-              public void run()
+              display.syncExec(new Runnable()
               {
-                if (passwordType.isLogin())
+                @Override
+                public void run()
                 {
-                  String[] data = Dialogs.login(new Shell(),
-                                                BARControl.tr("{0} login password",passwordType),
-                                                BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
-                                                name,
-                                                BARControl.tr("Password")+":"
-                                               );
-                  if (data != null)
+                  if (passwordType.isLogin())
                   {
-                    BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d name=%S encryptType=%s encryptedPassword=%S",
-                                                                      BARException.NONE,
-                                                                      data[0],
-                                                                      BARServer.getPasswordEncryptType(),
-                                                                      BARServer.encryptPassword(data[1])
-                                                                     ),
-                                                  0  // debugLevel
+                    String[] data = Dialogs.login(new Shell(),
+                                                  BARControl.tr("{0} login password",passwordType),
+                                                  BARControl.tr("Please enter {0} login for: {1}",passwordType,passwordText),
+                                                  name,
+                                                  BARControl.tr("Password")+":"
                                                  );
+                    if (data != null)
+                    {
+                      BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d name=%S encryptType=%s encryptedPassword=%S",
+                                                                        BARException.NONE,
+                                                                        data[0],
+                                                                        BARServer.getPasswordEncryptType(),
+                                                                        BARServer.encryptPassword(data[1])
+                                                                       ),
+                                                    0  // debugLevel
+                                                   );
+                    }
+                    else
+                    {
+                      BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
+                                                                        BARException.NO_PASSWORD
+                                                                       ),
+                                                    0  // debugLevel
+                                                   );
+                    }
                   }
                   else
                   {
-                    BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
-                                                                      BARException.NO_PASSWORD
-                                                                     ),
-                                                  0  // debugLevel
-                                                 );
+                    String password = Dialogs.password(new Shell(),
+                                                       BARControl.tr("{0} login password",passwordType),
+                                                       BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
+                                                       BARControl.tr("Password")+":"
+                                                      );
+                    if (password != null)
+                    {
+                      BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d encryptType=%s encryptedPassword=%S",
+                                                                        BARException.NONE,
+                                                                        BARServer.getPasswordEncryptType(),
+                                                                        BARServer.encryptPassword(password)
+                                                                       ),
+                                                    0  // debugLevel
+                                                   );
+                    }
+                    else
+                    {
+                      BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
+                                                                        BARException.NO_PASSWORD
+                                                                       ),
+                                                    0  // debugLevel
+                                                   );
+                    }
                   }
                 }
-                else
-                {
-                  String password = Dialogs.password(new Shell(),
-                                                     BARControl.tr("{0} login password",passwordType),
-                                                     BARControl.tr("Please enter {0} password for: {1}",passwordType,passwordText),
-                                                     BARControl.tr("Password")+":"
-                                                    );
-                  if (password != null)
-                  {
-                    BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d encryptType=%s encryptedPassword=%S",
-                                                                      BARException.NONE,
-                                                                      BARServer.getPasswordEncryptType(),
-                                                                      BARServer.encryptPassword(password)
-                                                                     ),
-                                                  0  // debugLevel
-                                                 );
-                  }
-                  else
-                  {
-                    BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
-                                                                      BARException.NO_PASSWORD
-                                                                     ),
-                                                  0  // debugLevel
-                                                 );
-                  }
-                }
-              }
-            });
-  //        }
+              });
+            }
+            else
+            {
+              BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
+                                                                BARException.NO_PASSWORD
+                                                               ),
+                                            0  // debugLevel
+                                           );
+            }
         }
         else if (command.name.equals("REQUEST_VOLUME"))
         {
