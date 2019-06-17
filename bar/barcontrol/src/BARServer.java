@@ -979,6 +979,8 @@ class ReadThread extends Thread
               throw new BARException(BARException.PARSE,data);
             }
 
+            BARServer.logReceived(1,"%s",line);
+
             // process command
             BARServer.process(commandId,name,valueMap);
           }
@@ -1300,26 +1302,12 @@ class CommandThread extends Thread
               });
 
               // send result
-              try
-              {
-                BARServer.sendResult(command.id,1,true,0,"action=%s skipAll=%y",action[0],skipAllFlag[0]);
-              }
-              catch (BARException exception)
-              {
-                // ignored
-              }
+              BARServer.sendResult(command.id,1,true,0,"action=%s skipAll=%y",action[0],skipAllFlag[0]);
             }
             else
             {
               // send result
-              try
-              {
-                BARServer.sendResult(command.id,1,true,0,"action=ABORT skipAll=no");
-              }
-              catch (BARException exception)
-              {
-                // ignored
-              }
+              BARServer.sendResult(command.id,1,true,0,"action=ABORT skipAll=no");
             }
           }
           else
@@ -1343,6 +1331,7 @@ class CommandThread extends Thread
             // get password
             if (display != null)
             {
+              final long id = command.id;
               display.syncExec(new Runnable()
               {
                 @Override
@@ -1358,22 +1347,17 @@ class CommandThread extends Thread
                                                  );
                     if (data != null)
                     {
-                      BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d name=%S encryptType=%s encryptedPassword=%S",
-                                                                        BARException.NONE,
-                                                                        data[0],
-                                                                        BARServer.getPasswordEncryptType(),
-                                                                        BARServer.encryptPassword(data[1])
-                                                                       ),
-                                                    0  // debugLevel
-                                                   );
+                      BARServer.sendResult(id,1,true,BARException.NONE,StringParser.format("name=%S encryptType=%s encryptedPassword=%S",
+                                                                                           BARException.NONE,
+                                                                                           data[0],
+                                                                                           BARServer.getPasswordEncryptType(),
+                                                                                           BARServer.encryptPassword(data[1])
+                                                                                          )
+                                           );
                     }
                     else
                     {
-                      BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
-                                                                        BARException.NO_PASSWORD
-                                                                       ),
-                                                    0  // debugLevel
-                                                   );
+                      BARServer.sendResult(id,1,true,BARException.NO_PASSWORD);
                     }
                   }
                   else
@@ -1385,21 +1369,15 @@ class CommandThread extends Thread
                                                       );
                     if (password != null)
                     {
-                      BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d encryptType=%s encryptedPassword=%S",
-                                                                        BARException.NONE,
-                                                                        BARServer.getPasswordEncryptType(),
-                                                                        BARServer.encryptPassword(password)
-                                                                       ),
-                                                    0  // debugLevel
-                                                   );
+                      BARServer.sendResult(id,1,true,BARException.NONE,StringParser.format("encryptType=%s encryptedPassword=%S",
+                                                                                           BARServer.getPasswordEncryptType(),
+                                                                                           BARServer.encryptPassword(password)
+                                                                                          )
+                                          );
                     }
                     else
                     {
-                      BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
-                                                                        BARException.NO_PASSWORD
-                                                                       ),
-                                                    0  // debugLevel
-                                                   );
+                      BARServer.sendResult(id,1,true,BARException.NO_PASSWORD);
                     }
                   }
                 }
@@ -1407,39 +1385,35 @@ class CommandThread extends Thread
             }
             else
             {
-              BARServer.asyncExecuteCommand(StringParser.format("ACTION_RESULT errorCode=%d",
-                                                                BARException.NO_PASSWORD
-                                                               ),
-                                            0  // debugLevel
-                                           );
+              BARServer.sendResult(command.id,1,true,BARException.NO_PASSWORD);
             }
         }
         else if (command.name.equals("REQUEST_VOLUME"))
         {
+          // get volume
+          if (display != null)
+          {
 //TODO
 Dprintf.dprintf("REQUEST_VOLUME");
-System.exit(1);
+BARServer.sendResult(command.id,1,true,BARException.LOAD_VOLUME_FAIL);
+          }
+          else
+          {
+            BARServer.sendResult(command.id,1,true,BARException.LOAD_VOLUME_FAIL);
+          }
         }
         else
         {
-//TODO
-Dprintf.dprintf("unknown command %s",command.name);
-Dprintf.halt();
+          BARServer.sendResult(command.id,1,true,BARException.UNKNOWN_COMMAND);
         }
       }
       catch (Throwable throwable)
       {
         // try to send abort result
-        try
-        {
-          BARServer.sendResult(command.id,1,true,0,"action=ABORT");
-        }
-        catch (Throwable unused)
-        {
-        }
+        BARServer.sendResult(command.id,1,true,0,"action=ABORT");
 
         BARControl.printInternalError(throwable);
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);        
       }
     }
   }
@@ -3002,13 +2976,12 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   }
 
   /** send result
-   * @param command command to send to BAR server
+   * @param commandId command id
    * @param debugLevel debug level (0..n)
-   * @param errorMessage error message or null
-   * @param resultHandler result handler
-   * @param handler handler
-   * @param busyIndicator busy indicator or null
-   * @return BARException.NONE or error code
+   * @param completedFlag true iff completed
+   * @param error error code
+   * @param format data
+   * @param arguments optional arguments
    */
   public static void sendResult(long      commandId,
                                 int       debugLevel,
@@ -3017,7 +2990,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                 String    format,
                                 Object... arguments
                                )
-    throws BARException
   {
     synchronized(lock)
     {
@@ -3029,10 +3001,18 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       try
       {
         // format result
-        String data = StringParser.format(format,arguments);
+        String line;
+        if (format != null)
+        {
+          String data = StringParser.format(format,arguments);
+          line = String.format("%d %d %d %s",commandId,completedFlag ? 1 : 0,error,data);
+        }
+        else
+        {
+          line = String.format("%d %d %d",commandId,completedFlag ? 1 : 0,error);
+        }
 
         // send result
-        String line = String.format("%d %d %d %s",commandId,completedFlag ? 1 : 0,error,data);
         output.write(line); output.write('\n'); output.flush();
         logSent(debugLevel,"%s",line);
       }
@@ -3041,6 +3021,21 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         throw new CommunicationError(exception.getMessage());
       }
     }
+  }
+
+  /** send result
+   * @param commandId command id
+   * @param debugLevel debug level (0..n)
+   * @param completedFlag true iff completed
+   * @param error error code
+   */
+  public static void sendResult(long      commandId,
+                                int       debugLevel,
+                                boolean   completedFlag,
+                                int       error
+                               )
+  {
+    sendResult(commandId,debugLevel,completedFlag,error,(String)null);
   }
 
   // ----------------------------------------------------------------------

@@ -330,6 +330,137 @@ LOCAL void updateStatusInfo(RestoreInfo *restoreInfo, bool forceUpdate)
 }
 
 /***********************************************************************\
+* Name   : statusInfoUpdateLock
+* Purpose: lock status info update
+* Input  : createInfo   - create info structure
+*          fragmentNode - fragment node (can be NULL)
+* Output : -
+* Return : always TRUE
+* Notes  : -
+\***********************************************************************/
+
+LOCAL SemaphoreLock statusInfoUpdateLock(CreateInfo *createInfo, ConstString name, FragmentNode **foundFragmentNode)
+{
+  assert(createInfo != NULL);
+
+  // lock
+  Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
+
+  if (foundFragmentNode != NULL)
+  {
+    // find fragment node
+    (*foundFragmentNode) = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+  }
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : statusInfoUpdateUnlock
+* Purpose: status info update unlock
+* Input  : createInfo - create info structure
+*          name       - name of entry
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void statusInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
+{
+  const FragmentNode *fragmentNode;
+
+  assert(createInfo != NULL);
+
+  if (name != NULL)
+  {
+    // update current status info if not set or timeout
+    if (   (createInfo->statusInfoCurrentFragmentNode == NULL)
+        || ((Misc_getTimestamp()-createInfo->statusInfoCurrentLastUpdateTimestamp) >= 10*US_PER_S)
+       )
+    {
+      // find fragment node
+      fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
+
+      // set new current status info
+      String_set(createInfo->statusInfo.entry.name,name);
+      if (fragmentNode != NULL)
+      {
+        createInfo->statusInfo.entry.doneSize  = FragmentList_getSize(fragmentNode);
+        createInfo->statusInfo.entry.totalSize = FragmentList_getTotalSize(fragmentNode);
+
+        createInfo->statusInfoCurrentFragmentNode = !FragmentList_isComplete(fragmentNode) ? fragmentNode : NULL;
+      }
+      else
+      {
+        createInfo->statusInfoCurrentFragmentNode = NULL;
+      }
+
+      // save last update time
+      createInfo->statusInfoCurrentLastUpdateTimestamp = Misc_getTimestamp();
+    }
+  }
+
+  // update status info
+  updateStatusInfo(createInfo,TRUE);
+
+  // unlock
+  Semaphore_unlock(&createInfo->statusInfoLock);
+}
+
+//TODO: comment
+#define STATUS_INFO_GET(createInfo,name) \
+  for (SemaphoreLock semaphoreLock = Semaphore_lock(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER); \
+       semaphoreLock; \
+       Semaphore_unlock(&createInfo->statusInfoLock), semaphoreLock = FALSE \
+      )
+
+/***********************************************************************\
+* Name   : STATUS_INFO_UPDATE
+* Purpose: update status info
+* Input  : createInfo   - create info structure
+*          name         - name of entry
+*          fragmentNode - fragment node variable (can be NULL)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define STATUS_INFO_UPDATE(createInfo,name,fragmentNode) \
+  for (SemaphoreLock semaphoreLock = statusInfoUpdateLock(createInfo,name,fragmentNode); \
+       semaphoreLock; \
+       statusInfoUpdateUnlock(createInfo,name), semaphoreLock = FALSE \
+      )
+
+/***********************************************************************\
+* Name   : updateStorageStatusInfo
+* Purpose: update storage info data
+* Input  : userData          - user data: create info
+*          storageStatusInfo - storage status info
+* Output : -
+* Return : TRUE to continue, FALSE to abort
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
+                                   void                    *userData
+                                  )
+{
+  CreateInfo *createInfo = (CreateInfo*)userData;
+
+  assert(createInfo != NULL);
+  assert(storageStatusInfo != NULL);
+
+  STATUS_INFO_UPDATE(createInfo,NULL,NULL)
+  {
+    createInfo->statusInfo.storage.doneSize = storageStatusInfo->storageDoneBytes;
+    createInfo->statusInfo.volume.number    = storageStatusInfo->volumeNumber;
+    createInfo->statusInfo.volume.progress  = storageStatusInfo->volumeProgress;
+  }
+
+  return !Storage_isAborted(&createInfo->storageInfo);
+}
+
+/***********************************************************************\
 * Name   : handleError
 * Purpose: handle restore error
 * Input  : restoreInfo - restore info
@@ -739,13 +870,21 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
     }
 
+    // update status
+    if ((fragmentNode == NULL) || FragmentList_isComplete(fragmentNode))
+    {
+      restoreInfo->statusInfo.done.count++;
+      restoreInfo->statusInfo.done.size += (uint64)fileInfo.size;
+      updateStatusInfo(restoreInfo,TRUE);
+    }
+
+    // update fragment
     if (fragmentNode != NULL)
     {
       // add fragment to file fragment list
       FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
 //FragmentList_debugPrintInfo(fragmentNode,String_cString(fileName));
     }
-
     if ((fragmentNode == NULL) || FragmentList_isComplete(fragmentNode))
     {
       if (!restoreInfo->storageFlags.dryRun)
@@ -828,7 +967,6 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
         }
       }
     }
-
     if (fragmentNode != NULL)
     {
       if (FragmentList_isComplete(fragmentNode))
@@ -881,6 +1019,10 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   {
     // skip
     printInfo(2,"  Restore '%s'...skipped\n",String_cString(fileName));
+
+    restoreInfo->statusInfo.skipped.count++;
+    restoreInfo->statusInfo.skipped.size += (uint64)fileInfo.size;
+    updateStatusInfo(restoreInfo,FALSE);
   }
 
   // close archive file, free resources

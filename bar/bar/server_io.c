@@ -121,6 +121,7 @@ LOCAL void freeResultNode(ServerIOResultNode *resultNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
+  StringMap_delete(resultNode->resultMap);
   String_delete(resultNode->data);
 }
 
@@ -1483,7 +1484,7 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
     // parse
     if      (String_parse(serverIO->line,STRING_BEGIN,"%u %y %u % S",NULL,&resultId,&completedFlag,&errorCode,data))
     {
-      // process results
+      // command results: <id> <complete flag> <error code> <data>
       #ifndef NDEBUG
         if (globalOptions.serverDebugLevel >= 1)
         {
@@ -1501,19 +1502,34 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       resultNode->error         = (errorCode != ERROR_CODE_NONE) ? ERRORF_(errorCode,"%s",String_cString(data)) : ERROR_NONE;
       resultNode->completedFlag = completedFlag;
       resultNode->data          = String_duplicate(data);
-
-//TODO: parse arguments?
-
-      // add result
-      SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      resultNode->resultMap     = StringMap_new();
+      if (StringMap_parse(resultNode->resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
       {
-        List_append(&serverIO->resultList,resultNode);
+        // store result
+        SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&serverIO->resultList,resultNode);
 //fprintf(stderr,"%s, %d: appended result: %d %d %d %s\n",__FILE__,__LINE__,resultNode->id,resultNode->error,resultNode->completedFlag,String_cString(resultNode->data));
+        }
+      }
+      else
+      {
+fprintf(stderr,"%s, %d: data='%s'\n",__FILE__,__LINE__,String_cString(data));
+        // parse error -> discard
+        #ifndef NDEBUG
+          if (globalOptions.serverDebugLevel >= 1)
+          {
+            fprintf(stderr,"DEBUG: parse result fail: %s\n",String_cString(data));
+          }
+        #endif /* not DEBUG */
+        StringMap_delete(resultNode->resultMap);
+        String_delete(resultNode->data);
+        LIST_DELETE_NODE(resultNode);
       }
     }
     else if (String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data))
     {
-      // get command
+      // command: <id> <name> <data>
       #ifndef NDEBUG
         if (globalOptions.serverDebugLevel >= 1)
         {
@@ -1892,6 +1908,28 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   String_delete(s);
 
   return error;
+}
+
+void ServerIO_clientActionResult(ServerIO   *serverIO,
+                                 uint       id,
+                                 Errors     error,
+                                 StringMap  resultMap
+                                )
+{
+  ServerIOResultNode *resultNode;
+
+  SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    resultNode = LIST_FIND(&serverIO->resultList,resultNode,resultNode->id == id);
+    if (resultNode != NULL)
+    {
+      resultNode->error         = error;
+      resultNode->completedFlag = TRUE;
+      StringMap_move(resultNode->resultMap,resultMap);
+    }
+    
+    Semaphore_signalModified(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
+  }
 }
 
 #ifdef __cplusplus

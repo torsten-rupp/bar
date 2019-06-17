@@ -88,7 +88,9 @@ typedef struct ServerIOResultNode
   uint   id;
   bool   completedFlag;
   Errors error;
+//TODO: union
   String data;
+  StringMap resultMap;
 } ServerIOResultNode;
 
 typedef struct
@@ -204,7 +206,7 @@ bool ServerIO_parseEncryptType(const char           *encryptTypeText,
 
 /***********************************************************************\
 * Name   : ServerIO_parseAction
-* Purpose: parse ation text
+* Purpose: parse action text
 * Input  : actionText - action text
 *          action     - action variable
 *          userData   - user data (not used)
@@ -714,6 +716,12 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
                              const char *format,
                              ...
                             );
+
+void ServerIO_clientActionResult(ServerIO   *serverIO,
+                                 uint       id,
+                                 Errors     error,
+                                 StringMap  resultMap
+                                );
 
 #ifdef __cplusplus
   }

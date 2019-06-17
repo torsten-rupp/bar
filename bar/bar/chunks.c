@@ -248,7 +248,6 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
 #endif
       if ((chunkBuffer->bytesRead+n) > chunkSize)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return ERROR_INVALID_CHUNK_SIZE;
       }
 
@@ -277,34 +276,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       // decrypt initial data
       if (cryptInfo != NULL)
       {
-//TODO
-//uint b,x;
-//byte *p;
-//Crypt_getBlockLength(CRYPT_ALGORITHM_AES256,&b);
-//fprintf(stderr,"%s, %d: Crypt_decrypt %d %d\n",__FILE__,__LINE__,n,b);
         Crypt_reset(cryptInfo);
-#if 1
         error = Crypt_decrypt(cryptInfo,chunkBuffer->buffer,n);
         if (error != ERROR_NONE)
         {
           free(chunkBuffer->buffer);
           return error;
         }
-#else
-        x = 0;
-        p = chunkBuffer->buffer;
-        while (x < n)
-        {
-          error = Crypt_decrypt(cryptInfo,p,b);
-          if (error != ERROR_NONE)
-          {
-            free(chunkBuffer->buffer);
-            return error;
-          }
-          x += b;
-          p += b;
-        }
-#endif
       }
       chunkBuffer->bufferLength += n;
 //fprintf(stderr,"%s, %d: read decrypted:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,n);
@@ -346,26 +324,6 @@ LOCAL Errors doneChunkBuffer(ChunkBuffer *chunkBuffer)
   assert(chunkBuffer != NULL);
 
   DEBUG_REMOVE_RESOURCE_TRACE(chunkBuffer,ChunkBuffer);
-
-//TODO
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-#if 0
-  switch (chunkBuffer->chunkMode)
-  {
-    case CHUNK_MODE_READ:
-      error = chunkBuffer->chunkIO->seek(chunkBuffer->chunkIOUserData,
-                                         chunkBuffer->offset+chunkBuffer->bytesRead-chunkBuffer->bufferIndex
-                                        );
-      if (error != ERROR_NONE)
-      {
-        free(chunkBuffer->buffer);
-        return error;
-      }
-      break;
-    case CHUNK_MODE_WRITE:
-      break;
-  }
-#endif
 
   free(chunkBuffer->buffer);
 
@@ -1224,6 +1182,7 @@ LOCAL void resetDefinition(ChunkDefinition *definition,
         case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
           {
 //TODO
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 #if 0
             uint arrayLength;
             void *arrayData;
@@ -2424,15 +2383,7 @@ chunkInfo->chunkSize = ALIGN(dataSize,chunkInfo->alignment);
 
   if (chunkHeader->transformInfo != NULL)
   {
-//TODO
-#if 0
-fprintf(stderr,"%s, %d: do transform %x -> %x, size %d %d!\n",__FILE__,__LINE__,
-chunkHeader->transformInfo->old.id,chunkHeader->transformInfo->new.id,
-ALIGN(chunkHeader->transformInfo->old.fixedSize,chunkInfo->alignment),
-getDefinitionSize(chunkHeader->transformInfo->old.definition,chunkInfo->alignment,NULL,0),
-getDefinitionSize(chunkHeader->transformInfo->new.definition,chunkInfo->alignment,NULL,0)
-);
-#endif
+//fprintf(stderr,"%s, %d: do transform %x -> %x, size %d %d!\n",__FILE__,__LINE__,chunkHeader->transformInfo->old.id,chunkHeader->transformInfo->new.id,ALIGN(chunkHeader->transformInfo->old.fixedSize,chunkInfo->alignment),getDefinitionSize(chunkHeader->transformInfo->old.definition,chunkInfo->alignment,NULL,0),getDefinitionSize(chunkHeader->transformInfo->new.definition,chunkInfo->alignment,NULL,0));
     // allocate memory for data of deprecated chunk
     deprecatedChunkData = malloc(chunkHeader->transformInfo->old.allocSize);
     if (deprecatedChunkData == NULL)
@@ -2664,7 +2615,6 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       if (chunkInfo->offset+CHUNK_HEADER_SIZE+chunkInfo->size > chunkInfo->io->getSize(chunkInfo->ioUserData))
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return ERROR_INVALID_CHUNK_SIZE;
       }
 
@@ -2750,7 +2700,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
     {
       chunkHeader->id            = chunkTransformInfo->new.id;
       chunkHeader->transformInfo = chunkTransformInfo;
-fprintf(stderr,"%s, %d: --- transform function %x %p\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
+//fprintf(stderr,"%s, %d: --- transform function %x %p\n",__FILE__,__LINE__,chunkHeader->id,chunkHeader->transformInfo);
       break;
     }
     chunkTransformInfo++;
@@ -2776,7 +2726,6 @@ Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
   size = chunkInfo->io->getSize(chunkInfo->ioUserData);
   if (chunkHeader->offset+CHUNK_HEADER_SIZE+chunkHeader->size > size)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return ERROR_INVALID_CHUNK_SIZE;
   }
 

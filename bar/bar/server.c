@@ -4744,8 +4744,9 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
 
 LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+Errors error;
 //  uint           stringMapIterator;
-//  uint64         n;
+  uint64         n;
 //  const char     *name;
 //  StringMapTypes type;
 //  StringMapValue value;
@@ -4757,12 +4758,24 @@ LOCAL void serverCommand_actionResult(ClientInfo *clientInfo, IndexHandle *index
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
+StringMap_debugPrint(0,argumentMap);
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
 //TODO
 #warning TODO
-#if 0
+#if 1
+  SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // get error
+    StringMap_getUInt64(argumentMap,"errorCode",&n,ERROR_UNKNOWN);
+    error = Error_(n,0);
+
+    // set action result
+    ServerIO_clientActionResult(&clientInfo->io,id,error,argumentMap);
+  }
+  
+#else
   SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get error
@@ -13210,13 +13223,17 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                         restoreCommandInfo->id,
                         FALSE,
                         ERROR_NONE,
-                        "state=RUNNING storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64"",
-                        statusInfo->storage.name,
-                        statusInfo->storage.doneSize,
-                        statusInfo->storage.totalSize,
+                        "state=RUNNING doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64"",
+                        statusInfo->done.count,
+                        statusInfo->done.size,
+                        statusInfo->total.count,
+                        statusInfo->total.size,
                         statusInfo->entry.name,
                         statusInfo->entry.doneSize,
-                        statusInfo->entry.totalSize
+                        statusInfo->entry.totalSize,
+                        statusInfo->storage.name,
+                        statusInfo->storage.doneSize,
+                        statusInfo->storage.totalSize
                        );
   }
 

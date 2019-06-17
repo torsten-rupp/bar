@@ -4833,9 +4833,10 @@ Dprintf.dprintf("starafsf");
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-
+          
 
           // restore
+Dprintf.dprintf("------------------");
           try
           {
             BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S directoryContent=%y restoreEntryMode=%s",
@@ -4863,6 +4864,8 @@ Dprintf.dprintf("starafsf");
                                              String        errorMessage = valueMap.getString("errorMessage","");
                                              String        storage      = valueMap.getString("storage","");
                                              String        entry        = valueMap.getString("entry","");
+Dprintf.dprintf("action=%s",action);
+System.exit(33);
 
                                              switch (action)
                                              {
@@ -4936,17 +4939,21 @@ Dprintf.dprintf("still not supported");
                                            else
                                            {
                                              RestoreStates state            = valueMap.getEnum  ("state",RestoreStates.class);
-                                             String        storageName      = valueMap.getString("storageName","");
-                                             long          storageDoneSize  = valueMap.getLong  ("storageDoneSize",0L);
-                                             long          storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
+                                             long          doneCount        = valueMap.getLong  ("entryDoneSize",0L);
+                                             long          doneSize         = valueMap.getLong  ("doneSize",0L);
+                                             long          totalCount       = valueMap.getLong  ("totalCount",0L);
+                                             long          totalSize        = valueMap.getLong  ("totalSize",0L);
                                              String        entryName        = valueMap.getString("entryName","");
                                              long          entryDoneSize    = valueMap.getLong  ("entryDoneSize",0L);
                                              long          entryTotalSize   = valueMap.getLong  ("entryTotalSize",0L);
+                                             String        storageName      = valueMap.getString("storageName","");
+                                             long          storageDoneSize  = valueMap.getLong  ("storageDoneSize",0L);
+                                             long          storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
 
                                              switch (state)
                                              {
                                                case RESTORED:
-                                                 printError("Restored storage '%s', %d bytes",storageName,storageDoneSize);
+                                                 System.out.println(String.format("Restored %d entries, %d bytes",doneCount,doneSize));
                                                  break;
                                                case FAILED:
                                                  printError("cannot restore storage '%s'",storageName);
