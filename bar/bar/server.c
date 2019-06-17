@@ -4774,7 +4774,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
     // set action result
     ServerIO_clientActionResult(&clientInfo->io,id,error,argumentMap);
   }
-  
+
 #else
   SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -5776,7 +5776,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
 * Return : -
 * Notes  : Arguments:
 *          Result:
-*            state=RUNNIGN|PAUSED|SUSPENDED
+*            state=RUNNING|PAUSED|SUSPENDED
 *            time=<pause time [s]>
 \***********************************************************************/
 
@@ -13120,6 +13120,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   {
     ClientInfo *clientInfo;
     uint       id;
+    bool       skipAll;
   } RestoreCommandInfo;
 
   /***********************************************************************\
@@ -13267,66 +13268,93 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     assert(statusInfo->storage.name != NULL);
     assert(statusInfo->entry.name != NULL);
 
-    // init variables
-    resultMap = StringMap_new();
+    if (!restoreCommandInfo->skipAll)
+    {
+      // init variables
+      resultMap = StringMap_new();
 
-    // show error
-    if (ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
-                              1*60*MS_PER_SECOND,
-                              resultMap,
-                              "CONFIRM",
-                              "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S message=%'S",
-                              error,
-                              Error_getText(error),
+      // show error
+      if (ServerIO_clientAction(&restoreCommandInfo->clientInfo->io,
+                                1*60*MS_PER_SECOND,
+                                resultMap,
+                                "CONFIRM",
+                                "type=RESTORE errorCode=%d errorData=%'s storageName=%'S entryName=%'S message=%'S",
+                                error,
+                                Error_getText(error),
+                                statusInfo->storage.name,
+                                statusInfo->entry.name,
+                                statusInfo->message
+                               ) != ERROR_NONE
+         )
+      {
+        StringMap_delete(resultMap);
+        return error;
+      }
+      if (!StringMap_getEnum(resultMap,"action",&action,(StringMapParseEnumFunction)ServerIO_parseAction,SERVER_IO_ACTION_NONE))
+      {
+        ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,restoreCommandInfo->id,TRUE,ERROR_EXPECTED_PARAMETER,"action=SKIP|ABORT");
+        StringMap_delete(resultMap);
+        return error;
+      }
+
+      // update state
+      switch (action)
+      {
+        case SERVER_IO_ACTION_NONE:
+          error = ERROR_NONE;
+          break;
+        case SERVER_IO_ACTION_SKIP:
+          ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
+                              restoreCommandInfo->id,
+                              FALSE,
+                              ERROR_NONE,
+                              "state=RUNNING storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" message=%'S",
                               statusInfo->storage.name,
+                              statusInfo->storage.doneSize,
+                              statusInfo->storage.totalSize,
                               statusInfo->entry.name,
+                              statusInfo->entry.doneSize,
+                              statusInfo->entry.totalSize,
                               statusInfo->message
-                             ) != ERROR_NONE
-       )
-    {
+                             );
+          error = ERROR_NONE;
+          break;
+        case SERVER_IO_ACTION_SKIP_ALL:
+          ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
+                              restoreCommandInfo->id,
+                              FALSE,
+                              ERROR_NONE,
+                              "state=RUNNING storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" message=%'S",
+                              statusInfo->storage.name,
+                              statusInfo->storage.doneSize,
+                              statusInfo->storage.totalSize,
+                              statusInfo->entry.name,
+                              statusInfo->entry.doneSize,
+                              statusInfo->entry.totalSize,
+                              statusInfo->message
+                             );
+          restoreCommandInfo->skipAll = TRUE;
+          error = ERROR_NONE;
+          break;
+        case SERVER_IO_ACTION_ABORT:
+          ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
+                              restoreCommandInfo->id,
+                              FALSE,
+                              error,
+                              "%s",
+                              Error_getData(error)
+                             );
+          break;
+      }
+
+
+      // free resources
       StringMap_delete(resultMap);
-      return error;
     }
-    if (!StringMap_getEnum(resultMap,"action",&action,(StringMapParseEnumFunction)ServerIO_parseAction,SERVER_IO_ACTION_NONE))
+    else
     {
-      ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,restoreCommandInfo->id,TRUE,ERROR_EXPECTED_PARAMETER,"action=SKIP|ABORT");
-      StringMap_delete(resultMap);
-      return error;
+      error = ERROR_NONE;
     }
-
-    // update state
-    switch (action)
-    {
-      case SERVER_IO_ACTION_SKIP:
-        ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
-                            restoreCommandInfo->id,
-                            FALSE,
-                            ERROR_NONE,
-                            "state=SKIPPED storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" message=%'S",
-                            statusInfo->storage.name,
-                            statusInfo->storage.doneSize,
-                            statusInfo->storage.totalSize,
-                            statusInfo->entry.name,
-                            statusInfo->entry.doneSize,
-                            statusInfo->entry.totalSize,
-                            statusInfo->message
-                           );
-        error = ERROR_NONE;
-        break;
-      case SERVER_IO_ACTION_ABORT:
-        ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
-                            restoreCommandInfo->id,
-                            FALSE,
-                            error,
-                            "%s",
-                            Error_getData(error)
-                           );
-        break;
-    }
-
-
-    // free resources
-    StringMap_delete(resultMap);
 
     return error;
   }
@@ -13608,6 +13636,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
             );
   restoreCommandInfo.clientInfo = clientInfo;
   restoreCommandInfo.id         = id;
+  restoreCommandInfo.skipAll    = FALSE;
   error = Command_restore(&storageNameList,
                           &includeEntryList,
                           NULL,  // excludePatternList
