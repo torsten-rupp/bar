@@ -1266,8 +1266,7 @@ class CommandThread extends Thread
             final String errorData   = command.valueMap.getString("errorData","");
 
             // confirm dialog
-            final String  action[]      = new String[]{"ABORT"};
-            final boolean skipAllFlag[] = new boolean[]{false};
+            final String  action[] = new String[]{"ABORT"};
             if (display != null)
             {
               display.syncExec(new Runnable()
@@ -1286,23 +1285,20 @@ class CommandThread extends Thread
                          )
                   {
                     case 0:
-                      action[0]      = "SKIP";
-                      skipAllFlag[0] = false;
+                      action[0] = "SKIP";
                       break;
                     case 1:
-                      action[0]      = "SKIP";
-                      skipAllFlag[0] = true;
+                      action[0] = "SKIP_ALL";
                       break;
                     case 2:
-                      action[0]      = "ABORT";
-                      skipAllFlag[0] = false;
+                      action[0] = "ABORT";
                       break;
                   }
                 }
               });
 
               // send result
-              BARServer.sendResult(command.id,1,true,0,"action=%s skipAll=%y",action[0],skipAllFlag[0]);
+              BARServer.sendResult(command.id,1,true,0,"action=%s",action[0]);
             }
             else
             {
@@ -1413,7 +1409,7 @@ BARServer.sendResult(command.id,1,true,BARException.LOAD_VOLUME_FAIL);
         BARServer.sendResult(command.id,1,true,0,"action=ABORT");
 
         BARControl.printInternalError(throwable);
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);        
+        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
       }
     }
   }

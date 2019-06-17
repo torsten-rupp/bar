@@ -3026,11 +3026,12 @@ Dprintf.dprintf("");
     }
   };
 
-  /** restore results
+  /** restore states
    */
-  enum RestoreResults
+  enum RestoreStates
   {
     NONE,
+    RUNNING,
     RESTORED,
     FAILED
   };
@@ -9610,7 +9611,6 @@ Dprintf.dprintf("");
           try
           {
             final long     errorCount[]  = new long[]{0};
-            final boolean  skipAllFlag[] = new boolean[]{false};
             final String[] errorMessage  = new String[1];
 
             // set archives/entries to restore
@@ -9629,10 +9629,10 @@ Dprintf.dprintf("");
             switch (restoreType)
             {
               case ARCHIVES:
-                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S skipVerifySignatures=%y restoreEntryMode=%y",
+                command = StringParser.format("RESTORE type=ARCHIVES destination=%'S skipVerifySignatures=%y restoreEntryMode=%s",
                                               (restoreToDirectory != null) ? restoreToDirectory : "",
                                               skipVerifySignatures,
-                                              restoreEntryMode
+                                              restoreEntryMode.toString()
                                              );
                 break;
               case ENTRIES:
@@ -9640,7 +9640,7 @@ Dprintf.dprintf("");
                                               (restoreToDirectory != null) ? restoreToDirectory : "",
                                               directoryContent,
                                               skipVerifySignatures,
-                                              restoreEntryMode
+                                              restoreEntryMode.toString()
                                              );
                 break;
             }
@@ -9651,17 +9651,23 @@ Dprintf.dprintf("");
                                        @Override
                                        public void handle(int i, ValueMap valueMap)
                                        {
-                                         RestoreResults result           = valueMap.getEnum  ("state",RestoreResults.class);
-                                         String         storageName      = valueMap.getString("storageName");
+                                         RestoreStates  state            = valueMap.getEnum  ("state",RestoreStates.class);
+                                         String         storageName      = valueMap.getString("storageName","");
                                          long           storageDoneSize  = valueMap.getLong  ("storageDoneSize",0L);
                                          long           storageTotalSize = valueMap.getLong  ("storageTotalSize",0L);
-                                         String         entryName        = valueMap.getString("entryName");
+                                         String         entryName        = valueMap.getString("entryName","");
                                          long           entryDoneSize    = valueMap.getLong  ("entryDoneSize",0L);
                                          long           entryTotalSize   = valueMap.getLong  ("entryTotalSize",0L);
 
-                                         switch (result)
+                                         switch (state)
                                          {
                                            case NONE:
+                                             break;
+                                           case RUNNING:
+                                             busyDialog.updateText(0,"%s",storageName);
+                                             busyDialog.updateProgressBar(0,(storageTotalSize > 0L) ? ((double)storageDoneSize*100.0)/(double)storageTotalSize : 0.0);
+                                             busyDialog.updateText(1,"%s",entryName);
+                                             busyDialog.updateProgressBar(1,(entryTotalSize > 0L) ? ((double)entryDoneSize*100.0)/(double)entryTotalSize : 0.0);
                                              break;
                                            case RESTORED:
                                              busyDialog.updateText(0,"%s",storageName);
