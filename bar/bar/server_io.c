@@ -521,9 +521,10 @@ bool ServerIO_parseAction(const char      *actionText,
 
   UNUSED_VARIABLE(userData);
 
-  if      (stringEqualsIgnoreCase(actionText,"SKIP" )) (*action) = SERVER_IO_ACTION_SKIP;
-  else if (stringEqualsIgnoreCase(actionText,"ABORT")) (*action) = SERVER_IO_ACTION_ABORT;
-  else                                                 (*action) = SERVER_IO_ACTION_NONE;
+  if      (stringEqualsIgnoreCase(actionText,"SKIP"    )) (*action) = SERVER_IO_ACTION_SKIP;
+  else if (stringEqualsIgnoreCase(actionText,"SKIP_ALL")) (*action) = SERVER_IO_ACTION_SKIP_ALL;
+  else if (stringEqualsIgnoreCase(actionText,"ABORT"   )) (*action) = SERVER_IO_ACTION_ABORT;
+  else                                                    (*action) = SERVER_IO_ACTION_NONE;
 
   return TRUE;
 }
@@ -1927,7 +1928,7 @@ void ServerIO_clientActionResult(ServerIO   *serverIO,
       resultNode->completedFlag = TRUE;
       StringMap_move(resultNode->resultMap,resultMap);
     }
-    
+
     Semaphore_signalModified(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
   }
 }
