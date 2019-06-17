@@ -130,11 +130,12 @@ typedef struct
   IsPauseFunction             isPauseCreateFunction;                // pause create check callback (can be NULL)
   void                        *isPauseCreateUserData;               // user data for pause create check
 
+  FragmentList                statusInfoFragmentList;               // status info fragment list
+
   StatusInfoFunction          statusInfoFunction;                   // status info callback
   void                        *statusInfoUserData;                  // user data for status info call back
   Semaphore                   statusInfoLock;                       // status info lock
   StatusInfo                  statusInfo;                           // status info
-  FragmentList                statusInfoFragmentList;               // status info fragment list
   const FragmentNode          *statusInfoCurrentFragmentNode;       // current fragment node in status info
   uint64                      statusInfoCurrentLastUpdateTimestamp; // timestamp of last update current fragment node
 } CreateInfo;
