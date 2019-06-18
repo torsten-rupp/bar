@@ -13269,9 +13269,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     assert(statusInfo->storage.name != NULL);
     assert(statusInfo->entry.name != NULL);
 
-    if (   !restoreCommandInfo->skipAllFlag
-        && !restoreCommandInfo->abortFlag
-       )
+    if      (   !restoreCommandInfo->skipAllFlag
+             && !restoreCommandInfo->abortFlag
+            )
     {
       // init variables
       resultMap = StringMap_new();
@@ -13295,7 +13295,6 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       }
       if (!StringMap_getEnum(resultMap,"action",&action,(StringMapParseEnumFunction)ServerIO_parseAction,SERVER_IO_ACTION_NONE))
       {
-        ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,restoreCommandInfo->id,TRUE,ERROR_EXPECTED_PARAMETER,"action=SKIP|ABORT");
         StringMap_delete(resultMap);
         return error;
       }
@@ -13307,52 +13306,24 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
           error = ERROR_NONE;
           break;
         case SERVER_IO_ACTION_SKIP:
-          ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
-                              restoreCommandInfo->id,
-                              FALSE,
-                              ERROR_NONE,
-                              "state=RUNNING storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" message=%'S",
-                              statusInfo->storage.name,
-                              statusInfo->storage.doneSize,
-                              statusInfo->storage.totalSize,
-                              statusInfo->entry.name,
-                              statusInfo->entry.doneSize,
-                              statusInfo->entry.totalSize,
-                              statusInfo->message
-                             );
           error = ERROR_NONE;
           break;
         case SERVER_IO_ACTION_SKIP_ALL:
-          ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
-                              restoreCommandInfo->id,
-                              FALSE,
-                              ERROR_NONE,
-                              "state=RUNNING storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" message=%'S",
-                              statusInfo->storage.name,
-                              statusInfo->storage.doneSize,
-                              statusInfo->storage.totalSize,
-                              statusInfo->entry.name,
-                              statusInfo->entry.doneSize,
-                              statusInfo->entry.totalSize,
-                              statusInfo->message
-                             );
           restoreCommandInfo->skipAllFlag = TRUE;
           error = ERROR_NONE;
           break;
         case SERVER_IO_ACTION_ABORT:
-          ServerIO_sendResult(&restoreCommandInfo->clientInfo->io,
-                              restoreCommandInfo->id,
-                              FALSE,
-                              error,
-                              "%s",
-                              Error_getData(error)
-                             );
           restoreCommandInfo->abortFlag = TRUE;
+          error = ERROR_ABORTED;
           break;
       }
 
       // free resources
       StringMap_delete(resultMap);
+    }
+    else if (restoreCommandInfo->abortFlag)
+    {
+      error = ERROR_ABORTED;
     }
     else
     {
@@ -13448,11 +13419,14 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       StringMap_delete(resultMap);
       return ERROR_EXPECTED_PARAMETER;
     }
-    if (!ServerIO_decryptPassword(&clientInfo->io,password,encryptedPassword,encryptType))
+
+    // decrypt password
+    error = ServerIO_decryptPassword(&clientInfo->io,password,encryptedPassword,encryptType);
+    if (error != ERROR_NONE)
     {
       String_delete(encryptedPassword);
       StringMap_delete(resultMap);
-      return ERROR_INVALID_PASSWORD;
+      return error;
     }
 
     // free resources
@@ -13659,7 +13633,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                          );
   if (error == ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=%s","RESTORED");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"state=RESTORED");
   }
   else
   {
