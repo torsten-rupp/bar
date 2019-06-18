@@ -13120,7 +13120,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   {
     ClientInfo *clientInfo;
     uint       id;
-    bool       skipAll;
+    bool       skipAllFlag;
+    bool       abortFlag;
   } RestoreCommandInfo;
 
   /***********************************************************************\
@@ -13268,7 +13269,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     assert(statusInfo->storage.name != NULL);
     assert(statusInfo->entry.name != NULL);
 
-    if (!restoreCommandInfo->skipAll)
+    if (   !restoreCommandInfo->skipAllFlag
+        && !restoreCommandInfo->abortFlag
+       )
     {
       // init variables
       resultMap = StringMap_new();
@@ -13333,7 +13336,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                               statusInfo->entry.totalSize,
                               statusInfo->message
                              );
-          restoreCommandInfo->skipAll = TRUE;
+          restoreCommandInfo->skipAllFlag = TRUE;
           error = ERROR_NONE;
           break;
         case SERVER_IO_ACTION_ABORT:
@@ -13344,9 +13347,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                               "%s",
                               Error_getData(error)
                              );
+          restoreCommandInfo->abortFlag = TRUE;
           break;
       }
-
 
       // free resources
       StringMap_delete(resultMap);
@@ -13634,9 +13637,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
              List_count(&storageNameList),
              List_count(&includeEntryList)
             );
-  restoreCommandInfo.clientInfo = clientInfo;
-  restoreCommandInfo.id         = id;
-  restoreCommandInfo.skipAll    = FALSE;
+  restoreCommandInfo.clientInfo  = clientInfo;
+  restoreCommandInfo.id          = id;
+  restoreCommandInfo.skipAllFlag = FALSE;
+  restoreCommandInfo.abortFlag   = FALSE;
   error = Command_restore(&storageNameList,
                           &includeEntryList,
                           NULL,  // excludePatternList
