@@ -6941,19 +6941,13 @@ fprintf(stderr,"%s, %d: mount %s\n",__FILE__,__LINE__,String_cString(mountedNode
           {
             error = Device_mount(globalOptions.mountCommand,mountedNode->name,NULL);
           }
-          if (error == ERROR_NONE)
-          {
-            mountedNode->mountCount++;
-          }
-        }
-        else
-        {
-          mountedNode->mountCount++;
         }
       }
-
       if (error == ERROR_NONE)
       {
+        mountedNode->mountCount++;
+        mountedNode->lastMountTimestamp = Misc_getTimestamp();
+
         mountNode = mountNode->next;
       }
     }
@@ -7051,9 +7045,12 @@ void purgeMounts(void)
 
   SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    LIST_ITERATE(&mountedList,mountedNode)
+    mountedNode = mountedList.head;
+    while (mountedNode != NULL)
     {
-      if (mountedNode->mountCount == 0)
+      if (   (mountedNode->mountCount == 0)
+          && (Misc_getTimestamp() > (mountedNode->lastMountTimestamp+60*US_PER_SECOND))
+         )
       {
         if (Device_isMounted(mountedNode->name))
         {
@@ -7069,7 +7066,11 @@ fprintf(stderr,"%s, %d: umount %s\n",__FILE__,__LINE__,String_cString(mountedNod
         }
 
 fprintf(stderr,"%s, %d: remove mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
-        List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
+        mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
+      }
+      else
+      {
+        mountedNode = mountedNode->next;
       }
     }
   }
