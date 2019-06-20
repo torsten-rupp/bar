@@ -1184,6 +1184,17 @@ Errors mountAll(const MountList *mountList);
 
 Errors unmountAll(const MountList *mountList);
 
+/***********************************************************************\
+* Name   : purgeMounts
+* Purpose: purge not used mounts
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void purgeMounts(void);
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\

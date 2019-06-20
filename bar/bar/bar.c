@@ -88,6 +88,24 @@
 
 /***************************** Datatypes *******************************/
 
+// mounted list
+typedef struct MountedNode
+{
+  LIST_NODE_HEADER(struct MountedNode);
+
+  String name;                                                // mount point
+  String device;                                              // mount device (optional)
+  uint   mountCount;                                          // mount count (unmount iff 0)
+  uint64 lastMountTimestamp;
+} MountedNode;
+
+typedef struct
+{
+  LIST_HEADER(MountedNode);
+
+  Semaphore lock;
+} MountedList;
+
 // commands
 typedef enum
 {
@@ -125,6 +143,8 @@ LOCAL bool               versionFlag      = FALSE;
 LOCAL bool               helpFlag         = FALSE;
 LOCAL bool               xhelpFlag        = FALSE;
 LOCAL bool               helpInternalFlag = FALSE;
+
+LOCAL MountedList        mountedList;                      // list of mounts
 
 LOCAL Commands           command;
 LOCAL String             jobUUIDName;
@@ -1451,6 +1471,25 @@ LOCAL DeviceNode *newDeviceNode(ConstString name)
   deviceNode->device.name = String_duplicate(name);
 
   return deviceNode;
+}
+
+/***********************************************************************\
+* Name   : freeMountedNode
+* Purpose: free mounted node
+* Input  : mountedNode - mounted node
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeMountedNode(MountedNode *mountedNode, void *userData)
+{
+  assert(mountedNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(mountedNode->device);
+  String_delete(mountedNode->name);
 }
 
 /***********************************************************************\
@@ -4027,6 +4066,9 @@ LOCAL Errors initAll(void)
 
   POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
 
+  Semaphore_init(&mountedList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&mountedList);
+
   command                                = COMMAND_NONE;
   jobUUIDName                            = String_new();
 
@@ -4078,6 +4120,8 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,&globalOptions,{ doneGlobalOptions(); });
   AUTOFREE_ADD(&autoFreeList,uuid,{ String_delete(uuid); });
   AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
+  AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
   AUTOFREE_ADD(&autoFreeList,jobUUIDName,{ String_delete(jobUUIDName); });
   AUTOFREE_ADD(&autoFreeList,jobUUID,{ String_delete(jobUUID); });
   AUTOFREE_ADD(&autoFreeList,storageName,{ String_delete(storageName); });
@@ -4356,6 +4400,9 @@ LOCAL void doneAll(void)
   String_delete(jobUUID);
 
   String_delete(jobUUIDName);
+
+  List_done(&mountedList,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
+  Semaphore_done(&mountedList.lock);
 
   String_delete(tmpDirectory);
   String_delete(uuid);
@@ -6846,102 +6893,186 @@ void freeMountNode(MountNode *mountNode, void *userData)
 
 Errors mountAll(const MountList *mountList)
 {
-  MountNode *mountNode;
-  Errors    error;
+  const MountNode *mountNode;
+  MountedNode     *mountedNode;
+  Errors          error;
 
   assert(mountList != NULL);
 
-  LIST_ITERATE(mountList,mountNode)
+  error = ERROR_NONE;
+
+  SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (!Device_isMounted(mountNode->name))
+    mountNode = LIST_HEAD(mountList);
+    while ((mountNode != NULL) && (error != ERROR_NONE))
     {
-      if (!String_isEmpty(mountNode->device))
+      // find mounted node
+      mountedNode = LIST_FIND(&mountedList,
+                              mountedNode,
+                                 String_equals(mountedNode->name,mountNode->name)
+                              && String_equals(mountedNode->device,mountNode->device)
+                             );
+      if (mountedNode == NULL)
       {
-        error = Device_mount(globalOptions.mountDeviceCommand,mountNode->name,mountNode->device);
+        mountedNode = LIST_NEW_NODE(MountedNode);
+        if (mountedNode == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
+        }
+        mountedNode->name       = String_duplicate(mountNode->name);
+        mountedNode->device     = String_duplicate(mountNode->device);
+        mountedNode->mountCount = Device_isMounted(mountNode->name) ? 1 : 0;
+
+        List_append(&mountedList,mountedNode);
+fprintf(stderr,"%s, %d: add mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
       }
-      else
+
+      if (mountedNode->mountCount == 0)
       {
-        error = Device_mount(globalOptions.mountCommand,mountNode->name,NULL);
+        // mount
+fprintf(stderr,"%s, %d: mount %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
+        if (!Device_isMounted(mountedNode->name))
+        {
+          if (!String_isEmpty(mountedNode->device))
+          {
+            error = Device_mount(globalOptions.mountDeviceCommand,mountedNode->name,mountedNode->device);
+          }
+          else
+          {
+            error = Device_mount(globalOptions.mountCommand,mountedNode->name,NULL);
+          }
+          if (error == ERROR_NONE)
+          {
+            mountedNode->mountCount++;
+          }
+        }
+        else
+        {
+          mountedNode->mountCount++;
+        }
       }
+
       if (error == ERROR_NONE)
       {
-        mountNode->mounted = TRUE;
+        mountNode = mountNode->next;
       }
-      else
-      {
-        printWarning("Cannot mount '%s' (error: %s)",
-                     String_cString(mountNode->name),
-                     Error_getText(error)
-                    );
+    }
+    assert((error != ERROR_NONE) || (mountNode == NULL));
 
-        mountNode = mountNode->prev;
-        while (mountNode != NULL)
+    if (error != ERROR_NONE)
+    {
+      assert(mountNode != NULL);
+      mountNode = mountNode->prev;
+
+      while (mountNode != NULL)
+      {
+        mountedNode = LIST_FIND(&mountedList,
+                                mountedNode,
+                                   String_equals(mountedNode->name,mountNode->name)
+                                && String_equals(mountedNode->device,mountNode->device)
+                               );
+        if (mountedNode != NULL)
         {
-          assert(mountNode->mountCount > 0);
-          mountNode->mountCount--;
-          if (mountNode->mountCount == 0)
+          assert(mountedNode->mountCount > 0);
+          mountedNode->mountCount--;
+          if (mountedNode->mountCount == 0)
           {
-            if (Device_isMounted(mountNode->name))
-            {
-              if (mountNode->mounted || mountNode->alwaysUnmount)
-              {
-                (void)Device_umount(globalOptions.unmountCommand,mountNode->name);
-              }
-              mountNode->mounted = FALSE;
-            }
+            (void)Device_umount(globalOptions.unmountCommand,mountNode->name);
+
+fprintf(stderr,"%s, %d: remove mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
+            List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
           }
         }
 
-        return error;
+        mountNode = mountNode->prev;
+      }
+
+      printWarning("Cannot mount '%s' (error: %s)",
+                   String_cString(mountNode->name),
+                   Error_getText(error)
+                  );
+    }
+  }
+
+  return error;
+}
+
+Errors unmountAll(const MountList *mountList)
+{
+  MountNode   *mountNode;
+  MountedNode *mountedNode;
+  Errors      error;
+
+  assert(mountList != NULL);
+
+  SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    LIST_ITERATE(mountList,mountNode)
+    {
+      // find mounted node
+      mountedNode = LIST_FIND(&mountedList,
+                              mountedNode,
+                                 String_equals(mountedNode->name,mountNode->name)
+                              && String_equals(mountedNode->device,mountNode->device)
+                             );
+      if (mountedNode != NULL)
+      {
+        assert(mountedNode->mountCount > 0);
+        mountedNode->mountCount--;
+        if (mountedNode->mountCount == 0)
+        {
+          if (Device_isMounted(mountedNode->name))
+          {
+fprintf(stderr,"%s, %d: umount %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
+            error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
+            if (error != ERROR_NONE)
+            {
+              printWarning("Cannot unmount '%s' (error: %s)",
+                           String_cString(mountedNode->name),
+                           Error_getText(error)
+                          );
+            }
+          }
+
+fprintf(stderr,"%s, %d: remove mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
+          List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
+        }
       }
     }
-    mountNode->mountCount++;
-
-    assert(Device_isMounted(mountNode->name));
   }
 
   return ERROR_NONE;
 }
 
-Errors unmountAll(const MountList *mountList)
+void purgeMounts(void)
 {
-  MountNode *mountNode;
-  Errors    error;
+  MountedNode *mountedNode;
+  Errors      error;
 
-  assert(mountList != NULL);
-
-  LIST_ITERATE(mountList,mountNode)
+  SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    assert(mountNode->mountCount > 0);
-    mountNode->mountCount--;
-    if (mountNode->mountCount == 0)
+    LIST_ITERATE(&mountedList,mountedNode)
     {
-      if (Device_isMounted(mountNode->name))
+      if (mountedNode->mountCount == 0)
       {
-        if (mountNode->mounted || mountNode->alwaysUnmount)
+        if (Device_isMounted(mountedNode->name))
         {
-          error = Device_umount(globalOptions.unmountCommand,mountNode->name);
-          if (error == ERROR_NONE)
-          {
-            mountNode->mounted = FALSE;
-          }
-          else
+fprintf(stderr,"%s, %d: umount %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
+          error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
+          if (error != ERROR_NONE)
           {
             printWarning("Cannot unmount '%s' (error: %s)",
-                         String_cString(mountNode->name),
+                         String_cString(mountedNode->name),
                          Error_getText(error)
                         );
           }
         }
+
+fprintf(stderr,"%s, %d: remove mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
+        List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
       }
     }
-    else
-    {
-      mountNode->mountCount = 0;
-    }
   }
-
-  return ERROR_NONE;
 }
 
 Errors getCryptPasswordFromConsole(String        name,

@@ -269,7 +269,7 @@ error = ERROR_NONE;
     // read stdout/stderr and wait until process terminate
     stdoutLine = String_new();
     stderrLine = String_new();
-    status = 0xFFFFFFFF;
+    status     = 0xFFFFFFFF;
     while (   (waitpid(pid,&status,WNOHANG) == 0)
            || (   !WIFEXITED(status)
                && !WIFSIGNALED(status)
@@ -293,7 +293,7 @@ error = ERROR_NONE;
 
       if (sleepFlag)
       {
-        Misc_udelay(1LL*US_PER_SECOND);
+        Misc_mdelay(250);
       }
     }
     while (readProcessIO(pipeStdout[0],stdoutLine))

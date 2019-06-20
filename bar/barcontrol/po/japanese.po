@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-06-17 11:31+0200\n"
+"POT-Creation-Date: 2019-06-20 08:47+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -624,7 +624,7 @@ msgstr "WebDAVログインパスワード"
 
 #: src/BARException.java:400 src/BARException.java:407
 #: src/BARException.java:414 src/BARException.java:424
-#: src/BARException.java:482 src/BARException.java:1008
+#: src/BARException.java:482 src/BARException.java:1015
 msgid " for ''%s''"
 msgstr ""
 
@@ -1149,250 +1149,255 @@ msgstr "アーカイブタイプ"
 msgid "not an archive file"
 msgstr "アーカイブファイル上書き"
 
-#: src/BARException.java:993
+#: src/BARException.java:995
+#, fuzzy
+msgid "archive ''%s'' not found"
+msgstr "保存作業"
+
+#: src/BARException.java:999
 msgid "archive not found"
 msgstr ""
 
-#: src/BARException.java:996
+#: src/BARException.java:1003
 #, fuzzy
 msgid "end of archive"
 msgstr "復元作業"
 
-#: src/BARException.java:999
+#: src/BARException.java:1006
 #, fuzzy
 msgid "no meta entry"
 msgstr "選択した"
 
-#: src/BARException.java:1002
+#: src/BARException.java:1009
 #, fuzzy
 msgid "no file entry"
 msgstr "選択した"
 
-#: src/BARException.java:1005
+#: src/BARException.java:1012
 #, fuzzy
 msgid "no file data entry"
 msgstr "選択した"
 
-#: src/BARException.java:1012
+#: src/BARException.java:1019
 #, fuzzy
 msgid "no directory entry"
 msgstr "ディレクトリサイズ"
 
-#: src/BARException.java:1015
+#: src/BARException.java:1022
 msgid "no link entry"
 msgstr ""
 
-#: src/BARException.java:1018
+#: src/BARException.java:1025
 msgid "no hard link entry"
 msgstr ""
 
-#: src/BARException.java:1021
+#: src/BARException.java:1028
 msgid "no special entry"
 msgstr ""
 
-#: src/BARException.java:1024
+#: src/BARException.java:1031
 msgid "no image entry"
 msgstr ""
 
-#: src/BARException.java:1027
+#: src/BARException.java:1034
 msgid "no image data entry"
 msgstr ""
 
-#: src/BARException.java:1030
+#: src/BARException.java:1037
 msgid "end of data"
 msgstr ""
 
-#: src/BARException.java:1033
+#: src/BARException.java:1040
 #, fuzzy
 msgid "incomplete archive"
 msgstr "ファイル"
 
-#: src/BARException.java:1036
+#: src/BARException.java:1043
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: src/BARException.java:1039
+#: src/BARException.java:1046
 msgid "wrong CRC"
 msgstr ""
 
-#: src/BARException.java:1042
+#: src/BARException.java:1049
 msgid " at offset "
 msgstr ""
 
-#: src/BARException.java:1047
+#: src/BARException.java:1054
 msgid "entry not found"
 msgstr ""
 
-#: src/BARException.java:1054
+#: src/BARException.java:1061
 msgid "entry is incomplete"
 msgstr ""
 
-#: src/BARException.java:1061
+#: src/BARException.java:1068
 msgid "wrong entry type"
 msgstr ""
 
-#: src/BARException.java:1068
+#: src/BARException.java:1075
 #, fuzzy
 msgid "entries differ"
 msgstr "新差分"
 
-#: src/BARException.java:1075
+#: src/BARException.java:1082
 msgid "corrupt data or invalid password"
 msgstr ""
 
-#: src/BARException.java:1082
+#: src/BARException.java:1089
 msgid "invalid chunk size"
 msgstr ""
 
-#: src/BARException.java:1085
+#: src/BARException.java:1092
 #, fuzzy
 msgid "unknown chunk"
 msgstr "ファイル"
 
-#: src/BARException.java:1092
+#: src/BARException.java:1099
 msgid "invalid signature"
 msgstr ""
 
-#: src/BARException.java:1095
+#: src/BARException.java:1102
 #, fuzzy
 msgid "invalid incremental file"
 msgstr "インクリメンタルファイル選択"
 
-#: src/BARException.java:1098
+#: src/BARException.java:1105
 #, fuzzy
 msgid "wrong incremental file version"
 msgstr "インクリメンタルファイル名"
 
-#: src/BARException.java:1101
+#: src/BARException.java:1108
 #, fuzzy
 msgid "corrupt incremental file"
 msgstr "インクリメンタルファイル選択"
 
-#: src/BARException.java:1104
+#: src/BARException.java:1111
 msgid "invalid device specifier"
 msgstr ""
 
-#: src/BARException.java:1107
+#: src/BARException.java:1114
 msgid "load volume fail"
 msgstr ""
 
-#: src/BARException.java:1110
+#: src/BARException.java:1117
 msgid "parse command fail"
 msgstr ""
 
-#: src/BARException.java:1113
+#: src/BARException.java:1120
 #, fuzzy
 msgid "expand command template fail"
 msgstr "トレーを開く"
 
-#: src/BARException.java:1116
+#: src/BARException.java:1123
 msgid "fork for execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1126
+#: src/BARException.java:1133
 msgid "execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1133
+#: src/BARException.java:1140
 msgid "parsing data"
 msgstr ""
 
-#: src/BARException.java:1140
+#: src/BARException.java:1147
 #, fuzzy
 msgid "unknown command"
 msgstr "ファイル"
 
-#: src/BARException.java:1147
+#: src/BARException.java:1154
 msgid "expected parameter"
 msgstr ""
 
-#: src/BARException.java:1160
+#: src/BARException.java:1167
 #, fuzzy
 msgid "unknown value"
 msgstr "ファイル"
 
-#: src/BARException.java:1164
+#: src/BARException.java:1171
 msgid "invalid value"
 msgstr ""
 
-#: src/BARException.java:1171
+#: src/BARException.java:1178
 #, fuzzy
 msgid "authorization"
 msgstr "作成作業"
 
-#: src/BARException.java:1174
+#: src/BARException.java:1181
 msgid "job not found"
 msgstr ""
 
-#: src/BARException.java:1177
+#: src/BARException.java:1184
 #, fuzzy
 msgid "job error"
 msgstr "エラー"
 
-#: src/BARException.java:1180
+#: src/BARException.java:1187
 #, fuzzy
 msgid "database"
 msgstr "最新エラー"
 
-#: src/BARException.java:1187
+#: src/BARException.java:1194
 msgid "unknown version on index"
 msgstr ""
 
-#: src/BARException.java:1190
+#: src/BARException.java:1197
 #, fuzzy
 msgid "missing table"
 msgstr "ファイル"
 
-#: src/BARException.java:1197
+#: src/BARException.java:1204
 #, fuzzy
 msgid "missing column"
 msgstr "ファイル"
 
-#: src/BARException.java:1204
+#: src/BARException.java:1211
 msgid "obsolete table"
 msgstr ""
 
-#: src/BARException.java:1211
+#: src/BARException.java:1218
 msgid "obsolete column"
 msgstr ""
 
-#: src/BARException.java:1218
+#: src/BARException.java:1225
 msgid "type mismatch"
 msgstr ""
 
-#: src/BARException.java:1225
+#: src/BARException.java:1232
 #, fuzzy
 msgid "error creating index"
 msgstr "エラー訂正コード追加"
 
-#: src/BARException.java:1228
+#: src/BARException.java:1235
 #, fuzzy
 msgid "index not found"
 msgstr "保存作業"
 
-#: src/BARException.java:1231
+#: src/BARException.java:1238
 msgid "index still not initialized"
 msgstr ""
 
-#: src/BARException.java:1234
+#: src/BARException.java:1241
 msgid "invalid index"
 msgstr ""
 
-#: src/BARException.java:1241
+#: src/BARException.java:1248
 msgid "timeout accessing index"
 msgstr ""
 
-#: src/BARException.java:1244
+#: src/BARException.java:1251
 #, fuzzy
 msgid "master disconnected"
 msgstr "接続ミス"
 
-#: src/BARException.java:1247
+#: src/BARException.java:1254
 #, fuzzy
 msgid "slave disconnected"
 msgstr "接続ミス"
 
-#: src/BARException.java:1250
+#: src/BARException.java:1257
 #, fuzzy
 msgid "slave is not paired"
 msgstr "接続ミス"
@@ -5551,10 +5556,6 @@ msgstr "現存エントリの上書き"
 #, fuzzy
 msgid "differental"
 msgstr "差分"
-
-#, fuzzy
-#~ msgid "archive ''%s'' not found"
-#~ msgstr "保存作業"
 
 #, fuzzy
 #~ msgid "Select entryXXXX"
