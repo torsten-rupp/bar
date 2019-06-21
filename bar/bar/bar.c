@@ -86,6 +86,8 @@
 #define VERSION_SVN_STRING __VERSION_TO_STRING(VERSION_SVN)
 #define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING " (rev. " VERSION_SVN_STRING ")"
 
+#define MOUNT_TIMEOUT (1L*60L*MS_PER_SECOND)  // mount timeout [ms]
+
 /***************************** Datatypes *******************************/
 
 // mounted list
@@ -6901,6 +6903,8 @@ Errors mountAll(const MountList *mountList)
 
   error = ERROR_NONE;
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+asm("int3");
   SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     mountNode = LIST_HEAD(mountList);
@@ -7049,7 +7053,7 @@ void purgeMounts(void)
     while (mountedNode != NULL)
     {
       if (   (mountedNode->mountCount == 0)
-          && (Misc_getTimestamp() > (mountedNode->lastMountTimestamp+60*US_PER_SECOND))
+          && (Misc_getTimestamp() > (mountedNode->lastMountTimestamp+MOUNT_TIMEOUT*US_PER_MS))
          )
       {
         if (Device_isMounted(mountedNode->name))
