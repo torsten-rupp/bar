@@ -2541,7 +2541,6 @@ public class TabStatus
                 break;
               case RUNNING:
               case DRY_RUNNING:
-  //              this.message.set(message);
                 break;
               case REQUEST_FTP_PASSWORD:
               case REQUEST_SSH_PASSWORD:
