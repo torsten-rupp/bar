@@ -196,26 +196,18 @@ ERROR WEBDAV_GET_SIZE                  TR("get WebDAV file size fail")
 // --- compress ---------------------------------------------------------
 ERROR INIT_COMPRESS
   stringSet(errorText,sizeof(errorText),TR("initialize compress fail"));
-  stringAppend(errorText,sizeof(errorText),": ");
   if (!stringIsEmpty(ERROR_DATA))
   {
+    stringAppend(errorText,sizeof(errorText),": ");
     stringAppend(errorText,sizeof(errorText),ERROR_DATA);
-  }
-  else
-  {
-    stringAppend(errorText,sizeof(errorText),ERROR_ERRNO_TEXT);
   }
 
 ERROR INIT_DECOMPRESS
   stringSet(errorText,sizeof(errorText),TR("initialize decompress fail"));
-  stringAppend(errorText,sizeof(errorText),": ");
   if (!stringIsEmpty(ERROR_DATA))
   {
+    stringAppend(errorText,sizeof(errorText),": ");
     stringAppend(errorText,sizeof(errorText),ERROR_DATA);
-  }
-  else
-  {
-    stringAppend(errorText,sizeof(errorText),ERROR_ERRNO_TEXT);
   }
 
 ERROR DEFLATE_FAIL
@@ -416,116 +408,53 @@ ERROR UNKNOWN_MAC_ALGORITHM            TR("unknown message authentication code a
 ERROR NO_FILE_NAME                     TR("no file name given")
 
 ERROR CREATE_FILE
-  // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERROR_ERRNO != 0)
+  stringSet(errorText,sizeof(errorText),TR("create file"));
+  if (!stringIsEmpty(ERROR_DATA))
   {
-    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("create file"));
-    if (!stringIsEmpty(ERROR_DATA))
-    {
-      stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
-    }
-    stringAppend(errorText,sizeof(errorText),TR(" fail"));
-  }
+  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR OPEN_FILE
-  // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERROR_ERRNO != 0)
+  stringSet(errorText,sizeof(errorText),TR("open file"));
+  if (!stringIsEmpty(ERROR_DATA))
   {
-    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("open file"));
-    if (!stringIsEmpty(ERROR_DATA))
-    {
-      stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
-    }
-    stringAppend(errorText,sizeof(errorText),TR(" fail"));
-  }
+  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR CREATE_DIRECTORY
-  // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERROR_ERRNO != 0)
+  stringSet(errorText,sizeof(errorText),TR("create directory"));
+  if (!stringIsEmpty(ERROR_DATA))
   {
-    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("create directory"));
-    if (!stringIsEmpty(ERROR_DATA))
-    {
-      stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
-    }
-    stringAppend(errorText,sizeof(errorText),TR(" fail"));
-  }
+  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR IO
-  stringSet(errorText,sizeof(errorText),(ERROR_ERRNO != 0) ? strerror(ERROR_ERRNO) : TR("i/o error"));
+  stringSet(errorText,sizeof(errorText),TR("i/o error"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR READ_FILE
-  // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERROR_ERRNO != 0)
-  {
-    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("read file fail: "));
-    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
-  }
+  stringSet(errorText,sizeof(errorText),TR("read file fail: "));
+  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
 
 ERROR END_OF_FILE
-  // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERROR_ERRNO != 0)
-  {
-    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("end of file: "));
-    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
-  }
+  stringSet(errorText,sizeof(errorText),TR("end of file: "));
+  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
 
 ERROR WRITE_FILE
-  // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERROR_ERRNO != 0)
-  {
-    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("write file fail: "));
-    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
-  }
+  stringSet(errorText,sizeof(errorText),TR("write file fail: "));
+  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
 
 ERROR DELETE_FILE
-  // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERROR_ERRNO != 0)
-  {
-    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("delete file fail: "));
-    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
-  }
+  stringSet(errorText,sizeof(errorText),TR("delete file fail: "));
+  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
 
 ERROR OPEN_DIRECTORY
-  // Note: do not add error text to error message if error number is set; file name should be part of error text
-  if (ERROR_ERRNO != 0)
-  {
-    stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
-  }
-  else
-  {
 /*
 TODO: remove
     errorText[0] = '\0';
@@ -545,9 +474,8 @@ TODO: remove
         break;
     }
 */
-    stringSet(errorText,sizeof(errorText),TR("open directory: "));
-    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
-  }
+  stringSet(errorText,sizeof(errorText),TR("open directory: "));
+  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
 
 ERROR READ_DIRECTORY                   TR("read directory fail")
 
@@ -613,11 +541,12 @@ ERROR OPEN_ISO9660_FILE
 ERROR NO_DEVICE_NAME                   TR("no device name given")
 
 ERROR OPEN_DEVICE
-  stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+  stringSet(errorText,sizeof(errorText),TR("open device"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
+  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR INVALID_DEVICE_BLOCK_SIZE        TR("invalid device block size")
 ERROR READ_DEVICE                      TR("read device fail")
@@ -745,7 +674,7 @@ ERROR PARSE_COMMAND                    TR("parse command fail")
 ERROR EXPAND_TEMPLATE                  TR("expand command template fail")
 ERROR FORK_FAIL                        TR("fork for execute external program fail")
 ERROR IO_REDIRECT_FAIL
-  stringSet(errorText,sizeof(errorText),strerror(ERROR_ERRNO));
+  stringSet(errorText,sizeof(errorText),TR("i/o fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
@@ -755,7 +684,7 @@ ERROR EXEC_FAIL
   stringSet(errorText,sizeof(errorText),TR("execute external program fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s' (exitcode: %d)",ERROR_DATA,ERROR_ERRNO);
+    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
   }
 
 // --- BARControl protocol ----------------------------------------------
