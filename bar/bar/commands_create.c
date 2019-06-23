@@ -7210,9 +7210,6 @@ Errors Command_create(ServerIO                     *masterIO,
   error = mountAll(&jobOptions->mountList);
   if (error != ERROR_NONE)
   {
-    printError("Cannot mount devices (error: %s)",
-               Error_getText(error)
-              );
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
