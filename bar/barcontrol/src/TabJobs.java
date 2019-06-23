@@ -2331,7 +2331,6 @@ public class TabJobs
           if (index >= 0)
           {
             selectedJobData = Widgets.getSelectedOptionMenuItem(widgetJobList,null);
-assert selectedJobData != null;
             Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,selectedJobData);
           }
         }
