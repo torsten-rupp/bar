@@ -6903,14 +6903,12 @@ Errors mountAll(const MountList *mountList)
 
   error = ERROR_NONE;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-asm("int3");
   SEMAPHORE_LOCKED_DO(&mountedList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     mountNode = LIST_HEAD(mountList);
-    while ((mountNode != NULL) && (error != ERROR_NONE))
+    while (mountNode != NULL)
     {
-      // find mounted node
+      // find/add mounted node
       mountedNode = LIST_FIND(&mountedList,
                               mountedNode,
                                  String_equals(mountedNode->name,mountNode->name)
@@ -6928,13 +6926,11 @@ asm("int3");
         mountedNode->mountCount = Device_isMounted(mountNode->name) ? 1 : 0;
 
         List_append(&mountedList,mountedNode);
-fprintf(stderr,"%s, %d: add mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
       }
 
+      // mount
       if (mountedNode->mountCount == 0)
       {
-        // mount
-fprintf(stderr,"%s, %d: mount %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
         if (!Device_isMounted(mountedNode->name))
         {
           if (!String_isEmpty(mountedNode->device))
@@ -6947,23 +6943,32 @@ fprintf(stderr,"%s, %d: mount %s\n",__FILE__,__LINE__,String_cString(mountedNode
           }
         }
       }
-      if (error == ERROR_NONE)
+      if (error != ERROR_NONE)
       {
-        mountedNode->mountCount++;
-        mountedNode->lastMountTimestamp = Misc_getTimestamp();
-
-        mountNode = mountNode->next;
+        break;
       }
+      mountedNode->mountCount++;
+      mountedNode->lastMountTimestamp = Misc_getTimestamp();
+
+      // next
+      mountNode = mountNode->next;
     }
     assert((error != ERROR_NONE) || (mountNode == NULL));
 
     if (error != ERROR_NONE)
     {
       assert(mountNode != NULL);
-      mountNode = mountNode->prev;
 
+      printWarning("Cannot mount '%s' (error: %s)",
+                   String_cString(mountNode->name),
+                   Error_getText(error)
+                  );
+
+      // revert mounts
+      mountNode = mountNode->prev;
       while (mountNode != NULL)
       {
+        // find mounted node
         mountedNode = LIST_FIND(&mountedList,
                                 mountedNode,
                                    String_equals(mountedNode->name,mountNode->name)
@@ -6977,18 +6982,13 @@ fprintf(stderr,"%s, %d: mount %s\n",__FILE__,__LINE__,String_cString(mountedNode
           {
             (void)Device_umount(globalOptions.unmountCommand,mountNode->name);
 
-fprintf(stderr,"%s, %d: remove mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
             List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
           }
         }
 
+        // previous
         mountNode = mountNode->prev;
       }
-
-      printWarning("Cannot mount '%s' (error: %s)",
-                   String_cString(mountNode->name),
-                   Error_getText(error)
-                  );
     }
   }
 
@@ -7016,25 +7016,7 @@ Errors unmountAll(const MountList *mountList)
       if (mountedNode != NULL)
       {
         assert(mountedNode->mountCount > 0);
-        mountedNode->mountCount--;
-        if (mountedNode->mountCount == 0)
-        {
-          if (Device_isMounted(mountedNode->name))
-          {
-fprintf(stderr,"%s, %d: umount %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
-            error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
-            if (error != ERROR_NONE)
-            {
-              printWarning("Cannot unmount '%s' (error: %s)",
-                           String_cString(mountedNode->name),
-                           Error_getText(error)
-                          );
-            }
-          }
-
-fprintf(stderr,"%s, %d: remove mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
-          List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
-        }
+        if (mountedNode->mountCount > 0) mountedNode->mountCount--;
       }
     }
   }
@@ -7058,9 +7040,13 @@ void purgeMounts(void)
       {
         if (Device_isMounted(mountedNode->name))
         {
-fprintf(stderr,"%s, %d: umount %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
           error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
-          if (error != ERROR_NONE)
+          if (error == ERROR_NONE)
+          {
+
+             mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
+          }
+          else
           {
             printWarning("Cannot unmount '%s' (error: %s)",
                          String_cString(mountedNode->name),
@@ -7068,9 +7054,6 @@ fprintf(stderr,"%s, %d: umount %s\n",__FILE__,__LINE__,String_cString(mountedNod
                         );
           }
         }
-
-fprintf(stderr,"%s, %d: remove mounted node %s\n",__FILE__,__LINE__,String_cString(mountedNode->name));
-        mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
       }
       else
       {
