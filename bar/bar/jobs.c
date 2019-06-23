@@ -80,11 +80,7 @@
 #define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
 
 // sleep times [s]
-//TODO
-//#define SLEEP_TIME_SLAVE_CONNECT_THREAD                 ( 1*60)  // [s]
-#define SLEEP_TIME_SLAVE_CONNECT_THREAD          (   10)  // [s]
-//#define SLEEP_TIME_SLAVE_THREAD                  (    1)  // [s]
-//TODO
+#define SLEEP_TIME_SLAVE_CONNECT_THREAD          ( 1*60)  // [s]
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*60)  // [s]
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
