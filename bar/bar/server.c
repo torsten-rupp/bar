@@ -3200,6 +3200,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   uint64                     expiredCreatedDateTime;
   ulong                      expiredTotalEntryCount;
   uint64                     expiredTotalEntrySize;
+  MountList                  mountList;
   IndexHandle                *indexHandle;
   Errors                     error;
   const JobNode              *jobNode;
@@ -3208,7 +3209,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   bool                       inTransit;
   uint                       totalEntityCount;
   uint64                     totalEntitySize;
-  const PersistenceNode      *persistenceNode;
+//  const PersistenceNode      *persistenceNode;
 
   // init variables
   expiredJobName = String_new();
@@ -3234,16 +3235,18 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
       {
         do
         {
+          // init variables
           expiredEntityId        = INDEX_ID_NONE;
           expiredArchiveType     = ARCHIVE_TYPE_NONE;
           expiredCreatedDateTime = 0LL;
           expiredTotalEntryCount = 0;
           expiredTotalEntrySize  = 0LL;
+          List_init(&mountList);
 
           JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             // find expired/surpluse entity
-            JOB_LIST_ITERATE(jobNode)
+            JOB_LIST_ITERATEX(jobNode,expiredEntityId == INDEX_ID_NONE)
             {
               List_init(&expirationEntityList);
 
@@ -3252,9 +3255,9 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                   && !List_isEmpty(&expirationEntityList)  // only expire if persistence list is not empty
                  )
               {
-  //LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalEntrySize); }
+//LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalEntrySize); }
                 // find expired entity
-                LIST_ITERATE(&expirationEntityList,expirationEntityNode)
+                LIST_ITERATEX(&expirationEntityList,expirationEntityNode,expiredEntityId == INDEX_ID_NONE)
                 {
                   totalEntityCount = 0;
                   totalEntitySize  = 0LL;
@@ -3275,7 +3278,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                     // check if "in-transit"
                     inTransit = isInTransit(expirationEntityNode);
                   }
-  //fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu inTransit=%d\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize,inTransit);
+//fprintf(stderr,"%s, %d: totalEntityCount=%u totalEntitySize=%llu inTransit=%d\n",__FILE__,__LINE__,totalEntityCount,totalEntitySize,inTransit);
 
                   // check if expired, keep one "in-transit" entity
                   if (   !inTransit
@@ -3305,42 +3308,15 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                     expiredTotalEntryCount = expirationEntityNode->totalEntryCount;
                     expiredTotalEntrySize  = expirationEntityNode->totalEntrySize;
 
-                    // mount devices
-  fprintf(stderr,"%s, %d: expiredEntityId=%ld\n",__FILE__,__LINE__,expiredEntityId);
-                    error = mountAll(&jobNode->job.options.mountList);
-                    if (error == ERROR_NONE)
-                    {
-                      // delete expired entity
-                      #ifndef SIMULATE_PURGE
-                        error = deleteEntity(indexHandle,expiredEntityId);
-                      #else /* not SIMULATE_PURGE */
-                        Array_append(&simulatedPurgeEntityIdArray,&expiredEntityId);
-                        error = ERROR_NONE;
-                      #endif /* SIMULATE_PURGE */
-
-                      // unmount devices
-                      (void)unmountAll(&jobNode->job.options.mountList);
-                    }
-                    if (error == ERROR_NONE)
-                    {
-                      plogMessage(NULL,  // logHandle,
-                                  LOG_TYPE_INDEX,
-                                  "INDEX",
-                                  #ifdef SIMULATE_PURGE
-                                    "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated)",
-                                  #else /* not SIMULATE_PURGE */
-                                    "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)",
-                                  #endif /* SIMULATE_PURGE */
-                                  String_cString(expiredJobName),
-                                  Archive_archiveTypeToString(expiredArchiveType,"NORMAL"),
-                                  String_cString(Misc_formatDateTime(String_clear(string),expiredCreatedDateTime,NULL)),
-                                  expiredTotalEntryCount,
-                                  BYTES_SHORT(expiredTotalEntrySize),
-                                  BYTES_UNIT(expiredTotalEntrySize),
-                                  expiredTotalEntrySize
-                                 );
-                    }
-                    break;
+                    // get mount list
+                    List_copy(&mountList,
+                              NULL,
+                              &jobNode->job.options.mountList,
+                              NULL,
+                              NULL,
+                              (ListNodeDuplicateFunction)duplicateMountNode,
+                              NULL
+                             );
                   }
                 }
               }
@@ -3348,13 +3324,58 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
               List_done(&expirationEntityList,CALLBACK((ListNodeFreeFunction)freeExpirationNode,NULL));
             }
           } // jobList
+
+          // delete expired entity
+          if (expiredEntityId != INDEX_ID_NONE)
+          {
+            // mount devices
+            error = mountAll(&mountList);
+            if (error == ERROR_NONE)
+            {
+              // delete expired entity
+              #ifndef SIMULATE_PURGE
+                error = deleteEntity(indexHandle,expiredEntityId);
+              #else /* not SIMULATE_PURGE */
+                Array_append(&simulatedPurgeEntityIdArray,&expiredEntityId);
+                error = ERROR_NONE;
+              #endif /* SIMULATE_PURGE */
+
+              // unmount devices
+              (void)unmountAll(&mountList);
+            }
+            if (error == ERROR_NONE)
+            {
+              plogMessage(NULL,  // logHandle,
+                          LOG_TYPE_INDEX,
+                          "INDEX",
+                          #ifdef SIMULATE_PURGE
+                            "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes) (simulated)",
+                          #else /* not SIMULATE_PURGE */
+                            "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)",
+                          #endif /* SIMULATE_PURGE */
+                          String_cString(expiredJobName),
+                          Archive_archiveTypeToString(expiredArchiveType,"NORMAL"),
+                          String_cString(Misc_formatDateTime(String_clear(string),expiredCreatedDateTime,NULL)),
+                          expiredTotalEntryCount,
+                          BYTES_SHORT(expiredTotalEntrySize),
+                          BYTES_UNIT(expiredTotalEntrySize),
+                          expiredTotalEntrySize
+                         );
+            }
+          }
+
+          // free resources
+          List_done(&mountList,(ListNodeFreeFunction)freeMountNode,NULL);
         }
         while (   !quitFlag
                && (expiredEntityId != INDEX_ID_NONE)
               );
       }
-      if (quitFlag) break;
 
+      // purge expired mounts
+      purgeMounts();
+
+      // sleep
       if (error == ERROR_NONE)
       {
         // sleep and check quit flag
@@ -4360,12 +4381,13 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
   UNUSED_VARIABLE(indexHandle);
 
   // get error code
-  if (!StringMap_getUInt64(argumentMap,"error",&n,0))
+  if (!StringMap_getUInt64(argumentMap,"error",&n,(uint64)ERROR_NONE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"error=<n>");
     return;
   }
   error = (Errors)n;
+fprintf(stderr,"%s, %d: '%s'\n",__FILE__,__LINE__,Error_getText(error));
 
   // format result
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
@@ -4759,12 +4781,14 @@ StringMap_debugPrint(0,argumentMap);
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
 //TODO
+#ifndef WERROR
 #warning TODO
+#endif
 #if 1
   SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get error
-    StringMap_getUInt64(argumentMap,"errorCode",&n,ERROR_UNKNOWN);
+    StringMap_getUInt64(argumentMap,"errorCode",&n,ERROR_CODE_UNKNOWN);
     error = Error_(n,0);
 
     // set action result
