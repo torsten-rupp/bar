@@ -6685,15 +6685,27 @@ Dprintf.dprintf("");
     {
       public void handleEvent(Event event)
       {
-        widgetStorageFilter.setText("");
-        widgetStorageStateFilter.select(0);
+        if (!widgetStorageFilter.isDisposed())
+        {
+          widgetStorageFilter.setText("");
+        }
+        if (!widgetStorageStateFilter.isDisposed())
+        {
+          widgetStorageStateFilter.select(0);
+        }
         setAllCheckedStorage(false);
         Widgets.refreshVirtualTable(widgetStorageTable);
         updateStorageTreeTableThread.triggerUpdate("",INDEX_STATE_SET_ALL,EntityStates.ANY,true);
 
-        widgetEntryFilter.setText("");
+        if (!widgetEntryFilter.isDisposed())
+        {
+          widgetEntryFilter.setText("");
+        }
         Widgets.setSelectedOptionMenuItem(widgetEntryTypeFilter,EntryTypes.ANY);
-        widgetEntryNewestOnly.setSelection(false);
+        if (!widgetEntryNewestOnly.isDisposed())
+        {
+          widgetEntryNewestOnly.setSelection(false);
+        }
         setAllCheckedEntries(false);
         Widgets.refreshVirtualTable(widgetEntryTable);
         updateEntryTableThread.triggerUpdate("","*",false,true);
