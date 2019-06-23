@@ -117,8 +117,6 @@ sub expandJava($)
   else
   {
     $s =~ s/ERROR_DATA/errorData/g;
-    $s =~ s/xxxERROR_ERRNO_TEXT/Integer.toString(errno)/g;
-    $s =~ s/ERROR_ERRNO/errno/g;
     if ($s =~ /^(.*)TR\((.*)\)(.*)$/)
     {
       my $prefix =$1;
