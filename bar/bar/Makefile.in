@@ -1089,6 +1089,8 @@ rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-ser
           --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
 
@@ -1101,6 +1103,8 @@ rundev1 rundevd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
 
@@ -1113,6 +1117,8 @@ rundevd2: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ..
           --incremental-data-directory=/tmp \
           --server-port=39999 --server-tls-port=0 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar2.log --log=all --server-debug \
           $(OPTIONS)
 
@@ -1125,6 +1131,8 @@ rundevgdb: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
 
@@ -1137,6 +1145,8 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
 
@@ -1149,6 +1159,8 @@ rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar.log --log=all --server-debug \
           $(OPTIONS)
 
@@ -1162,6 +1174,8 @@ rundev_slave: bar@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-cert.pe
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
@@ -1175,6 +1189,8 @@ rundevd_slave: bar-debug@EXEEXT@ /tmp/bar-slave.cfg ../bar-ca.pem ../bar-server-
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
@@ -1188,6 +1204,8 @@ rundevgdb_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar-slave.log --log=all \
           $(OPTIONS)
 
@@ -1201,6 +1219,8 @@ rundevddd_slave: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert
           --server-port=39911 --server-tls-port=39912 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
           --pairing-master-file=/tmp/pairing \
+          --unmount-command='sudo /bin/umount %directory' \
+          --verbose=0 \
           --log-file=/tmp/bar-slave.log --log=all --server-debug \
           $(OPTIONS)
 
@@ -1261,6 +1281,7 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
           --incremental-data-directory=/tmp \
           --server-port=39909 --server-tls-port=39910 \
           --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem --server-port=39909 \
+          --unmount-command='sudo /bin/umount %directory' \
           --verbose=0 \
           $(OPTIONS)
 
