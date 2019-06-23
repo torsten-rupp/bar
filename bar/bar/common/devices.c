@@ -477,16 +477,38 @@ Errors Device_umount(ConstString umountCommand,
                     )
 {
   TextMacro textMacros[1];
+  Errors    error;
 
   assert(mountPointName != NULL);
 
   TEXT_MACRO_N_STRING (textMacros[0],"%directory",mountPointName,NULL);
 
-  return Misc_executeCommand((umountCommand != NULL) ? String_cString(umountCommand) : "/bin/umount %directory",
-                             textMacros,SIZE_OF_ARRAY(textMacros),
-                             CALLBACK_NULL,
-                             CALLBACK_NULL
-                            );
+  if (!String_isEmpty(umountCommand))
+  {
+    error = Misc_executeCommand(String_cString(umountCommand),
+                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                CALLBACK_NULL,
+                                CALLBACK_NULL
+                               );
+  }
+  else
+  {
+    error = Misc_executeCommand("/bin/umount %directory",
+                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                CALLBACK_NULL,
+                                CALLBACK_NULL
+                               );
+    if (error != ERROR_NONE)
+    {
+      error = Misc_executeCommand("sudo /bin/umount %directory",
+                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                  CALLBACK_NULL,
+                                  CALLBACK_NULL
+                                 );
+    }
+  }
+
+  return error;
 }
 
 bool Device_isMounted(ConstString mountPointName)
