@@ -60,6 +60,7 @@ import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
@@ -802,7 +803,7 @@ public class TabRestore
         Widgets.setTreeItem(treeItem,
                             (Object)uuidIndexData,
                             uuidIndexData.name,
-                            (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                            "",  // date/time drawn in event handler
                             Units.formatByteSize(uuidIndexData.totalSize),
                             ""
                            );
@@ -1015,7 +1016,7 @@ public class TabRestore
         Widgets.setTreeItem(treeItem,
                             (Object)entityIndexData,
                             entityIndexData.archiveType.toString(),
-                            (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
+                            "",  // date/time drawn in event handler
                             Units.formatByteSize(entityIndexData.totalSize),
                             ""
                            );
@@ -1242,7 +1243,7 @@ Dprintf.dprintf("");
         Widgets.setTreeItem(treeItem,
                             (Object)storageIndexData,
                             storageIndexData.name,
-                            (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
+                            "",  // date/time drawn in event handler
                             Units.formatByteSize(storageIndexData.size),
                             storageIndexData.indexState.toString()
                            );
@@ -1258,7 +1259,7 @@ Dprintf.dprintf("");
          Widgets.setTableItem(tableItem,
                               (Object)storageIndexData,
                               storageIndexData.name,
-                              SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
+                              "",  // date/time drawn in event handler
                               Units.formatByteSize(storageIndexData.totalEntrySize),
                               storageIndexData.indexState.toString()
                              );
@@ -2215,7 +2216,7 @@ Dprintf.dprintf("");
                                                         Widgets.TREE_ITEM_FLAG_FOLDER,
                                                         uuidIndexData.name,
                                                         "", // hostName
-                                                        (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                                        "",  // date/time drawn in event handler
                                                         Units.formatByteSize(uuidIndexData.totalSize),
                                                         ""
                                                        );
@@ -2229,7 +2230,7 @@ Dprintf.dprintf("");
                                       (Object)uuidIndexData,
                                       uuidIndexData.name,
                                       "", // hostName
-                                      (uuidIndexData.lastExecutedDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(uuidIndexData.lastExecutedDateTime*1000L)) : "-",
+                                      "",  // date/time drawn in event handler
                                       Units.formatByteSize(uuidIndexData.totalSize),
                                       ""
                                      );
@@ -2398,7 +2399,7 @@ Dprintf.dprintf("");
                                                         Widgets.TREE_ITEM_FLAG_FOLDER,
                                                         entityIndexData.archiveType.toString(),
                                                         "", // hostName
-                                                        (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
+                                                        "",  // date/time drawn in event handler
                                                         Units.formatByteSize(entityIndexData.totalSize),
                                                         ""
                                                        );
@@ -2412,7 +2413,7 @@ Dprintf.dprintf("");
                                     (Object)entityIndexData,
                                     entityIndexData.archiveType.toString(),
                                     "", // hostName
-                                    (entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-",
+                                    "",  // date/time drawn in event handler
                                     Units.formatByteSize(entityIndexData.totalSize),
                                     ""
                                    );
@@ -2608,7 +2609,7 @@ Dprintf.dprintf("");
                                                            Widgets.TREE_ITEM_FLAG_NONE,
                                                            storageIndexData.name,
                                                            storageIndexData.hostName,
-                                                           (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
+                                                           "",  // date/time drawn in event handler
                                                            Units.formatByteSize(storageIndexData.size),
                                                            storageIndexData.indexState.toString()
                                                           );
@@ -2622,7 +2623,7 @@ Dprintf.dprintf("");
                                       (Object)storageIndexData,
                                       storageIndexData.name,
                                       storageIndexData.hostName,
-                                      (storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-",
+                                      "",  // date/time drawn in event handler
                                       Units.formatByteSize(storageIndexData.size),
                                       storageIndexData.indexState.toString()
                                      );
@@ -2930,7 +2931,7 @@ Dprintf.dprintf("");
                                      storageIndexData.name,
                                      storageIndexData.hostName,
                                      Units.formatByteSize(storageIndexData.totalEntrySize),
-                                     SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)),
+                                     "",  // date/time drawn in event handler
                                      storageIndexData.indexState.toString()
                                     );
                 tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
@@ -4100,7 +4101,10 @@ Dprintf.dprintf("");
   private final Image IMAGE_UNMARK_ALL;
 
   // date/time format
-  private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  private final SimpleDateFormat SIMPLE_DATE_FORMAT  = new SimpleDateFormat("yyyy-MM-dd EEE HH:mm:ss");
+  private final SimpleDateFormat SIMPLE_DATE_FORMAT1 = new SimpleDateFormat("yyyy-MM-dd");
+  private final SimpleDateFormat SIMPLE_DATE_FORMAT2 = new SimpleDateFormat("EEE");
+  private final SimpleDateFormat SIMPLE_DATE_FORMAT3 = new SimpleDateFormat("HH:mm:ss");
 
   // index data comparator
   final Comparator<IndexData> indexIdComperator = new Comparator<IndexData>()
@@ -4594,7 +4598,7 @@ Dprintf.dprintf("");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)));
+      label = Widgets.newLabel(widgetStorageTableToolTip,(storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4800,7 +4804,7 @@ Dprintf.dprintf("");
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetEntryTableToolTip,SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.storageDateTime*1000L)));
+      label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.storageDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.storageDateTime*1000L)) : "-");
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -5046,13 +5050,13 @@ Dprintf.dprintf("");
           }
         }
       };
-      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Name"),    SWT.LEFT, 450,true);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Name"),    SWT.LEFT, 400,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Hostname"),SWT.LEFT, 150,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for name."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
-      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Created"), SWT.LEFT, 160,true);
+      treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Created"), SWT.LEFT, 170,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for created date/time."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("Size"),    SWT.RIGHT,100,true);
@@ -5061,6 +5065,54 @@ Dprintf.dprintf("");
       treeColumn = Widgets.addTreeColumn(widgetStorageTree,BARControl.tr("State"),   SWT.LEFT,  60,true);
       treeColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       treeColumn.addSelectionListener(storageTreeColumnSelectionListener);
+
+      // special case for drawing date/time
+      widgetStorageTree.addListener(SWT.EraseItem, new Listener()
+      {
+        public void handleEvent(Event event)
+        {
+          TreeItem treeItem = (TreeItem)event.item;
+
+          if (event.index == 2)
+          {
+            // Note: do not draw column 2 = date/time
+            event.detail &= ~SWT.FOREGROUND;
+          }
+        }
+      });
+      widgetStorageTree.addListener(SWT.PaintItem, new Listener()
+      {
+        public void handleEvent(Event event)
+        {
+          TreeItem treeItem = (TreeItem)event.item;
+
+          if (event.index == 2)
+          {
+            // draw column 2 = date/time
+            IndexData indexData = (IndexData)treeItem.getData();
+
+            long dateTime = indexData.getDateTime();
+            if (dateTime > 0)
+            {
+              String t1 = SIMPLE_DATE_FORMAT1.format(new Date(dateTime*1000L));
+              String t2 = SIMPLE_DATE_FORMAT2.format(new Date(dateTime*1000L));
+              String t3 = SIMPLE_DATE_FORMAT3.format(new Date(dateTime*1000L));
+              Point  s1 = event.gc.textExtent(t1);
+              Point  s2 = event.gc.textExtent("MMM");
+              Point  s3 = event.gc.textExtent(t3);
+              event.gc.drawText(t1,event.x+0            ,event.y+(event.height-s1.y)/2,false);
+              event.gc.drawText(t2,event.x+s1.x+2       ,event.y+(event.height-s2.y)/2,false);
+              event.gc.drawText(t3,event.x+s1.x+2+s2.x+2,event.y+(event.height-s3.y)/2,false);
+            }
+            else
+            {
+              String t1 = "-";
+              Point  s1 = event.gc.textExtent(t1);
+              event.gc.drawText(t1, event.x+0, event.y+(event.height-s1.y)/2, false);
+            }
+          }
+        }
+      });
       widgetStorageTree.addListener(SWT.Expand,new Listener()
       {
         @Override
