@@ -957,27 +957,35 @@ public class TabJobs
   {
     int     id;
     String  name;
-    boolean alwaysUnmount;
+    String  device;
 
     /** create mount data
      * @param id unique id
      * @param name mount name
-     * @param alwaysUnmount TRUE to always unmount
+     * @param device device name (or null)
      */
-    MountData(int id, String name, boolean alwaysUnmount)
+    MountData(int id, String name, String device)
     {
-      this.id            = id;
-      this.name          = name;
-      this.alwaysUnmount = alwaysUnmount;
+      this.id     = id;
+      this.name   = name;
+      this.device = device;
     }
 
     /** create mount data
      * @param name mount name
-     * @param alwaysUnmount TRUE to always unmount
+     * @param device device name (or null)
      */
-    MountData(String name, boolean alwaysUnmount)
+    MountData(String name, String device)
     {
-      this(0,name,alwaysUnmount);
+      this(0,name,device);
+    }
+
+    /** create mount data
+     * @param name mount name
+     */
+    MountData(String name)
+    {
+      this(0,name,(String)null);
     }
 
     /** clone mount data
@@ -985,7 +993,7 @@ public class TabJobs
      */
     public MountData clone()
     {
-      return new MountData(name,alwaysUnmount);
+      return new MountData(name,device);
     }
 
     /** convert data to string
@@ -993,7 +1001,7 @@ public class TabJobs
      */
     public String toString()
     {
-      return "MountData {"+id+", "+name+", "+alwaysUnmount+"}";
+      return "MountData {"+id+", "+name+", "+device+"}";
     }
   }
 
@@ -4073,33 +4081,10 @@ public class TabJobs
               }
             }
           });
-          tableColumn = Widgets.addTableColumn(widgetMountTable,0,BARControl.tr("Name"),          SWT.LEFT,600,true );
+          tableColumn = Widgets.addTableColumn(widgetMountTable,0,BARControl.tr("Name"),  SWT.LEFT,600,true);
           tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-          tableColumn = Widgets.addTableColumn(widgetMountTable,1,BARControl.tr("Always unmount"),SWT.LEFT,100,false);
+          tableColumn = Widgets.addTableColumn(widgetMountTable,1,BARControl.tr("Device"),SWT.LEFT,100,true);
           tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-          widgetMountTable.addKeyListener(new KeyListener()
-          {
-            @Override
-            public void keyPressed(KeyEvent keyEvent)
-            {
-            }
-            @Override
-            public void keyReleased(KeyEvent keyEvent)
-            {
-              if      (Widgets.isAccelerator(keyEvent,SWT.INSERT))
-              {
-                Widgets.invoke(widgetExcludeListAdd);
-              }
-              else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
-              {
-                Widgets.invoke(widgetExcludeListRemove);
-              }
-              else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
-              {
-                Widgets.invoke(widgetExcludeListEdit);
-              }
-            }
-          });
 
           menu = Widgets.newPopupMenu(shell);
           {
@@ -11632,13 +11617,13 @@ throw new Error("NYI");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   int     id            = valueMap.getInt    ("id"           );
-                                   String  name          = valueMap.getString ("name"         );
-                                   boolean alwaysUnmount = valueMap.getBoolean("alwaysUnmount");
+                                   int    id     = valueMap.getInt   ("id"         );
+                                   String name   = valueMap.getString("name"       );
+                                   String device = valueMap.getString("device",null);
 
                                    if (!name.equals(""))
                                    {
-                                     final MountData mountData = new MountData(id,name,alwaysUnmount);
+                                     final MountData mountData = new MountData(id,name,device);
 
                                      if (!widgetMountTable.isDisposed())
                                      {
@@ -11651,7 +11636,7 @@ throw new Error("NYI");
                                                                    mountDataComparator,
                                                                    mountData,
                                                                    mountData.name,
-                                                                   mountData.alwaysUnmount ? "\u2713" : "-"
+                                                                   (mountData.device != null) ? mountData.device : ""
                                                                   );
                                          }
                                        });
@@ -11685,14 +11670,14 @@ throw new Error("NYI");
 
     // create widgets
     final Text   widgetName;
-    final Button widgetAlwaysUnmount;
+    final Text   widgetDevice;
     final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
     Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
-      Widgets.layout(label,0,0,TableLayoutData.NW);
+      Widgets.layout(label,0,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
@@ -11733,22 +11718,47 @@ throw new Error("NYI");
         });
       }
 
-      widgetAlwaysUnmount = Widgets.newCheckbox(subComposite,BARControl.tr("always unmount"));
-      widgetAlwaysUnmount.setSelection(mountData.alwaysUnmount);
-      Widgets.layout(widgetAlwaysUnmount,1,0,TableLayoutData.W);
-      widgetAlwaysUnmount.addSelectionListener(new SelectionListener()
+      label = Widgets.newLabel(composite,BARControl.tr("Device")+":");
+      Widgets.layout(label,1,0,TableLayoutData.W);
+
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
-        @Override
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        widgetDevice = Widgets.newText(subComposite);
+        widgetDevice.setToolTipText(BARControl.tr("Mount device (optional)."));
+        if (mountData.device != null) widgetDevice.setText(mountData.device);
+        Widgets.layout(widgetDevice,0,0,TableLayoutData.WE);
+
+        button = Widgets.newButton(subComposite,IMAGE_DIRECTORY);
+        button.setToolTipText(BARControl.tr("Select remote path. CTRL+click to select local path."));
+        Widgets.layout(button,0,1,TableLayoutData.DEFAULT);
+        button.addSelectionListener(new SelectionListener()
         {
-        }
-        @Override
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          mountData.alwaysUnmount = widget.getSelection();
-        }
-      });
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            String pathName;
+
+            pathName = Dialogs.file(shell,
+                                    Dialogs.FileDialogTypes.OPEN,
+                                    BARControl.tr("Select device"),
+                                    widgetDevice.getText(),
+                                    ((selectionEvent.stateMask & SWT.CTRL) == 0)
+                                      ? BARServer.remoteListDirectory
+                                      : BARControl.listDirectory
+                                   );
+            if (pathName != null)
+            {
+              widgetDevice.setText(pathName.trim());
+            }
+          }
+        });
+      }
     }
 
     // buttons
@@ -11768,8 +11778,8 @@ throw new Error("NYI");
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          mountData.name          = widgetName.getText().trim();
-          mountData.alwaysUnmount = widgetAlwaysUnmount.getSelection();
+          mountData.name   = widgetName.getText().trim();
+          mountData.device = widgetDevice.getText().trim();
           Dialogs.close(dialog,true);
         }
       });
@@ -11830,12 +11840,10 @@ throw new Error("NYI");
     try
     {
       ValueMap valueMap = new ValueMap();
-      BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S device=%'S alwaysUnmount=%y",
+      BARServer.executeCommand(StringParser.format("MOUNT_LIST_ADD jobUUID=%s name=%'S device=%'S",
                                                    selectedJobData.uuid,
                                                    mountData.name,
-//TODO
-                                                   "",  // device
-                                                   mountData.alwaysUnmount
+                                                   mountData.device
                                                   ),
                                0,  // debugLevel
                                valueMap
@@ -11857,7 +11865,7 @@ throw new Error("NYI");
                             new MountDataComparator(widgetMountTable),
                             mountData,
                             mountData.name,
-                            mountData.alwaysUnmount ? "\u2713" : "-"
+                            (mountData.device != null) ? mountData.device : ""
                            );
 
     // remove duplicate names
@@ -11882,13 +11890,11 @@ throw new Error("NYI");
     // add to mount list
     try
     {
-      BARServer.executeCommand(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S device=%'S alwaysUnmount=%y",
+      BARServer.executeCommand(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S device=%'S",
                                                    selectedJobData.uuid,
                                                    mountData.id,
                                                    mountData.name,
- //TODO
-                                                   "",  // device
-                                                   mountData.alwaysUnmount
+                                                   mountData.device
                                                   ),
                                0  // debugLevel
                               );
@@ -11907,7 +11913,7 @@ throw new Error("NYI");
     Widgets.setTableItem(widgetMountTable,
                          mountData,
                          mountData.name,
-                         mountData.alwaysUnmount ? "\u2713" : "-"
+                         (mountData.device != null) ? mountData.device : ""
                         );
 
     // remove duplicate names
@@ -11988,7 +11994,7 @@ throw new Error("NYI");
   {
     assert selectedJobData != null;
 
-    MountData mountData = new MountData(name,false);
+    MountData mountData = new MountData(name);
     if (mountEdit(mountData,"Add new mount","Add"))
     {
       mountListAdd(mountData);

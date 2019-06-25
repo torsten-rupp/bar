@@ -4349,8 +4349,8 @@ class Dialogs
       (byte)0xae,(byte)0x42,(byte)0x60,(byte)0x82
     };
 
-    int         row;
     Pane        pane;
+    int         row1,row2;
     Composite   composite;
     Label       label;
     Button      button;
@@ -4394,10 +4394,12 @@ class Dialogs
       DragSource   dragSource;
       DropTarget   dropTarget;
 
+      row1 = 0;
+
       // path
       composite = new Composite(dialog,SWT.NONE);
       composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},2));
-      composite.setLayoutData(new TableLayoutData(0,0,TableLayoutData.WE));
+      composite.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.WE));
       {
         label = new Label(composite,SWT.NONE);
         label.setText(Dialogs.tr("Path")+":");
@@ -4410,10 +4412,12 @@ class Dialogs
         widgetFolderUp.setImage(IMAGE_FOLDER_UP);
         Widgets.layout(widgetFolderUp,0,2,TableLayoutData.E);
       }
+      row1++;
 
       // create pane
       pane = Widgets.newPane(dialog,2,SWT.VERTICAL);
-      pane.setLayoutData(new TableLayoutData(1,0,TableLayoutData.NSWE));
+      pane.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.NSWE));
+      row1++;
 
       // shortcut list
       composite = pane.getComposite(0);
@@ -4503,56 +4507,85 @@ class Dialogs
         tableColumn.addSelectionListener(selectionListener);
       }
 
-      // filter, name
-      composite = new Composite(dialog,SWT.NONE);
-      composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0},2));
-      composite.setLayoutData(new TableLayoutData(2,0,TableLayoutData.WE));
+      if (   (fileExtensions != null)
+          || ((flags & FILE_SHOW_HIDDEN) != 0)
+          || ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.SAVE) || (type == FileDialogTypes.ENTRY))
+         )
       {
-        if (fileExtensions != null)
+        // filter, name
+        composite = new Composite(dialog,SWT.NONE);
+        composite.setLayout(new TableLayout(1.0,new double[]{0.0,1.0,0.0},2));
+        composite.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.WE));
         {
-          label = new Label(composite,SWT.NONE);
-          label.setText(Dialogs.tr("Filter")+":");
-          Widgets.layout(label,0,0,TableLayoutData.W);
+          row2 = 0;
 
-          widgetFilter = new Combo(composite,SWT.NONE);
-          widgetFilter.setLayoutData(new TableLayoutData(0,1,TableLayoutData.WE));
-        }
-        else
-        {
-          widgetFilter = null;
-        }
+          if (   (fileExtensions != null)
+              || ((flags & FILE_SHOW_HIDDEN) != 0)
+             )
+          {
+            if (fileExtensions != null)
+            {
+              label = new Label(composite,SWT.NONE);
+              label.setText(Dialogs.tr("Filter")+":");
+              Widgets.layout(label,row2,0,TableLayoutData.W);
 
-        if ((flags & FILE_SHOW_HIDDEN) != 0)
-        {
-          widgetShowHidden = new Button(composite,SWT.CHECK);
-          widgetShowHidden.setText(Dialogs.tr("show hidden"));
-          widgetShowHidden.setLayoutData(new TableLayoutData(0,2,TableLayoutData.E));
-        }
-        else
-        {
-          widgetShowHidden = null;
-        }
+              widgetFilter = new Combo(composite,SWT.NONE);
+              widgetFilter.setLayoutData(new TableLayoutData(row2,1,TableLayoutData.WE));
+            }
+            else
+            {
+              widgetFilter = null;
+            }
 
-        if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.SAVE) || (type == FileDialogTypes.ENTRY))
-        {
-          label = new Label(composite,SWT.NONE);
-          label.setText(Dialogs.tr("Name")+":");
-          Widgets.layout(label,1,0,TableLayoutData.W);
+            if ((flags & FILE_SHOW_HIDDEN) != 0)
+            {
+              widgetShowHidden = new Button(composite,SWT.CHECK);
+              widgetShowHidden.setText(Dialogs.tr("show hidden"));
+              widgetShowHidden.setLayoutData(new TableLayoutData(row2,2,TableLayoutData.E));
+            }
+            else
+            {
+              widgetShowHidden = null;
+            }
 
-          widgetName = new Text(composite,SWT.BORDER|SWT.SEARCH|SWT.ICON_CANCEL);
-          widgetName.setEnabled((type != FileDialogTypes.OPEN));
-          Widgets.layout(widgetName,1,1,TableLayoutData.WE,0,2);
+            row2++;
+          }
+          else
+          {
+            widgetFilter     = null;
+            widgetShowHidden = null;
+          }
+
+          if ((type == FileDialogTypes.OPEN) || (type == FileDialogTypes.SAVE) || (type == FileDialogTypes.ENTRY))
+          {
+            label = new Label(composite,SWT.NONE);
+            label.setText(Dialogs.tr("Name")+":");
+            Widgets.layout(label,row2,0,TableLayoutData.W);
+
+            widgetName = new Text(composite,SWT.BORDER|SWT.SEARCH|SWT.ICON_CANCEL);
+            widgetName.setEnabled((type != FileDialogTypes.OPEN));
+            Widgets.layout(widgetName,row2,1,TableLayoutData.WE,0,2);
+
+            row2++;
+          }
+          else
+          {
+            widgetName = null;
+          }
         }
-        else
-        {
-          widgetName = null;
-        }
+        row1++;
+      }
+      else
+      {
+        widgetFilter     = null;
+        widgetShowHidden = null;
+        widgetName       = null;
       }
 
       // buttons
       composite = new Composite(dialog,SWT.NONE);
       composite.setLayout(new TableLayout(0.0,1.0));
-      composite.setLayoutData(new TableLayoutData(4,0,TableLayoutData.WE,0,0,2));
+      composite.setLayoutData(new TableLayoutData(row1,0,TableLayoutData.WE,0,0,2));
       {
         widgetDone = new Button(composite,SWT.CENTER);
         switch (type)
@@ -4586,10 +4619,12 @@ class Dialogs
           }
         });
       }
+      row1++;
 
       // install listeners
       widgetPath.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           updater.updateFileList(widgetFileList,
@@ -4597,15 +4632,18 @@ class Dialogs
                                  (widgetName != null) ? widgetName.getText() : null
                                 );
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
       });
       widgetFolderUp.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           T file = (T)widgetPath.getData();
@@ -4635,6 +4673,7 @@ class Dialogs
       });
       widgetShortcutList.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           int index = widgetShortcutList.getSelectionIndex();
@@ -4671,6 +4710,7 @@ class Dialogs
                                  );
           }
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
         }
@@ -4698,6 +4738,7 @@ class Dialogs
       });
       widgetFileList.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
           int index = widgetFileList.getSelectionIndex();
@@ -4729,6 +4770,7 @@ class Dialogs
                                  );
           }
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           int index = widgetFileList.getSelectionIndex();
@@ -4754,6 +4796,7 @@ class Dialogs
       });
       widgetFileList.addMouseListener(new MouseListener()
       {
+        @Override
         public void mouseDoubleClick(MouseEvent mouseEvent)
         {
           TableItem[] tableItems = widgetFileList.getSelection();
@@ -4769,6 +4812,10 @@ class Dialogs
             }
             else
             {
+              // set new name
+              if (widgetName != null) widgetName.setText(file.getName());
+
+              // done
               fileGeometry = dialog.getSize();
               close(dialog,
                     (widgetName != null)
@@ -4778,9 +4825,11 @@ class Dialogs
             }
           }
         }
+        @Override
         public void mouseDown(MouseEvent mouseEvent)
         {
         }
+        @Override
         public void mouseUp(MouseEvent mouseEvent)
         {
         }
@@ -4789,9 +4838,11 @@ class Dialogs
       {
         widgetFilter.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             int index = widgetFilter.getSelectionIndex();
@@ -4812,9 +4863,11 @@ class Dialogs
       {
         widgetShowHidden.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             updater.setShowHidden(widgetShowHidden.getSelection());
@@ -4847,9 +4900,11 @@ class Dialogs
       }
       widgetDone.addSelectionListener(new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           fileGeometry = dialog.getSize();
