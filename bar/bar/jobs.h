@@ -655,7 +655,7 @@ INLINE void Job_listUnlock(void)
     if (dt > 2*US_PER_S)
     {
       fprintf(stderr,"%s, %d: Warning job list lock: %llums\n",__FILE__,__LINE__,dt/US_PER_MS);
-      debugDumpCurrentStackTrace(stderr,2,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1);
+      debugDumpCurrentStackTrace(stderr,2,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
     }
   #endif /* NDEBUG */
 

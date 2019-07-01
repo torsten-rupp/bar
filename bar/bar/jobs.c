@@ -1668,8 +1668,7 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
   {
     // add to mount list
     mountNode = newMountNodeCString(value,
-                                    NULL,  // deviceName
-                                    FALSE  // alwaysUnmount
+                                    NULL  // deviceName
                                    );
     if (mountNode == NULL)
     {

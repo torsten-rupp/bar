@@ -948,7 +948,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("exclude-list",                     &globalOptions.excludeListFileName,-1                          ),
   CONFIG_VALUE_STRING            ("exclude-command",                  &globalOptions.excludeCommand,-1                               ),
 
-  CONFIG_VALUE_SPECIAL           ("mount",                            &globalOptions.mountList,-1,                                   configValueParseMount,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("mount",                            &globalOptions.mountList,-1,                                   configValueParseMount,configValueFormatInitMount,configValueFormatDoneMount,configValueFormatMount,NULL),
   CONFIG_VALUE_STRING            ("mount-command",                    &globalOptions.mountCommand,-1                                 ),
   CONFIG_VALUE_STRING            ("mount-device-command",             &globalOptions.mountDeviceCommand,-1                           ),
   CONFIG_VALUE_STRING            ("unmount-command",                  &globalOptions.unmountCommand,-1                               ),
@@ -2398,7 +2398,6 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
 {
   String    mountName;
   String    deviceName;
-  bool      alwaysUnmount;
   MountNode *mountNode;
 
   assert(variable != NULL);
@@ -2411,29 +2410,34 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   UNUSED_VARIABLE(errorMessageSize);
 
   // init variables
-  mountName     = String_new();
-  deviceName    = String_new();
-  alwaysUnmount = FALSE;
+  mountName  = String_new();
+  deviceName = String_new();
 
-  // get name, alwaysUnmount
-  if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,&alwaysUnmount))
+  // get name
+//TODO: deprecated
+  if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,NULL))
   {
-    alwaysUnmount = FALSE;
   }
-  if      (String_parseCString(value,"%S,,%y",NULL,mountName,&alwaysUnmount))
+//TODO: deprecated
+  else if (String_parseCString(value,"%S,,%y",NULL,mountName,NULL))
   {
-    alwaysUnmount = FALSE;
+    String_clear(deviceName);
+  }
+//TODO: deprecated
+  else if (String_parseCString(value,"%S,%y",NULL,mountName,NULL))
+  {
+    String_clear(deviceName);
   }
   else if (String_parseCString(value,"%S,%S",NULL,mountName,deviceName))
   {
-    alwaysUnmount = FALSE;
   }
   else if (String_parseCString(value,"%S",NULL,mountName))
   {
-    alwaysUnmount = FALSE;
+    String_clear(deviceName);
   }
   else
   {
+    String_delete(deviceName);
     String_delete(mountName);
     return FALSE;
   }
@@ -2442,8 +2446,7 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   {
     // add to mount list
     mountNode = newMountNode(mountName,
-                             deviceName,
-                             alwaysUnmount
+                             deviceName
                             );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
@@ -3407,8 +3410,7 @@ LOCAL bool cmdOptionParseDeprecatedMountDevice(void *userData, void *variable, c
   {
     // add to mount list
     mountNode = newMountNodeCString(value,
-                                    NULL,  // deviceName
-                                    TRUE  // alwaysUnmount
+                                    NULL  // deviceName
                                    );
     assert(mountNode != NULL);
     List_append((MountList*)variable,mountNode);
@@ -3507,8 +3509,7 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
   {
     // add to mount list
     mountNode = newMountNodeCString(value,
-                                    NULL,  // deviceName
-                                    FALSE  // alwaysUnmount
+                                    NULL  // deviceName
                                    );
     if (mountNode == NULL)
     {
@@ -6823,17 +6824,16 @@ bool isServerAllocationPending(uint serverId)
   return pendingFlag;
 }
 
-MountNode *newMountNode(ConstString mountName, ConstString deviceName, bool alwaysUnmount)
+MountNode *newMountNode(ConstString mountName, ConstString deviceName)
 {
   assert(mountName != NULL);
 
   return newMountNodeCString(String_cString(mountName),
-                             String_cString(deviceName),
-                             alwaysUnmount
+                             String_cString(deviceName)
                             );
 }
 
-MountNode *newMountNodeCString(const char *mountName, const char *deviceName, bool alwaysUnmount)
+MountNode *newMountNodeCString(const char *mountName, const char *deviceName)
 {
   MountNode *mountNode;
 
@@ -6849,7 +6849,6 @@ MountNode *newMountNodeCString(const char *mountName, const char *deviceName, bo
   mountNode->id            = Misc_getId();
   mountNode->name          = String_newCString(mountName);
   mountNode->device        = String_newCString(deviceName);
-  mountNode->alwaysUnmount = alwaysUnmount;
   mountNode->mounted       = FALSE;
   mountNode->mountCount    = 0;
 
@@ -6867,8 +6866,7 @@ MountNode *duplicateMountNode(MountNode *fromMountNode,
   UNUSED_VARIABLE(userData);
 
   mountNode = newMountNode(fromMountNode->name,
-                           fromMountNode->device,
-                           fromMountNode->alwaysUnmount
+                           fromMountNode->device
                           );
   assert(mountNode != NULL);
 
@@ -6999,7 +6997,6 @@ Errors unmountAll(const MountList *mountList)
 {
   MountNode   *mountNode;
   MountedNode *mountedNode;
-  Errors      error;
 
   assert(mountList != NULL);
 
@@ -8046,7 +8043,7 @@ bool configValueFormatPattern(void **formatUserData, void *userData, String line
 bool configValueParseMount(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   String    mountName;
-  bool      alwaysUnmount;
+  String    deviceName;
   MountNode *mountNode;
 
   assert(variable != NULL);
@@ -8058,19 +8055,34 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   UNUSED_VARIABLE(errorMessageSize);
 
   // init variables
-  mountName     = String_new();
-  alwaysUnmount = FALSE;
+  mountName  = String_new();
+  deviceName = String_new();
 
-  // get name, alwaysUnmount
-  if      (String_parseCString(value,"%S,%y",NULL,mountName,&alwaysUnmount))
+  // get name
+//TODO: deprecated
+  if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,NULL))
+  {
+  }
+//TODO: deprecated
+  else if (String_parseCString(value,"%S,,%y",NULL,mountName,NULL))
+  {
+    String_clear(deviceName);
+  }
+//TODO: deprecated
+  else if (String_parseCString(value,"%S,%y",NULL,mountName,NULL))
+  {
+    String_clear(deviceName);
+  }
+  else if (String_parseCString(value,"%S,%S",NULL,mountName,deviceName))
   {
   }
   else if (String_parseCString(value,"%S",NULL,mountName))
   {
-    alwaysUnmount = FALSE;
+    String_clear(deviceName);
   }
   else
   {
+    String_delete(deviceName);
     String_delete(mountName);
     return FALSE;
   }
@@ -8079,8 +8091,7 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   {
     // add to mount list
     mountNode = newMountNode(mountName,
-                             NULL,  // deviceName
-                             alwaysUnmount
+                             NULL  // deviceName
                             );
     if (mountNode == NULL)
     {
@@ -8090,6 +8101,7 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   }
 
   // free resources
+  String_delete(deviceName);
   String_delete(mountName);
 
   return TRUE;
@@ -8121,7 +8133,8 @@ bool configValueFormatMount(void **formatUserData, void *userData, String line)
   mountNode = (MountNode*)(*formatUserData);
   if (mountNode != NULL)
   {
-    String_appendFormat(line,"%'S,%y",mountNode->name,mountNode->alwaysUnmount);
+    String_appendFormat(line,"%'S",mountNode->name);
+    if (!String_isEmpty(mountNode->device)) String_appendFormat(line,",%'S",mountNode->device);
 
     (*formatUserData) = mountNode->next;
 

@@ -315,7 +315,6 @@ typedef struct MountNode
   String device;                                              // mount device (optional)
   bool   mounted;                                             // TRUE iff mounted by BAR
   uint   mountCount;                                          // mount count (0 to unmount/not mounted)
-  bool   alwaysUnmount;                                       // TRUE for always unmount
 } MountNode;
 
 typedef struct

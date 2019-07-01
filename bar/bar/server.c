@@ -8843,7 +8843,6 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
 *            id=<n> \
 *            name=<name> \
 *            device=<name> \
-*            alwaysUnmount=<yes|no>
 *            ...
 \***********************************************************************/
 
@@ -8880,11 +8879,10 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     LIST_ITERATE(&jobNode->job.options.mountList,mountNode)
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                          "id=%u name=%'S device=%'S alwaysUnmount=%y",
+                          "id=%u name=%'S device=%'S",
                           mountNode->id,
                           mountNode->name,
-                          mountNode->device,
-                          mountNode->alwaysUnmount
+                          mountNode->device
                          );
     }
   }
@@ -8960,7 +8958,6 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
 *            jobUUID=<uuid>
 *            name=<name>
 *            device=<name>
-*            alwaysUnmount=yes|no
 *          Result:
 *            id=<n>
 \***********************************************************************/
@@ -8970,7 +8967,6 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   String       name;
   String       device;
-  bool         alwaysUnmount;
   JobNode      *jobNode;
   MountNode    *mountNode;
   uint         mountId;
@@ -8980,7 +8976,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get jobUUID, name, device, alwaysUnmount
+  // get jobUUID, name, device
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -9001,13 +8997,6 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     String_delete(name);
     return;
   }
-  if (!StringMap_getBool(argumentMap,"alwaysUnmount",&alwaysUnmount,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"alwaysUnmount=yes|no");
-    String_delete(device);
-    String_delete(name);
-    return;
-  }
 
   mountId = 0;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -9024,7 +9013,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     }
 
     // add to mount list
-    mountNode = newMountNode(name,device,alwaysUnmount);
+    mountNode = newMountNode(name,device);
     if (mountNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,
@@ -9071,7 +9060,6 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
 *            id=<n>
 *            name=<name>
 *            device=<name>
-*            alwaysUnmount=yes|no
 *          Result:
 \***********************************************************************/
 
@@ -9081,7 +9069,6 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
   uint         mountId;
   String       name;
   String       device;
-  bool         alwaysUnmount;
   JobNode      *jobNode;
   MountNode    *mountNode;
 
@@ -9090,7 +9077,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get jobUUID, mount id, name, alwaysUnmount
+  // get jobUUID, mount id, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
@@ -9112,13 +9099,6 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
   if (!StringMap_getString(argumentMap,"device",device,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"device=<name>");
-    String_delete(device);
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getBool(argumentMap,"alwaysUnmount",&alwaysUnmount,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"alwaysUnmount=yes|no");
     String_delete(device);
     String_delete(name);
     return;
@@ -9151,7 +9131,6 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     // update mount list
     String_set(mountNode->name,name);
     String_set(mountNode->device,device);
-    mountNode->alwaysUnmount = alwaysUnmount;
 
     // notify about changed lists
     Job_mountChanged(jobNode);
@@ -10687,7 +10666,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get jobUUID, mount id, name, alwaysUnmount
+  // get jobUUID, mount id, name
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");

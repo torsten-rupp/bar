@@ -615,10 +615,9 @@ UNUSED_VARIABLE(scheduleCustomText);
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
                                                               NULL,
-                                                              "MOUNT_LIST_ADD jobUUID=%S name=%'S alwaysUnmount=%y",
+                                                              "MOUNT_LIST_ADD jobUUID=%S name=%'S",
                                                               jobUUID,
-                                                              mountNode->name,
-                                                              mountNode->alwaysUnmount
+                                                              mountNode->name
                                                              );
   }
 
