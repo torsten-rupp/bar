@@ -31,6 +31,9 @@
 #ifdef HAVE_LINK_H
   #include <link.h>
 #endif
+#ifdef HAVE_DL_H
+  #include <dl.h>
+#endif
 #include <unistd.h>
 #include <errno.h>
 #include <assert.h>
@@ -490,6 +493,9 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
 
   ElfW(Half) i;
   ElfW(Addr) vaddr;
+  #ifdef HAVE_DL_H
+    Dl_info    dlInfo;
+  #endif
 
   assert(info != NULL);
   assert(fileMatchInfo != NULL);
@@ -497,6 +503,7 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
   // unused
   (void)infoSize;
 
+  // find in shared objects
   for (i = 0; i < info->dlpi_phnum; i++)
   {
     if (info->dlpi_phdr[i].p_type == PT_LOAD)
@@ -514,6 +521,22 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
       }
     }
   }
+
+  #ifdef HAVE_DL_H
+    // find via loader
+    if (!fileMatchInfo->found)
+    {
+      if (   (dladdr(fileMatchInfo->address, &dlInfo) != 0)
+          && (dlInfo.dli_fname != NULL)
+          && (dlInfo.dli_fname[0] != '\0')
+         )
+      {
+        fileMatchInfo->found    = TRUE;
+        fileMatchInfo->fileName = dlInfo.dli_fname;
+        fileMatchInfo->base     = (void*)(uintptr_t)dlInfo.dli_fbase;
+      }
+    }
+  #endif
 
   return 0; // return value not used
 }
@@ -555,7 +578,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
     dl_iterate_phdr(findMatchingFile,&fileMatchInfo);
     if (fileMatchInfo.found)
     {
-//fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,fileMatchInfo.fileName);
+//fprintf(stderr,"%s, %d: load from %s\n",__FILE__,__LINE__,fileMatchInfo.fileName);
       symbolInfoFromFile = getSymbolInfoFromFile(fileMatchInfo.fileName,
                                                  (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
                                                  symbolFunction,
@@ -564,7 +587,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
     }
     else
     {
-//fprintf(stderr,"%s, %d: load frm fi\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: load from %s\n",__FILE__,__LINE__,executableFileName);
       symbolInfoFromFile = getSymbolInfoFromFile(executableFileName,
                                                  (bfd_vma)addresses[i],
                                                  symbolFunction,
