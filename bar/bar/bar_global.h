@@ -357,7 +357,7 @@ typedef struct ScheduleNode
   bool               enabled;                                 // TRUE iff enabled
 
   // run info
-  uint64             lastExecutedDateTime;                    // last execution date/time (timestamp)
+  uint64             lastExecutedDateTime;                    // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
 
   // cached statistics info
   ulong              totalEntityCount;                        // total number of entities of last execution
