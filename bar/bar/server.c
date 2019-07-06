@@ -1954,7 +1954,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
       // end job
-      Job_end(jobNode,executeEndDateTime);
+      Job_end(jobNode);
 
       // update statistics data
       jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
@@ -1993,7 +1993,7 @@ fprintf(stderr,"%s, %d: start job on slave -------------------------------------
       if (!storageFlags.dryRun)
       {
         // store schedule info
-        Job_writeScheduleInfo(jobNode);
+        Job_writeScheduleInfo(jobNode,archiveType,executeEndDateTime);
       }
     }
   }
@@ -2379,7 +2379,7 @@ LOCAL void schedulerThreadCode(void)
                   && ((scheduleNode->weekDaySet    == WEEKDAY_SET_ANY) || IN_SET(scheduleNode->weekDaySet,weekDay)  )
                   && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
                   && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
-                  && (currentDateTime >= (jobNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
+                  && (currentDateTime >= (scheduleNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
                   && Continuous_isEntryAvailable(&continuousDatabaseHandle,jobNode->job.uuid,scheduleNode->uuid)
                  )
               {
@@ -4775,10 +4775,10 @@ Errors error;
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-StringMap_debugPrint(0,argumentMap);
-
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+//TODO
+#warning TODO
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); StringMap_debugPrint(0,argumentMap);
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
 //TODO
 #ifndef WERROR
@@ -7288,7 +7288,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    JOB_LIST_ITERATEX(jobNode,!isCommandAborted(clientInfo,id))
+    JOB_LIST_ITERATEX(jobNode,!quitFlag && !isCommandAborted(clientInfo,id))
     {
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                           "jobUUID=%S master=%'S name=%'S state=%s slaveHostName=%'S slaveHostPort=%d slaveHostForceSSL=%y slaveState=%'s archiveType=%s archivePartSize=%"PRIu64" deltaCompressAlgorithm=%s byteCompressAlgorithm=%s cryptAlgorithm=%'s cryptType=%'s cryptPasswordMode=%'s lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S estimatedRestTime=%lu",
@@ -7315,7 +7315,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           Crypt_algorithmToString(jobNode->job.options.cryptAlgorithms[0],"unknown"),
                           (jobNode->job.options.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.options.cryptPasswordMode,NULL),
-                          jobNode->lastExecutedDateTime,
+                          Job_getLastExecutedDateTime(jobNode),
                           jobNode->lastErrorMessage,
                           jobNode->runningInfo.estimatedRestTime
                          );
@@ -7387,7 +7387,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
-                        jobNode->lastExecutedDateTime,
+                        Job_getLastExecutedDateTime(jobNode),
                         jobNode->lastErrorMessage,
                         jobNode->executionCount.normal,
                         jobNode->executionCount.full,
@@ -7831,7 +7831,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // write initial schedule info
-    Job_writeScheduleInfo(newJobNode);
+    Job_writeScheduleInfo(newJobNode,ARCHIVE_TYPE_NONE,0LL);
 
     // add new job to list
     Job_listAppend(newJobNode);
@@ -17851,7 +17851,7 @@ Errors Server_run(ServerModes       mode,
                        jobNode->job.uuid,
                        NULL  // scheduleUUID
                       );
-      jobNode->lastExecutedDateTime         = jobAggregateInfo.lastExecutedDateTime;
+//TODO: remove      jobNode->lastExecutedDateTime         = jobAggregateInfo.lastExecutedDateTime;
       String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
       jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
       jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
