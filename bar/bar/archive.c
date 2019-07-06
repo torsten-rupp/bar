@@ -1158,9 +1158,11 @@ HALT_NOT_YET_IMPLEMENTED();
 
 /***********************************************************************\
 * Name   : cryptGetBlockLength
-* Purpose:
-* Input  :
-* Output : -
+* Purpose: get crypt block lengths
+* Input  : cryptAlgorithms     - crypt algorithms
+*          cryptAlgorithmCount - number of crypt alogithms
+*          blockLength         - crypt block lengths variable
+* Output : blockLength - crypt block lengths
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1174,6 +1176,7 @@ LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
   Errors error;
   uint   n;
 
+  assert(cryptAlgorithms != NULL);
   assert(blockLength != NULL);
 
   (*blockLength) = 1;
@@ -1185,7 +1188,6 @@ LOCAL Errors cryptGetBlockLength(CryptAlgorithms *cryptAlgorithms,
       return error;
     }
     (*blockLength) = lcm((*blockLength),n);
-//fprintf(stderr,"%s, %d: n=%d %d\n",__FILE__,__LINE__,n,*blockLength);
   }
 
   return ERROR_NONE;
@@ -3571,52 +3573,35 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                  maxBlockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
+      assert(byteLength > 0);
       assert((byteLength%archiveEntryInfo->file.byteCompressInfo.blockLength) == 0);
-//TODO
-#ifndef WERROR
-#warning remove?
-#endif
-assert(byteLength > 0L);
 
-      if (byteLength > 0L)
+      // encrypt block
+      error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
+                                 archiveEntryInfo->file.byteBuffer,
+                                 byteLength
+                                );
+      if (error != ERROR_NONE)
       {
-        // write header (if not already written)
-        if (!archiveEntryInfo->file.headerWrittenFlag)
-        {
-          error = writeFileChunks(archiveEntryInfo);
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
-        }
+        return error;
+      }
 
-        // encrypt block
-        error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
-                                   archiveEntryInfo->file.byteBuffer,
-                                   byteLength
-                                  );
-        if (error != ERROR_NONE)
+      #ifdef DEBUG_ENCODED_DATA_FILENAME
         {
-          return error;
+          int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+          write(handle,archiveEntryInfo->file.byteBuffer,byteLength);
+          close(handle);
         }
+      #endif /* DEBUG_ENCODED_DATA_FILENAME */
 
-        #ifdef DEBUG_ENCODED_DATA_FILENAME
-          {
-            int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
-            write(handle,archiveEntryInfo->file.byteBuffer,byteLength);
-            close(handle);
-          }
-        #endif /* DEBUG_ENCODED_DATA_FILENAME */
-
-        // write data block
-        error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
-                                archiveEntryInfo->file.byteBuffer,
-                                byteLength
-                               );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
+      // write data block
+      error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
+                              archiveEntryInfo->file.byteBuffer,
+                              byteLength
+                             );
+      if (error != ERROR_NONE)
+      {
+        return error;
       }
     }
   }
@@ -3674,11 +3659,11 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       assert(archiveEntryInfo->file.byteBufferSize >= (blockCount*archiveEntryInfo->file.byteCompressInfo.blockLength));
       Compress_getCompressedData(&archiveEntryInfo->file.byteCompressInfo,
                                  archiveEntryInfo->file.byteBuffer,
-//                                 archiveEntryInfo->file.byteBufferSize,
                                  blockCount*archiveEntryInfo->file.byteCompressInfo.blockLength,
-//                                 archiveEntryInfo->file.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
+      assert(byteLength > 0);
+      assert((byteLength%archiveEntryInfo->file.byteCompressInfo.blockLength) == 0);
 
       // calculate min. bytes to tramsfer to archive
       minBytes = (ulong)File_getSize(&archiveEntryInfo->file.intermediateFileHandle)+byteLength;
@@ -3922,45 +3907,42 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
 
-        if (byteLength > 0L)
+        // write header (if not already written)
+        if (!archiveEntryInfo->file.headerWrittenFlag)
         {
-          // write header (if not already written)
-          if (!archiveEntryInfo->file.headerWrittenFlag)
-          {
-            error = writeFileChunks(archiveEntryInfo);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-          }
-
-          // encrypt block
-          error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
-                                     archiveEntryInfo->file.byteBuffer,
-                                     byteLength
-                                    );
+          error = writeFileChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
             return error;
           }
+        }
 
-          #ifdef DEBUG_ENCODED_DATA_FILENAME
-            {
-              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
-              write(handle,archiveEntryInfo->file.byteBuffer,byteLength);
-              close(handle);
-            }
-          #endif /* DEBUG_ENCODED_DATA_FILENAME */
+        // encrypt block
+        error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
+                                   archiveEntryInfo->file.byteBuffer,
+                                   byteLength
+                                  );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
 
-          // write data block
-          error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
-                                  archiveEntryInfo->file.byteBuffer,
-                                  byteLength
-                                 );
-          if (error != ERROR_NONE)
+        #ifdef DEBUG_ENCODED_DATA_FILENAME
           {
-            return error;
+            int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+            write(handle,archiveEntryInfo->file.byteBuffer,byteLength);
+            close(handle);
           }
+        #endif /* DEBUG_ENCODED_DATA_FILENAME */
+
+        // write data block
+        error = Chunk_writeData(&archiveEntryInfo->file.chunkFileData.info,
+                                archiveEntryInfo->file.byteBuffer,
+                                byteLength
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
         }
       }
     }
@@ -4146,7 +4128,7 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
   assert(archiveEntryInfo != NULL);
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
-  assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
+  assert(archiveEntryInfo->image.byteCompressInfo.blockLength > 0);
 
   do
   {
@@ -4182,6 +4164,7 @@ LOCAL Errors flushImageDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                  maxBlockCount*archiveEntryInfo->image.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
+      assert(byteLength > 0);
       assert((byteLength%archiveEntryInfo->image.byteCompressInfo.blockLength) == 0);
 
       // encrypt block
@@ -4248,7 +4231,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
   assert(archiveEntryInfo->archiveHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(archiveEntryInfo->archiveHandle);
   assert(archiveEntryInfo->archiveHandle->mode == ARCHIVE_MODE_CREATE);
-  assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
+  assert(archiveEntryInfo->image.byteCompressInfo.blockLength > 0);
 
   do
   {
@@ -4267,11 +4250,11 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       assert(archiveEntryInfo->image.byteBufferSize >= (blockCount*archiveEntryInfo->image.byteCompressInfo.blockLength));
       Compress_getCompressedData(&archiveEntryInfo->image.byteCompressInfo,
                                  archiveEntryInfo->image.byteBuffer,
-//                                 archiveEntryInfo->image.byteBufferSize,
                                  blockCount*archiveEntryInfo->image.byteCompressInfo.blockLength,
-//                                 archiveEntryInfo->image.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
+      assert(byteLength > 0);
+      assert((byteLength%archiveEntryInfo->image.byteCompressInfo.blockLength) == 0);
 
       // calculate min. bytes to tramsfer to archive
       minBytes = (ulong)File_getSize(&archiveEntryInfo->image.intermediateFileHandle)+byteLength;
@@ -4512,45 +4495,42 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
 
-        if (byteLength > 0L)
+        // write header (if not already written)
+        if (!archiveEntryInfo->image.headerWrittenFlag)
         {
-          // write header (if not already written)
-          if (!archiveEntryInfo->image.headerWrittenFlag)
-          {
-            error = writeImageChunks(archiveEntryInfo);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-          }
-
-          // encrypt block
-          error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
-                                     archiveEntryInfo->image.byteBuffer,
-                                     byteLength
-                                    );
+          error = writeImageChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
             return error;
           }
+        }
 
-          #ifdef DEBUG_ENCODED_DATA_FILENAME
-            {
-              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
-              write(handle,archiveEntryInfo->image.byteBuffer,byteLength);
-              close(handle);
-            }
-          #endif /* DEBUG_ENCODED_DATA_FILENAME */
+        // encrypt block
+        error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
+                                   archiveEntryInfo->image.byteBuffer,
+                                   byteLength
+                                  );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
 
-          // store block into chunk
-          error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
-                                  archiveEntryInfo->image.byteBuffer,
-                                  byteLength
-                                );
-          if (error != ERROR_NONE)
+        #ifdef DEBUG_ENCODED_DATA_FILENAME
           {
-            return error;
+            int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+            write(handle,archiveEntryInfo->image.byteBuffer,byteLength);
+            close(handle);
           }
+        #endif /* DEBUG_ENCODED_DATA_FILENAME */
+
+        // store block into chunk
+        error = Chunk_writeData(&archiveEntryInfo->image.chunkImageData.info,
+                                archiveEntryInfo->image.byteBuffer,
+                                byteLength
+                              );
+        if (error != ERROR_NONE)
+        {
+          return error;
         }
       }
     }
@@ -4577,7 +4557,7 @@ LOCAL Errors readImageDataBlock(ArchiveEntryInfo *archiveEntryInfo)
   ulong  n;
 
   assert(archiveEntryInfo != NULL);
-  assert(archiveEntryInfo->image.byteCompressInfo.blockLength != 0);
+  assert(archiveEntryInfo->image.byteCompressInfo.blockLength > 0);
 
   if (!Chunk_eofSub(&archiveEntryInfo->image.chunkImageData.info))
   {
@@ -4791,10 +4771,14 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      // create new part (if not already created)
+      // write header (if not already written)
       if (!archiveEntryInfo->hardLink.headerWrittenFlag)
       {
-        writeHardLinkChunks(archiveEntryInfo);
+        error = writeHardLinkChunks(archiveEntryInfo);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
 
       // get max. number of byte-compressed data blocks to write
@@ -4808,6 +4792,7 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
                                  maxBlockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
+      assert(byteLength > 0);
       assert((byteLength%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) == 0);
 
       // encrypt block
@@ -4895,11 +4880,11 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       assert(archiveEntryInfo->hardLink.byteBufferSize >= (blockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength));
       Compress_getCompressedData(&archiveEntryInfo->hardLink.byteCompressInfo,
                                  archiveEntryInfo->hardLink.byteBuffer,
-//                                 archiveEntryInfo->hardLink.byteBufferSize,
                                  blockCount*archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
-//                                 archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
                                  &byteLength
                                 );
+      assert(byteLength > 0);
+      assert((byteLength%archiveEntryInfo->hardLink.byteCompressInfo.blockLength) == 0);
 
       // calculate min. bytes to tramsfer to archive
       minBytes = (ulong)File_getSize(&archiveEntryInfo->hardLink.intermediateFileHandle)+byteLength;
@@ -5147,45 +5132,42 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
 
-        if (byteLength > 0L)
+        // write header (if not already written)
+        if (!archiveEntryInfo->hardLink.headerWrittenFlag)
         {
-          // write header (if not already written)
-          if (!archiveEntryInfo->hardLink.headerWrittenFlag)
-          {
-            error = writeHardLinkChunks(archiveEntryInfo);
-            if (error != ERROR_NONE)
-            {
-              return error;
-            }
-          }
-
-          // encrypt block
-          error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
-                                     archiveEntryInfo->hardLink.byteBuffer,
-                                     byteLength
-                                    );
+          error = writeHardLinkChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
             return error;
           }
+        }
 
-          #ifdef DEBUG_ENCODED_DATA_FILENAME
-            {
-              int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
-              write(handle,archiveEntryInfo->hardLink.byteBuffer,byteLength);
-              close(handle);
-            }
-          #endif /* DEBUG_ENCODED_DATA_FILENAME */
+        // encrypt block
+        error = Crypt_encryptBytes(&archiveEntryInfo->hardLink.cryptInfo,
+                                   archiveEntryInfo->hardLink.byteBuffer,
+                                   byteLength
+                                  );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
 
-          // write block
-          error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
-                                  archiveEntryInfo->hardLink.byteBuffer,
-                                  byteLength
-                                 );
-          if (error != ERROR_NONE)
+        #ifdef DEBUG_ENCODED_DATA_FILENAME
           {
-            return error;
+            int handle = open64(DEBUG_ENCODED_DATA_FILENAME,O_CREAT|O_WRONLY|O_APPEND|O_LARGEFILE,0664);
+            write(handle,archiveEntryInfo->hardLink.byteBuffer,byteLength);
+            close(handle);
           }
+        #endif /* DEBUG_ENCODED_DATA_FILENAME */
+
+        // write block
+        error = Chunk_writeData(&archiveEntryInfo->hardLink.chunkHardLinkData.info,
+                                archiveEntryInfo->hardLink.byteBuffer,
+                                byteLength
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
         }
       }
     }
@@ -13782,9 +13764,6 @@ Errors Archive_readData(ArchiveEntryInfo *archiveEntryInfo,
       while (length > 0L)
       {
         // check if delta-decompressor is empty
-#ifndef WERROR
-#warning todo use getFreeDecompressSpace
-#endif
         error = Compress_getAvailableDecompressedBytes(&archiveEntryInfo->file.deltaCompressInfo,
                                                        &availableBytes
                                                       );
