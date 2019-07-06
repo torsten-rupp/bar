@@ -1295,7 +1295,8 @@ test: \
   bar-gcov@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test $@
+	@$(RMF) bar-test.log
+	@$(MAKE) -C test LOGFILE=$(abspath bar-test.log) $@
 test%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
