@@ -1951,7 +1951,6 @@ JobNode *Job_new(JobTypes    jobType,
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-  jobNode->lastExecutedDateTime         = 0LL;
   jobNode->lastErrorMessage             = String_new();
 
   Job_resetRunningInfo(jobNode);
@@ -2024,7 +2023,6 @@ JobNode *Job_copy(const JobNode *jobNode,
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-  newJobNode->lastExecutedDateTime         = 0LL;
   newJobNode->lastErrorMessage             = String_new();
 
   Job_resetRunningInfo(newJobNode);
@@ -2236,78 +2234,6 @@ void Job_persistenceChanged(const JobNode *jobNode)
   UNUSED_VARIABLE(jobNode);
 }
 
-//TODO: required?
-Errors Job_writeScheduleInfo(JobNode *jobNode)
-{
-  String             fileName,pathName,baseName;
-  FileHandle         fileHandle;
-  Errors             error;
-  ArchiveTypes       archiveType;
-  uint64             lastExecutedDateTime;
-  const ScheduleNode *scheduleNode;
-
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  if (!String_isEmpty(jobNode->fileName))
-  {
-    // get filename
-    fileName = String_new();
-    File_splitFileName(jobNode->fileName,&pathName,&baseName);
-    File_setFileName(fileName,pathName);
-    File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
-    String_delete(baseName);
-    String_delete(pathName);
-
-    // create file .name
-    error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
-    if (error != ERROR_NONE)
-    {
-      String_delete(fileName);
-      return error;
-    }
-
-    // write file
-    error = File_printLine(&fileHandle,"%lld",jobNode->lastExecutedDateTime);
-    if (error != ERROR_NONE)
-    {
-      File_close(&fileHandle);
-      String_delete(fileName);
-      return error;
-    }
-    for (archiveType = ARCHIVE_TYPE_MIN; archiveType <= ARCHIVE_TYPE_MAX; archiveType++)
-    {
-      lastExecutedDateTime = 0LL;
-      LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-      {
-        if ((scheduleNode->archiveType == archiveType) && (scheduleNode->lastExecutedDateTime > lastExecutedDateTime))
-        {
-          lastExecutedDateTime = scheduleNode->lastExecutedDateTime;
-        }
-      }
-      if (lastExecutedDateTime > 0LL)
-      {
-        error = File_printLine(&fileHandle,"%lld %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType,"UNKNOWN"));
-        if (error != ERROR_NONE)
-        {
-          File_close(&fileHandle);
-          String_delete(fileName);
-          return error;
-        }
-      }
-    }
-
-    // close file
-    File_close(&fileHandle);
-
-    // free resources
-    String_delete(fileName);
-  }
-
-  return ERROR_NONE;
-}
-
-//TODO: required?
 Errors Job_readScheduleInfo(JobNode *jobNode)
 {
   String          fileName,pathName,baseName;
@@ -2324,9 +2250,6 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
-
-  // reset variables
-//TODO: remove  jobNode->lastExecutedDateTime = 0LL;
 
   // get filename
   fileName = String_new();
@@ -2346,25 +2269,17 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
       return error;
     }
 
-    // read file
     line = String_new();
+
+    // read file
+    LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+    {
+      scheduleNode->lastExecutedDateTime = 0LL;
+    }
     if (File_getLine(&fileHandle,line,NULL,NULL))
     {
-      // parse
-      if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
-      {
-        jobNode->lastScheduleCheckDateTime = n;
-//TODO: remove        jobNode->lastExecutedDateTime      = n;
-        LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-        {
-          scheduleNode->lastExecutedDateTime = n;
-        }
-      }
-    }
-    while (File_getLine(&fileHandle,line,NULL,NULL))
-    {
-      // parse
-      if (String_parse(line,STRING_BEGIN,"%lld %64s",NULL,&n,s))
+      // first line: <last execution time stamp> or <last execution time stamp>+<type>
+      if      (String_parse(line,STRING_BEGIN,"%lld %64s",NULL,&n,s))
       {
         if (Archive_parseType(s,&archiveType,NULL))
         {
@@ -2377,7 +2292,34 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
           }
         }
       }
+      else if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
+      {
+        LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+        {
+          scheduleNode->lastExecutedDateTime = n;
+        }
+      }
+
+      // other lines: <last execution time stamp>+<type>
+      while (File_getLine(&fileHandle,line,NULL,NULL))
+      {
+        if (String_parse(line,STRING_BEGIN,"%lld %64s",NULL,&n,s))
+        {
+          if (Archive_parseType(s,&archiveType,NULL))
+          {
+            LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+            {
+              if (scheduleNode->archiveType == archiveType)
+              {
+                scheduleNode->lastExecutedDateTime = n;
+              }
+            }
+          }
+        }
+      }
     }
+    jobNode->lastScheduleCheckDateTime = Job_getLastExecutedDateTime(jobNode);
+
     String_delete(line);
 
     // close file
@@ -2440,179 +2382,87 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   return ERROR_NONE;
 }
 
-Errors Job_write(JobNode *jobNode)
+Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 executeEndDateTime)
 {
-  StringList            jobLinesList;
-  String                line;
-  Errors                error;
-  int                   i;
-  StringNode            *nextStringNode;
-  const ScheduleNode    *scheduleNode;
-  const PersistenceNode *persistenceNode;
-  ConfigValueFormat     configValueFormat;
+  ScheduleNode *scheduleNode;
+  String       fileName,pathName,baseName;
+  FileHandle   fileHandle;
+  Errors       error;
+  uint64       lastExecutedDateTime;
 
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
-  if (String_isSet(jobNode->fileName))
+  // set last executed
+  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
   {
-    // init variables
-    StringList_init(&jobLinesList);
-    line = String_new();
+    if (scheduleNode->archiveType == archiveType)
+    {
+      scheduleNode->lastExecutedDateTime = executeEndDateTime;
+    }
+  }
 
-    // read config file lines
-    error = ConfigValue_readConfigFileLines(jobNode->fileName,&jobLinesList);
+  if (!String_isEmpty(jobNode->fileName))
+  {
+    // get filename
+    fileName = String_new();
+    File_splitFileName(jobNode->fileName,&pathName,&baseName);
+    File_setFileName(fileName,pathName);
+    File_appendFileName(fileName,String_insertChar(baseName,0,'.'));
+    String_delete(baseName);
+    String_delete(pathName);
+
+    // create file .name
+    error = File_open(&fileHandle,fileName,FILE_OPEN_CREATE);
     if (error != ERROR_NONE)
     {
-      StringList_done(&jobLinesList);
-      String_delete(line);
+      String_delete(fileName);
       return error;
     }
 
-    // correct config values
-    switch (jobNode->job.options.cryptPasswordMode)
+    // write file: last execution time stamp
+    error = File_printLine(&fileHandle,"%lld",executeEndDateTime);
+    if (error != ERROR_NONE)
     {
-      case PASSWORD_MODE_DEFAULT:
-      case PASSWORD_MODE_ASK:
-        Password_clear(&jobNode->job.options.cryptPassword);
-        break;
-      case PASSWORD_MODE_NONE:
-      case PASSWORD_MODE_CONFIG:
-        // nothing to do
-        break;
+      File_close(&fileHandle);
+      String_delete(fileName);
+      return error;
     }
 
-    // update line list
-    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,NULL,i)
+    // write file: last execution time stamp+type
+    for (archiveType = ARCHIVE_TYPE_MIN; archiveType <= ARCHIVE_TYPE_MAX; archiveType++)
     {
-      // delete old entries, get position for insert new entries
-      nextStringNode = ConfigValue_deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
-
-      // insert new entries
-      ConfigValue_formatInit(&configValueFormat,
-                             &JOB_CONFIG_VALUES[i],
-                             CONFIG_VALUE_FORMAT_MODE_LINE,
-                             jobNode
-                            );
-      while (ConfigValue_format(&configValueFormat,line))
-      {
-        StringList_insert(&jobLinesList,line,nextStringNode);
-      }
-      ConfigValue_formatDone(&configValueFormat);
-    }
-
-    // delete old schedule sections, get position for insert new schedule sections, write new schedule sections
-    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"schedule");
-    if (!List_isEmpty(&jobNode->job.options.scheduleList))
-    {
-      StringList_insertCString(&jobLinesList,"",nextStringNode);
+      // get last executed date/time
+      lastExecutedDateTime = 0LL;
       LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
       {
-        // insert new schedule sections
-        String_format(line,"[schedule]");
-        StringList_insert(&jobLinesList,line,nextStringNode);
-
-        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"schedule",i)
+        if ((scheduleNode->archiveType == archiveType) && (scheduleNode->lastExecutedDateTime > lastExecutedDateTime))
         {
-          ConfigValue_formatInit(&configValueFormat,
-                                 &JOB_CONFIG_VALUES[i],
-                                 CONFIG_VALUE_FORMAT_MODE_LINE,
-                                 scheduleNode
-                                );
-          while (ConfigValue_format(&configValueFormat,line))
-          {
-            StringList_insert(&jobLinesList,line,nextStringNode);
-          }
-          ConfigValue_formatDone(&configValueFormat);
+          lastExecutedDateTime = scheduleNode->lastExecutedDateTime;
         }
-
-        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
-        StringList_insertCString(&jobLinesList,"",nextStringNode);
       }
-    }
 
-    // delete old persistence sections, get position for insert new persistence sections, write new persistence sections
-    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"persistence");
-    if (!List_isEmpty(&jobNode->job.options.persistenceList))
-    {
-      StringList_insertCString(&jobLinesList,"",nextStringNode);
-      LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
+      // write <last execution time stamp>+<type>
+      if (lastExecutedDateTime > 0LL)
       {
-        // insert new persistence sections
-        String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType,"normal"));
-        StringList_insert(&jobLinesList,line,nextStringNode);
-
-        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"persistence",i)
-        {
-          ConfigValue_formatInit(&configValueFormat,
-                                 &JOB_CONFIG_VALUES[i],
-                                 CONFIG_VALUE_FORMAT_MODE_LINE,
-                                 persistenceNode
-                                );
-          while (ConfigValue_format(&configValueFormat,line))
-          {
-            StringList_insert(&jobLinesList,line,nextStringNode);
-          }
-          ConfigValue_formatDone(&configValueFormat);
-        }
-
-        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
-        StringList_insertCString(&jobLinesList,"",nextStringNode);
-      }
-    }
-
-    // write config file lines
-    error = ConfigValue_writeConfigFileLines(jobNode->fileName,&jobLinesList);
-    if (error != ERROR_NONE)
-    {
-      String_delete(line);
-      StringList_done(&jobLinesList);
-      return error;
-    }
-    error = File_setPermission(jobNode->fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
-    if (error != ERROR_NONE)
-    {
-      logMessage(NULL,  // logHandle
-                 LOG_TYPE_WARNING,
-                 "cannot set file permissions of job '%s' (error: %s)\n",
-                 String_cString(jobNode->fileName),
-                 Error_getText(error)
-                );
-    }
-
-    // save time modified
-    jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
-
-    // free resources
-    String_delete(line);
-    StringList_done(&jobLinesList);
-  }
-
-  // reset modified flag
-  jobNode->modifiedFlag = FALSE;
-
-  return ERROR_NONE;
-}
-
-void Job_writeModifiedAll(void)
-{
-  JobNode *jobNode;
-  Errors  error;
-
-  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-  {
-    LIST_ITERATE(&jobList,jobNode)
-    {
-      if (jobNode->modifiedFlag)
-      {
-        error = Job_write(jobNode);
+        error = File_printLine(&fileHandle,"%lld %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType,"UNKNOWN"));
         if (error != ERROR_NONE)
         {
-          printWarning("Cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+          File_close(&fileHandle);
+          String_delete(fileName);
+          return error;
         }
       }
     }
+
+    // close file
+    File_close(&fileHandle);
+
+    // free resources
+    String_delete(fileName);
   }
+
+  return ERROR_NONE;
 }
 
 bool Job_read(JobNode *jobNode)
@@ -2909,7 +2759,7 @@ bool Job_read(JobNode *jobNode)
     jobNode->modifiedFlag = TRUE;
   }
 
-  // read schedule info
+  // read schedule info (ignore errors)
   (void)Job_readScheduleInfo(jobNode);
 
   // reset job modified
@@ -3050,6 +2900,201 @@ STRING_CHECK_VALID(jobNode->lastErrorMessage);
   return ERROR_NONE;
 }
 
+Errors Job_write(JobNode *jobNode)
+{
+  StringList            jobLinesList;
+  String                line;
+  Errors                error;
+  int                   i;
+  StringNode            *nextStringNode;
+  const ScheduleNode    *scheduleNode;
+  const PersistenceNode *persistenceNode;
+  ConfigValueFormat     configValueFormat;
+
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  if (String_isSet(jobNode->fileName))
+  {
+    // init variables
+    StringList_init(&jobLinesList);
+    line = String_new();
+
+    // read config file lines
+    error = ConfigValue_readConfigFileLines(jobNode->fileName,&jobLinesList);
+    if (error != ERROR_NONE)
+    {
+      StringList_done(&jobLinesList);
+      String_delete(line);
+      return error;
+    }
+
+    // correct config values
+    switch (jobNode->job.options.cryptPasswordMode)
+    {
+      case PASSWORD_MODE_DEFAULT:
+      case PASSWORD_MODE_ASK:
+        Password_clear(&jobNode->job.options.cryptPassword);
+        break;
+      case PASSWORD_MODE_NONE:
+      case PASSWORD_MODE_CONFIG:
+        // nothing to do
+        break;
+    }
+
+    // update line list
+    CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,NULL,i)
+    {
+      // delete old entries, get position for insert new entries
+      nextStringNode = ConfigValue_deleteEntries(&jobLinesList,NULL,JOB_CONFIG_VALUES[i].name);
+
+      // insert new entries
+      ConfigValue_formatInit(&configValueFormat,
+                             &JOB_CONFIG_VALUES[i],
+                             CONFIG_VALUE_FORMAT_MODE_LINE,
+                             jobNode
+                            );
+      while (ConfigValue_format(&configValueFormat,line))
+      {
+        StringList_insert(&jobLinesList,line,nextStringNode);
+      }
+      ConfigValue_formatDone(&configValueFormat);
+    }
+
+    // delete old schedule sections, get position for insert new schedule sections, write new schedule sections
+    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"schedule");
+    if (!List_isEmpty(&jobNode->job.options.scheduleList))
+    {
+      StringList_insertCString(&jobLinesList,"",nextStringNode);
+      LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+      {
+        // insert new schedule sections
+        String_format(line,"[schedule]");
+        StringList_insert(&jobLinesList,line,nextStringNode);
+
+        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"schedule",i)
+        {
+          ConfigValue_formatInit(&configValueFormat,
+                                 &JOB_CONFIG_VALUES[i],
+                                 CONFIG_VALUE_FORMAT_MODE_LINE,
+                                 scheduleNode
+                                );
+          while (ConfigValue_format(&configValueFormat,line))
+          {
+            StringList_insert(&jobLinesList,line,nextStringNode);
+          }
+          ConfigValue_formatDone(&configValueFormat);
+        }
+
+        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
+        StringList_insertCString(&jobLinesList,"",nextStringNode);
+      }
+    }
+
+    // delete old persistence sections, get position for insert new persistence sections, write new persistence sections
+    nextStringNode = ConfigValue_deleteSections(&jobLinesList,"persistence");
+    if (!List_isEmpty(&jobNode->job.options.persistenceList))
+    {
+      StringList_insertCString(&jobLinesList,"",nextStringNode);
+      LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
+      {
+        // insert new persistence sections
+        String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType,"normal"));
+        StringList_insert(&jobLinesList,line,nextStringNode);
+
+        CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"persistence",i)
+        {
+          ConfigValue_formatInit(&configValueFormat,
+                                 &JOB_CONFIG_VALUES[i],
+                                 CONFIG_VALUE_FORMAT_MODE_LINE,
+                                 persistenceNode
+                                );
+          while (ConfigValue_format(&configValueFormat,line))
+          {
+            StringList_insert(&jobLinesList,line,nextStringNode);
+          }
+          ConfigValue_formatDone(&configValueFormat);
+        }
+
+        StringList_insertCString(&jobLinesList,"[end]",nextStringNode);
+        StringList_insertCString(&jobLinesList,"",nextStringNode);
+      }
+    }
+
+    // write config file lines
+    error = ConfigValue_writeConfigFileLines(jobNode->fileName,&jobLinesList);
+    if (error != ERROR_NONE)
+    {
+      String_delete(line);
+      StringList_done(&jobLinesList);
+      return error;
+    }
+    error = File_setPermission(jobNode->fileName,FILE_PERMISSION_USER_READ|FILE_PERMISSION_USER_WRITE);
+    if (error != ERROR_NONE)
+    {
+      logMessage(NULL,  // logHandle
+                 LOG_TYPE_WARNING,
+                 "cannot set file permissions of job '%s' (error: %s)\n",
+                 String_cString(jobNode->fileName),
+                 Error_getText(error)
+                );
+    }
+
+    // save time modified
+    jobNode->fileModified = File_getFileTimeModified(jobNode->fileName);
+
+    // free resources
+    String_delete(line);
+    StringList_done(&jobLinesList);
+  }
+
+  // reset modified flag
+  jobNode->modifiedFlag = FALSE;
+
+  return ERROR_NONE;
+}
+
+void Job_writeModifiedAll(void)
+{
+  JobNode *jobNode;
+  Errors  error;
+
+  SEMAPHORE_LOCKED_DO(&jobList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    LIST_ITERATE(&jobList,jobNode)
+    {
+      if (jobNode->modifiedFlag)
+      {
+        error = Job_write(jobNode);
+        if (error != ERROR_NONE)
+        {
+          printWarning("Cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+        }
+      }
+    }
+  }
+}
+
+uint64 Job_getLastExecutedDateTime(const JobNode *jobNode)
+{
+  uint64             lastExecutedDateTime;
+  const ScheduleNode *scheduleNode;
+
+  assert(jobNode != NULL);
+  assert(Semaphore_isLocked(&jobList.lock));
+
+  lastExecutedDateTime = 0LL;
+  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+  {
+    if (scheduleNode->lastExecutedDateTime > lastExecutedDateTime)
+    {
+      lastExecutedDateTime = scheduleNode->lastExecutedDateTime;
+    }
+  }
+
+  return lastExecutedDateTime;
+}
+
 void Job_trigger(JobNode      *jobNode,
                  ConstString  scheduleUUID,
                  ConstString  scheduleCustomText,
@@ -3097,8 +3142,10 @@ void Job_start(JobNode *jobNode)
   jobList.activeCount++;
 }
 
-void Job_end(JobNode *jobNode, uint64 executeEndDateTime)
+void Job_end(JobNode *jobNode)
 {
+  ScheduleNode *scheduleNode;
+
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -3119,7 +3166,8 @@ void Job_end(JobNode *jobNode, uint64 executeEndDateTime)
   {
     jobNode->jobState = JOB_STATE_DONE;
   }
-  jobNode->lastExecutedDateTime = executeEndDateTime;
+
+  // signal modified
   Semaphore_signalModified(&jobList.lock,SEMAPHORE_SIGNAL_MODIFY_ALL);
 
   // decrement active counter
@@ -3161,9 +3209,6 @@ void Job_abort(JobNode *jobNode)
   {
     jobNode->jobState = JOB_STATE_NONE;
   }
-
-  // store schedule info
-  Job_writeScheduleInfo(jobNode);
 }
 
 void Job_reset(JobNode *jobNode)

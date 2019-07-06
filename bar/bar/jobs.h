@@ -213,7 +213,6 @@ typedef struct JobNode
   String              volumeMessage;                    // load volume message
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 
-  uint64              lastExecutedDateTime;             // last execution date/time (timestamp) (Note: read from <jobs dir>/.<job name>)
   String              lastErrorMessage;
 
   // running info
@@ -262,6 +261,14 @@ typedef struct
 
   Semaphore lock;
   uint      activeCount;
+
+  #ifndef NDEBUG
+    uint64 lockTimestamp;
+    #ifdef HAVE_BACKTRACE
+      void const *lockStackTrace[16];
+      int        lockStackTraceSize;
+    #endif /* HAVE_BACKTRACE */
+  #endif /* NDEBUG */
 } JobList;
 
 // slave list
@@ -286,10 +293,6 @@ typedef struct
 /***************************** Variables *******************************/
 extern SlaveList slaveList;
 extern JobList   jobList;
-
-#ifndef NDEBUG
-extern uint64 jobListLockTimestamp;
-#endif /* NDEBUG */
 
 /****************************** Macros *********************************/
 
@@ -625,7 +628,10 @@ INLINE bool Job_listLock(SemaphoreLockTypes semaphoreLockType,
   #ifndef NDEBUG
     if (locked)
     {
-      jobListLockTimestamp = Misc_getTimestamp();
+      jobList.lockTimestamp = Misc_getTimestamp();
+      #ifdef HAVE_BACKTRACE
+        jobList.lockStackTraceSize = backtrace((void*)jobList.lockStackTrace,SIZE_OF_ARRAY(jobList.lockStackTrace));
+      #endif /* HAVE_BACKTRACE */
     }
   #endif /* NDEBUG */
 
@@ -651,11 +657,17 @@ INLINE void Job_listUnlock(void)
   #endif /* NDEBUG */
 
   #ifndef NDEBUG
-    dt = Misc_getTimestamp()-jobListLockTimestamp;
+    dt = Misc_getTimestamp()-jobList.lockTimestamp;
     if (dt > 2*US_PER_S)
     {
       fprintf(stderr,"%s, %d: Warning job list lock: %llums\n",__FILE__,__LINE__,dt/US_PER_MS);
-      debugDumpCurrentStackTrace(stderr,2,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,0);
+      debugDumpStackTrace(stderr,
+                          2,
+                          DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
+                          jobList.lockStackTrace,
+                          jobList.lockStackTraceSize,
+                          0
+                         );
     }
   #endif /* NDEBUG */
 
@@ -1136,18 +1148,6 @@ void Job_scheduleChanged(const JobNode *jobNode);
 void Job_persistenceChanged(const JobNode *jobNode);
 
 /***********************************************************************\
-* Name   : Job_writeScheduleInfo
-* Purpose: write job schedule info
-* Input  : jobNode - job node
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-//TODO: required?
-Errors Job_writeScheduleInfo(JobNode *jobNode);
-
-/***********************************************************************\
 * Name   : Job_readScheduleInfo
 * Purpose: read job schedule info
 * Input  : jobNode - job node
@@ -1156,8 +1156,42 @@ Errors Job_writeScheduleInfo(JobNode *jobNode);
 * Notes  : -
 \***********************************************************************/
 
-//TODO: required?
 Errors Job_readScheduleInfo(JobNode *jobNode);
+
+/***********************************************************************\
+* Name   : Job_writeScheduleInfo
+* Purpose: write job schedule info
+* Input  : jobNode            - job node
+*          archiveType        - archive type
+*          executeEndDateTime - executed date/time (timestamp)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 executeEndDateTime);
+
+/***********************************************************************\
+* Name   : Job_read
+* Purpose: read job from file
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE iff job read, FALSE otherwise (error)
+* Notes  : -
+\***********************************************************************/
+
+bool Job_read(JobNode *jobNode);
+
+/***********************************************************************\
+* Name   : Job_rereadAll
+* Purpose: re-read all job files
+* Input  : jobsDirectory - directory with job files
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : update jobList
+\***********************************************************************/
+
+Errors Job_rereadAll(ConstString jobsDirectory);
 
 /***********************************************************************\
 * Name   : Job_write
@@ -1182,26 +1216,15 @@ Errors Job_write(JobNode *jobNode);
 void Job_writeModifiedAll(void);
 
 /***********************************************************************\
-* Name   : Job_read
-* Purpose: read job from file
-* Input  : fileName - file name
+* Name   : Job_getLastExecutedDateTime
+* Purpose: get last executed date/time of job
+* Input  : jobNode - job node
 * Output : -
-* Return : TRUE iff job read, FALSE otherwise (error)
+* Return : last executed date/time (timestamp)
 * Notes  : -
 \***********************************************************************/
 
-bool Job_read(JobNode *jobNode);
-
-/***********************************************************************\
-* Name   : Job_rereadAll
-* Purpose: re-read all job files
-* Input  : jobsDirectory - directory with job files
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : update jobList
-\***********************************************************************/
-
-Errors Job_rereadAll(ConstString jobsDirectory);
+uint64 Job_getLastExecutedDateTime(const JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_setModified
@@ -1257,15 +1280,14 @@ void Job_start(JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_end
-* Purpose: end job (store running data, free job data, e. g. passwords)
-* Input  : jobNode            - job node
-*          executeEndDateTime - executed date/time (timestamp)
+* Purpose: end job (store running data, free resources)
+* Input  : jobNode - job node
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Job_end(JobNode *jobNode, uint64 executeEndDateTime);
+void Job_end(JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_abort
@@ -1302,7 +1324,7 @@ void Job_resetRunningInfo(JobNode *jobNode);
 
 #if 0
 /***********************************************************************\
-* Name   : Server_addJob
+* Name   : Job_add
 * Purpose: add new job to server for execution
 * Input  : jobType            - job type
            name               - name of job
@@ -1316,12 +1338,12 @@ void Job_resetRunningInfo(JobNode *jobNode);
 \***********************************************************************/
 
 Errors Job_add(JobTypes          jobType,
-                     const String      name,
-                     const String      archiveName,
-                     const PatternList *includePatternList,
-                     const PatternList *excludePatternList,
-                     const JobOptions  *jobOptions
-                    );
+               const String      name,
+               const String      archiveName,
+               const PatternList *includePatternList,
+               const PatternList *excludePatternList,
+               const JobOptions  *jobOptions
+              );
 #endif /* 0 */
 
 // ----------------------------------------------------------------------
