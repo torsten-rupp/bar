@@ -7038,12 +7038,7 @@ void purgeMounts(void)
         if (Device_isMounted(mountedNode->name))
         {
           error = Device_umount(globalOptions.unmountCommand,mountedNode->name);
-          if (error == ERROR_NONE)
-          {
-
-             mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
-          }
-          else
+          if (error != ERROR_NONE)
           {
             printWarning("Cannot unmount '%s' (error: %s)",
                          String_cString(mountedNode->name),
@@ -7051,6 +7046,7 @@ void purgeMounts(void)
                         );
           }
         }
+        mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
       }
       else
       {
