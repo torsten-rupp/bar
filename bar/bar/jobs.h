@@ -660,7 +660,7 @@ INLINE void Job_listUnlock(void)
     dt = Misc_getTimestamp()-jobList.lockTimestamp;
     if (dt > 2*US_PER_S)
     {
-      fprintf(stderr,"%s, %d: Warning job list lock: %llums\n",__FILE__,__LINE__,dt/US_PER_MS);
+      fprintf(stderr,"Warning: job list locked %llums\n",dt/US_PER_MS);
       debugDumpStackTrace(stderr,
                           2,
                           DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
