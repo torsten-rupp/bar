@@ -27,18 +27,32 @@
 /***************************** Constants *******************************/
 
 /**************************** Datatypes ********************************/
+typedef struct
+{
+  int        signalNumber;
+  const char *signalName;
+} SignalHandlerInfo;
 
-/**************************** Variables ********************************/
+/***********************************************************************\
+* Name   : SignalHandlerFunction
+* Purpose: signal handler function
+* Input  : signalNumber   - signal number
+*          stackTrace     - stacktrace
+*          stackTraceSize - stacktrace size
+*          userData       - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
 
-/****************************** Macros *********************************/
+typedef void(*SignalHandlerFunction)(int        signalNumber,
+                                     const char signalName,
+                                     void const *stackTrace[],
+                                     uint       stackTraceSize,
+                                     void       *userData
+                                    );
 
-/**************************** Functions ********************************/
 
-#ifdef __cplusplus
-  extern "C" {
-#endif
-
-// callback for symbol information
 /***********************************************************************\
 * Name   : SymbolFunction
 * Purpose: callback for symbol information
@@ -59,8 +73,47 @@ typedef void(*SymbolFunction)(const void *address,
                               void       *userData
                              );
 
+/**************************** Variables ********************************/
+
+/****************************** Macros *********************************/
+
+/**************************** Functions ********************************/
+
+#ifdef __cplusplus
+  extern "C" {
+#endif
+
 /***********************************************************************\
-* Name   : getSymbolInfo
+* Name   : Stacktrace_init
+* Purpose: init stacktrace
+* Input  : signalHandlerInfo      - signal handler info
+*          signalHandlerInfoCount - number signal handl info
+*          signalHandlerFunction  - signal handler function
+*          signalHandlerUserData  - signal handler user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
+                     uint                    signalHandlerInfoCount,
+                     SignalHandlerFunction   signalHandlerFunction,
+                     void                    *signalHandlerUserData
+                    );
+
+/***********************************************************************\
+* Name   : Stacktrace_done
+* Purpose: done stacktrace
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Stacktrace_done(void);
+
+/***********************************************************************\
+* Name   : Stacktrace_getSymbolInfo
 * Purpose: get symbol information
 * Input  : executableFileName - executable name
 *          addresses          - addresses

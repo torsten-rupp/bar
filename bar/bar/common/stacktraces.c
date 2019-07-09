@@ -35,6 +35,7 @@
   #include <dl.h>
 #endif
 #include <unistd.h>
+#include <signal.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -46,10 +47,42 @@
 
 /***************************** Constants *******************************/
 #define DEBUG_SYMBOL_FILE_EXTENSION ".sym"
+#define MAX_STACKTRACE_SIZE         64
+#define SKIP_STACK_FRAME_COUNT      2
 
 /**************************** Datatypes ********************************/
+// section info
+typedef struct
+{
+  const asymbol * const *symbols;
+  ulong                 symbolCount;
+  bfd_vma               address;
+
+  bool                  sectionFound;
+  bool                  symbolFound;
+  const char            *fileName;
+  const char            *symbolName;
+  uint                  lineNb;
+} AddressInfo;
+
+// file match info
+typedef struct
+{
+  bool       found;
+  const void *address;
+
+  const char *fileName;
+  void       *base;
+  void       *hdr;
+} FileMatchInfo;
 
 /**************************** Variables ********************************/
+LOCAL stack_t                 oldSignalHandlerStackInfo;
+LOCAL const SignalHandlerInfo *signalHandlerInfo;
+LOCAL uint                    signalHandlerInfoCount;
+LOCAL SignalHandlerFunction   signalHandlerFunction;
+LOCAL void                    *signalHandlerUserData;
+LOCAL void                    *stackTrace[MAX_STACKTRACE_SIZE+SKIP_STACK_FRAME_COUNT];
 
 /****************************** Macros *********************************/
 
@@ -176,20 +209,6 @@ LOCAL bool demangleSymbolName(const char *symbolName,
   }
 }
 
-// section info
-typedef struct
-{
-  const asymbol * const *symbols;
-  ulong                 symbolCount;
-  bfd_vma               address;
-
-  bool                  sectionFound;
-  bool                  symbolFound;
-  const char            *fileName;
-  const char            *symbolName;
-  uint                  lineNb;
-} AddressInfo;
-
 /***********************************************************************\
 * Name   : findAddressInSection
 * Purpose: callback for find symbol in section
@@ -244,12 +263,14 @@ LOCAL void findAddressInSection(bfd *abfd, asection *section, void *data)
 /***********************************************************************\
 * Name   : addressToSymbolInfo
 * Purpose: get symbol info for address
-* Input  : abfd           - BFD handle
-*          symbols        - symbol array
-*          symbolCount    - number of entries in symbol array
-*          address        - address
-*          symbolFunction - callback function for symbol
-*          symbolUserData - callback user data
+* Input  : abfd             - BFD handle
+*          symbols          - symbol array
+*          symbolCount      - number of entries in symbol array
+*          address          - address
+*          symbolFunction   - callback function for symbol
+*          symbolUserData   - callback user data
+*          errorMessage     - error message
+*          errorMessageSize - max. size of error message
 * Output : -
 * Return : TRUE iff symbol information found
 * Notes  : -
@@ -260,7 +281,9 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
                                ulong                 symbolCount,
                                bfd_vma               address,
                                SymbolFunction        symbolFunction,
-                               void                  *symbolUserData
+                               void                  *symbolUserData,
+                               char                  *errorMessage,
+                               uint                  errorMessageSize
                               )
 {
   AddressInfo addressInfo;
@@ -275,12 +298,18 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
   bfd_map_over_sections(abfd,findAddressInSection,(PTR)&addressInfo);
   if (!addressInfo.sectionFound)
   {
-    fprintf(stderr,"ERROR: section not found for address %p\n",(void*)address);
+    if (errorMessage != NULL)
+    {
+      stringFormat(errorMessage,errorMessageSize,"section not found for address %p\n",(void*)address);
+    }
     return FALSE;
   }
   if (!addressInfo.symbolFound)
   {
-    fprintf(stderr,"ERROR: symbol not found for address %p\n",(void*)address);
+    if (errorMessage != NULL)
+    {
+      stringFormat(errorMessage,errorMessageSize,"ERROR: symbol not found for address %p\n",(void*)address);
+    }
     return FALSE;
   }
 
@@ -325,6 +354,11 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
                                                     &addressInfo.symbolName,
                                                     &addressInfo.lineNb
                                                    );
+  }
+
+  if (errorMessage != NULL)
+  {
+    stringClear(errorMessage);
   }
 
   return TRUE;
@@ -408,10 +442,12 @@ LOCAL void closeBFD(bfd           *abfd,
 /***********************************************************************\
 * Name   : getSymbolInfoFromFile
 * Purpose: get symbol information from file
-* Input  : fileName       - file name
-*          address        - address
-*          symbolFunction - callback function for symbol
-*          symbolUserData - callback user data
+* Input  : fileName         - file name
+*          address          - address
+*          symbolFunction   - callback function for symbol
+*          symbolUserData   - callback user data
+*          errorMessage     - error message
+*          errorMessageSize - max. size of error message
 * Output : -
 * Return : TRUE iff symbol read
 * Notes  : -
@@ -420,7 +456,9 @@ LOCAL void closeBFD(bfd           *abfd,
 LOCAL bool getSymbolInfoFromFile(const char     *fileName,
                                  bfd_vma        address,
                                  SymbolFunction symbolFunction,
-                                 void           *symbolUserData
+                                 void           *symbolUserData,
+                                 char           *errorMessage,
+                                 uint           errorMessageSize
                                 )
 {
   char          debugSymbolFileName[PATH_MAX];
@@ -454,24 +492,21 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
   }
 
   // get symbol info
-  result = addressToSymbolInfo(abfd,symbols,symbolCount,address,symbolFunction,symbolUserData);
+  result = addressToSymbolInfo(abfd,
+                               symbols,
+                               symbolCount,
+                               address,
+                               symbolFunction,
+                               symbolUserData,
+                               errorMessage,
+                               errorMessageSize
+                              );
 
   // close file
   closeBFD(abfd,symbols,symbolCount);
 
   return result;
 }
-
-// file match info
-typedef struct
-{
-  bool       found;
-  const void *address;
-
-  const char *fileName;
-  void       *base;
-  void       *hdr;
-} FileMatchInfo;
 
 /***********************************************************************\
 * Name   : findMatchingFile
@@ -542,18 +577,107 @@ LOCAL int findMatchingFile(struct dl_phdr_info *info,
 }
 #endif // HAVE_BFD_INIT
 
-/***********************************************************************\
-* Name   : Stacktrace_getSymbolInfo
-* Purpose: get symbol information
-* Input  : executableFileName - executable name
-*          addresses          - addresses
-*          addressCount       - number of addresses
-*          symbolFunction     - callback function for symbol
-*          symbolUserData     - callback user data
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
+LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
+{
+   int        stackTraceSize;
+   uint       i;
+   const char *signalName;
+
+   assert(NULL != signalHandlerFunction);
+
+   (void)sigInfo;
+   (void)context;
+
+   // done signal handlers
+   Stacktrace_done();
+
+   // get backtrace
+   stackTraceSize = backtrace(stackTrace, MAX_STACKTRACE_SIZE);
+
+   // get signal name
+   signalName = NULL;
+   i          = 0;
+   while ((i < signalHandlerInfoCount) && (NULL == signalName))
+   {
+      if (signalHandlerInfo[i].signalNumber == signalNumber)
+      {
+         signalName = signalHandlerInfo[i].signalName;
+      }
+      i++;
+   }
+   if (NULL == signalName)
+   {
+      signalName = "unknown";
+   }
+
+   // call signal handler
+   if (stackTraceSize >= SKIP_STACK_FRAME_COUNT)
+   {
+      signalHandlerFunction(signalNumber,
+                            signalName,
+                            (void const**)&stackTrace[SKIP_STACK_FRAME_COUNT],
+                            (uint)stackTraceSize-SKIP_STACK_FRAME_COUNT,
+                            signalHandlerUserData
+                           );
+   }
+}
+
+// ---------------------------------------------------------------------
+
+void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
+                     uint                    signalHandlerInfoCount_,
+                     SignalHandlerFunction   signalHandlerFunction_,
+                     void                    *signalHandlerUserData_
+                    )
+{
+   static uint8_t signalHandlerStack[64*1024];
+
+   stack_t          stackInfo;
+   struct sigaction signalActionInfo;
+
+   assert(signalHandlerInfo_ != NULL);
+
+   // initialise signal handler stack
+   stackInfo.ss_sp    = (void*)signalHandlerStack;
+   stackInfo.ss_size  = sizeof(signalHandlerStack)/sizeof(signalHandlerStack[0]);
+   stackInfo.ss_flags = 0;
+   if (sigaltstack(&stackInfo, &oldSignalHandlerStackInfo) == -1)
+   {
+     fprintf(stderr,"ERROR: cannot initialize signal handler stack (error: %s)\n", strerror(errno));
+     exit(128);
+   }
+
+   // add signal handlers
+   signalHandlerInfo      = signalHandlerInfo_;
+   signalHandlerInfoCount = signalHandlerInfoCount_;
+   signalHandlerFunction  = signalHandlerFunction_;
+   signalHandlerUserData  = signalHandlerUserData_;
+   for (uint i = 0; i < signalHandlerInfoCount; i++)
+   {
+      signalActionInfo.sa_handler   = NULL;
+      signalActionInfo.sa_sigaction = sigActionHandler;
+      sigfillset(&signalActionInfo.sa_mask);
+      signalActionInfo.sa_flags     = SA_SIGINFO|SA_RESTART|SA_ONSTACK;
+      signalActionInfo.sa_restorer  = NULL;
+      sigaction(signalHandlerInfo[i].signalNumber, &signalActionInfo, NULL);
+   }
+}
+
+void Stacktrace_done(void)
+{
+   struct sigaction signalActionInfo;
+
+   for (uint i = 0; i < signalHandlerInfoCount; i++)
+   {
+      signalActionInfo.sa_handler   = SIG_DFL;
+      signalActionInfo.sa_sigaction = NULL;
+      sigfillset(&signalActionInfo.sa_mask);
+      signalActionInfo.sa_flags     = 0;
+      signalActionInfo.sa_restorer  = NULL;
+      sigaction(signalHandlerInfo[i].signalNumber, &signalActionInfo, NULL);
+   }
+   sigaltstack(&oldSignalHandlerStackInfo, NULL);
+}
 
 void Stacktrace_getSymbolInfo(const char         *executableFileName,
                               const void * const addresses[],
@@ -565,7 +689,8 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
 #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
   uint          i;
   FileMatchInfo fileMatchInfo;
-  bool          symbolInfoFromFile;
+  char          errorMessage[128];
+  bool          symbolFound;
 
   assert(executableFileName != NULL);
   assert(addresses != NULL);
@@ -579,23 +704,37 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
     if (fileMatchInfo.found)
     {
 //fprintf(stderr,"%s, %d: load from %s\n",__FILE__,__LINE__,fileMatchInfo.fileName);
-      symbolInfoFromFile = getSymbolInfoFromFile(fileMatchInfo.fileName,
-                                                 (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
-                                                 symbolFunction,
-                                                 symbolUserData
-                                                );
+      symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
+                                          (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
+                                          symbolFunction,
+                                          symbolUserData,
+                                          errorMessage,
+                                          sizeof(errorMessage)
+                                         );
+      if (!symbolFound)
+      {
+        symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
+                                            (bfd_vma)addresses[i],
+                                            symbolFunction,
+                                            symbolUserData,
+                                            errorMessage,
+                                            sizeof(errorMessage)
+                                           );
+      }
     }
     else
     {
 //fprintf(stderr,"%s, %d: load from %s\n",__FILE__,__LINE__,executableFileName);
-      symbolInfoFromFile = getSymbolInfoFromFile(executableFileName,
-                                                 (bfd_vma)addresses[i],
-                                                 symbolFunction,
-                                                 symbolUserData
-                                                );
+      symbolFound = getSymbolInfoFromFile(executableFileName,
+                                          (bfd_vma)addresses[i],
+                                          symbolFunction,
+                                          symbolUserData,
+                                          errorMessage,
+                                          sizeof(errorMessage)
+                                         );
     }
 
-    if (!symbolInfoFromFile)
+    if (!symbolFound)
     {
       // use dladdr() as fallback
       Dl_info    info;
@@ -621,6 +760,8 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
           symbolName = NULL;
         }
         fileName = info.dli_fname;
+
+        symbolFound = TRUE;
       }
       else
       {
@@ -630,6 +771,11 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
 
       // handle line
       symbolFunction(addresses[i],fileName,symbolName,0,symbolUserData);
+    }
+
+    if (!symbolFound)
+    {
+      fprintf(stderr,"ERROR: %s\n",errorMessage);
     }
   }
 #else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
