@@ -3986,10 +3986,13 @@ Dprintf.dprintf("starafsf");
 
     try
     {
+      // parse arguments (initial)
+      parseArguments(args);
+
       // load settings
       Settings.load();
 
-      // parse arguments
+      // parse arguments (final to overwrite loaded setting values)
       parseArguments(args);
 
       // server login data
@@ -4833,7 +4836,7 @@ Dprintf.dprintf("starafsf");
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          
+
 
           // restore
 Dprintf.dprintf("------------------");
@@ -5179,7 +5182,9 @@ Dprintf.dprintf("still not supported");
         BARServer.disconnect();
 
         // save settings
+Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
         Settings.save();
+Dprintf.dprintf("");
       }
     }
     catch (org.eclipse.swt.SWTException exception)

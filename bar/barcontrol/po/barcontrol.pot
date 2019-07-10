@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-07-02 03:19+0200\n"
+"POT-Creation-Date: 2019-07-11 01:52+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -180,8 +180,8 @@ msgstr ""
 #: src/BARControl.java:2529 src/BARControl.java:2533 src/BARControl.java:3140
 #: src/BARControl.java:3148 src/BARControl.java:3179 src/BARControl.java:3187
 #: src/BARControl.java:3618 src/BARControl.java:3692 src/BARControl.java:3696
-#: src/BARControl.java:5098 src/BARControl.java:5110 src/BARControl.java:5132
-#: src/BARControl.java:5151
+#: src/BARControl.java:5101 src/BARControl.java:5113 src/BARControl.java:5135
+#: src/BARControl.java:5154
 msgid "Connection fail"
 msgstr ""
 
@@ -293,21 +293,21 @@ msgid "Connection lost"
 msgstr ""
 
 #: src/BARControl.java:3119 src/BARControl.java:3140 src/BARControl.java:3148
-#: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:5098
-#: src/BARControl.java:5132 src/BARControl.java:5151
+#: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:5101
+#: src/BARControl.java:5135 src/BARControl.java:5154
 msgid "Error: "
 msgstr ""
 
 #: src/BARControl.java:3119 src/BARControl.java:3140 src/BARControl.java:3148
-#: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:5098
-#: src/BARControl.java:5132 src/BARControl.java:5151
+#: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:5101
+#: src/BARControl.java:5135 src/BARControl.java:5154
 msgid "Try again"
 msgstr ""
 
 #: src/BARControl.java:3119 src/BARControl.java:3140 src/BARControl.java:3148
 #: src/BARControl.java:3179 src/BARControl.java:3187 src/BARControl.java:3460
-#: src/BARControl.java:3618 src/BARControl.java:3798 src/BARControl.java:5098
-#: src/BARControl.java:5110 src/BARControl.java:5132 src/BARControl.java:5151
+#: src/BARControl.java:3618 src/BARControl.java:3798 src/BARControl.java:5101
+#: src/BARControl.java:5113 src/BARControl.java:5135 src/BARControl.java:5154
 #: src/Dialogs.java:2265 src/Dialogs.java:2364 src/Dialogs.java:3470
 #: src/Dialogs.java:3486 src/Dialogs.java:3683 src/Dialogs.java:3948
 #: src/Dialogs.java:4609 src/Dialogs.java:5636 src/Dialogs.java:5827
@@ -335,7 +335,7 @@ msgstr ""
 msgid "SSL"
 msgstr ""
 
-#: src/BARControl.java:3389 src/BARControl.java:4880 src/BARControl.java:4904
+#: src/BARControl.java:3389 src/BARControl.java:4883 src/BARControl.java:4907
 #: src/BARServer.java:1342 src/BARServer.java:1364 src/Dialogs.java:3554
 #: src/Dialogs.java:3807 src/ServerSettings.java:590
 #: src/ServerSettings.java:2506 src/TabJobs.java:6456 src/TabJobs.java:6812
@@ -348,11 +348,11 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/BARControl.java:3618 src/BARControl.java:5110
+#: src/BARControl.java:3618 src/BARControl.java:5113
 msgid "Connection fail. Try to connect without TLS/SSL?"
 msgstr ""
 
-#: src/BARControl.java:3618 src/BARControl.java:5110
+#: src/BARControl.java:3618 src/BARControl.java:5113
 msgid "Try without TLS/SSL"
 msgstr ""
 
@@ -386,12 +386,12 @@ msgid ""
 "\n"
 msgstr ""
 
-#: src/BARControl.java:4878 src/BARServer.java:1340
+#: src/BARControl.java:4881 src/BARServer.java:1340
 #, java-format
 msgid "Please enter {0} login for: {1}"
 msgstr ""
 
-#: src/BARControl.java:4879 src/Dialogs.java:3542 src/Dialogs.java:3798
+#: src/BARControl.java:4882 src/Dialogs.java:3542 src/Dialogs.java:3798
 #: src/Dialogs.java:4483 src/Dialogs.java:4562 src/ServerSettings.java:608
 #: src/ServerSettings.java:2441 src/TabJobs.java:2322 src/TabJobs.java:4084
 #: src/TabJobs.java:9465 src/TabJobs.java:9607 src/TabJobs.java:11679
@@ -401,12 +401,12 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: src/BARControl.java:4903 src/BARServer.java:1363
+#: src/BARControl.java:4906 src/BARServer.java:1363
 #, java-format
 msgid "Please enter {0} password for: {1}"
 msgstr ""
 
-#: src/BARControl.java:4930
+#: src/BARControl.java:4933
 #, java-format
 msgid "Cannot restore ''{0}'': {1} - skipped"
 msgstr ""

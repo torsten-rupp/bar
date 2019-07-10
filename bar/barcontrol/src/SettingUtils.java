@@ -126,7 +126,7 @@ public class SettingUtils
     HashMap(Object... defaultValues)
     {
       for (int i = 0; i < defaultValues.length; i += 2)
-      {        
+      {
         put((K)defaultValues[i+0],(T)defaultValues[i+1]);
       }
     }
@@ -650,6 +650,7 @@ public class SettingUtils
       {
         stringList.add(tokenizer.nextToken());
       }
+
       return new SimpleStringArray(stringList);
     }
 
@@ -669,6 +670,7 @@ public class SettingUtils
           buffer.append((string != null) ? string : "");
         }
       }
+
       return buffer.toString();
     }
   }
@@ -719,6 +721,7 @@ public class SettingUtils
         {
           line = line.trim();
           lineNb++;
+//Dprintf.dprintf("line=%s",line);
 
           // check comment
           if (line.isEmpty() || line.startsWith("#"))
@@ -741,7 +744,7 @@ public class SettingUtils
           }
           else
           {
-            BARControl.printWarning("Unknown configuration value '%s' in line %d - skipped",line,lineNb);
+            System.err.println(String.format("Unknown configuration value '%s' in line %d - skipped",line,lineNb));
             continue;
           }
 
@@ -755,10 +758,9 @@ public class SettingUtils
                 if (annotation instanceof SettingValue)
                 {
                   SettingValue settingValue = (SettingValue)annotation;
-
-                    if (   ((!settingValue.name().isEmpty()) ? settingValue.name() : field.getName()).equals(name)
-                        || nameEquals(settingValue.deprecatedNames(),name)
-                       )
+                  if (   ((!settingValue.name().isEmpty()) ? settingValue.name() : field.getName()).equals(name)
+                      || nameEquals(settingValue.deprecatedNames(),name)
+                     )
                   {
                     try
                     {
@@ -938,7 +940,8 @@ public class SettingUtils
                         }
                         else
                         {
-Dprintf.dprintf("field.getType()=%s",type);
+//TODO: error message?
+//Dprintf.dprintf("field.getType()=%s",type);
                         }
                       }
                       else if (type == HashSet.class)
@@ -1610,13 +1613,14 @@ Dprintf.dprintf("field.getType()=%s",type);
                         }
                         else
                         {
-Dprintf.dprintf("field.getType()=%s",type);
+//TODO: error message?
+//Dprintf.dprintf("field.getType()=%s",type);
                         }
                       }
                     }
                     catch (NumberFormatException exception)
                     {
-                      BARControl.printWarning("Cannot parse number '%s' for configuration value '%s' in line %d",string,name,lineNb);
+                      System.err.println(String.format("Cannot parse number '%s' for configuration value '%s' in line %d",string,name,lineNb));
                     }
                     catch (Throwable throwable)
                     {
@@ -1628,6 +1632,7 @@ Dprintf.dprintf("field.getType()=%s",type);
                 }
                 else
                 {
+                  // ignore other annotations
                 }
               }
             }
@@ -1671,7 +1676,6 @@ Dprintf.dprintf("field.getType()=%s",type);
                 {
                   Constructor constructor = migrate.getDeclaredConstructor(Settings.class);
                   SettingMigrate settingMigrate = (SettingMigrate)constructor.newInstance(new Settings());
-//                  settingMigrate.run(settingValue);
                   field.set(null,settingMigrate.run(field.get(null)));
                 }
               }
@@ -2270,6 +2274,10 @@ throwable.printStackTrace();
                   output.printf("\n");
                 }
               }
+            }
+            else
+            {
+              // ignore other annotations
             }
           }
         }

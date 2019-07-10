@@ -355,19 +355,19 @@ public class Settings
   @SettingComment(text={"BARControl configuration",""})
 
   // program settings
-  @SettingValue(type=SettingUtils.ValueAdapterSimpleStringArray.class)
+  @SettingValue(type=SettingUtils.ValueAdapterSimpleStringArray.class, name="job-list-column-order")
   public static SettingUtils.SimpleStringArray jobListColumnOrder              = new SettingUtils.SimpleStringArray();
-  @SettingValue(type=SettingValueAdapterWidthArray.class)
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="job-list-columns")
   public static ColumnSizes                    jobListColumns                  = new ColumnSizes(110,130,90,90,80,80,100,150,120);
 
   @SettingComment(text={"","Pause default settings"})
-  @SettingValue
+  @SettingValue(name="pause-create")
   public static boolean                        pauseCreateFlag                 = true;
-  @SettingValue
+  @SettingValue(name="pause-storage")
   public static boolean                        pauseStorageFlag                = false;
-  @SettingValue
+  @SettingValue(name="pause-restore")
   public static boolean                        pauseRestoreFlag                = true;
-  @SettingValue
+  @SettingValue(name="pause-index-update")
   public static boolean                        pauseIndexUpdateFlag            = false;
 
   // server settings
@@ -376,15 +376,15 @@ public class Settings
   public static LinkedHashSet<Server>          servers                         = new LinkedHashSet<Server>();
   @SettingValue(name="serverName",type=String.class,deprecated=true)
   public static LinkedHashSet<String>          serverNames                     = new LinkedHashSet<String>();
-  @SettingValue
+  @SettingValue(name="server-ca-file")
   public static String                         serverCAFileName                = null;
-  @SettingValue
+  @SettingValue(name="server-cert-file")
   public static String                         serverCertificateFileName       = null;
-  @SettingValue
+  @SettingValue(name="server-key-file")
   public static String                         serverKeyFileName               = null;
-  @SettingValue
+  @SettingValue(name="force-ssl")
   public static boolean                        forceSSL                        = false;
-  @SettingValue
+  @SettingValue(name="role")
   public static BARControl.Roles               role                            = BARControl.Roles.BASIC;
 
   // file requester shortcuts
