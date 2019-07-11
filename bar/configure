@@ -8041,8 +8041,12 @@ $as_echo "done" >&6; }
   fi
 
   if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES icuuc icui18n icudata"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
+    fi
     HAVE_ICU=1
-    STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
 
 $as_echo "#define HAVE_ICU 1" >>confdefs.h
 
@@ -8678,8 +8682,12 @@ $as_echo "done" >&6; }
   fi
 
   if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES z"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES z"
+    fi
     HAVE_Z=1
-    STATIC_LIBRARIES="$STATIC_LIBRARIES z"
 
 $as_echo "#define HAVE_Z 1" >>confdefs.h
 
@@ -8942,8 +8950,12 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES bz2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES bz2"
+      fi
       HAVE_BZ2=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES bz2"
 
 $as_echo "#define HAVE_BZ2 1" >>confdefs.h
 
@@ -9228,8 +9240,12 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES lzma"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES lzma"
+      fi
       HAVE_LZMA=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES lzma"
 
 $as_echo "#define HAVE_LZMA 1" >>confdefs.h
 
@@ -9497,8 +9513,12 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES lzo2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2"
+      fi
       HAVE_LZO=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2"
 
 $as_echo "#define HAVE_LZO 1" >>confdefs.h
 
@@ -9750,8 +9770,12 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES lz4"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES lz4"
+      fi
       HAVE_LZ4=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES lz4"
 
 $as_echo "#define HAVE_LZ4 1" >>confdefs.h
 
@@ -10003,9 +10027,13 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
-      HAVE_ZSTD=1
       CC_DEFINES="$CC_DEFINES ZSTD_STATIC_LINKING_ONLY"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES zstd"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES zstd"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES zstd"
+      fi
+      HAVE_ZSTD=1
 
 $as_echo "#define HAVE_ZSTD 1" >>confdefs.h
 
@@ -10223,8 +10251,8 @@ if test $ENABLE_XDELTA3 = "yes"; then
     #   diff -u xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h >> xdelta3-3.0.11.patch
     (cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
 
-    HAVE_XDELTA3=1
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
+    HAVE_XDELTA3=1
 
 $as_echo "#define HAVE_XDELTA3 1" >>confdefs.h
 
@@ -10400,10 +10428,14 @@ $as_echo "done" >&6; }
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
+      CC_DEFINES="$CC_DEFINES GCRYPT_NO_DEPRECATED"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES gcrypt gpg-error"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt gpg-error"
+      fi
       HAVE_GCRYPT=1
       HAVE_GPG_ERROR=1
-      CC_DEFINES="$CC_DEFINES GCRYPT_NO_DEPRECATED"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt gpg-error"
 
 $as_echo "#define HAVE_GCRYPT 1" >>confdefs.h
 
@@ -10921,8 +10953,12 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES ssl crypto"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto"
+      fi
       HAVE_SSL=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto"
 
 $as_echo "#define HAVE_SSL 1" >>confdefs.h
 
@@ -11024,8 +11060,12 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES ssh2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
+      fi
       HAVE_SSH2=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
 
 $as_echo "#define HAVE_SSH2 1" >>confdefs.h
 
@@ -11691,8 +11731,12 @@ $as_echo "done" >&6; }
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES gnutls nettle hogweed gmp idn2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp idn2"
+      fi
       HAVE_GNU_TLS=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp idn2"
 
 $as_echo "#define HAVE_GNU_TLS 1" >>confdefs.h
 
@@ -12379,12 +12423,16 @@ $as_echo "done" >&6; }
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
+      CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES curl cares mxml"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares mxml"
+      fi
       HAVE_FTP=1
       HAVE_CARES=1
       HAVE_CURL=1
       HAVE_MXML=1
-      CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares mxml"
 
 $as_echo "#define HAVE_CARES 1" >>confdefs.h
 
@@ -13256,8 +13304,12 @@ $as_echo "done" >&6; }
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES iso9660 cdio iconv"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio iconv"
+      fi
       HAVE_ISO9660=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio iconv"
 
 $as_echo "#define HAVE_ISO9660 1" >>confdefs.h
 
@@ -13554,9 +13606,13 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
-      HAVE_PCRE=1
       CC_DEFINES="$CC_DEFINES PCRE_STATIC"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pcre pcreposix"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES pcre pcreposix"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES pcre pcreposix"
+      fi
+      HAVE_PCRE=1
 
 $as_echo "#define HAVE_PCRE 1" >>confdefs.h
 
@@ -13803,9 +13859,13 @@ $as_echo "done" >&6; }
         fi
 
         if test $result -eq 1; then
-          HAVE_PTHREADS_W32=1
           CC_DEFINES="$CC_DEFINES PTW32_STATIC_LIB"
-          STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
+          if test $ENABLE_LINK_DYNAMIC = "yes"; then
+            LIBRARIES="$LIBRARIES pthreadGC2"
+          else
+            STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
+          fi
+          HAVE_PTHREADS_W32=1
 
 $as_echo "#define HAVE_PTHREADS_W32 1" >>confdefs.h
 
@@ -13902,9 +13962,13 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
-      HAVE_BREAKPAD=1
       CC_INCLUDES="$CC_INCLUDES $cwd/extern/include/breakpad"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES breakpad_client"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
+      fi
+      HAVE_BREAKPAD=1
 
 $as_echo "#define HAVE_BREAKPAD 1" >>confdefs.h
 
@@ -14286,11 +14350,15 @@ $as_echo "done" >&6; }
     fi
 
     if test $result -eq 1; then
-      HAVE_BFD=1
       # PACKAGE required to make bfd.h happy
       CC_DEFINES="$CC_DEFINES PACKAGE"
       CC_INCLUDES="$CC_INCLUDES $cwd/extern/include"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES bfd iberty z"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z"
+      fi
+      HAVE_BFD=1
 
 $as_echo "#define HAVE_BFD 1" >>confdefs.h
 
@@ -15441,6 +15509,66 @@ _ACEOF
 
 
 
+if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing uuid_generate" >&5
+$as_echo_n "checking for library containing uuid_generate... " >&6; }
+if ${ac_cv_search_libraries_uuid_generate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in uuid ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo uuid/uuid.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "uuid/uuid.h"; then echo "extern void uuid_generate();"; fi`
+                                         return (int)uuid_generate;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_uuid_generate=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_uuid_generate+:} false; then :
+
+else
+  ac_cv_search_libraries_uuid_generate=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_uuid_generate" >&5
+$as_echo "$ac_cv_search_libraries_uuid_generate" >&6; }
+  ac_result=$ac_cv_search_libraries_uuid_generate
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES uuid"
+fi
+
+else
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing uuid_generate" >&5
@@ -15501,8 +15629,69 @@ $as_echo "$ac_cv_search_static_uuid_generate" >&6; }
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"
 fi
 
+fi
 case $host_os in
   linux*)
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing idn_free" >&5
+$as_echo_n "checking for library containing idn_free... " >&6; }
+if ${ac_cv_search_libraries_idn_free+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_libraries_save_LIBS=$LIBS
+
+      for ac_library in idn ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo idn-free.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "idn-free.h"; then echo "extern void idn_free();"; fi`
+                                         return (int)idn_free;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_libraries_idn_free=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_libraries_idn_free+:} false; then :
+
+else
+  ac_cv_search_libraries_idn_free=no
+fi
+
+            LIBS=$ac_func_search_libraries_save_LIBS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_idn_free" >&5
+$as_echo "$ac_cv_search_libraries_idn_free" >&6; }
+  ac_result=$ac_cv_search_libraries_idn_free
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES idn"
+fi
+
+    else
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing idn_free" >&5
@@ -15563,6 +15752,7 @@ $as_echo "$ac_cv_search_static_idn_free" >&6; }
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES idn"
 fi
 
+    fi
     ;;
   mingw*)
     ;;
@@ -23418,4 +23608,3 @@ fi
 
 
 rm -f $tmpFile
-

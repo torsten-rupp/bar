@@ -1525,8 +1525,12 @@ if test -d icu -o -d "`readlink icu`"; then
   fi
 
   if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES icuuc icui18n icudata"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
+    fi
     HAVE_ICU=1
-    STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc icui18n icudata"
     AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
   fi
 else
@@ -1607,8 +1611,12 @@ if test -d zlib -o -d "`readlink zlib`"; then
   fi
 
   if test $result -eq 1; then
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      LIBRARIES="$LIBRARIES z"
+    else
+      STATIC_LIBRARIES="$STATIC_LIBRARIES z"
+    fi
     HAVE_Z=1
-    STATIC_LIBRARIES="$STATIC_LIBRARIES z"
     AC_DEFINE(HAVE_Z,1,[zlib installed (local)])
   fi
 else
@@ -1673,8 +1681,12 @@ if test $ENABLE_BZ2 = "yes"; then
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES bz2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES bz2"
+      fi
       HAVE_BZ2=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES bz2"
       AC_DEFINE(HAVE_BZ2,1,[bzip2 installed (local)])
     fi
   else
@@ -1761,8 +1773,12 @@ if test $ENABLE_LZMA = "yes"; then
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES lzma"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES lzma"
+      fi
       HAVE_LZMA=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES lzma"
       AC_DEFINE(HAVE_LZMA,1,[lzma installed (local)])
     fi
   else
@@ -1832,8 +1848,12 @@ if test $ENABLE_LZO = "yes"; then
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES lzo2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2"
+      fi
       HAVE_LZO=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2"
       AC_DEFINE(HAVE_LZO,1,[lzo installed (local)])
     fi
   else
@@ -1892,8 +1912,12 @@ if test $ENABLE_LZ4 = "yes"; then
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES lz4"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES lz4"
+      fi
       HAVE_LZ4=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES lz4"
       AC_DEFINE(HAVE_LZ4,1,[lz4 installed (local)])
     fi
   else
@@ -1952,9 +1976,13 @@ if test $ENABLE_ZSTD = "yes"; then
     fi
 
     if test $result -eq 1; then
-      HAVE_ZSTD=1
       CC_DEFINES="$CC_DEFINES ZSTD_STATIC_LINKING_ONLY"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES zstd"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES zstd"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES zstd"
+      fi
+      HAVE_ZSTD=1
       AC_DEFINE(HAVE_ZSTD,1,[zstd installed (local)])
     fi
   else
@@ -1991,8 +2019,8 @@ if test $ENABLE_XDELTA3 = "yes"; then
     #   diff -u xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h >> xdelta3-3.0.11.patch
     (cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
 
-    HAVE_XDELTA3=1
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
+    HAVE_XDELTA3=1
     AC_DEFINE(HAVE_XDELTA3,1,[xdelta3 installed])
   fi
 fi
@@ -2131,10 +2159,14 @@ set +x
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
+      CC_DEFINES="$CC_DEFINES GCRYPT_NO_DEPRECATED"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES gcrypt gpg-error"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt gpg-error"
+      fi
       HAVE_GCRYPT=1
       HAVE_GPG_ERROR=1
-      CC_DEFINES="$CC_DEFINES GCRYPT_NO_DEPRECATED"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt gpg-error"
       AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed (local)])
     fi
   else
@@ -2260,8 +2292,12 @@ if test $ENABLE_SSH = "yes"; then
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES ssl crypto"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto"
+      fi
       HAVE_SSL=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto"
       AC_DEFINE(HAVE_SSL,1,[ssl installed (local)])
     fi
   fi
@@ -2344,8 +2380,12 @@ if test $ENABLE_SSH = "yes"; then
     fi
 
     if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES ssh2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
+      fi
       HAVE_SSH2=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2"
       AC_DEFINE(HAVE_SSH2,1,[ssh2 installed (local)])
     fi
   else
@@ -2579,8 +2619,12 @@ if test $ENABLE_TLS = "yes"; then
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES gnutls nettle hogweed gmp idn2"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp idn2"
+      fi
       HAVE_GNU_TLS=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls nettle hogweed gmp idn2"
       AC_DEFINE(HAVE_GNU_TLS,1,[gnutls installed (local)])
     fi
   else
@@ -2839,12 +2883,16 @@ if test $ENABLE_CURL = "yes"; then
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
+      CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES curl cares mxml"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares mxml"
+      fi
       HAVE_FTP=1
       HAVE_CARES=1
       HAVE_CURL=1
       HAVE_MXML=1
-      CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares mxml"
       AC_DEFINE(HAVE_CARES,1,[c-ares installed (local)])
       AC_DEFINE(HAVE_CURL,1,[curl installed (local)])
       AC_DEFINE(HAVE_MXML,1,[mxml installed (local)])
@@ -3005,8 +3053,12 @@ if test $ENABLE_ISO9660 = "yes"; then
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES iso9660 cdio iconv"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio iconv"
+      fi
       HAVE_ISO9660=1
-      STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio iconv"
       AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed (local)])
     fi
   else
@@ -3105,9 +3157,13 @@ if test $ENABLE_PCRE = "yes"; then
     fi
 
     if test $result -eq 1; then
-      HAVE_PCRE=1
       CC_DEFINES="$CC_DEFINES PCRE_STATIC"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES pcre pcreposix"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES pcre pcreposix"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES pcre pcreposix"
+      fi
+      HAVE_PCRE=1
       AC_DEFINE(HAVE_PCRE,1,[pcre installed (local)])
     fi
   else
@@ -3166,9 +3222,13 @@ case "$host_os" in
         fi
 
         if test $result -eq 1; then
-          HAVE_PTHREADS_W32=1
           CC_DEFINES="$CC_DEFINES PTW32_STATIC_LIB"
-          STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
+          if test $ENABLE_LINK_DYNAMIC = "yes"; then
+            LIBRARIES="$LIBRARIES pthreadGC2"
+          else
+            STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
+          fi
+          HAVE_PTHREADS_W32=1
           AC_DEFINE(HAVE_PTHREADS_W32,1,[pthreads-w32 installed (local)])
         fi
       fi
@@ -3246,9 +3306,13 @@ if test $ENABLE_BREAKPAD = "yes"; then
     fi
 
     if test $result -eq 1; then
-      HAVE_BREAKPAD=1
       CC_INCLUDES="$CC_INCLUDES $cwd/extern/include/breakpad"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES breakpad_client"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES breakpad_client"
+      fi
+      HAVE_BREAKPAD=1
       AC_DEFINE(HAVE_BREAKPAD,1,[breakpad installed (local)])
 
       AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/extern/bin)
@@ -3344,11 +3408,15 @@ if test $ENABLE_BFD = "yes"; then
     fi
 
     if test $result -eq 1; then
-      HAVE_BFD=1
       # PACKAGE required to make bfd.h happy
       CC_DEFINES="$CC_DEFINES PACKAGE"
       CC_INCLUDES="$CC_INCLUDES $cwd/extern/include"
-      STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z"
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES bfd iberty z"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z"
+      fi
+      HAVE_BFD=1
       AC_DEFINE(HAVE_BFD,1,[libbfd installed (local)])
 
       AC_PATH_PROGS(DUMP_SYMS,dump_syms,,,$cwd/extern/bin)
@@ -3493,10 +3561,18 @@ AC_CHECK_SIZEOF(unsigned long long)
 AC_CHECK_SIZEOF(void *)
 AC_CHECK_SIZEOF(size_t)
 
-AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,uuid/uuid.h)
+if test $ENABLE_LINK_DYNAMIC = "yes"; then
+  AC_SEARCH_LIBRARIES(uuid_generate,uuid,[LIBRARIES="$LIBRARIES uuid"],,uuid/uuid.h)
+else
+  AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],,uuid/uuid.h)
+fi
 case $host_os in
   linux*)
-    AC_SEARCH_STATIC_LIBRARIES(idn_free,idn,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn"],,idn-free.h)
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(idn_free,idn,[LIBRARIES="$LIBRARIES idn"],,idn-free.h)
+    else
+      AC_SEARCH_STATIC_LIBRARIES(idn_free,idn,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn"],,idn-free.h)
+    fi
     ;;
   mingw*)
     ;;

@@ -43,7 +43,7 @@ TEST_DATA_DIR      ?= test
 #--------------------------------- tool chain --------------------------------
 
 # shell in Makefile must be bash
-SHELL                       = bash
+SHELL                     = bash
 
 CC                        = @CC@
 CC_FLAGS                  = @CC_FLAGS@ -g
