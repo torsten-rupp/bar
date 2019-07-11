@@ -1996,28 +1996,28 @@ public class BARControl
   private void parseArguments(String[] args)
   {
     // parse arguments
-    int     z = 0;
+    int     i = 0;
     boolean endOfOptions = false;
-    while (z < args.length)
+    while (i < args.length)
     {
-      if      (!endOfOptions && args[z].equals("--"))
+      if      (!endOfOptions && args[i].equals("--"))
       {
         endOfOptions = true;
-        z++;
+        i++;
       }
-      else if (!endOfOptions && (args[z].startsWith("--") || args[z].startsWith("-")))
+      else if (!endOfOptions && (args[i].startsWith("--") || args[i].startsWith("-")))
       {
-        int i = Options.parse(OPTIONS,args,z,Settings.class);
-        if (i < 0)
+        int j = Options.parse(OPTIONS,args,i,Settings.class);
+        if (j < 0)
         {
-          throw new Error("Unknown option '"+args[z]+"'!");
+          throw new Error("Unknown option '"+args[i]+"'!");
         }
-        z = i;
+        i = j;
       }
       else
       {
-        Settings.serverName = args[z];
-        z++;
+        Settings.serverName = args[i];
+        i++;
       }
     }
 
@@ -2036,12 +2036,14 @@ public class BARControl
     }
 
     // add/update server
-//        Settings.serverNames.remove(args[z]);
-//        Settings.serverNames.add(args[z]);
+    if (Settings.serverName != null)
+    {
+      Settings.servers.add(new Settings.Server(Settings.serverName,Settings.serverPort));
+    }
 
     // check arguments
-if (false) {
 //TODO: check PEM
+if (false) {
     if ((Settings.serverKeyFileName != null) && !Settings.serverKeyFileName.isEmpty())
     {
       // check if PEM/JKS file is readable
@@ -5182,9 +5184,7 @@ Dprintf.dprintf("still not supported");
         BARServer.disconnect();
 
         // save settings
-Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
         Settings.save();
-Dprintf.dprintf("");
       }
     }
     catch (org.eclipse.swt.SWTException exception)

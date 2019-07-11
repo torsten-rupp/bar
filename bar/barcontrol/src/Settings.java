@@ -175,7 +175,7 @@ public class Settings
 
   /** server
    */
-  static class Server implements Cloneable
+  static class Server implements Cloneable, Comparable
   {
     public String name;
     public int    port;
@@ -200,6 +200,14 @@ public class Settings
     Server(String name, int port)
     {
       this(name,port,"");
+    }
+
+    /** create server
+     * @param name server name
+     */
+    Server(String name)
+    {
+      this(name,DEFAULT_SERVER_PORT);
     }
 
     /** create server
@@ -235,6 +243,26 @@ public class Settings
     {
       Server server = (Server)object;
       return this.name.equals(server.name) && (this.port == server.port);
+    }
+
+    /** compare index data
+     * @param object index data
+     * @return -1/0/1 if less/equals/greater
+     */
+    @Override
+    public int compareTo(Object object)
+    {
+      int result;
+
+      Server server = (Server)object;
+      result = this.name.compareTo(server.name);
+      if (result == 0)
+      {
+        if      (this.port < server.port) result = -1;
+        else if (this.port > server.port) result =  1;
+      }
+
+      return result;
     }
 
     /** get data string
@@ -276,9 +304,14 @@ public class Settings
       }
       else if (StringParser.parse(string,"%s:%d",data,StringUtils.QUOTE_CHARS))
       {
-        String name     = (String)data[0];
-        int    port     = (Integer)data[1];
+        String name = (String)data[0];
+        int    port = (Integer)data[1];
         server = new Server(name,port);
+      }
+      else if (StringParser.parse(string,"%s",data,StringUtils.QUOTE_CHARS))
+      {
+        String name = (String)data[0];
+        server = new Server(name);
       }
       else
       {
@@ -296,11 +329,25 @@ public class Settings
     {
       if ((server.password != null) && !server.password.isEmpty())
       {
-        return StringParser.format("%s:%d:%'s",server.name,server.port,server.password);
+        if (server.port != -1)
+        {
+          return StringParser.format("%s:%d:%'s",server.name,server.port,server.password);
+        }
+        else
+        {
+          return StringParser.format("%s:%d:%'s",server.name,DEFAULT_SERVER_PORT,server.password);
+        }
       }
       else
       {
-        return StringParser.format("%s:%d",server.name,server.port);
+        if (server.port != -1)
+        {
+          return StringParser.format("%s:%d",server.name,server.port);
+        }
+        else
+        {
+          return StringParser.format("%s",server.name);
+        }
       }
     }
 
@@ -374,8 +421,6 @@ public class Settings
   @SettingComment(text={"","Server settings"})
   @SettingValue(name="server",type=SettingValueAdapterServer.class,migrate=SettingMigrateServer.class)
   public static LinkedHashSet<Server>          servers                         = new LinkedHashSet<Server>();
-  @SettingValue(name="serverName",type=String.class,deprecated=true)
-  public static LinkedHashSet<String>          serverNames                     = new LinkedHashSet<String>();
   @SettingValue(name="server-ca-file")
   public static String                         serverCAFileName                = null;
   @SettingValue(name="server-cert-file")
@@ -446,11 +491,13 @@ public class Settings
   public static String                         serverName                      = null;
 
   // deprecated
-  @SettingValue(deprecated=true)
+  @SettingValue(name="server-name",type=String.class,deprecated=true)
+  public static LinkedHashSet<String>          serverNames                     = new LinkedHashSet<String>();
+  @SettingValue(name="server-password",deprecated=true)
   public static String                         serverPassword                  = null;
-  @SettingValue(deprecated=true)
+  @SettingValue(name="server-port",deprecated=true)
   public static int                            serverPort                      = -1;
-  @SettingValue(deprecated=true)
+  @SettingValue(name="server-tls-port",deprecated=true)
   public static int                            serverTLSPort                   = -1;
 
   // ------------------------ native functions ----------------------------
