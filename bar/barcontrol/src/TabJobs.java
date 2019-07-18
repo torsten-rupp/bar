@@ -1049,8 +1049,6 @@ public class TabJobs
     ArchiveTypes archiveType;
     int          interval;
     String       customText;
-    int          minKeep,maxKeep;
-    int          maxAge;
     boolean      noStorage;
     boolean      enabled;
     long         lastExecutedDateTime;
@@ -1067,9 +1065,6 @@ public class TabJobs
      * @param archiveType archive type string
      * @param interval continuous interval [min]
      * @param customText custom text
-     * @param minKeep min. number of archives to keep
-     * @param maxKeep max. number of archives to keep
-     * @param maxAge max. age to keep archives [days]
      * @param noStorage true to skip storage
      * @param enabled true iff enabled
      * @param lastExecutedDateTime date/time of last execution
@@ -1078,25 +1073,22 @@ public class TabJobs
      * @param totalEntrySize total size of existing entries for schedule [bytes]
      */
     ScheduleData(String       uuid,
-                  int          year,
-                  int          month,
-                  int          day,
-                  int          weekDays,
-                  int          hour,
-                  int          minute,
-                  ArchiveTypes archiveType,
-                  int          interval,
-                  String       customText,
-                  int          minKeep,
-                  int          maxKeep,
-                  int          maxAge,
-                  boolean      noStorage,
-                  boolean      enabled,
-                  long         lastExecutedDateTime,
-                  long         totalEntities,
-                  long         totalEntryCount,
-                  long         totalEntrySize
-                 )
+                 int          year,
+                 int          month,
+                 int          day,
+                 int          weekDays,
+                 int          hour,
+                 int          minute,
+                 ArchiveTypes archiveType,
+                 int          interval,
+                 String       customText,
+                 boolean      noStorage,
+                 boolean      enabled,
+                 long         lastExecutedDateTime,
+                 long         totalEntities,
+                 long         totalEntryCount,
+                 long         totalEntrySize
+                )
     {
       this.uuid                 = uuid;
       this.year                 = year;
@@ -1108,9 +1100,6 @@ public class TabJobs
       this.archiveType          = archiveType;
       this.interval             = interval;
       this.customText           = customText;
-      this.minKeep              = minKeep;
-      this.maxKeep              = maxKeep;
-      this.maxAge               = maxAge;
       this.noStorage            = noStorage;
       this.enabled              = enabled;
       this.lastExecutedDateTime = lastExecutedDateTime;
@@ -1123,7 +1112,7 @@ public class TabJobs
      */
     ScheduleData()
     {
-      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ArchiveTypes.NORMAL,0,"",0,0,0,false,true,0,0,0,0);
+      this(null,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ScheduleData.ANY,ArchiveTypes.NORMAL,0,"",false,true,0,0,0,0);
     }
 
     /** create schedule data
@@ -1141,22 +1130,22 @@ public class TabJobs
      * @param totalEntrySize total size of existing entries for schedule [bytes]
      */
     ScheduleData(String       uuid,
-                  String       date,
-                  String       weekDays,
-                  String       time,
-                  ArchiveTypes archiveType,
-                  int          interval,
-                  String       customText,
-                  int          minKeep,
-                  int          maxKeep,
-                  int          maxAge,
-                  boolean      noStorage,
-                  boolean      enabled,
-                  long         lastExecutedDateTime,
-                  long         totalEntities,
-                  long         totalEntryCount,
-                  long         totalEntrySize
-                 )
+                 String       date,
+                 String       weekDays,
+                 String       time,
+                 ArchiveTypes archiveType,
+                 int          interval,
+                 String       customText,
+                 int          minKeep,
+                 int          maxKeep,
+                 int          maxAge,
+                 boolean      noStorage,
+                 boolean      enabled,
+                 long         lastExecutedDateTime,
+                 long         totalEntities,
+                 long         totalEntryCount,
+                 long         totalEntrySize
+                )
     {
       this.uuid                 = uuid;
       setDate(date);
@@ -1165,9 +1154,6 @@ public class TabJobs
       this.archiveType          = archiveType;
       this.interval             = interval;
       this.customText           = customText;
-      this.minKeep              = minKeep;
-      this.maxKeep              = maxKeep;
-      this.maxAge               = maxAge;
       this.noStorage            = noStorage;
       this.enabled              = enabled;
       this.lastExecutedDateTime = lastExecutedDateTime;
@@ -1182,25 +1168,22 @@ public class TabJobs
     public ScheduleData clone()
     {
       return new ScheduleData(uuid,
-                               year,
-                               month,
-                               day,
-                               weekDays,
-                               hour,
-                               minute,
-                               archiveType,
-                               interval,
-                               customText,
-                               minKeep,
-                               maxKeep,
-                               maxAge,
-                               noStorage,
-                               enabled,
-                               lastExecutedDateTime,
-                               totalEntities,
-                               totalEntryCount,
-                               totalEntrySize
-                              );
+                              year,
+                              month,
+                              day,
+                              weekDays,
+                              hour,
+                              minute,
+                              archiveType,
+                              interval,
+                              customText,
+                              noStorage,
+                              enabled,
+                              lastExecutedDateTime,
+                              totalEntities,
+                              totalEntryCount,
+                              totalEntrySize
+                             );
     }
 
     /** get year value
@@ -1489,54 +1472,6 @@ public class TabJobs
             );
 
       return (weekDays == ScheduleData.ANY) || ((weekDays & (1 << weekDay)) != 0);
-    }
-
-    /** get min. number of archives to keep
-     * @return min. number of archives to keep
-     */
-    int getMinKeep()
-    {
-      return minKeep;
-    }
-
-    /** set min. number of archives to keep
-     * @param minKeep min. number of archives to keep
-     */
-    void setMinKeep(int minKeep)
-    {
-      this.minKeep = minKeep;
-    }
-
-    /** get max. number of archives to keep
-     * @return max. number of archives to keep
-     */
-    int getMaxKeep()
-    {
-      return minKeep;
-    }
-
-    /** get max. number of archives to keep
-     * @return max. number of archives to keep
-     */
-    void setMaxKeep(int maxKeep)
-    {
-      this.maxKeep = maxKeep;
-    }
-
-    /** get max. age to keep archives
-     * @return number of days to keep archives
-     */
-    int getMaxAge()
-    {
-      return maxAge;
-    }
-
-    /** get max. age to keep archives
-     * @return number of days to keep archives
-     */
-    void getMaxAge(int maxAge)
-    {
-      this.maxAge = maxAge;
     }
 
     /** check if no-storage option set
@@ -13872,9 +13807,6 @@ Dprintf.dprintf("line=%s",line);
             scheduleData.archiveType          = archiveType;
             scheduleData.interval             = interval;
             scheduleData.customText           = customText;
-            scheduleData.minKeep              = minKeep;
-            scheduleData.maxKeep              = maxKeep;
-            scheduleData.maxAge               = maxAge;
             scheduleData.lastExecutedDateTime = lastExecutedDateTime;
             scheduleData.totalEntities        = totalEntities;
             scheduleData.totalEntryCount      = totalEntryCount;
@@ -14007,8 +13939,6 @@ Dprintf.dprintf("line=%s",line);
     final Button   widgetTypeDefault,widgetTypeNormal,widgetTypeFull,widgetTypeIncremental,widgetTypeDifferential,widgetTypeContinuous;
     final Combo    widgetInterval;
     final Text     widgetCustomText;
-    final Combo    widgetMinKeep,widgetMaxKeep;
-    final Combo    widgetMaxAge;
     final Button   widgetNoStorage;
     final Button   widgetEnabled;
     final Button   widgetSave;
@@ -14194,87 +14124,11 @@ Dprintf.dprintf("line=%s",line);
       widgetCustomText.setText(scheduleData.customText);
       Widgets.layout(widgetCustomText,5,1,TableLayoutData.WE);
 
-      label = Widgets.newLabel(composite,BARControl.tr("Keep")+":",Settings.hasNormalRole());
+      label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
       Widgets.layout(label,6,0,TableLayoutData.W);
 
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,6,1,TableLayoutData.WE);
-      {
-        label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":",Settings.hasExpertRole());
-        Widgets.layout(label,0,0,TableLayoutData.W);
-
-        widgetMinKeep = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
-        widgetMinKeep.setToolTipText(BARControl.tr("Min. number of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMinKeep,new Object[]{"0",0,
-                                                              "1",1,
-                                                              "2",2,
-                                                              "3",3,
-                                                              "4",4,
-                                                              "5",5,
-                                                              "6",6,
-                                                              "7",7,
-                                                              "8",8,
-                                                              "9",9,
-                                                              "10",10
-                                                             }
-                                  );
-        Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(scheduleData.minKeep));
-        Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
-
-        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasNormalRole());
-        Widgets.layout(label,0,2,TableLayoutData.W);
-
-        widgetMaxKeep = Widgets.newOptionMenu(subComposite,Settings.hasNormalRole());
-        widgetMaxKeep.setToolTipText(BARControl.tr("Max. number of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",Keep.ALL,
-                                                              "1",1,
-                                                              "2",2,
-                                                              "3",3,
-                                                              "4",4,
-                                                              "5",5,
-                                                              "6",6,
-                                                              "7",7,
-                                                              "8",8,
-                                                              "9",9,
-                                                              "10",10
-                                                             }
-                                  );
-        Widgets.setSelectedOptionMenuItem(widgetMaxKeep,new Integer(scheduleData.maxKeep));
-        Widgets.layout(widgetMaxKeep,0,3,TableLayoutData.W);
-
-        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasExpertRole());
-        Widgets.layout(label,0,4,TableLayoutData.W);
-
-        widgetMaxAge = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
-        widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",Age.FOREVER,
-                                                             BARControl.tr("1 day"),1,
-                                                             BARControl.tr("2 days"),2,
-                                                             BARControl.tr("3 days"),3,
-                                                             BARControl.tr("4 days"),4,
-                                                             BARControl.tr("5 days"),5,
-                                                             BARControl.tr("6 days"),6,
-                                                             BARControl.tr("1 week"),7,
-                                                             BARControl.tr("2 weeks"),14,
-                                                             BARControl.tr("3 weeks"),21,
-                                                             BARControl.tr("4 weeks"),28,
-                                                             BARControl.tr("2 months"),60,
-                                                             BARControl.tr("3 months"),90,
-                                                             BARControl.tr("6 months"),180,
-                                                             BARControl.tr("12 months"),365,
-                                                             BARControl.tr("18 months"),548,
-                                                             BARControl.tr("24 months"),730
-                                                            }
-                                  );
-        Widgets.setSelectedOptionMenuItem(widgetMaxAge,new Integer(scheduleData.maxAge));
-        Widgets.layout(widgetMaxAge,0,5,TableLayoutData.W);
-      }
-
-      label = Widgets.newLabel(composite,BARControl.tr("Options")+":");
-      Widgets.layout(label,7,0,TableLayoutData.W);
-
-      subComposite = Widgets.newComposite(composite,SWT.NONE);
-      Widgets.layout(subComposite,7,1,TableLayoutData.WE);
       {
         widgetNoStorage = Widgets.newCheckbox(subComposite,BARControl.tr("no storage"),Settings.hasExpertRole());
         Widgets.layout(widgetNoStorage,0,0,TableLayoutData.W);
@@ -14353,9 +14207,6 @@ throw new Error("NYI");
         else                                            scheduleData.archiveType = ArchiveTypes.NORMAL;
         scheduleData.interval   = (Integer)Widgets.getSelectedOptionMenuItem(widgetInterval,0);
         scheduleData.customText = widgetCustomText.getText();
-        scheduleData.minKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMinKeep,0);
-        scheduleData.maxKeep    = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxKeep,0);
-        scheduleData.maxAge     = (Integer)Widgets.getSelectedOptionMenuItem(widgetMaxAge,0);
         scheduleData.noStorage  = widgetNoStorage.getSelection();
         scheduleData.enabled    = widgetEnabled.getSelection();
 
@@ -14406,9 +14257,6 @@ throw new Error("NYI");
                                                        scheduleData.archiveType.toString(),
                                                        scheduleData.interval,
                                                        scheduleData.customText,
-                                                       scheduleData.minKeep,
-                                                       scheduleData.maxKeep,
-                                                       scheduleData.maxAge,
                                                        scheduleData.noStorage,
                                                        scheduleData.enabled
                                                       ),
@@ -14463,9 +14311,6 @@ throw new Error("NYI");
           BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType.toString());
           BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"interval",scheduleData.interval);
           BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"text",scheduleData.customText);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"min-keep",scheduleData.minKeep);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-keep",scheduleData.maxKeep);
-          BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"max-age",scheduleData.maxAge);
           BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
           BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
 
@@ -14502,18 +14347,15 @@ throw new Error("NYI");
           {
             ValueMap valueMap = new ValueMap();
             BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
-                                                                      selectedJobData.uuid,
-                                                                      newScheduleData.getDate(),
-                                                                      newScheduleData.getWeekDays(),
-                                                                      newScheduleData.getTime(),
-                                                                      newScheduleData.archiveType.toString(),
-                                                                      newScheduleData.customText,
-                                                                      newScheduleData.minKeep,
-                                                                      newScheduleData.maxKeep,
-                                                                      newScheduleData.maxAge,
-                                                                      newScheduleData.noStorage,
-                                                                      newScheduleData.enabled
-                                                                     ),
+                                                         selectedJobData.uuid,
+                                                         newScheduleData.getDate(),
+                                                         newScheduleData.getWeekDays(),
+                                                         newScheduleData.getTime(),
+                                                         newScheduleData.archiveType.toString(),
+                                                         newScheduleData.customText,
+                                                         newScheduleData.noStorage,
+                                                         newScheduleData.enabled
+                                                        ),
                                                   0,  // debugLevel
                                                   valueMap
                                                  );
