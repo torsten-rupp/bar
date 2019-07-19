@@ -96,8 +96,8 @@ LOCAL bool readProcessIO(int fd, String line)
 #warning not implemented
     #endif /* PLATFORM_... */
 
-
     // read data until EOL found
+//TODO: read more than 1 character
     while (n > 0)
     {
       if (read(fd,&ch,1) == 1)
@@ -129,13 +129,17 @@ LOCAL bool readProcessIO(int fd, String line)
 /***********************************************************************\
 * Name   : execute
 * Purpose: execute command
-* Input  : command   - command to execute
-*          arguments - arguments
-*          errorText - error text or NULL
+* Input  : command                 - command to execute
+*          arguments               - arguments
+*          errorText               - error text or NULL
 *          stdoutExecuteIOFunction - stdout callback
 *          stdoutExecuteIOUserData - stdout callback user data
+*          stdoutStripCount        - number of character to strip from
+*                                    stdout output text
 *          stderrExecuteIOFunction - stderr callback
 *          stderrExecuteIOUserData - stderr callback user data
+*          stderrStripCount        - number of character to strip from
+*                                    stderr output text
 * Output : ERROR_NONE or error code
 * Return : -
 * Notes  : -
@@ -146,8 +150,10 @@ LOCAL Errors execute(const char        *command,
                      const char        *errorText,
                      ExecuteIOFunction stdoutExecuteIOFunction,
                      void              *stdoutExecuteIOUserData,
+                     uint              stdoutStripCount,
                      ExecuteIOFunction stderrExecuteIOFunction,
-                     void              *stderrExecuteIOUserData
+                     void              *stderrExecuteIOUserData,
+                     uint              stderrStripCount
                     )
 {
   String     text;
@@ -157,7 +163,7 @@ LOCAL Errors execute(const char        *command,
   pid_t      pid;
   int        status;
   bool       sleepFlag;
-  String     stdoutLine,stderrLine;
+  String     line;
   int        exitcode;
   int        terminateSignal;
 
@@ -267,9 +273,8 @@ error = ERROR_NONE;
 #endif /* 0 */
 
     // read stdout/stderr and wait until process terminate
-    stdoutLine = String_new();
-    stderrLine = String_new();
-    status     = 0xFFFFFFFF;
+    line   = String_new();
+    status = 0xFFFFFFFF;
     while (   (waitpid(pid,&status,WNOHANG) == 0)
            || (   !WIFEXITED(status)
                && !WIFSIGNALED(status)
@@ -278,16 +283,18 @@ error = ERROR_NONE;
     {
       sleepFlag = TRUE;
 
-      if (readProcessIO(pipeStdout[0],stdoutLine))
+      if (readProcessIO(pipeStdout[0],line))
       {
-        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutLine,stdoutExecuteIOUserData);
-        String_clear(stdoutLine);
+        String_remove(line,STRING_BEGIN,stdoutStripCount);
+        if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(line,stdoutExecuteIOUserData);
+        String_clear(line);
         sleepFlag = FALSE;
       }
-      if (readProcessIO(pipeStderr[0],stderrLine))
+      if (readProcessIO(pipeStderr[0],line))
       {
-        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrLine,stderrExecuteIOUserData);
-        String_clear(stderrLine);
+        String_remove(line,STRING_BEGIN,stderrStripCount);
+        if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(line,stderrExecuteIOUserData);
+        String_clear(line);
         sleepFlag = FALSE;
       }
 
@@ -296,18 +303,19 @@ error = ERROR_NONE;
         Misc_mdelay(250);
       }
     }
-    while (readProcessIO(pipeStdout[0],stdoutLine))
+    while (readProcessIO(pipeStdout[0],line))
     {
-      if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(stdoutLine,stdoutExecuteIOUserData);
-      String_clear(stdoutLine);
+      String_remove(line,STRING_BEGIN,stdoutStripCount);
+      if (stdoutExecuteIOFunction != NULL) stdoutExecuteIOFunction(line,stdoutExecuteIOUserData);
+      String_clear(line);
     }
-    while (readProcessIO(pipeStderr[0],stderrLine))
+    while (readProcessIO(pipeStderr[0],line))
     {
-      if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(stderrLine,stderrExecuteIOUserData);
-      String_clear(stderrLine);
+      String_remove(line,STRING_BEGIN,stderrStripCount);
+      if (stderrExecuteIOFunction != NULL) stderrExecuteIOFunction(line,stderrExecuteIOUserData);
+      String_clear(line);
     }
-    String_delete(stderrLine);
-    String_delete(stdoutLine);
+    String_delete(line);
 
     // close i/o
     close(pipeStderr[0]);
@@ -1571,9 +1579,11 @@ stringNode = stringNode->next;
     // execute command
     error = execute(String_cString(command),
                     arguments,
-                    NULL,
+                    NULL,  // errorText
                     CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
-                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
+                    0,  // stdoutStripCount
+                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData),
+                    0  // stderrStripCount
                    );
 
     // free resources
@@ -1668,7 +1678,9 @@ Errors Misc_executeScript(const char        *script,
                     arguments,
                     script,
                     CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
-                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData)
+                    0,
+                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData),
+                    String_length(tmpFileName)+1+1
                    );
 
     // free resources
