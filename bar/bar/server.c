@@ -1703,9 +1703,6 @@ NULL,//                                                        scheduleTitle,
       else
       {
         // slave job -> send to slave and run on slave machine
-//TODO: remove
-fprintf(stderr,"%s, %d: start job on slave ------------------------------------------------ \n",__FILE__,__LINE__);
-
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
           if (connectorInfo == NULL)
@@ -9885,10 +9882,6 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 *            time=<hour>|*:<minute>|* \
 *            interval=<n>
 *            customText=<text> \
-//TODO:remove
-*            minKeep=<n>|* \
-*            maxKeep=<n>|* \
-*            maxAage=<n>|* \
 *            noStorage=yes|no \
 *            enabled=yes|no \
 *            totalEntities=<n>|0 \
@@ -10005,7 +9998,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
         // send schedule info
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S minKeep=%u maxKeep=%u maxAge=%u noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                            "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                             scheduleNode->uuid,
                             (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType,NULL) : "*",
                             date,
@@ -10013,10 +10006,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
                             time,
                             scheduleNode->interval,
                             scheduleNode->customText,
-//TODO: remove
-                            scheduleNode->minKeep,
-                            scheduleNode->maxKeep,
-                            scheduleNode->maxAge,
                             scheduleNode->noStorage,
                             scheduleNode->enabled,
                             scheduleNode->lastExecutedDateTime,
@@ -10052,10 +10041,6 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 *            time=<hour>|*:<minute>|*
 *            interval=<n>
 *            customText=<text>
-//TODO:remove
-*            minKeep=<n>|*
-*            maxKeep=<n>|*
-*            maxAage=<n>|*
 *            noStorage=yes|no
 *            enabled=yes|no
 *          Result:
@@ -10138,43 +10123,6 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   StringMap_getUInt(argumentMap,"interval",&interval,0);
   customText = String_new();
   StringMap_getString(argumentMap,"customText",customText,NULL);
-  if (!StringMap_getInt(argumentMap,"minKeep",&minKeep,0))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>|*");
-    String_delete(customText);
-    String_delete(time);
-    String_delete(weekDays);
-    String_delete(date);
-    String_delete(title);
-    return;
-  }
-  if (!StringMap_getInt(argumentMap,"maxKeep",&maxKeep,0))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>|*");
-    String_delete(customText);
-    String_delete(time);
-    String_delete(weekDays);
-    String_delete(date);
-    String_delete(title);
-    return;
-  }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxAge","*"),"*"))
-  {
-    maxAge = AGE_FOREVER;
-  }
-  else
-  {
-    if (!StringMap_getInt(argumentMap,"maxAge",&maxAge,0))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
-      String_delete(customText);
-      String_delete(time);
-      String_delete(weekDays);
-      String_delete(date);
-      String_delete(title);
-      return;
-    }
-  }
   if (!StringMap_getBool(argumentMap,"noStorage",&noStorage,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"noStorage=yes|no");
