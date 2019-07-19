@@ -6956,6 +6956,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  String name;
   String script;
   Errors error;
 
@@ -6964,12 +6965,20 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get script
+  // get name, script
+  name = String_new();
+  if (!StringMap_getString(argumentMap,"name",name,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    String_delete(name);
+    return;
+  }
   script = String_new();
   if (!StringMap_getString(argumentMap,"script",script,NULL))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"script=<script>");
     String_delete(script);
+    String_delete(name);
     return;
   }
 
@@ -6988,11 +6997,29 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
                                ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
                              },NULL)
                             );
+  if (error == ERROR_NONE)
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Test script '%s' OK",
+               String_cString(name)
+              );
+  }
+  else
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Test script '%s' fail (error: %s)",
+               String_cString(name),
+               Error_getText(error)
+              );
+  }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
 
   // free resources
   String_delete(script);
+  String_delete(name);
 }
 
 /***********************************************************************\
