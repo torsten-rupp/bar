@@ -3808,7 +3808,7 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                testScript(includeFileCommand.getString());
+                testScript("include-file-command",includeFileCommand.getString());
               }
             });
           }
@@ -3885,7 +3885,7 @@ public class TabJobs
               @Override
               public void widgetSelected(SelectionEvent selectionEvent)
               {
-                testScript(includeImageCommand.getString());
+                testScript("include-image-command",includeImageCommand.getString());
               }
             });
           }
@@ -3961,7 +3961,7 @@ public class TabJobs
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              testScript(excludeCommand.getString());
+              testScript("exclude-command",excludeCommand.getString());
             }
           });
         }
@@ -8281,7 +8281,7 @@ widgetArchivePartSize.setListVisible(true);
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              testScript(preCommand.getString());
+              testScript("pre-command",preCommand.getString());
             }
           });
         }
@@ -8358,7 +8358,7 @@ widgetArchivePartSize.setListVisible(true);
             @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
-              testScript(postCommand.getString());
+              testScript("post-command",postCommand.getString());
             }
           });
         }
@@ -13689,15 +13689,17 @@ throw new Error("NYI");
   //-----------------------------------------------------------------------
 
   /** test script on server
+   * @param name script name/type
    * @param script script to test
    */
-  private void testScript(String script)
+  private void testScript(String name, String script)
   {
     final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Test script"),500,300,BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
 
     String[] errorMessage = new String[1];
     ValueMap valueMap     = new ValueMap();
-    Command command = BARServer.runCommand(StringParser.format("TEST_SCRIPT script=%'S",
+    Command command = BARServer.runCommand(StringParser.format("TEST_SCRIPT name=%'S script=%'S",
+                                                               name,
                                                                script
                                                               ),
                                            0
@@ -13712,8 +13714,6 @@ throw new Error("NYI");
       try
       {
         String line= valueMap.getString("line");
-Dprintf.dprintf("line=%s",line);
-
         busyDialog.updateList(line);
       }
       catch (IllegalArgumentException exception)
