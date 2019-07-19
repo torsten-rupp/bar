@@ -321,7 +321,7 @@ error = ERROR_NONE;
       exitcode = WEXITSTATUS(status);
       if (exitcode != 0)
       {
-        error = ERRORX_(EXEC_FAIL,0,"%s (exitcode: %d)",String_cString(text),exitcode);
+        error = ERRORX_(EXEC_FAIL,exitcode,"%s",String_cString(text));
         String_delete(text);
         return error;
       }
@@ -329,7 +329,7 @@ error = ERROR_NONE;
     else if (WIFSIGNALED(status))
     {
       terminateSignal = WTERMSIG(status);
-      error = ERRORX_(EXEC_FAIL,0,"%s (signal: %d)",String_cString(text),terminateSignal);
+      error = ERRORX_(EXEC_TERMINATE,0,"%s",String_cString(text),terminateSignal);
       String_delete(text);
       return error;
     }

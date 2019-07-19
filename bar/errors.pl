@@ -117,6 +117,7 @@ sub expandJava($)
   else
   {
     $s =~ s/ERROR_DATA/errorData/g;
+    $s =~ s/ERROR_ERRNO/errno/g;
     if ($s =~ /^(.*)TR\((.*)\)(.*)$/)
     {
       my $prefix =$1;
@@ -679,6 +680,7 @@ int _Error_dataToIndex(const char *format, ...)
 #define ERROR_LINENB      ERROR_GET_LINENB(error)
 #define ERROR_LINENB_TEXT ERROR_GET_LINENB_TEXT(error)
 #define ERROR_DATA        ERROR_GET_DATA(error)
+#define ERROR_ERRNO       ERROR_GET_ERRNO(error)
 
 unsigned int Error_getCode(Errors error)
 {
@@ -1000,6 +1002,12 @@ class $javaClassName extends Exception
   private static void stringAppend(StringBuilder buffer, int n, int size)
   {
     buffer.append(String.format(\"%03x\",n));
+  }
+
+  private static void stringFormat(StringBuilder buffer, int size, String format, Object... arguments)
+  {
+    buffer.setLength(0);
+    buffer.append(String.format(format,arguments));
   }
 
   private static void stringFormatAppend(StringBuilder buffer, int size, String format, Object... arguments)
