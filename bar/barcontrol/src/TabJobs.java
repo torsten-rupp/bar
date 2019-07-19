@@ -14249,7 +14249,7 @@ throw new Error("NYI");
         try
         {
           ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+          BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s interval=%d customText=%S noStorage=%y enabled=%y",
                                                        selectedJobData.uuid,
                                                        scheduleData.getDate(),
                                                        scheduleData.getWeekDays(),
@@ -14346,7 +14346,7 @@ throw new Error("NYI");
           try
           {
             ValueMap valueMap = new ValueMap();
-            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S minKeep=%d maxKeep=%d maxAge=%d noStorage=%y enabled=%y",
+            BARServer.executeCommand(StringParser.format("SCHEDULE_LIST_ADD jobUUID=%s date=%s weekDays=%s time=%s archiveType=%s customText=%S noStorage=%y enabled=%y",
                                                          selectedJobData.uuid,
                                                          newScheduleData.getDate(),
                                                          newScheduleData.getWeekDays(),
