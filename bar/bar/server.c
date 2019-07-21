@@ -10084,8 +10084,6 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   ArchiveTypes archiveType;
   uint         interval;
   String       customText;
-  int          minKeep,maxKeep;
-  int          maxAge;
   bool         noStorage;
   bool         enabled;
   ScheduleNode *scheduleNode;
@@ -10197,11 +10195,11 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   scheduleNode->archiveType = archiveType;
   scheduleNode->interval    = interval;
   String_set(scheduleNode->customText,customText);
-  scheduleNode->minKeep     = minKeep;
-  scheduleNode->maxKeep     = maxKeep;
-  scheduleNode->maxAge      = maxAge;
   scheduleNode->noStorage   = noStorage;
   scheduleNode->enabled     = enabled;
+  scheduleNode->minKeep     = 0;
+  scheduleNode->maxKeep     = 0;
+  scheduleNode->maxAge      = 0;
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {

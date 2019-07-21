@@ -351,8 +351,6 @@ typedef struct ScheduleNode
   ArchiveTypes       archiveType;                             // archive type to create
   uint               interval;                                // continuous interval [min]
   String             customText;                              // custom text
-  String             preProcessScript;                        // script to execute before start of job
-  String             postProcessScript;                       // script to execute after after termination of job
   bool               noStorage;                               // TRUE to skip storage, only create incremental data
   bool               enabled;                                 // TRUE iff enabled
 

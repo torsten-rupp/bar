@@ -908,24 +908,27 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
   {
     case STORAGE_TYPE_CD:
       volumeSize = CD_VOLUME_SIZE;
-      if      ((jobOptions != NULL) && (jobOptions->volumeSize > 0LL)       ) volumeSize = jobOptions->volumeSize;
-      else if (globalOptions.cd.volumeSize > 0LL                            ) volumeSize = globalOptions.cd.volumeSize;
-      else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ) volumeSize = CD_VOLUME_ECC_SIZE;
-      else                                                                    volumeSize = CD_VOLUME_SIZE;
+      if      ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize > 0LL)) volumeSize = jobOptions->opticalDisk.volumeSize;
+      else if ((jobOptions != NULL) && (jobOptions->volumeSize > 0LL)            ) volumeSize = jobOptions->volumeSize;
+      else if (globalOptions.cd.volumeSize > 0LL                                 ) volumeSize = globalOptions.cd.volumeSize;
+      else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag      ) volumeSize = CD_VOLUME_ECC_SIZE;
+      else                                                                         volumeSize = CD_VOLUME_SIZE;
       maxMediumSize = MAX_CD_SIZE;
       break;
     case STORAGE_TYPE_DVD:
-      if      ((jobOptions != NULL) && (jobOptions->volumeSize > 0LL)       ) volumeSize = jobOptions->volumeSize;
-      else if (globalOptions.dvd.volumeSize > 0LL                           ) volumeSize = globalOptions.dvd.volumeSize;
-      else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ) volumeSize = DVD_VOLUME_ECC_SIZE;
-      else                                                                    volumeSize = DVD_VOLUME_SIZE;
+      if      ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize > 0LL)) volumeSize = jobOptions->opticalDisk.volumeSize;
+      else if ((jobOptions != NULL) && (jobOptions->volumeSize > 0LL)            ) volumeSize = jobOptions->volumeSize;
+      else if (globalOptions.dvd.volumeSize > 0LL                                ) volumeSize = globalOptions.dvd.volumeSize;
+      else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag      ) volumeSize = DVD_VOLUME_ECC_SIZE;
+      else                                                                         volumeSize = DVD_VOLUME_SIZE;
       maxMediumSize = MAX_DVD_SIZE;
       break;
     case STORAGE_TYPE_BD:
-      if      ((jobOptions != NULL) && (jobOptions->volumeSize > 0LL)       ) volumeSize = jobOptions->volumeSize;
-      else if (globalOptions.bd.volumeSize > 0LL                            ) volumeSize = globalOptions.bd.volumeSize;
-      else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag ) volumeSize = BD_VOLUME_ECC_SIZE;
-      else                                                                    volumeSize = BD_VOLUME_SIZE;
+      if      ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize > 0LL)) volumeSize = jobOptions->opticalDisk.volumeSize;
+      else if ((jobOptions != NULL) && (jobOptions->volumeSize > 0LL)            ) volumeSize = jobOptions->volumeSize;
+      else if (globalOptions.bd.volumeSize > 0LL                                 ) volumeSize = globalOptions.bd.volumeSize;
+      else if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag      ) volumeSize = BD_VOLUME_ECC_SIZE;
+      else                                                                         volumeSize = BD_VOLUME_SIZE;
       maxMediumSize = MAX_BD_SIZE;
       break;
     default:

@@ -527,8 +527,8 @@ UNUSED_VARIABLE(scheduleCustomText);
   SET_OPTION_PASSWORD ("crypt-password",         &jobOptions->cryptPassword              );
   SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length));
 
-  SET_OPTION_STRING   ("pre-command",            jobOptions->preProcessScript            );
-  SET_OPTION_STRING   ("post-command",           jobOptions->postProcessScript           );
+  SET_OPTION_STRING   ("pre-command",            jobOptions->slavePreProcessScript       );
+  SET_OPTION_STRING   ("post-command",           jobOptions->slavePostProcessScript      );
 
   SET_OPTION_STRING   ("ftp-login-name",         jobOptions->ftpServer.loginName         );
   SET_OPTION_PASSWORD ("ftp-password",           &jobOptions->ftpServer.password         );
