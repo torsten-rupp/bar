@@ -2019,7 +2019,7 @@ public class TabJobs
   private final Color  COLOR_MODIFIED;
   private final Color  COLOR_INFO_FOREGROUND;
   private final Color  COLOR_INFO_BACKGROUND;
-  private final Color  COLOR_DISABLE_BACKGROUND;
+  private final Color  COLOR_DISABLED_BACKGROUND;
 
   private final Color  COLOR_BACKGROUND_ODD;
   private final Color  COLOR_BACKGROUND_EVEN;
@@ -2214,18 +2214,18 @@ public class TabJobs
     display = shell.getDisplay();
 
     // get colors
-    COLOR_BLACK              = display.getSystemColor(SWT.COLOR_BLACK);
-    COLOR_WHITE              = display.getSystemColor(SWT.COLOR_WHITE);
-    COLOR_RED                = display.getSystemColor(SWT.COLOR_RED);
-    COLOR_MODIFIED           = new Color(null,0xFF,0xA0,0xA0);
-    COLOR_INFO_FOREGROUND    = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-    COLOR_INFO_BACKGROUND    = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-    COLOR_DISABLE_BACKGROUND = display.getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
+    COLOR_BLACK               = display.getSystemColor(SWT.COLOR_BLACK);
+    COLOR_WHITE               = display.getSystemColor(SWT.COLOR_WHITE);
+    COLOR_RED                 = display.getSystemColor(SWT.COLOR_RED);
+    COLOR_MODIFIED            = new Color(null,0xFF,0xA0,0xA0);
+    COLOR_INFO_FOREGROUND     = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    COLOR_INFO_BACKGROUND     = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+    COLOR_DISABLED_BACKGROUND = display.getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
 
-    COLOR_BACKGROUND_ODD     = new Color(display,0xF8,0xF7,0xF6);
-    COLOR_BACKGROUND_EVEN    = display.getSystemColor(SWT.COLOR_WHITE);
-    COLOR_EXPIRED            = new Color(null,0xFF,0xA0,0xA0);
-    COLOR_IN_TRANSIT         = new Color(null,0xA0,0xFF,0xA0);
+    COLOR_BACKGROUND_ODD      = new Color(display,0xF8,0xF7,0xF6);
+    COLOR_BACKGROUND_EVEN     = display.getSystemColor(SWT.COLOR_WHITE);
+    COLOR_EXPIRED             = new Color(null,0xFF,0xA0,0xA0);
+    COLOR_IN_TRANSIT          = new Color(null,0xA0,0xFF,0xA0);
 
     // get images
     IMAGE_DIRECTORY          = Widgets.loadImage(display,"directory.png");
@@ -8452,7 +8452,7 @@ widgetArchivePartSize.setListVisible(true);
                   else
                   {
                     Widgets.setEnabled(control,false);
-                    control.setBackground(COLOR_DISABLE_BACKGROUND);
+                    control.setBackground(COLOR_DISABLED_BACKGROUND);
                   }
                 }
               });
@@ -8556,7 +8556,7 @@ widgetArchivePartSize.setListVisible(true);
                   else
                   {
                     Widgets.setEnabled(control,false);
-                    control.setBackground(COLOR_DISABLE_BACKGROUND);
+                    control.setBackground(COLOR_DISABLED_BACKGROUND);
                   }
                 }
               });
