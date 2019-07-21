@@ -169,6 +169,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_STRUCT_VALUE_STRING      ("pre-command",               JobNode,job.options.preProcessScript             ),
   CONFIG_STRUCT_VALUE_STRING      ("post-command",              JobNode,job.options.postProcessScript            ),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-pre-command",         JobNode,job.options.slavePreProcessScript        ),
+  CONFIG_STRUCT_VALUE_STRING      ("slave-post-command",        JobNode,job.options.slavePostProcessScript       ),
 
   CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",            JobNode,job.options.ftpServer.loginName          ),
   CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",              JobNode,job.options.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
@@ -608,6 +610,637 @@ LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
 
   // insert into persistence list
   List_insert(persistenceList,persistenceNode,nextPersistenceNode);
+}
+
+/***********************************************************************\
+* Name   : initOptionsFileServer
+* Purpose: init file server
+* Input  : fileServer - file server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initOptionsFileServer(FileServer *fileServer)
+{
+  assert(fileServer != NULL);
+  assert(globalOptions.defaultFileServer != NULL);
+}
+
+/***********************************************************************\
+* Name   : duplicateOptionsFileServer
+* Purpose: duplicate file server
+* Input  : fileServer     - file server
+*          fromFileServer - from file server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void duplicateOptionsFileServer(FileServer *fileServer, const FileServer *fromFileServer)
+{
+  assert(fileServer != NULL);
+  assert(fromFileServer != NULL);
+}
+
+/***********************************************************************\
+* Name   : clearOptionsFileServer
+* Purpose: clear file server
+* Input  : fileServer - file server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearOptionsFileServer(FileServer *fileServer)
+{
+  assert(fileServer != NULL);
+}
+
+/***********************************************************************\
+* Name   : doneOptionsFileServer
+* Purpose: done file server
+* Input  : fileServer - file server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneOptionsFileServer(FileServer *fileServer)
+{
+  assert(fileServer != NULL);
+}
+
+/***********************************************************************\
+* Name   : initOptionsFTPServer
+* Purpose: init FTP server
+* Input  : ftpServer - FTP server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initOptionsFTPServer(FTPServer *ftpServer)
+{
+  assert(ftpServer != NULL);
+  assert(globalOptions.defaultFTPServer != NULL);
+
+  ftpServer->loginName = String_new();
+  Password_initDuplicate(&ftpServer->password,&globalOptions.defaultFTPServer->ftp.password);
+}
+
+/***********************************************************************\
+* Name   : duplicateOptionsFTPServer
+* Purpose: duplicate FTP server
+* Input  : ftpServer     - FTP server
+*          fromFTPServer - from FTP server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void duplicateOptionsFTPServer(FTPServer *ftpServer, const FTPServer *fromFTPServer)
+{
+  assert(ftpServer != NULL);
+  assert(fromFTPServer != NULL);
+
+  ftpServer->loginName = String_duplicate(fromFTPServer->loginName);
+  Password_initDuplicate(&ftpServer->password,&fromFTPServer->password);
+}
+
+/***********************************************************************\
+* Name   : clearOptionsFTPServer
+* Purpose: clear FTP server
+* Input  : ftpServer - FTP server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearOptionsFTPServer(FTPServer *ftpServer)
+{
+  assert(ftpServer != NULL);
+
+  String_clear(ftpServer->loginName);
+  Password_clear(&ftpServer->password);
+}
+
+/***********************************************************************\
+* Name   : doneOptionsFTPServer
+* Purpose: done FTP server
+* Input  : ftpServer - FTP server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneOptionsFTPServer(FTPServer *ftpServer)
+{
+  assert(ftpServer != NULL);
+
+  Password_done(&ftpServer->password);
+  String_delete(ftpServer->loginName);
+}
+
+/***********************************************************************\
+* Name   : initOptionsSSHServer
+* Purpose: init SSH server
+* Input  : sshServer - SSH server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initOptionsSSHServer(SSHServer *sshServer)
+{
+  assert(sshServer != NULL);
+  assert(globalOptions.defaultSSHServer != NULL);
+
+  sshServer->port      = 0;
+  sshServer->loginName = String_new();
+  Password_initDuplicate(&sshServer->password,&globalOptions.defaultSSHServer->ssh.password);
+  duplicateKey(&sshServer->publicKey,&globalOptions.defaultSSHServer->ssh.publicKey);
+  duplicateKey(&sshServer->privateKey,&globalOptions.defaultSSHServer->ssh.privateKey);
+}
+
+/***********************************************************************\
+* Name   : duplicateOptionsSSHServer
+* Purpose: duplicate SSH server
+* Input  : sshServer     - SSH server
+*          fromSSHServer - from SSH server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void duplicateOptionsSSHServer(SSHServer *sshServer, const SSHServer *fromSSHServer)
+{
+  assert(sshServer != NULL);
+  assert(fromSSHServer != NULL);
+
+  sshServer->port      = fromSSHServer->port;
+  sshServer->loginName = String_duplicate(fromSSHServer->loginName);
+  Password_initDuplicate(&sshServer->password,&fromSSHServer->password);
+  duplicateKey(&sshServer->publicKey,&fromSSHServer->publicKey);
+  duplicateKey(&sshServer->privateKey,&fromSSHServer->privateKey);
+}
+
+/***********************************************************************\
+* Name   : clearOptionsSSHServer
+* Purpose: clear SSH server
+* Input  : sshServer - SSH server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearOptionsSSHServer(SSHServer *sshServer)
+{
+  assert(sshServer != NULL);
+
+  sshServer->port = 0;
+  String_clear(sshServer->loginName);
+  Password_clear(&sshServer->password);
+  clearKey(&sshServer->publicKey);
+  clearKey(&sshServer->privateKey);
+}
+
+/***********************************************************************\
+* Name   : doneOptionsSSHServer
+* Purpose: done SSH server
+* Input  : sshServer - SSH server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneOptionsSSHServer(SSHServer *sshServer)
+{
+  assert(sshServer != NULL);
+
+  doneKey(&sshServer->privateKey);
+  doneKey(&sshServer->publicKey);
+  Password_done(&sshServer->password);
+  String_delete(sshServer->loginName);
+}
+
+/***********************************************************************\
+* Name   : initOptionsWebDAVServer
+* Purpose: init webDAV server
+* Input  : webDAVServer - webDAV server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initOptionsWebDAVServer(WebDAVServer *webDAVServer)
+{
+  assert(webDAVServer != NULL);
+  assert(globalOptions.defaultWebDAVServer != NULL);
+
+  webDAVServer->loginName = String_new();
+  Password_initDuplicate(&webDAVServer->password,&globalOptions.defaultWebDAVServer->webDAV.password);
+  duplicateKey(&webDAVServer->publicKey,&globalOptions.defaultWebDAVServer->webDAV.publicKey);
+  duplicateKey(&webDAVServer->privateKey,&globalOptions.defaultWebDAVServer->webDAV.privateKey);
+}
+
+/***********************************************************************\
+* Name   : duplicateOptionsWebDAVServer
+* Purpose: duplicate webDAV server
+* Input  : webDAVServer     - webDAV server
+*          fromWEBDAVServer - from webDAV server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void duplicateOptionsWebDAVServer(WebDAVServer *webDAVServer, const WebDAVServer *fromWEBDAVServer)
+{
+  assert(webDAVServer != NULL);
+  assert(fromWEBDAVServer != NULL);
+
+  webDAVServer->loginName = String_duplicate(fromWEBDAVServer->loginName);
+  Password_initDuplicate(&webDAVServer->password,&fromWEBDAVServer->password);
+  duplicateKey(&webDAVServer->publicKey,&fromWEBDAVServer->publicKey);
+  duplicateKey(&webDAVServer->privateKey,&fromWEBDAVServer->privateKey);
+}
+
+/***********************************************************************\
+* Name   : clearOptionsWebDAVServer
+* Purpose: clear webDAV server
+* Input  : webDAVServer - webDAV server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearOptionsWebDAVServer(WebDAVServer *webDAVServer)
+{
+  assert(webDAVServer != NULL);
+
+  String_clear(webDAVServer->loginName);
+  Password_clear(&webDAVServer->password);
+  clearKey(&webDAVServer->publicKey);
+  clearKey(&webDAVServer->privateKey);
+}
+
+/***********************************************************************\
+* Name   : doneOptionsWebDAVServer
+* Purpose: done webDAV server
+* Input  : webDAVServer - webDAV server
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneOptionsWebDAVServer(WebDAVServer *webDAVServer)
+{
+  assert(webDAVServer != NULL);
+
+  doneKey(&webDAVServer->privateKey);
+  doneKey(&webDAVServer->publicKey);
+  Password_done(&webDAVServer->password);
+  String_delete(webDAVServer->loginName);
+}
+
+/***********************************************************************\
+* Name   : initOptionsOpticalDisk
+* Purpose: init options optical disk
+* Input  : opticalDisk - optical disk options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initOptionsOpticalDisk(OpticalDisk *opticalDisk)
+{
+  assert(opticalDisk != NULL);
+
+  opticalDisk->deviceName              = String_new();
+  opticalDisk->requestVolumeCommand    = String_new();
+  opticalDisk->unloadVolumeCommand     = String_new();
+  opticalDisk->loadVolumeCommand       = String_new();
+  opticalDisk->volumeSize              = 0LL;
+  opticalDisk->imagePreProcessCommand  = String_new();
+  opticalDisk->imagePostProcessCommand = String_new();
+  opticalDisk->imageCommand            = String_new();
+  opticalDisk->eccPreProcessCommand    = String_new();
+  opticalDisk->eccPostProcessCommand   = String_new();
+  opticalDisk->eccCommand              = String_new();
+  opticalDisk->blankCommand            = String_new();
+  opticalDisk->writePreProcessCommand  = String_new();
+  opticalDisk->writePostProcessCommand = String_new();
+  opticalDisk->writeCommand            = String_new();
+  opticalDisk->writeImageCommand       = String_new();
+}
+
+/***********************************************************************\
+* Name   : duplicateOptionsOpticalDisk
+* Purpose: duplicate options optical disk
+* Input  : opticalDisk     - optical disk options
+*          fromOpticalDisk - from optical disk options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void duplicateOptionsOpticalDisk(OpticalDisk *opticalDisk, const OpticalDisk *fromOpticalDisk)
+{
+  assert(opticalDisk != NULL);
+  assert(fromOpticalDisk != NULL);
+
+  opticalDisk->deviceName              = String_duplicate(fromOpticalDisk->deviceName             );
+  opticalDisk->requestVolumeCommand    = String_duplicate(fromOpticalDisk->requestVolumeCommand   );
+  opticalDisk->unloadVolumeCommand     = String_duplicate(fromOpticalDisk->unloadVolumeCommand    );
+  opticalDisk->loadVolumeCommand       = String_duplicate(fromOpticalDisk->loadVolumeCommand      );
+  opticalDisk->volumeSize              = fromOpticalDisk->volumeSize;
+  opticalDisk->imagePreProcessCommand  = String_duplicate(fromOpticalDisk->imagePreProcessCommand );
+  opticalDisk->imagePostProcessCommand = String_duplicate(fromOpticalDisk->imagePostProcessCommand);
+  opticalDisk->imageCommand            = String_duplicate(fromOpticalDisk->imageCommand           );
+  opticalDisk->eccPreProcessCommand    = String_duplicate(fromOpticalDisk->eccPreProcessCommand   );
+  opticalDisk->eccPostProcessCommand   = String_duplicate(fromOpticalDisk->eccPostProcessCommand  );
+  opticalDisk->eccCommand              = String_duplicate(fromOpticalDisk->eccCommand             );
+  opticalDisk->blankCommand            = String_duplicate(fromOpticalDisk->blankCommand           );
+  opticalDisk->writePreProcessCommand  = String_duplicate(fromOpticalDisk->writePreProcessCommand );
+  opticalDisk->writePostProcessCommand = String_duplicate(fromOpticalDisk->writePostProcessCommand);
+  opticalDisk->writeCommand            = String_duplicate(fromOpticalDisk->writeCommand           );
+  opticalDisk->writeImageCommand       = String_duplicate(fromOpticalDisk->writeImageCommand      );
+}
+
+/***********************************************************************\
+* Name   : clearOptionsOpticalDisk
+* Purpose: clear options optical disk
+* Input  : opticalDisk - optical disc options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearOptionsOpticalDisk(OpticalDisk *opticalDisk)
+{
+  assert(opticalDisk != NULL);
+
+  String_clear(opticalDisk->deviceName             );
+  String_clear(opticalDisk->requestVolumeCommand   );
+  String_clear(opticalDisk->unloadVolumeCommand    );
+  String_clear(opticalDisk->loadVolumeCommand      );
+  opticalDisk->volumeSize = 0LL;
+  String_clear(opticalDisk->imagePreProcessCommand );
+  String_clear(opticalDisk->imagePostProcessCommand);
+  String_clear(opticalDisk->imageCommand           );
+  String_clear(opticalDisk->eccPreProcessCommand   );
+  String_clear(opticalDisk->eccPostProcessCommand  );
+  String_clear(opticalDisk->eccCommand             );
+  String_clear(opticalDisk->blankCommand           );
+  String_clear(opticalDisk->writePreProcessCommand );
+  String_clear(opticalDisk->writePostProcessCommand);
+  String_clear(opticalDisk->writeCommand           );
+  String_clear(opticalDisk->writeImageCommand      );
+}
+
+/***********************************************************************\
+* Name   : doneOptionsOpticalDisk
+* Purpose: done options optical disk
+* Input  : opticalDisk - optical disc options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneOptionsOpticalDisk(OpticalDisk *opticalDisk)
+{
+  assert(opticalDisk != NULL);
+
+  String_delete(opticalDisk->writeImageCommand      );
+  String_delete(opticalDisk->writeCommand           );
+  String_delete(opticalDisk->writePostProcessCommand);
+  String_delete(opticalDisk->writePreProcessCommand );
+  String_delete(opticalDisk->blankCommand           );
+  String_delete(opticalDisk->eccCommand             );
+  String_delete(opticalDisk->eccPostProcessCommand  );
+  String_delete(opticalDisk->eccPreProcessCommand   );
+  String_delete(opticalDisk->imageCommand           );
+  String_delete(opticalDisk->imagePostProcessCommand);
+  String_delete(opticalDisk->imagePreProcessCommand );
+  String_delete(opticalDisk->loadVolumeCommand      );
+  String_delete(opticalDisk->unloadVolumeCommand    );
+  String_delete(opticalDisk->requestVolumeCommand   );
+  String_delete(opticalDisk->deviceName             );
+}
+
+/***********************************************************************\
+* Name   : initOptionsDevice
+* Purpose: init options device
+* Input  : device - device options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initOptionsDevice(Device *device)
+{
+  assert(device != NULL);
+
+  device->name                    = String_new();
+  device->requestVolumeCommand    = String_new();
+  device->unloadVolumeCommand     = String_new();
+  device->loadVolumeCommand       = String_new();
+  device->volumeSize              = 0LL;
+  device->imagePreProcessCommand  = String_new();
+  device->imagePostProcessCommand = String_new();
+  device->imageCommand            = String_new();
+  device->eccPreProcessCommand    = String_new();
+  device->eccPostProcessCommand   = String_new();
+  device->eccCommand              = String_new();
+  device->blankCommand            = String_new();
+  device->writePreProcessCommand  = String_new();
+  device->writePostProcessCommand = String_new();
+  device->writeCommand            = String_new();
+}
+
+/***********************************************************************\
+* Name   : duplicateOptionsDevice
+* Purpose: duplicate options device
+* Input  : device     - device options
+*          fromDevice - from device options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void duplicateOptionsDevice(Device *device, const Device *fromDevice)
+{
+  assert(device != NULL);
+  assert(fromDevice != NULL);
+
+  device->name                    = String_duplicate(fromDevice->name                   );
+  device->requestVolumeCommand    = String_duplicate(fromDevice->requestVolumeCommand   );
+  device->unloadVolumeCommand     = String_duplicate(fromDevice->unloadVolumeCommand    );
+  device->loadVolumeCommand       = String_duplicate(fromDevice->loadVolumeCommand      );
+  device->volumeSize              = fromDevice->volumeSize;
+  device->imagePreProcessCommand  = String_duplicate(fromDevice->imagePreProcessCommand );
+  device->imagePostProcessCommand = String_duplicate(fromDevice->imagePostProcessCommand);
+  device->imageCommand            = String_duplicate(fromDevice->imageCommand           );
+  device->eccPreProcessCommand    = String_duplicate(fromDevice->eccPreProcessCommand   );
+  device->eccPostProcessCommand   = String_duplicate(fromDevice->eccPostProcessCommand  );
+  device->eccCommand              = String_duplicate(fromDevice->eccCommand             );
+  device->blankCommand            = String_duplicate(fromDevice->blankCommand           );
+  device->writePreProcessCommand  = String_duplicate(fromDevice->writePreProcessCommand );
+  device->writePostProcessCommand = String_duplicate(fromDevice->writePostProcessCommand);
+  device->writeCommand            = String_duplicate(fromDevice->writeCommand           );
+}
+
+/***********************************************************************\
+* Name   : clearOptionsDevice
+* Purpose: clear device
+* Input  : device - device options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearOptionsDevice(Device *device)
+{
+  assert(device != NULL);
+
+  String_clear(device->name                   );
+  String_clear(device->requestVolumeCommand   );
+  String_clear(device->unloadVolumeCommand    );
+  String_clear(device->loadVolumeCommand      );
+  device->volumeSize = 0LL;
+  String_clear(device->imagePreProcessCommand );
+  String_clear(device->imagePostProcessCommand);
+  String_clear(device->imageCommand           );
+  String_clear(device->eccPreProcessCommand   );
+  String_clear(device->eccPostProcessCommand  );
+  String_clear(device->eccCommand             );
+  String_clear(device->blankCommand           );
+  String_clear(device->writePreProcessCommand );
+  String_clear(device->writePostProcessCommand);
+  String_clear(device->writeCommand           );
+}
+
+/***********************************************************************\
+* Name   : doneOptionsDevice
+* Purpose: done device
+* Input  : device - device options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void doneOptionsDevice(Device *device)
+{
+  assert(device != NULL);
+
+  String_delete(device->writeCommand           );
+  String_delete(device->writePostProcessCommand);
+  String_delete(device->writePreProcessCommand );
+  String_delete(device->blankCommand           );
+  String_delete(device->eccCommand             );
+  String_delete(device->eccPostProcessCommand  );
+  String_delete(device->eccPreProcessCommand   );
+  String_delete(device->imageCommand           );
+  String_delete(device->imagePostProcessCommand);
+  String_delete(device->imagePreProcessCommand );
+  String_delete(device->loadVolumeCommand      );
+  String_delete(device->unloadVolumeCommand    );
+  String_delete(device->requestVolumeCommand   );
+  String_delete(device->name                   );
+}
+
+/***********************************************************************\
+* Name   : clearOptions
+* Purpose: clear options
+* Input  : jobOptions - job options
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearOptions(JobOptions *jobOptions)
+{
+  uint i;
+
+  assert(jobOptions != NULL);
+
+  String_clear(jobOptions->uuid);
+
+  String_clear(jobOptions->includeFileListFileName);
+  String_clear(jobOptions->includeFileCommand);
+  String_clear(jobOptions->includeImageListFileName);
+  String_clear(jobOptions->includeImageCommand);
+  String_clear(jobOptions->excludeListFileName);
+  String_clear(jobOptions->excludeCommand);
+
+  List_clear(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  PatternList_clear(&jobOptions->compressExcludePatternList);
+  DeltaSourceList_clear(&jobOptions->deltaSourceList);
+  List_clear(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_clear(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  jobOptions->persistenceList.lastModificationTimestamp = 0LL;
+
+  jobOptions->archiveType                = ARCHIVE_TYPE_NORMAL;
+
+  jobOptions->archivePartSize            = globalOptions.archivePartSize;
+  String_clear(jobOptions->incrementalListFileName);
+  jobOptions->directoryStripCount        = DIRECTORY_STRIP_NONE;
+  String_clear(jobOptions->destination);
+  jobOptions->owner                      = globalOptions.owner;
+  jobOptions->permissions                = globalOptions.permissions;
+  jobOptions->patternType                = globalOptions.patternType;
+
+  jobOptions->compressAlgorithms.delta   = COMPRESS_ALGORITHM_NONE;
+  jobOptions->compressAlgorithms.byte    = COMPRESS_ALGORITHM_NONE;
+
+  #ifdef HAVE_GCRYPT
+    jobOptions->cryptType                = CRYPT_TYPE_SYMMETRIC;
+  #else /* not HAVE_GCRYPT */
+    jobOptions->cryptType                = CRYPT_TYPE_NONE;
+  #endif /* HAVE_GCRYPT */
+  for (i = 0; i < 4; i++)
+  {
+    jobOptions->cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
+  }
+  jobOptions->cryptPasswordMode                 = PASSWORD_MODE_DEFAULT;
+  Password_clear(&jobOptions->cryptPassword);
+  clearKey(&jobOptions->cryptPublicKey);
+  clearKey(&jobOptions->cryptPrivateKey);
+
+  String_clear(jobOptions->preProcessScript );
+  String_clear(jobOptions->postProcessScript);
+  String_clear(jobOptions->slavePreProcessScript );
+  String_clear(jobOptions->slavePostProcessScript);
+
+  clearOptionsFileServer(&jobOptions->fileServer);
+  clearOptionsFTPServer(&jobOptions->ftpServer);
+  clearOptionsSSHServer(&jobOptions->sshServer);
+  clearOptionsWebDAVServer(&jobOptions->webDAVServer);
+  clearOptionsOpticalDisk(&jobOptions->opticalDisk);
+  clearOptionsDevice(&jobOptions->device);
+
+  String_clear(jobOptions->comment);
+
+  jobOptions->skipUnreadableFlag         = FALSE;
+  jobOptions->forceDeltaCompressionFlag  = FALSE;
+  jobOptions->ignoreNoDumpAttributeFlag  = FALSE;
+  jobOptions->archiveFileMode            = ARCHIVE_FILE_MODE_STOP;
+  jobOptions->restoreEntryMode           = RESTORE_ENTRY_MODE_STOP;
+  jobOptions->errorCorrectionCodesFlag   = FALSE;
+  jobOptions->alwaysCreateImageFlag      = FALSE;
+  jobOptions->blankFlag                  = FALSE;
+  jobOptions->waitFirstVolumeFlag        = FALSE;
+  jobOptions->rawImagesFlag              = FALSE;
+  jobOptions->noFragmentsCheckFlag       = FALSE;
+//TODO: job option or better global option only?
+  jobOptions->noIndexDatabaseFlag        = FALSE;
+  jobOptions->forceVerifySignaturesFlag  = FALSE;
+  jobOptions->skipVerifySignaturesFlag   = FALSE;
+  jobOptions->noSignatureFlag            = FALSE;
+//TODO: job option or better global option only?
+  jobOptions->noBAROnMediumFlag          = FALSE;
+  jobOptions->noStopOnErrorFlag          = FALSE;
+  jobOptions->noStopOnAttributeErrorFlag = FALSE;
 }
 
 /***********************************************************************\
@@ -2483,16 +3116,12 @@ bool Job_read(JobNode *jobNode)
   // reset job values
   String_clear(jobNode->job.uuid);
   String_clear(jobNode->job.slaveHost.name);
-  jobNode->job.slaveHost.port                            = 0;
-  jobNode->job.slaveHost.forceSSL                        = FALSE;
+  jobNode->job.slaveHost.port     = 0;
+  jobNode->job.slaveHost.forceSSL = FALSE;
   String_clear(jobNode->job.archiveName);
   EntryList_clear(&jobNode->job.includeEntryList);
   PatternList_clear(&jobNode->job.excludePatternList);
-  DeltaSourceList_clear(&jobNode->job.options.deltaSourceList);
-  List_clear(&jobNode->job.options.scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  List_clear(&jobNode->job.options.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  jobNode->job.options.persistenceList.lastModificationTimestamp = 0LL;
-  Job_clearOptions(&jobNode->job.options);
+  clearOptions(&jobNode->job.options);
 
   // open file
   error = File_open(&fileHandle,jobNode->fileName,FILE_OPEN_READ);
@@ -2837,6 +3466,7 @@ STRING_CHECK_VALID(jobNode->lastErrorMessage);
           Job_includeExcludeChanged(jobNode);
           Job_mountChanged(jobNode);
           Job_scheduleChanged(jobNode);
+          Job_persistenceChanged(jobNode);
         }
       }
     }
@@ -3144,8 +3774,6 @@ void Job_start(JobNode *jobNode)
 
 void Job_end(JobNode *jobNode)
 {
-  ScheduleNode *scheduleNode;
-
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
@@ -3250,14 +3878,13 @@ void Job_initOptions(JobOptions *jobOptions)
 
   jobOptions->uuid                                      = String_new();
 
-  jobOptions->archiveType                               = globalOptions.archiveType;
-
   jobOptions->includeFileListFileName                   = String_duplicate(globalOptions.includeFileListFileName);
   jobOptions->includeFileCommand                        = String_duplicate(globalOptions.includeFileCommand);
   jobOptions->includeImageListFileName                  = String_duplicate(globalOptions.includeImageListFileName);
   jobOptions->includeImageCommand                       = String_duplicate(globalOptions.includeImageCommand);
   jobOptions->excludeListFileName                       = String_duplicate(globalOptions.excludeListFileName);
   jobOptions->excludeCommand                            = String_duplicate(globalOptions.excludeCommand);
+
   List_initDuplicate(&jobOptions->mountList,
                      &globalOptions.mountList,
                      NULL,  // fromListFromNode
@@ -3278,351 +3905,188 @@ void Job_initOptions(JobOptions *jobOptions)
   List_init(&jobOptions->persistenceList);
   jobOptions->persistenceList.lastModificationTimestamp = 0LL;
 
+  jobOptions->archiveType                               = globalOptions.archiveType;
+
   jobOptions->archivePartSize                           = globalOptions.archivePartSize;
   jobOptions->incrementalListFileName                   = String_duplicate(globalOptions.incrementalListFileName);
   jobOptions->directoryStripCount                       = globalOptions.directoryStripCount;
   jobOptions->destination                               = String_duplicate(globalOptions.destination);
-  jobOptions->owner.userId                              = globalOptions.owner.userId;
-  jobOptions->owner.groupId                             = globalOptions.owner.groupId;
+  jobOptions->owner                                     = globalOptions.owner;
+  jobOptions->permissions                               = globalOptions.permissions;
   jobOptions->patternType                               = globalOptions.patternType;
+
   jobOptions->compressAlgorithms.delta                  = globalOptions.compressAlgorithms.delta;
   jobOptions->compressAlgorithms.byte                   = globalOptions.compressAlgorithms.byte;
+
   for (i = 0; i < 4; i++)
   {
     jobOptions->cryptAlgorithms[i] = globalOptions.cryptAlgorithms[i];
   }
-  #ifdef HAVE_GCRYPT
-    jobOptions->cryptType                               = globalOptions.cryptType;
-  #else /* not HAVE_GCRYPT */
-    jobOptions->cryptType                               = globalOptions.cryptType;
-  #endif /* HAVE_GCRYPT */
+  jobOptions->cryptType                                 = globalOptions.cryptType;
   jobOptions->cryptPasswordMode                         = globalOptions.cryptPasswordMode;
   Password_initDuplicate(&jobOptions->cryptPassword,&globalOptions.cryptPassword);
   duplicateKey(&jobOptions->cryptPublicKey,&globalOptions.cryptPublicKey);
   duplicateKey(&jobOptions->cryptPrivateKey,&globalOptions.cryptPrivateKey);
 
-  jobOptions->preProcessScript                          = NULL;
-  jobOptions->postProcessScript                         = NULL;
-//TODO: requrired?
-#if 0
-  jobOptions->file.preProcessScript                     = NULL;
-  jobOptions->file.postProcessScript                    = NULL;
-  jobOptions->ftp.preProcessScript                      = NULL;
-  jobOptions->ftp.postProcessScript                     = NULL;
-  jobOptions->scp.preProcessScript                      = NULL;
-  jobOptions->scp.postProcessScript                     = NULL;
-  jobOptions->sftp.preProcessScript                     = NULL;
-  jobOptions->sftp.postProcessScript                    = NULL;
-  jobOptions->webdav.preProcessScript                   = NULL;
-  jobOptions->webdav.postProcessScript                  = NULL;
-  jobOptions->cd.deviceName                             = NULL;
-  jobOptions->cd.requestVolumeCommand                   = NULL;
-  jobOptions->cd.unloadVolumeCommand                    = NULL;
-  jobOptions->cd.loadVolumeCommand                      = NULL;
-  jobOptions->cd.volumeSize                             = 0LL;
-  jobOptions->cd.imagePreProcessCommand                 = NULL;
-  jobOptions->cd.imagePostProcessCommand                = NULL;
-  jobOptions->cd.imageCommand                           = NULL;
-  jobOptions->cd.eccPreProcessCommand                   = NULL;
-  jobOptions->cd.eccPostProcessCommand                  = NULL;
-  jobOptions->cd.eccCommand                             = NULL;
-  jobOptions->cd.blankCommand                           = NULL;
-  jobOptions->cd.writePreProcessCommand                 = NULL;
-  jobOptions->cd.writePostProcessCommand                = NULL;
-  jobOptions->cd.writeCommand                           = NULL;
-  jobOptions->cd.writeImageCommand                      = NULL;
-  jobOptions->dvd.deviceName                            = NULL;
-  jobOptions->dvd.requestVolumeCommand                  = NULL;
-  jobOptions->dvd.unloadVolumeCommand                   = NULL;
-  jobOptions->dvd.loadVolumeCommand                     = NULL;
-  jobOptions->dvd.volumeSize                            = 0LL;
-  jobOptions->dvd.imagePreProcessCommand                = NULL;
-  jobOptions->dvd.imagePostProcessCommand               = NULL;
-  jobOptions->dvd.imageCommand                          = NULL;
-  jobOptions->dvd.eccPreProcessCommand                  = NULL;
-  jobOptions->dvd.eccPostProcessCommand                 = NULL;
-  jobOptions->dvd.eccCommand                            = NULL;
-  jobOptions->dvd.blankCommand                          = NULL;
-  jobOptions->dvd.writePreProcessCommand                = NULL;
-  jobOptions->dvd.writePostProcessCommand               = NULL;
-  jobOptions->dvd.writeCommand                          = NULL;
-  jobOptions->dvd.writeImageCommand                     = NULL;
-  jobOptions->bd.deviceName                             = NULL;
-  jobOptions->bd.requestVolumeCommand                   = NULL;
-  jobOptions->bd.unloadVolumeCommand                    = NULL;
-  jobOptions->bd.loadVolumeCommand                      = NULL;
-  jobOptions->bd.volumeSize                             = 0LL;
-  jobOptions->bd.imagePreProcessCommand                 = NULL;
-  jobOptions->bd.imagePostProcessCommand                = NULL;
-  jobOptions->bd.imageCommand                           = NULL;
-  jobOptions->bd.eccPreProcessCommand                   = NULL;
-  jobOptions->bd.eccPostProcessCommand                  = NULL;
-  jobOptions->bd.eccCommand                             = NULL;
-  jobOptions->bd.blankCommand                           = NULL;
-  jobOptions->bd.writePreProcessCommand                 = NULL;
-  jobOptions->bd.writePostProcessCommand                = NULL;
-  jobOptions->bd.writeCommand                           = NULL;
-  jobOptions->bd.writeImageCommand                      = NULL;
-#endif
+  jobOptions->preProcessScript                          = String_new();
+  jobOptions->postProcessScript                         = String_new();
+  jobOptions->slavePreProcessScript                     = String_new();
+  jobOptions->slavePostProcessScript                    = String_new();
 
-  assert(globalOptions.defaultFTPServer != NULL);
-  Password_initDuplicate(&jobOptions->ftpServer.password,&globalOptions.defaultFTPServer->ftp.password);
+  initOptionsFileServer(&jobOptions->fileServer);
+  initOptionsFTPServer(&jobOptions->ftpServer);
+  initOptionsSSHServer(&jobOptions->sshServer);
+  initOptionsWebDAVServer(&jobOptions->webDAVServer);
+  initOptionsOpticalDisk(&jobOptions->opticalDisk);
+  initOptionsDevice(&jobOptions->device);
 
-  assert(globalOptions.defaultSSHServer != NULL);
-  Password_initDuplicate(&jobOptions->sshServer.password,&globalOptions.defaultSSHServer->ssh.password);
-  duplicateKey(&jobOptions->sshServer.publicKey,&globalOptions.defaultSSHServer->ssh.publicKey);
-  duplicateKey(&jobOptions->sshServer.privateKey,&globalOptions.defaultSSHServer->ssh.privateKey);
+  jobOptions->fragmentSize                              = globalOptions.fragmentSize;
+  jobOptions->maxStorageSize                            = globalOptions.maxStorageSize;
+  jobOptions->volumeSize                                = globalOptions.volumeSize;
 
-  assert(globalOptions.defaultWebDAVServer != NULL);
-  Password_initDuplicate(&jobOptions->webDAVServer.password,&globalOptions.defaultWebDAVServer->webDAV.password);
-  duplicateKey(&jobOptions->webDAVServer.publicKey,&globalOptions.defaultWebDAVServer->webDAV.publicKey);
-  duplicateKey(&jobOptions->webDAVServer.privateKey,&globalOptions.defaultWebDAVServer->webDAV.privateKey);
+  jobOptions->comment                                   = String_duplicate(globalOptions.comment);
 
-  jobOptions->fragmentSize                    = globalOptions.fragmentSize;
-  jobOptions->maxStorageSize                  = globalOptions.maxStorageSize;
-  jobOptions->volumeSize                      = globalOptions.volumeSize;
-  jobOptions->comment                         = String_duplicate(globalOptions.comment);
-
-  jobOptions->skipUnreadableFlag              = globalOptions.skipUnreadableFlag;
-  jobOptions->forceDeltaCompressionFlag       = globalOptions.forceDeltaCompressionFlag;
-  jobOptions->ignoreNoDumpAttributeFlag       = globalOptions.ignoreNoDumpAttributeFlag;
-  jobOptions->archiveFileMode                 = globalOptions.archiveFileMode;
-  jobOptions->restoreEntryMode                = globalOptions.restoreEntryMode;
-  jobOptions->errorCorrectionCodesFlag        = globalOptions.errorCorrectionCodesFlag;
-  jobOptions->alwaysCreateImageFlag           = globalOptions.alwaysCreateImageFlag;
-  jobOptions->blankFlag                       = globalOptions.blankFlag;
-  jobOptions->waitFirstVolumeFlag             = globalOptions.waitFirstVolumeFlag;
-  jobOptions->rawImagesFlag                   = globalOptions.rawImagesFlag;
-  jobOptions->noFragmentsCheckFlag            = globalOptions.noFragmentsCheckFlag;
+  jobOptions->skipUnreadableFlag                        = globalOptions.skipUnreadableFlag;
+  jobOptions->forceDeltaCompressionFlag                 = globalOptions.forceDeltaCompressionFlag;
+  jobOptions->ignoreNoDumpAttributeFlag                 = globalOptions.ignoreNoDumpAttributeFlag;
+  jobOptions->archiveFileMode                           = globalOptions.archiveFileMode;
+  jobOptions->restoreEntryMode                          = globalOptions.restoreEntryMode;
+  jobOptions->errorCorrectionCodesFlag                  = globalOptions.errorCorrectionCodesFlag;
+  jobOptions->alwaysCreateImageFlag                     = globalOptions.alwaysCreateImageFlag;
+  jobOptions->blankFlag                                 = globalOptions.blankFlag;
+  jobOptions->waitFirstVolumeFlag                       = globalOptions.waitFirstVolumeFlag;
+  jobOptions->rawImagesFlag                             = globalOptions.rawImagesFlag;
+  jobOptions->noFragmentsCheckFlag                      = globalOptions.noFragmentsCheckFlag;
 //TODO: job option or better global option only?
-  jobOptions->noIndexDatabaseFlag             = globalOptions.noIndexDatabaseFlag;
-  jobOptions->forceVerifySignaturesFlag       = globalOptions.forceVerifySignaturesFlag;
-  jobOptions->skipVerifySignaturesFlag        = globalOptions.skipVerifySignaturesFlag;
-  jobOptions->noSignatureFlag                 = globalOptions.noSignatureFlag;
+  jobOptions->noIndexDatabaseFlag                       = globalOptions.noIndexDatabaseFlag;
+  jobOptions->forceVerifySignaturesFlag                 = globalOptions.forceVerifySignaturesFlag;
+  jobOptions->skipVerifySignaturesFlag                  = globalOptions.skipVerifySignaturesFlag;
+  jobOptions->noSignatureFlag                           = globalOptions.noSignatureFlag;
 //TODO: job option or better global option only?
-  jobOptions->noBAROnMediumFlag               = globalOptions.noBAROnMediumFlag;
-  jobOptions->noStopOnErrorFlag               = globalOptions.noStopOnErrorFlag;
-  jobOptions->noStopOnAttributeErrorFlag      = globalOptions.noStopOnAttributeErrorFlag;
+  jobOptions->noBAROnMediumFlag                         = globalOptions.noBAROnMediumFlag;
+  jobOptions->noStopOnErrorFlag                         = globalOptions.noStopOnErrorFlag;
+  jobOptions->noStopOnAttributeErrorFlag                = globalOptions.noStopOnAttributeErrorFlag;
 
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
 
 void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
 {
-  DEBUG_CHECK_RESOURCE_TRACE(fromJobOptions);
-
-  Job_initOptions(jobOptions);
-  Job_setOptions(jobOptions,fromJobOptions);
-}
-
-void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
-{
   uint i;
 
   assert(jobOptions != NULL);
   assert(fromJobOptions != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(jobOptions);
+
   DEBUG_CHECK_RESOURCE_TRACE(fromJobOptions);
 
-  String_set(jobOptions->uuid,                                fromJobOptions->uuid);
+  memClear(jobOptions,sizeof(JobOptions));
 
-  jobOptions->archiveType                                   = fromJobOptions->archiveType;
+  jobOptions->uuid                                      = String_new();
 
-  String_set(jobOptions->includeFileListFileName,             fromJobOptions->includeFileListFileName);
-  String_set(jobOptions->includeFileCommand,                  fromJobOptions->includeFileCommand);
-  String_set(jobOptions->includeImageListFileName,            fromJobOptions->includeImageListFileName);
-  String_set(jobOptions->includeImageCommand,                 fromJobOptions->includeImageCommand);
-  String_set(jobOptions->excludeListFileName,                fromJobOptions->excludeListFileName);
-  String_set(jobOptions->excludeCommand,                     fromJobOptions->excludeCommand);
+  jobOptions->includeFileListFileName                   = String_duplicate(fromJobOptions->includeFileListFileName);
+  jobOptions->includeFileCommand                        = String_duplicate(fromJobOptions->includeFileCommand);
+  jobOptions->includeImageListFileName                  = String_duplicate(fromJobOptions->includeImageListFileName);
+  jobOptions->includeImageCommand                       = String_duplicate(fromJobOptions->includeImageCommand);
+  jobOptions->excludeListFileName                       = String_duplicate(fromJobOptions->excludeListFileName);
+  jobOptions->excludeCommand                            = String_duplicate(fromJobOptions->excludeCommand);
 
-  List_clear(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
-  List_copy(&jobOptions->mountList,
-            NULL,  // toListNextNode
-            &fromJobOptions->mountList,
-            NULL,  // fromListFromNode
-            NULL,  // fromListToNode
-            CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
-           );
-  PatternList_clear(&jobOptions->compressExcludePatternList);
-  PatternList_copy(&jobOptions->compressExcludePatternList,
-                   &fromJobOptions->compressExcludePatternList,
-                   NULL,  // fromPatternListFromNode
-                   NULL  // fromPatternListToNode
-                  );
-  DeltaSourceList_clear(&jobOptions->deltaSourceList);
-  DeltaSourceList_copy(&jobOptions->deltaSourceList,
-                       &fromJobOptions->deltaSourceList,
-                       NULL,  // fromDeltaSourceListFromNode
-                       NULL  // fromDeltaSourceListToNode
-                      );
-  List_clear(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  List_copy(&jobOptions->scheduleList,
-            NULL, // toListNextNode
-            &fromJobOptions->scheduleList,
-            NULL,  // fromListFromNode
-            NULL,  // fromListToNode
-            CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
-           );
-  List_clear(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  List_copy(&jobOptions->persistenceList,
-            NULL,  // toListNextNode
-            &fromJobOptions->persistenceList,
-            NULL,  // fromListFromNode
-            NULL,  // fromListToNode
-            CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
-           );
-  jobOptions->persistenceList.lastModificationTimestamp     = 0LL;
+  List_initDuplicate(&jobOptions->mountList,
+                     &fromJobOptions->mountList,
+                     NULL,  // fromListFromNode
+                     NULL,  // fromListToNode
+                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+                    );
+  PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
+                            &fromJobOptions->compressExcludePatternList,
+                            NULL,  // fromPatternListFromNode
+                            NULL  // fromPatternListToNode
+                           );
+  DeltaSourceList_initDuplicate(&jobOptions->deltaSourceList,
+                                &fromJobOptions->deltaSourceList,
+                                NULL,  // fromDeltaSourceListFromNode
+                                NULL  // fromDeltaSourceListToNode
+                               );
+  List_initDuplicate(&jobOptions->scheduleList,
+                     &fromJobOptions->scheduleList,
+                     NULL,  // fromListFromNode
+                     NULL,  // fromListToNode
+                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
+                    );
+  List_initDuplicate(&jobOptions->persistenceList,
+                     &fromJobOptions->persistenceList,
+                     NULL,  // fromListFromNode
+                     NULL,  // fromListToNode
+                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+                    );
+  jobOptions->persistenceList.lastModificationTimestamp = 0LL;
 
-  jobOptions->archivePartSize                               = fromJobOptions->archivePartSize;
-  String_set(jobOptions->incrementalListFileName,             fromJobOptions->incrementalListFileName);
-  jobOptions->directoryStripCount                           = fromJobOptions->directoryStripCount;
-  String_set(jobOptions->destination,                         fromJobOptions->destination);
-  jobOptions->owner.userId                                  = fromJobOptions->owner.userId;
-  jobOptions->owner.groupId                                 = fromJobOptions->owner.groupId;
-  jobOptions->patternType                                   = fromJobOptions->patternType;
-  jobOptions->compressAlgorithms.delta                      = fromJobOptions->compressAlgorithms.delta;
-  jobOptions->compressAlgorithms.byte                       = fromJobOptions->compressAlgorithms.byte;
+  jobOptions->archiveType                               = fromJobOptions->archiveType;
+
+  jobOptions->archivePartSize                           = fromJobOptions->archivePartSize;
+  jobOptions->incrementalListFileName                   = String_duplicate(fromJobOptions->incrementalListFileName);
+  jobOptions->directoryStripCount                       = fromJobOptions->directoryStripCount;
+  jobOptions->destination                               = String_duplicate(fromJobOptions->destination);
+  jobOptions->owner                                     = fromJobOptions->owner;
+  jobOptions->permissions                               = fromJobOptions->permissions;
+  jobOptions->patternType                               = fromJobOptions->patternType;
+
+  jobOptions->compressAlgorithms.delta                  = fromJobOptions->compressAlgorithms.delta;
+  jobOptions->compressAlgorithms.byte                   = fromJobOptions->compressAlgorithms.byte;
+
   for (i = 0; i < 4; i++)
   {
     jobOptions->cryptAlgorithms[i] = fromJobOptions->cryptAlgorithms[i];
   }
-  jobOptions->cryptType                                     = fromJobOptions->cryptType;
-  jobOptions->cryptPasswordMode                             = fromJobOptions->cryptPasswordMode;
-  Password_set(&jobOptions->cryptPassword,                    &fromJobOptions->cryptPassword);
-  setKey(&jobOptions->cryptPublicKey,fromJobOptions->cryptPublicKey.data,fromJobOptions->cryptPublicKey.length);
-  setKey(&jobOptions->cryptPrivateKey,fromJobOptions->cryptPrivateKey.data,fromJobOptions->cryptPrivateKey.length);
-  String_set(jobOptions->preProcessScript,                    fromJobOptions->preProcessScript);
-  String_set(jobOptions->postProcessScript,                   fromJobOptions->postProcessScript);
-
-  String_set(jobOptions->ftpServer.loginName,                 fromJobOptions->ftpServer.loginName);
-  Password_set(&jobOptions->ftpServer.password,               &fromJobOptions->ftpServer.password);
-
-  String_set(jobOptions->sshServer.loginName,                 fromJobOptions->sshServer.loginName);
-  Password_set(&jobOptions->sshServer.password,               &fromJobOptions->sshServer.password);
-  setKey(&jobOptions->sshServer.publicKey,fromJobOptions->sshServer.publicKey.data,fromJobOptions->sshServer.publicKey.length);
-  setKey(&jobOptions->sshServer.privateKey,fromJobOptions->sshServer.privateKey.data,fromJobOptions->sshServer.privateKey.length);
-
-  String_set(jobOptions->webDAVServer.loginName,              fromJobOptions->webDAVServer.loginName);
-  Password_set(&jobOptions->webDAVServer.password,            &fromJobOptions->webDAVServer.password);
-  setKey(&jobOptions->webDAVServer.publicKey,fromJobOptions->webDAVServer.publicKey.data,fromJobOptions->webDAVServer.publicKey.length);
-  setKey(&jobOptions->webDAVServer.privateKey,fromJobOptions->webDAVServer.privateKey.data,fromJobOptions->webDAVServer.privateKey.length);
-
-  jobOptions->fragmentSize                                  = fromJobOptions->fragmentSize;
-  jobOptions->maxStorageSize                                = fromJobOptions->maxStorageSize;
-  jobOptions->volumeSize                                    = fromJobOptions->volumeSize;
-  String_set(jobOptions->comment,                             fromJobOptions->comment);
-  jobOptions->skipUnreadableFlag                            = fromJobOptions->skipUnreadableFlag;
-  jobOptions->forceDeltaCompressionFlag                     = fromJobOptions->forceDeltaCompressionFlag;
-  jobOptions->ignoreNoDumpAttributeFlag                     = fromJobOptions->ignoreNoDumpAttributeFlag;
-  jobOptions->archiveFileMode                               = fromJobOptions->archiveFileMode;
-  jobOptions->restoreEntryMode                              = fromJobOptions->restoreEntryMode;
-  jobOptions->errorCorrectionCodesFlag                      = fromJobOptions->errorCorrectionCodesFlag;
-  jobOptions->blankFlag                                     = fromJobOptions->blankFlag;
-  jobOptions->alwaysCreateImageFlag                         = fromJobOptions->alwaysCreateImageFlag;
-  jobOptions->waitFirstVolumeFlag                           = fromJobOptions->waitFirstVolumeFlag;
-  jobOptions->rawImagesFlag                                 = fromJobOptions->rawImagesFlag;
-  jobOptions->noFragmentsCheckFlag                          = fromJobOptions->noFragmentsCheckFlag;
-  jobOptions->noIndexDatabaseFlag                           = fromJobOptions->noIndexDatabaseFlag;
-  jobOptions->skipVerifySignaturesFlag                      = fromJobOptions->skipVerifySignaturesFlag;
-  jobOptions->noBAROnMediumFlag                             = fromJobOptions->noBAROnMediumFlag;
-  jobOptions->noStopOnErrorFlag                             = fromJobOptions->noStopOnErrorFlag;
-  jobOptions->noStopOnAttributeErrorFlag                    = fromJobOptions->noStopOnAttributeErrorFlag;
-
-  String_set(jobOptions->opticalDisk.requestVolumeCommand,    fromJobOptions->opticalDisk.requestVolumeCommand);
-  String_set(jobOptions->opticalDisk.unloadVolumeCommand,     fromJobOptions->opticalDisk.unloadVolumeCommand);
-  String_set(jobOptions->opticalDisk.imagePreProcessCommand,  fromJobOptions->opticalDisk.imagePreProcessCommand);
-  String_set(jobOptions->opticalDisk.imagePostProcessCommand, fromJobOptions->opticalDisk.imagePostProcessCommand);
-  String_set(jobOptions->opticalDisk.imageCommand,            fromJobOptions->opticalDisk.imageCommand);
-  String_set(jobOptions->opticalDisk.eccPreProcessCommand,    fromJobOptions->opticalDisk.eccPreProcessCommand);
-  String_set(jobOptions->opticalDisk.eccPostProcessCommand,   fromJobOptions->opticalDisk.eccPostProcessCommand);
-  String_set(jobOptions->opticalDisk.eccCommand,              fromJobOptions->opticalDisk.eccCommand);
-  String_set(jobOptions->opticalDisk.blankCommand,            fromJobOptions->opticalDisk.blankCommand);
-  String_set(jobOptions->opticalDisk.writePreProcessCommand,  fromJobOptions->opticalDisk.writePreProcessCommand);
-  String_set(jobOptions->opticalDisk.writePostProcessCommand, fromJobOptions->opticalDisk.writePostProcessCommand);
-  String_set(jobOptions->opticalDisk.writeCommand,            fromJobOptions->opticalDisk.writeCommand);
-
-  String_set(jobOptions->deviceName,                          fromJobOptions->deviceName);
-  String_set(jobOptions->device.requestVolumeCommand,         fromJobOptions->device.requestVolumeCommand);
-  String_set(jobOptions->device.unloadVolumeCommand,          fromJobOptions->device.unloadVolumeCommand);
-  String_set(jobOptions->device.imagePreProcessCommand,       fromJobOptions->device.imagePreProcessCommand);
-  String_set(jobOptions->device.imagePostProcessCommand,      fromJobOptions->device.imagePostProcessCommand);
-  String_set(jobOptions->device.imageCommand,                 fromJobOptions->device.imageCommand);
-  String_set(jobOptions->device.eccPreProcessCommand,         fromJobOptions->device.eccPreProcessCommand);
-  String_set(jobOptions->device.eccPostProcessCommand,        fromJobOptions->device.eccPostProcessCommand);
-  String_set(jobOptions->device.eccCommand,                   fromJobOptions->device.eccCommand);
-  String_set(jobOptions->device.blankCommand,                 fromJobOptions->device.blankCommand);
-  String_set(jobOptions->device.writePreProcessCommand,       fromJobOptions->device.writePreProcessCommand);
-  String_set(jobOptions->device.writePostProcessCommand,      fromJobOptions->device.writePostProcessCommand);
-  String_set(jobOptions->device.writeCommand,                 fromJobOptions->device.writeCommand);
-}
-
-void Job_clearOptions(JobOptions *jobOptions)
-{
-  uint i;
-
-  assert(jobOptions != NULL);
-
-  String_clear(jobOptions->uuid);
-
-  jobOptions->archiveType                       = ARCHIVE_TYPE_NORMAL;
-
-  String_clear(jobOptions->includeFileListFileName);
-  String_clear(jobOptions->includeFileCommand);
-  String_clear(jobOptions->includeImageListFileName);
-  String_clear(jobOptions->includeImageCommand);
-  String_clear(jobOptions->excludeListFileName);
-  String_clear(jobOptions->excludeCommand);
-
-  List_clear(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
-  PatternList_clear(&jobOptions->compressExcludePatternList);
-  DeltaSourceList_clear(&jobOptions->deltaSourceList);
-  List_clear(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  List_clear(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-
-  jobOptions->archivePartSize                   = globalOptions.archivePartSize;
-  String_clear(jobOptions->incrementalListFileName);
-  jobOptions->directoryStripCount               = DIRECTORY_STRIP_NONE;
-  String_clear(jobOptions->destination);
-  jobOptions->owner.userId                      = globalOptions.owner.userId;
-  jobOptions->owner.groupId                     = globalOptions.owner.groupId;
-  jobOptions->patternType                       = globalOptions.patternType;
-  jobOptions->compressAlgorithms.delta          = COMPRESS_ALGORITHM_NONE;
-  jobOptions->compressAlgorithms.byte           = COMPRESS_ALGORITHM_NONE;
-  for (i = 0; i < 4; i++)
-  {
-    jobOptions->cryptAlgorithms[i] = CRYPT_ALGORITHM_NONE;
-  }
   #ifdef HAVE_GCRYPT
-    jobOptions->cryptType                       = CRYPT_TYPE_SYMMETRIC;
+    jobOptions->cryptType                               = fromJobOptions->cryptType;
   #else /* not HAVE_GCRYPT */
-    jobOptions->cryptType                       = CRYPT_TYPE_NONE;
+    jobOptions->cryptType                               = fromJobOptions->cryptType;
   #endif /* HAVE_GCRYPT */
-  jobOptions->cryptPasswordMode                 = PASSWORD_MODE_DEFAULT;
-  Password_clear(&jobOptions->cryptPassword);
-  clearKey(&jobOptions->cryptPublicKey);
-  clearKey(&jobOptions->cryptPrivateKey);
+  jobOptions->cryptPasswordMode                         = fromJobOptions->cryptPasswordMode;
+  Password_initDuplicate(&jobOptions->cryptPassword,&fromJobOptions->cryptPassword);
+  duplicateKey(&jobOptions->cryptPublicKey,&fromJobOptions->cryptPublicKey);
+  duplicateKey(&jobOptions->cryptPrivateKey,&fromJobOptions->cryptPrivateKey);
 
-  String_clear(jobOptions->ftpServer.loginName);
-  Password_clear(&jobOptions->ftpServer.password);
-  jobOptions->sshServer.port                    = 0;
-  String_clear(jobOptions->sshServer.loginName);
-  Password_clear(&jobOptions->sshServer.password);
-  clearKey(&jobOptions->sshServer.publicKey);
-  clearKey(&jobOptions->sshServer.privateKey);
-  String_clear(jobOptions->preProcessScript);
-  String_clear(jobOptions->postProcessScript);
+  jobOptions->preProcessScript                          = String_duplicate(fromJobOptions->preProcessScript);
+  jobOptions->postProcessScript                         = String_duplicate(fromJobOptions->postProcessScript);
+  jobOptions->slavePreProcessScript                     = String_duplicate(fromJobOptions->slavePreProcessScript);
+  jobOptions->slavePostProcessScript                    = String_duplicate(fromJobOptions->slavePostProcessScript);
 
-  jobOptions->device.volumeSize                 = 0LL;
+  duplicateOptionsFileServer(&jobOptions->fileServer,&fromJobOptions->fileServer);
+  duplicateOptionsFTPServer(&jobOptions->ftpServer,&fromJobOptions->ftpServer);
+  duplicateOptionsSSHServer(&jobOptions->sshServer,&fromJobOptions->sshServer);
+  duplicateOptionsWebDAVServer(&jobOptions->webDAVServer,&fromJobOptions->webDAVServer);
+  duplicateOptionsOpticalDisk(&jobOptions->opticalDisk,&fromJobOptions->opticalDisk);
+  duplicateOptionsDevice(&jobOptions->device,&fromJobOptions->device);
 
-  jobOptions->waitFirstVolumeFlag               = FALSE;
-  jobOptions->errorCorrectionCodesFlag          = FALSE;
-  jobOptions->blankFlag                         = FALSE;
-  jobOptions->skipUnreadableFlag                = FALSE;
-  jobOptions->rawImagesFlag                     = FALSE;
-  jobOptions->archiveFileMode                   = ARCHIVE_FILE_MODE_STOP;
+  jobOptions->fragmentSize                              = fromJobOptions->fragmentSize;
+  jobOptions->maxStorageSize                            = fromJobOptions->maxStorageSize;
+  jobOptions->volumeSize                                = fromJobOptions->volumeSize;
 
-  String_delete(jobOptions->preProcessScript ); jobOptions->preProcessScript  = NULL;
-  String_delete(jobOptions->postProcessScript); jobOptions->postProcessScript = NULL;
+  jobOptions->comment                                   = String_duplicate(fromJobOptions->comment);
+
+  jobOptions->skipUnreadableFlag                        = fromJobOptions->skipUnreadableFlag;
+  jobOptions->forceDeltaCompressionFlag                 = fromJobOptions->forceDeltaCompressionFlag;
+  jobOptions->ignoreNoDumpAttributeFlag                 = fromJobOptions->ignoreNoDumpAttributeFlag;
+  jobOptions->archiveFileMode                           = fromJobOptions->archiveFileMode;
+  jobOptions->restoreEntryMode                          = fromJobOptions->restoreEntryMode;
+  jobOptions->errorCorrectionCodesFlag                  = fromJobOptions->errorCorrectionCodesFlag;
+  jobOptions->alwaysCreateImageFlag                     = fromJobOptions->alwaysCreateImageFlag;
+  jobOptions->blankFlag                                 = fromJobOptions->blankFlag;
+  jobOptions->waitFirstVolumeFlag                       = fromJobOptions->waitFirstVolumeFlag;
+  jobOptions->rawImagesFlag                             = fromJobOptions->rawImagesFlag;
+  jobOptions->noFragmentsCheckFlag                      = fromJobOptions->noFragmentsCheckFlag;
+//TODO: job option or better global option only?
+  jobOptions->noIndexDatabaseFlag                       = fromJobOptions->noIndexDatabaseFlag;
+  jobOptions->forceVerifySignaturesFlag                 = fromJobOptions->forceVerifySignaturesFlag;
+  jobOptions->skipVerifySignaturesFlag                  = fromJobOptions->skipVerifySignaturesFlag;
+  jobOptions->noSignatureFlag                           = fromJobOptions->noSignatureFlag;
+//TODO: job option or better global option only?
+  jobOptions->noBAROnMediumFlag                         = fromJobOptions->noBAROnMediumFlag;
+  jobOptions->noStopOnErrorFlag                         = fromJobOptions->noStopOnErrorFlag;
+  jobOptions->noStopOnAttributeErrorFlag                = fromJobOptions->noStopOnAttributeErrorFlag;
+
+  DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
 
 void Job_doneOptions(JobOptions *jobOptions)
@@ -3631,48 +4095,18 @@ void Job_doneOptions(JobOptions *jobOptions)
 
   DEBUG_REMOVE_RESOURCE_TRACE(jobOptions,JobOptions);
 
-  String_delete(jobOptions->device.writeCommand);
-  String_delete(jobOptions->device.writePostProcessCommand);
-  String_delete(jobOptions->device.writePreProcessCommand);
-  String_delete(jobOptions->device.blankCommand);
-  String_delete(jobOptions->device.eccCommand);
-  String_delete(jobOptions->device.eccPostProcessCommand);
-  String_delete(jobOptions->device.eccPreProcessCommand);
-  String_delete(jobOptions->device.imageCommand);
-  String_delete(jobOptions->device.imagePostProcessCommand);
-  String_delete(jobOptions->device.imagePreProcessCommand);
-  String_delete(jobOptions->device.unloadVolumeCommand);
-  String_delete(jobOptions->device.requestVolumeCommand);
-  String_delete(jobOptions->deviceName);
-
-  String_delete(jobOptions->opticalDisk.writeCommand);
-  String_delete(jobOptions->opticalDisk.writePostProcessCommand);
-  String_delete(jobOptions->opticalDisk.writePreProcessCommand);
-  String_delete(jobOptions->opticalDisk.blankCommand);
-  String_delete(jobOptions->opticalDisk.eccCommand);
-  String_delete(jobOptions->opticalDisk.eccPostProcessCommand);
-  String_delete(jobOptions->opticalDisk.eccPreProcessCommand);
-  String_delete(jobOptions->opticalDisk.imageCommand);
-  String_delete(jobOptions->opticalDisk.imagePostProcessCommand);
-  String_delete(jobOptions->opticalDisk.imagePreProcessCommand);
-  String_delete(jobOptions->opticalDisk.unloadVolumeCommand);
-  String_delete(jobOptions->opticalDisk.requestVolumeCommand);
-
-  doneKey(&jobOptions->webDAVServer.privateKey);
-  doneKey(&jobOptions->webDAVServer.publicKey);
-  Password_done(&jobOptions->webDAVServer.password);
-  String_delete(jobOptions->webDAVServer.loginName);
-
-  doneKey(&jobOptions->sshServer.privateKey);
-  doneKey(&jobOptions->sshServer.publicKey);
-  Password_done(&jobOptions->sshServer.password);
-  String_delete(jobOptions->sshServer.loginName);
-
-  Password_done(&jobOptions->ftpServer.password);
-  String_delete(jobOptions->ftpServer.loginName);
-
   String_delete(jobOptions->comment);
 
+  doneOptionsDevice(&jobOptions->device);
+  doneOptionsOpticalDisk(&jobOptions->opticalDisk);
+
+  doneOptionsWebDAVServer(&jobOptions->webDAVServer);
+  doneOptionsSSHServer(&jobOptions->sshServer);
+  doneOptionsFTPServer(&jobOptions->ftpServer);
+  doneOptionsFileServer(&jobOptions->fileServer);
+
+  String_delete(jobOptions->slavePostProcessScript);
+  String_delete(jobOptions->slavePreProcessScript);
   String_delete(jobOptions->postProcessScript);
   String_delete(jobOptions->preProcessScript);
 

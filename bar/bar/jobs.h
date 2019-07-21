@@ -26,6 +26,7 @@
 #include "connector.h"
 
 /****************** Conditional compilation switches *******************/
+#define MAX_CRYPT_ALGORITHMS 4
 
 /***************************** Constants *******************************/
 extern const ConfigValue JOB_CONFIG_VALUES[];
@@ -46,25 +47,18 @@ struct JobOptions
 
   MountList                   mountList;                     // mount list
   PatternList                 compressExcludePatternList;    // excluded compression patterns
-
   DeltaSourceList             deltaSourceList;               // delta sources
-
   ScheduleList                scheduleList;                  // schedule list (unordered)
-
   PersistenceList             persistenceList;               // persistence list (ordered)
-
 
   ArchiveTypes                archiveType;                   // archive type (normal, full, incremental, differential)
 
   uint64                      archivePartSize;               // archive part size [bytes]
-
   String                      incrementalListFileName;       // name of incremental list file
-
   int                         directoryStripCount;           // number of directories to strip in restore or DIRECTORY_STRIP_ANY for all
   String                      destination;                   // destination for restore
   Owner                       owner;                         // restore owner
   FilePermission              permissions;                   // restore permissions
-
   PatternTypes                patternType;                   // pattern type
 
   CompressAlgorithmsDeltaByte compressAlgorithms;            // compress algorithms delta/byte
@@ -78,13 +72,14 @@ struct JobOptions
 
   String                      preProcessScript;              // script to execute before start of job
   String                      postProcessScript;             // script to execute after after termination of job
+  String                      slavePreProcessScript;         // script to execute before start of job on slave
+  String                      slavePostProcessScript;        // script to execute after after termination of job on slave
 
   FileServer                  fileServer;                    // job specific file server settings
   FTPServer                   ftpServer;                     // job specific FTP server settings
   SSHServer                   sshServer;                     // job specific SSH server settings
   WebDAVServer                webDAVServer;                  // job specific WebDAV server settings
   OpticalDisk                 opticalDisk;                   // job specific optical disk settings
-  String                      deviceName;                    // device name to use
   Device                      device;                        // job specific device settings
 
   uint64                      fragmentSize;                  // fragment size [bytes]
@@ -1380,7 +1375,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
 * Notes  : -
 \***********************************************************************/
 
-void Job_clearOptions(JobOptions *jobOptions);
+//void Job_clearOptions(JobOptions *jobOptions);
 
 /***********************************************************************\
 * Name   : Job_setOptions
@@ -1392,7 +1387,7 @@ void Job_clearOptions(JobOptions *jobOptions);
 * Notes  : -
 \***********************************************************************/
 
-void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
+//void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
 
 /***********************************************************************\
 * Name   : doneJobOptions
