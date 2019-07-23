@@ -67,6 +67,7 @@
   * fixed download-third-party.sh: use curl instead of wget,
     because of a bug in wget under Debian (TLS error)
   * improved database delete: FTS entries
+  * ignore unknown chunks when update index
   * use C99
   * upgrade OpenSSL 1.1.1
   * upgrade ICU 63.1
