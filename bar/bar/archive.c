@@ -14794,7 +14794,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                         &archiveEntryType,
                                         NULL,  // archiveCryptInfo
                                         NULL,  // offset
-                                        ARCHIVE_FLAG_NONE
+                                        ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS
                                        );
     if (error != ERROR_NONE)
     {
