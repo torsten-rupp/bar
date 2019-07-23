@@ -2408,9 +2408,9 @@ NULL, // masterSocketHandle
           if (error != ERROR_NONE)
           {
             printWarning("Cannot read next entry from storage '%s' (error: %s)!",
-                       String_cString(printableStorageName),
-                       Error_getText(error)
-                      );
+                         String_cString(printableStorageName),
+                         Error_getText(error)
+                        );
             break;
           }
 
