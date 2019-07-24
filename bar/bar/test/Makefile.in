@@ -106,7 +106,7 @@ VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BAR_DIR)
 #------------------------ specific variables/settings ------------------------
 
 # quiet (no output)
-QUIET ?= 
+QUIET ?=
 
 # logfile
 LOGFILE ?=
@@ -339,7 +339,7 @@ help_output:
 	@$(ECHO) "  test13_master[-debug|-valgrind], test_master[-debug|-valgrind]"
 	@$(ECHO) "  test13_slave[-debug|-valgrind], test_slave[-debug|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-valgrind]"
-	@$(ECHO) "  test_parameters[-debug|-valgrind]"
+	@$(ECHO) "  test_arguments[-debug|-valgrind]"
 	@$(ECHO) "  test_misc[-debug|-valgrind]"
 	@$(ECHO) "  test_all[-debug|-valgrind]"
 	@$(ECHO) "  test_data"
@@ -562,9 +562,9 @@ TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 1200 $(TIMEOUT) --signal=ABRT 800 $(TIME
 .PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test13_master test13_slave
 .PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug test12-debug test13-debug test13_master-debug test13_slave-debug
 .PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind test12-valgrind test13-valgrind test13_master-valgrind test13_slave-valgrind
-.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_signatures test_split test_convert test_image test_storage test_dvd test_combined test_server test_slave test_parameters test_misc
-.PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_signatures-debug test_split-debug test_convert-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_server-debug test_slave-debug test_parameters-debug test_misc-debug
-.PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_signatures-valgrind test_split-valgrind test_convert-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_server-valgrind test_slave-valgrind test_parameters-valgrind test_misc-valgrind
+.PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_signatures test_split test_convert test_image test_storage test_dvd test_combined test_server test_slave test_arguments test_misc
+.PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_signatures-debug test_split-debug test_convert-debug test_image-debug test_storage-debug test_dvd-debug test_combined-debug test_server-debug test_slave-debug test_arguments-debug test_misc-debug
+.PHONY: test_basic-valgrind test_compress-valgrind test_crypt-valgrind test_asymmetric_crypt-valgrind test_signatures-valgrind test_split-valgrind test_convert-valgrind test_image-valgrind test_storage-valgrind test_dvd-valgrind test_combined-valgrind test_server-valgrind test_slave-valgrind test_arguments-valgrind test_misc-valgrind
 .PHONY: test_storage_file test_storage_ftp test_storage_scp test_storage_sftp test_storage_webdav
 .PHONY: test_storage_file-debug test_storage_ftp-debug test_storage_scp-debug test_storage_sftp-debug test_storage_webdav-debug
 .PHONY: test_storage_file-valgrind test_storage_ftp-valgrind test_storage_scp-valgrind test_storage_sftp-valgrind test_storage_webdav-valgrind
@@ -583,7 +583,7 @@ test:
           test_image \
           test_combined \
           test_server \
-          test_parameters \
+          test_arguments \
           test_misc
 
 test-debug: \
@@ -1398,10 +1398,10 @@ test_all:
           test_hugefiles \
           test_dvd \
           test_combined \
-          test_parameters \
+          test_arguments \
           test_misc
 
-test_parameters: \
+test_arguments: \
   $(TEST_BAR) \
   $(TEST_CONFIG) \
   $(TEST_JOBS_DIRECTORY) \
@@ -1541,9 +1541,17 @@ endif
 	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l bd:///test*.bar $(LOG))
 	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t bd:///test*.bar $(LOG))
 	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d bd:///test*.bar $(LOG))
-	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c /media/ramdisk/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --mount=/media/ramdisk $(LOG))
+#	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c /media/ramdisk/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --mount=/media/ramdisk $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --remote-bar-executable=$(TEST_BAR) $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config=intermediate/bar.cfg $(LOG))
+	#
+	# server
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-mode=master $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-mode=slave $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-port=1234 $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-tls-port=1234 $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-password=test $(LOG))
+	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-max-connections=1234 $(LOG))
 	#
 	# owner
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --owner=test:test $(LOG))
@@ -1673,13 +1681,13 @@ endif
 	@$(RMF) intermediate/test-deprecated.cfg
 	@$(ECHO) "ok"
 
-test_parameters-debug: \
+test_arguments-debug: \
   $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_parameters
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_arguments
 
-test_parameters-valgrind: \
+test_arguments-valgrind: \
   $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_parameters
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_arguments
 
 test_misc: \
   $(TEST_BAR) \
