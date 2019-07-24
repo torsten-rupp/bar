@@ -1546,30 +1546,36 @@ LOCAL void jobThreadCode(void)
         }
 
         // pre-process command
-        if (jobNode->runningInfo.error == ERROR_NONE)
+        if (!String_isEmpty(jobNode->job.options.preProcessScript))
         {
-          if (!String_isEmpty(jobNode->job.options.preProcessScript))
+          TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
+          TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+          TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+          TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
+          error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
+                                  executeStartDateTime,
+                                  textMacros,
+                                  6
+                                 );
+          if (error == ERROR_NONE)
           {
-            TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
-            TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-            TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-            TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
-            TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-            TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
-            jobNode->runningInfo.error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
-                                                         executeStartDateTime,
-                                                         textMacros,
-                                                         6
-                                                        );
-            if (jobNode->runningInfo.error != ERROR_NONE)
-            {
-              logMessage(&logHandle,
-                         LOG_TYPE_ALWAYS,
-                         "Aborted job '%s': pre-command fail (error: %s)",
-                         String_cString(jobName),
-                         Error_getText(jobNode->runningInfo.error)
-                        );
-            }
+            logMessage(&logHandle,
+                       LOG_TYPE_INFO,
+                       "Executed pre-command for '%s'",
+                       String_cString(jobName)
+                      );
+          }
+          else
+          {
+            if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+            logMessage(&logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Aborted job '%s': pre-command fail (error: %s)",
+                       String_cString(jobName),
+                       Error_getText(jobNode->runningInfo.error)
+                      );
           }
         }
 
@@ -1673,7 +1679,8 @@ NULL,//                                                        scheduleTitle,
         }
 
         // post-process command
-        if (jobNode->job.options.postProcessScript != NULL)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+        if (!String_isEmpty(jobNode->job.options.postProcessScript))
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,                                                      NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,                                                  NULL);
@@ -1688,8 +1695,19 @@ NULL,//                                                        scheduleTitle,
                                   textMacros,
                                   8
                                  );
-          if (error != ERROR_NONE)
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+          if (error == ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+            logMessage(&logHandle,
+                       LOG_TYPE_INFO,
+                       "Executed post-command for '%s'",
+                       String_cString(jobName)
+                      );
+          }
+          else
+          {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
             logMessage(&logHandle,
                        LOG_TYPE_ALWAYS,
@@ -1699,6 +1717,7 @@ NULL,//                                                        scheduleTitle,
                       );
           }
         }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else
       {
@@ -4538,6 +4557,12 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       }
       else
       {
+        logMessage(NULL,  // logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Authorization client %s:%d fail - invalid password",
+                   String_cString(clientInfo->io.network.name),
+                   clientInfo->io.network.port
+                  );
         error = ERROR_INVALID_PASSWORD;
       }
     }
@@ -4545,16 +4570,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     {
       // Note: server in debug mode -> no password check
       error = ERROR_NONE;
-    }
-    if (error != ERROR_NONE)
-    {
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Authorization client %s:%d fail (error: %s)",
-                 String_cString(clientInfo->io.network.name),
-                 clientInfo->io.network.port,
-                 Error_getText(error)
-                );
     }
   }
   else if (!String_isEmpty(encryptedUUID))
@@ -7015,6 +7030,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
               );
   }
 
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
 
   // free resources
