@@ -226,6 +226,7 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePermissions(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -593,7 +594,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SPECIAL      ("server-ca-file",                    0,  1,1,&serverCA,                                       0,cmdOptionReadCertificateFile,NULL,1,                         "TLS (SSL) server certificate authority file (CA file)","file name"        ),
   CMD_OPTION_SPECIAL      ("server-cert-file",                  0,  1,1,&serverCert,                                     0,cmdOptionReadCertificateFile,NULL,1,                         "TLS (SSL) server certificate file","file name"                            ),
   CMD_OPTION_SPECIAL      ("server-key-file",                   0,  1,1,&serverKey,                                      0,cmdOptionReadKeyFile,NULL,1,                                 "TLS (SSL) server key file","file name"                                    ),
-  CMD_OPTION_SPECIAL      ("server-password",                   0,  1,1,&serverPasswordHash,                             0,cmdOptionParsePassword,NULL,1,                               "server password (use with care!)","password"                              ),
+  CMD_OPTION_SPECIAL      ("server-password",                   0,  1,1,&serverPasswordHash,                             0,cmdOptionParseHashData,NULL,1,                               "server password (use with care!)","password"                              ),
   CMD_OPTION_INTEGER      ("server-max-connections",            0,  1,1,serverMaxConnections,                            0,0,65535,NULL,                                                "max. concurrent connections to server",NULL                               ),
 
   CMD_OPTION_INTEGER      ("nice-level",                        0,  1,1,globalOptions.niceLevel,                         0,0,19,NULL,                                                   "general nice level of processes/threads",NULL                             ),
@@ -3017,6 +3018,42 @@ LOCAL bool cmdOptionParsePassword(void *userData, void *variable, const char *na
   UNUSED_VARIABLE(errorMessageSize);
 
   Password_setCString((Password*)variable,value);
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : cmdOptionParseHashData
+* Purpose: command line option call back for parsing password to hash
+*          data
+* Input  : -
+* Output : -
+* Return : TRUE iff parsed, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+{
+  CryptHash cryptHash;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(defaultValue);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  // calculate hash
+  Crypt_initHash(&cryptHash,PASSWORD_HASH_ALGORITHM);
+  Crypt_updateHash(&cryptHash,value,stringLength(value));
+
+  // store hash
+  setHash((Hash*)variable,&cryptHash);
+
+  // free resources
+  Crypt_doneHash(&cryptHash);
 
   return TRUE;
 }
