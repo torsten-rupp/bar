@@ -3822,7 +3822,6 @@ assert jobData != null;
       {
         try
         {
-Dprintf.dprintf("starafsf");
           BARServer.executeCommand(StringParser.format("MASTER_WAIT"),
                                    1,  // debugLevel
                                    new Command.ResultHandler()
