@@ -1364,21 +1364,14 @@ public class BARControl
      */
     LoginData(String name, int port, int tlsPort, boolean forceSSL, String password, Roles role)
     {
-      final Settings.Server defaultServer = Settings.getLastServer();
+      final Settings.Server lastServer = Settings.getLastServer();
 
-      this.serverName    = !name.isEmpty()     ? name     : ((defaultServer != null) ? defaultServer.name : Settings.DEFAULT_SERVER_NAME    );
-      this.serverPort    = (port != 0        ) ? port     : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT    );
-      this.serverTLSPort = (port != 0        ) ? tlsPort  : ((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT);
+      this.serverName    = !name.isEmpty()     ? name     : ((lastServer != null) ? lastServer.name : Settings.DEFAULT_SERVER_NAME    );
+      this.serverPort    = (port != 0        ) ? port     : ((lastServer != null) ? lastServer.port : Settings.DEFAULT_SERVER_PORT    );
+      this.serverTLSPort = (port != 0        ) ? tlsPort  : ((lastServer != null) ? lastServer.port : Settings.DEFAULT_SERVER_TLS_PORT);
       this.forceSSL      = forceSSL;
       this.password      = !password.isEmpty() ? password : "";
       this.role          = role;
-
-      // get last used server if no name given
-//TODO
-//      if (this.serverName.isEmpty() && (Settings.servers.size() > 0))
-//      {
-//        this.serverName = Settings.serverNames.toArray(new String[Settings.serverNames.size()])[Settings.serverNames.size()-1];
-//      }
     }
 
     /** create login data
@@ -4000,6 +3993,8 @@ assert jobData != null;
       Settings.Server server = null;
       if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT    );
       if ((server == null)) server = Settings.getServer(Settings.serverName,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
+      if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverPort    != -1) ? Settings.serverPort    : Settings.DEFAULT_SERVER_PORT    );
+      if ((server == null)) server = Settings.getServer(Settings.DEFAULT_SERVER_NAME,(Settings.serverTLSPort != -1) ? Settings.serverTLSPort : Settings.DEFAULT_SERVER_TLS_PORT);
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
@@ -4007,6 +4002,7 @@ assert jobData != null;
                                 (server != null) ? server.password : "",
                                 Settings.role
                                );
+      // support deprecated server settings
       if (Settings.serverName     != null) loginData.serverName    = Settings.serverName;
       if (Settings.serverPort     != -1  ) loginData.serverPort    = Settings.serverPort;
       if (Settings.serverTLSPort  != -1  ) loginData.serverTLSPort = Settings.serverTLSPort;
