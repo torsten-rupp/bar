@@ -297,14 +297,14 @@ public class Settings
       Object[] data = new Object[3];
       if      (StringParser.parse(string,"%s:%d:%'s",data,StringUtils.QUOTE_CHARS))
       {
-        String name     = (String)data[0];
+        String name     = (String) data[0];
         int    port     = (Integer)data[1];
-        String password = (String)data[2];
+        String password = (String) data[2];
         server = new Server(name,port,password);
       }
       else if (StringParser.parse(string,"%s:%d",data,StringUtils.QUOTE_CHARS))
       {
-        String name = (String)data[0];
+        String name = (String) data[0];
         int    port = (Integer)data[1];
         server = new Server(name,port);
       }
