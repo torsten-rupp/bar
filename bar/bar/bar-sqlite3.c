@@ -2946,11 +2946,11 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 
                            databaseId  = (int64)atoll(values[0]);
 
-                           if (verboseFlag) { fprintf(stderr,"  %lld...",databaseId); }
+                           if (verboseFlag) { fprintf(stderr,"  %ld...",databaseId); }
                            (void)Database_execute(databaseHandle,
                                                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                                   {
-                                                    int64 duplicateDatabaseId;
+                                                    int64 purgeDatabaseId;
 
                                                     assert(count == 1);
                                                     assert(values != NULL);
@@ -2960,7 +2960,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                                     UNUSED_VARIABLE(count);
                                                     UNUSED_VARIABLE(userData);
 
-                                                    duplicateDatabaseId = (int64)atoll(values[0]);
+                                                    purgeDatabaseId = (int64)atoll(values[0]);
 
                                                     (void)Database_execute(databaseHandle,
                                                                            CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -2968,7 +2968,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                                                            "DELETE FROM storage \
                                                                             WHERE id=%lld \
                                                                            ",
-                                                                           databaseId
+                                                                           purgeDatabaseId
                                                                           );
 
                                                     n++;
@@ -3611,25 +3611,12 @@ int main(int argc, const char *argv[])
 {
   const uint MAX_LINE_LENGTH = 8192;
 
-  uint            i,j,n;
+  uint            i,n;
   const char      *databaseFileName;
   String          commands;
   char            line[MAX_LINE_LENGTH];
-  int             sqliteMode;
   Errors          error;
   DatabaseHandle  databaseHandle;
-  sqlite3_stmt    *statementHandles[64];
-  uint            statementHandleCount;
-  const char      *command,*nextCommand;
-  StringTokenizer stringTokenizer;
-  ConstString     string;
-  union
-  {
-    int64  l;
-    double d;
-  }               value;
-  long            nextIndex;
-  String          s;
   const char      *l;
 
   initAll();
@@ -4203,7 +4190,7 @@ int main(int argc, const char *argv[])
                             );
     if (error == ERROR_NONE)
     {
-      if (verboseFlag) fprintf(stderr,"Result: %d\n",Error_getText(error));
+      if (verboseFlag) fprintf(stderr,"Result: %s\n",Error_getText(error));
     }
     else
     {
