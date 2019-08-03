@@ -3553,16 +3553,13 @@ LOCAL void indexThreadCode(void)
   List_init(&indexCryptPasswordList);
 
   // init index
+  indexHandle = NULL;
   if (Index_isAvailable())
   {
     while (!quitFlag && (indexHandle == NULL))
     {
       indexHandle = Index_open(NULL,10*MS_PER_SECOND);
     }
-  }
-  else
-  {
-    indexHandle = NULL;
   }
 
   if (indexHandle != NULL)
@@ -4788,7 +4785,9 @@ Errors error;
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 //TODO
+#ifndef WERROR
 #warning TODO
+#endif
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); StringMap_debugPrint(0,argumentMap);
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
