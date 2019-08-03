@@ -101,6 +101,8 @@
   extern "C" {
 #endif
 
+#if 0
+//TODO: remove?
 /***********************************************************************\
 * Name   : findCommandInPath
 * Purpose: find command in PATH
@@ -244,6 +246,7 @@ LOCAL Errors execute(const char *command, const char *arguments[])
 
   return error;
 }
+#endif
 
 /*---------------------------------------------------------------------*/
 
