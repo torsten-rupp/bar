@@ -625,6 +625,8 @@ LOCAL void initOptionsFileServer(FileServer *fileServer)
 {
   assert(fileServer != NULL);
   assert(globalOptions.defaultFileServer != NULL);
+
+  UNUSED_VARIABLE(fileServer);
 }
 
 /***********************************************************************\
@@ -641,6 +643,9 @@ LOCAL void duplicateOptionsFileServer(FileServer *fileServer, const FileServer *
 {
   assert(fileServer != NULL);
   assert(fromFileServer != NULL);
+
+  UNUSED_VARIABLE(fileServer);
+  UNUSED_VARIABLE(fromFileServer);
 }
 
 /***********************************************************************\
@@ -655,6 +660,8 @@ LOCAL void duplicateOptionsFileServer(FileServer *fileServer, const FileServer *
 LOCAL void clearOptionsFileServer(FileServer *fileServer)
 {
   assert(fileServer != NULL);
+
+  UNUSED_VARIABLE(fileServer);
 }
 
 /***********************************************************************\
@@ -669,6 +676,8 @@ LOCAL void clearOptionsFileServer(FileServer *fileServer)
 LOCAL void doneOptionsFileServer(FileServer *fileServer)
 {
   assert(fileServer != NULL);
+
+  UNUSED_VARIABLE(fileServer);
 }
 
 /***********************************************************************\
@@ -4175,6 +4184,7 @@ ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)
 
   assert(jobNode != NULL);
 
+  connectorInfo = NULL;
   JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,timeout)
   {
     slaveNode = LIST_FIND(&slaveList,
