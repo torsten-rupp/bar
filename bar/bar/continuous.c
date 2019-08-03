@@ -1585,8 +1585,7 @@ Errors Continuous_initAll(void)
                     free(notifyInfo);
                   },NULL),
 #else
-//                  CALLBACK(freeNotifyDictionary,NULL),
-                  CALLBACK_NULL,  // dictionaryFreeFunction
+                  CALLBACK(freeNotifyDictionary,NULL),
 #endif
                   CALLBACK_NULL  // dictionaryCompareFunction
                  );
