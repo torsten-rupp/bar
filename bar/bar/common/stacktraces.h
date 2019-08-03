@@ -37,6 +37,7 @@ typedef struct
 * Name   : SignalHandlerFunction
 * Purpose: signal handler function
 * Input  : signalNumber   - signal number
+*          signalName     - signal name
 *          stackTrace     - stacktrace
 *          stackTraceSize - stacktrace size
 *          userData       - user data
@@ -46,7 +47,7 @@ typedef struct
 \***********************************************************************/
 
 typedef void(*SignalHandlerFunction)(int        signalNumber,
-                                     const char signalName,
+                                     const char *signalName,
                                      void const *stackTrace[],
                                      uint       stackTraceSize,
                                      void       *userData
