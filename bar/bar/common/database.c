@@ -297,6 +297,7 @@ LOCAL DatabaseList databaseList;
       })(); \
       __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
       assert(__result == 0); \
+      UNUSED_VARIABLE(__result); \
     } \
     while (0)
   #define DATABASE_HANDLE_DOX(result,databaseHandle,block) \
@@ -316,6 +317,7 @@ LOCAL DatabaseList databaseList;
                })(); \
       __result = pthread_mutex_unlock(databaseHandle->databaseNode->lock); \
       assert(__result == 0); \
+      UNUSED_VARIABLE(__result); \
     } \
     while (0)
   #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
@@ -346,6 +348,7 @@ LOCAL DatabaseList databaseList;
       databaseLockBy.lineNb   = 0; \
       __result = pthread_mutex_unlock(&databaseLock); \
       assert(__result == 0); \
+      UNUSED_VARIABLE(__result); \
     } \
     while (0)
   #define DATABASE_HANDLE_DOX(result,databaseHandle,block) \
@@ -373,6 +376,7 @@ LOCAL DatabaseList databaseList;
       databaseLockBy.lineNb   = 0; \
       __result = pthread_mutex_unlock(&databaseLock); \
       assert(__result == 0); \
+      UNUSED_VARIABLE(__result); \
     } \
     while (0)
   #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
@@ -916,6 +920,8 @@ LOCAL_INLINE bool isReadWriteLock(DatabaseHandle *databaseHandle)
   return (databaseHandle->databaseNode->readWriteCount > 0);
 }
 
+#if 0
+//TODO: remove?
 /***********************************************************************\
 * Name   : isTransactionLock
 * Purpose: check if transaction lock
@@ -932,6 +938,7 @@ LOCAL_INLINE bool isTransactionLock(DatabaseHandle *databaseHandle)
 
   return (databaseHandle->databaseNode->transactionCount > 0);
 }
+#endif
 
 /***********************************************************************\
 * Name   : isOwnReadWriteLock
@@ -1536,7 +1543,8 @@ LOCAL_INLINE void __triggerUnlockRead(const char *__fileName__, ulong __lineNb__
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
-//  assert(DATABASE_HANDLE_IS_LOCKED(databaseHandle));
+
+  UNUSED_VARIABLE(type);
 
   #ifndef NDEBUG
 //fprintf(stderr,"%s, %d: trigger r %d\n",__FILE__,__LINE__,databaseNode->readTrigger);
@@ -1587,6 +1595,8 @@ LOCAL_INLINE void __triggerUnlockReadWrite(const char *__fileName__, ulong __lin
   assert(databaseHandle->databaseNode != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle->databaseNode);
   assert(DATABASE_HANDLE_IS_LOCKED(databaseHandle));
+
+  UNUSED_VARIABLE(type);
 
   #ifndef NDEBUG
 //fprintf(stderr,"%s, %d: trigger rw %d\n",__FILE__,__LINE__,databaseNode->readWriteTrigger);
