@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-07-01 03:47+0200\n"
+"POT-Creation-Date: 2019-07-28 12:15+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -786,99 +786,112 @@ msgstr ""
 msgid "i/o fail"
 msgstr ""
 
-#: errors.def:686
+#: errors.def:686 errors.def:701
+msgid "execute external program"
+msgstr ""
+
+#: errors.def:689
+#, c-format
+msgid "execute external program '%s' fail"
+msgstr ""
+
+#: errors.def:693
 msgid "execute external program fail"
 msgstr ""
 
-#: errors.def:694
+#: errors.def:707
+msgid "fail"
+msgstr ""
+
+#: errors.def:715
 msgid "parsing data"
 msgstr ""
 
-#: errors.def:701
+#: errors.def:722
 msgid "unknown command"
 msgstr ""
 
-#: errors.def:708
+#: errors.def:729
 msgid "expected parameter"
 msgstr ""
 
-#: errors.def:721
+#: errors.def:742
 msgid "unknown value"
 msgstr ""
 
-#: errors.def:725
+#: errors.def:746
 msgid "invalid value"
 msgstr ""
 
-#: errors.def:729
+#: errors.def:750
 msgid "authorization"
 msgstr ""
 
-#: errors.def:730
+#: errors.def:751
 msgid "job not found"
 msgstr ""
 
-#: errors.def:731
+#: errors.def:752
 msgid "job error"
 msgstr ""
 
-#: errors.def:737
+#: errors.def:758
 msgid "database"
 msgstr ""
 
-#: errors.def:741
+#: errors.def:762
 msgid "unknown version on index"
 msgstr ""
 
-#: errors.def:745
+#: errors.def:766
 msgid "missing table"
 msgstr ""
 
-#: errors.def:752
+#: errors.def:773
 msgid "missing column"
 msgstr ""
 
-#: errors.def:759
+#: errors.def:780
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:766
+#: errors.def:787
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:773
+#: errors.def:794
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:777
+#: errors.def:798
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:778
+#: errors.def:799
 msgid "index not found"
 msgstr ""
 
-#: errors.def:779
+#: errors.def:800
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:783
+#: errors.def:804
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:787
+#: errors.def:808
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:790
+#: errors.def:811
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:791
+#: errors.def:812
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:792
+#: errors.def:813
 msgid "slave is not paired"
 msgstr ""
 
