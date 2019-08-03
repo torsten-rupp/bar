@@ -341,6 +341,8 @@ LOCAL void updateStatusInfo(RestoreInfo *restoreInfo, bool forceUpdate)
   }
 }
 
+#if 0
+//TODO: remove?
 /***********************************************************************\
 * Name   : statusInfoUpdateLock
 * Purpose: lock status info update
@@ -435,36 +437,7 @@ LOCAL void statusInfoUpdateUnlock(RestoreInfo *restoreInfo, ConstString name)
        semaphoreLock; \
        statusInfoUpdateUnlock(restoreInfo,name), semaphoreLock = FALSE \
       )
-
-//TODO: remove
-/***********************************************************************\
-* Name   : updateStorageStatusInfo
-* Purpose: update storage info data
-* Input  : userData          - user data: create info
-*          storageStatusInfo - storage status info
-* Output : -
-* Return : TRUE to continue, FALSE to abort
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool xxxupdateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
-                                   void                    *userData
-                                  )
-{
-  RestoreInfo *restoreInfo = (RestoreInfo*)userData;
-
-  assert(restoreInfo != NULL);
-  assert(storageStatusInfo != NULL);
-
-  STATUS_INFO_UPDATE(restoreInfo,NULL,NULL)
-  {
-    restoreInfo->statusInfo.storage.doneSize = storageStatusInfo->storageDoneBytes;
-    restoreInfo->statusInfo.volume.number    = storageStatusInfo->volumeNumber;
-    restoreInfo->statusInfo.volume.progress  = storageStatusInfo->volumeProgress;
-  }
-
-  return TRUE;//!Storage_isAborted(&restoreInfo->storageInfo);
-}
+#endif
 
 /***********************************************************************\
 * Name   : handleError
