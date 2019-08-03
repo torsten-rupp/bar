@@ -483,17 +483,16 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     {
       error = (   !Password_isEmpty(storageInfo->storageSpecifier.loginPassword)
                || !Password_isEmpty(&sshServer.password)
-               || !Password_isEmpty(defaultSSHPassword)
+               || !Password_isEmpty(&defaultSSHPassword)
               )
                 ? ERRORX_(INVALID_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName))
                 : ERRORX_(NO_SSH_PASSWORD,0,"%s",String_cString(storageInfo->storageSpecifier.hostName));
     }
 
-    // store password as default SSH password
+    // store password as default password
     if (error == ERROR_NONE)
     {
-      if (defaultSSHPassword == NULL) defaultSSHPassword = Password_new();
-      Password_set(defaultSSHPassword,storageInfo->storageSpecifier.loginPassword);
+      Password_set(&defaultSSHPassword,storageInfo->storageSpecifier.loginPassword);
     }
     assert(error != ERROR_UNKNOWN);
     if (error != ERROR_NONE)

@@ -78,7 +78,7 @@ const StorageFlags STORAGE_FLAGS_NO_STORAGE = { .noStorage=TRUE, .dryRun=FALSE }
 /***************************** Variables *******************************/
 LOCAL sighandler_t oldSignalAlarmHandler;
 #ifdef HAVE_SSH2
-  LOCAL Password *defaultSSHPassword;
+  LOCAL Password defaultSSHPassword;
 #endif /* HAVE_SSH2 */
 
 /****************************** Macros *********************************/
@@ -446,7 +446,7 @@ LOCAL bool initSSHLogin(ConstString             hostName,
         switch (globalOptions.runMode)
         {
           case RUN_MODE_INTERACTIVE:
-            if (defaultSSHPassword == NULL)
+            if (Password_isEmpty(&defaultSSHPassword))
             {
               s = !String_isEmpty(loginName)
                     ? String_format(String_new(),"SSH login password for %S@%S",loginName,hostName)
@@ -459,7 +459,7 @@ LOCAL bool initSSHLogin(ConstString             hostName,
             }
             else
             {
-              Password_set(loginPassword,defaultSSHPassword);
+              Password_set(loginPassword,&defaultSSHPassword);
               initFlag = TRUE;
             }
             break;
@@ -715,7 +715,7 @@ Errors Storage_initAll(void)
 
   oldSignalAlarmHandler = signal(SIGALRM,signalHandler);
   #if defined(HAVE_SSH2)
-    defaultSSHPassword = NULL;
+    Password_init(&defaultSSHPassword);
   #endif /* HAVE_SSH2 */
 
   #if   defined(HAVE_CURL)
@@ -778,7 +778,7 @@ void Storage_doneAll(void)
   StorageFile_doneAll();
 
   #if defined(HAVE_SSH2)
-    Password_delete(defaultSSHPassword);
+    Password_done(&defaultSSHPassword);
   #endif /* HAVE_SSH2 */
   if (oldSignalAlarmHandler != SIG_ERR)
   {
