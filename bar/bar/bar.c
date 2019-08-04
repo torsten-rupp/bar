@@ -2157,6 +2157,8 @@ LOCAL Errors readCertificateFile(Certificate *certificate, const char *fileName)
   certificate->data   = data;
   certificate->length = dataLength;
 
+  printInfo(2,"Read certificate file '%s'\n",fileName);
+
   return ERROR_NONE;
 }
 
@@ -4342,6 +4344,12 @@ LOCAL Errors initAll(void)
   ConfigValue_init(CONFIG_VALUES);
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
+  // special case: set verbose level in interactive mode
+  if (!daemonFlag && !batchFlag)
+  {
+    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
+  }
+
   // done resources
   AutoFree_done(&autoFreeList);
 
@@ -4463,21 +4471,24 @@ LOCAL void doneAll(void)
 LOCAL Errors readAllServerKeys(void)
 {
   String fileName;
+  Key    key;
 
   // init default servers
   fileName = String_new();
+  initKey(&key);
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
-  if (File_exists(fileName))
+  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
   {
-    (void)readKeyFile(&defaultSSHServer.ssh.publicKey,String_cString(fileName));
-    (void)readKeyFile(&defaultWebDAVServer.webDAV.publicKey,String_cString(fileName));
+    duplicateKey(&defaultSSHServer.ssh.publicKey,&key);
+    duplicateKey(&defaultWebDAVServer.webDAV.publicKey,&key);
   }
   File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
-  if (File_exists(fileName))
+  if (File_exists(fileName) && (readKeyFile(&key,String_cString(fileName)) == ERROR_NONE))
   {
-    (void)readKeyFile(&defaultSSHServer.ssh.privateKey,String_cString(fileName));
-    (void)readKeyFile(&defaultWebDAVServer.webDAV.privateKey,String_cString(fileName));
+    duplicateKey(&defaultSSHServer.ssh.privateKey,&key);
+    duplicateKey(&defaultWebDAVServer.webDAV.privateKey,&key);
   }
+  doneKey(&key);
   String_delete(fileName);
 
   // read default server CA, certificate, key
@@ -10593,14 +10604,6 @@ exit(1);
   {
     return ERROR_INVALID_ARGUMENT;
   }
-
-  // special case: set verbose level in interactive mode
-  if (!daemonFlag && !batchFlag)
-  {
-//    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
-  }
-fprintf(stderr,"%s, %d: v=%d\n",__FILE__,__LINE__,globalOptions.verboseLevel);
-//exit(1);
 
   // read server job list (if possible)
   (void)Job_rereadAll(globalOptions.jobsDirectory);
