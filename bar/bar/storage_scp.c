@@ -390,8 +390,8 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
     if (storageInfo->storageSpecifier.hostPort == 0) storageInfo->storageSpecifier.hostPort = sshServer.port;
-    storageInfo->sftp.publicKey  = sshServer.publicKey;
-    storageInfo->sftp.privateKey = sshServer.privateKey;
+    storageInfo->scp.publicKey  = sshServer.publicKey;
+    storageInfo->scp.privateKey = sshServer.privateKey;
     if (String_isEmpty(storageInfo->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
@@ -734,6 +734,7 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(fileName));
 
@@ -846,6 +847,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
@@ -1017,8 +1019,8 @@ LOCAL bool StorageSCP_eof(StorageHandle *storageHandle)
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
 
   #ifdef HAVE_SSH2
@@ -1050,8 +1052,8 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(buffer != NULL);
 
@@ -1207,8 +1209,8 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
   #ifdef HAVE_SSH2
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->scp);
   #endif /* HAVE_SSH2 */
-  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
+  assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_SCP);
   assert(buffer != NULL);
 
