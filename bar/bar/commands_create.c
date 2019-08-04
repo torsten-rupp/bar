@@ -603,7 +603,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   }
 
   // write header
-  memset(id,0,sizeof(id));
+  memClear(id,sizeof(id));
   strncpy(id,INCREMENTAL_LIST_FILE_ID,sizeof(id)-1);
   error = File_write(&fileHandle,id,sizeof(id));
   if (error != ERROR_NONE)

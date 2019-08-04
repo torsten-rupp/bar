@@ -2463,7 +2463,7 @@ LOCAL Errors StorageFTP_getInfo(const StorageInfo *storageInfo,
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
-  memset(fileInfo,0,sizeof(fileInfo));
+  memClear(fileInfo,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)

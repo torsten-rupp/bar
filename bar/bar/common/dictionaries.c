@@ -527,7 +527,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
   entries = realloc(entries,newSize*sizeof(DictionaryEntry));
   if (entries != NULL)
   {
-    memset(&entries[oldSize],0,(newSize-oldSize)*sizeof(DictionaryEntry));
+    memClear(&entries[oldSize],(newSize-oldSize)*sizeof(DictionaryEntry));
   }
 
   return entries;

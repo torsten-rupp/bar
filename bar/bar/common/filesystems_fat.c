@@ -138,7 +138,7 @@ LOCAL bool readClusterBitmap(DeviceHandle *deviceHandle, FATHandle *fatHandle, u
   assert(clustersCount <= CLUSTER_BITMAP_SIZE);
 
   // init cluster bitmap from FAT entries
-  memset(fatHandle->clusterBitmap,0,sizeof(fatHandle->clusterBitmap));
+  memClear(fatHandle->clusterBitmap,sizeof(fatHandle->clusterBitmap));
   switch (fatHandle->type)
   {
     case FILE_SYSTEM_TYPE_FAT12:

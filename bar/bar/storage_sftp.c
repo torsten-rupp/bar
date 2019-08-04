@@ -1562,7 +1562,7 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
   assert(storageInfo->type == STORAGE_TYPE_SFTP);
   assert(fileInfo != NULL);
 
-  memset(fileInfo,0,sizeof(FileInfo));
+  memClear(fileInfo,sizeof(FileInfo));
 
   error = ERROR_UNKNOWN;
   #ifdef HAVE_SSH2
@@ -2003,7 +2003,7 @@ LOCAL Errors StorageSFTP_readDirectoryList(StorageDirectoryListHandle *storageDi
           fileInfo->permission      = storageDirectoryListHandle->sftp.attributes.permissions;
           fileInfo->major           = 0;
           fileInfo->minor           = 0;
-          memset(&fileInfo->cast,0,sizeof(FileCast));
+          memClear(&fileInfo->cast,sizeof(FileCast));
         }
 
         storageDirectoryListHandle->sftp.entryReadFlag = FALSE;

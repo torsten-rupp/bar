@@ -3723,7 +3723,7 @@ LOCAL void initGlobalOptions(void)
 {
   uint i;
 
-  memset(&globalOptions,0,sizeof(GlobalOptions));
+  memClear(&globalOptions,sizeof(GlobalOptions));
 
   // --- program options
   globalOptions.runMode                                         = RUN_MODE_INTERACTIVE;

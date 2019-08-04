@@ -272,10 +272,10 @@ LOCAL void debugStringInit(void)
   #ifdef TRACE_STRING_ALLOCATIONS
     List_init(&debugStringAllocList);
     debugStringAllocList.memorySize = 0L;
-    memset(debugStringAllocList.hash,0,sizeof(debugStringAllocList.hash));
+    memClear(debugStringAllocList.hash,sizeof(debugStringAllocList.hash));
     List_init(&debugStringFreeList);
     debugStringFreeList.memorySize = 0L;
-    memset(debugStringFreeList.hash,0,sizeof(debugStringFreeList.hash));
+    memClear(debugStringFreeList.hash,sizeof(debugStringFreeList.hash));
   #endif /* TRACE_STRING_ALLOCATIONS */
   #ifdef MAX_STRINGS_CHECK
     debugMaxStringNextWarningCount = WARN_MAX_STRINGS;
@@ -2728,7 +2728,7 @@ String String_erase(String string)
   {
     assert(string->data != NULL);
 
-    memset(string->data,0,string->maxLength);
+    memClear(string->data,string->maxLength);
     string->length = 0L;
 
     STRING_UPDATE_VALID(string);
@@ -3598,7 +3598,7 @@ char *String_subBuffer(char *buffer, ConstString fromString, ulong fromIndex, lo
           n = MIN((ulong)fromLength,fromString->length);
         }
         memmove(&buffer[0],&fromString->data[fromString->length-n],n);
-        memset(&buffer[n],0,fromLength-n);
+        memClear(&buffer[n],fromLength-n);
       }
       else if (fromIndex < fromString->length)
       {
@@ -3611,16 +3611,16 @@ char *String_subBuffer(char *buffer, ConstString fromString, ulong fromIndex, lo
           n = MIN((ulong)fromLength,fromString->length-fromIndex);
         }
         memmove(&buffer[0],&fromString->data[fromIndex],n);
-        memset(&buffer[n],0,fromLength-n);
+        memClear(&buffer[n],fromLength-n);
       }
       else
       {
-        memset(buffer,0,fromLength);
+        memClear(buffer,fromLength);
       }
     }
     else
     {
-      memset(buffer,0,fromLength);
+      memClear(buffer,fromLength);
     }
   }
 

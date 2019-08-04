@@ -3363,7 +3363,7 @@ Errors Storage_getInfo(StorageInfo *storageInfo,
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   infoFileName = (fileName != NULL) ? archiveName : storageInfo->storageSpecifier.archiveName;
-  memset(fileInfo,0,sizeof(fileInfo));
+  memClear(fileInfo,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
   switch (storageInfo->type)

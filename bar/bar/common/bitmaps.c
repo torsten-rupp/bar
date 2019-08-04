@@ -103,7 +103,7 @@ void Bitmap_clear(Bitmap *bitmap)
   assert(bitmap != NULL);
   assert(bitmap->data != NULL);
 
-  memset(bitmap->data,0,(bitmap->size+8-1)/8);
+  memClear(bitmap->data,(bitmap->size+8-1)/8);
 }
 
 void Bitmap_set(Bitmap *bitmap, uint64 n)

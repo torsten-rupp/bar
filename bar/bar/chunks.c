@@ -373,7 +373,7 @@ LOCAL Errors getChunkBuffer(ChunkBuffer *chunkBuffer, void **p, ulong size)
       }
       chunkBuffer->buffer     = buffer;
       chunkBuffer->bufferSize = bufferSize;
-      memset(&chunkBuffer->buffer[chunkBuffer->bufferLength],0,chunkBuffer->bufferSize-chunkBuffer->bufferLength);
+      memClear(&chunkBuffer->buffer[chunkBuffer->bufferLength],chunkBuffer->bufferSize-chunkBuffer->bufferLength);
     }
 
     // read data
@@ -437,7 +437,7 @@ LOCAL Errors putChunkBuffer(ChunkBuffer *chunkBuffer, const void *p, ulong size)
     {
       return ERROR_INSUFFICIENT_MEMORY;
     }
-    memset(&chunkBuffer->buffer[chunkBuffer->bufferLength],0,chunkBuffer->bufferSize-chunkBuffer->bufferLength);
+    memClear(&chunkBuffer->buffer[chunkBuffer->bufferLength],chunkBuffer->bufferSize-chunkBuffer->bufferLength);
   }
 
   // put data
@@ -512,7 +512,7 @@ LOCAL Errors flushChunkBuffer(ChunkBuffer *chunkBuffer)
 
   // calculate data bytes
   n = ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment);
-  memset(&chunkBuffer->buffer[chunkBuffer->bufferLength],0,n-chunkBuffer->bufferLength);
+  memClear(&chunkBuffer->buffer[chunkBuffer->bufferLength],n-chunkBuffer->bufferLength);
 
   // encrypt data
 //fprintf(stderr,"%s, %d: write:\n",__FILE__,__LINE__); debugDumpMemory(FALSE,chunkBuffer->buffer,ALIGN(chunkBuffer->bufferLength,chunkBuffer->alignment));
@@ -699,27 +699,27 @@ LOCAL void initDefinition(const char      *__fileName__,
           }
           break;
         case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(byte));
+          memClear((byte*)chunkData+definition[i+2],definition[i+1]*sizeof(byte));
           i += 3;
           break;
         case CHUNK_DATATYPE_UINT8 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
         case CHUNK_DATATYPE_INT8  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(uint8));
+          memClear((byte*)chunkData+definition[i+2],definition[i+1]*sizeof(uint8));
           i += 3;
           break;
         case CHUNK_DATATYPE_UINT16|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
         case CHUNK_DATATYPE_INT16 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(uint16));
+          memClear((byte*)chunkData+definition[i+2],definition[i+1]*sizeof(uint16));
           i += 3;
           break;
         case CHUNK_DATATYPE_UINT32|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
         case CHUNK_DATATYPE_INT32 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(uint32));
+          memClear((byte*)chunkData+definition[i+2],definition[i+1]*sizeof(uint32));
           i += 3;
           break;
         case CHUNK_DATATYPE_UINT64|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
         case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(uint64));
+          memClear((byte*)chunkData+definition[i+2],definition[i+1]*sizeof(uint64));
           i += 3;
           break;
         case CHUNK_DATATYPE_BYTE  |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:
@@ -736,7 +736,7 @@ LOCAL void initDefinition(const char      *__fileName__,
           i += 3;
           break;
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
-          memset((byte*)chunkData+definition[i+2],0,definition[i+1]*sizeof(String*));
+          memClear((byte*)chunkData+definition[i+2],definition[i+1]*sizeof(String*));
           i += 3;
           break;
         case CHUNK_DATATYPE_STRING|CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_DYNAMIC:

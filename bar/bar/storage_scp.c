@@ -1537,7 +1537,7 @@ LOCAL Errors StorageSCP_getInfo(const StorageInfo *storageInfo,
   assert(fileInfo != NULL);
 
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
-  memset(fileInfo,0,sizeof(fileInfo));
+  memClear(fileInfo,sizeof(fileInfo));
 
   error = ERROR_UNKNOWN;
   switch (storageInfo->type)

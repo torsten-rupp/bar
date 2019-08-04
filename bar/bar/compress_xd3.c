@@ -715,12 +715,12 @@ LOCAL Errors CompressXD3_init(CompressInfo       *compressInfo,
   }
 
   // init xdelta configuration (Note: clear memory is required by xdelta library!)
-  memset(&xd3Config,0,sizeof(xd3Config));
+  memClear(&xd3Config,sizeof(xd3Config));
   xd3_init_config(&xd3Config,compressInfo->xdelta.flags);
   xd3Config.winsize = XDELTA_BUFFER_SIZE;
 
   // init xdelta stream (Note: clear memory is required by xdelta library!)
-  memset(&compressInfo->xdelta.stream,0,sizeof(compressInfo->xdelta.stream));
+  memClear(&compressInfo->xdelta.stream,sizeof(compressInfo->xdelta.stream));
   compressInfo->xdelta.stream.getblk = NULL;
   xd3Result = xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config);
   if (xd3Result != 0)
@@ -739,7 +739,7 @@ LOCAL Errors CompressXD3_init(CompressInfo       *compressInfo,
   }
 
   // init xdelta source variables (Note: clear memory is required by xdelta library!)
-  memset(&compressInfo->xdelta.source,0,sizeof(compressInfo->xdelta.source));
+  memClear(&compressInfo->xdelta.source,sizeof(compressInfo->xdelta.source));
   compressInfo->xdelta.source.ioh      = NULL;
   compressInfo->xdelta.source.blksize  = XDELTA_BUFFER_SIZE;
   compressInfo->xdelta.source.onblk    = (usize_t)0;
@@ -782,12 +782,12 @@ LOCAL Errors CompressXD3_reset(CompressInfo *compressInfo)
   compressInfo->xdelta.flushFlag = FALSE;
 
   // re-init xdelta configuration (Note: clear memory is required by xdelta library!)
-  memset(&xd3Config,0,sizeof(xd3Config));
+  memClear(&xd3Config,sizeof(xd3Config));
   xd3_init_config(&xd3Config,compressInfo->xdelta.flags);
   xd3Config.winsize = XDELTA_BUFFER_SIZE;
 
   // re-init xdelta stream (Note: clear memory is required by xdelta library!)
-  memset(&compressInfo->xdelta.stream,0,sizeof(compressInfo->xdelta.stream));
+  memClear(&compressInfo->xdelta.stream,sizeof(compressInfo->xdelta.stream));
   compressInfo->xdelta.stream.getblk = NULL;
   if (xd3_config_stream(&compressInfo->xdelta.stream,&xd3Config) != 0)
   {
@@ -808,7 +808,7 @@ LOCAL Errors CompressXD3_reset(CompressInfo *compressInfo)
   }
 
   // init xdelta source variables (Note: clear memory is required by xdelta library!)
-  memset(&compressInfo->xdelta.source,0,sizeof(compressInfo->xdelta.source));
+  memClear(&compressInfo->xdelta.source,sizeof(compressInfo->xdelta.source));
   compressInfo->xdelta.source.blksize  = XDELTA_BUFFER_SIZE;
   compressInfo->xdelta.source.onblk    = (usize_t)0;
   compressInfo->xdelta.source.curblkno = (xoff_t)(-1);

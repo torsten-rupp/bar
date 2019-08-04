@@ -2032,7 +2032,7 @@ LOCAL Errors StorageOptical_getInfo(const StorageInfo *storageInfo,
   assert(fileInfo != NULL);
 
   infoFileName = (fileName != NULL) ? fileName : storageInfo->storageSpecifier.archiveName;
-  memset(fileInfo,0,sizeof(fileInfo));
+  memClear(fileInfo,sizeof(fileInfo));
 
   error = ERROR_FUNCTION_NOT_SUPPORTED;
   assert(error != ERROR_UNKNOWN);
@@ -2256,7 +2256,7 @@ LOCAL Errors StorageOptical_readDirectoryList(StorageDirectoryListHandle *storag
             fileInfo->permission      = iso9660Stat->xa.attributes;
             fileInfo->major           = 0;
             fileInfo->minor           = 0;
-            memset(&fileInfo->cast,0,sizeof(FileCast));
+            memClear(&fileInfo->cast,sizeof(FileCast));
           }
 
           storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_node_next(storageDirectoryListHandle->opticalDisk.cdioNextNode);

@@ -164,7 +164,7 @@ LOCAL void initIO(ServerIO *serverIO, ServerIOTypes type)
   #ifndef NO_SESSION_ID
     Crypt_randomize(serverIO->sessionId,sizeof(SessionId));
   #else /* not NO_SESSION_ID */
-    memset(serverIO->sessionId,0,sizeof(SessionId));
+    memClear(serverIO->sessionId,sizeof(SessionId));
   #endif /* NO_SESSION_ID */
   serverIO->encryptType       = SERVER_IO_ENCRYPT_TYPE_NONE;
   Crypt_initKey(&serverIO->publicKey,CRYPT_PADDING_TYPE_PKCS1);

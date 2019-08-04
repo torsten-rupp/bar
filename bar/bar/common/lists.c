@@ -219,9 +219,9 @@ LOCAL void debugListInit(void)
   pthread_mutexattr_settype(&debugListLockAttributes,PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&debugListLock,&debugListLockAttributes);
   List_init(&debugListAllocNodeList);
-  memset(debugListAllocNodeList.hash,0,sizeof(debugListAllocNodeList.hash));
+  memClear(debugListAllocNodeList.hash,sizeof(debugListAllocNodeList.hash));
   List_init(&debugListFreeNodeList);
-  memset(debugListFreeNodeList.hash,0,sizeof(debugListFreeNodeList.hash));
+  memClear(debugListFreeNodeList.hash,sizeof(debugListFreeNodeList.hash));
 }
 #endif /* not NDEBUG */
 

@@ -1662,10 +1662,7 @@ void Compress_getCompressedData(CompressInfo *compressInfo,
   RingBuffer_get(&compressInfo->compressRingBuffer,buffer,n);
 
   // set rest in last block to 0
-  memset(buffer+n,
-         0,
-         CEIL(n,compressInfo->blockLength)-n
-        );
+  memClear(buffer+n,CEIL(n,compressInfo->blockLength)-n);
 
   // set length
   (*bufferLength) = CEIL(n,compressInfo->blockLength);

@@ -523,16 +523,16 @@ const char *Password_deploy(const Password *password)
   }
 }
 
-void Password_undeploy(const Password *password, const char *plain)
+void Password_undeploy(const Password *password, const char *plainPassword)
 {
   if (password != NULL)
   {
     #ifdef HAVE_GCRYPT
       UNUSED_VARIABLE(password);
-      UNUSED_VARIABLE(plain);
+      UNUSED_VARIABLE(plainPassword);
     #else /* not HAVE_GCRYPT */
-      memset((char*)plain,0,password->dataLength);
-      freeSecure((char*)plain);
+      memClear((char*)plainPassword,password->dataLength);
+      freeSecure((char*)plainPassword);
     #endif /* HAVE_GCRYPT */
   }
 }
