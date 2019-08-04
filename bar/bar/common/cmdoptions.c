@@ -1609,7 +1609,7 @@ bool CmdOption_parse(const char              *argv[],
                 value = NULL;
                 break;
               case CMD_OPTION_TYPE_INCREMENT:
-                // check if '='
+                // check if '=' follow
                 if (optionChars[1] == '=')
                 {
                   value = &optionChars[2];

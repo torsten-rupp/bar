@@ -572,9 +572,9 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("ssh-port",                          0,  0,2,defaultSSHServer.ssh.port,                       0,0,65535,NULL,                                                "ssh port",NULL                                                            ),
   CMD_OPTION_STRING       ("ssh-login-name",                    0,  0,2,defaultSSHServer.ssh.loginName,                  0,                                                             "ssh login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ssh-password",                      0,  0,2,&defaultSSHServer.ssh.password,                  0,cmdOptionParsePassword,NULL,1,                               "ssh password (use with care!)","password"                                 ),
-  CMD_OPTION_SPECIAL      ("ssh-public-key",                    0,  1,2,&defaultSSHServer.ssh.publicKey,                 0,cmdOptionParseKeyData,NULL,1,                                "ssh public key file name","file name|data"                                ),
-  CMD_OPTION_SPECIAL      ("ssh-private-key",                   0,  1,2,&defaultSSHServer.ssh.privateKey,                0,cmdOptionParseKeyData,NULL,1,                                "ssh private key file name","file name|data"                               ),
-  CMD_OPTION_INTEGER      ("ssh-max-connections",               0,  0,2,defaultSSHServer.maxConnectionCount,             0,0,MAX_INT,NULL,                                              "max. number of concurrent ssh connections","unlimited"                    ),
+  CMD_OPTION_SPECIAL      ("ssh-public-key",                    0,  1,2,&defaultSSHServer.ssh.publicKey,                 0,cmdOptionParseKeyData,NULL,1,                                "ssh public key","file name|data"                                          ),
+  CMD_OPTION_SPECIAL      ("ssh-private-key",                   0,  1,2,&defaultSSHServer.ssh.privateKey,                0,cmdOptionParseKeyData,NULL,1,                                "ssh private key","file name|data"                                         ),
+  CMD_OPTION_INTEGER      ("ssh-max-connections",               0,  1,2,defaultSSHServer.maxConnectionCount,             0,0,MAX_INT,NULL,                                              "max. number of concurrent ssh connections","unlimited"                    ),
 //TODO
 //  CMD_OPTION_INTEGER64    ("ssh-max-storage-size",              0,  0,2,defaultSSHServer.maxStorageSize,                 0,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ssh server","unlimited"                  ),
 
@@ -754,7 +754,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
   CMD_OPTION_BOOLEAN      ("no-default-config",                 0,  1,1,globalOptions.noDefaultConfigFlag,               0,                                                             "do not read configuration files " CONFIG_DIR "/bar.cfg and ~/.bar/" DEFAULT_CONFIG_FILE_NAME),
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                         0,                                                             "suppress any output"                                                      ),
-  CMD_OPTION_INCREMENT    ("verbose",                           'v',3,1,globalOptions.verboseLevel,                      0,0,6,                                                         "verbosity level"                                                          ),
+  CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                      0,0,6,                                                         "increment/set verbosity level"                                            ),
 
   CMD_OPTION_INCREMENT    ("server-debug",                      0,  2,1,globalOptions.serverDebugLevel,                  0,0,2,                                                         "debug level for server"                                                   ),
 
@@ -2223,6 +2223,8 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
   if (key->data != NULL) freeSecure(key->data);
   key->data   = data;
   key->length = dataLength;
+
+  printInfo(2,"Read key file '%s'\n",fileName);
 
   return ERROR_NONE;
 }
@@ -4060,7 +4062,6 @@ LOCAL Errors initAll(void)
   AutoFreeList     autoFreeList;
   Errors           error;
   const char       *localePath;
-  String           fileName;
 
   // initialize fatal log handler, crash dump handler
   #ifndef NDEBUG
@@ -4337,27 +4338,6 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE() { Server_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Server_initAll,{ Server_doneAll(); });
 
-  // initialize default ssh keys
-  fileName = String_new();
-  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
-  if (File_exists(fileName))
-  {
-    (void)readKeyFile(&defaultSSHServer.ssh.publicKey,String_cString(fileName));
-    (void)readKeyFile(&defaultWebDAVServer.webDAV.publicKey,String_cString(fileName));
-  }
-  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
-  if (File_exists(fileName))
-  {
-    (void)readKeyFile(&defaultSSHServer.ssh.privateKey,String_cString(fileName));
-    (void)readKeyFile(&defaultWebDAVServer.webDAV.privateKey,String_cString(fileName));
-  }
-  String_delete(fileName);
-
-  // read default server CA, certificate, key
-  (void)readCertificateFile(&serverCA,DEFAULT_TLS_SERVER_CA_FILE);
-  (void)readCertificateFile(&serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
-  (void)readKeyFile(&serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
-
   // initialize command line options and config values
   ConfigValue_init(CONFIG_VALUES);
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
@@ -4469,6 +4449,43 @@ LOCAL void doneAll(void)
   #if HAVE_BREAKPAD
     MiniDump_done();
   #endif /* HAVE_BREAKPAD */
+}
+
+/***********************************************************************\
+* Name   : readAllServerKeys
+* Purpose: initialize all server keys/certificates
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors readAllServerKeys(void)
+{
+  String fileName;
+
+  // init default servers
+  fileName = String_new();
+  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa.pub");
+  if (File_exists(fileName))
+  {
+    (void)readKeyFile(&defaultSSHServer.ssh.publicKey,String_cString(fileName));
+    (void)readKeyFile(&defaultWebDAVServer.webDAV.publicKey,String_cString(fileName));
+  }
+  File_appendFileNameCString(String_setCString(fileName,getenv("HOME")),".ssh/id_rsa");
+  if (File_exists(fileName))
+  {
+    (void)readKeyFile(&defaultSSHServer.ssh.privateKey,String_cString(fileName));
+    (void)readKeyFile(&defaultWebDAVServer.webDAV.privateKey,String_cString(fileName));
+  }
+  String_delete(fileName);
+
+  // read default server CA, certificate, key
+  (void)readCertificateFile(&serverCA,DEFAULT_TLS_SERVER_CA_FILE);
+  (void)readCertificateFile(&serverCert,DEFAULT_TLS_SERVER_CERTIFICATE_FILE);
+  (void)readKeyFile(&serverKey,DEFAULT_TLS_SERVER_KEY_FILE);
+
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -10508,7 +10525,7 @@ exit(1);
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
-                       1,1,
+                       0,1,
                        globalOptionSet,
                        stderr,"ERROR: ","Warning: "
                       )
@@ -10580,8 +10597,10 @@ exit(1);
   // special case: set verbose level in interactive mode
   if (!daemonFlag && !batchFlag)
   {
-    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
+//    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
   }
+fprintf(stderr,"%s, %d: v=%d\n",__FILE__,__LINE__,globalOptions.verboseLevel);
+//exit(1);
 
   // read server job list (if possible)
   (void)Job_rereadAll(globalOptions.jobsDirectory);
@@ -10737,6 +10756,18 @@ int main(int argc, const char *argv[])
        )
     {
       error = ERROR_INVALID_ARGUMENT;
+    }
+  }
+
+  // read all server keys/certificates
+  if (error == ERROR_NONE)
+  {
+    error = readAllServerKeys();
+    if (error != ERROR_NONE)
+    {
+      printError(_("Cannot read server keys/certificates (error: %s)!"),
+                 Error_getText(error)
+                );
     }
   }
 
