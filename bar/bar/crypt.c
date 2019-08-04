@@ -1558,7 +1558,6 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
     uint         dataLength;
     uint         i;
     gcry_error_t gcryptError;
-    const char   *plainPassword;
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -1587,18 +1586,19 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
         break;
       case CRYPT_KEY_DERIVE_FUNCTION:
         assert(dataLength < sizeof(NO_SALT));
-        plainPassword = Password_deploy(password);
-        gcryptError = gcry_kdf_derive(plainPassword,
-                                      (size_t)Password_length(password),
-                                      KEY_DERIVE_ALGORITHM,
-                                      KEY_DERIVE_HASH_ALGORITHM,
-                                      (cryptSalt != NULL) ? cryptSalt->data : NO_SALT,
-                                      (cryptSalt != NULL) ? cryptSalt->length : sizeof(NO_SALT),
-                                      KEY_DERIVE_ITERATIONS,
-                                      dataLength,
-                                      data
-                                     );
-        Password_undeploy(password,plainPassword);
+        PASSWORD_DEPLOY_DO(plainPassword,password)
+        {
+          gcryptError = gcry_kdf_derive(plainPassword,
+                                        (size_t)Password_length(password),
+                                        KEY_DERIVE_ALGORITHM,
+                                        KEY_DERIVE_HASH_ALGORITHM,
+                                        (cryptSalt != NULL) ? cryptSalt->data : NO_SALT,
+                                        (cryptSalt != NULL) ? cryptSalt->length : sizeof(NO_SALT),
+                                        KEY_DERIVE_ITERATIONS,
+                                        dataLength,
+                                        data
+                                       );
+        }
         if (gcryptError != 0)
         {
           freeSecure(data);

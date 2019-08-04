@@ -1205,10 +1205,11 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     {
       String_sub(string,storageName,6,nextIndex-6);
       String_trimEnd(string,"/");
-      if (!Storage_parseSSHSpecifier(string,
+      if (!Storage_parseSCPSpecifier(string,
                                      storageSpecifier->hostName,
                                      &storageSpecifier->hostPort,
-                                     storageSpecifier->loginName
+                                     storageSpecifier->loginName,
+                                     storageSpecifier->loginPassword
                                     )
          )
       {

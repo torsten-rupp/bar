@@ -7400,9 +7400,10 @@ bool configValueFormatPassword(void **formatUserData, void *userData, String lin
   password = (Password*)(*formatUserData);
   if (password != NULL)
   {
-    plain = Password_deploy(password);
-    String_appendFormat(line,"%'s",plain);
-    Password_undeploy(password,plain);
+    PASSWORD_DEPLOY_DO(plainPassword,password)
+    {
+      String_appendFormat(line,"%'s",plain);
+    }
 
     (*formatUserData) = NULL;
 

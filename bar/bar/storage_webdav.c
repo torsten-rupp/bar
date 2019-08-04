@@ -188,8 +188,7 @@ LOCAL bool initWebDAVLogin(ConstString             hostName,
 
 LOCAL CURLcode setWebDAVLogin(CURL *curlHandle, ConstString loginName, Password *loginPassword, long timeout)
 {
-  CURLcode    curlCode;
-  const char *plainPassword;
+  CURLcode curlCode;
 
   // reset
   curl_easy_reset(curlHandle);
@@ -227,9 +226,10 @@ LOCAL CURLcode setWebDAVLogin(CURL *curlHandle, ConstString loginName, Password 
   }
   if (curlCode == CURLE_OK)
   {
-    plainPassword = Password_deploy(loginPassword);
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainPassword);
-    Password_undeploy(loginPassword,plainPassword);
+    PASSWORD_DEPLOY_DO(plainPassword,loginPassword)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainPassword);
+    }
   }
 
   // set nop-handlers
@@ -548,7 +548,6 @@ LOCAL String StorageWebDAV_getName(String                 string,
                                   )
 {
   ConstString storageFileName;
-  const char  *plainPassword;
 
   assert(storageSpecifier != NULL);
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
@@ -574,9 +573,10 @@ LOCAL String StorageWebDAV_getName(String                 string,
     if (!Password_isEmpty(storageSpecifier->loginPassword))
     {
       String_appendChar(string,':');
-      plainPassword = Password_deploy(storageSpecifier->loginPassword);
-      String_appendCString(string,plainPassword);
-      Password_undeploy(storageSpecifier->loginPassword,plainPassword);
+      PASSWORD_DEPLOY_DO(plainPassword,storageSpecifier->loginPassword)
+      {
+        String_appendCString(string,plainPassword);
+      }
     }
     String_appendChar(string,'@');
   }
@@ -2211,7 +2211,6 @@ LOCAL Errors StorageWebDAV_getInfo(const StorageInfo *storageInfo,
     Server            server;
     CURL              *curlHandle;
     String            baseURL;
-    const char        *plainPassword;
     CURLcode          curlCode;
     String            directoryName,baseName;
     String            url;

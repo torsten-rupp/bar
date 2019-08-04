@@ -345,24 +345,24 @@ LOCAL Errors Connector_setJobOptionCString(ConnectorInfo *connectorInfo, ConstSt
 
 LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, const Password *password)
 {
-  const char *plainPassword;
-  Errors     error;
+  Errors error;
 
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(name != NULL);
 
-  plainPassword = Password_deploy(password);
-  error = Connector_executeCommand(connectorInfo,
-                                   CONNECTOR_DEBUG_LEVEL,
-                                   CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
-                                   "JOB_OPTION_SET jobUUID=%S name=%s value=%'s",
-                                   jobUUID,
-                                   name,
-                                   plainPassword
-                                  );
-  Password_undeploy(password,plainPassword);
+  PASSWORD_DEPLOY_DO(plainPassword,password)
+  {
+    error = Connector_executeCommand(connectorInfo,
+                                     CONNECTOR_DEBUG_LEVEL,
+                                     CONNECTOR_COMMAND_TIMEOUT,
+                                     NULL,
+                                     "JOB_OPTION_SET jobUUID=%S name=%s value=%'s",
+                                     jobUUID,
+                                     name,
+                                     plainPassword
+                                    );
+  }
 
   return error;
 }
