@@ -348,6 +348,7 @@ LOCAL bool getIntegerOption(int                   *value,
   if (i > 0)
   {
     while ((i > 0) && !isdigit(string[i-1])) { i--; }
+//TODO: stringSub
     j = MIN(i,               sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
     j = MIN(strlen(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
   }
@@ -459,6 +460,7 @@ LOCAL bool getInteger64Option(int64                 *value,
   if (i > 0)
   {
     while ((i > 0) && !isdigit(string[i-1])) { i--; }
+//TODO: stringSub
     j = MIN(i,               sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
     j = MIN(strlen(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
   }
@@ -645,6 +647,7 @@ LOCAL bool processOption(const CommandLineOption *commandLineOption,
         if (i > 0)
         {
           while ((i > 0) && !isdigit(value[i-1])) { i--; }
+//TODO: stringSub
           n = MIN(i,              sizeof(number  )-1); strncpy(number,  &value[0],n); number  [n] = '\0';
           n = MIN(strlen(value)-i,sizeof(unitName)-1); strncpy(unitName,&value[i],n); unitName[n]   = '\0';
         }
@@ -1365,11 +1368,13 @@ bool CmdOption_parse(const char              *argv[],
         s = strchr(argv[i]+2,'=');
         if (s != NULL)
         {
+//TODO: stringSub
           strncpy(name,argv[i]+2,MIN((uint)(s-(argv[i]+2)),sizeof(name)-1));
           name[MIN((uint)(s-(argv[i]+2)),sizeof(name)-1)] = '\0';
         }
         else
         {
+//TODO: stringSub
           strncpy(name,argv[i]+2,sizeof(name)-1);
           name[sizeof(name)-1] = '\0';
         }
@@ -1534,7 +1539,7 @@ bool CmdOption_parse(const char              *argv[],
           if (commandLineOptions[j].priority == priority)
           {
             // process option
-            snprintf(option,sizeof(option),"--%s",name);
+            stringFormat(option,sizeof(option),"--%s",name);
             if (!processOption(&commandLineOptions[j],option,value,optionSet,outputHandle,errorPrefix,warningPrefix))
             {
               return FALSE;
@@ -1677,7 +1682,7 @@ bool CmdOption_parse(const char              *argv[],
             if (commandLineOptions[j].priority == priority)
             {
               // process option
-              snprintf(option,sizeof(option),"-%s",name);
+              stringFormat(option,sizeof(option),"-%s",name);
               if (!processOption(&commandLineOptions[j],option,value,optionSet,outputHandle,errorPrefix,warningPrefix))
               {
                 return FALSE;
@@ -2003,60 +2008,60 @@ void CmdOption_printHelp(FILE                    *outputHandle,
       }
 
       // output name
-      name[0] = '\0';
+      stringClear(name);
       if (commandLineOptions[i].shortName != '\0')
       {
-        snprintf(s,sizeof(s)-1,"-%c|",commandLineOptions[i].shortName);
-        strncat(name,s,sizeof(name)-strlen(name));
+        stringFormat(s,sizeof(s)-1,"-%c|",commandLineOptions[i].shortName);
+        stringAppend(name,sizeof(name),s);
       }
       assert(commandLineOptions[i].name != NULL);
-      strncat(name,"--",sizeof(name)-strlen(name));
-      strncat(name,commandLineOptions[i].name,sizeof(name)-strlen(name));
+      stringAppend(name,sizeof(name),"--");
+      stringAppend(name,sizeof(name),commandLineOptions[i].name);
       switch (commandLineOptions[i].type)
       {
         case CMD_OPTION_TYPE_INTEGER:
-          strncat(name,"=<n>",sizeof(name)-strlen(name));
+          stringAppend(name,sizeof(name),"=<n>");
           if (commandLineOptions[i].integerOption.units != NULL)
           {
-            strncat(name,"[",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"[");
             j = 0;
             ITERATE_UNITS(unit,commandLineOptions[i].integerOption.units)
             {
-              if (j > 0) strncat(name,"|",sizeof(name)-strlen(name));
-              strncat(name,unit->name,sizeof(name)-strlen(name));
+              if (j > 0) stringAppend(name,sizeof(name),"|");
+              stringAppend(name,sizeof(name),unit->name);
               j++;
             }
-            strncat(name,"]",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"]");
           }
           break;
         case CMD_OPTION_TYPE_INTEGER64:
-          strncat(name,"=<n>",sizeof(name)-strlen(name));
+          stringAppend(name,sizeof(name),"=<n>");
           if (commandLineOptions[i].integer64Option.units != NULL)
           {
-            strncat(name,"[",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"[");
             j = 0;
             ITERATE_UNITS(unit,commandLineOptions[i].integer64Option.units)
             {
-              if (j > 0) strncat(name,"|",sizeof(name)-strlen(name));
-              strncat(name,unit->name,sizeof(name)-strlen(name));
+              if (j > 0) stringAppend(name,sizeof(name),"|");
+              stringAppend(name,sizeof(name),unit->name);
               j++;
             }
-            strncat(name,"]",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"]");
           }
           break;
         case CMD_OPTION_TYPE_DOUBLE:
-          strncat(name,"=<n>",sizeof(name)-strlen(name));
+          stringAppend(name,sizeof(name),"=<n>");
           break;
         case CMD_OPTION_TYPE_BOOLEAN:
           if (commandLineOptions[i].booleanOption.yesnoFlag)
           {
-            strncat(name,"[=yes|no]",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"[=yes|no]");
           }
           break;
         case CMD_OPTION_TYPE_FLAG:
           if (commandLineOptions[i].booleanOption.yesnoFlag)
           {
-            strncat(name,"[=yes|no]",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"[=yes|no]");
           }
           break;
         case CMD_OPTION_TYPE_INCREMENT:
@@ -2064,43 +2069,43 @@ void CmdOption_printHelp(FILE                    *outputHandle,
         case CMD_OPTION_TYPE_ENUM:
           break;
         case CMD_OPTION_TYPE_SELECT:
-          strncat(name,"=<name>",sizeof(name)-strlen(name));
+          stringAppend(name,sizeof(name),"=<name>");
           break;
         case CMD_OPTION_TYPE_SET:
-          strncat(name,"=<name>[,<name>...]",sizeof(name)-strlen(name));
+          stringAppend(name,sizeof(name),"=<name>[,<name>...]");
           break;
         case CMD_OPTION_TYPE_CSTRING:
         case CMD_OPTION_TYPE_STRING:
-          strncat(name,"=<",sizeof(name)-strlen(name));
+          stringAppend(name,sizeof(name),"=<");
           if (commandLineOptions[i].stringOption.descriptionArgument != NULL)
           {
-            strncat(name,commandLineOptions[i].stringOption.descriptionArgument,sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),commandLineOptions[i].stringOption.descriptionArgument);
           }
           else
           {
-            strncat(name,"string",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"string");
           }
-          strncat(name,">",sizeof(name)-strlen(name));
+          stringAppend(name,sizeof(name),">");
           break;
         case CMD_OPTION_TYPE_SPECIAL:
           if (commandLineOptions[i].specialOption.argumentCount > 0)
           {
-            strncat(name,"=<",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"=<");
             if (commandLineOptions[i].specialOption.descriptionArgument != NULL)
             {
-              strncat(name,commandLineOptions[i].specialOption.descriptionArgument,sizeof(name)-strlen(name));
+              stringAppend(name,sizeof(name),commandLineOptions[i].specialOption.descriptionArgument);
             }
             else
             {
-              strncat(name,"...",sizeof(name)-strlen(name));
+              stringAppend(name,sizeof(name),"...");
             }
-            strncat(name,">",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),">");
           }
           break;
         case CMD_OPTION_TYPE_DEPRECATED:
           if (commandLineOptions[i].deprecatedOption.argumentCount > 0)
           {
-            strncat(name,"=<...>",sizeof(name)-strlen(name));
+            stringAppend(name,sizeof(name),"=<...>");
           }
           break;
         #ifndef NDEBUG
