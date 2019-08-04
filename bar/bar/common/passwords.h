@@ -53,6 +53,29 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+/***********************************************************************\
+* Name   : PASSWORD_DEPLOY_DO
+* Purpose: deploy password and execute block
+* Input  : plainPassword - plain password
+*          password      - password
+* Output : -
+* Return : -
+* Notes  : usage:
+*            PASSWORD_DEPLOY_DO(plainPassword,password)
+*            {
+*              ...
+*            }
+*
+*          plainPassword must be undeployed manually if 'break' or
+*          'return' is used!
+\***********************************************************************/
+
+#define PASSWORD_DEPLOY_DO(plainPassword,password) \
+  for (const char *plainPassword = Password_deploy(password); \
+       plainPassword != NULL; \
+       Password_undeploy(password,plainPassword), plainPassword = NULL \
+      )
+
 #ifndef NDEBUG
   #define Password_init(...)          __Password_init         (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Password_initDuplicate(...) __Password_initDuplicate(__FILE__,__LINE__, ## __VA_ARGS__)
@@ -337,14 +360,14 @@ const char *Password_deploy(const Password *password);
 /***********************************************************************\
 * Name   : Password_undeploy
 * Purpose: undeploy password
-* Input  : password - password
-*          plain    - plain password text
+* Input  : password      - password
+*          plainPassword - plain password text
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Password_undeploy(const Password *password, const char *plain);
+void Password_undeploy(const Password *password, const char *plainPassword);
 
 /***********************************************************************\
 * Name   : Password_equals
