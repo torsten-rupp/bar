@@ -657,7 +657,6 @@ Errors Network_connect(SocketHandle *socketHandle,
     case SOCKET_TYPE_SSH:
       #ifdef HAVE_SSH2
       {
-        const char *plainPassword;
         #if  defined(PLATFORM_LINUX)
           long       flags;
           int        n;
@@ -781,74 +780,84 @@ Errors Network_connect(SocketHandle *socketHandle,
 
 #if 1
         // authorize with key
-        plainPassword = Password_deploy(password);
+        error = ERROR_SSH_AUTHENTICATION;
+        PASSWORD_DEPLOY_DO(plainPassword,password)
+        {
 //fprintf(stderr,"%s, %d: sshPublicKeyLength=%d\n",__FILE__,__LINE__,sshPublicKeyLength); debugDumpMemory(sshPublicKeyData,sshPublicKeyLength,0);
 //fprintf(stderr,"%s, %d: sshPrivateKeyLength=%d\n",__FILE__,__LINE__,sshPrivateKeyLength); debugDumpMemory(sshPrivateKeyData,sshPrivateKeyLength,0);
 //fprintf(stderr,"%s, %d: loginName=%s\n",__FILE__,__LINE__,String_cString(loginName));
 //fprintf(stderr,"%s, %d: plainPassword=%s\n",__FILE__,__LINE__,plainPassword);
-        error = ERROR_SSH_AUTHENTICATION;
-        if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
-        {
-          if ((sshPublicKeyData != NULL) && (sshPrivateKeyData != NULL))
+fprintf(stderr,"%s, %d: plainPassword=%s\n",__FILE__,__LINE__,plainPassword);
+          if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
           {
-            result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
-                                                           String_cString(loginName),
-                                                           String_length(loginName),
-                                                           sshPublicKeyData,
-                                                           sshPublicKeyLength,
-                                                           sshPrivateKeyData,
-                                                           sshPrivateKeyLength,
-                                                           plainPassword
-                                                          );
+            if (   (sshPublicKeyData != NULL)
+                && (sshPublicKeyLength > 0)
+                && (sshPrivateKeyData != NULL)
+                && (sshPrivateKeyLength > 0)
+               )
+            {
+              result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
+                                                             String_cString(loginName),
+                                                             String_length(loginName),
+                                                             sshPublicKeyData,
+                                                             sshPublicKeyLength,
+                                                             sshPrivateKeyData,
+                                                             sshPrivateKeyLength,
+                                                             plainPassword
+                                                            );
+              if (result == 0)
+              {
+                error = ERROR_NONE;
+              }
+              else
+              {
+                ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
+                /* Note: work-around for missleading error message from libssh2:
+                         original error (-16) is overwritten by callback-error (-19)
+                         in libssh2.
+                */
+  fprintf(stderr,"%s, %d: ssh2Error=%d\n",__FILE__,__LINE__,ssh2Error);
+  debugDumpMemory(sshPrivateKeyData,sshPrivateKeyLength,0);
+                if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
+                {
+                  error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
+                }
+                else
+                {
+                  error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
+                }
+              }
+            }
+          }
+          if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
+          {
+            // authorize with password only
+            result = libssh2_userauth_password_ex(socketHandle->ssh2.session,
+                                                  String_cString(loginName),
+                                                  String_length(loginName),
+                                                  plainPassword,
+                                                  Password_length(password),
+                                                  NULL
+                                                 );
             if (result == 0)
             {
               error = ERROR_NONE;
             }
             else
             {
-              ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
-              // Note: work-around for missleading error message from libssh2: original error (-16) is overwritten by callback-error (-19) in libssh2.
-              if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
-              {
-                error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
-              }
-              else
-              {
-                error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
-              }
+              ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,NULL,NULL,0);
+              error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
             }
-          }
-        }
-        if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
-        {
-          // authorize with password only
-          result = libssh2_userauth_password_ex(socketHandle->ssh2.session,
-                                                String_cString(loginName),
-                                                String_length(loginName),
-                                                plainPassword,
-                                                Password_length(password),
-                                                NULL
-                                               );
-          if (result == 0)
-          {
-            error = ERROR_NONE;
-          }
-          else
-          {
-            ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,NULL,NULL,0);
-            error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
           }
         }
         if (error != ERROR_NONE)
         {
-          Password_undeploy(password,plainPassword);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           shutdown(socketHandle->handle,SHUT_RDWR);
           close(socketHandle->handle);
           return error;
         }
-        Password_undeploy(password,plainPassword);
 #else
         // authorize interactive
         if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,
@@ -1007,7 +1016,6 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
     case SOCKET_TYPE_SSH:
       #ifdef HAVE_SSH2
       {
-        const char *plainPassword;
         #if  defined(PLATFORM_LINUX)
           long       flags;
           int        n;
@@ -1069,16 +1077,18 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
 
 #if 1
         // authorize with key
-        plainPassword = Password_deploy(password);
-        result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
-                                                       String_cString(loginName),
-                                                       String_length(loginName),
-                                                       sshPublicKeyData,
-                                                       sshPublicKeyLength,
-                                                       sshPrivateKeyData,
-                                                       sshPrivateKeyLength,
-                                                       plainPassword
-                                                      );
+        PASSWORD_DEPLOY_DO(plainPassword,password)
+        {
+          result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
+                                                         String_cString(loginName),
+                                                         String_length(loginName),
+                                                         sshPublicKeyData,
+                                                         sshPublicKeyLength,
+                                                         sshPrivateKeyData,
+                                                         sshPrivateKeyLength,
+                                                         plainPassword
+                                                        );
+        }
         if (result != 0)
         {
           ssh2Error = libssh2_session_last_error(socketHandle->ssh2.session,&ssh2ErrorText,NULL,0);
@@ -1091,12 +1101,10 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
           {
             error = ERRORX_(SSH_AUTHENTICATION,ssh2Error,"%s",ssh2ErrorText);
           }
-          Password_undeploy(password,plainPassword);
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
           return error;
         }
-        Password_undeploy(password,plainPassword);
 #else
         // authorize interactive
         if (libssh2_userauth_keyboard_interactive(socketHandle->ssh2.session,

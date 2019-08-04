@@ -161,7 +161,8 @@ typedef enum
 *              ...
 *            }
 *
-*          semaphore must be unlocked manually if 'break' is used!
+*          semaphore must be unlocked manually if 'break'  or
+*          'return' is used!
 \***********************************************************************/
 
 #define SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType,timeout) \
