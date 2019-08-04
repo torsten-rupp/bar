@@ -1554,14 +1554,14 @@ bool CmdOption_parse(const char              *argv[],
           return FALSE;
         }
       }
-      else if (!endOfOptionsFlag && (strncmp(argv[i],"-",1) == 0))
+      else if (!endOfOptionsFlag && stringStartsWith(argv[i],"-"))
       {
         // get option chars
         optionChars = argv[i]+1;
-        while ((optionChars != NULL) && (*optionChars) != '\0')
+        while ((optionChars != NULL) && ((*optionChars) != NUL))
         {
-          // get name
-          name[0] = (*optionChars);
+          // get short name
+          name[0] = optionChars[0];
           name[1] = '\0';
 
           // find option
@@ -1601,7 +1601,20 @@ bool CmdOption_parse(const char              *argv[],
                 break;
               case CMD_OPTION_TYPE_BOOLEAN:
               case CMD_OPTION_TYPE_FLAG:
+                value = NULL;
+                break;
               case CMD_OPTION_TYPE_INCREMENT:
+                // check if '='
+                if (optionChars[1] == '=')
+                {
+                  value = &optionChars[2];
+                  optionChars = NULL;
+                }
+                else
+                {
+                  value = NULL;
+                }
+                break;
               case CMD_OPTION_TYPE_ENUM:
                 value = NULL;
                 break;
@@ -1672,7 +1685,7 @@ bool CmdOption_parse(const char              *argv[],
             }
 
             // next option char
-            optionChars++;
+            if (optionChars != NULL) optionChars++;
           }
           else
           {
