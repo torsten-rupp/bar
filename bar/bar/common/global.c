@@ -1400,6 +1400,8 @@ void debugDumpMemory(const void *address, uint length, bool printAddress)
   const byte *p;
   uint       z,i;
 
+  assert(address != NULL);
+
   z = 0;
   while (z < length)
   {
