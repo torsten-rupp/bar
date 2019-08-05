@@ -351,6 +351,8 @@ LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstS
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(name != NULL);
 
+  error = ERROR_UNKNOWN;
+
   PASSWORD_DEPLOY_DO(plainPassword,password)
   {
     error = Connector_executeCommand(connectorInfo,
