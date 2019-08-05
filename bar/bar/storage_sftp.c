@@ -664,7 +664,7 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
         sftp = libssh2_sftp_init(Network_getSSHSession(&socketHandle));
         if (sftp != NULL)
         {
-          // get file fino
+          // get file info
           if (libssh2_sftp_lstat(sftp,
                                  String_cString(archiveName),
                                  &sftpAttributes
@@ -692,30 +692,136 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
 
 LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
 {
+  bool         isFileFlag;
+  Errors       error;
+  #ifdef HAVE_SSH2
+    SocketHandle socketHandle;
+    LIBSSH2_SFTP *sftp;
+  #endif /* HAVE_SSH2 */
+
   assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
+  assert(storageInfo->type == STORAGE_TYPE_SFTP);
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  isFileFlag = FALSE;
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  error = ERROR_UNKNOWN;
+  #ifdef HAVE_SSH2
+    {
+      LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
+
+      error = Network_connect(&socketHandle,
+                              SOCKET_TYPE_SSH,
+                              storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->sftp.publicKey.data,
+                              storageInfo->sftp.publicKey.length,
+                              storageInfo->sftp.privateKey.data,
+                              storageInfo->sftp.privateKey.length,
+                                SOCKET_FLAG_NONE
+                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                             );
+      if (error == ERROR_NONE)
+      {
+        libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
+
+        // init session
+        sftp = libssh2_sftp_init(Network_getSSHSession(&socketHandle));
+        if (sftp != NULL)
+        {
+          // get file info
+          if (libssh2_sftp_lstat(sftp,
+                                 String_cString(archiveName),
+                                 &sftpAttributes
+                                ) == 0
+             )
+          {
+            isFileFlag = LIBSSH2_SFTP_S_ISREG(sftpAttributes.flags);
+          }
+
+          libssh2_sftp_shutdown(sftp);
+        }
+        Network_disconnect(&socketHandle);
+      }
+    }
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SSH2 */
+  assert(error != ERROR_UNKNOWN);
+
+  return isFileFlag;
 }
 
 LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
 {
+  bool         isDirectoryFlag;
+  Errors       error;
+  #ifdef HAVE_SSH2
+    SocketHandle socketHandle;
+    LIBSSH2_SFTP *sftp;
+  #endif /* HAVE_SSH2 */
+
   assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
+  assert(storageInfo->type == STORAGE_TYPE_SFTP);
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  isDirectoryFlag = FALSE;
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  error = ERROR_UNKNOWN;
+  #ifdef HAVE_SSH2
+    {
+      LIBSSH2_SFTP_ATTRIBUTES sftpAttributes;
+
+      error = Network_connect(&socketHandle,
+                              SOCKET_TYPE_SSH,
+                              storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.hostPort,
+                              storageInfo->storageSpecifier.loginName,
+                              storageInfo->storageSpecifier.loginPassword,
+                              storageInfo->sftp.publicKey.data,
+                              storageInfo->sftp.publicKey.length,
+                              storageInfo->sftp.privateKey.data,
+                              storageInfo->sftp.privateKey.length,
+                                SOCKET_FLAG_NONE
+                              | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                              | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                             );
+      if (error == ERROR_NONE)
+      {
+        libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
+
+        // init session
+        sftp = libssh2_sftp_init(Network_getSSHSession(&socketHandle));
+        if (sftp != NULL)
+        {
+          // get file info
+          if (libssh2_sftp_lstat(sftp,
+                                 String_cString(archiveName),
+                                 &sftpAttributes
+                                ) == 0
+             )
+          {
+            isDirectoryFlag = LIBSSH2_SFTP_S_ISDIR(sftpAttributes.flags);
+          }
+
+          libssh2_sftp_shutdown(sftp);
+        }
+        Network_disconnect(&socketHandle);
+      }
+    }
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SSH2 */
+  assert(error != ERROR_UNKNOWN);
+
+  return isDirectoryFlag;
 }
 
 LOCAL bool StorageSFTP_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
@@ -727,9 +833,7 @@ LOCAL bool StorageSFTP_isReadable(const StorageInfo *storageInfo, ConstString ar
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL bool StorageSFTP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
