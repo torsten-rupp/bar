@@ -1402,9 +1402,7 @@ LOCAL bool StorageFTP_isReadable(const StorageInfo *storageInfo, ConstString arc
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL bool StorageFTP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
