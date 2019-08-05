@@ -788,8 +788,6 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->scp.socketHandle),READ_TIMEOUT);
 
     // install send/receive callback to track number of sent/received bytes
-    storageHandle->scp.totalSentBytes     = 0LL;
-    storageHandle->scp.totalReceivedBytes = 0LL;
     (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->scp.socketHandle)))) = storageHandle;
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
@@ -898,8 +896,6 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     libssh2_session_set_timeout(Network_getSSHSession(&storageHandle->scp.socketHandle),READ_TIMEOUT);
 
     // install send/receive callback to track number of sent/received bytes
-    storageHandle->scp.totalSentBytes     = 0LL;
-    storageHandle->scp.totalReceivedBytes = 0LL;
     (*(libssh2_session_abstract(Network_getSSHSession(&storageHandle->scp.socketHandle)))) = storageHandle;
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
@@ -1224,6 +1220,7 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
     assert(storageHandle->scp.channel != NULL);
 
     error = ERROR_NONE;
+
     writtenBytes = 0L;
     while (writtenBytes < bufferLength)
     {
@@ -1300,7 +1297,7 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
                       );
       }
     }
-    assert(error != ERROR_UNKNOWN);
+    storageHandle->scp.size += writtenBytes;
 
     return error;
   #else /* not HAVE_SSH2 */
