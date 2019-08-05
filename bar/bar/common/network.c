@@ -816,8 +816,6 @@ Errors Network_connect(SocketHandle *socketHandle,
                          original error (-16) is overwritten by callback-error (-19)
                          in libssh2.
                 */
-  fprintf(stderr,"%s, %d: ssh2Error=%d\n",__FILE__,__LINE__,ssh2Error);
-  debugDumpMemory(sshPrivateKeyData,sshPrivateKeyLength,0);
                 if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
                 {
                   error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
@@ -1077,6 +1075,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
 
 #if 1
         // authorize with key
+        result = 0;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {
           result = libssh2_userauth_publickey_frommemory(socketHandle->ssh2.session,
