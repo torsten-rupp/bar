@@ -390,8 +390,10 @@ LOCAL Errors StorageSCP_init(StorageInfo                *storageInfo,
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("LOGNAME"));
     if (String_isEmpty(storageInfo->storageSpecifier.loginName)) String_setCString(storageInfo->storageSpecifier.loginName,getenv("USER"));
     if (storageInfo->storageSpecifier.hostPort == 0) storageInfo->storageSpecifier.hostPort = sshServer.port;
-    storageInfo->scp.publicKey  = sshServer.publicKey;
-    storageInfo->scp.privateKey = sshServer.privateKey;
+    duplicateKey(&storageInfo->scp.publicKey, &sshServer.publicKey );
+    duplicateKey(&storageInfo->scp.privateKey,&sshServer.privateKey);
+    AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.publicKey,{ doneKey(&storageInfo->scp.publicKey); });
+    AUTOFREE_ADD(&autoFreeList,&storageInfo->scp.privateKey,{ doneKey(&storageInfo->scp.privateKey); });
     if (String_isEmpty(storageInfo->storageSpecifier.hostName))
     {
       AutoFree_cleanup(&autoFreeList);
@@ -523,6 +525,8 @@ LOCAL Errors StorageSCP_done(StorageInfo *storageInfo)
 
   // free SSH server connection
   #ifdef HAVE_SSH2
+    doneKey(&storageInfo->scp.privateKey);
+    doneKey(&storageInfo->scp.publicKey);
     freeServer(storageInfo->scp.serverId);
   #else /* not HAVE_SSH2 */
     UNUSED_VARIABLE(storageInfo);
@@ -790,6 +794,8 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
 
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
+
     // open channel and file for writing
     #ifdef HAVE_SSH2_SCP_SEND64
       storageHandle->scp.channel = libssh2_scp_send64(Network_getSSHSession(&storageHandle->scp.socketHandle),
@@ -819,13 +825,12 @@ LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,
                       "%s",
                       sshErrorText
                      );
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
       Network_disconnect(&storageHandle->scp.socketHandle);
       return error;
     }
-
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
@@ -899,6 +904,8 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     storageHandle->scp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,scpSendCallback   );
     storageHandle->scp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,scpReceiveCallback);
 
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
+
     // open channel and file for reading
     storageHandle->scp.channel = libssh2_scp_recv(Network_getSSHSession(&storageHandle->scp.socketHandle),
                                                       String_cString(archiveName),
@@ -914,6 +921,7 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
                       "%s",
                       sshErrorText
                      );
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_RECV,storageHandle->scp.oldReceiveCallback);
       libssh2_session_callback_set(Network_getSSHSession(&storageHandle->scp.socketHandle),LIBSSH2_CALLBACK_SEND,storageHandle->scp.oldSendCallback);
       Network_disconnect(&storageHandle->scp.socketHandle);
@@ -921,8 +929,6 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
       return error;
     }
     storageHandle->scp.size = (uint64)fileInfo.st_size;
-
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
