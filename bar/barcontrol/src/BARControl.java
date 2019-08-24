@@ -855,20 +855,21 @@ class Units
    */
   public static String getByteSize(double n)
   {
-/*
-    if      (n >= 1024L*1024L*1024L*1024L) return String.format("%.1f",n/(1024L*1024L*1024L*1024L));
-    else if (n >=       1024L*1024L*1024L) return String.format("%.1f",n/(      1024L*1024L*1024L));
-    else if (n >=             1024L*1024L) return String.format("%.1f",n/(            1024L*1024L));
-    else if (n >=                   1024L) return String.format("%.1f",n/(                  1024L));
-    else                                   return String.format("%d"  ,(long)n                    );
-*/
-    DecimalFormat decimalFormat = new DecimalFormat(".#");
+    final DecimalFormat DECIMAL_FORMAT = new DecimalFormat(".#");
 
-    if      (n >= 1024L*1024L*1024L*1024L) return decimalFormat.format(n/(1024L*1024L*1024L*1024L));
-    else if (n >=       1024L*1024L*1024L) return decimalFormat.format(n/(      1024L*1024L*1024L));
-    else if (n >=             1024L*1024L) return decimalFormat.format(n/(            1024L*1024L));
-    else if (n >=                   1024L) return decimalFormat.format(n/(                  1024L));
-    else                                   return String.format("%d",(long)n);
+    String result;
+
+    if      ((n % (1024L*1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L*1024L));
+    else if (n >= (1024L*1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L*1024L));
+    else if ((n % (      1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L));
+    else if (n >= (      1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L));
+    else if ((n % (            1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L));
+    else if (n >= (            1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L));
+    else if ((n % (                  1024L)) == 0) result = String.format("%d",(long)n/(1024L));
+    else if (n >= (                  1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L));
+    else                                         result = String.format("%d",(long)n);
+
+    return result;
   }
 
   /** get byte size unit
@@ -877,11 +878,15 @@ class Units
    */
   public static String getByteUnit(double n)
   {
-    if      (n >= 1024L*1024L*1024L*1024L) return BARControl.tr("TBytes");
-    else if (n >=       1024L*1024L*1024L) return BARControl.tr("GBytes");
-    else if (n >=             1024L*1024L) return BARControl.tr("MBytes");
-    else if (n >=                   1024L) return BARControl.tr("KBytes");
-    else                                   return BARControl.tr("bytes");
+    String result;
+
+    if      (n >= 1024L*1024L*1024L*1024L) result =  BARControl.tr("TBytes");
+    else if (n >=       1024L*1024L*1024L) result =  BARControl.tr("GBytes");
+    else if (n >=             1024L*1024L) result =  BARControl.tr("MBytes");
+    else if (n >=                   1024L) result =  BARControl.tr("KBytes");
+    else                                   result =  BARControl.tr("bytes");
+
+    return result;
   }
 
   /** get byte size short unit
@@ -890,11 +895,15 @@ class Units
    */
   public static String getByteShortUnit(double n)
   {
-    if      (n >= 1024L*1024L*1024L*1024L) return "T";
-    else if (n >=       1024L*1024L*1024L) return "G";
-    else if (n >=             1024L*1024L) return "M";
-    else if (n >=                   1024L) return "K";
-    else                            return "";
+    String result;
+
+    if      (n >= 1024L*1024L*1024L*1024L) result =  "T";
+    else if (n >=       1024L*1024L*1024L) result =  "G";
+    else if (n >=             1024L*1024L) result =  "M";
+    else if (n >=                   1024L) result =  "K";
+    else                                   result =  "";
+
+    return result;
   }
 
   /** parse byte size string
