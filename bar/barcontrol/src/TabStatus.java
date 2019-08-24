@@ -1802,8 +1802,8 @@ public class TabStatus
     {
       widgetButtonStart = Widgets.newButton(composite,null,BARControl.tr("Start")+"\u2026",BARServer.isMaster());
       widgetButtonStart.setToolTipText(BARControl.tr("Start selected job."));
-      Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonStart.setEnabled(false);
+      Widgets.layout(widgetButtonStart,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonStart.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -1825,17 +1825,18 @@ public class TabStatus
         public void handle(Widget widget, JobData jobData)
         {
           Button button = (Button)widget;
-          button.setEnabled(   (jobData.state != JobData.States.RUNNING    )
-                            && (jobData.state != JobData.States.DRY_RUNNING)
-                            && (jobData.state != JobData.States.WAITING    )
+          button.setEnabled(   (jobData.state == JobData.States.NONE   )
+                            || (jobData.state == JobData.States.DONE   )
+                            || (jobData.state == JobData.States.ERROR  )
+                            || (jobData.state == JobData.States.ABORTED)
                            );
         }
       });
 
       widgetButtonAbort = Widgets.newButton(composite,null,BARControl.tr("Abort")+"\u2026",BARServer.isMaster());
       widgetButtonAbort.setToolTipText(BARControl.tr("Abort selected job."));
-      Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonAbort.setEnabled(false);
+      Widgets.layout(widgetButtonAbort,0,1,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonAbort.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -1899,8 +1900,8 @@ public class TabStatus
 
       widgetButtonVolume = Widgets.newButton(composite,null,BARControl.tr("Volume"),BARServer.isMaster());
       widgetButtonVolume.setToolTipText(BARControl.tr("Click when a new volume is available in drive."));
-      Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonVolume.setEnabled(false);
+      Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
       widgetButtonVolume.addSelectionListener(new SelectionListener()
       {
         @Override
