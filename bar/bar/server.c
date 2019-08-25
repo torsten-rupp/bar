@@ -2001,7 +2001,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
 
       // free resources
-      Job_connectorUnlock(connectorInfo);
+      if (connectorInfo != NULL)
+      {
+        Job_connectorUnlock(connectorInfo);
+      }
       Job_doneOptions(&jobOptions);
       PatternList_clear(&excludePatternList);
       EntryList_clear(&includeEntryList);
