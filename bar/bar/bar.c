@@ -6615,22 +6615,22 @@ void initCDSettings(OpticalDisk      *cd,
 {
   assert(cd != NULL);
 
-  cd->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.cd.deviceName;
-  cd->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.cd.requestVolumeCommand;
-  cd->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.cd.unloadVolumeCommand;
-  cd->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.cd.loadVolumeCommand;
-  cd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.cd.volumeSize;
-  cd->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.cd.imagePreProcessCommand;
-  cd->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.cd.imagePostProcessCommand;
-  cd->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.cd.imageCommand;
-  cd->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.cd.eccPreProcessCommand;
-  cd->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.cd.eccPostProcessCommand;
-  cd->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.cd.eccCommand;
-  cd->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.cd.blankCommand;
-  cd->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.cd.writePreProcessCommand;
-  cd->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.cd.writePostProcessCommand;
-  cd->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.cd.writeCommand;
-  cd->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.cd.writeImageCommand;
+  cd->deviceName              = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.deviceName             )) ? jobOptions->opticalDisk.deviceName              : globalOptions.cd.deviceName;
+  cd->requestVolumeCommand    = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.requestVolumeCommand   )) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.cd.requestVolumeCommand;
+  cd->unloadVolumeCommand     = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.unloadVolumeCommand    )) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.cd.unloadVolumeCommand;
+  cd->loadVolumeCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.loadVolumeCommand      )) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.cd.loadVolumeCommand;
+  cd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize != 0LL                     )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.cd.volumeSize;
+  cd->imagePreProcessCommand  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imagePreProcessCommand )) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.cd.imagePreProcessCommand;
+  cd->imagePostProcessCommand = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imagePostProcessCommand)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.cd.imagePostProcessCommand;
+  cd->imageCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imageCommand           )) ? jobOptions->opticalDisk.imageCommand            : globalOptions.cd.imageCommand;
+  cd->eccPreProcessCommand    = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccPreProcessCommand   )) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.cd.eccPreProcessCommand;
+  cd->eccPostProcessCommand   = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccPostProcessCommand  )) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.cd.eccPostProcessCommand;
+  cd->eccCommand              = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccCommand             )) ? jobOptions->opticalDisk.eccCommand              : globalOptions.cd.eccCommand;
+  cd->blankCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccCommand             )) ? jobOptions->opticalDisk.blankCommand            : globalOptions.cd.blankCommand;
+  cd->writePreProcessCommand  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writePreProcessCommand )) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.cd.writePreProcessCommand;
+  cd->writePostProcessCommand = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writePostProcessCommand)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.cd.writePostProcessCommand;
+  cd->writeCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeCommand           )) ? jobOptions->opticalDisk.writeCommand            : globalOptions.cd.writeCommand;
+  cd->writeImageCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeImageCommand      )) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.cd.writeImageCommand;
 }
 
 void initDVDSettings(OpticalDisk      *dvd,
@@ -6639,22 +6639,22 @@ void initDVDSettings(OpticalDisk      *dvd,
 {
   assert(dvd != NULL);
 
-  dvd->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.dvd.deviceName;
-  dvd->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.dvd.requestVolumeCommand;
-  dvd->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.dvd.unloadVolumeCommand;
-  dvd->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.dvd.loadVolumeCommand;
-  dvd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.dvd.volumeSize;
-  dvd->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.dvd.imagePreProcessCommand;
-  dvd->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.dvd.imagePostProcessCommand;
-  dvd->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.dvd.imageCommand;
-  dvd->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.dvd.eccPreProcessCommand;
-  dvd->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.dvd.eccPostProcessCommand;
-  dvd->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.dvd.eccCommand;
-  dvd->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.dvd.blankCommand;
-  dvd->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.dvd.writePreProcessCommand;
-  dvd->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.dvd.writePostProcessCommand;
-  dvd->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.dvd.writeCommand;
-  dvd->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.dvd.writeImageCommand;
+  dvd->deviceName              = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.deviceName             )) ? jobOptions->opticalDisk.deviceName              : globalOptions.dvd.deviceName;
+  dvd->requestVolumeCommand    = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.requestVolumeCommand   )) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.dvd.requestVolumeCommand;
+  dvd->unloadVolumeCommand     = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.unloadVolumeCommand    )) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.dvd.unloadVolumeCommand;
+  dvd->loadVolumeCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.loadVolumeCommand      )) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.dvd.loadVolumeCommand;
+  dvd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize != 0LL                     )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.dvd.volumeSize;
+  dvd->imagePreProcessCommand  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imagePreProcessCommand )) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.dvd.imagePreProcessCommand;
+  dvd->imagePostProcessCommand = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imagePostProcessCommand)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.dvd.imagePostProcessCommand;
+  dvd->imageCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imageCommand           )) ? jobOptions->opticalDisk.imageCommand            : globalOptions.dvd.imageCommand;
+  dvd->eccPreProcessCommand    = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccPreProcessCommand   )) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.dvd.eccPreProcessCommand;
+  dvd->eccPostProcessCommand   = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccPostProcessCommand  )) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.dvd.eccPostProcessCommand;
+  dvd->eccCommand              = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccCommand             )) ? jobOptions->opticalDisk.eccCommand              : globalOptions.dvd.eccCommand;
+  dvd->blankCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccCommand             )) ? jobOptions->opticalDisk.blankCommand            : globalOptions.dvd.blankCommand;
+  dvd->writePreProcessCommand  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writePreProcessCommand )) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.dvd.writePreProcessCommand;
+  dvd->writePostProcessCommand = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writePostProcessCommand)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.dvd.writePostProcessCommand;
+  dvd->writeCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeCommand           )) ? jobOptions->opticalDisk.writeCommand            : globalOptions.dvd.writeCommand;
+  dvd->writeImageCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeImageCommand      )) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.dvd.writeImageCommand;
 }
 
 void initBDSettings(OpticalDisk      *bd,
@@ -6663,22 +6663,22 @@ void initBDSettings(OpticalDisk      *bd,
 {
   assert(bd != NULL);
 
-  bd->deviceName              = ((jobOptions != NULL) && (jobOptions->opticalDisk.deviceName              != NULL)) ? jobOptions->opticalDisk.deviceName              : globalOptions.bd.deviceName;
-  bd->requestVolumeCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.requestVolumeCommand    != NULL)) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.bd.requestVolumeCommand;
-  bd->unloadVolumeCommand     = ((jobOptions != NULL) && (jobOptions->opticalDisk.unloadVolumeCommand     != NULL)) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.bd.unloadVolumeCommand;
-  bd->loadVolumeCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.loadVolumeCommand       != NULL)) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.bd.loadVolumeCommand;
-  bd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize              != 0LL )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.bd.volumeSize;
-  bd->imagePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.bd.imagePreProcessCommand;
-  bd->imagePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.imagePostProcessCommand != NULL)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.bd.imagePostProcessCommand;
-  bd->imageCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.imageCommand            != NULL)) ? jobOptions->opticalDisk.imageCommand            : globalOptions.bd.imageCommand;
-  bd->eccPreProcessCommand    = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPreProcessCommand    != NULL)) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.bd.eccPreProcessCommand;
-  bd->eccPostProcessCommand   = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccPostProcessCommand   != NULL)) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.bd.eccPostProcessCommand;
-  bd->eccCommand              = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.eccCommand              : globalOptions.bd.eccCommand;
-  bd->blankCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.eccCommand              != NULL)) ? jobOptions->opticalDisk.blankCommand            : globalOptions.bd.blankCommand;
-  bd->writePreProcessCommand  = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePreProcessCommand  != NULL)) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.bd.writePreProcessCommand;
-  bd->writePostProcessCommand = ((jobOptions != NULL) && (jobOptions->opticalDisk.writePostProcessCommand != NULL)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.bd.writePostProcessCommand;
-  bd->writeCommand            = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeCommand            != NULL)) ? jobOptions->opticalDisk.writeCommand            : globalOptions.bd.writeCommand;
-  bd->writeImageCommand       = ((jobOptions != NULL) && (jobOptions->opticalDisk.writeImageCommand       != NULL)) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
+  bd->deviceName              = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.deviceName             )) ? jobOptions->opticalDisk.deviceName              : globalOptions.bd.deviceName;
+  bd->requestVolumeCommand    = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.requestVolumeCommand   )) ? jobOptions->opticalDisk.requestVolumeCommand    : globalOptions.bd.requestVolumeCommand;
+  bd->unloadVolumeCommand     = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.unloadVolumeCommand    )) ? jobOptions->opticalDisk.unloadVolumeCommand     : globalOptions.bd.unloadVolumeCommand;
+  bd->loadVolumeCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.loadVolumeCommand      )) ? jobOptions->opticalDisk.loadVolumeCommand       : globalOptions.bd.loadVolumeCommand;
+  bd->volumeSize              = ((jobOptions != NULL) && (jobOptions->opticalDisk.volumeSize != 0LL                     )) ? jobOptions->opticalDisk.volumeSize              : globalOptions.bd.volumeSize;
+  bd->imagePreProcessCommand  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imagePreProcessCommand )) ? jobOptions->opticalDisk.imagePreProcessCommand  : globalOptions.bd.imagePreProcessCommand;
+  bd->imagePostProcessCommand = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imagePostProcessCommand)) ? jobOptions->opticalDisk.imagePostProcessCommand : globalOptions.bd.imagePostProcessCommand;
+  bd->imageCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.imageCommand           )) ? jobOptions->opticalDisk.imageCommand            : globalOptions.bd.imageCommand;
+  bd->eccPreProcessCommand    = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccPreProcessCommand   )) ? jobOptions->opticalDisk.eccPreProcessCommand    : globalOptions.bd.eccPreProcessCommand;
+  bd->eccPostProcessCommand   = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccPostProcessCommand  )) ? jobOptions->opticalDisk.eccPostProcessCommand   : globalOptions.bd.eccPostProcessCommand;
+  bd->eccCommand              = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccCommand             )) ? jobOptions->opticalDisk.eccCommand              : globalOptions.bd.eccCommand;
+  bd->blankCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.eccCommand             )) ? jobOptions->opticalDisk.blankCommand            : globalOptions.bd.blankCommand;
+  bd->writePreProcessCommand  = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writePreProcessCommand )) ? jobOptions->opticalDisk.writePreProcessCommand  : globalOptions.bd.writePreProcessCommand;
+  bd->writePostProcessCommand = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writePostProcessCommand)) ? jobOptions->opticalDisk.writePostProcessCommand : globalOptions.bd.writePostProcessCommand;
+  bd->writeCommand            = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeCommand           )) ? jobOptions->opticalDisk.writeCommand            : globalOptions.bd.writeCommand;
+  bd->writeImageCommand       = ((jobOptions != NULL) && !String_isEmpty(jobOptions->opticalDisk.writeImageCommand      )) ? jobOptions->opticalDisk.writeImageCommand       : globalOptions.bd.writeImageCommand;
 }
 
 void doneOpticalDiskSettings(OpticalDisk *opticalDisk)
