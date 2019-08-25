@@ -670,7 +670,13 @@ ERROR INVALID_DEVICE_SPECIFIER         TR("invalid device specifier")
 ERROR LOAD_VOLUME_FAIL                 TR("load volume fail")
 
 // --- exec -------------------------------------------------------------
-ERROR PARSE_COMMAND                    TR("parse command fail")
+ERROR PARSE_COMMAND
+  stringSet(errorText,sizeof(errorText),TR("parse command fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+  }
+
 ERROR EXPAND_TEMPLATE                  TR("expand command template fail")
 ERROR FORK_FAIL                        TR("fork for execute external program fail")
 ERROR IO_REDIRECT_FAIL
