@@ -946,21 +946,21 @@ LOCAL Errors StorageOptical_init(StorageInfo            *storageInfo,
                 );
   }
 
-  storageInfo->opticalDisk.write.requestVolumeCommand   = opticalDisk.requestVolumeCommand;
-  storageInfo->opticalDisk.write.unloadVolumeCommand    = opticalDisk.unloadVolumeCommand;
-  storageInfo->opticalDisk.write.loadVolumeCommand      = opticalDisk.loadVolumeCommand;
+  storageInfo->opticalDisk.write.requestVolumeCommand   = String_duplicate(opticalDisk.requestVolumeCommand);
+  storageInfo->opticalDisk.write.unloadVolumeCommand    = String_duplicate(opticalDisk.unloadVolumeCommand);
+  storageInfo->opticalDisk.write.loadVolumeCommand      = String_duplicate(opticalDisk.loadVolumeCommand);
   storageInfo->opticalDisk.write.volumeSize             = volumeSize;
-  storageInfo->opticalDisk.write.imagePreProcessCommand = opticalDisk.imagePreProcessCommand;
-  storageInfo->opticalDisk.write.imagePostProcessCommand= opticalDisk.imagePostProcessCommand;
-  storageInfo->opticalDisk.write.imageCommand           = opticalDisk.imageCommand;
-  storageInfo->opticalDisk.write.eccPreProcessCommand   = opticalDisk.eccPreProcessCommand;
-  storageInfo->opticalDisk.write.eccPostProcessCommand  = opticalDisk.eccPostProcessCommand;
-  storageInfo->opticalDisk.write.eccCommand             = opticalDisk.eccCommand;
-  storageInfo->opticalDisk.write.blankCommand           = opticalDisk.blankCommand;
-  storageInfo->opticalDisk.write.writePreProcessCommand = opticalDisk.writePreProcessCommand;
-  storageInfo->opticalDisk.write.writePostProcessCommand= opticalDisk.writePostProcessCommand;
-  storageInfo->opticalDisk.write.writeCommand           = opticalDisk.writeCommand;
-  storageInfo->opticalDisk.write.writeImageCommand      = opticalDisk.writeImageCommand;
+  storageInfo->opticalDisk.write.imagePreProcessCommand = String_duplicate(opticalDisk.imagePreProcessCommand);
+  storageInfo->opticalDisk.write.imagePostProcessCommand= String_duplicate(opticalDisk.imagePostProcessCommand);
+  storageInfo->opticalDisk.write.imageCommand           = String_duplicate(opticalDisk.imageCommand);
+  storageInfo->opticalDisk.write.eccPreProcessCommand   = String_duplicate(opticalDisk.eccPreProcessCommand);
+  storageInfo->opticalDisk.write.eccPostProcessCommand  = String_duplicate(opticalDisk.eccPostProcessCommand);
+  storageInfo->opticalDisk.write.eccCommand             = String_duplicate(opticalDisk.eccCommand);
+  storageInfo->opticalDisk.write.blankCommand           = String_duplicate(opticalDisk.blankCommand);
+  storageInfo->opticalDisk.write.writePreProcessCommand = String_duplicate(opticalDisk.writePreProcessCommand);
+  storageInfo->opticalDisk.write.writePostProcessCommand= String_duplicate(opticalDisk.writePostProcessCommand);
+  storageInfo->opticalDisk.write.writeCommand           = String_duplicate(opticalDisk.writeCommand);
+  storageInfo->opticalDisk.write.writeImageCommand      = String_duplicate(opticalDisk.writeImageCommand);
   storageInfo->opticalDisk.write.steps                  = 1;
   if ((jobOptions != NULL) && jobOptions->errorCorrectionCodesFlag) storageInfo->opticalDisk.write.steps += 3;
   if ((jobOptions != NULL) && jobOptions->blankFlag) storageInfo->opticalDisk.write.steps += 1;
@@ -1039,6 +1039,20 @@ LOCAL Errors StorageOptical_done(StorageInfo *storageInfo)
   // free resources
   StringList_done(&storageInfo->opticalDisk.write.fileNameList);
   String_delete(storageInfo->opticalDisk.write.directory);
+  String_delete(storageInfo->opticalDisk.write.writeImageCommand);
+  String_delete(storageInfo->opticalDisk.write.writeCommand);
+  String_delete(storageInfo->opticalDisk.write.writePostProcessCommand);
+  String_delete(storageInfo->opticalDisk.write.writePreProcessCommand);
+  String_delete(storageInfo->opticalDisk.write.blankCommand);
+  String_delete(storageInfo->opticalDisk.write.eccCommand);
+  String_delete(storageInfo->opticalDisk.write.eccPostProcessCommand);
+  String_delete(storageInfo->opticalDisk.write.eccPreProcessCommand);
+  String_delete(storageInfo->opticalDisk.write.imageCommand);
+  String_delete(storageInfo->opticalDisk.write.imagePostProcessCommand);
+  String_delete(storageInfo->opticalDisk.write.imagePreProcessCommand);
+  String_delete(storageInfo->opticalDisk.write.loadVolumeCommand);
+  String_delete(storageInfo->opticalDisk.write.unloadVolumeCommand);
+  String_delete(storageInfo->opticalDisk.write.requestVolumeCommand);
 
   return error;
 }
@@ -1388,8 +1402,6 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       error = File_delete(fileName,FALSE);
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-__B();
         break;
       }
     }
