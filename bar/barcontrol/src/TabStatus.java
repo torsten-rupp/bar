@@ -520,10 +520,10 @@ public class TabStatus
   };
 
   // colors
-  private final Color COLOR_RUNNING;
-  private final Color COLOR_REQUEST;
-  private final Color COLOR_ERROR;
-  private final Color COLOR_ABORTED;
+  private final Color            COLOR_RUNNING;
+  private final Color            COLOR_REQUEST;
+  private final Color            COLOR_ERROR;
+  private final Color            COLOR_ABORTED;
 
   // date/time format
   private final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -584,6 +584,7 @@ public class TabStatus
   private HashSet<UpdateJobStateListener> updateJobStateListeners = new HashSet<UpdateJobStateListener>();
   private JobData                         selectedJobData         = null;
   private States                          status                  = States.RUNNING;
+  private int                             updateStatusFailCount   = 0;
 
   /** create status tab
    * @param parentTabFolder parent tab folder
@@ -620,7 +621,14 @@ public class TabStatus
       public void handleEvent(Event event)
       {
         // make sure data is updated when jobs tab is shown
-        update();
+        try
+        {
+          update();
+        }
+        catch (BARException exception)
+        {
+          // ignored
+        }
       }
     });
 
@@ -1981,7 +1989,14 @@ public class TabStatus
    */
   public void startUpdate()
   {
-    update();
+    try
+    {
+      update();
+    }
+    catch (BARException exception)
+    {
+      // ignored
+    }
     tabStatusUpdateThread.start();
   }
 
@@ -2349,6 +2364,7 @@ public class TabStatus
   /** update server status
    */
   private void updateStatus()
+    throws BARException
   {
     try
     {
@@ -2411,10 +2427,16 @@ public class TabStatus
           });
           break;
       }
+
+      updateStatusFailCount = 0;
     }
     catch (BARException exception)
     {
-      // ignored
+      updateStatusFailCount++;
+      if (updateStatusFailCount > 5)
+      {
+        throw exception;
+      }
     }
   }
 
@@ -2624,6 +2646,7 @@ public class TabStatus
   /** update status, job list, job data
    */
   private void update()
+    throws BARException
   {
     // update job list
     updateStatus();
