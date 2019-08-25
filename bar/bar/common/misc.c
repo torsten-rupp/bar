@@ -1510,7 +1510,7 @@ Errors Misc_executeCommand(const char        *commandTemplate,
   uint            n,z;
 
   error = ERROR_NONE;
-  if (commandTemplate != NULL)
+  if (!stringIsEmpty(commandTemplate))
   {
     commandLine = String_new();
     name        = String_new();
