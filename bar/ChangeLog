@@ -78,7 +78,7 @@
   * upgrade c-reas 1.15.0
   * upgrade curl 7.62.0
   * upgrade SQLite 3.27: UPSERT
-  * upgrade libssh2 1.8.2
+  * upgrade libssh2 1.9.0
   * added patch to fix memory leak in libssh2
   * removed ftplib
   * BARControl: read keys from .pem files, JKS is now
