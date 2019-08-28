@@ -71,7 +71,6 @@ endif
 
 LD                        = $(if @CXX@,@CXX@,@CC@)
 LD_FLAGS                  = @LD_FLAGS@
-#-static-libstdc++ -static-libasan
 LD_FLAGS_RELEASE          = @LD_FLAGS_RELEASE@
 LD_FLAGS_DEBUG            = @LD_FLAGS_DEBUG@ -Wl,-wrap,pthread_create
 ifneq (@HEAPVIEW_DIR@,)
@@ -80,6 +79,7 @@ else
 LD_FLAGS_DEBUG            +=
 endif
 LD_FLAGS_GCOV             = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -fprofile-arcs
+LD_FLAGS_GPROF            = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -pg
 LD_FLAGS_VALGRIND         = @LD_FLAGS_VALGRIND@
 LD_LIBRARY_PATHS          = @LIBRARY_PATHS@
 ifneq (@HEAPVIEW_DIR@,)
@@ -346,6 +346,10 @@ gcov/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h i
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
 
+gprof/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gprof/$*.o
+
 valgrind/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
@@ -368,6 +372,10 @@ gcov/%.o: %.c
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gcov/$*.o
 
+gprof/%.o: %.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o gprof/$*.o
+
 valgrind/%.o: %.c
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
@@ -383,7 +391,10 @@ debug/%.o: $(SOURCE_DIR)/%.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o debug/$*.o
 
 gcov/%.o: $(SOURCE_DIR)/%.cpp
-	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o gcov/$*.o
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_GCOV) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o gcov/$*.o
+
+gprof/%.o: $(SOURCE_DIR)/%.cpp
+	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_GPROF) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o gprof/$*.o
 
 valgrind/%.o: $(SOURCE_DIR)/%.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.cpp -o valgrind/$*.o
@@ -476,6 +487,8 @@ BAR_OBJECTS_DEBUG        = $(addprefix debug/,$(BAR_OBJECTS))
 
 BAR_OBJECTS_GCOV         = $(addprefix gcov/,$(BAR_OBJECTS))
 
+BAR_OBJECTS_GPROF        = $(addprefix gprof/,$(BAR_OBJECTS))
+
 BAR_OBJECTS_VALGRIND     = $(addprefix valgrind/,$(BAR_OBJECTS))
 
 SQLITE3_SOURCE           = $(if $(wildcard ../sqlite/sqlite3.c),../sqlite/sqlite3.c,sqlite3.c)
@@ -495,6 +508,8 @@ EXTERN_OBJECTS_RELEASE   = $(addprefix release/,$(EXTERN_OBJECTS))
 EXTERN_OBJECTS_DEBUG     = $(addprefix debug/,$(EXTERN_OBJECTS))
 
 EXTERN_OBJECTS_GCOV      = $(addprefix gcov/,$(EXTERN_OBJECTS))
+
+EXTERN_OBJECTS_GPROF     = $(addprefix gprof/,$(EXTERN_OBJECTS))
 
 EXTERN_OBJECTS_VALGRIND  = $(addprefix valgrind/,$(EXTERN_OBJECTS))
 
@@ -572,6 +587,7 @@ INTERMEDIATE_HEADERS     = errors.h \
 TARGETS                  = bar@EXEEXT@ \
                            bar-debug@EXEEXT@ \
                            bar-gcov@EXEEXT@ \
+                           bar-gprof@EXEEXT@ \
                            bar-valgrind@EXEEXT@ \
                            $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                            $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
@@ -594,6 +610,7 @@ clean: \
 	$(RMF) $(BAR_OBJECTS_RELEASE)
 	$(RMF) $(BAR_OBJECTS_DEBUG)
 	$(RMF) $(BAR_OBJECTS_GCOV)
+	$(RMF) $(BAR_OBJECTS_GPROF)
 	$(RMF) $(BAR_OBJECTS_VALGRIND)
 	$(RMF) $(EXTERN_OBJECTS_RELEASE)
 	$(RMF) $(EXTERN_OBJECTS_DEBUG)
@@ -713,6 +730,12 @@ Makefile.depend: Makefile Makefile.in
             $(foreach header,$(INTERMEDIATE_HEADERS),\
               $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
             ) \
+            $(SED) 's|\(.*\.o:\)|gprof/\1|g' | \
+            $(CAT) >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(foreach header,$(INTERMEDIATE_HEADERS),\
+              $(SED) 's|$(SOURCE_DIR)/$(header)|$(header)|g' | \
+            ) \
             $(SED) 's|\(.*\.o:\)|valgrind/\1|g' | \
             $(CAT) >> Makefile.depend; \
         done;
@@ -723,6 +746,8 @@ Makefile.depend: Makefile Makefile.in
             $(SED) 's|\(.*\.o:\)|debug/common/\1|g' >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|gcov/common/\1|g' >> Makefile.depend; \
+          $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
+            $(SED) 's|\(.*\.o:\)|gprof/common/\1|g' >> Makefile.depend; \
           $(CC) $(CC_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -MM $(SOURCE_DIR)/$$z 2>/dev/null | \
             $(SED) 's|\(.*\.o:\)|valgrind/common/\1|g' >> Makefile.depend; \
         done;
@@ -764,6 +789,13 @@ bar-gcov@EXEEXT@: \
   $(BAR_OBJECTS_GCOV) \
   $(EXTERN_OBJECTS_GCOV)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_GCOV) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
+          $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
+          $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
+
+bar-gprof@EXEEXT@: \
+  $(BAR_OBJECTS_GPROF) \
+  $(EXTERN_OBJECTS_GPROF)
+	$(LD) $(LD_FLAGS) $(LD_FLAGS_GPROF) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
@@ -868,6 +900,9 @@ debug/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 gcov/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gprof/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 valgrind/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
@@ -880,6 +915,9 @@ debug/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 gcov/xdelta3.o: ../xdelta3/xdelta3.c
+	$(INSTALL) -d $(@D)
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
+gprof/xdelta3.o: ../xdelta3/xdelta3.c
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DHAVE_CONFIG_H -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(XDELTA3_FLAGS) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 valgrind/xdelta3.o: ../xdelta3/xdelta3.c
@@ -917,6 +955,7 @@ errors.c: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl
 release/errors.o: errors.c errors.h
 debug/errors.o: errors.c errors.h
 gcov/errors.o: errors.c errors.h
+gprof/errors.o: errors.c errors.h
 valgrind/errors.o: errors.c errors.h
 
 # archive format definition
@@ -929,6 +968,7 @@ archive_format.c: $(SOURCE_DIR)/archive_format.pl $(SOURCE_DIR)/archive_format.d
 release/archive_format.o: archive_format.c archive_format.h
 debug/archive_format.o: archive_format.c archive_format.h
 gcov/archive_format.o: archive_format.c archive_format.h
+gprof/archive_format.o: archive_format.c archive_format.h
 valgrind/archive_format.o: archive_format.c archive_format.h
 
 # index database definition
@@ -1293,6 +1333,7 @@ test: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
   bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(RMF) bar-test.log
@@ -1301,6 +1342,7 @@ test%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
   bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test $@
@@ -1311,6 +1353,11 @@ test%-debug: \
 
 test%-gcov: \
   bar-gcov@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(MAKE) -C test $@
+
+test%-gprof: \
+  bar-gprof@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(MAKE) -C test $@
 
@@ -1372,7 +1419,7 @@ gcov coverage: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 ifneq ($(LCOV),)
-	@$(MAKE) -C test test1 TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
+	@$(MAKE) -C test test1 test2 test3 test4 test5 test6 test7 TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ QUIET=1
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
 	$(INSTALL) -d coverage
 ifneq ($(GENHTML),)
