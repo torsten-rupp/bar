@@ -10683,6 +10683,7 @@ NULL//                             password
     decryptedFlag = TRUE;
   }
   foundDirectoryEntryFlag = FALSE;
+  error                   = ERROR_NONE;
   do
   {
 //fprintf(stderr,"%s, %d: decrpyt key \n",__FILE__,__LINE__); debugDumpMemory(decryptKey->data,decryptKey->dataLength,0);
@@ -12200,10 +12201,7 @@ NULL//                             password
     decryptedFlag = TRUE;
   }
   foundSpecialEntryFlag = FALSE;
-  error                 = ERROR_NONE;
-  while (   !foundSpecialEntryFlag
-         && (error == ERROR_NONE)
-        )
+  do
   {
     // reset
     AutoFree_freeAll(&autoFreeList2);
