@@ -736,6 +736,9 @@ AC_SUBST(LAUNCH4J_DIR)                      dnl launch4j directory
 
 AC_SUBST(DUMP_SYMS)                         dnl Breakpad dump symbols tool
 
+AC_SUBST(LCOV)                              dnl lcov command
+AC_SUBST(GENHTML)                           dnl genhtml command
+
 AC_SUBST(CERTOOL)                           dnl GNU TLS certtool
 AC_SUBST(OPENSSL)                           dnl OpenSSL key tool
 AC_SUBST(KEYTOOL)                           dnl Java keytool
@@ -1306,6 +1309,9 @@ fi
 AC_PATH_PROGS(CERTTOOL,certtool)
 AC_PATH_PROGS(OPENSSL,openssl)
 AC_PATH_PROGS(KEYTOOL,keytool)
+
+AC_PATH_PROGS(LCOV,lcov)
+AC_PATH_PROGS(GENHTML,genhtml)
 
 AC_PATH_PROGS(UNOCONV,unoconv)
 if test -z "$UNOCONV"; then

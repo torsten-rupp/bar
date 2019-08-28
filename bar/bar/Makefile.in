@@ -183,8 +183,8 @@ TOUCH          = touch
 ULIMIT         = ulimit
 XARGS          = xargs
 
-LCOV           = lcov
-GENHTML        = genhtml
+LCOV           = @LCOV@
+GENHTML        = @GENHTML@
 
 VALGRIND       = valgrind
 VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
@@ -1371,12 +1371,20 @@ functionVerifyParameter = \
 gcov coverage: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
-	@$(MAKE) -C test test TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
+ifneq ($(LCOV),)
+	@$(MAKE) -C test test1 TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
 	$(INSTALL) -d coverage
+ifneq ($(GENHTML),)
 	$(GENHTML) -o coverage bar-gcov.info --legend
 	# work-around for bug in genhtml?
-	ln -sfT coverage/gcov.css gcov.css
+	$(LN) -sfT coverage/gcov.css gcov.css
+else
+	@$(ECHO) "ERROR: no 'genhtml' command - cannot generate HTML output"
+endif
+else
+	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
+endif
 
 gcov%: \
   bar-gcov@EXEEXT@ \
@@ -1386,7 +1394,7 @@ gcov%: \
 	$(INSTALL) -d coverage
 	$(GENHTML) -o coverage bar-gcov.info --legend
 	# work-around for bug in genhtml?
-	ln -sfT coverage/gcov.css gcov.css
+	$(LN) -sfT coverage/gcov.css gcov.css
 
 gcov_clean:
 	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
@@ -1401,7 +1409,7 @@ gcov_html:
 	$(INSTALL) -d coverage
 	$(GENHTML) -o coverage bar-gcov.info --legend
 	# work-around for bug in genhtml?
-	ln -sfT coverage/gcov.css gcov.css
+	$(LN) -sfT coverage/gcov.css gcov.css
 
 # ----------------------------------------------------------------------------
 
