@@ -703,6 +703,7 @@ CXX_WARN_FLAGS
 CXX_FLAGS
 CC_WARN_FLAGS
 CC_FLAGS_VALGRIND
+CC_FLAGS_GPROF
 CC_FLAGS_GCOV
 CC_FLAGS_DEBUG
 CC_FLAGS_RELEASE
@@ -5213,7 +5214,7 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
-        for s in CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG; do
+        for s in CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_GPROF CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG; do
           eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
           eval "$s=\"\$$s-fno-pie\""
         done

@@ -696,6 +696,7 @@ AC_SUBST(CC_FLAGS)                          dnl C compiler flags
 AC_SUBST(CC_FLAGS_RELEASE)                  dnl additional C compiler flags for release version
 AC_SUBST(CC_FLAGS_DEBUG)                    dnl additional C compiler flags for debug version
 AC_SUBST(CC_FLAGS_GCOV)                     dnl additional C compiler flags for gcov version
+AC_SUBST(CC_FLAGS_GPROF)                    dnl additional C compiler flags for gprof version
 AC_SUBST(CC_FLAGS_VALGRIND)                 dnl additional C compiler flags for valgrind version
 AC_SUBST(CC_WARN_FLAGS)                     dnl C compiler warning flags
 AC_SUBST(CXX_FLAGS)                         dnl C++ compiler flags
@@ -1183,7 +1184,7 @@ fi
 AC_PATH_PROGS(MD5SUM,md5sum)
 
 AC_PROG_CC_STDC
-AC_CC_OPTION(-fno-pie,                     CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG)
+AC_CC_OPTION(-fno-pie,                     CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_GPROF CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG)
 AC_CC_OPTION(-Wall,                        CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_CC_OPTION(-Wpointer-arith,              CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_CC_OPTION(-Wunused-label,               CC_WARN_FLAGS CXX_WARN_FLAGS)
