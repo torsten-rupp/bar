@@ -80,7 +80,7 @@ else
 LD_FLAGS_DEBUG            +=
 endif
 LD_FLAGS_GCOV             = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -fprofile-arcs
-LD_FLAGS_GPROF            = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create
+LD_FLAGS_GPROF            = @LD_FLAGS_GCOV@ -Wl,-wrap,pthread_create -pg
 LD_FLAGS_VALGRIND         = @LD_FLAGS_VALGRIND@
 LD_LIBRARY_PATHS          = @LIBRARY_PATHS@
 ifneq (@HEAPVIEW_DIR@,)
