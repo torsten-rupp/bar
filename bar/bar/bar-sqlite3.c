@@ -55,22 +55,26 @@ typedef enum
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL bool infoFlag             = FALSE;  // output index database info
-LOCAL bool checkFlag            = FALSE;  // check database
-LOCAL bool createFlag           = FALSE;  // create new index database
-LOCAL bool createIndizesFlag    = FALSE;  // re-create indizes
-LOCAL bool createTriggersFlag   = FALSE;  // re-create triggers
-LOCAL bool createNewestFlag     = FALSE;  // re-create newest data
-LOCAL bool createAggregatesFlag = FALSE;  // re-create aggregate data
-LOCAL bool cleanFlag            = FALSE;  // execute clean
-LOCAL bool purgeDeletedFlag     = FALSE;  // execute purge deleted storages
-LOCAL bool vacuumFlag           = FALSE;  // execute vacuum
-LOCAL bool showNamesFlag        = FALSE;
-LOCAL bool showHeaderFlag       = FALSE;
-LOCAL bool headerPrintedFlag    = FALSE;
-LOCAL bool foreignKeysFlag      = TRUE;
-LOCAL bool pipeFlag             = FALSE;
-LOCAL bool verboseFlag          = FALSE;
+LOCAL bool       infoFlag              = FALSE;  // output index database info
+LOCAL bool       checkFlag             = FALSE;  // check database
+LOCAL bool       createFlag            = FALSE;  // create new index database
+LOCAL bool       createIndizesFlag     = FALSE;  // re-create indizes
+LOCAL bool       createTriggersFlag    = FALSE;  // re-create triggers
+LOCAL bool       createNewestFlag      = FALSE;  // re-create newest data
+LOCAL bool       createAggregatesFlag  = FALSE;  // re-create aggregate data
+LOCAL bool       cleanFlag             = FALSE;  // execute clean
+LOCAL bool       purgeDeletedFlag      = FALSE;  // execute purge deleted storages
+LOCAL bool       vacuumFlag            = FALSE;  // execute vacuum
+LOCAL bool       showStoragesFlag      = FALSE;  // show storage of job
+LOCAL bool       showEntriesFlag       = FALSE;  // show entries of job
+LOCAL bool       showEntriesNewestFlag = FALSE;  // show newest entries of job
+LOCAL bool       showNamesFlag         = FALSE;
+LOCAL bool       showHeaderFlag        = FALSE;
+LOCAL bool       headerPrintedFlag     = FALSE;
+LOCAL bool       foreignKeysFlag       = TRUE;
+LOCAL bool       pipeFlag              = FALSE;
+LOCAL bool       verboseFlag           = FALSE;
+LOCAL const char *jobUUID              = NULL;
 
 /****************************** Macros *********************************/
 
@@ -95,21 +99,24 @@ LOCAL void printUsage(const char *programName)
 {
   printf("Usage %s: [<options>] <database file> [<command>...|-]\n",programName);
   printf("\n");
-  printf("Options:  --info               - output index database infos\n");
-  printf("          --create             - create new index database\n");
-  printf("          --create-triggers    - re-create triggers\n");
-  printf("          --create-newest      - re-create newest data\n");
-  printf("          --create-indizes     - re-create indizes\n");
-  printf("          --create-aggregates  - re-create aggregated data\n");
-  printf("          --check              - check index database integrity\n");
-  printf("          --clean              - clean index database\n");
-  printf("          --vacuum             - collect and free unused file space\n");
-  printf("          -n|--names           - print named values\n");
-  printf("          -H|--header          - print headers\n");
-  printf("          -f|--no-foreign-keys - disable foreign key constraints\n");
-  printf("          --pipe               - read data from stdin and pipe into database (use ? as variable)\n");
-  printf("          -v|--verbose         - verbose output\n");
-  printf("          -h|--help            - print this help\n");
+  printf("Options:  --info                    - output index database infos\n");
+  printf("          --create                  - create new index database\n");
+  printf("          --create-triggers         - re-create triggers\n");
+  printf("          --create-newest           - re-create newest data\n");
+  printf("          --create-indizes          - re-create indizes\n");
+  printf("          --create-aggregates       - re-create aggregated data\n");
+  printf("          --check                   - check index database integrity\n");
+  printf("          --clean                   - clean index database\n");
+  printf("          --vacuum                  - collect and free unused file space\n");
+  printf("          -s|--storages [<uuid>]    - print storages\n");
+  printf("          -e|--entries [<uuid>]     - print entries\n");
+  printf("          --entries-newest [<uuid>] - print newest entries\n");
+  printf("          -n|--names                - print named values\n");
+  printf("          -H|--header               - print headers\n");
+  printf("          -f|--no-foreign-keys      - disable foreign key constraints\n");
+  printf("          --pipe                    - read data from stdin and pipe into database (use ? as variable)\n");
+  printf("          -v|--verbose              - verbose output\n");
+  printf("          -h|--help                 - print this help\n");
 }
 
 /***********************************************************************\
@@ -723,6 +730,150 @@ LOCAL void printPercentage(ulong n, ulong count)
 }
 
 /***********************************************************************\
+* Name   : createDatabase
+* Purpose: create database
+* Input  : databaseFileName - database file name
+* Output : databaseHandle - database handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *databaseFileName)
+{
+  Errors error;
+
+  if (verboseFlag) { fprintf(stderr,"Create..."); fflush(stderr); }
+
+  error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,WAIT_FOREVER);
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: create database fail: %s!\n",Error_getText(error));
+    return error;
+  }
+
+  error = Database_execute(databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           INDEX_DEFINITION
+                          );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: create database fail: %s!\n",Error_getText(error));
+    return error;
+  }
+
+  if (verboseFlag) fprintf(stderr,"OK  \n");
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : openDatabase
+* Purpose: open database
+* Input  : -
+* Output : databaseHandle - database handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFileName)
+{
+  Errors error;
+
+  if (verboseFlag) { fprintf(stderr,"Open database '%s'...",databaseFileName); fflush(stderr); }
+
+  error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,WAIT_FOREVER);
+  if (error != ERROR_NONE)
+  {
+    if (verboseFlag) fprintf(stderr,"FAIL\n");
+    fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
+    return error;
+  }
+
+  if (verboseFlag) fprintf(stderr,"OK  \n");
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : closeDatabase
+* Purpose: close database
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void closeDatabase(DatabaseHandle *databaseHandle)
+{
+  if (verboseFlag) { fprintf(stderr,"Close database..."); fflush(stderr); }
+  Database_close(databaseHandle);
+  if (verboseFlag) fprintf(stderr,"OK  \n");
+}
+
+/***********************************************************************\
+* Name   : checkDatabase
+* Purpose: check database
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
+{
+  Errors error;
+
+  printf("Check:\n");
+
+  fprintf(stderr,"  Quick integrity...");
+  error = Database_execute(databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "PRAGMA quick_check;"
+                          );
+  if (error == ERROR_NONE)
+  {
+    fprintf(stderr,"ok\n");
+  }
+  else
+  {
+    fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
+  }
+
+  fprintf(stderr,"  Foreign key...");
+  error = Database_execute(databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "PRAGMA foreign_key_check;"
+                          );
+  if (error == ERROR_NONE)
+  {
+    fprintf(stderr,"ok\n");
+  }
+  else
+  {
+    fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
+  }
+
+  if (verboseFlag) { fprintf(stderr,"Create triggers..."); fflush(stderr); }
+  fprintf(stderr,"  Full integrity...");
+  error = Database_execute(databaseHandle,
+                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "PRAGMA integrit_check;"
+                          );
+  if (error == ERROR_NONE)
+  {
+    fprintf(stderr,"ok\n");
+  }
+  else
+  {
+    fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
+  }
+}
+
+/***********************************************************************\
 * Name   : createTriggers
 * Purpose: create triggers
 * Input  : databaseHandle - database handle
@@ -1207,10 +1358,16 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                                fprintf(stderr,"ERROR: create newest fail for entries (error: %s)!\n",Error_getText(error));
                                return error;
                              }
+#if 0
+String s = String_new();
+error = Database_getString(databaseHandle,s,"entries","entities.jobUUID","left join storage on storage.id=entries.storageId left join entities on entities.id=storage.entityId where entries.id=%d",entryId);
+fprintf(stderr,"%s, %d: %lu name=%s size=%lu timeLastChanged=%lu job=%s existsFlag=%d error=%s\n",__FILE__,__LINE__,entryId,name,size,timeLastChanged,String_cString(s),existsFlag,Error_getText(error));
+//exit(1);
+String_delete(s);
+#endif
 
                              if (!existsFlag)
                              {
-//fprintf(stderr,"%s, %d: %llu name=%s offset=%llu size=%llu timeLastChanged=%llu\n",__FILE__,__LINE__,entryId,name,offset,size,timeLastChanged);
                                // insert
                                error = Database_execute(databaseHandle,
                                                         CALLBACK(NULL,NULL),  // databaseRowFunction
@@ -3669,6 +3826,18 @@ int main(int argc, const char *argv[])
     {
       vacuumFlag = TRUE;
     }
+    else if (stringEquals(argv[i],"-s") || stringEquals(argv[i],"--storages"))
+    {
+      showStoragesFlag = TRUE;
+    }
+    else if (stringEquals(argv[i],"-e") || stringEquals(argv[i],"--entries"))
+    {
+      showEntriesFlag = TRUE;
+    }
+    else if (stringEquals(argv[i],"--entries-newest"))
+    {
+      showEntriesNewestFlag = TRUE;
+    }
     else if (stringEquals(argv[i],"-n") || stringEquals(argv[i],"--names"))
     {
       showNamesFlag = TRUE;
@@ -3708,9 +3877,13 @@ int main(int argc, const char *argv[])
     {
       switch (n)
       {
-        case 0: databaseFileName = argv[i]; n++; break;
+        case 0:
+          databaseFileName = argv[i];
+          n++;
+          break;
         default:
           String_appendCString(commands,argv[i]);
+          jobUUID = argv[i];
           break;
       }
     }
@@ -3720,9 +3893,13 @@ int main(int argc, const char *argv[])
   {
     switch (n)
     {
-      case 0: databaseFileName = argv[i]; n++; break;
+      case 0:
+        databaseFileName = argv[i];
+        n++;
+        break;
       default:
         String_appendCString(commands,argv[i]);
+        jobUUID = argv[i];
         break;
     }
     i++;
@@ -3746,150 +3923,20 @@ int main(int argc, const char *argv[])
     }
   }
 
-  // open database
-#if 0
-  if (verboseFlag) { fprintf(stderr,"Open database '%s'...",databaseFileName); fflush(stderr); }
   if (createFlag)
   {
-    sqliteMode = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
-    File_deleteCString(databaseFileName,FALSE);
+    // create database
+    error = createDatabase(&databaseHandle,databaseFileName);
   }
   else
   {
-    sqliteMode = SQLITE_OPEN_READWRITE;
+    // open database
+    error = openDatabase(&databaseHandle,databaseFileName);
   }
-  sqliteResult = sqlite3_open_v2(databaseFileName,&databaseHandle,sqliteMode,NULL);
-  if (sqliteResult != SQLITE_OK)
+  if (error != ERROR_NONE)
   {
-    if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (SQLite error: %d)!\n",databaseFileName,sqliteResult);
     String_delete(commands);
     exit(EXITCODE_FAIL);
-  }
-  sqlite3_progress_handler(databaseHandle,10000,sqlProgressHandler,NULL);
-
-  // disable synchronous mode, enable WAL
-  error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "PRAGMA synchronous=OFF"
-                          );
-  if (error != ERROR_NONE)
-  {
-    if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-  error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "PRAGMA journal_mode=WAL"
-                          );
-  if (error != ERROR_NONE)
-  {
-    if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
-    exit(EXITCODE_FAIL);
-  }
-  error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "PRAGMA recursive_triggers=ON"
-                          );
-  assert(sqliteResult == SQLITE_OK);
-  if (foreignKeysFlag)
-  {
-    error = Database_execute(databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "PRAGMA foreign_keys=ON;"
-                            );
-    if (error != ERROR_NONE)
-    {
-      if (verboseFlag) fprintf(stderr,"FAIL\n");
-      fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
-      String_delete(commands);
-      exit(EXITCODE_FAIL);
-    }
-  }
-
-  // register special functions
-  sqliteResult = sqlite3_create_function(databaseHandle,
-                                         "unixtimestamp",
-                                         1,
-                                         SQLITE_ANY,
-                                         NULL,
-                                         unixTimestamp,
-                                         NULL,
-                                         NULL
-                                        );
-  assert(sqliteResult == SQLITE_OK);
-#ifdef HAVE_PCRE
-  sqliteResult = sqlite3_create_function(databaseHandle,
-                                         "regexp",
-                                         3,
-                                         SQLITE_ANY,
-                                         NULL,
-                                         regexpMatch,
-                                         NULL,
-                                         NULL
-                                        );
-  assert(sqliteResult == SQLITE_OK);
-#endif /* HAVE_PCRE */
-  sqliteResult = sqlite3_create_function(databaseHandle,
-                                         "dirname",
-                                         1,
-                                         SQLITE_ANY,
-                                         NULL,
-                                         dirname,
-                                         NULL,
-                                         NULL
-                                        );
-  assert(sqliteResult == SQLITE_OK);
-  if (verboseFlag) fprintf(stderr,"OK  \n");
-#endif
-
-  // create/open database
-  if (createFlag)
-  {
-    if (verboseFlag) { fprintf(stderr,"Create..."); fflush(stderr); }
-
-    error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,WAIT_FOREVER);
-    if (error != ERROR_NONE)
-    {
-      fprintf(stderr,"ERROR: create database fail: %s!\n",Error_getText(error));
-      String_delete(commands);
-      exit(EXITCODE_FAIL);
-    }
-
-    error = Database_execute(&databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             INDEX_DEFINITION
-                            );
-    if (error != ERROR_NONE)
-    {
-      fprintf(stderr,"ERROR: create database fail: %s!\n",Error_getText(error));
-      String_delete(commands);
-      exit(EXITCODE_FAIL);
-    }
-
-    if (verboseFlag) fprintf(stderr,"OK  \n");
-  }
-  else
-  {
-    if (verboseFlag) { fprintf(stderr,"Open database '%s'...",databaseFileName); fflush(stderr); }
-
-    error = Database_open(&databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,WAIT_FOREVER);
-    if (error != ERROR_NONE)
-    {
-      if (verboseFlag) fprintf(stderr,"FAIL\n");
-      fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
-      String_delete(commands);
-      exit(EXITCODE_FAIL);
-    }
-
-    if (verboseFlag) fprintf(stderr,"OK  \n");
   }
 
   // output info
@@ -3902,6 +3949,9 @@ int main(int argc, const char *argv[])
           && !cleanFlag
           && !purgeDeletedFlag
           && !vacuumFlag
+          && !showStoragesFlag
+          && !showEntriesFlag
+          && !showEntriesNewestFlag
           && String_isEmpty(commands)
           && !pipeFlag
           && !inputAvailable())
@@ -3912,52 +3962,7 @@ int main(int argc, const char *argv[])
 
   if (checkFlag)
   {
-    // check database
-    printf("Check:\n");
-    fprintf(stderr,"  Quick integrity check...");
-    error = Database_execute(&databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "PRAGMA quick_check;"
-                            );
-    if (error != ERROR_NONE)
-    {
-      fprintf(stderr,"ok\n");
-    }
-    else
-    {
-      fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
-    }
-
-    fprintf(stderr,"  Foreign key check...");
-    error = Database_execute(&databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "PRAGMA foreign_key_check;"
-                            );
-    if (error != ERROR_NONE)
-    {
-      fprintf(stderr,"ok\n");
-    }
-    else
-    {
-      fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
-    }
-
-    fprintf(stderr,"  Full integrity check...");
-    error = Database_execute(&databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "PRAGMA integrit_check;"
-                            );
-    if (error != ERROR_NONE)
-    {
-      fprintf(stderr,"ok\n");
-    }
-    else
-    {
-      fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
-    }
+    checkDatabase(&databaseHandle);
   }
 
   // recreate triggeres
@@ -4003,179 +4008,365 @@ int main(int argc, const char *argv[])
     vacuum(&databaseHandle);
   }
 
-  // execute command
-  if (!String_isEmpty(commands))
+  if (showStoragesFlag)
   {
-    if (pipeFlag)
+    uint64 maxIdLength,maxStorageNameLength;
+    char   format[256];
+
+    Database_execute(&databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
+
+                       maxIdLength          = (uint)1+log10(atof(values[0]));
+                       maxStorageNameLength = (uint)atoi(values[1]);
+
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     "SELECT MAX(storage.id),MAX(LENGTH(storage.name)) FROM storage \
+                        LEFT join entities on storage.entityId=entities.id \
+                      WHERE %d OR entities.jobUUID=%'s \
+                     ",
+                     jobUUID == NULL,
+                     jobUUID
+                    );
+
+    stringFormat(format,sizeof(format),"%%%ds %%-s\n",maxIdLength);
+    UNUSED_VARIABLE(maxStorageNameLength);
+    Database_execute(&databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 2);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
+
+                       printf(format,values[0],values[1]);
+
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     "SELECT storage.id,storage.name FROM storage \
+                        LEFT join entities on storage.entityId=entities.id \
+                      WHERE %d OR entities.jobUUID=%'s \
+                      ORDER BY storage.name ASC \
+                     ",
+                     jobUUID == NULL,
+                     jobUUID
+                    );
+  }
+
+  if (showEntriesFlag)
+  {
+    uint64 maxIdLength,maxEntryNameLength,maxStorageNameLength;
+    char   format[256];
+
+    Database_execute(&databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 3);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
+
+                       maxIdLength          = (uint)1+log10(atof(values[0]));
+                       maxEntryNameLength   = (uint)atoi(values[1]);
+                       maxStorageNameLength = (uint)atoi(values[2]);
+
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     "SELECT MAX(entries.id),MAX(LENGTH(entries.name)),MAX(LENGTH(storage.name)) FROM entries \
+                        LEFT join storage ON entries.storageId=storage.id \
+                        LEFT join entities ON storage.entityId=entities.id \
+                      WHERE %d OR entities.jobUUID=%'s \
+                     ",
+                     jobUUID == NULL,
+                     jobUUID
+                    );
+
+    stringFormat(format,sizeof(format),"%%%ds %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
+    UNUSED_VARIABLE(maxStorageNameLength);
+    Database_execute(&databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 3);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
+
+                       printf(format,values[0],values[1],values[2]);
+
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     "SELECT entries.id,entries.name,storage.name FROM entries \
+                        LEFT join storage ON entries.storageId=storage.id \
+                        LEFT join entities ON storage.entityId=entities.id \
+                      WHERE %d OR entities.jobUUID=%'s \
+                      ORDER BY entries.name ASC \
+                     ",
+                     jobUUID == NULL,
+                     jobUUID
+                    );
+  }
+
+  if (showEntriesNewestFlag)
+  {
+    uint64 maxIdLength,maxEntryNameLength,maxStorageNameLength;
+    char   format[256];
+
+    Database_execute(&databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 3);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
+
+                       maxIdLength          = (uint)1+log10(atof(values[0]));
+                       maxEntryNameLength   = (uint)atoi(values[1]);
+                       maxStorageNameLength = (uint)atoi(values[2]);
+
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     "SELECT MAX(entriesNewest.id),MAX(LENGTH(entriesNewest.name)),MAX(LENGTH(storage.name)) FROM entriesNewest \
+                        LEFT join storage ON entriesNewest.storageId=storage.id \
+                        LEFT join entities ON storage.entityId=entities.id \
+                      WHERE %d OR entities.jobUUID=%'s \
+                     ",
+                     jobUUID == NULL,
+                     jobUUID
+                    );
+
+    stringFormat(format,sizeof(format),"%%%ds %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
+    UNUSED_VARIABLE(maxStorageNameLength);
+    Database_execute(&databaseHandle,
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     {
+                       assert(count == 3);
+                       assert(values != NULL);
+                       assert(values[0] != NULL);
+                       assert(values[1] != NULL);
+
+                       UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(userData);
+
+                       printf(format,values[0],values[1],values[2]);
+
+                       return ERROR_NONE;
+                     },NULL),
+                     NULL,  // changedRowCount
+                     "SELECT entriesNewest.id,entriesNewest.name,storage.name FROM entriesNewest \
+                        LEFT join storage ON entriesNewest.storageId=storage.id \
+                        LEFT join entities ON storage.entityId=entities.id \
+                      WHERE %d OR entities.jobUUID=%'s \
+                      ORDER BY entriesNewest.name ASC \
+                     ",
+                     jobUUID == NULL,
+                     jobUUID
+                    );
+  }
+
+  if (   !showStoragesFlag
+      && !showEntriesFlag
+      && !showEntriesNewestFlag
+     )
+  {
+    // execute command
+    if (!String_isEmpty(commands))
     {
-      // pipe from stdin
-
-      // start transaction
-      error = Database_execute(&databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "BEGIN TRANSACTION"
-                              );
-      if (error != ERROR_NONE)
+      if (pipeFlag)
       {
-        printf("FAIL\n");
-        fprintf(stderr,"ERROR: start transaction fail: %s!\n",Error_getText(error));
-        String_delete(commands);
-        exit(EXITCODE_FAIL);
-      }
+        // pipe from stdin
 
-#if 0
-      // prepare SQL statements
-      statementHandleCount = 0;
-      command = String_cString(commands);
-      while (!stringIsEmpty(command))
-      {
-        if (statementHandleCount > SIZE_OF_ARRAY(statementHandles))
+        // start transaction
+        error = Database_execute(&databaseHandle,
+                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "BEGIN TRANSACTION"
+                                );
+        if (error != ERROR_NONE)
         {
-          fprintf(stderr,"ERROR: too many SQL commands (limit %lu)!\n",SIZE_OF_ARRAY(statementHandles));
+          printf("FAIL\n");
+          fprintf(stderr,"ERROR: start transaction fail: %s!\n",Error_getText(error));
           String_delete(commands);
           exit(EXITCODE_FAIL);
         }
 
-        sqliteResult = sqlite3_prepare_v2(databaseHandle,
-                                          command,
-                                          -1,
-                                          &statementHandles[statementHandleCount],
-                                          &nextCommand
-                                         );
-        if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
-        if (sqliteResult != SQLITE_OK)
+  #if 0
+        // prepare SQL statements
+        statementHandleCount = 0;
+        command = String_cString(commands);
+        while (!stringIsEmpty(command))
         {
-          (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-//TODO          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,command,sqlite3_errmsg(databaseHandle));
-          String_delete(commands);
-          exit(EXITCODE_FAIL);
-        }
-        statementHandleCount++;
-        command = stringTrimBegin(nextCommand);
-      }
-
-      s = String_new();
-      while (fgets(line,sizeof(line),stdin) != NULL)
-      {
-//fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,line);
-        String_trim(String_setCString(s,line),STRING_WHITE_SPACES);
-        if (verboseFlag) fprintf(stderr,"%s...",String_cString(s));
-
-        // reset SQL statements
-        for (i = 0; i < statementHandleCount; i++)
-        {
-          sqlite3_reset(statementHandles[i]);
-        }
-
-        // parse input
-        i = 0;
-        String_initTokenizer(&stringTokenizer,s,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,TRUE);
-        i = 0;
-        j = 1;
-        while ((i < statementHandleCount) && String_getNextToken(&stringTokenizer,&string,NULL))
-        {
-//fprintf(stderr,"%s, %d: %d %d -> %s\n",__FILE__,__LINE__,i,j,String_cString(string));
-          do
+          if (statementHandleCount > SIZE_OF_ARRAY(statementHandles))
           {
-            nextIndex = STRING_BEGIN;
-            if      (nextIndex != STRING_END)
-            {
-              value.l = String_toInteger64(string,STRING_BEGIN,&nextIndex,NULL,0);
-              if (nextIndex == STRING_END)
-              {
-                sqliteResult = sqlite3_bind_int64(statementHandles[i],j,value.l);
-              }
-            }
-            if (nextIndex != STRING_END)
-            {
-              value.d = String_toDouble(string,STRING_BEGIN,&nextIndex,NULL,0);
-              if (nextIndex == STRING_END)
-              {
-                sqliteResult = sqlite3_bind_double(statementHandles[i],j,value.d);
-              }
-            }
-            if (nextIndex != STRING_END)
-            {
-              nextIndex = STRING_END;
-              sqliteResult = sqlite3_bind_text(statementHandles[i],j,String_cString(string),String_length(string),SQLITE_TRANSIENT);
-            }
-            if (nextIndex != STRING_END)
-            {
-              String_delete(s);
-              (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-              fprintf(stderr,"ERROR: Invalid data '%s'!\n",String_cString(string));
-              String_delete(commands);
-              exit(EXITCODE_FAIL);
-            }
-
-            if (sqliteResult == SQLITE_OK)
-            {
-              // next argument
-              j++;
-            }
-            else
-            {
-              // next statement
-              i++;
-              j = 1;
-            }
+            fprintf(stderr,"ERROR: too many SQL commands (limit %lu)!\n",SIZE_OF_ARRAY(statementHandles));
+            String_delete(commands);
+            exit(EXITCODE_FAIL);
           }
-          while ((sqliteResult != SQLITE_OK) && (i < statementHandleCount));
-        }
-        String_doneTokenizer(&stringTokenizer);
 
-        // execute SQL commands
+          sqliteResult = sqlite3_prepare_v2(databaseHandle,
+                                            command,
+                                            -1,
+                                            &statementHandles[statementHandleCount],
+                                            &nextCommand
+                                           );
+          if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
+          if (sqliteResult != SQLITE_OK)
+          {
+            (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
+  //TODO          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,command,sqlite3_errmsg(databaseHandle));
+            String_delete(commands);
+            exit(EXITCODE_FAIL);
+          }
+          statementHandleCount++;
+          command = stringTrimBegin(nextCommand);
+        }
+
+        s = String_new();
+        while (fgets(line,sizeof(line),stdin) != NULL)
+        {
+  //fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,line);
+          String_trim(String_setCString(s,line),STRING_WHITE_SPACES);
+          if (verboseFlag) fprintf(stderr,"%s...",String_cString(s));
+
+          // reset SQL statements
+          for (i = 0; i < statementHandleCount; i++)
+          {
+            sqlite3_reset(statementHandles[i]);
+          }
+
+          // parse input
+          i = 0;
+          String_initTokenizer(&stringTokenizer,s,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,TRUE);
+          i = 0;
+          j = 1;
+          while ((i < statementHandleCount) && String_getNextToken(&stringTokenizer,&string,NULL))
+          {
+  //fprintf(stderr,"%s, %d: %d %d -> %s\n",__FILE__,__LINE__,i,j,String_cString(string));
+            do
+            {
+              nextIndex = STRING_BEGIN;
+              if      (nextIndex != STRING_END)
+              {
+                value.l = String_toInteger64(string,STRING_BEGIN,&nextIndex,NULL,0);
+                if (nextIndex == STRING_END)
+                {
+                  sqliteResult = sqlite3_bind_int64(statementHandles[i],j,value.l);
+                }
+              }
+              if (nextIndex != STRING_END)
+              {
+                value.d = String_toDouble(string,STRING_BEGIN,&nextIndex,NULL,0);
+                if (nextIndex == STRING_END)
+                {
+                  sqliteResult = sqlite3_bind_double(statementHandles[i],j,value.d);
+                }
+              }
+              if (nextIndex != STRING_END)
+              {
+                nextIndex = STRING_END;
+                sqliteResult = sqlite3_bind_text(statementHandles[i],j,String_cString(string),String_length(string),SQLITE_TRANSIENT);
+              }
+              if (nextIndex != STRING_END)
+              {
+                String_delete(s);
+                (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
+                fprintf(stderr,"ERROR: Invalid data '%s'!\n",String_cString(string));
+                String_delete(commands);
+                exit(EXITCODE_FAIL);
+              }
+
+              if (sqliteResult == SQLITE_OK)
+              {
+                // next argument
+                j++;
+              }
+              else
+              {
+                // next statement
+                i++;
+                j = 1;
+              }
+            }
+            while ((sqliteResult != SQLITE_OK) && (i < statementHandleCount));
+          }
+          String_doneTokenizer(&stringTokenizer);
+
+          // execute SQL commands
+          for (i = 0; i < statementHandleCount; i++)
+          {
+            sqliteResult = sqlite3_step(statementHandles[i]);
+            if (sqliteResult != SQLITE_DONE) break;
+          }
+          if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
+          if (sqliteResult != SQLITE_DONE)
+          {
+            String_delete(s);
+            (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
+  //TODO          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,String_cString(commands),sqlite3_errmsg(databaseHandle));
+            String_delete(commands);
+            exit(EXITCODE_FAIL);
+          }
+        }
+        String_delete(s);
+
+        // free resources
         for (i = 0; i < statementHandleCount; i++)
         {
-          sqliteResult = sqlite3_step(statementHandles[i]);
-          if (sqliteResult != SQLITE_DONE) break;
+          sqlite3_finalize(statementHandles[i]);
         }
-        if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
-        if (sqliteResult != SQLITE_DONE)
+  #endif
+
+        // end transaction
+        error = Database_execute(&databaseHandle,
+                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "END TRANSACTION"
+                                );
+        if (error != ERROR_NONE)
         {
-          String_delete(s);
-          (void)Database_execute(databaseHandle,CALLBACK(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-//TODO          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,String_cString(commands),sqlite3_errmsg(databaseHandle));
+          fprintf(stderr,"ERROR: end transaction fail: %s!\n",Error_getText(error));
           String_delete(commands);
           exit(EXITCODE_FAIL);
         }
       }
-      String_delete(s);
-
-      // free resources
-      for (i = 0; i < statementHandleCount; i++)
+      else
       {
-        sqlite3_finalize(statementHandles[i]);
-      }
-#endif
-
-      // end transaction
-      error = Database_execute(&databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "END TRANSACTION"
-                              );
-      if (error != ERROR_NONE)
-      {
-        fprintf(stderr,"ERROR: end transaction fail: %s!\n",Error_getText(error));
-        String_delete(commands);
-        exit(EXITCODE_FAIL);
-      }
-    }
-    else
-    {
-      // single command execution
-      error = Database_execute(&databaseHandle,
-                               CALLBACK(printRow,NULL),
-                               NULL,  // changedRowCount
-                               String_cString(commands)
-                              );
-      if (error != ERROR_NONE)
-      {
-        fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",String_cString(commands),Error_getText(error));
-        String_delete(commands);
-        exit(EXITCODE_FAIL);
+        // single command execution
+        error = Database_execute(&databaseHandle,
+                                 CALLBACK(printRow,NULL),
+                                 NULL,  // changedRowCount
+                                 String_cString(commands)
+                                );
+        if (error != ERROR_NONE)
+        {
+          fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",String_cString(commands),Error_getText(error));
+          String_delete(commands);
+          exit(EXITCODE_FAIL);
+        }
       }
     }
   }
@@ -4201,9 +4392,7 @@ int main(int argc, const char *argv[])
   }
 
   // close database
-  if (verboseFlag) { fprintf(stderr,"Close database..."); fflush(stderr); }
-  Database_close(&databaseHandle);
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  closeDatabase(&databaseHandle);
 
   // free resources
   String_delete(commands);
