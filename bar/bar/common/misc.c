@@ -1678,7 +1678,7 @@ Errors Misc_executeScript(const char        *script,
                     arguments,
                     script,
                     CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
-                    0,
+                    0,  // stdoutStripCount
                     CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData),
                     String_length(tmpFileName)+1+1
                    );
