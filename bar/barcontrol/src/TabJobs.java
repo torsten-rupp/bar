@@ -14000,7 +14000,7 @@ throw new Error("NYI");
     {
       try
       {
-        String line= valueMap.getString("line");
+        String line = valueMap.getString("line");
         busyDialog.updateList(line);
       }
       catch (IllegalArgumentException exception)

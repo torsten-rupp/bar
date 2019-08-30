@@ -525,19 +525,23 @@ DESTROYER_OBJECTS        = $(foreach z,$(filter %.c,  $(DESTROYER_SOURCES)),$(pa
                            $(foreach z,$(filter %.cpp,$(filter-out $(COMMON_SOURCES_FILTER),$(COMMON_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
 
 
-BAR_MINIDUMP_SOURCES     = bar-minidump.cc \
+BAR_MINIDUMP_SOURCES     = bar-minidump.cpp \
 
 BAR_MINIDUMP_HEADERS     = \
 
-BAR_MINIDUMP_OBJECTS     = $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cc,%.o,$z)) \
+BAR_MINIDUMP_OBJECTS     = $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.c,  %.o,$z)) \
+                           $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cpp,%.o,$z)) \
+                           $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cc, %.o,$z)) \
                            stackwalk_common.o \
 
 BAR_SQLITE3_SOURCES      = bar-sqlite3.c \
+archive.c \
                            $(SQLITE3_SOURCE) \
 
 BAR_SQLITE3_HEADERS      = $(patsubst %.c,%.h,$(filter-out bar-sqlite3.c,$(BAR_SQLITE3_SOURCES))) \
 
-BAR_SQLITE3_OBJECTS      = $(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.cc,%.o,$z))
+BAR_SQLITE3_OBJECTS      = $(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.c,  %.o,$z)) \
+                           $(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.cpp,%.o,$z)) \
 
 OTHER_SOURCES            = forward.h \
                            \

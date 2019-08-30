@@ -31,6 +31,7 @@
 #include "sqlite3.h"
 
 #include "index_definition.h"
+#include "archive.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -4038,12 +4039,13 @@ int main(int argc, const char *argv[])
                      jobUUID
                     );
 
-    stringFormat(format,sizeof(format),"%%%ds %%-s\n",maxIdLength);
+    stringFormat(format,sizeof(format),"%%-%ds %%-%ds %%64s %%s\n",maxIdLength,maxStorageNameLength);
+fprintf(stderr,"%s, %d: format=%s\n",__FILE__,__LINE__,format);
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_execute(&databaseHandle,
                      CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
-                       assert(count == 2);
+                       assert(count == 4);
                        assert(values != NULL);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
@@ -4051,12 +4053,14 @@ int main(int argc, const char *argv[])
                        UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(userData);
 
-                       printf(format,values[0],values[1]);
+                       char *s=Archive_archiveTypeToString((ArchiveTypes)atoi(values[3]), "unknown");
+
+                       printf(format,values[0],values[1],values[2],s);
 
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
-                     "SELECT storage.id,storage.name FROM storage \
+                     "SELECT storage.id,storage.name,entities.jobUUID,entities.type FROM storage \
                         LEFT join entities on storage.entityId=entities.id \
                       WHERE %d OR entities.jobUUID=%'s \
                       ORDER BY storage.name ASC \
