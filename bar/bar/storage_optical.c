@@ -1063,7 +1063,8 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
                                        bool        initialFlag
                                       )
 {
-  TextMacro   textMacros[3];
+  uint        j;
+  TextMacro   textMacros[5];
   Errors      error;
   ConstString template;
 
@@ -1091,9 +1092,12 @@ LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
   }
 
   // init macros
+  j = Thread_getNumberOfCores();
   TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
-  TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                               NULL);
+  TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                             NULL);
   TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageInfo->requestedVolumeNumber,      NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[3],"%j",     j,                                       NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[4],"%j1",    (j > 1) ? j-1 : 1,                       NULL);
 
   // write pre-processing
   template = NULL;
@@ -1132,9 +1136,11 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
   Errors        error;
   ExecuteIOInfo executeIOInfo;
   String        imageFileName;
-  TextMacro     textMacros[6];
+  uint          j;
+  TextMacro     textMacros[8];
   String        fileName;
   FileInfo      fileInfo;
+  uint          retryCount;
   bool          retryFlag;
   ConstString   template;
 
@@ -1168,12 +1174,15 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     }
 
     // init macros
+    j = Thread_getNumberOfCores();
     TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageInfo->storageSpecifier.deviceName,NULL);
     TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageInfo->opticalDisk.write.directory,NULL);
-    TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                             NULL);
-    TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0,                                         NULL);
-    TEXT_MACRO_N_STRING (textMacros[4],"%file",     archiveName,                               NULL);
+    TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                           NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[3],"%sectors",  0,                                       NULL);
+    TEXT_MACRO_N_STRING (textMacros[4],"%file",     archiveName,                             NULL);
     TEXT_MACRO_N_INTEGER(textMacros[5],"%number",   storageInfo->volumeNumber,               NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[6],"%j",        j,                                       NULL);
+    TEXT_MACRO_N_INTEGER(textMacros[7],"%j1",       (j > 1) ? j-1 : 1,                       NULL);
 
     if ((storageInfo->jobOptions != NULL) && (storageInfo->jobOptions->alwaysCreateImageFlag || storageInfo->jobOptions->errorCorrectionCodesFlag))
     {
@@ -1264,7 +1273,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         storageInfo->opticalDisk.write.step++;
       }
 
-      retryFlag = TRUE;
+      retryCount = 3;
+      retryFlag  = TRUE;
       do
       {
         retryFlag = FALSE;
@@ -1285,6 +1295,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         else
         {
           printInfo(1,"FAIL\n");
+          retryCount--;
           if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
           {
             retryFlag = Misc_getYesNo("Retry write image to medium?");
@@ -1295,9 +1306,17 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           }
         }
       }
-      while ((error != ERROR_NONE) && retryFlag);
+      while ((error != ERROR_NONE) && (retryCount > 0) && retryFlag);
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+/*
+        logMessage(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "Write image to medium failed '%s'\n",
+                   Error_getText(erorr)
+                  )
+*/
         File_delete(imageFileName,FALSE);
         String_delete(imageFileName);
         StringList_done(&executeIOInfo.stderrList);
@@ -1345,7 +1364,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         storageInfo->opticalDisk.write.step++;
       }
 
-      retryFlag = TRUE;
+      retryCount = 3;
+      retryFlag  = TRUE;
       do
       {
         retryFlag = FALSE;
@@ -1365,6 +1385,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         else
         {
           printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
+          retryCount--;
           if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
           {
             retryFlag = Misc_getYesNo("Retry write image to medium?");
@@ -1375,7 +1396,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           }
         }
       }
-      while ((error != ERROR_NONE) && retryFlag);
+      while ((error != ERROR_NONE) && (retryCount > 0) && retryFlag);
       if (error != ERROR_NONE)
       {
         File_delete(imageFileName,FALSE);
