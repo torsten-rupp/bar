@@ -9084,8 +9084,7 @@ Errors addStorageNameListFromFile(StringList *storageNameList, const char *fileN
 
 Errors addStorageNameListFromCommand(StringList *storageNameList, const char *template)
 {
-  String     script;
-//  TextMacro textMacros[5];
+  String script;
   Errors error;
 
   assert(storageNameList != NULL);
@@ -9095,14 +9094,11 @@ Errors addStorageNameListFromCommand(StringList *storageNameList, const char *te
   script = String_new();
 
   // expand template
-//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",Archive_typeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   Archive_typeToShortString(archiveType),".");
-//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
   Misc_expandMacros(script,
                     template,
                     EXPAND_MACRO_MODE_STRING,
-NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
+                    NULL,  // textMacros
+                    0,  // SIZE_OF_ARRAY(textMacros)
                     TRUE
                    );
 
@@ -9179,8 +9175,7 @@ Errors addIncludeListFromFile(EntryTypes entryType, EntryList *entryList, const 
 
 Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, const char *template)
 {
-  String     script;
-//  TextMacro textMacros[5];
+  String script;
   Errors error;
 
   assert(entryList != NULL);
@@ -9190,14 +9185,11 @@ Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, con
   script = String_new();
 
   // expand template
-//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",Archive_typeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   Archive_typeToShortString(archiveType),".");
-//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
   Misc_expandMacros(script,
                     template,
                     EXPAND_MACRO_MODE_STRING,
-NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
+                    NULL,  // textMacros
+                    0,  // SIZE_OF_ARRAY(textMacros)
                     TRUE
                    );
 
@@ -9275,8 +9267,7 @@ Errors addExcludeListFromFile(PatternList *patternList, const char *fileName)
 
 Errors addExcludeListFromCommand(PatternList *patternList, const char *template)
 {
-  String     script;
-//  TextMacro textMacros[5];
+  String script;
   Errors error;
 
   assert(patternList != NULL);
@@ -9286,14 +9277,11 @@ Errors addExcludeListFromCommand(PatternList *patternList, const char *template)
   script = String_new();
 
   // expand template
-//  TEXT_MACRO_N_STRING (textMacros[1],"%name",jobName,                             TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[2],"%type",Archive_typeToString(archiveType),     TEXT_MACRO_PATTERN_STRING);
-//  TEXT_MACRO_N_CSTRING(textMacros[3],"%T",   Archive_typeToShortString(archiveType),".");
-//  TEXT_MACRO_N_STRING (textMacros[4],"%text",scheduleCustomText,                  TEXT_MACRO_PATTERN_STRING);
   Misc_expandMacros(script,
                     template,
                     EXPAND_MACRO_MODE_STRING,
-NULL,0,//                    textMacros,SIZE_OF_ARRAY(textMacros),
+                    NULL,  // textMacros
+                    0,  // SIZE_OF_ARRAY(textMacros)
                     TRUE
                    );
 
@@ -10223,6 +10211,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileListFileName));
     if (error != ERROR_NONE)
     {
+      printError(_("Cannot get included list (error: %s)!"),
+                 Error_getText(error)
+                );
       return error;
     }
   }
@@ -10231,6 +10222,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageListFileName));
     if (error != ERROR_NONE)
     {
+      printError(_("Cannot get included list (error: %s)!"),
+                 Error_getText(error)
+                );
       return error;
     }
   }
@@ -10239,6 +10233,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addExcludeListFromFile(&excludePatternList,String_cString(globalOptions.excludeListFileName));
     if (error != ERROR_NONE)
     {
+      printError(_("Cannot get excluded list (error: %s)!"),
+                 Error_getText(error)
+                );
       return error;
     }
   }
@@ -10249,6 +10246,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileCommand));
     if (error != ERROR_NONE)
     {
+      printError(_("Cannot get included list (error: %s)!"),
+                 Error_getText(error)
+                );
       return error;
     }
   }
@@ -10257,6 +10257,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageCommand));
     if (error != ERROR_NONE)
     {
+      printError(_("Cannot get included list (error: %s)!"),
+                 Error_getText(error)
+                );
       return error;
     }
   }
@@ -10265,6 +10268,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
     error = addExcludeListFromCommand(&excludePatternList,String_cString(globalOptions.excludeCommand));
     if (error != ERROR_NONE)
     {
+      printError(_("Cannot get excluded list (error: %s)!"),
+                 Error_getText(error)
+                );
       return error;
     }
   }
@@ -10360,6 +10366,10 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromFile(&storageNameList,NULL);
           if (error != ERROR_NONE)
           {
+            printError(_("Cannot get storages names (error: %s)!"),
+                       Error_getText(error)
+                      );
+            StringList_done(&storageNameList);
             break;
           }
         }
@@ -10368,6 +10378,10 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromFile(&storageNameList,String_cString(globalOptions.storageNameListFileName));
           if (error != ERROR_NONE)
           {
+            printError(_("Cannot get storages names (error: %s)!"),
+                       Error_getText(error)
+                      );
+            StringList_done(&storageNameList);
             break;
           }
         }
@@ -10376,6 +10390,10 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromCommand(&storageNameList,String_cString(globalOptions.storageNameCommand));
           if (error != ERROR_NONE)
           {
+            printError(_("Cannot get storages names (error: %s)!"),
+                       Error_getText(error)
+                      );
+            StringList_done(&storageNameList);
             break;
           }
         }
