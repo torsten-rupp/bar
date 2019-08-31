@@ -2012,6 +2012,9 @@ public class TabJobs
     }
   }
 
+  // max. size of medium data with ECC [%]
+  private final double MAX_MEDIUM_SIZE_ECC = 0.8;
+
   // colors
   private final Color  COLOR_BLACK;
   private final Color  COLOR_WHITE;
@@ -5930,6 +5933,7 @@ widgetArchivePartSize.setListVisible(true);
               {
                 Dialogs.warning(shell,BARControl.tr("When writing to a CD without splitting enabled\nthe resulting archive file may not fit on medium."));
               }
+
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
                   && (volumeSize.getLong() <= 0)
@@ -5937,19 +5941,25 @@ widgetArchivePartSize.setListVisible(true);
               {
                 Dialogs.warning(shell,BARControl.tr("When writing to a CD without setting medium size\nthe resulting archive file may not fit on medium."));
               }
+
+              long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
               if (   changedFlag
+                  && ecc.getBoolean()
                   && archivePartSizeFlag.getBoolean()
                   && (archivePartSize.getLong() > 0)
-                  && ((volumeSize.getLong()%archivePartSize.getLong()) < ((long)((double)archivePartSize.getLong()*0.1)))
-                  && ecc.getBoolean()
+                  && ((size%archivePartSize.getLong()) > 0)
+                  && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
                  )
               {
                 Dialogs.warning(shell,
                                 BARControl.tr("When writing to a CD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes (~20%).\n"+
                                               "\n"+
                                               "Good settings may be:\n"+
-                                              "- part size 250M, medium 500M\n"+
-                                              "- part size 140M, medium 560M\n"
+                                              "- part size 215M, size 430M, medium 540\n"+
+                                              "- part size 260M, size 520M, medium 650\n"+
+                                              "- part size 280M, size 560M, medium 700\n"+
+                                              "- part size 250M, size 650M, medium 800\n"+
+                                              "- part size 240M, size 720M, medium 900\n"
                                              )
                                );
               }
@@ -5988,6 +5998,7 @@ widgetArchivePartSize.setListVisible(true);
                                                    )
                                );
               }
+
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
                   && (volumeSize.getLong() <= 0)
@@ -5998,20 +6009,26 @@ widgetArchivePartSize.setListVisible(true);
                                                    )
                                );
               }
+
+              long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
               if (   changedFlag
+                  && ecc.getBoolean()
                   && archivePartSizeFlag.getBoolean()
                   && (archivePartSize.getLong() > 0)
-                  && ((volumeSize.getLong()%archivePartSize.getLong()) < ((long)((double)archivePartSize.getLong()*0.1)))
-                  && ecc.getBoolean()
+                  && ((size%archivePartSize.getLong()) > 0)
+                  && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
                  )
               {
                 Dialogs.warning(shell,
                                 BARControl.tr("When writing to a DVD with error-correction codes enabled\n"+
-                                              "some free space should be available on medium for error-correction codes (~20%%).\n"+
+                                              "some free space should be available on medium for error-correction codes (~20%).\n"+
                                               "\n"+
                                               "Good settings may be:\n"+
-                                              "- part size 515M, medium 3.5G\n"+
-                                              "- part size 620M, medium 3.6G"
+                                              "- part size 470M, size 3.7G,\tmedium 4.7G\n"+
+                                              "- part size 425M, size 6.8G,\tmedium 8.5G\n"+
+                                              "- part size 470M, size 7.52G,\tmedium 9.4G\n"+
+                                              "- part size 660M, size 10.56G,\tmedium 13.2G\n"+
+                                              "- part size 850M, size 13.6G,\tmedium 17G"
                                              )
                                );
               }
@@ -6050,6 +6067,7 @@ widgetArchivePartSize.setListVisible(true);
                                                    )
                                );
               }
+
               if (   changedFlag
                   && archivePartSizeFlag.getBoolean()
                   && (volumeSize.getLong() <= 0)
@@ -6060,20 +6078,25 @@ widgetArchivePartSize.setListVisible(true);
                                                    )
                                );
               }
+
+              long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
               if (   changedFlag
+                  && ecc.getBoolean()
                   && archivePartSizeFlag.getBoolean()
                   && (archivePartSize.getLong() > 0)
-                  && ((volumeSize.getLong()%archivePartSize.getLong()) < ((long)((double)archivePartSize.getLong()*0.1)))
-                  && ecc.getBoolean()
+                  && ((size%archivePartSize.getLong()) > 0)
+                  && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
                  )
               {
                 Dialogs.warning(shell,
                                 BARControl.tr("When writing to a BD with error-correction codes enabled\n"+
-                                              "some free space should be available on medium for error-correction codes (~20%%).\n"+
+                                              "some free space should be available on medium for error-correction codes (~20%).\n"+
                                               "\n"+
                                               "Good settings may be:\n"+
-                                              "- part size 1G, medium 20G\n"+
-                                              "- part size 5G, medium 20G\n"
+                                              "- part size 1G,\t\tsize 20G,\t\tmedium 25G\n"+
+                                              "- part size 2G,\t\tsize 40G,\t\tmedium 50G\n"+
+                                              "- part size 5G,\t\tsize 80G,\t\tmedium 100G\n"+
+                                              "- part size 6.4G,\tsize 102.4G,\tmedium 128G\n"
                                              )
                                );
               }
@@ -7793,7 +7816,7 @@ widgetArchivePartSize.setListVisible(true);
           {
             combo = Widgets.newCombo(subComposite);
             combo.setToolTipText(BARControl.tr("Size of medium. You may specify a smaller value than the real physical size to leave some free space for error-correction codes."));
-            combo.setItems(new String[]{"630M","700M","2G","3G","3.2G","4G","6.4G","7.2G","8G","20G","25G","40G","50G","80G","100G"});
+            combo.setItems(new String[]{"425M","430M","470M","520M","560","650M","660M","720M","850M","2G","3G","3.2G","4G","6.4G","7.2G","8G","20G","25G","40G","50G","80G","100G"});
             combo.setData("showedErrorDialog",false);
             Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
             combo.addModifyListener(new ModifyListener()
@@ -7831,7 +7854,7 @@ widgetArchivePartSize.setListVisible(true);
                   BARServer.setJobOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
 
-                  long size = (long)((double)n*0.8);
+                  long size = (long)((double)n*MAX_MEDIUM_SIZE_ECC);
 
                   if (   changedFlag
                       && ecc.getBoolean()
@@ -7867,7 +7890,7 @@ widgetArchivePartSize.setListVisible(true);
                   BARServer.setJobOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
 
-                  long size = (long)((double)volumeSize.getLong()*0.8);
+                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
 
                   if (   changedFlag
                       && ecc.getBoolean()
@@ -7911,7 +7934,7 @@ widgetArchivePartSize.setListVisible(true);
                   BARServer.setJobOption(selectedJobData.uuid,"volume-size",n);
                   widget.setBackground(null);
 
-                  long size = (long)((double)volumeSize.getLong()*0.8);
+                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
 
                   if (   changedFlag
                       && ecc.getBoolean()
@@ -7970,7 +7993,7 @@ widgetArchivePartSize.setListVisible(true);
                 boolean changedFlag = ecc.set(checkedFlag);
                 BARServer.setJobOption(selectedJobData.uuid,"ecc",checkedFlag);
 
-                long size = (long)((double)volumeSize.getLong()*0.8);
+                long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
 
                 if (   changedFlag
                     && ecc.getBoolean()
@@ -11413,7 +11436,7 @@ throw new Error("NYI");
                                    final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
                                    final String       pattern     = valueMap.getString("pattern"                       );
 
-                                   if (!pattern.equals(""))
+                                   if (!pattern.isEmpty())
                                    {
                                      if (!widgetExcludeList.isDisposed())
                                      {
