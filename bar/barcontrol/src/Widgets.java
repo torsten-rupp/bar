@@ -19,6 +19,8 @@ import java.lang.reflect.Array;
 
 import java.net.URL;
 
+import java.text.Collator;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -659,6 +661,9 @@ class WidgetModifyListener
     return false;
   }
 
+  /** parse value
+   * @param value
+   */
   public void parse(String value)
   {
     // default: nothing to do
@@ -670,45 +675,17 @@ class WidgetModifyListener
    */
   public void modified(final Widget widget, final WidgetVariable variable)
   {
-//TODO
-    if (widget != null)
+    if ((widget != null) && (!widget.isDisposed()))
     {
-    if (!widget.isDisposed())
-    {
-    widget.getDisplay().syncExec(new Runnable()
-    {
-      @Override
-      public void run()
+      widget.getDisplay().syncExec(new Runnable()
       {
-      if      (widget instanceof Label)
-      {
-        Label widgetLabel = (Label)widget;
-
-        String text = getString(variable);
-        if (text == null)
+        @Override
+        public void run()
         {
-          if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
-          else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
-          else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
-          else if (variable.getType() == String.class ) text = variable.getString();
-        }
-        if ((text != null) && !text.equals(cachedText))
+        if      (widget instanceof Label)
         {
-          // Fix layout: save current bounds and restore after pack()
-          Rectangle bounds = widgetLabel.getBounds();
-          widgetLabel.setText(text);
-          widgetLabel.pack();
-          widgetLabel.setBounds(bounds);
+          Label widgetLabel = (Label)widget;
 
-          cachedText = text;
-        }
-      }
-      else if (widget instanceof Button)
-      {
-        Button widgetButton = (Button)widget;
-
-        if      ((widgetButton.getStyle() & SWT.PUSH) == SWT.PUSH)
-        {
           String text = getString(variable);
           if (text == null)
           {
@@ -720,155 +697,179 @@ class WidgetModifyListener
           if ((text != null) && !text.equals(cachedText))
           {
             // Fix layout: save current bounds and restore after pack()
-            Rectangle bounds = widgetButton.getBounds();
-            widgetButton.setText(text);
-            widgetButton.pack();
-            widgetButton.setBounds(bounds);
+            Rectangle bounds = widgetLabel.getBounds();
+            widgetLabel.setText(text);
+            widgetLabel.pack();
+            widgetLabel.setBounds(bounds);
 
             cachedText = text;
           }
         }
-        else if ((widgetButton.getStyle() & SWT.CHECK) == SWT.CHECK)
+        else if (widget instanceof Button)
         {
-          boolean selection = false;
-          if      (variable.getType() == Boolean.class) selection = variable.getBoolean();
-          else if (variable.getType() == Integer.class) selection = (variable.getInteger() != 0);
-          else if (variable.getType() == Long.class   ) selection = (variable.getLong() != 0);
-          else if (variable.getType() == Double.class ) selection = (variable.getDouble() != 0);
-          widgetButton.setSelection(selection);
+          Button widgetButton = (Button)widget;
+
+          if      ((widgetButton.getStyle() & SWT.PUSH) == SWT.PUSH)
+          {
+            String text = getString(variable);
+            if (text == null)
+            {
+              if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
+              else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+              else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+              else if (variable.getType() == String.class ) text = variable.getString();
+            }
+            if ((text != null) && !text.equals(cachedText))
+            {
+              // Fix layout: save current bounds and restore after pack()
+              Rectangle bounds = widgetButton.getBounds();
+              widgetButton.setText(text);
+              widgetButton.pack();
+              widgetButton.setBounds(bounds);
+
+              cachedText = text;
+            }
+          }
+          else if ((widgetButton.getStyle() & SWT.CHECK) == SWT.CHECK)
+          {
+            boolean selection = false;
+            if      (variable.getType() == Boolean.class) selection = variable.getBoolean();
+            else if (variable.getType() == Integer.class) selection = (variable.getInteger() != 0);
+            else if (variable.getType() == Long.class   ) selection = (variable.getLong() != 0);
+            else if (variable.getType() == Double.class ) selection = (variable.getDouble() != 0);
+            widgetButton.setSelection(selection);
+          }
+          else if ((widgetButton.getStyle() & SWT.RADIO) == SWT.RADIO)
+          {
+            boolean selection = false;
+            if      (variable.getType() == Boolean.class) selection = variable.getBoolean();
+            else if (variable.getType() == Integer.class) selection = (variable.getInteger() != 0);
+            else if (variable.getType() == Long.class   ) selection = (variable.getLong() != 0);
+            else if (variable.getType() == Double.class ) selection = (variable.getDouble() != 0);
+            widgetButton.setSelection(selection);
+          }
         }
-        else if ((widgetButton.getStyle() & SWT.RADIO) == SWT.RADIO)
+        else if (widget instanceof Combo)
         {
-          boolean selection = false;
-          if      (variable.getType() == Boolean.class) selection = variable.getBoolean();
-          else if (variable.getType() == Integer.class) selection = (variable.getInteger() != 0);
-          else if (variable.getType() == Long.class   ) selection = (variable.getLong() != 0);
-          else if (variable.getType() == Double.class ) selection = (variable.getDouble() != 0);
-          widgetButton.setSelection(selection);
-        }
-      }
-      else if (widget instanceof Combo)
-      {
-        Combo widgetCombo = (Combo)widget;
+          Combo widgetCombo = (Combo)widget;
 
-        String text = getString(variable);
-        if (text == null)
+          String text = getString(variable);
+          if (text == null)
+          {
+            if      (variable.getType() == Boolean.class) text = Boolean.toString(variable.getBoolean());
+            else if (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
+            else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+            else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+            else if (variable.getType() == String.class ) text = variable.getString();
+            else if (variable.getType() == Enum.class   ) text = variable.getString();
+          }
+          if ((text != null) && !text.equals(cachedText))
+          {
+            // Fix layout: save current bounds and restore after pack()
+            Rectangle bounds = widgetCombo.getBounds();
+            widgetCombo.setText(text);
+            widgetCombo.pack();
+            widgetCombo.setBounds(bounds);
+
+            cachedText = text;
+          }
+        }
+        else if (widget instanceof Text)
         {
-          if      (variable.getType() == Boolean.class) text = Boolean.toString(variable.getBoolean());
-          else if (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
-          else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
-          else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
-          else if (variable.getType() == String.class ) text = variable.getString();
-          else if (variable.getType() == Enum.class   ) text = variable.getString();
+          Text widgetText = (Text)widget;
+
+          String text = getString(variable);
+          if (text == null)
+          {
+            if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
+            else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+            else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+            else if (variable.getType() == String.class ) text = variable.getString();
+          }
+          if ((text != null) && !text.equals(cachedText))
+          {
+            // Fix layout: save current bounds and restore after pack()
+            Rectangle bounds = widgetText.getBounds();
+            widgetText.setText(text);
+            widgetText.pack();
+            widgetText.setBounds(bounds);
+
+            cachedText = text;
+          }
         }
-        if ((text != null) && !text.equals(cachedText))
+        else if (widget instanceof StyledText)
         {
-          // Fix layout: save current bounds and restore after pack()
-          Rectangle bounds = widgetCombo.getBounds();
-          widgetCombo.setText(text);
-          widgetCombo.pack();
-          widgetCombo.setBounds(bounds);
+          StyledText widgetStyledText = (StyledText)widget;
 
-          cachedText = text;
+          String text = getString(variable);
+          if (text == null)
+          {
+            if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
+            else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
+            else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
+            else if (variable.getType() == String.class ) text = variable.getString();
+          }
+          if ((text != null) && !text.equals(cachedText))
+          {
+            // Fix layout: save current bounds and restore after pack()
+            Rectangle bounds = widgetStyledText.getBounds();
+            widgetStyledText.setText(text);
+            widgetStyledText.pack();
+            widgetStyledText.setBounds(bounds);
+
+            cachedText = text;
+          }
         }
-      }
-      else if (widget instanceof Text)
-      {
-        Text widgetText = (Text)widget;
-
-        String text = getString(variable);
-        if (text == null)
+        else if (widget instanceof Spinner)
         {
-          if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
-          else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
-          else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
-          else if (variable.getType() == String.class ) text = variable.getString();
+          Spinner widgetSpinner = (Spinner)widget;
+
+          int value = 0;
+          if      (variable.getType() == Integer.class) value = variable.getInteger();
+          else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
+          else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
+          widgetSpinner.setSelection(value);
         }
-        if ((text != null) && !text.equals(cachedText))
+        else if (widget instanceof Slider)
         {
-          // Fix layout: save current bounds and restore after pack()
-          Rectangle bounds = widgetText.getBounds();
-          widgetText.setText(text);
-          widgetText.pack();
-          widgetText.setBounds(bounds);
+          Slider widgetSlider = (Slider)widget;
 
-          cachedText = text;
+          int value = 0;
+          if      (variable.getType() == Integer.class) value = variable.getInteger();
+          else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
+          else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
+          widgetSlider.setSelection(value);
         }
-      }
-      else if (widget instanceof StyledText)
-      {
-        StyledText widgetStyledText = (StyledText)widget;
-
-        String text = getString(variable);
-        if (text == null)
+        else if (widget instanceof Scale)
         {
-          if      (variable.getType() == Integer.class) text = Integer.toString(variable.getInteger());
-          else if (variable.getType() == Long.class   ) text = Long.toString(variable.getLong());
-          else if (variable.getType() == Double.class ) text = Double.toString(variable.getDouble());
-          else if (variable.getType() == String.class ) text = variable.getString();
+          Scale widgetScale = (Scale)widget;
+
+          int value = 0;
+          if      (variable.getType() == Integer.class) value = variable.getInteger();
+          else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
+          else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
+          widgetScale.setSelection(value);
         }
-        if ((text != null) && !text.equals(cachedText))
+        else if (widget instanceof ProgressBar)
         {
-          // Fix layout: save current bounds and restore after pack()
-          Rectangle bounds = widgetStyledText.getBounds();
-          widgetStyledText.setText(text);
-          widgetStyledText.pack();
-          widgetStyledText.setBounds(bounds);
+          ProgressBar widgetProgressBar = (ProgressBar)widget;
 
-          cachedText = text;
+          double value = 0.0;
+          if      (variable.getType() == Integer.class) value = (double)variable.getInteger();
+          else if (variable.getType() == Long.class   ) value = (double)variable.getLong();
+          else if (variable.getType() == Double.class ) value = variable.getDouble();
+          widgetProgressBar.setSelection(value);
         }
-      }
-      else if (widget instanceof Spinner)
-      {
-        Spinner widgetSpinner = (Spinner)widget;
-
-        int value = 0;
-        if      (variable.getType() == Integer.class) value = variable.getInteger();
-        else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
-        else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
-        widgetSpinner.setSelection(value);
-      }
-      else if (widget instanceof Slider)
-      {
-        Slider widgetSlider = (Slider)widget;
-
-        int value = 0;
-        if      (variable.getType() == Integer.class) value = variable.getInteger();
-        else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
-        else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
-        widgetSlider.setSelection(value);
-      }
-      else if (widget instanceof Scale)
-      {
-        Scale widgetScale = (Scale)widget;
-
-        int value = 0;
-        if      (variable.getType() == Integer.class) value = variable.getInteger();
-        else if (variable.getType() == Long.class   ) value = (int)variable.getLong();
-        else if (variable.getType() == Double.class ) value = (int)variable.getDouble();
-        widgetScale.setSelection(value);
-      }
-      else if (widget instanceof ProgressBar)
-      {
-        ProgressBar widgetProgressBar = (ProgressBar)widget;
-
-        double value = 0.0;
-        if      (variable.getType() == Integer.class) value = (double)variable.getInteger();
-        else if (variable.getType() == Long.class   ) value = (double)variable.getLong();
-        else if (variable.getType() == Double.class ) value = variable.getDouble();
-        widgetProgressBar.setSelection(value);
-      }
-      else if (widget instanceof MenuItem)
-      {
-        MenuItem widgetMenuItem = (MenuItem)widget;
-      }
-      else
-      {
-        throw new InternalError("Unhandled widget '"+widget+"' in widget listener!");
-      }
-      }
-    });
-    }
+        else if (widget instanceof MenuItem)
+        {
+          MenuItem widgetMenuItem = (MenuItem)widget;
+        }
+        else
+        {
+          throw new InternalError("Unhandled widget '"+widget+"' in widget listener!");
+        }
+        }
+      });
     }
   }
 
@@ -1373,6 +1374,7 @@ class ListItem
 class Widgets
 {
   //-----------------------------------------------------------------------
+  public static Collator STRING_COLLATOR = java.text.Collator.getInstance();
 
   // hash of widgets listeners
   private static HashSet<WidgetModifyListener> widgetModifyListenerHashSet = new HashSet<WidgetModifyListener>();
@@ -4185,25 +4187,43 @@ e composite widget
     {
       ArrayList<ListItem> listItems = (ArrayList<ListItem>)list.getData();
 
-      for (int i = 0; i < listItems.size(); i++)
+/*
+if (comparator == String.CASE_INSENSITIVE_ORDER)
+{
+for (int j = 0; j < listItems.size(); j++) Dprintf.dprintf("%d: %s -- %s -> %d",j,listItems.get(j).text,data,comparator.compare(data,(T)listItems.get(j).text));
+for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItems.get(j).text,(T)listItems.get(j-1).text) >= 0);
+}
+*/
+      index = listItems.size();
+      if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
       {
-        if (comparator != String.CASE_INSENSITIVE_ORDER)
+        // compare data
+        for (int i = 0; i < listItems.size(); i++)
         {
-          if (comparator.compare((T)listItems.get(index).data,data) > 0)
-          {
-            index = i;
-            break;
-          }
-        }
-        else
-        {
-          if (comparator.compare((T)listItems.get(index).text,data) > 0)
+          assert((i == 0) || comparator.compare((T)listItems.get(i).data,(T)listItems.get(i-1).data) >= 0);
+
+          if (comparator.compare((T)listItems.get(i).data,data) > 0)
           {
             index = i;
             break;
           }
         }
       }
+      else
+      {
+        // compare text
+        for (int i = 0; i < listItems.size(); i++)
+        {
+          assert((i == 0) || comparator.compare((T)listItems.get(i).text,(T)listItems.get(i-1).text) >= 0);
+
+          if (comparator.compare(data,(T)listItems.get(i).text) < 0)
+          {
+            index = i;
+            break;
+          }
+        }
+      }
+//Dprintf.dprintf("new %d: %s",index,data);
     }
 
     return index;
@@ -6224,7 +6244,7 @@ e composite widget
             switch (sortDirection)
             {
               case SWT.UP:
-                if (comparator != String.CASE_INSENSITIVE_ORDER)
+                if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
                 {
                   swapFlag = (comparator.compare((T)tableItems[i].getData(),(T)tableItems[i+1].getData()) > 0);
                 }
@@ -6234,7 +6254,7 @@ e composite widget
                 }
                 break;
               case SWT.DOWN:
-                if (comparator != String.CASE_INSENSITIVE_ORDER)
+                if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
                 {
                   swapFlag = (comparator.compare((T)tableItems[i].getData(),(T)tableItems[i+1].getData()) < 0);
                 }
@@ -6349,7 +6369,7 @@ e composite widget
           switch (sortDirection)
           {
             case SWT.UP:
-              if (comparator != String.CASE_INSENSITIVE_ORDER)
+              if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
               {
                 foundFlag = (comparator.compare((T)tableItems[index].getData(),data) > 0);
               }
@@ -6359,7 +6379,7 @@ e composite widget
               }
               break;
             case SWT.DOWN:
-              if (comparator != String.CASE_INSENSITIVE_ORDER)
+              if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
               {
                 foundFlag = (comparator.compare((T)tableItems[index].getData(),data) < 0);
               }
@@ -7469,7 +7489,7 @@ e composite widget
         switch (sortDirection)
         {
           case SWT.UP:
-            if (comparator != String.CASE_INSENSITIVE_ORDER)
+            if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
             {
               foundFlag = (comparator.compare((T)treeItems[index].getData(),data) > 0);
             }
@@ -7479,7 +7499,7 @@ e composite widget
             }
             break;
           case SWT.DOWN:
-            if (comparator != String.CASE_INSENSITIVE_ORDER)
+            if ((comparator != String.CASE_INSENSITIVE_ORDER) && (comparator != STRING_COLLATOR))
             {
               foundFlag = (comparator.compare((T)treeItems[index].getData(),data) < 0);
             }
