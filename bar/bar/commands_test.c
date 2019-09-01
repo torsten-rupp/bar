@@ -1318,7 +1318,8 @@ NULL, // masterSocketHandle
                        CALLBACK(NULL,NULL),  // getPassword
                        CALLBACK(NULL,NULL),  // requestVolume
                        CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL)  // isAborted
+                       CALLBACK(NULL,NULL),  // isAborted
+                       NULL  // logHandle
                       );
   if (error != ERROR_NONE)
   {

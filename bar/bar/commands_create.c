@@ -4083,7 +4083,8 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                CALLBACK(NULL,NULL),  // getPassword
                                CALLBACK(NULL,NULL),  // requestVolume
                                CALLBACK(NULL,NULL),  // isPause
-                               CALLBACK(NULL,NULL)  // isAborted
+                               CALLBACK(NULL,NULL),  // isAborte
+                               logHandle
                               );
           if (error == ERROR_NONE)
           {
@@ -4296,7 +4297,8 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                CALLBACK(NULL,NULL),  // getPassword
                                CALLBACK(NULL,NULL),  // requestVolume
                                CALLBACK(NULL,NULL),  // isPause
-                               CALLBACK(NULL,NULL)  // isAborted
+                               CALLBACK(NULL,NULL),  // isAborted
+                               logHandle
                               );
           if (error == ERROR_NONE)
           {
@@ -7232,7 +7234,8 @@ masterIO, // masterIO
                        CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
                        CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
                        CALLBACK(isPauseStorageFunction,isPauseStorageUserData),
-                       CALLBACK(isAbortedFunction,isAbortedUserData)
+                       CALLBACK(isAbortedFunction,isAbortedUserData),
+                       logHandle
                       );
   if (error != ERROR_NONE)
   {

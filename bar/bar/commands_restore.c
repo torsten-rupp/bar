@@ -3139,7 +3139,8 @@ NULL, // masterIO
                        CALLBACK(NULL,NULL), // requestVolume
 //TODO
                        CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL)  // isAborted
+                       CALLBACK(NULL,NULL),  // isAborted
+                       restoreInfo->logHandle
                       );
   if (error != ERROR_NONE)
   {

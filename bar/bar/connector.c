@@ -3095,7 +3095,8 @@ CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,co
 CALLBACK(NULL,NULL),//                       CALLBACK(getPasswordFunction,getPasswordUserData),
 CALLBACK(NULL,NULL),//                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
                        CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL)  // isAborted
+                       CALLBACK(NULL,NULL),  // isAborted
+                       NULL  // logHandle
                       );
   if (error != ERROR_NONE)
   {
