@@ -14372,6 +14372,9 @@ if test $ENABLE_BFD = "yes"; then
 
       result=1
       if test $result -eq 1; then
+        # patch to fix memory leak
+        #   diff -u binutils-2.32.org/bfd/dwarf2.c binutils-2.32/bfd/dwarf2.c > ../misc/binutils-2.32-dwarf2-leak.patch
+        (cd extern/binutils-2.32; $PATCH --batch -N -p1 <$cwd/misc/binutils-2.32-dwarf2-leak.patch) 1>/dev/null 2>/dev/null
         # Note: - fix distlean
         #       - use cpu+os to avoid "unknown" in name which cause
         #         using of wrong tool names by binutils build!
