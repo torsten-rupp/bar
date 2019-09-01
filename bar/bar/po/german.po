@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-07-28 12:15+0200\n"
+"POT-Creation-Date: 2019-08-30 19:58+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -770,128 +770,128 @@ msgstr ""
 msgid "load volume fail"
 msgstr ""
 
-#: errors.def:673
+#: errors.def:676
 msgid "parse command fail"
 msgstr ""
 
-#: errors.def:674
+#: errors.def:680
 msgid "expand command template fail"
 msgstr ""
 
-#: errors.def:675
+#: errors.def:681
 msgid "fork for execute external program fail"
 msgstr ""
 
-#: errors.def:679
+#: errors.def:685
 msgid "i/o fail"
 msgstr ""
 
-#: errors.def:686 errors.def:701
+#: errors.def:692 errors.def:707
 msgid "execute external program"
 msgstr ""
 
-#: errors.def:689
+#: errors.def:695
 #, c-format
 msgid "execute external program '%s' fail"
 msgstr ""
 
-#: errors.def:693
+#: errors.def:699
 msgid "execute external program fail"
 msgstr ""
 
-#: errors.def:707
+#: errors.def:713
 msgid "fail"
 msgstr ""
 
-#: errors.def:715
+#: errors.def:721
 msgid "parsing data"
 msgstr ""
 
-#: errors.def:722
+#: errors.def:728
 msgid "unknown command"
 msgstr ""
 
-#: errors.def:729
+#: errors.def:735
 msgid "expected parameter"
 msgstr ""
 
-#: errors.def:742
+#: errors.def:748
 msgid "unknown value"
 msgstr ""
 
-#: errors.def:746
+#: errors.def:752
 msgid "invalid value"
 msgstr ""
 
-#: errors.def:750
+#: errors.def:756
 msgid "authorization"
 msgstr ""
 
-#: errors.def:751
+#: errors.def:757
 msgid "job not found"
 msgstr ""
 
-#: errors.def:752
+#: errors.def:758
 msgid "job error"
 msgstr ""
 
-#: errors.def:758
+#: errors.def:764
 msgid "database"
 msgstr ""
 
-#: errors.def:762
+#: errors.def:768
 msgid "unknown version on index"
 msgstr ""
 
-#: errors.def:766
+#: errors.def:772
 msgid "missing table"
 msgstr ""
 
-#: errors.def:773
+#: errors.def:779
 msgid "missing column"
 msgstr ""
 
-#: errors.def:780
+#: errors.def:786
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:787
+#: errors.def:793
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:794
+#: errors.def:800
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:798
+#: errors.def:804
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:799
+#: errors.def:805
 msgid "index not found"
 msgstr ""
 
-#: errors.def:800
+#: errors.def:806
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:804
+#: errors.def:810
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:808
+#: errors.def:814
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:811
+#: errors.def:817
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:812
+#: errors.def:818
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:813
+#: errors.def:819
 msgid "slave is not paired"
 msgstr ""
 
