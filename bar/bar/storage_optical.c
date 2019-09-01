@@ -116,186 +116,6 @@ LOCAL void libcdioLogCallback(cdio_log_level_t level, const char *message)
 #endif /* HAVE_ISO9660 */
 
 /***********************************************************************\
-* Name   : requestNewOpticalMedium
-* Purpose: request new cd/dvd/bd medium
-* Input  : storageInfo - storage info
-           message     - message to show (or NULL)
-*          waitFlag    - TRUE to wait for new medium
-* Output : -
-* Return : TRUE if new medium loaded, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
-                                     const char  *message,
-                                     bool        waitFlag
-                                    )
-{
-  TextMacro                   textMacros[2];
-  bool                        mediumRequestedFlag;
-  StorageRequestVolumeResults storageRequestVolumeResult;
-
-  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
-  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->requestedVolumeNumber,      NULL);
-
-  if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
-      || (storageInfo->volumeState == STORAGE_VOLUME_STATE_LOADED)
-     )
-  {
-    // sleep a short time to give hardware time for finishing volume, then unload current volume
-    printInfo(1,"Unload medium #%d...",storageInfo->volumeNumber);
-    Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
-    Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.unloadVolumeCommand),
-                        textMacros,SIZE_OF_ARRAY(textMacros),
-                        CALLBACK(executeIOOutput,NULL),
-                        CALLBACK(executeIOOutput,NULL)
-                       );
-    printInfo(1,"OK\n");
-
-    storageInfo->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
-  }
-
-  // request new medium
-  mediumRequestedFlag  = FALSE;
-  storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_UNKNOWN;
-  if      (storageInfo->requestVolumeFunction != NULL)
-  {
-    // request volume via callback
-    mediumRequestedFlag = TRUE;
-
-    // request new medium via call back, unload if requested
-    do
-    {
-      storageRequestVolumeResult = storageInfo->requestVolumeFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
-                                                                        storageInfo->requestedVolumeNumber,
-                                                                        message,
-                                                                        storageInfo->requestVolumeUserData
-                                                                       );
-      if (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD)
-      {
-        // sleep a short time to give hardware time for finishing volume, then unload current medium
-        printInfo(1,"Unload medium...");
-        Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.unloadVolumeCommand),
-                            textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
-                           );
-        printInfo(1,"OK\n");
-      }
-    }
-    while (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD);
-
-    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
-  }
-  else if (storageInfo->opticalDisk.write.requestVolumeCommand != NULL)
-  {
-    // request volume via external command
-    mediumRequestedFlag = TRUE;
-
-    // request new volume via external command
-    printInfo(1,"Request new medium #%d...",storageInfo->requestedVolumeNumber);
-    if (Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.requestVolumeCommand),
-                            textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
-                           ) == ERROR_NONE
-       )
-    {
-      printInfo(1,"OK\n");
-      storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_FAIL;
-    }
-
-    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
-  }
-  else
-  {
-    // request volume via console
-    if (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
-    {
-      if (waitFlag)
-      {
-        mediumRequestedFlag = TRUE;
-
-        printInfo(0,"Please insert medium #%d into drive '%s' and press ENTER to continue\n",storageInfo->requestedVolumeNumber,String_cString(storageInfo->storageSpecifier.deviceName));
-        Misc_waitEnter();
-
-        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
-      }
-      else
-      {
-        printInfo(0,"Please insert medium #%d into drive '%s'\n",storageInfo->requestedVolumeNumber,String_cString(storageInfo->storageSpecifier.deviceName));
-      }
-    }
-    else
-    {
-      if (waitFlag)
-      {
-        mediumRequestedFlag = TRUE;
-
-        printInfo(0,"Press ENTER to continue\n");
-        Misc_waitEnter();
-
-        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
-      }
-    }
-
-    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
-  }
-
-  if (mediumRequestedFlag)
-  {
-    switch (storageRequestVolumeResult)
-    {
-      case STORAGE_REQUEST_VOLUME_RESULT_OK:
-        // load medium, then sleep a short time to give hardware time for reading medium information
-        printInfo(1,"Load medium #%d...",storageInfo->requestedVolumeNumber);
-        Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.loadVolumeCommand),
-                            textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
-                           );
-        Misc_udelay(LOAD_VOLUME_DELAY_TIME);
-        printInfo(1,"OK\n");
-
-        // store new medium number
-        storageInfo->volumeNumber = storageInfo->requestedVolumeNumber;
-
-        // update volume info
-        storageInfo->runningInfo.volumeNumber = storageInfo->volumeNumber;
-        updateStorageStatusInfo(storageInfo);
-
-        storageInfo->volumeState = STORAGE_VOLUME_STATE_LOADED;
-        return ERROR_NONE;
-        break;
-      case STORAGE_REQUEST_VOLUME_RESULT_ABORTED:
-        // load medium
-        printInfo(1,"Load medium #%d...",storageInfo->requestedVolumeNumber);
-        Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.loadVolumeCommand),
-                            textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
-                           );
-        printInfo(1,"OK\n");
-
-        return ERROR_ABORTED;
-        break;
-      default:
-        return ERROR_LOAD_VOLUME_FAIL;
-        break;
-    }
-  }
-  else
-  {
-    return ERROR_NONE;
-  }
-}
-
-/***********************************************************************\
 * Name   : executeIOmkisofsOutput
 * Purpose: process mkisofs output
 * Input  : storageInfo - storage info
@@ -1057,6 +877,204 @@ LOCAL Errors StorageOptical_done(StorageInfo *storageInfo)
   return error;
 }
 
+LOCAL Errors StorageOptical_loadVolume(const StorageInfo *storageInfo)
+{
+  TextMacro textMacros[2];
+
+  assert(storageInfo != NULL);
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
+
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->requestedVolumeNumber,      NULL);
+  return Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.loadVolumeCommand),
+                             textMacros,SIZE_OF_ARRAY(textMacros),
+                             CALLBACK(executeIOOutput,NULL),
+                             CALLBACK(executeIOOutput,NULL)
+                            );
+}
+
+LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
+{
+  TextMacro textMacros[2];
+
+  assert(storageInfo != NULL);
+  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
+
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->requestedVolumeNumber,      NULL);
+  return Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.unloadVolumeCommand),
+                             textMacros,SIZE_OF_ARRAY(textMacros),
+                             CALLBACK(executeIOOutput,NULL),
+                             CALLBACK(executeIOOutput,NULL)
+                            );
+}
+
+/***********************************************************************\
+* Name   : requestNewOpticalMedium
+* Purpose: request new cd/dvd/bd medium
+* Input  : storageInfo - storage info
+           message     - message to show (or NULL)
+*          waitFlag    - TRUE to wait for new medium
+* Output : -
+* Return : TRUE if new medium loaded, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
+                                     const char  *message,
+                                     bool        waitFlag
+                                    )
+{
+  TextMacro                   textMacros[2];
+  bool                        mediumRequestedFlag;
+  StorageRequestVolumeResults storageRequestVolumeResult;
+
+  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
+  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->requestedVolumeNumber,      NULL);
+
+  if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
+      || (storageInfo->volumeState == STORAGE_VOLUME_STATE_LOADED)
+     )
+  {
+    // sleep a short time to give hardware time for finishing volume, then unload current volume
+    printInfo(1,"Unload medium #%d...",storageInfo->volumeNumber);
+    Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+    (void)StorageOptical_unloadVolume(storageInfo);
+    printInfo(1,"OK\n");
+
+    storageInfo->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
+  }
+
+  // request new medium
+  mediumRequestedFlag  = FALSE;
+  storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_UNKNOWN;
+  if      (storageInfo->requestVolumeFunction != NULL)
+  {
+    // request volume via callback
+    mediumRequestedFlag = TRUE;
+
+    // request new medium via call back, unload if requested
+    do
+    {
+      storageRequestVolumeResult = storageInfo->requestVolumeFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
+                                                                        storageInfo->requestedVolumeNumber,
+                                                                        message,
+                                                                        storageInfo->requestVolumeUserData
+                                                                       );
+      if (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD)
+      {
+        // sleep a short time to give hardware time for finishing volume, then unload current medium
+        printInfo(1,"Unload medium...");
+        Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
+        (void)StorageOptical_unloadVolume(storageInfo);
+        printInfo(1,"OK\n");
+      }
+    }
+    while (storageRequestVolumeResult == STORAGE_REQUEST_VOLUME_RESULT_UNLOAD);
+
+    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
+  }
+  else if (storageInfo->opticalDisk.write.requestVolumeCommand != NULL)
+  {
+    // request volume via external command
+    mediumRequestedFlag = TRUE;
+
+    // request new volume via external command
+    printInfo(1,"Request new medium #%d...",storageInfo->requestedVolumeNumber);
+    if (Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.requestVolumeCommand),
+                            textMacros,SIZE_OF_ARRAY(textMacros),
+                            CALLBACK(executeIOOutput,NULL),
+                            CALLBACK(executeIOOutput,NULL)
+                           ) == ERROR_NONE
+       )
+    {
+      printInfo(1,"OK\n");
+      storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
+    }
+    else
+    {
+      printInfo(1,"FAIL\n");
+      storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_FAIL;
+    }
+
+    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
+  }
+  else
+  {
+    // request volume via console
+    if (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
+    {
+      if (waitFlag)
+      {
+        mediumRequestedFlag = TRUE;
+
+        printInfo(0,"Please insert medium #%d into drive '%s' and press ENTER to continue\n",storageInfo->requestedVolumeNumber,String_cString(storageInfo->storageSpecifier.deviceName));
+        Misc_waitEnter();
+
+        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
+      }
+      else
+      {
+        printInfo(0,"Please insert medium #%d into drive '%s'\n",storageInfo->requestedVolumeNumber,String_cString(storageInfo->storageSpecifier.deviceName));
+      }
+    }
+    else
+    {
+      if (waitFlag)
+      {
+        mediumRequestedFlag = TRUE;
+
+        printInfo(0,"Press ENTER to continue\n");
+        Misc_waitEnter();
+
+        storageRequestVolumeResult = STORAGE_REQUEST_VOLUME_RESULT_OK;
+      }
+    }
+
+    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
+  }
+
+  if (mediumRequestedFlag)
+  {
+    switch (storageRequestVolumeResult)
+    {
+      case STORAGE_REQUEST_VOLUME_RESULT_OK:
+        // load medium, then sleep a short time to give hardware time for reading medium information
+        printInfo(1,"Load medium #%d...",storageInfo->requestedVolumeNumber);
+        (void)StorageOptical_loadVolume(storageInfo);
+        Misc_udelay(LOAD_VOLUME_DELAY_TIME);
+        printInfo(1,"OK\n");
+
+        // store new medium number
+        storageInfo->volumeNumber = storageInfo->requestedVolumeNumber;
+
+        // update volume info
+        storageInfo->runningInfo.volumeNumber = storageInfo->volumeNumber;
+        updateStorageStatusInfo(storageInfo);
+
+        storageInfo->volumeState = STORAGE_VOLUME_STATE_LOADED;
+        return ERROR_NONE;
+        break;
+      case STORAGE_REQUEST_VOLUME_RESULT_ABORTED:
+        // load medium
+        printInfo(1,"Load medium #%d...",storageInfo->requestedVolumeNumber);
+        (void)StorageOptical_loadVolume(storageInfo);
+        printInfo(1,"OK\n");
+        Misc_udelay(LOAD_VOLUME_DELAY_TIME);
+
+        return ERROR_ABORTED;
+        break;
+      default:
+        return ERROR_LOAD_VOLUME_FAIL;
+        break;
+    }
+  }
+  else
+  {
+    return ERROR_NONE;
+  }
+}
+
 LOCAL Errors StorageOptical_preProcess(StorageInfo *storageInfo,
                                        ConstString archiveName,
                                        time_t      timestamp,
@@ -1197,6 +1215,18 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       if (error != ERROR_NONE)
       {
         printInfo(1,"FAIL\n");
+
+        logMessage(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "Make medium image: %s\n",
+                   Error_getText(error)
+                  );
+        logLines(storageInfo->logHandle,
+                 LOG_TYPE_ERROR,
+                 "  ",
+                 &executeIOInfo.stderrList
+                );
+
         File_delete(imageFileName,FALSE);
         String_delete(imageFileName);
         StringList_done(&executeIOInfo.stderrList);
@@ -1219,6 +1249,18 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL\n");
+
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Add ECC to image: %s\n",
+                     Error_getText(error)
+                    );
+          logLines(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "  ",
+                   &executeIOInfo.stderrList
+                  );
+
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
           StringList_done(&executeIOInfo.stderrList);
@@ -1250,10 +1292,9 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         updateStorageStatusInfo(storageInfo);
       }
 
-      // blank mediuam
       if (storageInfo->jobOptions->blankFlag)
       {
-        // add error-correction codes to medium image
+        // blank mediuam
         printInfo(1,"Blank medium #%d...",storageInfo->opticalDisk.write.number);
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
@@ -1264,6 +1305,18 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL\n");
+
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Blank medium: %s\n",
+                     Error_getText(error)
+                    );
+          logLines(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "  ",
+                   &executeIOInfo.stderrList
+                  );
+
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
           StringList_done(&executeIOInfo.stderrList);
@@ -1295,6 +1348,18 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         else
         {
           printInfo(1,"FAIL\n");
+
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Write image to medium: %s\n",
+                     Error_getText(error)
+                    );
+          logLines(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "  ",
+                   &executeIOInfo.stderrList
+                  );
+
           retryCount--;
           if (globalOptions.runMode == RUN_MODE_INTERACTIVE)
           {
@@ -1309,14 +1374,6 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       while ((error != ERROR_NONE) && (retryCount > 0) && retryFlag);
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-/*
-        logMessage(storageInfo->logHandle,
-                   LOG_TYPE_ERROR,
-                   "Write image to medium failed '%s'\n",
-                   Error_getText(erorr)
-                  )
-*/
         File_delete(imageFileName,FALSE);
         String_delete(imageFileName);
         StringList_done(&executeIOInfo.stderrList);
@@ -1355,6 +1412,18 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (error != ERROR_NONE)
         {
           printInfo(1,"FAIL\n");
+
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Blank medium: %s\n",
+                     Error_getText(error)
+                    );
+          logLines(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "  ",
+                   &executeIOInfo.stderrList
+                  );
+
           File_delete(imageFileName,FALSE);
           String_delete(imageFileName);
           StringList_done(&executeIOInfo.stderrList);
@@ -1399,6 +1468,17 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       while ((error != ERROR_NONE) && (retryCount > 0) && retryFlag);
       if (error != ERROR_NONE)
       {
+        logMessage(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "Write image to medium: %s\n",
+                   Error_getText(error)
+                  );
+        logLines(storageInfo->logHandle,
+                 LOG_TYPE_ERROR,
+                 "  ",
+                 &executeIOInfo.stderrList
+                );
+
         File_delete(imageFileName,FALSE);
         String_delete(imageFileName);
         StringList_done(&executeIOInfo.stderrList);
@@ -1465,27 +1545,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                            );
     printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
   }
-
-  return error;
-}
-
-LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
-{
-  Errors    error;
-  TextMacro textMacros[1];
-
-  assert(storageInfo != NULL);
-  assert((storageInfo->type == STORAGE_TYPE_CD) || (storageInfo->type == STORAGE_TYPE_DVD) || (storageInfo->type == STORAGE_TYPE_BD));
-
-  error = ERROR_UNKNOWN;
-
-  TEXT_MACRO_N_STRING(textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
-  error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.unloadVolumeCommand),
-                              textMacros,SIZE_OF_ARRAY(textMacros),
-                              CALLBACK(executeIOOutput,NULL),
-                              CALLBACK(executeIOOutput,NULL)
-                             );
-  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
