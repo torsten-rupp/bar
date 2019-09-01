@@ -5200,6 +5200,19 @@ void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...)
   va_end(arguments);
 }
 
+void logLines(LogHandle *logHandle, ulong logType, const char *prefix, const StringList *lines)
+{
+  StringNode *stringNode;
+  String     line;
+
+  assert(lines != NULL);
+
+  STRINGLIST_ITERATE(lines,stringNode,line)
+  {
+    logMessage(logHandle,logType,"%s%s",prefix,String_cString(line));
+  }
+}
+
 void fatalLogMessage(const char *text, void *userData)
 {
   String dateTime;
