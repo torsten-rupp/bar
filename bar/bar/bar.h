@@ -360,6 +360,20 @@ void plogMessage(LogHandle *logHandle, ulong logType, const char *prefix, const 
 void logMessage(LogHandle *logHandle, ulong logType, const char *text, ...);
 
 /***********************************************************************\
+* Name   : logLines
+* Purpose: log lines into job log and global log
+* Input  : logHandle - log handle
+*          logType   - log type; see LOG_TYPES_*
+*          prefix    - prefix text
+*          lines     - line list
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void logLines(LogHandle *logHandle, ulong logType, const char *prefix, const StringList *lines);
+
+/***********************************************************************\
 * Name   : fatalLogMessage
 * Purpose: log fatal error
 * Input  : text     - format string (like printf)

@@ -228,8 +228,9 @@ typedef struct
 
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
-
   StorageFlags                    storageFlags;              // storage flags; see STORAGE_FLAG_...
+
+  LogHandle                       *logHandle;                // log handle
 
   StorageUpdateStatusInfoFunction updateStatusInfoFunction;  // storage status info update call-back
   void                            *updateStatusInfoUserData;
@@ -1063,6 +1064,7 @@ Errors Storage_prepare(const String     storageName,
 *                                            be NULL)
 *          isAbortedUserData               - user data for is aborted
 *                                            check
+*          logHandle                       - log handle (can be NULL)
 * Output : storageInfo - initialized storage info
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1085,7 +1087,8 @@ Errors Storage_prepare(const String     storageName,
                       IsPauseFunction                 isPauseFunction,
                       void                            *isPauseUserData,
                       IsAbortedFunction               isAbortedFunction,
-                      void                            *isAbortedUserData
+                      void                            *isAbortedUserData,
+                      LogHandle                       *logHandle
                      );
 #else /* not NDEBUG */
   Errors __Storage_init(const char                      *__fileName__,
@@ -1106,7 +1109,8 @@ Errors Storage_prepare(const String     storageName,
                         IsPauseFunction                 isPauseFunction,
                         void                            *isPauseUserData,
                         IsAbortedFunction               isAbortedFunction,
-                        void                            *isAbortedUserData
+                        void                            *isAbortedUserData,
+                        LogHandle                       *logHandle
                        );
 #endif /* NDEBUG */
 

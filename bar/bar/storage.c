@@ -1677,7 +1677,8 @@ String Storage_getPrintableName(String                 string,
                       IsPauseFunction                 isPauseFunction,
                       void                            *isPauseUserData,
                       IsAbortedFunction               isAbortedFunction,
-                      void                            *isAbortedUserData
+                      void                            *isAbortedUserData,
+                      LogHandle                       *logHandle
                      )
 #else /* not NDEBUG */
   Errors __Storage_init(const char                      *__fileName__,
@@ -1698,7 +1699,8 @@ String Storage_getPrintableName(String                 string,
                         IsPauseFunction                 isPauseFunction,
                         void                            *isPauseUserData,
                         IsAbortedFunction               isAbortedFunction,
-                        void                            *isAbortedUserData
+                        void                            *isAbortedUserData,
+                        LogHandle                       *logHandle
                        )
 #endif /* NDEBUG */
 {
@@ -1719,6 +1721,7 @@ String Storage_getPrintableName(String                 string,
   Storage_duplicateSpecifier(&storageInfo->storageSpecifier,storageSpecifier);
   storageInfo->jobOptions                = jobOptions;
   storageInfo->storageFlags              = storageFlags;
+  storageInfo->logHandle                 = logHandle;
   storageInfo->updateStatusInfoFunction  = storageUpdateStatusInfoFunction;
   storageInfo->updateStatusInfoUserData  = storageUpdateStatusInfoUserData;
   storageInfo->getNamePasswordFunction   = getNamePasswordFunction;
@@ -3715,7 +3718,8 @@ NULL, // masterIO
                        CALLBACK(NULL,NULL),  // updateStatusInfo
                        CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
                        CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL)  // isAborted
+                       CALLBACK(NULL,NULL),  // isAborted
+                       NULL  // logHandle
                       );
   if (error != ERROR_NONE)
   {

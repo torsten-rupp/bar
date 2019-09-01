@@ -2582,7 +2582,8 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                      CALLBACK(NULL,NULL),  // getNamePassword
                                      CALLBACK(NULL,NULL),  // requestVolume
                                      CALLBACK(NULL,NULL),  // isPause
-                                     CALLBACK(NULL,NULL)  // isAborted
+                                     CALLBACK(NULL,NULL),  // isAborted
+                                     NULL  // logHandle
                                     );
           if (resultError != ERROR_NONE)
           {
@@ -2599,7 +2600,8 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                        CALLBACK(NULL,NULL),  // getNamePassword
                                        CALLBACK(NULL,NULL),  // requestVolume
                                        CALLBACK(NULL,NULL),  // isPause
-                                       CALLBACK(NULL,NULL)  // isAborted
+                                       CALLBACK(NULL,NULL),  // isAborted
+                                       NULL  // logHandle
                                       );
           }
         }
@@ -2617,7 +2619,8 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                      CALLBACK(NULL,NULL),  // getNamePassword
                                      CALLBACK(NULL,NULL),  // requestVolume
                                      CALLBACK(NULL,NULL),  // isPause
-                                     CALLBACK(NULL,NULL)  // isAborted
+                                     CALLBACK(NULL,NULL),  // isAborted
+                                     NULL  // logHandle
                                     );
         }
         if (resultError == ERROR_NONE)
@@ -3641,7 +3644,8 @@ LOCAL void indexThreadCode(void)
                                CALLBACK(NULL,NULL),  // getNamePassword
                                CALLBACK(NULL,NULL),  // requestVolume
                                CALLBACK(NULL,NULL),  // isPause
-                               CALLBACK(NULL,NULL)  // isAborted
+                               CALLBACK(NULL,NULL),  // isAborted
+                               NULL  // logHandle
                               );
           if (error == ERROR_NONE)
           {
@@ -11837,7 +11841,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        CALLBACK(NULL,NULL),  // getNamePassword
                        CALLBACK(NULL,NULL),  // requestVolume
                        CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL)  // isAborted
+                       CALLBACK(NULL,NULL),  // isAborted
+                       NULL  // logHandle
                       );
   if (error != ERROR_NONE)
   {
@@ -15019,7 +15024,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                        CALLBACK(NULL,NULL),  // getNamePassword
                        CALLBACK(NULL,NULL),  // requestVolume
                        CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL)  // isAborted
+                       CALLBACK(NULL,NULL),  // isAborted
+                       NULL  // logHandle
                       ) == ERROR_NONE
          )
       {
