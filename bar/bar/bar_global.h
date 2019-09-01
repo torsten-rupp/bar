@@ -85,7 +85,7 @@
 #define CD_UNLOAD_VOLUME_COMMAND                  "eject %device"
 #define CD_LOAD_VOLUME_COMMAND                    "eject -t %device"
 #define CD_IMAGE_COMMAND                          "nice mkisofs -V Backup -volset %number -r -o %image %directory"
-#define CD_ECC_COMMAND                            "nice dvdisaster -mRS02 -n cd -c -i %image -v"
+#define CD_ECC_COMMAND                            "nice dvdisaster -mRS03 -x %j1 -c -i %image -v"
 #define CD_BLANK_COMMAND                          "nice dvd+rw-format -blank %device"
 #define CD_WRITE_COMMAND                          "nice sh -c 'mkisofs -V Backup -volset %number -r -o %image %directory && cdrecord dev=%device %image'"
 #define CD_WRITE_IMAGE_COMMAND                    "nice cdrecord dev=%device %image"
@@ -93,7 +93,7 @@
 #define DVD_UNLOAD_VOLUME_COMMAND                 "eject %device"
 #define DVD_LOAD_VOLUME_COMMAND                   "eject -t %device"
 #define DVD_IMAGE_COMMAND                         "nice mkisofs -V Backup -volset %number -r -o %image %directory"
-#define DVD_ECC_COMMAND                           "nice dvdisaster -mRS02 -n dvd -c -i %image -v"
+#define DVD_ECC_COMMAND                           "nice dvdisaster -mRS03 -x %j1 -c -i %image -v"
 #define DVD_BLANK_COMMAND                         "nice dvd+rw-format -blank %device"
 #define DVD_WRITE_COMMAND                         "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
 //#warning todo remove -dry-run
@@ -105,7 +105,7 @@
 #define BD_UNLOAD_VOLUME_COMMAND                  "eject %device"
 #define BD_LOAD_VOLUME_COMMAND                    "eject -t %device"
 #define BD_IMAGE_COMMAND                          "nice mkisofs -V Backup -volset %number -r -o %image %directory"
-#define BD_ECC_COMMAND                            "nice dvdisaster -mRS02 -n bd -c -i %image -v"
+#define BD_ECC_COMMAND                            "nice dvdisaster -mRS03 -x %j1 -c -i %image -v"
 #define BD_BLANK_COMMAND                          "nice dvd+rw-format -blank %device"
 #define BD_WRITE_COMMAND                          "nice growisofs -Z %device -A BAR -V Backup -volset %number -r %directory"
 //#warning todo remove -dry-run
