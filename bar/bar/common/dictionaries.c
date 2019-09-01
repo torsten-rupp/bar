@@ -628,6 +628,7 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
       {
         if (dictionary->dictionaryFreeFunction != NULL)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           dictionary->dictionaryFreeFunction(dictionary->entryTables[z].entries[index].data,
                                              dictionary->entryTables[z].entries[index].length,
                                              dictionary->dictionaryFreeUserData
@@ -677,6 +678,7 @@ void Dictionary_clear(Dictionary *dictionary)
           {
             assert(dictionary->entryTables[z].entries[index].data != NULL);
             free(dictionary->entryTables[z].entries[index].data);
+            dictionary->entryTables[z].entries[index].allocatedFlag = FALSE;
           }
 
           free(dictionary->entryTables[z].entries[index].keyData);
@@ -1105,6 +1107,7 @@ void Dictionary_remove(Dictionary *dictionary,
       {
         assert(dictionaryEntryTable->entries[entryIndex].data != NULL);
         free(dictionaryEntryTable->entries[entryIndex].data);
+        dictionaryEntryTable->entries[entryIndex].allocatedFlag = FALSE;
       }
 
       free(dictionaryEntryTable->entries[entryIndex].keyData);
