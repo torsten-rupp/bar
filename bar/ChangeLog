@@ -57,6 +57,9 @@
     storage archives are found
   * moved index clean-up functions to delete orphaned entries,
     duplicate entries into bar-sqlite3
+  * CD/DVD/BD: use dvdisaster RS03 encodiung with multiple
+    threads (Note: change or delete settings in bar.cfg to get
+    new default commands!)
   * fixed FTP upload: directory path
   * fixed FTP upload: avoid abort
   * fixed SFTP upload: stop/append/overwrite
