@@ -510,6 +510,7 @@ ERROR NOT_A_DIRECTORY
 
 ERROR END_OF_DIRECTORY                 TR("end of directory list")
 
+ERROR INIT_FILE_NOTIFY                 TR("init file notify fail")
 ERROR INSUFFICIENT_FILE_NOTIFY         TR("insufficient file notify entries")
 
 // --- optical disk i/o -------------------------------------------------

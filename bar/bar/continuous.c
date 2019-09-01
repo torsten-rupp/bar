@@ -504,6 +504,8 @@ LOCAL NotifyInfo *getNotifyInfo(int watchHandle)
 {
   NotifyInfo *notifyInfo;
 
+  assert(Semaphore_isLocked(&notifyLock));
+
   if (!Dictionary_find(&notifyHandles,
                        &watchHandle,
                        sizeof(watchHandle),
@@ -531,6 +533,8 @@ LOCAL NotifyInfo *getNotifyInfo(int watchHandle)
 LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 {
   NotifyInfo *notifyInfo;
+
+  assert(Semaphore_isLocked(&notifyLock));
 
   if (!Dictionary_find(&notifyNames,
                        String_cString(directory),
@@ -567,6 +571,7 @@ LOCAL void freeNotifyDictionary(const void *data, ulong length, void *userData)
 
   freeNotifyInfo(notifyInfo,NULL);
   free(notifyInfo);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
@@ -590,7 +595,6 @@ LOCAL NotifyInfo *addNotify(ConstString name)
   if (notifyInfo == NULL)
   {
     // create notify
-//fprintf(stderr,"%s, %d: inotify_add_watch %s\n",__FILE__,__LINE__,String_cString(name));
     watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
     if (watchHandle == -1)
     {
@@ -621,9 +625,9 @@ LOCAL NotifyInfo *addNotify(ConstString name)
                    String_cString(notifyInfo->name),String_length(notifyInfo->name),
                    notifyInfo,sizeof(NotifyInfo*)
                   );
-  }
 
-//fprintf(stderr,"%s, %d: add notify %d: %s\n",__FILE__,__LINE__,notifyInfo->watchHandle,String_cString(notifyInfo->name));
+    DEBUG_ADD_RESOURCE_TRACE(notifyInfo,NotifyInfo);
+  }
 
   return notifyInfo;
 }
@@ -641,11 +645,14 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
 {
   assert(notifyInfo != NULL);
 
-//fprintf(stderr,"%s, %d: rem %d: %s\n",__FILE__,__LINE__,notifyInfo->watchHandle,String_cString(notifyInfo->directory));
-
   assert(Semaphore_isLocked(&notifyLock));
 
+  DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
+
   // remove notify
+  (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+
+  // delete notify
   Dictionary_remove(&notifyNames,
                     String_cString(notifyInfo->name),
                     String_length(notifyInfo->name)
@@ -654,13 +661,6 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
                     &notifyInfo->watchHandle,
                     sizeof(notifyInfo->watchHandle)
                    );
-
-  // delete notify
-  (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
-
-  // free resources
-  freeNotifyInfo(notifyInfo,NULL);
-  free(notifyInfo);
 }
 
 /***********************************************************************\
@@ -808,8 +808,8 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
 LOCAL void removeNotifySubDirectories(ConstString name)
 {
   DictionaryIterator dictionaryIterator;
-  const void         *keyData;
-  ulong              keyLength;
+//  const void         *keyData;
+//  ulong              keyLength;
   void               *data;
   ulong              length;
   NotifyInfo         *notifyInfo;
@@ -819,8 +819,8 @@ LOCAL void removeNotifySubDirectories(ConstString name)
 
   Dictionary_initIterator(&dictionaryIterator,&notifyHandles);
   while (Dictionary_getNext(&dictionaryIterator,
-                            &keyData,
-                            &keyLength,
+                            NULL,  // keyData,
+                            NULL,  // keyLength,
                             &data,
                             &length
                            )
@@ -1571,22 +1571,7 @@ Errors Continuous_initAll(void)
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
                   CALLBACK_NULL,  // dictionaryCopyFunction
-#if 0
-// Note: this does not work anymore with gcc 7.3?
-                  CALLBACK_INLINE(void,(const void *data, ulong length, void *userData),
-                  {
-                    NotifyInfo *notifyInfo = (NotifyInfo*)data;
-                    assert(notifyInfo != NULL);
-
-                    UNUSED_VARIABLE(length);
-                    UNUSED_VARIABLE(userData);
-
-                    freeNotifyInfo(notifyInfo,NULL);
-                    free(notifyInfo);
-                  },NULL),
-#else
                   CALLBACK(freeNotifyDictionary,NULL),
-#endif
                   CALLBACK_NULL  // dictionaryCompareFunction
                  );
   Dictionary_init(&notifyNames,
@@ -1608,7 +1593,7 @@ Errors Continuous_initAll(void)
     Dictionary_done(&notifyNames);
     Dictionary_done(&notifyHandles);
     Semaphore_done(&notifyLock);
-    return ERRORX_(OPEN_FILE,errno,"inotify");
+    return ERROR_INIT_FILE_NOTIFY;
   }
 
   // init command queue
@@ -1647,6 +1632,8 @@ void Continuous_doneAll(void)
     assert(length == sizeof(NotifyInfo*));
 
     notifyInfo = (NotifyInfo*)data;
+
+    DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
 
     // delete notify
     (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
