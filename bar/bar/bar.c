@@ -10379,7 +10379,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromFile(&storageNameList,NULL);
           if (error != ERROR_NONE)
           {
-            printError(_("Cannot get storages names (error: %s)!"),
+            printError(_("Cannot get storage names (error: %s)!"),
                        Error_getText(error)
                       );
             StringList_done(&storageNameList);
@@ -10391,7 +10391,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromFile(&storageNameList,String_cString(globalOptions.storageNameListFileName));
           if (error != ERROR_NONE)
           {
-            printError(_("Cannot get storages names (error: %s)!"),
+            printError(_("Cannot get storage names (error: %s)!"),
                        Error_getText(error)
                       );
             StringList_done(&storageNameList);
@@ -10403,7 +10403,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           error = addStorageNameListFromCommand(&storageNameList,String_cString(globalOptions.storageNameCommand));
           if (error != ERROR_NONE)
           {
-            printError(_("Cannot get storages names (error: %s)!"),
+            printError(_("Cannot get storage names (error: %s)!"),
                        Error_getText(error)
                       );
             StringList_done(&storageNameList);
