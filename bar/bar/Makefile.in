@@ -492,11 +492,16 @@ BAR_OBJECTS_GPROF        = $(addprefix gprof/,$(BAR_OBJECTS))
 
 BAR_OBJECTS_VALGRIND     = $(addprefix valgrind/,$(BAR_OBJECTS))
 
-SQLITE3_SOURCE           = $(if $(wildcard ../sqlite/sqlite3.c),../sqlite/sqlite3.c,sqlite3.c)
+SQLITE3_SOURCES          = $(if $(wildcard ../sqlite/sqlite3.c),../sqlite/sqlite3.c,sqlite3.c)
 
-SQLITE3_HEADER           = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sqlite3.h,sqlite3.h)
+SQLITE3_HEADERS          = $(if $(wildcard ../sqlite/sqlite3.h),../sqlite/sqlite3.h,sqlite3.h)
 
-EXTERN_SOURCES           = $(SQLITE3_SOURCE) \
+SQLITE3_OBJECTS          = $(foreach z,$(filter %.c,  $(notdir $(SQLITE3_SOURCES))),$(patsubst %.c,  %.o,$z)) \
+                           $(foreach z,$(filter %.cpp,$(notdir $(SQLITE3_SOURCES))),$(patsubst %.cpp,%.o,$z)) \
+
+SQLITE3_OBJECTS_RELEASE  = $(addprefix release/,$(SQLITE3_OBJECTS))
+
+EXTERN_SOURCES           = $(SQLITE3_SOURCES) \
 
 EXTERN_HEADERS           = $(patsubst %.c,%.h,$(EXTERN_SOURCES)) \
 
@@ -535,13 +540,29 @@ BAR_MINIDUMP_OBJECTS     = $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.c,  
                            stackwalk_common.o \
 
 BAR_SQLITE3_SOURCES      = bar-sqlite3.c \
-archive.c \
-                           $(SQLITE3_SOURCE) \
+                           \
+                           common/global.c \
+                           common/lists.c \
+                           common/strings.c \
+                           common/stringlists.c \
+                           common/files.c \
+                           common/devices.c \
+                           common/database.c \
+                           common/threads.c \
+                           common/misc.c \
+                           common/arrays.c \
+                           common/semaphores.c \
+                           common/stacktraces.c \
 
 BAR_SQLITE3_HEADERS      = $(patsubst %.c,%.h,$(filter-out bar-sqlite3.c,$(BAR_SQLITE3_SOURCES))) \
 
-BAR_SQLITE3_OBJECTS      = $(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.c,  %.o,$z)) \
-                           $(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.cpp,%.o,$z)) \
+BAR_SQLITE3_OBJECTS      = $(addprefix release/,$(foreach z,$(BAR_SQLITE3_SOURCES),$(patsubst %.c,%.o,$z))) \
+                           release/errors.o \
+
+SHOWCHUNKS_SOURCES       = showchunks.c \
+
+SHOWCHUNKS_OBJECTS       = $(addprefix release/,$(foreach z,$(SHOWCHUNKS_SOURCES),$(patsubst %.c,%.o,$z))) \
+                           release/errors.o \
 
 OTHER_SOURCES            = forward.h \
                            \
@@ -896,19 +917,19 @@ else
 endif
 
 # compile SQLite, xdelta C source without warning flags
-release/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+release/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS)                       $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-debug/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+debug/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-gcov/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+gcov/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-gprof/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+gprof/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
-valgrind/sqlite3.o: $(SQLITE3_SOURCE) $(SQLITE3_HEADER)
+valgrind/sqlite3.o: $(SQLITE3_SOURCES) $(SQLITE3_HEADERS)
 	$(INSTALL) -d $(@D)
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" $(SQLITE_FLAGS) $(SQLITE_FLAGS_DEBUG) $(foreach z,$(CC_DEFINES),-D$z) $(foreach z,$(CC_INCLUDES),-I$z) -c $< -o $@
 
@@ -998,34 +1019,16 @@ bar-minidump@EXEEXT@: $(BAR_MINIDUMP_OBJECTS)
           -lbreakpad -ldisasm
 
 # create show chunks program
-showchunks@EXEEXT@: showchunks.o
+showchunks@EXEEXT@: \
+  $(SHOWCHUNKS_OBJECTS)
 	$(LD) $(LD_FLAGS) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
 
 # create bar-sqlite3
-bar-sqlite3.o: \
-  bar-sqlite3.c \
-  errors.h \
-  index_definition.h
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_DEBUG) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_DEBUG) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) $(foreach z,$(CC_INCLUDES),-isystem $z) -c $(SOURCE_DIR)/$*.c -o $*.o
-
-bar-sqlite3: \
-  bar-sqlite3.o \
-  debug/errors.o \
-  debug/sqlite3.o \
-  debug/common/global.o \
-  debug/common/lists.o \
-  debug/common/strings.o \
-  debug/common/stringlists.o \
-  debug/common/files.o \
-  debug/common/devices.o \
-  debug/common/database.o \
-  debug/common/threads.o \
-  debug/common/misc.o \
-  debug/common/arrays.o \
-  debug/common/semaphores.o \
-  debug/common/stacktraces.o
+bar-sqlite3@EXEEXT@: \
+  $(BAR_SQLITE3_OBJECTS) \
+  $(SQLITE3_OBJECTS_RELEASE)
 	$(LD) $(LD_FLAGS) $(LD_FLAGS_DEBUG) -o $@ $^ $(foreach z,$(LD_LIBRARY_PATHS),-L$z) \
           $(if $(LD_STATIC_LIBRARIES),$(LD_STATIC_PREFIX) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(foreach z,$(LD_STATIC_LIBRARIES),-l$z) $(LD_DYNAMIC_PREFIX)) \
           $(foreach z,$(LD_LIBRARIES), -l$z) $(foreach z,$(LD_LIBRARIES), -l$z)
