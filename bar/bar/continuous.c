@@ -571,7 +571,6 @@ LOCAL void freeNotifyDictionary(const void *data, ulong length, void *userData)
 
   freeNotifyInfo(notifyInfo,NULL);
   free(notifyInfo);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
@@ -661,6 +660,10 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
                     &notifyInfo->watchHandle,
                     sizeof(notifyInfo->watchHandle)
                    );
+
+  // free resources
+  freeNotifyInfo(notifyInfo,NULL);
+  free(notifyInfo);
 }
 
 /***********************************************************************\
@@ -1571,12 +1574,12 @@ Errors Continuous_initAll(void)
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
                   CALLBACK_NULL,  // dictionaryCopyFunction
-                  CALLBACK(freeNotifyDictionary,NULL),
+                  CALLBACK_NULL,  // freeNotifyDictionary
                   CALLBACK_NULL  // dictionaryCompareFunction
                  );
   Dictionary_init(&notifyNames,
                   CALLBACK_NULL,  // dictionaryCopyFunction
-                  CALLBACK_NULL,  // dictionaryFreeFunction (Note: free done in notifyHandles)
+                  CALLBACK_NULL,  // dictionaryFreeFunction
                   CALLBACK_NULL  // dictionaryCompareFunction
                  );
 
