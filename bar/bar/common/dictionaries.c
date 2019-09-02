@@ -628,7 +628,6 @@ LOCAL DictionaryEntry *growTable(DictionaryEntry *entries, uint oldSize, uint ne
       {
         if (dictionary->dictionaryFreeFunction != NULL)
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           dictionary->dictionaryFreeFunction(dictionary->entryTables[z].entries[index].data,
                                              dictionary->entryTables[z].entries[index].length,
                                              dictionary->dictionaryFreeUserData
@@ -1291,7 +1290,7 @@ void Dictionary_debugDump(Dictionary *dictionary)
                        UNUSED_VARIABLE(length);
                        UNUSED_VARIABLE(userData);
 
-                       printf("%s: %s\n",(const char*)keyData,(const char*)data);
+                       fwrite(keyData,1,keyLength,stdout); printf(": %p %lu\n",(const char*)data,length);
 
                        return TRUE;
                      },
