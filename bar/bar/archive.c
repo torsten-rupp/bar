@@ -3388,6 +3388,7 @@ LOCAL Errors transferToArchive(const ArchiveHandle *archiveHandle,
   error = File_seek(fileHandle,0LL);
   if (error != ERROR_NONE)
   {
+    free(buffer);
     return error;
   }
 
