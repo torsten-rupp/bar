@@ -1679,7 +1679,6 @@ NULL,//                                                        scheduleTitle,
         }
 
         // post-process command
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (!String_isEmpty(jobNode->job.options.postProcessScript))
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,                                                      NULL);
@@ -1695,10 +1694,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                   textMacros,
                                   8
                                  );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           if (error == ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             logMessage(&logHandle,
                        LOG_TYPE_INFO,
                        "Executed post-command for '%s'",
@@ -1707,7 +1704,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           }
           else
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
             logMessage(&logHandle,
                        LOG_TYPE_ALWAYS,
@@ -1717,7 +1713,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       );
           }
         }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
       else
       {
