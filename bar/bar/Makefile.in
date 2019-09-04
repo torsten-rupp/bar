@@ -1427,7 +1427,12 @@ gcov coverage: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 ifneq ($(LCOV),)
-	@$(MAKE) -C test test1 test2 test3 test4 test5 test6 test7 TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ QUIET=1
+	@$(MAKE) -C test \
+          test1 test2 test3 test4 test5 test6 test7 \
+          test_combined \
+          test_arguments \
+          test_misc \
+          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ QUIET=1
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
 	$(INSTALL) -d coverage
 ifneq ($(GENHTML),)
