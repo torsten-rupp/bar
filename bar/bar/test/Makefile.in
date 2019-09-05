@@ -1045,29 +1045,33 @@ test8 test_image: \
   $(TEST_CONFIG) \
   $(TEST_JOBS_DIRECTORY)
 	@$(ECHO_NO_LF) "Test 8: image..."
-	for compress in none zip9; do \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-            $(TEST_IMAGE_OPERATIONS) \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-          $(MAKE) \
-            BAR_FILE="test" \
-            BAR_PATTERN="test" \
-            BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
-            $(TEST_IMAGE_OPERATIONS) \
-            ; \
-          rc=$$?; \
-          if test $$rc -ne 0; then \
-            exit $$rc; \
-          fi; \
-        done
-	@$(ECHO) "ok"
+	if test @HAVE_SUDO_COMMAND_MOUNT_UMOUNT@ -a @HAVE_SUDO_COMMAND_LOSETUP@ -a @HAVE_SUDO_COMMAND_MKFS@; then \
+	  for compress in none zip9; do \
+            $(MAKE) \
+              BAR_FILE="test" \
+              BAR_PATTERN="test" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
+              $(TEST_IMAGE_OPERATIONS) \
+              ; \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit $$rc; \
+            fi; \
+            $(MAKE) \
+              BAR_FILE="test" \
+              BAR_PATTERN="test" \
+              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
+              $(TEST_IMAGE_OPERATIONS) \
+              ; \
+            rc=$$?; \
+            if test $$rc -ne 0; then \
+              exit $$rc; \
+            fi; \
+	    $(ECHO) "ok"; \
+          done; \
+        else \
+          $(ECHO) "FAIL (error: no sudo-commands)"; \
+        fi; \
 
 test8-debug test_image-debug: \
   $(TEST_BAR_DEBUG)
@@ -1549,15 +1553,17 @@ test_combined: \
             if test $$rc -ne 0; then \
               exit $$rc; \
             fi; \
-            $(MAKE) \
-              BAR_FILE=test-### \
-              BAR_PATTERN="test-*" \
-              BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
-              $(TEST_IMAGE_OPERATIONS) \
-              ; \
-            rc=$$?; \
-            if test $$rc -ne 0; then \
-              exit $$rc; \
+            if test @HAVE_SUDO_COMMAND_MOUNT_UMOUNT@ -a @HAVE_SUDO_COMMAND_LOSETUP@ -a @HAVE_SUDO_COMMAND_MKFS@; then \
+              $(MAKE) \
+                BAR_FILE=test-### \
+                BAR_PATTERN="test-*" \
+                BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
+                $(TEST_IMAGE_OPERATIONS) \
+                ; \
+              rc=$$?; \
+              if test $$rc -ne 0; then \
+                exit $$rc; \
+              fi; \
             fi; \
           done; \
           rc=$$?; \
@@ -2475,7 +2481,7 @@ functionTestDeviceDelete = \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to create file system on test device
-# call functionTestDeviceDelete,<loop device>,<mkfs options>
+# call functionTestDeviceInitFilesystem,<loop device>,<mkfs options>
 functionTestDeviceInitFilesystem = \
   ( \
     $(ECHO) $(SUDO) -n $(MKFS) $2 $1; \
@@ -2487,7 +2493,7 @@ functionTestDeviceInitFilesystem = \
 functionInitFilesystem = \
   ( \
     $(call functionTestDeviceCreate,$(LOOP0),$1); \
-    $(call functionTestDeviceInitFilesystem,$2,$(LOOP0)); \
+    $(call functionTestDeviceInitFilesystem,$(LOOP0),$2); \
     $(if $3,$(ECHO) $(INSTALL) -d test/dev0; \
             $(INSTALL) -d test/dev0; \
             $(ECHO) $(SUDO) -n $(MOUNT) $(LOOP0) test/dev0; \
