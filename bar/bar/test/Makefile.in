@@ -298,10 +298,10 @@ all: $(TARGETS)
 # clean
 clean:
 ifeq (@HAVE_SUDO_COMMAND_CHATTR_A@,1)
-	-$(SUDO) $(CHATTR) -a data/append-only.dat 2>/dev/null
+	-$(SUDO) -n $(CHATTR) -a data/append-only.dat 2>/dev/null
 endif
 ifeq (@HAVE_SUDO_COMMAND_CHATTR_I@,1)
-	-$(SUDO) $(CHATTR) -i data/immutable.dat 2>/dev/null
+	-$(SUDO) -n $(CHATTR) -i data/immutable.dat 2>/dev/null
 endif
 	$(RMRF) data
 	$(RMRF) restore
@@ -649,8 +649,8 @@ test_data_clean:
 
 test_data_dist_clean: \
   test_data_clean
-	if test -f data/append-only.dat; then $(SUDO) $(CHATTR) -a data/append-only.dat; fi
-	if test -f data/immutable.dat; then $(SUDO) $(CHATTR) -i data/immutable.dat; fi
+	if test -f data/append-only.dat; then $(SUDO) -n $(CHATTR) -a data/append-only.dat; fi
+	if test -f data/immutable.dat; then $(SUDO) -n $(CHATTR) -i data/immutable.dat; fi
 	$(RMRF) data
 
 test1 test_basic: \
@@ -1923,9 +1923,9 @@ test_misc: \
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
           $(TEST_OPTIONS) \
           --mount test/dev0,$(LOOP0) \
-          --mount-command='sudo /bin/mount -p 0 %directory' \
+          --mount-command='sudo -n /bin/mount -p 0 %directory' \
           --mount-device-command='sudo /bin/mount -p 0 %device %directory' \
-          --unmount-command='sudo /bin/umount %directory' \
+          --unmount-command='sudo -n /bin/umount %directory' \
           -c intermediate/test.bar $(LOOP0)/zero*.dat \
           $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG) \
         )
@@ -2107,10 +2107,10 @@ endif
 endif
 data/immutable.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) An immutable file >$@; $(SUDO) $(CHATTR) +i $@ 1>/dev/null
+	$(ECHO) An immutable file >$@; $(SUDO) -n $(CHATTR) +i $@ 1>/dev/null
 data/append-only.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Append-only file >$@; $(SUDO) $(CHATTR) +a $@ 1>/dev/null
+	$(ECHO) Append-only file >$@; $(SUDO) -n $(CHATTR) +a $@ 1>/dev/null
 data/fifo:
 	$(INSTALL) -d $(@D)
 	($(CD) data; $(MKFIFO) fifo)
@@ -2409,18 +2409,25 @@ ifeq (@HAVE_GCRYPT@,1)
 	#($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L $(if $(BAR_STORAGE),$(BAR_STORAGE),intermediate/)$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --verbose=2 $(LOG)))
 endif
 
+HAVE_SUDO_COMMAND_CHATTR=@HAVE_SUDO_COMMAND_CHATTR@
+HAVE_SUDO_COMMAND_MOUNT_UMOUNT=@HAVE_SUDO_COMMAND_MOUNT_UMOUNT@
+HAVE_SUDO_COMMAND_LOSETUP=@HAVE_SUDO_COMMAND_LOSETUP@
+HAVE_SUDO_COMMAND_MKFS=@HAVE_SUDO_COMMAND_MKFS@
+HAVE_SUDO_COMMAND_CP=@HAVE_SUDO_COMMAND_CP@
+HAVE_SUDO_COMMAND_DIFF=@HAVE_SUDO_COMMAND_DIFF@
+
 # helper function to create a test device
 # call functionTestDeviceReset
 functionTestDeviceReset = \
   ( \
-    $(ECHO) $(SUDO) $(UMOUNT) test/dev0; \
-    $(SUDO) $(UMOUNT) test/dev0 2>/dev/null; \
-    $(ECHO) $(SUDO) $(UMOUNT) test/dev1; \
-    $(SUDO) $(UMOUNT) test/dev1 2>/dev/null; \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP0); \
-    $(SUDO) $(LOSETUP) -d $(LOOP0) 2>/dev/null; \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $(LOOP1); \
-    $(SUDO) $(LOSETUP) -d $(LOOP1) 2>/dev/null; \
+    $(ECHO) $(SUDO) -n $(UMOUNT) test/dev0; \
+    $(SUDO) -n $(UMOUNT) test/dev0 2>/dev/null; \
+    $(ECHO) $(SUDO) -n $(UMOUNT) test/dev1; \
+    $(SUDO) -n $(UMOUNT) test/dev1 2>/dev/null; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) -d $(LOOP0); \
+    $(SUDO) -n $(LOSETUP) -d $(LOOP0) 2>/dev/null; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) -d $(LOOP1); \
+    $(SUDO) -n$(LOSETUP) -d $(LOOP1) 2>/dev/null; \
     true; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
@@ -2452,27 +2459,27 @@ functionCreateFileRandom = \
 # call functionTestDeviceCreate,<loop device>,<image file>
 functionTestDeviceCreate = \
   ( \
-    $(ECHO) $(SUDO) $(LOSETUP) $1 $2; \
-    $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) $(CHMOD) o+rw $1; \
-    $(SUDO) $(CHMOD) o+rw $1; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
+    $(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
+    $(SUDO) -n $(CHMOD) o+rw $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to delete a test device
 # call functionTestDeviceDelete,<loop device>
 functionTestDeviceDelete = \
   ( \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $1; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
     $(SLEEP) 5; \
-    $(SUDO) $(LOSETUP) -d $1; \
+    $(SUDO) -n $(LOSETUP) -d $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to create file system on test device
 # call functionTestDeviceDelete,<loop device>,<mkfs options>
 functionTestDeviceInitFilesystem = \
   ( \
-    $(ECHO) $(SUDO) $(MKFS) $2 $1; \
-    $(SUDO) $(MKFS) $2 $1 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(MKFS) $2 $1; \
+    $(SUDO) -n $(MKFS) $2 $1 1>/dev/null 2>/dev/null; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to initialize file system on a test device
@@ -2483,13 +2490,13 @@ functionInitFilesystem = \
     $(call functionTestDeviceInitFilesystem,$2,$(LOOP0)); \
     $(if $3,$(ECHO) $(INSTALL) -d test/dev0; \
             $(INSTALL) -d test/dev0; \
-            $(ECHO) $(SUDO) $(MOUNT) $(LOOP0) test/dev0; \
-            $(SUDO) $(MOUNT) $(LOOP0) test/dev0; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-            $(ECHO) $(SUDO) $(CP) -r -p $3 test/dev0; \
-            $(SUDO) $(CP) -r -p $3 test/dev0 1>/dev/null 2>/dev/null; \
+            $(ECHO) $(SUDO) -n $(MOUNT) $(LOOP0) test/dev0; \
+            $(SUDO) -n $(MOUNT) $(LOOP0) test/dev0; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+            $(ECHO) $(SUDO) -n $(CP) -r -p $3 test/dev0; \
+            $(SUDO) -n $(CP) -r -p $3 test/dev0 1>/dev/null 2>/dev/null; \
             $(SLEEP) 5; \
-            $(ECHO) $(SUDO) $(UMOUNT) test/dev0; \
-            $(SUDO) $(UMOUNT) test/dev0; \
+            $(ECHO) $(SUDO) -n $(UMOUNT) test/dev0; \
+            $(SUDO) -n $(UMOUNT) test/dev0; \
     ) \
     $(call functionTestDeviceDelete,$(LOOP0)); \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
@@ -2498,33 +2505,33 @@ functionInitFilesystem = \
 # call functionDeviceMount,<loop device>,<image file>,<mount point>
 functionDeviceMount = \
   ( \
-    $(ECHO) $(SUDO) $(LOSETUP) $1 $2; \
-    $(SUDO) $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) $(CHMOD) o+rw $1; \
-    $(SUDO) $(CHMOD) o+rw $1; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) $1 $2; \
+    $(SUDO) -n $(LOSETUP) $1 $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(CHMOD) o+rw $1; \
+    $(SUDO) -n $(CHMOD) o+rw $1; \
     $(ECHO) $(INSTALL) -d $3; \
     $(INSTALL) -d $3; \
-    $(ECHO) $(SUDO) $(MOUNT) $1 $3; \
-    $(SUDO) $(MOUNT) $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(MOUNT) $1 $3; \
+    $(SUDO) -n $(MOUNT) $1 $3; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to umount a test device
 # call functionDeviceUmount,<loop device>,<mount point>
 functionDeviceUmount = \
   ( \
-    $(ECHO) $(SUDO) $(UMOUNT) $2; \
-    $(SUDO) $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
-    $(ECHO) $(SUDO) $(LOSETUP) -d $1; \
+    $(ECHO) $(SUDO) -n $(UMOUNT) $2; \
+    $(SUDO) -n $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
     $(SLEEP) 5; \
-    $(SUDO) $(LOSETUP) -d $1; \
+    $(SUDO) -n $(LOSETUP) -d $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 # helper function to dump content of device to file
 # call functionTestDeviceDump,<loop device>,<file>
 functionTestDeviceDump = \
   ( \
-    $(ECHO) $(SUDO) $(DD) if=$1 of=- \> $2; \
-    ($(SUDO) $(DD) if=$1 of=-) >$2 2>/dev/null; \
+    $(ECHO) $(SUDO) -n $(DD) if=$1 of=- \> $2; \
+    ($(SUDO) -n $(DD) if=$1 of=-) >$2 2>/dev/null; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
 .PHONY: test_image_operations
@@ -3652,7 +3659,7 @@ test_image_operations_check:
 	@
 	@$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),test/dev0)
 	@$(call functionDeviceMount,$(DEVICE1),$(IMAGE1),test/dev1)
-	$(SUDO) $(DIFF) -r test/dev0 test/dev1 $(LOG)
+	$(SUDO) -n $(DIFF) -r test/dev0 test/dev1 $(LOG)
 	$(SLEEP) 5
 	@$(call functionDeviceUmount,$(DEVICE0),test/dev0)
 	@$(call functionDeviceUmount,$(DEVICE1),test/dev1)

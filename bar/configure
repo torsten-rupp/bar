@@ -650,6 +650,12 @@ CXX
 HEAPVIEW_DIR
 HAVE_SUDO_COMMAND_CHATTR_A
 HAVE_SUDO_COMMAND_CHATTR_I
+HAVE_SUDO_COMMAND_DIFF
+HAVE_SUDO_COMMAND_CP
+HAVE_SUDO_COMMAND_MKFS
+HAVE_SUDO_COMMAND_LOSETUP
+HAVE_SUDO_COMMAND_MOUNT_UMOUNT
+HAVE_SUDO_COMMAND_CHATTR
 EPM_VERSION_4
 EPM_VERSION_3
 EPM
@@ -2655,6 +2661,15 @@ case $host_os in *\ *) host_os=`echo "$host_os" | sed 's/ /-/g'`;; esac
 
 
 
+HAVE_SUDO_COMMAND_CHATTR=1
+        HAVE_SUDO_COMMAND_MOUNT_UMOUNT=1
+  HAVE_SUDO_COMMAND_LOSETUP=1
+       HAVE_SUDO_COMMAND_MKFS=1
+          HAVE_SUDO_COMMAND_CP=1
+            HAVE_SUDO_COMMAND_DIFF=1
+
+HAVE_SUDO_COMMAND_CHATTR_I=1
+        HAVE_SUDO_COMMAND_CHATTR_A=1
 
 
 
@@ -7467,14 +7482,15 @@ done
 
 # sudo tests
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking execution of '$SUDO chattr +i'" >&5
-$as_echo_n "checking execution of '$SUDO chattr +i'... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr +i'" >&5
+$as_echo_n "checking for execution of '$SUDO chattr +i'... " >&6; }
   as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr +i|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n chattr +i $tmpFile 1</dev/null 2>/dev/null
+      SUDO_ASKPASS=false $SUDO -n -l | grep "chattr \\[+-\\]i *" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
       else
@@ -7488,20 +7504,21 @@ $as_echo "$ac_result" >&6; }
 fi
 
   if test "$ac_result" != no; then :
-  HAVE_SUDO_COMMAND_CHATTR_I=1
+
 elif :; then :
-  HAVE_SUDO_COMMAND_CHATTR_I=0
+  HAVE_SUDO_COMMAND_CHATTR=0
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking execution of '$SUDO chattr +a'" >&5
-$as_echo_n "checking execution of '$SUDO chattr +a'... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr +a'" >&5
+$as_echo_n "checking for execution of '$SUDO chattr +a'... " >&6; }
   as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr +a|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n chattr +a $tmpFile 1</dev/null 2>/dev/null
+      SUDO_ASKPASS=false $SUDO -n -l | grep "chattr \\[+-\\]a *" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
       else
@@ -7515,13 +7532,236 @@ $as_echo "$ac_result" >&6; }
 fi
 
   if test "$ac_result" != no; then :
-  HAVE_SUDO_COMMAND_CHATTR_A=1
+
 elif :; then :
-  HAVE_SUDO_COMMAND_CHATTR_A=0
+  HAVE_SUDO_COMMAND_CHATTR=0
 fi
 
-SUDO_ASKPASS=false $SUDO -n chattr -i $tmpFile 1</dev/null 2>/dev/null
-SUDO_ASKPASS=false $SUDO -n chattr -a $tmpFile 1</dev/null 2>/dev/null
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO mount /dev/loop[01] test/dev[01]'" >&5
+$as_echo_n "checking for execution of '$SUDO mount /dev/loop[01] test/dev[01]'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo mount /dev/loop[01] test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep "mount /dev/loop\\[01\\] test/dev\\[01\\]" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+
+elif :; then :
+  HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO umount test/dev[01]'" >&5
+$as_echo_n "checking for execution of '$SUDO umount test/dev[01]'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo umount test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep "umount test/dev\\[01\\]" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+  HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0
+elif :; then :
+
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup -d /dev/loop[01]'" >&5
+$as_echo_n "checking for execution of '$SUDO losetup -d /dev/loop[01]'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup -d /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep "losetup -d /dev/loop\\[01\\]" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+
+elif :; then :
+  HAVE_SUDO_COMMAND_LOSETUP=0
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup /dev/loop[01] test/dev[01].dat'" >&5
+$as_echo_n "checking for execution of '$SUDO losetup /dev/loop[01] test/dev[01].dat'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup /dev/loop[01] test/dev[01].dat|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep "losetup /dev/loop\\[01\\] test/dev\\[01\\]\\.dat" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+
+elif :; then :
+  HAVE_SUDO_COMMAND_LOSETUP=0
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab].dat'" >&5
+$as_echo_n "checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab].dat'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup /dev/loop[01] test/dev0[ab].dat|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep "losetup /dev/loop\\[01\\] test/dev0\\[ab\\]\\.dat" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+
+elif :; then :
+  HAVE_SUDO_COMMAND_LOSETUP=0
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO mkfs -t * /dev/loop[01]'" >&5
+$as_echo_n "checking for execution of '$SUDO mkfs -t * /dev/loop[01]'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo mkfs -t * /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep "mkfs -t * /dev/loop\\[01\\]" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+
+elif :; then :
+  HAVE_SUDO_COMMAND_MKFS=0
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO cp -r -p data/* test/dev[01]'" >&5
+$as_echo_n "checking for execution of '$SUDO cp -r -p data/* test/dev[01]'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo cp -r -p data/* test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep "cp -r -p data/* test/dev\\[01\\]" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+
+elif :; then :
+  HAVE_SUDO_COMMAND_CP=0
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO diff -r test/dev0 test/dev1'" >&5
+$as_echo_n "checking for execution of '$SUDO diff -r test/dev0 test/dev1'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo diff -r test/dev0 test/dev1|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep "diff -r test/dev0 test/dev1" 1>/dev/null 2>/dev/null
+      # 1</dev/null 2>/dev/null
+      if   test $? -eq 0; then
+        ac_result=yes
+      else
+        ac_result=no
+      fi
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+$as_echo "$ac_result" >&6; }
+      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+
+
+fi
+
+  if test "$ac_result" != no; then :
+
+elif :; then :
+  HAVE_SUDO_COMMAND_DIFF=0
+fi
+
+#AC_ERROR(xxx)
 
 
 case $host_os in
