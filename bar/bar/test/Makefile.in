@@ -81,6 +81,7 @@ SSH            = ssh
 SSHPASS        = sshpass
 SORT           = sort
 STAT           = stat
+SYNC           = sync
 TAIL           = tail
 TAR            = tar
 TEE            = tee
@@ -2476,7 +2477,7 @@ functionTestDeviceCreate = \
 functionTestDeviceDelete = \
   ( \
     $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
-    $(SLEEP) 5; \
+    $(SYNC); \
     $(SUDO) -n $(LOSETUP) -d $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
@@ -2500,7 +2501,7 @@ functionInitFilesystem = \
             $(SUDO) -n $(MOUNT) $(LOOP0) test/dev0; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
             $(ECHO) $(SUDO) -n $(CP) -r -p $3 test/dev0; \
             $(SUDO) -n $(CP) -r -p $3 test/dev0 1>/dev/null 2>/dev/null; \
-            $(SLEEP) 5; \
+            $(SYNC); \
             $(ECHO) $(SUDO) -n $(UMOUNT) test/dev0; \
             $(SUDO) -n $(UMOUNT) test/dev0; \
     ) \
@@ -2527,8 +2528,8 @@ functionDeviceUmount = \
   ( \
     $(ECHO) $(SUDO) -n $(UMOUNT) $2; \
     $(SUDO) -n $(UMOUNT) $2; rc=$$?; if test $$rc -ne 0; then exit $$rc; fi; \
+    $(SYNC); \
     $(ECHO) $(SUDO) -n $(LOSETUP) -d $1; \
-    $(SLEEP) 5; \
     $(SUDO) -n $(LOSETUP) -d $1; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
@@ -3582,6 +3583,7 @@ test_image_operations_base: \
 	@
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
+	@$(call functionTestDeviceReset)
 	@
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG)
@@ -3609,6 +3611,7 @@ test_image_operations_delta: \
 	@
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
+	@$(call functionTestDeviceReset)
 	@
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG)
@@ -3655,6 +3658,8 @@ test_image_operations_check:
 	@$(call functionVerifyParameter,DEVICE1)
 	@
 	@# ---
+	@$(call functionTestDeviceReset)
+	@
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE0) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
@@ -3666,7 +3671,6 @@ test_image_operations_check:
 	@$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),test/dev0)
 	@$(call functionDeviceMount,$(DEVICE1),$(IMAGE1),test/dev1)
 	$(SUDO) -n $(DIFF) -r test/dev0 test/dev1 $(LOG)
-	$(SLEEP) 5
 	@$(call functionDeviceUmount,$(DEVICE0),test/dev0)
 	@$(call functionDeviceUmount,$(DEVICE1),test/dev1)
 
@@ -3680,6 +3684,8 @@ test_image_operations_diff_image:
 	@$(call functionVerifyParameter,DEVICE1)
 	@
 	@# ---
+	@$(call functionTestDeviceReset)
+	@
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	@$(call functionTestDeviceDump,$(DEVICE0),test/dev0.dump)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
@@ -3702,6 +3708,7 @@ test_image_operations_create: \
 	@
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
+	@$(call functionTestDeviceReset)
 	@
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG)
