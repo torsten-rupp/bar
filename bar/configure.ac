@@ -1345,8 +1345,8 @@ AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
 # sudo tests
-AC_PROG_SUDO_COMMAND([chattr +i],[chattr \\[[+-\\]]i \\*],,HAVE_SUDO_COMMAND_CHATTR=0)
-AC_PROG_SUDO_COMMAND([chattr +a],[chattr \\[[+-\\]]a \\*],,HAVE_SUDO_COMMAND_CHATTR=0)
+AC_PROG_SUDO_COMMAND([chattr * data/*],[chattr\\s+\\* data/\\*],,HAVE_SUDO_COMMAND_CHATTR=0)
+AC_PROG_SUDO_COMMAND([chattr * configure-*],[chattr \\* configure-\\*],,HAVE_SUDO_COMMAND_CHATTR=0)
 AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] test/dev[[01]]],[mount /dev/loop\\[[01\\]] test/dev\\[[01\\]]],,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
 AC_PROG_SUDO_COMMAND([umount test/dev[[01]]],[umount test/dev\\[[01\\]]],HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
 AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],[losetup -d /dev/loop\\[[01\\]]],,HAVE_SUDO_COMMAND_LOSETUP=0)

@@ -7482,14 +7482,14 @@ done
 
 # sudo tests
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr +i'" >&5
-$as_echo_n "checking for execution of '$SUDO chattr +i'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr +i|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr * data/*'" >&5
+$as_echo_n "checking for execution of '$SUDO chattr * data/*'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr * data/*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "chattr \\[+-\\]i \\*" 1>/dev/null 2>/dev/null
+      SUDO_ASKPASS=false $SUDO -n -l | grep "chattr\\s+\\* data/\\*" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7510,14 +7510,14 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr +a'" >&5
-$as_echo_n "checking for execution of '$SUDO chattr +a'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr +a|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr * configure-*'" >&5
+$as_echo_n "checking for execution of '$SUDO chattr * configure-*'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr * configure-*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "chattr \\[+-\\]a \\*" 1>/dev/null 2>/dev/null
+      SUDO_ASKPASS=false $SUDO -n -l | grep "chattr \\* configure-\\*" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
