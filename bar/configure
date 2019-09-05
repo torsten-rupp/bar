@@ -7481,15 +7481,23 @@ done
 
 
 # sudo tests
+#set -x
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr * data/*'" >&5
-$as_echo_n "checking for execution of '$SUDO chattr * data/*'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr * data/*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr \* data/\*'" >&5
+$as_echo_n "checking for execution of '$SUDO chattr \* data/\*'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr \\* data/\\*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "chattr\\s\\+\\* data/\\*" 1>/dev/null 2>/dev/null
+      ac_pattern="chattr \* data/\*"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7510,14 +7518,21 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr * configure-*'" >&5
-$as_echo_n "checking for execution of '$SUDO chattr * configure-*'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr * configure-*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr \* configure-\*'" >&5
+$as_echo_n "checking for execution of '$SUDO chattr \* configure-\*'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr \\* configure-\\*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "chattr \\* configure-\\*" 1>/dev/null 2>/dev/null
+      ac_pattern="chattr \* configure-\*"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7545,7 +7560,14 @@ $as_echo_n "checking for execution of '$SUDO mount /dev/loop[01] test/dev[01]'..
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "mount /dev/loop\\[01\\] test/dev\\[01\\]" 1>/dev/null 2>/dev/null
+      ac_pattern="mount /dev/loop[01] test/dev[01]"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7573,7 +7595,14 @@ $as_echo_n "checking for execution of '$SUDO umount test/dev[01]'... " >&6; }
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "umount test/dev\\[01\\]" 1>/dev/null 2>/dev/null
+      ac_pattern="umount test/dev[01]"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7601,7 +7630,14 @@ $as_echo_n "checking for execution of '$SUDO losetup -d /dev/loop[01]'... " >&6;
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "losetup -d /dev/loop\\[01\\]" 1>/dev/null 2>/dev/null
+      ac_pattern="losetup -d /dev/loop[01]"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7629,7 +7665,14 @@ $as_echo_n "checking for execution of '$SUDO losetup /dev/loop[01] test/dev[01].
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "losetup /dev/loop\\[01\\] test/dev\\[01\\]\\.dat" 1>/dev/null 2>/dev/null
+      ac_pattern="losetup /dev/loop[01] test/dev[01]\.dat"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7650,14 +7693,21 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab].dat'" >&5
-$as_echo_n "checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab].dat'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup /dev/loop[01] test/dev0[ab].dat|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab]\.dat'" >&5
+$as_echo_n "checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab]\.dat'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup /dev/loop[01] test/dev0[ab]\\.dat|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "losetup /dev/loop\\[01\\] test/dev0\\[ab\\]\\.dat" 1>/dev/null 2>/dev/null
+      ac_pattern="losetup /dev/loop[01] test/dev0[ab]\.dat"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7678,14 +7728,21 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO mkfs -t * /dev/loop[01]'" >&5
-$as_echo_n "checking for execution of '$SUDO mkfs -t * /dev/loop[01]'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo mkfs -t * /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO mkfs -t \* /dev/loop[01]'" >&5
+$as_echo_n "checking for execution of '$SUDO mkfs -t \* /dev/loop[01]'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo mkfs -t \\* /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "mkfs -t \\* /dev/loop\\[01\\]" 1>/dev/null 2>/dev/null
+      ac_pattern="mkfs -t \* /dev/loop[01]"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7706,14 +7763,21 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO cp -r -p data/* test/dev[01]'" >&5
-$as_echo_n "checking for execution of '$SUDO cp -r -p data/* test/dev[01]'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo cp -r -p data/* test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO cp -r -p data/\* test/dev[01]'" >&5
+$as_echo_n "checking for execution of '$SUDO cp -r -p data/\* test/dev[01]'... " >&6; }
+  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo cp -r -p data/\\* test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
   if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "cp -r -p data/\\* test/dev\\[01\\]" 1>/dev/null 2>/dev/null
+      ac_pattern="cp -r -p data/\* test/dev[01]"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
@@ -7741,7 +7805,14 @@ $as_echo_n "checking for execution of '$SUDO diff -r test/dev0 test/dev1'... " >
   $as_echo_n "(cached) " >&6
 else
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep "diff -r test/dev0 test/dev1" 1>/dev/null 2>/dev/null
+      ac_pattern="diff -r test/dev0 test/dev1"
+#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?]]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
+#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+
+      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
       # 1</dev/null 2>/dev/null
       if   test $? -eq 0; then
         ac_result=yes
