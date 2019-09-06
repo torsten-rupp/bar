@@ -202,50 +202,31 @@ else
   VERSION_SVN   := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE|$(SED) 's/RELEASE=//g')
 endif
 
-# supported compress algorithms
-ifeq ($(COMPRESS_NAMES),)
-  COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
-  ifeq ($(COMPRESS_NAMES_BZIP),)
-    ifeq (@HAVE_BZ2@,1)
-      COMPRESS_NAMES += bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
-    endif
-  else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_BZIP)
+# supported min. compress algorithms
+ifeq ($(MIN_COMPRESS_NAMES),)
+  MIN_COMPRESS_NAMES = none
+  MIN_COMPRESS_NAMES += zip9
+  ifeq (@HAVE_BZ2@,1)
+    MIN_COMPRESS_NAMES += bzip9
   endif
-  ifeq ($(COMPRESS_NAMES_LZMA),)
-    ifeq (@HAVE_LZMA@,1)
-      COMPRESS_NAMES += lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7 lzma8 lzma9
-    endif
-  else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZMA)
+  ifeq (@HAVE_LZMA@,1)
+    MIN_COMPRESS_NAMES += lzma9
   endif
-  ifeq ($(COMPRESS_NAMES_LZO),)
-    ifeq (@HAVE_LZO@,1)
-      COMPRESS_NAMES += lzo1 lzo2 lzo3 lzo4 lzo5
-    endif
-  else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZO)
+  ifeq (@HAVE_LZO@,1)
+    MIN_COMPRESS_NAMES += lzo5
   endif
-  ifeq ($(COMPRESS_NAMES_LZ4),)
-    ifeq (@HAVE_LZ4@,1)
-      COMPRESS_NAMES += lz4-0 lz4-1 lz4-9
-    endif
-  else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_LZ4)
+  ifeq (@HAVE_LZ4@,1)
+    MIN_COMPRESS_NAMES += lz4-9
   endif
-  ifeq ($(COMPRESS_NAMES_ZSTD),)
-    ifeq (@HAVE_ZSTD@,1)
-      COMPRESS_NAMES += zstd0 zstd9 zstd19
-    endif
-  else
-    COMPRESS_NAMES += $(COMPRESS_NAMES_ZSTD)
+  ifeq (@HAVE_ZSTD@,1)
+    MIN_COMPRESS_NAMES += zstd19
   endif
 endif
 
-# supported crypt algorithms
-CRYPT_NAMES  = none
+# supported min. crypt algorithms
+MIN_CRYPT_NAMES  = none
 ifeq (@HAVE_GCRYPT@,1)
-CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
+  MIN_CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES256 TWOFISH256 SERPENT256 CAMELLIA256
 endif
 
 # SQLite flags
@@ -1429,16 +1410,41 @@ gcov coverage: \
   bar-keygen@SHELLEXT@
 ifneq ($(LCOV),)
 	@$(MAKE) -C test \
-          test1 test2 test3 test4 test5 test6 test7 \
-          test_combined \
+          test1 \
+          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) -C test \
+          test2 \
+          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+          COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) -C test \
+          test3 \
+          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
+          QUIET=1
+	@$(MAKE) -C test \
+          test4 test5 test6 test7 test8 \
+          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) -C test \
           test_arguments \
           test_misc \
-          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ QUIET=1
+          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
-	$(INSTALL) -d coverage
 ifneq ($(GENHTML),)
 	$(GENHTML) -o coverage bar-gcov.info --legend
 	# work-around for bug in genhtml?
+	$(INSTALL) -d coverage
 	$(LN) -sfT coverage/gcov.css gcov.css
 else
 	@$(ECHO) "ERROR: no 'genhtml' command - cannot generate HTML output"
