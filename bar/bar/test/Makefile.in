@@ -121,6 +121,25 @@ QUIET ?=
 LOGFILE ?=
 
 # supported compress algorithms
+ifeq ($(MIN_COMPRESS_NAMES),)
+  MIN_COMPRESS_NAMES = none
+  MIN_COMPRESS_NAMES += zip9
+  ifeq (@HAVE_BZ2@,1)
+    MIN_COMPRESS_NAMES += bzip9
+  endif
+  ifeq (@HAVE_LZMA@,1)
+    MIN_COMPRESS_NAMES += lzma9
+  endif
+  ifeq (@HAVE_LZO@,1)
+    MIN_COMPRESS_NAMES += lzo5
+  endif
+  ifeq (@HAVE_LZ4@,1)
+    MIN_COMPRESS_NAMES += lz4-9
+  endif
+  ifeq (@HAVE_ZSTD@,1)
+    MIN_COMPRESS_NAMES += zstd19
+  endif
+endif
 ifeq ($(COMPRESS_NAMES),)
   COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9
   ifeq ($(COMPRESS_NAMES_BZIP),)
@@ -174,9 +193,13 @@ ifeq ($(COMPRESS_NAMES_HUGE),)
 endif
 
 # supported crypt algorithms
+MIN_CRYPT_NAMES  = none
+ifeq (@HAVE_GCRYPT@,1)
+  MIN_CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES256 TWOFISH256 SERPENT256 CAMELLIA256
+endif
 CRYPT_NAMES  = none
 ifeq (@HAVE_GCRYPT@,1)
-CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
+  CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
 endif
 
 # SQLite flags
@@ -394,8 +417,6 @@ help_output:
         ifeq (@HAVE_GCRYPT@,1)
 	@$(ECHO) "    3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256"
         endif
-
-
 
 # ----------------------------------------------------------------------------
 
@@ -1936,9 +1957,9 @@ test_misc: \
 	($(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
           $(TEST_OPTIONS) \
           --mount test/dev0,$(LOOP0) \
-          --mount-command='sudo -n /bin/mount -p 0 %directory' \
-          --mount-device-command='sudo /bin/mount -p 0 %device %directory' \
-          --unmount-command='sudo -n /bin/umount %directory' \
+          --mount-command='$(SUDO) -n $(MOUNT) %directory' \
+          --mount-device-command='$(SUDO) -n $(MOUNT) %device %directory' \
+          --unmount-command='$(SUDO) -n $(UMOUNT) %directory' \
           -c intermediate/test.bar $(LOOP0)/zero*.dat \
           $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG) \
         )
