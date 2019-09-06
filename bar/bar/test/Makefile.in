@@ -93,7 +93,13 @@ WC             = wc
 XARGS          = xargs
 
 # for tests only (create test devices)
-FSCK           = fsck
+FSCK_EXT2      = fsck.ext2
+FSCK_EXT3      = fsck.ext3
+FSCK_EXT4      = fsck.ext4
+FSCK_FAT       = fsck.fat
+FSCK_VFAT      = fsck.vfat
+FSCK_REISERFS  = fsck.reiserfs
+FSCK_OPTIONS   =
 LOSETUP        = /sbin/losetup
 MKFS           = /sbin/mkfs
 MOUNT          = /bin/mount
@@ -2427,7 +2433,7 @@ functionTestDeviceReset = \
     $(ECHO) $(SUDO) -n $(LOSETUP) -d $(LOOP0); \
     $(SUDO) -n $(LOSETUP) -d $(LOOP0) 2>/dev/null; \
     $(ECHO) $(SUDO) -n $(LOSETUP) -d $(LOOP1); \
-    $(SUDO) -n$(LOSETUP) -d $(LOOP1) 2>/dev/null; \
+    $(SUDO) -n $(LOSETUP) -d $(LOOP1) 2>/dev/null; \
     true; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 
@@ -2615,6 +2621,8 @@ ifneq (@MKFS_EXT2@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT2) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -2631,6 +2639,8 @@ ifneq (@MKFS_EXT2@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT2) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -2665,6 +2675,8 @@ ifneq (@MKFS_EXT2@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT2) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -2681,6 +2693,8 @@ ifneq (@MKFS_EXT2@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT2) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -2715,6 +2729,8 @@ ifneq (@MKFS_EXT2@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT2) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -2731,6 +2747,8 @@ ifneq (@MKFS_EXT2@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT2) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -2765,6 +2783,8 @@ ifneq (@MKFS_EXT2@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT2) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -2781,6 +2801,8 @@ ifneq (@MKFS_EXT2@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT2) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -2823,6 +2845,8 @@ ifneq (@MKFS_EXT3@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT3) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -2839,6 +2863,8 @@ ifneq (@MKFS_EXT3@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT3) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -2873,6 +2899,8 @@ ifneq (@MKFS_EXT3@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT3) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -2889,6 +2917,8 @@ ifneq (@MKFS_EXT3@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT3) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -2923,6 +2953,8 @@ ifneq (@MKFS_EXT3@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT3) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -2939,6 +2971,8 @@ ifneq (@MKFS_EXT3@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT3) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -2973,6 +3007,8 @@ ifneq (@MKFS_EXT3@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT3) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -2989,6 +3025,8 @@ ifneq (@MKFS_EXT3@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT3) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -3031,6 +3069,8 @@ ifneq (@MKFS_EXT4@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT4) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -3047,6 +3087,8 @@ ifneq (@MKFS_EXT4@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT4) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -3081,6 +3123,8 @@ ifneq (@MKFS_EXT4@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT4) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -3097,6 +3141,8 @@ ifneq (@MKFS_EXT4@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT4) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -3131,6 +3177,8 @@ ifneq (@MKFS_EXT4@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT4) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -3147,6 +3195,8 @@ ifneq (@MKFS_EXT4@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT4) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -3181,6 +3231,8 @@ ifneq (@MKFS_EXT4@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT4) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -3197,6 +3249,8 @@ ifneq (@MKFS_EXT4@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_EXT4) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -3255,6 +3309,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_FAT) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -3271,6 +3327,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_FAT) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -3313,6 +3371,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_FAT) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -3329,6 +3389,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_FAT) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -3371,6 +3433,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_FAT) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check \
           test_image_operations_diff_image
@@ -3387,6 +3451,8 @@ ifneq (@MKFS_MSDOS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_FAT) \
+          FSCK_OPTIONS= \
           test_image_operations_base \
           test_image_operations_check
 	$(RMF) test/dev1.dat
@@ -3444,6 +3510,7 @@ ifneq (@MKFS_REISERFS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           test_image_operations_base \
           test_image_operations_check \
@@ -3461,6 +3528,7 @@ ifneq (@MKFS_REISERFS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           test_image_operations_base \
           test_image_operations_check
@@ -3477,6 +3545,7 @@ ifneq (@MKFS_REISERFS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           test_image_operations_base \
           test_image_operations_check \
@@ -3494,6 +3563,7 @@ ifneq (@MKFS_REISERFS@,)
           BAR_FILE="$(if $(BAR_FILE),$(BAR_FILE),test)" \
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none" \
+          FSCK=$(FSCK_REISERFS) \
           FSCK_OPTIONS="-n -y" \
           test_image_operations_base \
           test_image_operations_check
