@@ -432,7 +432,7 @@ LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_ARCHIVE_FILE_MODES[] = 
 LOCAL const CommandLineOptionSelect COMMAND_LINE_OPTIONS_RESTORE_ENTRY_MODES[] = CMD_VALUE_SELECT_ARRAY
 (
   {"stop",      RESTORE_ENTRY_MODE_STOP,      "stop if entry exists" },
-  {"append",    RESTORE_ENTRY_MODE_RENAME,    "rename entries"       },
+  {"rename",    RESTORE_ENTRY_MODE_RENAME,    "rename entries"       },
   {"overwrite", RESTORE_ENTRY_MODE_OVERWRITE, "overwrite entries"    },
 );
 
