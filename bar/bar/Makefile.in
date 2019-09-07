@@ -1428,10 +1428,17 @@ ifneq ($(LCOV),)
           CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
           QUIET=1
 	@$(MAKE) -C test \
-          test4 test5 test6 test7 test8 \
+          test4 test5 test6 test7 \
           TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) -C test \
+          test_image \
+          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          EXT_BLOCK_SIZES=default \
           QUIET=1
 	@$(MAKE) -C test \
           test_arguments \

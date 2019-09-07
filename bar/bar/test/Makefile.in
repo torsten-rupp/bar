@@ -215,6 +215,9 @@ OPTIONS ?=
 # image types used for tests
 TEST_IMAGE_OPERATIONS = test_image_operations
 
+# ext block sizes
+EXT_BLOCK_SIZES ?= default 1024 2048 4096
+
 # test settings
 TEST_CONFIG                      = intermediate/bar.cfg
 TEST_JOBS_DIRECTORY              = intermediate/jobs
@@ -2632,6 +2635,8 @@ ifneq (@MKFS_EXT2@,)
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
 	@
+ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
+	@
 	# ext2 zero-data, default block size
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
 	@$(call functionCreateFileZero,test/dev1.dat,32,1M)
@@ -2684,7 +2689,9 @@ ifneq (@MKFS_EXT2@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+	@
+endif
+ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext2 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -2738,7 +2745,9 @@ ifneq (@MKFS_EXT2@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+	@
+endif
+ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext2 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -2792,7 +2801,8 @@ ifneq (@MKFS_EXT2@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+endif
+ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext2 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -2842,6 +2852,7 @@ ifneq (@MKFS_EXT2@,)
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
+endif
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
@@ -2855,7 +2866,9 @@ ifneq (@MKFS_EXT3@,)
 	# ext3
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
-	#
+	@
+ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
+	@
 	# ext3 zero-data, default block size
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
 	@$(call functionCreateFileZero,test/dev1.dat,32,1M)
@@ -2908,7 +2921,8 @@ ifneq (@MKFS_EXT3@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+endif
+ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext3 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -2962,7 +2976,8 @@ ifneq (@MKFS_EXT3@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+endif
+ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext3 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -3016,7 +3031,8 @@ ifneq (@MKFS_EXT3@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+endif
+ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext3 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -3066,6 +3082,7 @@ ifneq (@MKFS_EXT3@,)
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
+endif
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
@@ -3079,7 +3096,9 @@ ifneq (@MKFS_EXT4@,)
 	# ext4
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
-	#
+	@
+ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
+	@
 	# ext4 zero-data, default block size
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
 	@$(call functionCreateFileZero,test/dev1.dat,32,1M)
@@ -3132,7 +3151,8 @@ ifneq (@MKFS_EXT4@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+endif
+ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext4 zero-data, block size 1024 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -3186,7 +3206,8 @@ ifneq (@MKFS_EXT4@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+endif
+ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext4 zero-data, block size 2048 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -3240,7 +3261,8 @@ ifneq (@MKFS_EXT4@,)
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
 	@
-	@# ---
+endif
+ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
 	@
 	# ext4 zero-data, block size 4096 bytes
 	@$(call functionCreateFileZero,test/dev0.dat,32,1M)
@@ -3300,6 +3322,7 @@ ifneq (@MKFS_EXT4@,)
           BAR_PATTERN="$(if $(BAR_PATTERN),$(BAR_PATTERN),test)" \
           BAR_OPTIONS="$(if $(BAR_OPTIONS),$(BAR_OPTIONS) --raw-images,$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --raw-images) $(OPTIONS)" \
           test_image_operations_delta
+endif
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0b.dat
 	$(RMF) test/dev0a.dat
