@@ -455,7 +455,6 @@ LOCAL size_t curlFTPParseDirectoryListCallback(const void *buffer,
     switch (*s)
     {
       case '\n':
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         StringList_append(&storageDirectoryListHandle->ftp.lineList,line);
         String_clear(line);
         break;
@@ -2599,8 +2598,8 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     StringList_init(&storageDirectoryListHandle->ftp.lineList);
     storageDirectoryListHandle->ftp.fileName = String_new();
     AUTOFREE_ADD(&autoFreeList,&password,{ Password_done(&password); });
-    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.fileName,{ String_delete(storageDirectoryListHandle->ftp.fileName); });
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.lineList,{ StringList_done(&storageDirectoryListHandle->ftp.lineList); });
+    AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.fileName,{ String_delete(storageDirectoryListHandle->ftp.fileName); });
 
     // get FTP server settings
     storageDirectoryListHandle->ftp.serverId = initFTPServerSettings(&ftpServer,storageDirectoryListHandle->storageSpecifier.hostName,jobOptions);
@@ -2740,6 +2739,7 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     String_delete(url);
     (void)curl_easy_cleanup(curlHandle);
     doneFTPServerSettings(&ftpServer);
+    Password_done(&password);
     AutoFree_done(&autoFreeList);
 
     return ERROR_NONE;
