@@ -1405,6 +1405,7 @@ functionVerifyParameter = \
 .PHONY: gcov coverage
 .PHONY: gcov_clean
 .PHONY: gcov_zero
+.PHONY: gcov_html
 gcov coverage: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
@@ -1447,15 +1448,7 @@ ifneq ($(LCOV),)
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
           QUIET=1
-	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
-ifneq ($(GENHTML),)
-	$(GENHTML) -o coverage bar-gcov.info --legend
-	# work-around for bug in genhtml?
-	$(INSTALL) -d coverage
-	$(LN) -sfT coverage/gcov.css gcov.css
-else
-	@$(ECHO) "ERROR: no 'genhtml' command - cannot generate HTML output"
-endif
+	@$(MAKE) gcov_html
 else
 	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
 endif
@@ -1479,11 +1472,15 @@ gcov_zero:
 	$(LCOV) --base-directory . --directory . --zerocounters
 
 gcov_html:
+ifneq ($(GENHTML),)
 	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
 	$(INSTALL) -d coverage
 	$(GENHTML) -o coverage bar-gcov.info --legend
 	# work-around for bug in genhtml?
 	$(LN) -sfT coverage/gcov.css gcov.css
+else
+	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
+endif
 
 # ----------------------------------------------------------------------------
 
