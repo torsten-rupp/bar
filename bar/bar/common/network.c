@@ -818,7 +818,7 @@ Errors Network_connect(SocketHandle *socketHandle,
                 */
                 if (ssh2Error == LIBSSH2_ERROR_PUBLICKEY_UNVERIFIED)
                 {
-                  error = ERRORX_(INVALID_SSH_PRIVATE_KEY,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
+                  error = ERRORX_(INVALID_SSH_PASSWORD,ssh2Error,"%s@%s",String_cString(loginName),String_cString(hostName));
                 }
                 else
                 {
