@@ -1040,17 +1040,18 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
     storageHandle->sftp.oldSendCallback    = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_SEND,sftpSendCallback   );
     storageHandle->sftp.oldReceiveCallback = libssh2_session_callback_set(Network_getSSHSession(&storageHandle->sftp.socketHandle),LIBSSH2_CALLBACK_RECV,sftpReceiveCallback);
 
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
+
     // init session
     storageHandle->sftp.sftp = libssh2_sftp_init(Network_getSSHSession(&storageHandle->sftp.socketHandle));
     if (storageHandle->sftp.sftp == NULL)
     {
       error = ERROR_(SSH,libssh2_session_last_errno(Network_getSSHSession(&storageHandle->sftp.socketHandle)));
       Network_disconnect(&storageHandle->sftp.socketHandle);
+      DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
       free(storageHandle->sftp.readAheadBuffer.data);
       return error;
     }
-
-    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->sftp,StorageHandleSFTP);
 
     // open file
     storageHandle->sftp.sftpHandle = libssh2_sftp_open(storageHandle->sftp.sftp,
