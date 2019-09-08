@@ -1047,7 +1047,7 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
     ulong   length;
     uint64  startTimestamp,endTimestamp;
     uint64  startTotalReceivedBytes,endTotalReceivedBytes;
-    ssize_t n;
+    ssize_t readBytes;
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
@@ -1092,13 +1092,12 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
         assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
 
         // get max. number of bytes to receive in one step
+        length = MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),bufferSize);
         if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
         {
-          length = MIN(storageHandle->storageInfo->scp.bandWidthLimiter.blockSize,bufferSize);
-        }
-        else
-        {
-          length = bufferSize;
+          length = MIN(length,
+                       storageHandle->storageInfo->scp.bandWidthLimiter.blockSize
+                      );
         }
         assert(length > 0L);
 
@@ -1111,22 +1110,21 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           // read into read-ahead buffer
           do
           {
-            n = libssh2_channel_read(storageHandle->scp.channel,
-                                     (char*)storageHandle->scp.readAheadBuffer.data,
-                                     MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),MAX_BUFFER_SIZE)
-                                   );
-            if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+            readBytes = libssh2_channel_read(storageHandle->scp.channel,
+                                             (char*)storageHandle->scp.readAheadBuffer.data,
+                                             length
+                                           );
+            if (readBytes == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
           }
-          while (n == LIBSSH2_ERROR_EAGAIN);
-          if (n < 0)
+          while (readBytes == LIBSSH2_ERROR_EAGAIN);
+          if (readBytes < 0)
           {
             error = ERROR_(IO,errno);
             break;
           }
           storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
-          storageHandle->scp.readAheadBuffer.length = (ulong)n;
-//fprintf(stderr,"%s,%d: n=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,n,
-//storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
+          storageHandle->scp.readAheadBuffer.length = (ulong)readBytes;
+//fprintf(stderr,"%s,%d: readBytes=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,readBytes,storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
 
           // copy data from read-ahead buffer
           bytesAvail = MIN(length,storageHandle->scp.readAheadBuffer.length);
@@ -1143,24 +1141,24 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
           // read direct
           do
           {
-            n = libssh2_channel_read(storageHandle->scp.channel,
+            readBytes = libssh2_channel_read(storageHandle->scp.channel,
                                              buffer,
                                              length
                                             );
-            if (n == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+            if (readBytes == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
           }
-          while (n == LIBSSH2_ERROR_EAGAIN);
-          if (n < 0)
+          while (readBytes == LIBSSH2_ERROR_EAGAIN);
+          if (readBytes < 0)
           {
             error = ERROR_(IO,errno);
             break;
           }
 
           // adjust buffer, bufferSize, bytes read, index
-          buffer = (byte*)buffer+(ulong)n;
-          bufferSize -= (ulong)n;
-          if (bytesRead != NULL) (*bytesRead) += (ulong)n;
-          storageHandle->scp.index += (uint64)n;
+          buffer = (byte*)buffer+(ulong)readBytes;
+          bufferSize -= (ulong)readBytes;
+          if (bytesRead != NULL) (*bytesRead) += (ulong)readBytes;
+          storageHandle->scp.index += (uint64)readBytes;
         }
 
         // get end time, end received bytes
@@ -1389,48 +1387,90 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
     error = ERROR_NONE;
     if      (offset > storageHandle->scp.index)
     {
-      uint64  skip;
-      uint64  i;
-      uint64  n;
+      uint64  skipSize;
+      ulong   index;
+      ulong   bytesAvail;
+      ulong   length;
+      uint64  startTimestamp,endTimestamp;
+      uint64  startTotalReceivedBytes,endTotalReceivedBytes;
       ssize_t readBytes;
 
-      skip = offset-storageHandle->scp.index;
-      while (skip > 0LL)
+      skipSize = offset-storageHandle->scp.index;
+      while (   (skipSize > 0LL)
+             && (error == ERROR_NONE)
+            )
       {
         // skip data in read-ahead buffer
         if (   (storageHandle->scp.index >= storageHandle->scp.readAheadBuffer.offset)
             && (storageHandle->scp.index < (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length))
            )
         {
-          i = storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset;
-          n = MIN(skip,storageHandle->scp.readAheadBuffer.length-i);
-          skip -= n;
-          storageHandle->scp.index += (uint64)n;
+          // skip data in read-ahead buffer, adjust skipSize, index
+          index      = (ulong)(storageHandle->scp.index-storageHandle->scp.readAheadBuffer.offset);
+          bytesAvail = MIN(skipSize,storageHandle->scp.readAheadBuffer.length-index);
+          skipSize -= bytesAvail;
+          storageHandle->scp.index += (uint64)bytesAvail;
         }
 
-        if (skip > 0LL)
+        if (skipSize > 0LL)
         {
           assert(storageHandle->scp.index >= (storageHandle->scp.readAheadBuffer.offset+storageHandle->scp.readAheadBuffer.length));
 
-          // wait for data
-          if (!waitSSHSessionSocket(&storageHandle->scp.socketHandle))
+          // get max. number of bytes to receive in one step
+          length = (ulong)MIN(MIN((size_t)(storageHandle->scp.size-storageHandle->scp.index),skipSize),MAX_BUFFER_SIZE);
+          if (storageHandle->storageInfo->scp.bandWidthLimiter.maxBandWidthList != NULL)
           {
-            error = ERROR_(IO,errno);
-            break;
+            length = MIN(length,
+                         storageHandle->storageInfo->scp.bandWidthLimiter.blockSize
+                        );
           }
+          assert(length > 0L);
+//fprintf(stderr,"%s, %d: skipSize=%llu length=%lu\n",__FILE__,__LINE__,skipSize,length);
+
+          // get start time, start received bytes
+          startTimestamp          = Misc_getTimestamp();
+          startTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
 
           // read data
-          readBytes = libssh2_channel_read(storageHandle->scp.channel,
-                                           (char*)storageHandle->scp.readAheadBuffer.data,
-                                           MIN((size_t)skip,MAX_BUFFER_SIZE)
-                                          );
+          do
+          {
+            readBytes = libssh2_channel_read(storageHandle->scp.channel,
+                                             (char*)storageHandle->scp.readAheadBuffer.data,
+                                             length
+                                            );
+            if (readBytes == LIBSSH2_ERROR_EAGAIN) Misc_udelay(100LL*US_PER_MS);
+          }
+          while (readBytes == LIBSSH2_ERROR_EAGAIN);
           if (readBytes < 0)
           {
             error = ERROR_(IO,errno);
-            break;
+            continue;
           }
           storageHandle->scp.readAheadBuffer.offset = storageHandle->scp.index;
-          storageHandle->scp.readAheadBuffer.length = (uint64)readBytes;
+          storageHandle->scp.readAheadBuffer.length = (ulong)readBytes;
+//fprintf(stderr,"%s,%d: readBytes=%ld storageHandle->scp.bufferOffset=%llu storageHandle->scp.bufferLength=%lu\n",__FILE__,__LINE__,readBytes,storageHandle->scp.readAheadBuffer.offset,storageHandle->scp.readAheadBuffer.length);
+
+          // skip data in read-ahead buffer, adjust skipSize, index
+          bytesAvail = storageHandle->scp.readAheadBuffer.length;
+          skipSize -= bytesAvail;
+          storageHandle->scp.index += (uint64)bytesAvail;
+
+          // get end time, end received bytes
+          endTimestamp          = Misc_getTimestamp();
+          endTotalReceivedBytes = storageHandle->scp.totalReceivedBytes;
+          assert(endTotalReceivedBytes >= startTotalReceivedBytes);
+
+          /* limit used band width if requested (note: when the system time is
+             changing endTimestamp may become smaller than startTimestamp;
+             thus do not check this with an assert())
+          */
+          if (endTimestamp >= startTimestamp)
+          {
+            limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
+                           endTotalReceivedBytes-startTotalReceivedBytes,
+                           endTimestamp-startTimestamp
+                          );
+          }
         }
       }
     }
