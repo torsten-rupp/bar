@@ -192,6 +192,9 @@ ifeq ($(COMPRESS_NAMES_HUGE),)
   endif
 endif
 
+# image compress algorithms
+IMAGE_COMPRESS_NAMES ?= none zip9
+
 # supported crypt algorithms
 MIN_CRYPT_NAMES  = none
 ifeq (@HAVE_GCRYPT@,1)
@@ -202,18 +205,8 @@ ifeq (@HAVE_GCRYPT@,1)
   CRYPT_NAMES  += 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256 SERPENT128 SERPENT192 SERPENT256 CAMELLIA128 CAMELLIA192 CAMELLIA256
 endif
 
-# SQLite flags
-SQLITE_FLAGS = $(if @HAVE_USLEEP@,-DHAVE_USLEEP=1) -DSQLITE_DEFAULT_FILE_PERMISSIONS=0600 -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT $(if @HAVE_ICU@,-DSQLITE_ENABLE_ICU)
-#-DSQLITE_DEBUG -DSQLITE_LOCK_TRACE
-
-# xdelta3 flags
-XDELTA3_FLAGS =
-
 # additional options
 OPTIONS ?=
-
-# image types used for tests
-TEST_IMAGE_OPERATIONS = test_image_operations
 
 # ext block sizes
 EXT_BLOCK_SIZES ?= default 1024 2048 4096
@@ -272,7 +265,7 @@ TEST_PASSWORD_SFTP               ?= $(TEST_PASSWORD_SSH)
 TEST_PUBLIC_KEY_SFTP             =  $(TEST_PUBLIC_KEY_SSH)
 TEST_PRIVATE_KEY_SFTP            =  $(TEST_PRIVATE_KEY_SSH)
 
-TEST_HOST_WEBDAV                 ?= $(TEST_HOST)/webdav
+TEST_HOST_WEBDAV                 ?= $(TEST_HOST)
 TEST_LOGIN_NAME_WEBDAV           ?= $(TEST_LOGIN_NAME)
 TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
 
@@ -1077,12 +1070,12 @@ test8 test_image: \
   $(TEST_JOBS_DIRECTORY)
 	@$(ECHO_NO_LF) "Test 8: image..."
 	if test @HAVE_SUDO_COMMAND_MOUNT_UMOUNT@ -a @HAVE_SUDO_COMMAND_LOSETUP@ -a @HAVE_SUDO_COMMAND_MKFS@; then \
-	  for compress in none zip9; do \
+	  for compress in $(IMAGE_COMPRESS_NAMES); do \
             $(MAKE) \
               BAR_FILE="test" \
               BAR_PATTERN="test" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures --max-threads=1 $(OPTIONS)" \
-              $(TEST_IMAGE_OPERATIONS) \
+              test_image_operations \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -1092,7 +1085,7 @@ test8 test_image: \
               BAR_FILE="test" \
               BAR_PATTERN="test" \
               BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
-              $(TEST_IMAGE_OPERATIONS) \
+              test_image_operations \
               ; \
             rc=$$?; \
             if test $$rc -ne 0; then \
@@ -1589,7 +1582,7 @@ test_combined: \
                 BAR_FILE=test-### \
                 BAR_PATTERN="test-*" \
                 BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=$$compress --crypt-algorithm=$$crypt --crypt-type=asymmetric --crypt-password=$(TEST_PASSWORD_CRYPT) --crypt-public-key=$(CURDIR)/$(TEST_KEY_CRYPT_PUBLIC) --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PUBLIC) --signature-private-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_PRIVATE) --archive-part-size=10M $(OPTIONS)" \
-                $(TEST_IMAGE_OPERATIONS) \
+                test_image_operations \
                 ; \
               rc=$$?; \
               if test $$rc -ne 0; then \
