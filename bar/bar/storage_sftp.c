@@ -1297,10 +1297,13 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
           */
           if (endTimestamp >= startTimestamp)
           {
-            limitBandWidth(&storageHandle->storageInfo->sftp.bandWidthLimiter,
-                           endTotalReceivedBytes-startTotalReceivedBytes,
-                           endTimestamp-startTimestamp
-                          );
+            SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            {
+              limitBandWidth(&storageHandle->storageInfo->sftp.bandWidthLimiter,
+                             endTotalReceivedBytes-startTotalReceivedBytes,
+                             endTimestamp-startTimestamp
+                            );
+            }
           }
         }
       }
@@ -1411,10 +1414,13 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
         */
         if (endTimestamp >= startTimestamp)
         {
-          limitBandWidth(&storageHandle->storageInfo->sftp.bandWidthLimiter,
-                         endTotalSentBytes-startTotalSentBytes,
-                         endTimestamp-startTimestamp
-                        );
+          SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            limitBandWidth(&storageHandle->storageInfo->sftp.bandWidthLimiter,
+                           endTotalSentBytes-startTotalSentBytes,
+                           endTimestamp-startTimestamp
+                          );
+          }
         }
       }
       storageHandle->sftp.size += writtenBytes;

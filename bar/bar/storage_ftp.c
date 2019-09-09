@@ -2076,10 +2076,13 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
       */
       if (endTimestamp >= startTimestamp)
       {
-        limitBandWidth(&storageHandle->storageInfo->ftp.bandWidthLimiter,
-                       bytesAvail,
-                       endTimestamp-startTimestamp
-                      );
+        SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          limitBandWidth(&storageHandle->storageInfo->ftp.bandWidthLimiter,
+                         bytesAvail,
+                         endTimestamp-startTimestamp
+                        );
+        }
       }
     }
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -2189,10 +2192,13 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
       */
       if (endTimestamp >= startTimestamp)
       {
-        limitBandWidth(&storageHandle->storageInfo->ftp.bandWidthLimiter,
-                       storageHandle->ftp.transferedBytes,
-                       endTimestamp-startTimestamp
-                      );
+        SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          limitBandWidth(&storageHandle->storageInfo->ftp.bandWidthLimiter,
+                         storageHandle->ftp.transferedBytes,
+                         endTimestamp-startTimestamp
+                        );
+        }
       }
     }
   #else /* not HAVE_CURL || HAVE_FTP */

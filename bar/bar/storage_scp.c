@@ -1172,10 +1172,13 @@ LOCAL Errors StorageSCP_read(StorageHandle *storageHandle,
         */
         if (endTimestamp >= startTimestamp)
         {
-          limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
-                         endTotalReceivedBytes-startTotalReceivedBytes,
-                         endTimestamp-startTimestamp
-                        );
+          SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
+                           endTotalReceivedBytes-startTotalReceivedBytes,
+                           endTimestamp-startTimestamp
+                          );
+          }
         }
       }
     }
@@ -1289,10 +1292,13 @@ LOCAL Errors StorageSCP_write(StorageHandle *storageHandle,
       */
       if (endTimestamp >= startTimestamp)
       {
-        limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
-                       endTotalSentBytes-startTotalSentBytes,
-                       endTimestamp-startTimestamp
-                      );
+        SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
+                         endTotalSentBytes-startTotalSentBytes,
+                         endTimestamp-startTimestamp
+                        );
+        }
       }
     }
     storageHandle->scp.size += writtenBytes;
@@ -1466,10 +1472,13 @@ LOCAL Errors StorageSCP_seek(StorageHandle *storageHandle,
           */
           if (endTimestamp >= startTimestamp)
           {
-            limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
-                           endTotalReceivedBytes-startTotalReceivedBytes,
-                           endTimestamp-startTimestamp
-                          );
+            SEMAPHORE_LOCKED_DO(&storageHandle->storageInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+            {
+              limitBandWidth(&storageHandle->storageInfo->scp.bandWidthLimiter,
+                             endTotalReceivedBytes-startTotalReceivedBytes,
+                             endTimestamp-startTimestamp
+                            );
+            }
           }
         }
       }
