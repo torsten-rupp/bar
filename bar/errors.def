@@ -191,7 +191,17 @@ ERROR NO_WEBDAV_PASSWORD
 
 ERROR INVALID_WEBDAV_PASSWORD          TR("invalid WebDAV password")
 ERROR WEBDAV_AUTHENTICATION            TR("invalid WebDAV user/password")
+ERROR WEBDAV_BAD_REQUEST               TR("WebDAV bad request")
 ERROR WEBDAV_GET_SIZE                  TR("get WebDAV file size fail")
+ERROR WEBDAV_UPLOAD                    TR("WebDAV upload fail")
+ERROR WEBDAV_DOWNLOAD                  TR("WebDAV download fail")
+ERROR WEBDAV_FAIL
+  stringSet(errorText,sizeof(errorText),TR("WebDAV fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppend(errorText,sizeof(errorText),": ");
+    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  }
 
 // --- compress ---------------------------------------------------------
 ERROR INIT_COMPRESS
@@ -500,6 +510,8 @@ ERROR FILE_NOT_FOUND_
   {
     stringSet(errorText,sizeof(errorText),TR("file not found"));
   }
+
+ERROR FILE_ACCESS_DENIED               TR("access denied")
 
 ERROR NOT_A_DIRECTORY
   stringSet(errorText,sizeof(errorText),TR("not a directory"));
