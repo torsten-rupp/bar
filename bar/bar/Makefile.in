@@ -241,9 +241,6 @@ XDELTA3_FLAGS =
 # additional options
 OPTIONS ?=
 
-# image types used for tests
-TEST_IMAGE_OPERATIONS = test_image_operations
-
 # test settings
 TEST_CONFIG                      = intermediate/bar.cfg
 TEST_KEY_CRYPT_PUBLIC            = intermediate/key-crypt.public
@@ -1410,45 +1407,75 @@ gcov coverage: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 ifneq ($(LCOV),)
-	@$(MAKE) -C test \
-          test1 \
-          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+	@$(MAKE) gcov_basic \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
           QUIET=1
-	@$(MAKE) -C test \
-          test2 \
-          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+	@$(MAKE) gcov_compress \
           COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
           CRYPT_NAMES="none" \
           QUIET=1
-	@$(MAKE) -C test \
-          test3 \
-          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+	@$(MAKE) gcov_crypt \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
           QUIET=1
-	@$(MAKE) -C test \
-          test4 test5 test6 test7 \
-          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+	@$(MAKE) gcov_asymmetric_crypt \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
           QUIET=1
-	@$(MAKE) -C test \
-          test_image \
-          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+	@$(MAKE) gcov_signatures \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_split \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_split \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_image \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          IMAGE_COMPRESS_NAMES=none \
           EXT_BLOCK_SIZES=default \
           QUIET=1
-	@$(MAKE) -C test \
-          test_arguments \
-          test_misc \
-          TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@ \
+	@$(MAKE) gcov_storage_file \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+ifneq ($(TEST_PASSWORD_FTP),)
+	@$(MAKE) gcov_storage_ftp \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+endif
+ifneq ($(TEST_PASSWORD_SSH),)
+	@$(MAKE) gcov_storage_scp \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_storage_sftp \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+endif
+	@$(MAKE) gcov_arguments \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+	@$(MAKE) gcov_misc \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
           QUIET=1
 	@$(MAKE) gcov_html
+ifeq ($(TEST_PASSWORD_FTP),)
+	@$(ECHO) Warning: no FTP password - skipped ftp test
+endif
+ifeq ($(TEST_PASSWORD_SSH),)
+	@$(ECHO) Warning: no SSH password - skipped scp/sftp test
+endif
 else
 	@$(ECHO) "ERROR: no 'lcov' command - cannot run coverage analysis"
 endif
@@ -1457,11 +1484,8 @@ gcov%: \
   bar-gcov@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	$(MAKE) -C test $(subst gcov,test,$@) TEST_BAR=$(BASE_DIR)/bar-gcov@EXEEXT@
-	$(LCOV) --base-directory . --directory . --capture --output-file bar-gcov.info
-	$(INSTALL) -d coverage
-	$(GENHTML) -o coverage bar-gcov.info --legend
-	# work-around for bug in genhtml?
-	$(LN) -sfT coverage/gcov.css gcov.css
+
+#	$(MAKE) gcov_html
 
 gcov_clean:
 	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
