@@ -321,7 +321,7 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
     storageBandWidthLimiter->measurementTime += transmissionTime;
 //fprintf(stderr,"%s, %d: sum %lu bytes %llu us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementBytes,storageBandWidthLimiter->measurementTime);
 
-    if (storageBandWidthLimiter->measurementTime > MS_TO_US(100LL))   // too small time values are not reliable, thus accumlate over time
+    if (storageBandWidthLimiter->measurementTime > MS_TO_US(100LL))   // too small time values are not reliable, thus accumulate over time
     {
       // calculate average band width
       averageBandWidth = 0;
@@ -391,6 +391,7 @@ LOCAL void limitBandWidth(StorageBandWidthLimiter *storageBandWidthLimiter,
       }
 
       // calculate and store new current bandwidth
+      assert((storageBandWidthLimiter->measurementTime+delayTime) != 0LL);
       storageBandWidthLimiter->measurements[storageBandWidthLimiter->measurementNextIndex] = (ulong)((BYTES_TO_BITS((uint64)storageBandWidthLimiter->measurementBytes)*US_PER_SECOND)/(storageBandWidthLimiter->measurementTime+delayTime));
 //fprintf(stderr,"%s, %d: new measurement[%d] %lu bits/us\n",__FILE__,__LINE__,storageBandWidthLimiter->measurementNextIndex,storageBandWidthLimiter->measurements[storageBandWidthLimiter->measurementNextIndex]);
       storageBandWidthLimiter->measurementNextIndex = (storageBandWidthLimiter->measurementNextIndex+1)%SIZE_OF_ARRAY(storageBandWidthLimiter->measurements);
