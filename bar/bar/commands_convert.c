@@ -741,7 +741,7 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
-  printInfo(1,"  Convert file '%s'...",String_cString(fileName));
+  printInfo(1,"  Convert file      '%s'...",String_cString(fileName));
 
   // set new compression, crypt settings
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
@@ -945,7 +945,7 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   assert(deviceInfo.blockSize > 0);
 
-  printInfo(1,"  Convert image '%s'...",String_cString(deviceName));
+  printInfo(1,"  Convert image     '%s'...",String_cString(deviceName));
 
   // set new compression, crypt settings
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
@@ -1237,7 +1237,7 @@ LOCAL Errors convertLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); String_delete(linkName); return DEBUG_TESTCODE_ERROR(); }
 
-  printInfo(1,"  Convert link '%s'...",String_cString(linkName));
+  printInfo(1,"  Convert link      '%s'...",String_cString(linkName));
 
   // set new crypt settings
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_CRYPT_ALGORITHMS)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
@@ -1535,7 +1535,7 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
-  printInfo(1,"  Convert special device '%s'...",String_cString(fileName));
+  printInfo(1,"  Convert special   '%s'...",String_cString(fileName));
 
   // set new crypt settings
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_CRYPT_ALGORITHMS)) cryptAlgorithm = jobOptions->cryptAlgorithms[0];
@@ -1654,7 +1654,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(comment); String_delete(hostName); String_delete(userName); return DEBUG_TESTCODE_ERROR(); }
 
-  printInfo(1,"  Convert meta...");
+  printInfo(1,"  Convert meta      ...");
 
   // set new UUID, comment
   if (!String_isEmpty(newJobUUID)) String_set(jobUUID,newJobUUID);

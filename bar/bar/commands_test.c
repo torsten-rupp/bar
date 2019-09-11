@@ -257,7 +257,7 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Test file '%s'...",String_cString(fileName));
+    printInfo(1,"  Test file      '%s'...",String_cString(fileName));
 
     // read file content
     length = 0LL;
@@ -352,7 +352,7 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"Test '%s'...skipped\n",String_cString(fileName));
+    printInfo(2,"  Test file      '%s'...skipped\n",String_cString(fileName));
   }
 
   // close archive entry
@@ -457,7 +457,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Test image '%s'...",String_cString(deviceName));
+    printInfo(1,"  Test image     '%s'...",String_cString(deviceName));
 
     // read image content
     block = 0LL;
@@ -552,7 +552,7 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"  Test '%s'...skipped\n",String_cString(deviceName));
+    printInfo(2,"  Test image     '%s'...skipped\n",String_cString(deviceName));
   }
 
   // close archive entry
@@ -623,7 +623,7 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Test directory '%s'...",String_cString(directoryName));
+    printInfo(1,"  Test directory  '%s'...",String_cString(directoryName));
 
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
@@ -642,7 +642,7 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"Test '%s'...skipped\n",String_cString(directoryName));
+    printInfo(2,"  Test directory '%s'...skipped\n",String_cString(directoryName));
   }
 
   // close archive entry
@@ -717,7 +717,7 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Test link '%s'...",String_cString(linkName));
+    printInfo(1,"  Test link      '%s'...",String_cString(linkName));
 
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
@@ -737,7 +737,7 @@ LOCAL Errors testLinkEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"  Test '%s'...skipped\n",String_cString(linkName));
+    printInfo(2,"  Test link      '%s'...skipped\n",String_cString(linkName));
   }
 
   // close archive file
@@ -960,7 +960,7 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
     else
     {
       // skip
-      printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
+      printInfo(2,"  Test hard link '%s'...skipped\n",String_cString(fileName));
     }
   }
   if (error != ERROR_NONE)
@@ -1038,7 +1038,7 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Test special device '%s'...",String_cString(fileName));
+    printInfo(1,"  Test special   '%s'...",String_cString(fileName));
 
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
@@ -1057,7 +1057,7 @@ LOCAL Errors testSpecialEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"  Test '%s'...skipped\n",String_cString(fileName));
+    printInfo(2,"  Test special   '%s'...skipped\n",String_cString(fileName));
   }
 
   // close archive entry

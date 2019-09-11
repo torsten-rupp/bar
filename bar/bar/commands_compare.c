@@ -299,7 +299,7 @@ LOCAL Errors compareFileEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Compare file '%s'...",String_cString(fileName));
+    printInfo(1,"  Compare file      '%s'...",String_cString(fileName));
 
     // check if file exists and check file type
     if (!File_exists(fileName))
@@ -503,7 +503,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   else
   {
     // skip
-    printInfo(2,"  Compare '%s'...skipped\n",String_cString(fileName));
+    printInfo(2,"  Compare file      '%s'...skipped\n",String_cString(fileName));
   }
 
   // close archive file
@@ -614,7 +614,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,deviceName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Compare image '%s'...",String_cString(deviceName));
+    printInfo(1,"  Compare image     '%s'...",String_cString(deviceName));
 
     // check if device/image exists
     if (!File_exists(deviceName))
@@ -873,7 +873,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"  Compare '%s'...skipped\n",String_cString(deviceName));
+    printInfo(2,"  Compare image     '%s'...skipped\n",String_cString(deviceName));
   }
 
   // close archive file, free resources
@@ -996,7 +996,7 @@ LOCAL Errors compareDirectoryEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"  Compare '%s'...skipped\n",String_cString(directoryName));
+    printInfo(2,"  Compare directory '%s'...skipped\n",String_cString(directoryName));
   }
 
   // close archive file
@@ -1070,7 +1070,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,linkName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Compare link '%s'...",String_cString(linkName));
+    printInfo(1,"  Compare link      '%s'...",String_cString(linkName));
 
     // check if file exists and file type
     if (!File_exists(linkName))
@@ -1142,7 +1142,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
       String_delete(linkName);
       return error;
     }
-    D EBUG_TESTCODE("Command_compare403") { Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); String_delete(linkName); return DEBUG_TESTCODE_ERROR(); }
+    DEBUG_TESTCODE("Command_compare403") { Archive_closeEntry(&archiveEntryInfo); String_delete(fileName); String_delete(linkName); return DEBUG_TESTCODE_ERROR(); }
 
     // check file time, permissions, file owner/group
 #endif /* 0 */
@@ -1159,7 +1159,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"  Compare '%s'...skipped\n",String_cString(linkName));
+    printInfo(2,"  Compare link      '%s'...skipped\n",String_cString(linkName));
   }
 
   // close archive file
@@ -1505,7 +1505,7 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
     else
     {
       // skip
-      printInfo(2,"  Compare '%s'...skipped\n",String_cString(fileName));
+      printInfo(2,"  Compare hard link '%s'...skipped\n",String_cString(fileName));
     }
   }
 
@@ -1575,7 +1575,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Compare special device '%s'...",String_cString(fileName));
+    printInfo(1,"  Compare special   '%s'...",String_cString(fileName));
 
     // check if file exists and file type
     if (!File_exists(fileName))
@@ -1663,7 +1663,7 @@ LOCAL Errors compareSpecialEntry(ArchiveHandle     *archiveHandle,
   else
   {
     // skip
-    printInfo(2,"  Compare '%s'...skipped\n",String_cString(fileName));
+    printInfo(2,"  Compare special   '%s'...skipped\n",String_cString(fileName));
   }
 
   // close archive file

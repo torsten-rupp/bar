@@ -573,7 +573,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_STOP:
               // stop
               printInfo(1,
-                        "  Restore file '%s'...skipped (file part %llu..%llu exists)\n",
+                        "  Restore file      '%s'...skipped (file part %llu..%llu exists)\n",
                         String_cString(destinationFileName),
                         fragmentOffset,
                         (fragmentSize > 0LL) ? fragmentOffset+fragmentSize-1 : fragmentOffset
@@ -629,7 +629,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
           {
             case RESTORE_ENTRY_MODE_STOP:
               // stop
-              printInfo(1,"  Restore file '%s'...skipped (file exists)\n",String_cString(destinationFileName));
+              printInfo(1,"  Restore file      '%s'...skipped (file exists)\n",String_cString(destinationFileName));
               AutoFree_cleanup(&autoFreeList);
               return !restoreInfo->jobOptions->noStopOnErrorFlag ? ERROR_FILE_EXISTS_ : ERROR_NONE;
               break;
@@ -680,7 +680,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       fragmentNode = NULL;
     }
 
-    printInfo(1,"  Restore file '%s'...",String_cString(destinationFileName));
+    printInfo(1,"  Restore file      '%s'...",String_cString(destinationFileName));
 
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
@@ -997,7 +997,7 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   else
   {
     // skip
-    printInfo(2,"  Restore '%s'...skipped\n",String_cString(fileName));
+    printInfo(2,"  Restore file      '%s'...skipped\n",String_cString(fileName));
 
     restoreInfo->statusInfo.skipped.count++;
     restoreInfo->statusInfo.skipped.size += (uint64)fileInfo.size;
@@ -1142,7 +1142,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
             case RESTORE_ENTRY_MODE_STOP:
               // stop
               printInfo(1,
-                        "  Restore image '%s'...skipped (image part %llu..%llu exists)\n",
+                        "  Restore image     '%s'...skipped (image part %llu..%llu exists)\n",
                         String_cString(destinationDeviceName),
                         blockOffset*(uint64)deviceInfo.blockSize,
                         ((blockCount > 0) ? blockOffset+blockCount-1:blockOffset)*(uint64)deviceInfo.blockSize
@@ -1193,7 +1193,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       fragmentNode = NULL;
     }
 
-    printInfo(1,"  Restore image '%s'...",String_cString(destinationDeviceName));
+    printInfo(1,"  Restore image     '%s'...",String_cString(destinationDeviceName));
 
     // create parent directories if not existing
     if (!restoreInfo->storageFlags.dryRun)
@@ -1496,7 +1496,7 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   else
   {
     // skip
-    printInfo(2,"  Restore '%s'...skipped\n",String_cString(deviceName));
+    printInfo(2,"  Restore image     '%s'...skipped\n",String_cString(deviceName));
   }
 
   // close archive file
@@ -1773,7 +1773,7 @@ LOCAL Errors restoreDirectoryEntry(RestoreInfo   *restoreInfo,
   else
   {
     // skip
-    printInfo(2,"  Restore '%s'...skipped\n",String_cString(directoryName));
+    printInfo(2,"  Restore directory '%s'...skipped\n",String_cString(directoryName));
   }
 
   // close archive file
@@ -1941,7 +1941,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
         case RESTORE_ENTRY_MODE_STOP:
           // stop
           printInfo(1,
-                    "  Restore link '%s'...skipped (file exists)\n",
+                    "  Restore link      '%s'...skipped (file exists)\n",
                     String_cString(destinationFileName)
                    );
           if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -1989,7 +1989,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    printInfo(1,"  Restore link '%s'...",String_cString(destinationFileName));
+    printInfo(1,"  Restore link      '%s'...",String_cString(destinationFileName));
 
     // create link
     if (!restoreInfo->storageFlags.dryRun)
@@ -2085,7 +2085,7 @@ LOCAL Errors restoreLinkEntry(RestoreInfo   *restoreInfo,
   else
   {
     // skip
-    printInfo(2,"  Restore '%s'...skipped\n",String_cString(linkName));
+    printInfo(2,"  Restore link      '%s'...skipped\n",String_cString(linkName));
   }
 
   // close archive file
@@ -2731,7 +2731,7 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
     else
     {
       // skip
-      printInfo(2,"  Restore '%s'...skipped\n",String_cString(fileName));
+      printInfo(2,"  Restore hard link '%s'...skipped\n",String_cString(fileName));
     }
   }
   AutoFree_restore(&autoFreeList,autoFreeSavePoint,FALSE);
@@ -2906,7 +2906,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
         case RESTORE_ENTRY_MODE_STOP:
           // stop
           printInfo(1,
-                    "  Restore special device '%s'...skipped (file exists)\n",
+                    "  Restore special   '%s'...skipped (file exists)\n",
                     String_cString(destinationFileName)
                    );
           if (!restoreInfo->jobOptions->noStopOnErrorFlag)
@@ -2955,7 +2955,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    printInfo(1,"  Restore special device '%s'...",String_cString(destinationFileName));
+    printInfo(1,"  Restore special   '%s'...",String_cString(destinationFileName));
 
     // create special device
     if (!restoreInfo->storageFlags.dryRun)
@@ -3054,7 +3054,7 @@ LOCAL Errors restoreSpecialEntry(RestoreInfo   *restoreInfo,
   else
   {
     // skip
-    printInfo(2,"  Restore '%s'...skipped\n",String_cString(fileName));
+    printInfo(2,"  Restore special   '%s'...skipped\n",String_cString(fileName));
   }
 
   // close archive file
