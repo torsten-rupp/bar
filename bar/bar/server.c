@@ -17083,10 +17083,7 @@ LOCAL Errors initBatchClient(ClientInfo *clientInfo,
 LOCAL void doneBatchClient(ClientInfo *clientInfo)
 {
   assert(clientInfo != NULL);
-
-  // done input/output
-  File_close(&clientInfo->io.file.outputHandle);
-  File_close(&clientInfo->io.file.inputHandle);
+  DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
   // disconnect
   ServerIO_disconnect(&clientInfo->io);
@@ -17144,6 +17141,7 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   CommandInfoNode *commandInfoNode;
 
   assert(clientInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(clientInfo);
 
   clientInfo->quitFlag = TRUE;
 
@@ -17237,9 +17235,6 @@ LOCAL ClientNode *newClient(void)
     HALT_INSUFFICIENT_MEMORY();
   }
 
-  // initialize node
-  initClient(&clientNode->clientInfo);
-
   DEBUG_ADD_RESOURCE_TRACE(clientNode,ClientNode);
 
   return clientNode;
@@ -17285,6 +17280,9 @@ LOCAL Errors newNetworkClient(ClientNode               **clientNode,
   // create new client
   (*clientNode) = newClient();
   assert((*clientNode) != NULL);
+
+  // initialize client
+  initClient(&(*clientNode)->clientInfo);
 
   // init network client
   error = initNetworkClient(&(*clientNode)->clientInfo,serverSocketHandle);
@@ -18465,6 +18463,9 @@ Errors Server_batch(int inputDescriptor,
   {
     printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!");
   }
+
+  // initialize client
+  initClient(&clientInfo);
 
   // init client
   error = initBatchClient(&clientInfo,inputDescriptor,outputDescriptor);

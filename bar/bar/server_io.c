@@ -935,26 +935,7 @@ SOCKET_TYPE_PLAIN,
   }
 #endif
 
-  // disconnect
-  switch (serverIO->type)
-  {
-    case SERVER_IO_TYPE_NONE:
-      break;
-    case SERVER_IO_TYPE_NETWORK:
-      Network_disconnect(&serverIO->network.socketHandle);
-      break;
-    case SERVER_IO_TYPE_BATCH:
-      File_close(&serverIO->file.outputHandle);
-      File_close(&serverIO->file.inputHandle);
-      break;
-    #ifndef NDEBUG
-      default:
-        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        break;
-    #endif /* NDEBUG */
-  }
-
-  // free resources
+  // done i/o
   doneIO(serverIO);
 }
 
