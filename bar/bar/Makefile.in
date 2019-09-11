@@ -1461,6 +1461,12 @@ ifneq ($(TEST_PASSWORD_SSH),)
           CRYPT_NAMES="none" \
           QUIET=1
 endif
+ifneq ($(TEST_PASSWORD_WEBDAV),)
+	@$(MAKE) gcov_storage_webdav \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
+endif
 	@$(MAKE) gcov_arguments \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
@@ -1489,7 +1495,6 @@ gcov%: \
 
 gcov_clean:
 	$(FIND) gcov -type f -name '*.gcda'|$(XARGS) $(RMF)
-	$(FIND) gcov -type f -name '*.gcno'|$(XARGS) $(RMF)
 	$(RMRF) coverage
 
 gcov_zero:
