@@ -235,6 +235,17 @@ TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
 TEST_SERVER_CONTINUOUS_DATABASE  = $(TEST_SERVER_DIRECTORY)/continuous.db
 TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
 
+TEST_SLAVE_HOST                  =
+TEST_SLAVE_PORT                  = 39911
+TEST_SLAVE_USERNAME              ?= test
+TEST_SLAVE_PASSWORD              ?= test
+TEST_SLAVE_DIRECTORY             = intermediate/slave
+TEST_SLAVE_CONFIG                = $(TEST_SLAVE_DIRECTORY)/bar.cfg
+TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/barserver.pid
+TEST_SLAVE_JOBS_DIRECTORY        = $(TEST_SLAVE_DIRECTORY)/jobs
+TEST_SLAVE_DATABASE              = $(TEST_SLAVE_DIRECTORY)/index.db
+TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
+
 # hosts, ports, passwords, keys for tests
 TEST_HOST                        ?= localhost
 TEST_LOGIN_NAME                  ?= $(LOGNAME)
@@ -271,17 +282,6 @@ TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
 
 TEST_PASSWORD_CRYPT              =  Franz_Kafka:Die_Verwandlung
 TEST_PASSWORD_CRYPT_OTHER        =  Heinrich_Böll:Ansichten_eines_Clown
-
-TEST_SLAVE_HOST                  =
-TEST_SLAVE_PORT                  = 39911
-TEST_SLAVE_USERNAME              ?= test
-TEST_SLAVE_PASSWORD              ?= test
-TEST_SLAVE_DIRECTORY             = intermediate/slave
-TEST_SLAVE_CONFIG                = $(TEST_SLAVE_DIRECTORY)/bar.cfg
-TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/barserver.pid
-TEST_SLAVE_JOBS                  = $(TEST_SLAVE_DIRECTORY)/jobs
-TEST_SLAVE_DATABASE              = $(TEST_SLAVE_DIRECTORY)/index.db
-TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
@@ -363,7 +363,6 @@ help_output:
 	@$(ECHO) "  test10[-debug|-valgrind], test_hugefiles[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test11[-debug|-valgrind], test_dvd[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test12[-debug|-valgrind], test_server[-debug|-gcov|-gprof|-valgrind]"
-	@$(ECHO) "  test13[-debug|-valgrind], test_master_slave[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test13_master[-debug|-valgrind], test_master[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test13_slave[-debug|-valgrind], test_slave[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-gcov|-gprof|-valgrind]"
@@ -709,7 +708,7 @@ TEST_KEYS = $(TEST_KEY_CRYPT_PUBLIC) \
             $(TEST_KEY_SIGNATURE_OTHER_PRIVATE)
 
 # default test options
-TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG) --jobs-directory=$(CURDIR)/$(TEST_JOBS_DIRECTORY)
+TEST_OPTIONS = --no-default-config --config=$(CURDIR)/$(TEST_CONFIG)
 
 # test environment variables
 TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS=
@@ -770,8 +769,7 @@ test-valgrind: \
 
 test_win: \
   $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	$(TEST_BAR) -o -c c:\\tmp\\x.bar -# c:\\users\\torsten
 	$(TEST_BAR) -L c:\\tmp\\x.bar
 
@@ -795,6 +793,13 @@ test_data_clean:
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(RMF)  $(TEST_CONFIG) $(TEST_SERVER_CONFIG)
 	$(RMRF) $(TEST_JOBS_DIRECTORY)
+	$(RMRF) $(TEST_SERVER_JOBS_DIRECTORY)
+	$(RMF)  $(TEST_SERVER_DATABASE)
+	$(RMF)  $(TEST_SERVER_CONTINUOUS_DATABASE)
+	$(RMF)  $(TEST_SERVER_LOG_FILE)
+	$(RMRF) $(TEST_SLAVE_JOBS_DIRECTORY)
+	$(RMF)  $(TEST_SLAVE_DATABASE)
+	$(RMF)  $(TEST_SLAVE_LOG_FILE)
 
 test_data_dist_clean: \
   test_data_clean
@@ -803,8 +808,7 @@ test_data_dist_clean: \
 	$(RMRF) data
 
 test1 test_basic: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 1: basic..."
 	@$(MAKE) \
           BAR_FILE="test" \
@@ -843,8 +847,7 @@ test1-valgrind test_basic-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
 
 test2 test_compress: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 2: compress..."
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
@@ -1075,7 +1078,6 @@ test4-valgrind test_asymmetric_crypt-valgrind: \
 
 test5 test_signatures: \
   $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY) \
   $(TEST_KEYS)
 	@$(ECHO_NO_LF) "Test 5: signatures..."
 	$(MAKE) \
@@ -1125,8 +1127,7 @@ test5-valgrind test_signatures-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_signatures
 
 test6 test_split: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 6: split..."
 	$(MAKE) \
           BAR_FILE="test-###" \
@@ -1165,8 +1166,7 @@ test6-valgrind test_split-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
 
 test7 test_convert: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 7: convert..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1193,8 +1193,7 @@ test7-valgrind test_convert-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_convert
 
 test8 test_image: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 8: image..."
 	if test @HAVE_SUDO_COMMAND_MOUNT_UMOUNT@ -a @HAVE_SUDO_COMMAND_LOSETUP@ -a @HAVE_SUDO_COMMAND_MKFS@; then \
 	  for compress in $(IMAGE_COMPRESS_NAMES); do \
@@ -1265,8 +1264,7 @@ test9-valgrind test_storage-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage
 
 test_storage_file: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	$(MAKE) \
           BAR_STORAGE="file://" \
           BAR_FILE="test" \
@@ -1305,8 +1303,7 @@ test_storage_file-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_file
 
 test_storage_ftp: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO) Info : TEST_HOST_FTP=$(TEST_HOST_FTP)
 	@$(ECHO) Info : TEST_LOGIN_NAME_FTP=$(TEST_LOGIN_NAME_FTP)
 	@$(call functionVerifyParameter,TEST_HOST_FTP,parameter TEST_HOST_FTP nor TEST_HOST set)
@@ -1350,8 +1347,7 @@ test_storage_ftp-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_ftp
 
 test_storage_scp: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO) Info : TEST_HOST_SCP=$(TEST_HOST_SCP)
 	@$(ECHO) Info : TEST_LOGIN_NAME_SCP=$(TEST_LOGIN_NAME_SCP)
 	@$(call functionVerifyParameter,TEST_HOST_SCP,parameter TEST_HOST_SCP nor TEST_HOST set)
@@ -1390,8 +1386,7 @@ test_storage_scp-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_scp
 
 test_storage_sftp: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO) Info : TEST_HOST_SFTP=$(TEST_HOST_SFTP)
 	@$(ECHO) Info : TEST_LOGIN_NAME_SFTP=$(TEST_LOGIN_NAME_SFTP)
 	@$(call functionVerifyParameter,TEST_HOST_SFTP,parameter TEST_HOST_SFTP nor TEST_HOST set)
@@ -1437,8 +1432,7 @@ test_storage_sftp-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_sftp
 
 test_storage_webdav: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO) Info : TEST_HOST_WEBDAV=$(TEST_HOST_WEBDAV)
 	@$(ECHO) Info : TEST_LOGIN_NAME_WEBDAV=$(TEST_LOGIN_NAME_WEBDAV)
 	@$(call functionVerifyParameter,TEST_HOST_WEBDAV,parameter TEST_HOST_WEBDAV nor TEST_HOST set)
@@ -1482,8 +1476,7 @@ test_storage_webdav-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
 
 test10 test_hugefiles: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 10: huge files..."
 	for compress in $(COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
@@ -1516,8 +1509,7 @@ test10-valgrind test_hugefiles-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
 
 test11 test_dvd: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	@$(ECHO_NO_LF) "Test 11: dvd..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1545,7 +1537,9 @@ test11-valgrind test_dvd-valgrind: \
 
 test12 test_server: \
   $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_JOBS_DIRECTORY) \
+  $(TEST_SERVER_JOBS_DIRECTORY) \
+  $(TEST_SLAVE_JOBS_DIRECTORY)
 	@$(ECHO_NO_LF) "Test 12: server..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1577,37 +1571,9 @@ test12-valgrind test_server-valgrind: \
   $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
 
-test13: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
-	@$(ECHO_NO_LF) "Test 13: slave..."
-	$(MAKE) \
-          BAR_FILE="test" \
-          BAR_PATTERN="test" \
-          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
-          test_master_slave_operations \
-          ;
-	@$(ECHO) "ok"
-
-test13-debug: \
-  $(TEST_BAR_DEBUG)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
-
-test13-gcov: \
-  $(TEST_BAR_GCOV)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_slave
-
-test13-gprof: \
-  $(TEST_BAR_GPROF)
-	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_slave
-
-test13-valgrind: \
-  $(TEST_BAR_VALGRIND)
-	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
-
 test13_master test_master: \
   $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_SERVER_JOBS_DIRECTORY)
 	@$(ECHO_NO_LF) "Test 13: master..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1635,7 +1601,7 @@ test13_master-valgrind test_master-valgrind: \
 
 test13_slave test_slave: \
   $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_SLAVE_JOBS_DIRECTORY)
 	@$(ECHO_NO_LF) "Test 13: slave..."
 	$(MAKE) \
           BAR_FILE="test" \
@@ -1663,8 +1629,7 @@ test13_slave-valgrind test_slave-valgrind: \
 
 test_combined: \
   $(TEST_CONFIG) \
-  $(TEST_KEYS) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_KEYS)
 	@$(ECHO_NO_LF) "Test combined..."
 	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
           for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
@@ -1736,7 +1701,6 @@ test_all:
 test_arguments: \
   $(TEST_BAR) \
   $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY) \
   $(TEST_KEYS) \
   $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test parameters..."
@@ -2066,7 +2030,6 @@ test_arguments-valgrind: \
 test_misc: \
   $(TEST_BAR) \
   $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY) \
   $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test miscellaneous..."
 	@$(RMRF) $(TEST_FILES_CLEAN)
@@ -2132,29 +2095,25 @@ run_debug_test_code:
 
 $(TEST_KEY_CRYPT_PUBLIC) $(TEST_KEY_CRYPT_PRIVATE): \
   $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	$(RMF) $(TEST_KEY_CRYPT_PUBLIC) $(TEST_KEY_CRYPT_PRIVATE)
 	$(TEST_BAR) $(TEST_OPTIONS) --generate-keys --generate-keys-mode=transient --crypt-password="$(TEST_PASSWORD_CRYPT)" intermediate/key-crypt
 
 $(TEST_KEY_CRYPT_OTHER_PUBLIC) $(TEST_KEY_CRYPT_OTHER_PRIVATE): \
   $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	$(RMF) $(TEST_KEY_CRYPT_OTHER_PUBLIC) $(TEST_KEY_CRYPT_OTHER_PRIVATE)
 	$(TEST_BAR) $(TEST_OPTIONS) --generate-keys --generate-keys-mode=transient --crypt-password="$(TEST_PASSWORD_CRYPT_OTHER)" intermediate/key-crypt-other
 
 $(TEST_KEY_SIGNATURE_PUBLIC) $(TEST_KEY_SIGNATURE_PRIVATE): \
   $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	$(RMF) $(TEST_KEY_SIGNATURE_PUBLIC) $(TEST_KEY_SIGNATURE_PRIVATE)
 	$(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys --generate-keys-mode=transient intermediate/key-signature
 
 $(TEST_KEY_SIGNATURE_OTHER_PUBLIC) $(TEST_KEY_SIGNATURE_OTHER_PRIVATE): \
   $(TEST_BAR) \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	$(RMF) $(TEST_KEY_SIGNATURE_OTHER_PUBLIC) $(TEST_KEY_SIGNATURE_OTHER_PRIVATE)
 	$(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys --generate-keys-mode=transient intermediate/key-signature-other
 
@@ -2213,8 +2172,13 @@ data/linkdata.dat data/link.dat:
 	$(DD) if=$(DEVICE_RANDOM) of=data/linkdata.dat bs=1k count=512 2>/dev/null
 	($(CD) $(@D); $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
 data/link_not_existing_file.dat:
-	$(INSTALL) -d $(@D)
-	($(CD) data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat)
+	@# Note: work-around for dead link: check if exists and only output info and create if if not
+	@if test ! -L $@; then \
+          $(ECHO) "$(INSTALL) -d $(@D)"; \
+          $(INSTALL) -d $(@D); \
+          $(ECHO) "($(CD) data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat)"; \
+          ($(CD) data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat); \
+        fi
 data/circular_link.dat.marker:
 	$(INSTALL) -d $(@D)
 	($(CD) data; $(LN) -s circular_link.dat circular_link.dat)
@@ -2277,19 +2241,19 @@ data/fifo:
 	($(CD) data; $(MKFIFO) fifo)
 data/name\'.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
+	$(ECHO) Hello World >"$@"
 data/name\".dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
+	$(ECHO) Hello World >'$@'
 data/name\\.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
+	$(ECHO) Hello World >'$@'
 data/name\\n.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
+	$(ECHO) Hello World >'$@'
 data/name%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >$@
+	$(ECHO) Hello World >'$@'
 data/name%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World >$@
@@ -2325,6 +2289,12 @@ $(TEST_CONFIG):
 	$(CHMOD) 600 $@
 
 $(TEST_JOBS_DIRECTORY):
+	$(INSTALL) -d $@
+
+$(TEST_SERVER_JOBS_DIRECTORY):
+	$(INSTALL) -d $@
+
+$(TEST_SLAVE_JOBS_DIRECTORY):
 	$(INSTALL) -d $@
 
 $(TEST_SERVER_DATABASE): \
@@ -2588,8 +2558,7 @@ test_image_operations: \
 
 .PHONY: test_image_operations_raw
 test_image_operations_raw:  \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	# raw
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
@@ -2643,8 +2612,7 @@ test_image_operations_ext: \
 
 # Ext2
 test_image_operations_ext2: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 ifneq (@MKFS_EXT2@,)
 	# ext2
 	$(INSTALL) -d test
@@ -2875,8 +2843,7 @@ endif
 
 # Ext3
 test_image_operations_ext3: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 ifneq (@MKFS_EXT3@,)
 	# ext3
 	$(INSTALL) -d test
@@ -3105,8 +3072,7 @@ endif
 
 # Ext4
 test_image_operations_ext4: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 ifneq (@MKFS_EXT4@,)
 	# ext4
 	$(INSTALL) -d test
@@ -3351,8 +3317,7 @@ test_image_operations_fat: \
 
 # FAT 12
 test_image_operations_fat12: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 ifneq (@MKFS_MSDOS@,)
 	# FAT12
 	$(INSTALL) -d test
@@ -3413,8 +3378,7 @@ endif
 
 # FAT 16
 test_image_operations_fat16: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 ifneq (@MKFS_MSDOS@,)
 	# FAT16
 	$(INSTALL) -d test
@@ -3475,8 +3439,7 @@ endif
 
 # FAT 32
 test_image_operations_fat32: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 ifneq (@MKFS_MSDOS@,)
 	# FAT32
 	$(INSTALL) -d test
@@ -3552,8 +3515,7 @@ endif
 
 # ReiserFS version 3 (Note: Linux only support block size 4096)
 test_image_operations_reiserfs3: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3
 	$(INSTALL) -d test
@@ -3655,8 +3617,7 @@ endif
 # image dry-run
 .PHONY: test_image_operations_dryrun
 test_image_operations_dryrun: \
-  $(TEST_CONFIG) \
-  $(TEST_JOBS_DIRECTORY)
+  $(TEST_CONFIG)
 	# delta tests
 	@$(call functionInfo,test image operation dryrun)
 	@$(call functionVerifyParameter,TEST_BAR)
@@ -3898,7 +3859,8 @@ test_server_operations_socket_server: \
   $(TEST_BAR) \
   $(TEST_CONFIG) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
-  $(TEST_FILES)
+  $(TEST_FILES) \
+  $(TEST_SERVER_DATABASE)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -4002,12 +3964,15 @@ test_server_operations_socket_client: \
         ) $(LOG)
 
 test_server_operations_socket: \
-  $(TEST_FILES) \
-  $(TEST_SERVER_DATABASE)
+  $(TEST_FILES)
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@#
 	# create test archive
-	($(CD) $(SUB_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
+	@#
 	@$(MAKE) test_server_operations_socket_server
-	@$(MAKE) test_server_operations_socket_client
+	echo @$(MAKE) test_server_operations_socket_client
 	if test -f $(TEST_SERVER_PID_FILE); then $(KILL) -9 `$(CAT) $(TEST_SERVER_PID_FILE)` 2>/dev/null; fi; \
 
 test_server_operations_batch: \
@@ -4018,7 +3983,7 @@ test_server_operations_batch: \
 	$(call functionCleanTestFiles)
 	@#
 	# create test archive
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
 	@#
 	# run batch server
 	( \
@@ -4080,7 +4045,8 @@ test_master_slave_operations_master: \
   $(TEST_BAR) \
   $(TEST_CONFIG) \
   $(TEST_JOBS_DIRECTORY) \
-  $(TEST_SERVER_JOBS_DIRECTORY)
+  $(TEST_SERVER_JOBS_DIRECTORY) \
+  $(TEST_SLAVE_JOBS_DIRECTORY)
 	( \
 	  $(CD) $(UP_DIR); \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -4117,6 +4083,7 @@ test_master_slave_operations_slave: \
   $(TEST_BAR) \
   $(TEST_SLAVE_CONFIG) \
   $(TEST_JOBS_DIRECTORY) \
+  $(TEST_SLAVE_JOBS_DIRECTORY) \
   $(TEST_FILES)
 	@$(call functionVerifyParameter,TEST_SLAVE_PORT)
 	@$(call functionVerifyParameter,TEST_SLAVE_USERNAME)
@@ -4131,9 +4098,9 @@ test_master_slave_operations_slave: \
             $(call functionSlaveExecute,$(KILLALL) $(TEST_BAR)); \
             $(call functionSlaveCopy,$(TEST_BAR),$(TEST_BAR)); \
             $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_DIRECTORY)); \
-            $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_JOBS)); \
+            $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_JOBS_DIRECTORY)); \
             $(call functionSlaveCopy,bar.cfg,$(TEST_SLAVE_CONFIG)); \
-            $(call functionSlaveExecute,$(RMF) $(TEST_SLAVE_JOBS)/__test__); \
+            $(call functionSlaveExecute,$(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/__test__); \
 	    $(call functionSlaveExecute,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
 	      --no-default-config --config=$(TEST_SLAVE_CONFIG) \
@@ -4143,7 +4110,7 @@ test_master_slave_operations_slave: \
               --server-mode=slave \
 	      --server-port=$(TEST_SLAVE_PORT) \
 	      --index-database=$(TEST_SLAVE_DATABASE) \
-              --jobs-directory=$(TEST_SLAVE_JOBS) \
+              --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
 	      --server-debug \
               --log-file=$(TEST_SLAVE_LOG_FILE) \
               --log=all \
@@ -4152,9 +4119,9 @@ test_master_slave_operations_slave: \
             ); \
           else \
             $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_DIRECTORY); \
-            $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_JOBS); \
+            $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_JOBS_DIRECTORY); \
             $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_SLAVE_CONFIG); \
-            $(RMF) $(TEST_SLAVE_JOBS)/__test__; \
+            $(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/__test__; \
 	    $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
 	      --no-default-config --config=$(TEST_SLAVE_CONFIG) \
@@ -4164,7 +4131,7 @@ test_master_slave_operations_slave: \
               --server-mode=slave \
 	      --server-port=$(TEST_SLAVE_PORT) \
 	      --index-database=$(TEST_SLAVE_DATABASE) \
-              --jobs-directory=$(TEST_SLAVE_JOBS) \
+              --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
 	      --server-debug \
               --log-file=$(TEST_SLAVE_LOG_FILE) \
               --log=all \
