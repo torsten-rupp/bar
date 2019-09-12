@@ -192,9 +192,30 @@ ERROR NO_WEBDAV_PASSWORD
 ERROR INVALID_WEBDAV_PASSWORD          TR("invalid WebDAV password")
 ERROR WEBDAV_AUTHENTICATION            TR("invalid WebDAV user/password")
 ERROR WEBDAV_BAD_REQUEST               TR("WebDAV bad request")
-ERROR WEBDAV_GET_SIZE                  TR("get WebDAV file size fail")
-ERROR WEBDAV_UPLOAD                    TR("WebDAV upload fail")
-ERROR WEBDAV_DOWNLOAD                  TR("WebDAV download fail")
+ERROR WEBDAV_GET_SIZE
+  stringSet(errorText,sizeof(errorText),TR("get WebDAV file size"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+  }
+  stringAppend(errorText,sizeof(errorText)," fail");
+
+ERROR WEBDAV_UPLOAD
+  stringSet(errorText,sizeof(errorText),TR("WebDAV upload"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+  }
+  stringAppend(errorText,sizeof(errorText)," fail");
+
+ERROR WEBDAV_DOWNLOAD
+  stringSet(errorText,sizeof(errorText),TR("WebDAV download"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+  }
+  stringAppend(errorText,sizeof(errorText)," fail");
+
 ERROR WEBDAV_FAIL
   stringSet(errorText,sizeof(errorText),TR("WebDAV fail"));
   if (!stringIsEmpty(ERROR_DATA))

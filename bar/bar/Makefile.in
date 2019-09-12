@@ -1417,7 +1417,8 @@ ifneq ($(LCOV),)
           QUIET=1
 	@$(MAKE) gcov_crypt \
           COMPRESS_NAMES="none" \
-          CRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
+          xxxCRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
+          CRYPT_NAMES="none" \
           QUIET=1
 	@$(MAKE) gcov_asymmetric_crypt \
           COMPRESS_NAMES="none" \
@@ -1467,6 +1468,10 @@ ifneq ($(TEST_PASSWORD_WEBDAV),)
           CRYPT_NAMES="none" \
           QUIET=1
 endif
+	@$(MAKE) gcov_server \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
 	@$(MAKE) gcov_arguments \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \

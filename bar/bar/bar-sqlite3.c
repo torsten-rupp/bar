@@ -31,7 +31,7 @@
 #include "sqlite3.h"
 
 #include "index_definition.h"
-#include "archive.h"
+#include "archive_format_const.h"
 
 /****************** Conditional compilation switches *******************/
 
@@ -52,6 +52,18 @@ typedef enum
 
   EXITCODE_UNKNOWN                = 128
 } ExitCodes;
+
+// archive types
+const char *ARCHIVE_TYPES[] =
+{
+  [CHUNK_CONST_ARCHIVE_TYPE_NONE        ] = "none",
+  [CHUNK_CONST_ARCHIVE_TYPE_NORMAL      ] = "normal",
+  [CHUNK_CONST_ARCHIVE_TYPE_FULL        ] = "full",
+  [CHUNK_CONST_ARCHIVE_TYPE_INCREMENTAL ] = "incremental",
+  [CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL] = "differential",
+  [CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS  ] = "continuous"
+};
+
 
 /***************************** Datatypes *******************************/
 
@@ -120,6 +132,8 @@ LOCAL void printUsage(const char *programName)
   printf("          -h|--help                 - print this help\n");
 }
 
+#if 0
+//TODO: required?
 /***********************************************************************\
 * Name   : unixTimestamp
 * Purpose: callback for UNIXTIMESTAMP function
@@ -567,6 +581,7 @@ LOCAL String formatSQLString(String     sqlString,
 
   return sqlString;
 }
+#endif /* 0 */
 
 /***********************************************************************\
 * Name   : sqlProgressHandler
@@ -902,6 +917,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
                                assert(values[0] != NULL);
 
                                UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
                                UNUSED_VARIABLE(userData);
 
                                stringSet(name,sizeof(name),values[0]);
@@ -988,6 +1004,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
                                assert(values[0] != NULL);
 
                                UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
                                UNUSED_VARIABLE(userData);
 
                                stringSet(name,sizeof(name),values[0]);
@@ -1027,6 +1044,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
                                assert(values[0] != NULL);
 
                                UNUSED_VARIABLE(columns);
+                               UNUSED_VARIABLE(count);
                                UNUSED_VARIABLE(userData);
 
                                stringSet(name,sizeof(name),values[0]);
@@ -1227,6 +1245,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              totalEntriesCount = (ulong)atol(values[0]);
@@ -1250,6 +1269,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              totalEntriesNewestCount = (ulong)atol(values[0]);
@@ -1317,6 +1337,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              assert(values[9] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              entryId         = (uint64)atoll(values[0]);
@@ -1340,6 +1361,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                                                         assert(values[0] != NULL);
 
                                                         UNUSED_VARIABLE(columns);
+                                                        UNUSED_VARIABLE(count);
                                                         UNUSED_VARIABLE(userData);
 
                                                         existsFlag = (values[0] != NULL);
@@ -1759,6 +1781,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              totalCount = (ulong)atol(values[0]);
@@ -1815,6 +1838,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[2] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId    = (uint64)atoll(values[0]);
@@ -1887,6 +1911,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[2] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId    = (uint64)atoll(values[0]);
@@ -1956,6 +1981,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId = (uint64)atoll(values[0]);
@@ -2018,6 +2044,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId = (uint64)atoll(values[0]);
@@ -2082,6 +2109,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId = (uint64)atoll(values[0]);
@@ -2145,6 +2173,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId = (uint64)atoll(values[0]);
@@ -2212,6 +2241,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[2] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId    = (uint64)atoll(values[0]);
@@ -2281,6 +2311,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[2] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId    = (uint64)atoll(values[0]);
@@ -2350,6 +2381,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId = (uint64)atoll(values[0]);
@@ -2412,6 +2444,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId = (uint64)atoll(values[0]);
@@ -2478,6 +2511,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              totalCount = (ulong)atol(values[0]);
@@ -2507,6 +2541,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              storageId = (uint64)atoll(values[0]);
@@ -3305,6 +3340,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  %-11s: %s\n",values[0],values[1]);
@@ -3329,6 +3365,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  OK         : %s\n",values[0]);
@@ -3351,6 +3388,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Error      : %s\n",values[0]);
@@ -3372,6 +3410,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Deleted    : %s\n",values[0]);
@@ -3398,6 +3437,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3420,6 +3460,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3442,6 +3483,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3463,6 +3505,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Directories: %lu\n",atol(values[0]));
@@ -3484,6 +3527,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Links      : %lu\n",atol(values[0]));
@@ -3506,6 +3550,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3527,6 +3572,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Special    : %lu\n",atol(values[0]));
@@ -3552,6 +3598,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3574,6 +3621,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3596,6 +3644,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3617,6 +3666,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Directories: %lu\n",atol(values[0]));
@@ -3638,6 +3688,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Links      : %lu\n",atol(values[0]));
@@ -3660,6 +3711,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[1] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
@@ -3681,6 +3733,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
                              printf("  Special    : %lu\n",atol(values[0]));
@@ -4023,6 +4076,7 @@ int main(int argc, const char *argv[])
                        assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
                        maxIdLength          = (uint)1+log10(atof(values[0]));
@@ -4039,21 +4093,29 @@ int main(int argc, const char *argv[])
                      jobUUID
                     );
 
-    stringFormat(format,sizeof(format),"%%-%ds %%-%ds %%64s %%s\n",maxIdLength,maxStorageNameLength);
-fprintf(stderr,"%s, %d: format=%s\n",__FILE__,__LINE__,format);
+    stringFormat(format,sizeof(format),"%%-%ds %%-%ds %%64s %%-10s\n",maxIdLength,maxStorageNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_execute(&databaseHandle,
                      CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
+                       uint       archiveType;
+                       const char *s;
+
                        assert(count == 4);
                        assert(values != NULL);
                        assert(values[0] != NULL);
                        assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
-                       char *s=Archive_archiveTypeToString((ArchiveTypes)atoi(values[3]), "unknown");
+                       archiveType = atoi(values[3]);
+                       s = "unknown";
+                       for (uint i = CHUNK_CONST_ARCHIVE_TYPE_NONE; i <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS; i++)                      
+                       {
+                         if (i == archiveType) s = ARCHIVE_TYPES[i];
+                       }
 
                        printf(format,values[0],values[1],values[2],s);
 
@@ -4084,6 +4146,7 @@ fprintf(stderr,"%s, %d: format=%s\n",__FILE__,__LINE__,format);
                        assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
                        maxIdLength          = (uint)1+log10(atof(values[0]));
@@ -4113,6 +4176,7 @@ fprintf(stderr,"%s, %d: format=%s\n",__FILE__,__LINE__,format);
                        assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
                        printf(format,values[0],values[1],values[2]);
@@ -4145,6 +4209,7 @@ fprintf(stderr,"%s, %d: format=%s\n",__FILE__,__LINE__,format);
                        assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
                        maxIdLength          = (uint)1+log10(atof(values[0]));
@@ -4174,6 +4239,7 @@ fprintf(stderr,"%s, %d: format=%s\n",__FILE__,__LINE__,format);
                        assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
+                       UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
                        printf(format,values[0],values[1],values[2]);

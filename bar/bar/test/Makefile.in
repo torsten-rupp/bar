@@ -1741,23 +1741,23 @@ test_arguments: \
   $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test parameters..."
 	@$(ECHO) "# test config" >intermediate/test.cfg
-	#
+	@#
 	# short/long options
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --create intermediate/test.bar data/zero.dat $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --test intermediate/test.bar $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compare intermediate/test.bar $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --extract intermediate/test.bar --destination restore $(LOG))
-	#
+	@#
 	# help
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -h 1>/dev/null $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --help 1>/dev/null $(LOG))
-	#
+	@#
 	# working directory
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C intermediate $(TEST_OPTIONS) -c test.bar ../data/zero.dat $(LOG))
-	#
+	@#
 	# normal/full/incremental/differential
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	@$(RMF) intermediate/test-full.bid
@@ -1773,7 +1773,7 @@ test_arguments: \
 	test `$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test-incremental-empty.bar --no-header-footer 2>/dev/null|$(WC) -l` = "0" $(LOG)
 	@$(RMF) intermediate/random1024-new.dat
 	@$(RMF) intermediate/test-full.bid
-	#
+	@#
 	# patterns
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar data/zero.dat $(LOG))
@@ -1789,7 +1789,7 @@ test_arguments: \
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t "intermediate/not-existing-file-test*.bar" $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d intermediate/not-existing-file-test*.bar $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d "intermediate/not-existing-file-test*.bar" $(LOG))
-	#
+	@#
 	# compress
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=none $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -z none $(LOG))
@@ -1813,7 +1813,7 @@ ifeq (@HAVE_XDELTA3@,1)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=none+zip0 $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --compress-algorithm=xdelta1+zip0 $(LOG))
 endif
-	#
+	@#
 	# crypt
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=none        $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=3DES        $(LOG))
@@ -1830,7 +1830,7 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=CAMELLIA128 $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=CAMELLIA192 $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --crypt-algorithm=CAMELLIA256 $(LOG))
-	#
+	@#
 	# commands (test parsing command line options only for commands only used in server)
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar --pre-command="echo" --post-command="echo" data/zero.dat --overwrite-archive-files $(LOG))
@@ -1840,12 +1840,12 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar --exclude-command="find data" --overwrite-archive-files $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --storage-command="find . -type f -name test.bar || true" $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --mount-command="echo" --overwrite-archive-files $(LOG))
-	#
+	@#
 	# special file names
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat --overwrite-archive-files $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar not-existing-file-%d%f%p%s.dat --overwrite-archive-files --skip-unreadable=no $(LOG))
-	#
+	@#
 	# different options
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar --verbose=2 $(LOG))
@@ -1854,7 +1854,7 @@ endif
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x intermediate/test.bar --directory-strip=1 --destination restore $(LOG))
-	#
+	@#
 	# partial restore
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) $(LOG))
@@ -1874,7 +1874,7 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x intermediate/test.bar --destination restore --restore-entry-mode=overwrite $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x intermediate/test.bar --destination restore --restore-entry-mode=rename $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x intermediate/test.bar --destination restore --restore-entry-mode=rename $(LOG))
-	#
+	@#
 	$(call functionTestCheckExitcode,0,0,$(ECHO) intermediate/test*.bar | $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l --storage-list-stdin $(LOG))
 	$(ECHO) 'intermediate/test*.bar' > intermediate/storage.list
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l --storage-list intermediate/storage.list $(LOG))
@@ -1892,7 +1892,7 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test*.bar -H -# '*rand*' -! '*512*' $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test*.bar -L -# '*rand*' -! '*512*' $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l intermediate/test*.bar -g -H -L -# '*rand*' -! '*512*' $(LOG))
-	#
+	@#
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config=intermediate/test.cfg -l intermediate/test*.bar $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --dry-run $(LOG))
 	$(call functionTestCheckExitcode,0,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -l cd://test*.bar $(LOG))
@@ -1910,7 +1910,7 @@ endif
 #	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c /media/ramdisk/test.bar $(TEST_FILES) --overwrite-archive-files --verbose=2 --mount=/media/ramdisk $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --remote-bar-executable=$(TEST_BAR) $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --config=intermediate/bar.cfg $(LOG))
-	#
+	@#
 	# server
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-mode=master $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-mode=slave $(LOG))
@@ -1918,13 +1918,13 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-tls-port=1234 $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-password=test $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-max-connections=1234 $(LOG))
-	#
+	@#
 	# owner
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --owner=test:test $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --owner=:test $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --owner=test: $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --owner=test $(LOG))
-	#
+	@#
 	# permissions
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --permissions=r--:r--:r-- $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --permissions=-w-:-w-:-w- $(LOG))
@@ -1936,9 +1936,9 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --permissions=-w- $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --permissions=--x $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --permissions=644 $(LOG))
-	#
+	@#
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --permissions=644 $(LOG))
-	#
+	@#
 	# bandwidth
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --max-band-width=1000000 $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --max-band-width=1000K $(LOG))
@@ -1952,7 +1952,7 @@ endif
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --max-band-width="1M *-*-1 foo 23:*" $(LOG))
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --max-band-width="1M *-*-1 Mon foo:*" $(LOG))
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --max-band-width="1M *-*-1 Mon 23:foo" $(LOG))
-	#
+	@#
 	# file/entry modes
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --archive-file-mode=stop $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --archive-file-mode=append $(LOG))
@@ -1964,13 +1964,13 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --restore-entry-mode=rename $(LOG))
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --restore-entry-mode=foo $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --overwrite-files=yes $(LOG))
-	#
+	@#
 	# templates
 	@$(RMF) intermediate/test-????-??-??-??-??-??-#.bar; \
         $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test-%Y-%m-%d-%H-%M-%S-%#.bar $(TEST_FILES) --overwrite-archive-files $(LOG)); \
         test -f intermediate/test-????-??-??-??-??-??-#.bar;
 	@$(RMF) intermediate/test-????-??-??-??-??-??-#.bar
-	#
+	@#
 	# scripts
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="echo pre > intermediate/output.txt" --file-write-post-command="echo post echo pre > intermediate/output.txt" $(LOG))
@@ -1978,7 +1978,7 @@ endif
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-pre-command="false;" $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-post-command="true;" $(LOG))
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files --file-write-post-command="false;" $(LOG))
-	#
+	@#
 	# keys
 	@$(RMRF) intermediate/keys
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-keys --generate-keys-mode=transient --crypt-password=foo intermediate/keys/key-crypt $(LOG))
@@ -1991,11 +1991,11 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --signature-public-key="`$(CAT) intermediate/keys/key-signature.public`" $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-keys --generate-keys-mode=transient --crypt-password=foo $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys --generate-keys-mode=transient $(LOG))
-	#
+	@#
 	$(BAR_DIR)/bar-keygen --tls-directory=intermediate/keys --private-directory=intermediate/keys --certs-directory=intermediate/keys --openssl --force $(LOG)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-ca-file=intermediate/keys/bar-ca.pem  --server-cert-file=intermediate/keys/bar-server-cert.pem --server-key-file=intermediate/keys/bar-server-key.pem $(LOG))
 	@$(RMRF) intermediate/keys
-	#
+	@#
 	# wrong options
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,5,5,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --not-existing-option  $(LOG))
@@ -2007,10 +2007,10 @@ ifeq (@HAVE_XDELTA3@,1)
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(LOG))
 endif
 	$(call functionTestCheckExitcode,6,6,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test-not-exists.cfg -l intermediate/test*.bar $(LOG))
-	#
+	@#
 	# deprecated command line options
 	@$(RMRF) $(TEST_FILES_CLEAN)
-	#
+	@#
 	# deprecated configuration values
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(ECHO) "mount-device = foo" >intermediate/test-deprecated.cfg
@@ -2031,18 +2031,18 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(LOG))
 	$(ECHO) "remote-host-force-ssl = no" >intermediate/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(LOG))
-	#
+	@#
 	# wrong configuration values
 	$(ECHO) "does-not-exist = foo" >intermediate/test-deprecated.cfg
 	$(call functionTestCheckExitcode,6,6,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(LOG))
-	#
+	@#
 	# test not implemented functions
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) device://test/test.bar $(LOG))
 	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t device://test/test.bar $(LOG))
 	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d device://test/test.bar $(LOG))
 	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x device://test/test.bar $(LOG))
-	#
+	@#
 	@$(RMF) intermediate/test.cfg
 	@$(RMF) intermediate/test-deprecated.cfg
 	@$(ECHO) "ok"
@@ -2070,11 +2070,11 @@ test_misc: \
   $(TEST_FILES)
 	@$(ECHO_NO_LF) "Test miscellaneous..."
 	@$(RMRF) $(TEST_FILES_CLEAN)
-	#
+	@#
 	if test ! "$(TEST_BAR)" = "$(TEST_BAR_VALGRIND)"; then \
 	  $(call functionTestCheckExitcode,134,134,($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT_LOW); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/test.bar $(TEST_FILES) --overwrite-archive-files $(LOG))); \
         fi
-	#
+	@#
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
 	@
@@ -2364,7 +2364,7 @@ test_file_operations_base: \
 	@$(call functionInfo,test file operations base)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	$(call functionCleanTestFiles)
 	@# Note: create twice to test delete+create=overwrite
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
@@ -2408,24 +2408,24 @@ ifeq (@HAVE_XDELTA3@,1)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
-	#
+	@#
 	$(call functionCleanTestFiles)
 	($(CD) data/delta1; $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -c ../../intermediate/$(BAR_FILE)-A.bar test.dat $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
-	#
+	@#
 	$(RMF) intermediate/$(BAR_PATTERN)-B.bar restore/test.dat
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -c ../../intermediate/$(BAR_FILE)-B.bar test.dat --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)             -t intermediate/$(BAR_PATTERN)-B.bar --delta-source='intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -d ../../intermediate/$(BAR_PATTERN)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -x ../../intermediate/$(BAR_PATTERN)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(LOG))
 	$(DIFF) data/delta2/test.dat restore/test.dat
-	#
+	@#
 	$(RMF) intermediate/$(BAR_PATTERN)-B.bar restore/test.dat
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -c ../../intermediate/$(BAR_FILE)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)             -t intermediate/$(BAR_PATTERN)-B.bar --delta-source='intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -d ../../intermediate/$(BAR_PATTERN)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -x ../../intermediate/$(BAR_PATTERN)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(LOG))
 	$(DIFF) data/delta2/test.dat restore/test.dat
-	#
+	@#
 ifeq (@HAVE_BZ2@,1)
 	$(RMF) intermediate/$(BAR_PATTERN)-B.bar restore/test.dat
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -c ../../intermediate/$(BAR_FILE)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(LOG))
@@ -2434,7 +2434,7 @@ ifeq (@HAVE_BZ2@,1)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -x ../../intermediate/$(BAR_PATTERN)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(LOG))
 	$(DIFF) data/delta2/test.dat restore/test.dat
 endif
-	#
+	@#
 ifeq (@HAVE_LZMA@,1)
 	$(RMF) intermediate/$(BAR_PATTERN)-B.bar restore/test.dat
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -c ../../intermediate/$(BAR_FILE)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' test.dat $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(LOG))
@@ -2453,7 +2453,7 @@ test_file_operations_dryrun: \
 	@$(call functionInfo,test file operations dryrun)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --dry-run --verbose=2 $(LOG))
 	test ! -f $(BAR_STORAGE)intermediate/$(BAR_FILE).bar
@@ -2466,7 +2466,7 @@ test_file_operations_incremental: \
 	@$(call functionInfo,test file operations incremental)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE)-full.bar --full --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	$(INSTALL) -d intermediate/new; $(CP) data/random1024.dat intermediate/new/random1024-new.dat
@@ -2483,7 +2483,7 @@ test_file_operations_differential: \
 	@$(call functionInfo,test file operations differential)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE)-full.bar --full --incremental-list-file=intermediate/$(BAR_FILE).bid $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	$(INSTALL) -d intermediate/new; $(CP) data/random1024.dat intermediate/new/random1024-new.dat
@@ -2502,7 +2502,7 @@ test_file_operations_destroyed: \
 	@$(call functionInfo,test file operations destroyed)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null))
 	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 >$${fileName}_destroyed; done
@@ -2520,10 +2520,10 @@ test_directory_operations: \
   $(TEST_BAR)
 	@$(call functionInfo,test directory operations)
 	@$(call functionVerifyParameter,TEST_BAR)
-	#
+	@#
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(BAR_STORAGE)intermediate $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(BAR_STORAGE)intermediate/ $(BAR_OPTIONS) $(LOG))
-	#
+	@#
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)  $(BAR_STORAGE)intermediate/not_existing $(BAR_OPTIONS) $(LOG)))
 
 .PHONY: test_convert_operations
@@ -2533,7 +2533,7 @@ test_convert_operations: \
 	@$(call functionInfo,test file operations convert)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	$(call functionCleanTestFiles)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c        $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) -L $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) -i none`")
@@ -2551,7 +2551,7 @@ test_convert_operations: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) --info $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) 'Franz Kafka: Das Schloss'`")
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) --convert $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(BAR_OPTIONS) --comment='Franz Kafka: Die Verwandlung' --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) test -n "`$(TEST_BAR) -C $(SUB_DIR) --info $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) | $(GREP) 'Franz Kafka: Die Verwandlung'`")
-	#
+	@#
 ifeq (@HAVE_GCRYPT@,1)
 	# convert encrypted AES256
 	$(RMRF) $(TEST_FILES_CLEAN)
@@ -2725,7 +2725,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext2 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -2781,7 +2781,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext2 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -2836,7 +2836,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext2 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -2901,7 +2901,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext3 random-data, default block size
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -2956,7 +2956,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext3 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -3011,7 +3011,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext3 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -3066,7 +3066,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext3 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -3131,7 +3131,7 @@ ifneq ($(findstring default,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext4 random-data, default block size
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -3186,7 +3186,7 @@ ifneq ($(findstring 1024,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext4 random-data, block size 1024 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -3241,7 +3241,7 @@ ifneq ($(findstring 2048,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext4 random-data, block size 2048 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -3296,7 +3296,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ext4 random-data, block size 4096 bytes
 	@$(call functionCreateFileRandom,test/dev0.dat,32,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,32,1M)
@@ -3313,7 +3313,7 @@ ifneq ($(findstring 4096,$(EXT_BLOCK_SIZES)),)
           test_image_operations_check
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	#$(call functionCreateSpare,test/dev0.dat,512G)
 	#$(call functionCreateSpare,test/dev1.dat,512G)
 	#@$(call functionInitFilesystem,test/dev0.dat,-t ext4 -b 4096,data/random* data/zero*.dat data/readonly*.dat data/file*.dat)
@@ -3357,7 +3357,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT12
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	# FAT12 zero-data
 	@$(call functionCreateFileZero,test/dev0.dat,1,1440K)
 	@$(call functionCreateFileZero,test/dev1.dat,1,1440K)
@@ -3375,7 +3375,7 @@ ifneq (@MKFS_MSDOS@,)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# FAT12 random-data
 	@$(call functionCreateFileRandom,test/dev0.dat,1,1440K)
 	@$(call functionCreateFileRandom,test/dev1.dat,1,1440K)
@@ -3419,7 +3419,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT16
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	# FAT16 zero-data
 	@$(call functionCreateFileZero,test/dev0.dat,20,1M)
 	@$(call functionCreateFileZero,test/dev1.dat,20,1M)
@@ -3437,7 +3437,7 @@ ifneq (@MKFS_MSDOS@,)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# FAT16 random-data
 	@$(call functionCreateFileRandom,test/dev0.dat,20,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,20,1M)
@@ -3481,7 +3481,7 @@ ifneq (@MKFS_MSDOS@,)
 	# FAT32
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	# FAT32 zero-data
 	@$(call functionCreateFileZero,test/dev0.dat,64,1M)
 	@$(call functionCreateFileZero,test/dev1.dat,64,1M)
@@ -3499,7 +3499,7 @@ ifneq (@MKFS_MSDOS@,)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# FAT32 random-data
 	@$(call functionCreateFileRandom,test/dev0.dat,64,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,64,1M)
@@ -3558,7 +3558,7 @@ ifneq (@MKFS_REISERFS@,)
 	# ReiserFS 3
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	# ReiserFS 3 zero-data
 	@$(call functionCreateFileZero,test/dev0.dat,64,1M)
 	@$(call functionCreateFileZero,test/dev1.dat,64,1M)
@@ -3576,7 +3576,7 @@ ifneq (@MKFS_REISERFS@,)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ReiserFS 3 random-data
 	@$(call functionCreateFileRandom,test/dev0.dat,64,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,64,1M)
@@ -3593,7 +3593,7 @@ ifneq (@MKFS_REISERFS@,)
           test_image_operations_check
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ReiserFS 3 zero-data
 	@$(call functionCreateFileZero,test/dev0.dat,64,1M)
 	@$(call functionCreateFileZero,test/dev1.dat,64,1M)
@@ -3611,7 +3611,7 @@ ifneq (@MKFS_REISERFS@,)
           test_image_operations_diff_image
 	$(RMF) test/dev1.dat
 	$(RMF) test/dev0.dat
-	#
+	@#
 	# ReiserFS 3 random-data
 	@$(call functionCreateFileRandom,test/dev0.dat,64,1M)
 	@$(call functionCreateFileRandom,test/dev1.dat,64,1M)
@@ -3660,7 +3660,7 @@ test_image_operations_dryrun: \
 	# delta tests
 	@$(call functionInfo,test image operation dryrun)
 	@$(call functionVerifyParameter,TEST_BAR)
-	#
+	@#
 	$(INSTALL) -d test
 	@$(call functionTestDeviceReset)
 	@
@@ -3702,17 +3702,17 @@ test_image_operations_base: \
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -t intermediate/test*.bar $(BAR_OPTIONS) $(LOG)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d intermediate/test*.bar $(BAR_OPTIONS) $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x intermediate/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE1))
@@ -3730,15 +3730,15 @@ test_image_operations_delta: \
 	@$(call functionVerifyParameter,DEVICE1)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@$(call functionVerifyParameter,BAR_PATTERN)
-	#
+	@#
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
-	#
+	@#
 ifeq (@HAVE_XDELTA3@,1)
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE)-B.bar $(DEVICE0) $(BAR_OPTIONS) --delta-source='intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files --verbose=2 $(LOG)
@@ -3746,18 +3746,18 @@ ifeq (@HAVE_XDELTA3@,1)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d intermediate/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
 endif
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x intermediate/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE1))
-	#
+	@#
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_A))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE)-A.bar $(DEVICE0) $(BAR_OPTIONS) --compress-algorithm=zip9 --overwrite-archive-files --verbose=2 $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
-	#
+	@#
 ifeq (@HAVE_XDELTA3@,1)
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0_B))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE)-B.bar $(DEVICE0) $(BAR_OPTIONS) --delta-source='intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --compress-algorithm=xdelta9+zip9 --force-delta-compression --overwrite-archive-files --verbose=2 $(LOG)
@@ -3765,7 +3765,7 @@ ifeq (@HAVE_XDELTA3@,1)
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -d intermediate/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
 endif
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -x intermediate/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE1))
@@ -3778,18 +3778,18 @@ test_image_operations_check:
 	@$(call functionVerifyParameter,IMAGE1)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
-	#
+	@#
 	@# ---
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE0) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
 	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE1) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
 	@$(call functionTestDeviceDelete,$(DEVICE1))
-	#
+	@#
 	@$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),test/dev0)
 	@$(call functionDeviceMount,$(DEVICE1),$(IMAGE1),test/dev1)
 	$(SUDO) -n $(DIFF) -r test/dev0 test/dev1 $(LOG)
@@ -3804,18 +3804,18 @@ test_image_operations_diff_image:
 	@$(call functionVerifyParameter,IMAGE1)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,DEVICE1)
-	#
+	@#
 	@# ---
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	@$(call functionTestDeviceDump,$(DEVICE0),test/dev0.dump)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
 	@$(call functionTestDeviceDump,$(DEVICE1),test/dev1.dump)
 	@$(call functionTestDeviceDelete,$(DEVICE1))
-	#
+	@#
 	$(DIFF) test/dev0.dump test/dev1.dump
 
 test_image_operations_create: \
@@ -3827,11 +3827,11 @@ test_image_operations_create: \
 	@$(call functionVerifyParameter,IMAGE0)
 	@$(call functionVerifyParameter,DEVICE0)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	@$(call functionTestDeviceReset)
-	#
+	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
 	$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -m intermediate/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
@@ -3844,7 +3844,7 @@ test_hugefiles_operations: \
 	@$(call functionInfo,test huge file opertations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(INSTALL) -d data/tmp
 	for z in $(TEST_HUGEFILES1); do \
@@ -3868,7 +3868,7 @@ test_dvd_operations: \
 	@$(call functionInfo,test DVD opertations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	@# ---
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SLEEP) 30
@@ -3901,7 +3901,7 @@ test_server_operations_socket_server: \
   $(TEST_FILES)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	( \
 	  $(CD) $(UP_DIR); \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -3938,7 +3938,7 @@ test_server_operations_socket_client: \
   $(TEST_BAR)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	( \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),VERSION); \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),STATUS); \
@@ -4014,12 +4014,13 @@ test_server_operations_batch: \
   $(TEST_BAR)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
-	#
+	@#
 	$(call functionCleanTestFiles)
-	#
+	@#
 	# create test archive
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
-	#
+	@#
+	# run batch server
 	( \
           $(call functionServerCommandBatch,VERSION); \
           $(call functionServerCommandBatch,STATUS); \
@@ -4120,7 +4121,7 @@ test_master_slave_operations_slave: \
 	@$(call functionVerifyParameter,TEST_SLAVE_PORT)
 	@$(call functionVerifyParameter,TEST_SLAVE_USERNAME)
 	@$(call functionVerifyParameter,TEST_SLAVE_PASSWORD)
-	#
+	@#
 	( \
 	  $(CD) $(UP_DIR); \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -4183,11 +4184,11 @@ test_master_slave_operations_create: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	$(MAKE) test_master_slave_operations_slave TEST_DETACH=1
 	$(MAKE) test_master_slave_operations_master TEST_DETACH=1
-	#
+	@#
 	( \
 $(call functionSlaveExecute,"ps auxw|grep bar"); \
         ) $(LOG)
-	#
+	@#
 	( \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_NEW name=__test__ jobUUID=test); \
           $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=test name=remote-host-name value=test); \
@@ -4200,8 +4201,8 @@ $(call functionSlaveExecute,"ps auxw|grep bar"); \
           $(SLEEP) 2; \
           done; \
         ) $(LOG)
-	#
-	#
+	@#
+	@#
 	@$(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
 	@$(call functionSlaveExecute,"$(KILLALL) $(TEST_BAR)"); \
 

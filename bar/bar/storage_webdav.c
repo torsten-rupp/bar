@@ -458,9 +458,9 @@ LOCAL Errors getResponseError(CURL *curlHandle)
   assert(curlHandle != NULL);
 
   curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
-fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
   if (curlCode == CURLE_OK)
   {
+fprintf(stderr,"%s, %d: responseCode=%d\n",__FILE__,__LINE__,responseCode);
     switch (responseCode)
     {
       case HTTP_CODE_OK:
@@ -469,6 +469,7 @@ fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
         error = ERROR_NONE;
         break;
       case HTTP_CODE_BAD_REQUEST:
+      case HTTP_CODE_BAD_METHOD:
         error = ERROR_WEBDAV_BAD_REQUEST;
         break;
       case HTTP_CODE_UNAUTHORIZED:
@@ -479,13 +480,13 @@ fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
         error = ERROR_FILE_NOT_FOUND_;
         break;
       default:
-        error = ERRORX_(WEBDAV_FAIL,0,"a %s",curl_easy_strerror(curlCode));
+        error = ERRORX_(WEBDAV_FAIL,0,"%s",curl_easy_strerror(curlCode));
         break;
     }
   }
   else
   {
-    error = ERRORX_(WEBDAV_FAIL,0,"b %s",curl_easy_strerror(curlCode));
+    error = ERRORX_(WEBDAV_FAIL,0,"%s",curl_easy_strerror(curlCode));
   }
 
   return error;
@@ -1425,7 +1426,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       return error;
     }
 
-#if 0
+#if 0    
     // check response code
     curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
 fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
@@ -1600,6 +1601,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     // check if file exists
     if (!fileDirectoryExists(storageHandle->webdav.curlHandle,url))
     {
+      error = ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(url));
       String_delete(url);
       String_delete(baseName);
       String_delete(directoryName);
@@ -1607,7 +1609,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       free(storageHandle->webdav.receiveBuffer.data);
-      return ERROR_FILE_NOT_FOUND_;
+      return error;
     }
 
     // get file size
@@ -1616,6 +1618,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
         || (fileSize < 0.0)
        )
     {
+      error = ERRORX_(WEBDAV_GET_SIZE,0,"%s",String_cString(url));
       String_delete(url);
       String_delete(baseName);
       String_delete(directoryName);
@@ -1623,7 +1626,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       free(storageHandle->webdav.receiveBuffer.data);
-      return ERROR_WEBDAV_GET_SIZE;
+      return error;
     }
     storageHandle->webdav.size = (uint64)fileSize;
 
@@ -1661,7 +1664,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
       error = getResponseError(storageHandle->webdav.curlHandle);
     }
 
-#if 0
+#if 0    
     // check response code
     curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
 fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
@@ -2484,7 +2487,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
     else
     {
-      error = ERRORX_(FILE_NOT_FOUND_,0,"%s",curl_easy_strerror(curlCode));
+      error = ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(url));
     }
 
     // free resources
@@ -2707,11 +2710,12 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     curl_slist_free_all(curlSList);
     if (curlCode != CURLE_OK)
     {
+      error = getResponseError(curlHandle);
       String_delete(directoryData);
       String_delete(url);
       (void)curl_easy_cleanup(curlHandle);
       AutoFree_cleanup(&autoFreeList);
-      return ERROR_READ_DIRECTORY;
+      return error;
     }
 
     // parse directory entries
