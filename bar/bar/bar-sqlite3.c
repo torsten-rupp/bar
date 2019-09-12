@@ -760,6 +760,10 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
 
   if (verboseFlag) { fprintf(stderr,"Create..."); fflush(stderr); }
 
+  // delete existing file
+  (void)File_deleteCString(databaseFileName,FALSE);
+
+  // create new database
   error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,WAIT_FOREVER);
   if (error != ERROR_NONE)
   {
@@ -767,6 +771,7 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
     return error;
   }
 
+  // create tables, triggers
   error = Database_execute(databaseHandle,
                            CALLBACK(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -4112,7 +4117,7 @@ int main(int argc, const char *argv[])
 
                        archiveType = atoi(values[3]);
                        s = "unknown";
-                       for (uint i = CHUNK_CONST_ARCHIVE_TYPE_NONE; i <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS; i++)                      
+                       for (uint i = CHUNK_CONST_ARCHIVE_TYPE_NONE; i <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS; i++)
                        {
                          if (i == archiveType) s = ARCHIVE_TYPES[i];
                        }
