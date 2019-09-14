@@ -623,7 +623,7 @@ LOCAL Errors testDirectoryEntry(ArchiveHandle     *archiveHandle,
       && !PatternList_match(excludePatternList,directoryName,PATTERN_MATCH_MODE_EXACT)
      )
   {
-    printInfo(1,"  Test directory  '%s'...",String_cString(directoryName));
+    printInfo(1,"  Test directory '%s'...",String_cString(directoryName));
 
     // check if all data read
     if (!Archive_eofData(&archiveEntryInfo))
