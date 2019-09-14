@@ -2241,16 +2241,20 @@ data/fifo:
 	($(CD) data; $(MKFIFO) fifo)
 data/name\'.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >"$@"
+	@# Note: not using "$@"
+	$(ECHO) Hello World >data/name\'.dat
 data/name\".dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >'$@'
+	@# Note: not using '$@'
+	$(ECHO) Hello World >data/name\".dat
 data/name\\.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >'$@'
+	@# Note: not using '$@'
+	$(ECHO) Hello World >data/name\\.dat
 data/name\\n.dat:
 	$(INSTALL) -d $(@D)
-	$(ECHO) Hello World >'$@'
+	@# Note: not using '$@'
+	$(ECHO) Hello World >data/name\\n.dat
 data/name%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World >'$@'
