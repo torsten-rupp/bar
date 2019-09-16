@@ -10090,7 +10090,8 @@ LOCAL Errors runBatch(void)
 
   // batch mode -> run server with standard i/o
   error = Server_batch(STDIN_FILENO,
-                       STDOUT_FILENO
+                       STDOUT_FILENO,
+                       indexDatabaseFileName
                       );
   if (error != ERROR_NONE)
   {
