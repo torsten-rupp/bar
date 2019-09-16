@@ -950,8 +950,8 @@ void ServerIO_setEnd(ServerIO *serverIO)
 Errors ServerIO_decryptData(const ServerIO       *serverIO,
                             void                 **data,
                             uint                 *dataLength,
-                            ConstString          encryptedString,
-                            ServerIOEncryptTypes encryptType
+                            ServerIOEncryptTypes encryptType,
+                            ConstString          encryptedString
                            )
 {
   byte   encryptedBuffer[1024];
@@ -1159,8 +1159,8 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
   error = ServerIO_decryptData(serverIO,
                                &data,
                                &dataLength,
-                               encryptedString,
-                               encryptType
+                               encryptType,
+                               encryptedString
                               );
   if (error != ERROR_NONE)
   {
@@ -1178,8 +1178,8 @@ Errors ServerIO_decryptString(const ServerIO       *serverIO,
 
 Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
                                 Password             *password,
-                                ConstString          encryptedPassword,
-                                ServerIOEncryptTypes encryptType
+                                ServerIOEncryptTypes encryptType,
+                                ConstString          encryptedPassword
                                )
 {
   Errors error;
@@ -1195,8 +1195,8 @@ Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
   error = ServerIO_decryptData(serverIO,
                                &data,
                                &dataLength,
-                               encryptedPassword,
-                               encryptType
+                               encryptType,
+                               encryptedPassword
                               );
   if (error != ERROR_NONE)
   {
@@ -1324,8 +1324,8 @@ bool ServerIO_verifyPassword(const ServerIO       *serverIO,
     error = ServerIO_decryptData(serverIO,
                                  &data,
                                  &dataLength,
-                                 encryptedPassword,
-                                 encryptType
+                                 encryptType,
+                                 encryptedPassword
                                 );
     if (error != ERROR_NONE)
     {
@@ -1379,8 +1379,8 @@ bool ServerIO_verifyHash(const ServerIO       *serverIO,
   error = ServerIO_decryptData(serverIO,
                                &data,
                                &dataLength,
-                               encryptedHash,
-                               encryptType
+                               encryptType,
+                               encryptedHash
                               );
   if (error != ERROR_NONE)
   {
@@ -1524,6 +1524,15 @@ fprintf(stderr,"%s, %d: data='%s'\n",__FILE__,__LINE__,String_cString(data));
       {
 //fprintf(stderr,"%s, %d: parse %s\n",__FILE__,__LINE__,String_cString(commandNode->data));
         commandFlag = StringMap_parse(argumentMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL);
+        #ifndef NDEBUG
+          if (!commandFlag)
+          {
+            if (globalOptions.serverDebugLevel >= 1)
+            {
+              fprintf(stderr,"DEBUG: skipped malformed data: %s\n",String_cString(serverIO->line));
+            }
+          }
+        #endif /* not DEBUG */
       }
       else
       {

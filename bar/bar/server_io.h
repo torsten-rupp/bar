@@ -377,9 +377,9 @@ Errors xxxServerIO_acceptSession(ServerIO *serverIO);
 * Name   : ServerIO_decryptData
 * Purpose: decrypt data from hex/base64-string with session data
 * Input  : serverIO        - server i/o
-*          encryptedString - encrypted data (encoded string)
 *          encryptType     - encrypt type; see
 *                            SERVER_IO_ENCRYPT_TYPE_...
+*          encryptedString - encrypted data (encoded string)
 * Output : data       - decrypted data (secure memory)
 *          dataLength - decrypted data length
 * Return : ERROR_NONE or error code
@@ -394,8 +394,8 @@ Errors xxxServerIO_acceptSession(ServerIO *serverIO);
 Errors ServerIO_decryptData(const ServerIO       *serverIO,
                             void                 **data,
                             uint                 *dataLength,
-                            ConstString          encryptedString,
-                            ServerIOEncryptTypes encryptType
+                            ServerIOEncryptTypes encryptType,
+                            ConstString          encryptedString
                            );
 
 /***********************************************************************\
@@ -432,9 +432,9 @@ Errors ServerIO_encryptData(const ServerIO *serverIO,
 * Purpose: decrypt password from hex-string with session data
 * Input  : serverIO          - server i/o
 //TODO: use base64
-*          encryptedPassword - encrypted password, hex-encoded
 *          encryptType     - encrypt type; see
 *                            SERVER_IO_ENCRYPT_TYPE_...
+*          encryptedPassword - encrypted password, hex-encoded
 * Output : password - decrypted password
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -442,8 +442,8 @@ Errors ServerIO_encryptData(const ServerIO *serverIO,
 
 Errors ServerIO_decryptPassword(const ServerIO       *serverIO,
                                 Password             *password,
-                                ConstString          encryptedPassword,
-                                ServerIOEncryptTypes encryptType
+                                ServerIOEncryptTypes encryptType,
+                                ConstString          encryptedPassword
                                );
 
 /***********************************************************************\
