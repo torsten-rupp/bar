@@ -101,15 +101,17 @@ Errors Server_run(ServerModes       mode,
 /***********************************************************************\
 * Name   : Server_batch
 * Purpose: run batch server
-* Input  : inputDescriptor  - input file descriptor
-*          outputDescriptor - input file descriptor
+* Input  : inputDescriptor       - input file descriptor
+*          outputDescriptor      - input file descriptor
+*          indexDatabaseFileName - index database file name or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Server_batch(int inputDescriptor,
-                    int outputDescriptor
+Errors Server_batch(int        inputDescriptor,
+                    int        outputDescriptor,
+                    const char *indexDatabaseFileName
                    );
 
 #if 0

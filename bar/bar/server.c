@@ -2279,7 +2279,7 @@ LOCAL void schedulerThreadCode(void)
     return;
   }
 
-  // init index
+  // open index
   indexHandle = NULL;
   if (Index_isAvailable())
   {
@@ -3232,7 +3232,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   expiredJobName = String_new();
   string  = String_new();
 
-  // init index
+  // open index
   indexHandle = NULL;
   if (Index_isAvailable())
   {
@@ -3553,7 +3553,7 @@ LOCAL void indexThreadCode(void)
   printableStorageName = String_new();
   List_init(&indexCryptPasswordList);
 
-  // init index
+  // open index
   indexHandle = NULL;
   if (Index_isAvailable())
   {
@@ -3827,7 +3827,7 @@ LOCAL void autoIndexThreadCode(void)
   printableStorageName = String_new();
   storageName          = String_new();
 
-  // init index (Note: timeout not important; auto-index should not block)
+  // open index (Note: timeout is not important; auto-index should not block)
   indexHandle = NULL;
   if (Index_isAvailable())
   {
@@ -4579,8 +4579,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     error = ServerIO_decryptData(&clientInfo->io,
                                  &buffer,
                                  &bufferLength,
-                                 encryptedUUID,
-                                 encryptType
+                                 encryptType,
+                                 encryptedUUID
                                 );
     if (error == ERROR_NONE)
     {
@@ -7685,6 +7685,12 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
     return;
   }
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  if (!String_matchCString(jobUUID,STRING_BEGIN,"\\d{8}-\\d{4}-\\d{4}-\\d{4}-\\d{8}",NULL,NULL))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected UUID <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>");
+    String_delete(name);
+    return;
+  }
   master = String_new();
   StringMap_getString(argumentMap,"master",master,NULL);
 
@@ -11312,6 +11318,7 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 {
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
+  Errors               error;
   Password             password;
 
   assert(clientInfo != NULL);
@@ -11336,7 +11343,12 @@ LOCAL void serverCommand_decryptPasswordAdd(ClientInfo *clientInfo, IndexHandle 
 
   // decrypt password and add to list
   Password_init(&password);
-  if (!ServerIO_decryptPassword(&clientInfo->io,&password,encryptedPassword,encryptType))
+  error = ServerIO_decryptPassword(&clientInfo->io,
+                                   &password,
+                                   encryptType,
+                                   encryptedPassword
+                                  );
+  if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
     Password_done(&password);
@@ -11373,6 +11385,7 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
 {
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
+  Errors               error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11396,7 +11409,12 @@ LOCAL void serverCommand_ftpPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // decrypt password
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.ftpServer.password,encryptedPassword,encryptType))
+    error = ServerIO_decryptPassword(&clientInfo->io,
+                                     &clientInfo->jobOptions.ftpServer.password,
+                                     encryptType,
+                                     encryptedPassword
+                                    );
+    if (error != ERROR_NONE)
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_FTP_PASSWORD,"");
@@ -11430,6 +11448,7 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
 {
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
+  Errors               error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11453,7 +11472,12 @@ LOCAL void serverCommand_sshPassword(ClientInfo *clientInfo, IndexHandle *indexH
   // decrypt password
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.sshServer.password,encryptedPassword,encryptType))
+    error = ServerIO_decryptPassword(&clientInfo->io,
+                                     &clientInfo->jobOptions.sshServer.password,
+                                     encryptType,
+                                     encryptedPassword
+                                    );
+    if (error != ERROR_NONE)
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_SSH_PASSWORD,"");
@@ -11487,6 +11511,7 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
 {
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
+  Errors               error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11510,7 +11535,12 @@ LOCAL void serverCommand_webdavPassword(ClientInfo *clientInfo, IndexHandle *ind
   // decrypt password
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.webDAVServer.password,encryptedPassword,encryptType))
+    error = ServerIO_decryptPassword(&clientInfo->io,
+                                     &clientInfo->jobOptions.webDAVServer.password,
+                                     encryptType,
+                                     encryptedPassword
+                                    );
+    if (error != ERROR_NONE)
     {
       Semaphore_unlock(&clientInfo->lock);
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_WEBDAV_PASSWORD,"");
@@ -11547,6 +11577,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
   ServerIOEncryptTypes encryptType;
   String               encryptedPassword;
   JobNode              *jobNode;
+  Errors               error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11589,7 +11620,12 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
       // decrypt password
 //TODO: remove
 //      if (jobNode->job.options.cryptPassword == NULL) jobNode->job.options.cryptPassword = Password_new();
-      if (!ServerIO_decryptPassword(&clientInfo->io,&jobNode->job.options.cryptPassword,encryptedPassword,encryptType))
+      error = ServerIO_decryptPassword(&clientInfo->io,
+                                       &jobNode->job.options.cryptPassword,
+                                       encryptType,
+                                       encryptedPassword
+                                      );
+      if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
         Job_listUnlock();
@@ -11603,7 +11639,12 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
     // decrypt password
     SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      if (!ServerIO_decryptPassword(&clientInfo->io,&clientInfo->jobOptions.cryptPassword,encryptedPassword,encryptType))
+      error = ServerIO_decryptPassword(&clientInfo->io,
+                                       &clientInfo->jobOptions.cryptPassword,
+                                       encryptType,
+                                       encryptedPassword
+                                      );
+      if (error != ERROR_NONE)
       {
         Semaphore_unlock(&clientInfo->lock);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INVALID_CRYPT_PASSWORD,"");
@@ -12453,7 +12494,7 @@ LOCAL void serverCommand_storageListAdd(ClientInfo *clientInfo, IndexHandle *ind
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            indexId=<id>|0
+*            indexIds=<id>,..
 *          Result:
 \***********************************************************************/
 
@@ -13411,7 +13452,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     }
 
     // decrypt password
-    error = ServerIO_decryptPassword(&clientInfo->io,password,encryptedPassword,encryptType);
+    error = ServerIO_decryptPassword(&clientInfo->io,
+                                     password,
+                                     encryptType,
+                                     encryptedPassword
+                                    );
     if (error != ERROR_NONE)
     {
       String_delete(encryptedPassword);
@@ -16870,7 +16915,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   // init variables
   result = String_new();
 
-  // init index
+  // open index
   indexHandle = NULL;
   if (Index_isAvailable())
   {
@@ -17827,7 +17872,7 @@ Errors Server_run(ServerModes       mode,
     printWarning("No server password set!");
   }
 
-  // init index
+  // open index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // initial update statics data
@@ -18420,8 +18465,9 @@ Errors Server_run(ServerModes       mode,
   return ERROR_NONE;
 }
 
-Errors Server_batch(int inputDescriptor,
-                    int outputDescriptor
+Errors Server_batch(int        inputDescriptor,
+                    int        outputDescriptor,
+                    const char *indexDatabaseFileName
                    )
 {
   AutoFreeList autoFreeList;
@@ -18455,8 +18501,51 @@ Errors Server_batch(int inputDescriptor,
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
-  // init index
+  // init index database
+  if (!stringIsEmpty(indexDatabaseFileName))
+  {
+    error = Index_init(indexDatabaseFileName);
+    if (error != ERROR_NONE)
+    {
+      printInfo(1,"FAIL!\n");
+      printError("Cannot init index database '%s' (error: %s)!",
+                 indexDatabaseFileName,
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    printInfo(1,"OK\n");
+    AUTOFREE_ADD(&autoFreeList,indexDatabaseFileName,{ Index_done(); });
+  }
+
+  // open index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+
+  // start threads
+  if (Index_isAvailable())
+  {
+//TODO: required?
+    // init database pause callbacks
+    Index_setPauseCallback(CALLBACK(indexPauseCallback,NULL));
+
+    Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+    if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize index thread!");
+    }
+    if (globalOptions.indexDatabaseAutoUpdateFlag)
+    {
+      if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
+      {
+        HALT_FATAL_ERROR("Cannot initialize index update thread!");
+      }
+    }
+    if (!Thread_init(&purgeExpiredEntitiesThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredEntitiesThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
+    }
+  }
 
   // run in batch mode
   if (globalOptions.serverDebugLevel >= 1)
@@ -18544,11 +18633,41 @@ String_setCString(commandString,"3 ARCHIVE_LIST name=test.bar");processCommand(&
 processCommand(&clientInfo,commandString);
 #endif /* 0 */
 
+  // wait for thread exit
+  if (Index_isAvailable())
+  {
+    if (!Thread_join(&purgeExpiredEntitiesThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop purge expired entities thread!");
+    }
+    Thread_done(&purgeExpiredEntitiesThread);
+
+    if (globalOptions.indexDatabaseAutoUpdateFlag)
+    {
+      if (!Thread_join(&autoIndexThread))
+      {
+        HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
+      }
+      Thread_done(&autoIndexThread);
+    }
+    if (!Thread_join(&indexThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop index thread!");
+    }
+    Thread_done(&indexThread);
+
+    Semaphore_done(&indexThreadTrigger);
+
+    // done database pause callbacks
+    Index_setPauseCallback(CALLBACK(NULL,NULL));
+  }
+
   // done index
   Index_close(indexHandle);
 
   // free resources
   doneClient(&clientInfo);
+  if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   Semaphore_done(&serverStateLock);
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));

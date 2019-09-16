@@ -460,7 +460,6 @@ LOCAL Errors getResponseError(CURL *curlHandle)
   curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
   if (curlCode == CURLE_OK)
   {
-fprintf(stderr,"%s, %d: responseCode=%d\n",__FILE__,__LINE__,responseCode);
     switch (responseCode)
     {
       case HTTP_CODE_OK:
@@ -1426,7 +1425,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
       return error;
     }
 
-#if 0    
+#if 0
     // check response code
     curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
 fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
@@ -1664,7 +1663,7 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
       error = getResponseError(storageHandle->webdav.curlHandle);
     }
 
-#if 0    
+#if 0
     // check response code
     curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
 fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,curlCode,responseCode);
