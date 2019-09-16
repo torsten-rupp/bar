@@ -56,7 +56,7 @@ typedef enum
   WEEKDAY_SUN = 6,
 } WeekDays;
 
-// length of UUID string (xxxxxxxx-xxxx-Mxxx-Nxxx-xxxxxxxxxxxx)
+// length of UUID string (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 #define MISC_UUID_STRING_LENGTH 36
 
 // text macro patterns
