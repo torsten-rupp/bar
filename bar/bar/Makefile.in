@@ -1432,7 +1432,7 @@ ifneq ($(LCOV),)
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
           QUIET=1
-	@$(MAKE) gcov_split \
+	@$(MAKE) gcov_convert \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
           QUIET=1
