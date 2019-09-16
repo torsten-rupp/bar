@@ -189,10 +189,11 @@ LOCAL const struct
 
 /***************************** Variables *******************************/
 #ifndef NDEBUG
-  LOCAL pthread_once_t  debugFileInitFlag = PTHREAD_ONCE_INIT;
-  LOCAL pthread_mutex_t debugFileLock;
-  LOCAL DebugFileList   debugOpenFileList;
-  LOCAL DebugFileList   debugClosedFileList;
+  LOCAL pthread_once_t      debugFileInitFlag = PTHREAD_ONCE_INIT;
+  LOCAL pthread_mutexattr_t debugFileLockAttribute;
+  LOCAL pthread_mutex_t     debugFileLock;
+  LOCAL DebugFileList       debugOpenFileList;
+  LOCAL DebugFileList       debugClosedFileList;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -222,7 +223,12 @@ LOCAL const struct
 #ifndef NDEBUG
 LOCAL void debugFileInit(void)
 {
-  pthread_mutex_init(&debugFileLock,NULL);
+  if (pthread_mutexattr_init(&debugFileLockAttribute) != 0)
+  {
+    HALT_INTERNAL_ERROR("Cannot initialize file debug lock!");
+  }
+  pthread_mutexattr_settype(&debugFileLockAttribute,PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&debugFileLock,&debugFileLockAttribute);
   List_init(&debugOpenFileList);
   List_init(&debugClosedFileList);
 }
