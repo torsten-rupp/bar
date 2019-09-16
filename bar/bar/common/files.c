@@ -1343,27 +1343,17 @@ Errors File_getTmpFileNameCString(String     fileName,
   if (prefix == NULL) prefix = "tmp";
 
   // get directory
-  if (!stringIsEmpty(directory))
+  if (stringIsEmpty(directory)) directory = "/tmp";
+
+  // get template
+  n = stringLength(directory)+stringLength(FILE_SEPARATOR_STRING)+stringLength(prefix)+7+1;
+  s = (char*)malloc(n);
+  if (s == NULL)
   {
-    n = stringLength(directory)+stringLength(FILE_SEPARATOR_STRING)+stringLength(prefix)+7+1;
-    s = (char*)malloc(n);
-    if (s == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    stringSet(s,n,directory);
-    stringAppend(s,n,FILE_SEPARATOR_STRING);
+    HALT_INSUFFICIENT_MEMORY();
   }
-  else
-  {
-    n = stringLength(prefix)+7+1;
-    s = (char*)malloc(n);
-    if (s == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    stringClear(s);
-  }
+  stringSet(s,n,directory);
+  stringAppend(s,n,FILE_SEPARATOR_STRING);
   stringAppend(s,n,prefix);
   stringAppend(s,n,"-XXXXXX");
 
