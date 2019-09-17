@@ -799,6 +799,7 @@ ERROR DATABASE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DATABASE_EXISTS                  TR("database already exists")
 ERROR DATABASE_VERSION_UNKNOWN         TR("unknown version on index")
 ERROR DATABASE_MISSING_TABLE
   stringSet(errorText,sizeof(errorText),TR("missing table"));
