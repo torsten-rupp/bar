@@ -85,6 +85,7 @@ LOCAL bool       showNamesFlag         = FALSE;
 LOCAL bool       showHeaderFlag        = FALSE;
 LOCAL bool       headerPrintedFlag     = FALSE;
 LOCAL bool       foreignKeysFlag       = TRUE;
+LOCAL bool       forceFlag             = TRUE;
 LOCAL bool       pipeFlag              = FALSE;
 LOCAL bool       verboseFlag           = FALSE;
 LOCAL const char *jobUUID              = NULL;
@@ -127,6 +128,7 @@ LOCAL void printUsage(const char *programName)
   printf("          -n|--names                - print named values\n");
   printf("          -H|--header               - print headers\n");
   printf("          -f|--no-foreign-keys      - disable foreign key constraints\n");
+  printf("          --force                   - force operation\n");
   printf("          --pipe                    - read data from stdin and pipe into database (use ? as variable)\n");
   printf("          -v|--verbose              - verbose output\n");
   printf("          -h|--help                 - print this help\n");
@@ -759,6 +761,12 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
   Errors error;
 
   if (verboseFlag) { fprintf(stderr,"Create..."); fflush(stderr); }
+
+  // check if exists
+  if (!forceFlag && File_exists(databaseFileName))
+  {
+    return ERROR_DATABASE_EXISTS;
+  }
 
   // delete existing file
   (void)File_deleteCString(databaseFileName,FALSE);
@@ -3908,6 +3916,10 @@ int main(int argc, const char *argv[])
     else if (stringEquals(argv[i],"-f") || stringEquals(argv[i],"--no-foreign-keys"))
     {
       foreignKeysFlag = FALSE;
+    }
+    else if (stringEquals(argv[i],"--force"))
+    {
+      forceFlag = FALSE;
     }
     else if (stringEquals(argv[i],"--pipe"))
     {
