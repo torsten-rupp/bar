@@ -150,6 +150,34 @@ ERROR SSH
     stringSet(errorText,sizeof(errorText),TR("ssh protocol error"));
   }
 
+// --- job --------------------------------------------------------------
+ERROR JOB_ALREADY_EXISTS
+  stringFormat(errorText,sizeof(errorText),TR("job '%s' already exists"),ERROR_DATA);
+
+ERROR JOB_RUNNING
+  stringFormat(errorText,sizeof(errorText),TR("job '%s' running"),ERROR_DATA);
+
+ERROR CREATE_JOB
+  stringSet(errorText,sizeof(errorText),TR("create job fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR DELETE_JOB
+  stringSet(errorText,sizeof(errorText),TR("delete job fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR RENAME_JOB
+  stringSet(errorText,sizeof(errorText),TR("rename job fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 // --- storage ----------------------------------------------------------
 ERROR INIT_STORAGE                     TR("initialize storage fail")
 ERROR NO_STORAGE_NAME                  TR("no storage name given")
@@ -548,12 +576,14 @@ ERROR INSUFFICIENT_FILE_NOTIFY         TR("insufficient file notify entries")
 
 // --- optical disk i/o -------------------------------------------------
 ERROR OPTICAL_DISK_NOT_FOUND
-  stringSet(errorText,sizeof(errorText),TR("CD/DVD/BD device"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),"CD/DVD/BD device '%s' not found",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText),TR(" not found"));
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("CD/DVD/BD device not found"));
+  }
 
 ERROR OPEN_OPTICAL_DISK
   stringSet(errorText,sizeof(errorText),TR("open CD/DVD/BD disk"));
@@ -613,7 +643,7 @@ ERROR NOT_AN_ARCHIVE_FILE              TR("not an archive file")
 ERROR ARCHIVE_NOT_FOUND
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("archive '%s' not found"),ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),TR("archive '%s' not found"),ERROR_DATA);
   }
   else
   {
@@ -650,10 +680,13 @@ ERROR CRC_
   }
 
 ERROR ENTRY_NOT_FOUND
-  stringSet(errorText,sizeof(errorText),TR("entry not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormat(errorText,sizeof(errorText),"entry '%s' not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),"entry not found");
   }
 
 ERROR ENTRY_INCOMPLETE
@@ -788,8 +821,85 @@ ERROR INVALID_VALUE
   }
 
 ERROR AUTHORIZATION                    TR("authorization")
-ERROR JOB_NOT_FOUND                    TR("job not found")
-ERROR JOB                              TR("job error")
+ERROR JOB_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"job %s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("job not found"));
+  }
+
+ERROR SCHEDULE_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"schedule %s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("schedule not found"));
+  }
+
+ERROR PERSISTENCE_ID_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"persistence with id #%s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("persistence not found"));
+  }
+
+ERROR SERVER_ID_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"server with id #%s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("server not found"));
+  }
+
+ERROR ENTRY_ID_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"entry with id #%s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("entry not found"));
+  }
+
+ERROR PATTERN_ID_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"pattern with id #%s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("pattern not found"));
+  }
+
+ERROR MOUNT_ID_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"mount with id #%s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("mount not found"));
+  }
+
+ERROR DELTA_SOURCE_ID_NOT_FOUND
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormat(errorText,sizeof(errorText),"delta source with id #%s not found",ERROR_DATA);
+  }
+  else
+  {
+    stringSet(errorText,sizeof(errorText),TR("delta source not found"));
+  }
 
 // --- index database (SQLite3) -----------------------------------------
 ERROR DATABASE
@@ -848,7 +958,7 @@ ERROR DATABASE_INVALID_INDEX
 
 ERROR DATABASE_TIMEOUT                 TR("timeout accessing index")
 
-// --- mastesr/slave ----------------------------------------------------
+// --- master/slave -----------------------------------------------------
 ERROR MASTER_DISCONNECED               TR("master disconnected")
 ERROR SLAVE_DISCONNECTED               TR("slave disconnected")
 ERROR NOT_PAIRED                       TR("slave is not paired")

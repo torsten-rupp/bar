@@ -926,6 +926,14 @@ class $javaClassName extends Exception
     this(errorCode,errno,String.format(format,arguments));
   }
 
+  /** get error message
+   * @return error message
+   */
+  public String getMessage()
+  {
+    return getText(this);
+  }
+
   /** get error code
    * @return error code
    */
@@ -963,7 +971,7 @@ class $javaClassName extends Exception
    */
   public String toString()
   {
-    return getText();
+    return getText(this);
   }
 
   // -------------------------------------------------------------------

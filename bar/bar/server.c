@@ -5609,7 +5609,7 @@ LOCAL void serverCommand_serverListUpdate(ClientInfo *clientInfo, IndexHandle *i
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
-      ServerIO_sendResult(&clientInfo->io,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
+      ServerIO_sendResult(&clientInfo->io,serverId,TRUE,ERROR_SERVER_ID_NOT_FOUND,"%u",serverId);
       String_delete(privateKey);
       String_delete(publicKey);
       String_delete(password);
@@ -5720,7 +5720,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     if (serverNode == NULL)
     {
       Semaphore_unlock(&globalOptions.serverList.lock);
-      ServerIO_sendResult(&clientInfo->io,serverId,TRUE,ERROR_JOB_NOT_FOUND,"storage server with id #%u not found",serverId);
+      ServerIO_sendResult(&clientInfo->io,serverId,TRUE,ERROR_SERVER_ID_NOT_FOUND,"%u",serverId);
       return;
     }
 
@@ -7089,7 +7089,7 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -7177,7 +7177,7 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(value);
       String_delete(name);
@@ -7259,7 +7259,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -7420,7 +7420,7 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -7511,7 +7511,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       String_delete(scheduleCustomText);
       Job_listUnlock();
       return;
@@ -7576,7 +7576,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -7629,7 +7629,7 @@ LOCAL void serverCommand_jobReset(ClientInfo *clientInfo, IndexHandle *indexHand
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -7705,7 +7705,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       // check if job already exists
       if (Job_exists(name))
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_ALREADY_EXISTS,"%S",name);
         Job_listUnlock();
         String_delete(master);
         String_delete(name);
@@ -7718,7 +7718,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       if (error != ERROR_NONE)
       {
         String_delete(fileName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_CREATE_JOB,"%s",Error_getText(error));
         Job_listUnlock();
         String_delete(master);
         String_delete(name);
@@ -7830,7 +7830,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     // check if mew job already exists
     if (Job_exists(name))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(name));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_ALREADY_EXISTS,"%s",name);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -7840,7 +7840,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -7852,7 +7852,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"create job '%s' fail: %s",String_cString(name),Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_CREATE_JOB,"%s",Error_getText(error));
       Job_listUnlock();
       String_delete(name);
       return;
@@ -7937,7 +7937,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     // check if job already exists
     if (Job_exists(newName))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job '%s' already exists",String_cString(newName));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_ALREADY_EXISTS,"%S",newName);
       Job_listUnlock();
       String_delete(newName);
       return;
@@ -7947,7 +7947,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(newName);
       return;
@@ -7958,7 +7958,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     error = File_rename(jobNode->fileName,fileName,NULL);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"error renaming job %S: %s",jobUUID,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_RENAME_JOB,"%s",jobUUID,Error_getText(error));
       Job_listUnlock();
       String_delete(newName);
       return;
@@ -8017,7 +8017,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8025,18 +8025,18 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
     // remove job in list if not running or requested volume
     if (Job_isRunning(jobNode->jobState))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"job %S running",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_RUNNING,"%S",jobNode->name);
       Job_listUnlock();
       return;
     }
 
     if (jobNode->fileName != NULL)
     {
-      // delete job file, schedule state file
+      // delete job file
       error = File_delete(jobNode->fileName,FALSE);
       if (error != ERROR_NONE)
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB,"error deleting job %S: %s",jobUUID,Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DELETE_JOB,"%s",Error_getText(error));
         Job_listUnlock();
         return;
       }
@@ -8152,7 +8152,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8232,7 +8232,7 @@ LOCAL void serverCommand_includeList(ClientInfo *clientInfo, IndexHandle *indexH
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8290,7 +8290,7 @@ LOCAL void serverCommand_includeListClear(ClientInfo *clientInfo, IndexHandle *i
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8366,7 +8366,7 @@ LOCAL void serverCommand_includeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(patternString);
       return;
@@ -8451,7 +8451,7 @@ LOCAL void serverCommand_includeListUpdate(ClientInfo *clientInfo, IndexHandle *
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(patternString);
       return;
@@ -8517,7 +8517,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8525,7 +8525,7 @@ LOCAL void serverCommand_includeListRemove(ClientInfo *clientInfo, IndexHandle *
     // remove from include list
     if (!EntryList_remove(&jobNode->job.includeEntryList,entryId))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"entry with id #%u not found",entryId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_ENTRY_NOT_FOUND,"%u",entryId);
       Job_listUnlock();
       return;
     }
@@ -8580,7 +8580,7 @@ LOCAL void serverCommand_excludeList(ClientInfo *clientInfo, IndexHandle *indexH
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8637,7 +8637,7 @@ LOCAL void serverCommand_excludeListClear(ClientInfo *clientInfo, IndexHandle *i
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8706,7 +8706,7 @@ LOCAL void serverCommand_excludeListAdd(ClientInfo *clientInfo, IndexHandle *ind
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(patternString);
       return;
@@ -8784,7 +8784,7 @@ LOCAL void serverCommand_excludeListUpdate(ClientInfo *clientInfo, IndexHandle *
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(patternString);
       return;
@@ -8850,7 +8850,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8858,7 +8858,7 @@ LOCAL void serverCommand_excludeListRemove(ClientInfo *clientInfo, IndexHandle *
     // remove from exclude list
     if (!PatternList_remove(&jobNode->job.excludePatternList,patternId))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PATTERN_ID_NOT_FOUND,"%u",patternId);
       Job_listUnlock();
       return;
     }
@@ -8917,7 +8917,7 @@ LOCAL void serverCommand_mountList(ClientInfo *clientInfo, IndexHandle *indexHan
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -8974,7 +8974,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -9052,7 +9052,7 @@ LOCAL void serverCommand_mountListAdd(ClientInfo *clientInfo, IndexHandle *index
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(device);
       String_delete(name);
@@ -9157,7 +9157,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(device);
       String_delete(name);
@@ -9168,7 +9168,7 @@ LOCAL void serverCommand_mountListUpdate(ClientInfo *clientInfo, IndexHandle *in
     mountNode = LIST_FIND(&jobNode->job.options.mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount %S not found",name);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_MOUNT_ID_NOT_FOUND,"%u",mountId);
       Job_listUnlock();
       String_delete(device);
       String_delete(name);
@@ -9238,7 +9238,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -9247,7 +9247,7 @@ LOCAL void serverCommand_mountListRemove(ClientInfo *clientInfo, IndexHandle *in
     mountNode = LIST_FIND(&jobNode->job.options.mountList,mountNode,mountNode->id == mountId);
     if (mountNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"mount with id #%u not found",mountId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_MOUNT_ID_NOT_FOUND,"%u",mountId);
       Job_listUnlock();
       return;
     }
@@ -9306,7 +9306,7 @@ LOCAL void serverCommand_sourceList(ClientInfo *clientInfo, IndexHandle *indexHa
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -9364,7 +9364,7 @@ LOCAL void serverCommand_sourceListClear(ClientInfo *clientInfo, IndexHandle *in
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -9430,7 +9430,7 @@ LOCAL void serverCommand_sourceListAdd(ClientInfo *clientInfo, IndexHandle *inde
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(patternString);
       return;
@@ -9505,7 +9505,7 @@ LOCAL void serverCommand_sourceListUpdate(ClientInfo *clientInfo, IndexHandle *i
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(patternString);
       return;
@@ -9568,7 +9568,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -9576,7 +9576,7 @@ LOCAL void serverCommand_sourceListRemove(ClientInfo *clientInfo, IndexHandle *i
     // remove from source list
     if (!DeltaSourceList_remove(&jobNode->job.options.deltaSourceList,deltaSourceId))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"delta source with id #%u not found",deltaSourceId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DELTA_SOURCE_ID_NOT_FOUND,"%u",deltaSourceId);
       Job_listUnlock();
       return;
     }
@@ -9630,7 +9630,7 @@ LOCAL void serverCommand_excludeCompressList(ClientInfo *clientInfo, IndexHandle
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -9686,7 +9686,7 @@ LOCAL void serverCommand_excludeCompressListClear(ClientInfo *clientInfo, IndexH
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -9752,7 +9752,7 @@ LOCAL void serverCommand_excludeCompressListAdd(ClientInfo *clientInfo, IndexHan
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(patternString);
       return;
@@ -9827,7 +9827,7 @@ LOCAL void serverCommand_excludeCompressListUpdate(ClientInfo *clientInfo, Index
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       String_delete(patternString);
       return;
@@ -9890,7 +9890,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -9898,7 +9898,7 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
     // remove from exclude list
     if (!PatternList_remove(&jobNode->job.options.compressExcludePatternList,patternId))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"pattern with id #%u not found",patternId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PATTERN_ID_NOT_FOUND,"%u",patternId);
       Job_listUnlock();
       return;
     }
@@ -9967,7 +9967,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -10230,7 +10230,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       deleteScheduleNode(scheduleNode);
       String_delete(customText);
@@ -10306,7 +10306,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -10315,7 +10315,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
       Job_listUnlock();
       return;
     }
@@ -10385,7 +10385,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -10479,7 +10479,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -10588,7 +10588,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       deletePersistenceNode(persistenceNode);
       return;
@@ -10721,7 +10721,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -10730,7 +10730,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
     if (persistenceNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"persistence #%u not found",persistenceId);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PERSISTENCE_ID_NOT_FOUND,"%u",persistenceId);
       Job_listUnlock();
       return;
     }
@@ -10826,7 +10826,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -10835,7 +10835,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     persistenceNode = LIST_FIND(&jobNode->job.options.persistenceList,persistenceNode,persistenceNode->id == persistenceId);
     if (persistenceNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"persistence %u of job %S not found",persistenceId,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_PERSISTENCE_ID_NOT_FOUND,"%u",persistenceId);
       Job_listUnlock();
       return;
     }
@@ -10921,7 +10921,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -10930,7 +10930,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
     scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -11036,7 +11036,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -11045,7 +11045,7 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
       Job_listUnlock();
       String_delete(value);
       String_delete(name);
@@ -11138,7 +11138,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -11147,7 +11147,7 @@ LOCAL void serverCommand_scheduleOptionDelete(ClientInfo *clientInfo, IndexHandl
     scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -11236,7 +11236,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -11245,28 +11245,23 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
     scheduleNode = Job_findScheduleByUUID(jobNode,scheduleUUID);
     if (scheduleNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"schedule %S of job %S not found",scheduleUUID,jobUUID);
-      Job_listUnlock();
-      return;
-    }
-
-    // check if active
-    if (Job_isActive(jobNode->jobState))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job already scheduled");
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_SCHEDULE_NOT_FOUND,"%S",scheduleUUID);
       Job_listUnlock();
       return;
     }
 
     // trigger job
-    Job_trigger(jobNode,
-                scheduleNode->uuid,
-                scheduleNode->customText,
-                scheduleNode->archiveType,
-                scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
-                Misc_getCurrentDateTime(),
-                getClientInfo(clientInfo,buffer,sizeof(buffer))
-               );
+    if (!Job_isActive(jobNode->jobState))
+    {
+      Job_trigger(jobNode,
+                  scheduleNode->uuid,
+                  scheduleNode->customText,
+                  scheduleNode->archiveType,
+                  scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
+                  Misc_getCurrentDateTime(),
+                  getClientInfo(clientInfo,buffer,sizeof(buffer))
+                 );
+    }
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11611,7 +11606,7 @@ LOCAL void serverCommand_cryptPassword(ClientInfo *clientInfo, IndexHandle *inde
       jobNode = Job_findByUUID(jobUUID);
       if (jobNode == NULL)
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
         Job_listUnlock();
         String_delete(encryptedPassword);
         return;
@@ -11735,7 +11730,7 @@ LOCAL void serverCommand_volumeLoad(ClientInfo *clientInfo, IndexHandle *indexHa
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
@@ -11785,7 +11780,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"job %S not found",jobUUID);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
       return;
     }
