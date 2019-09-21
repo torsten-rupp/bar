@@ -11038,6 +11038,8 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
       Job_listUnlock();
+      String_delete(value);
+      String_delete(name);
       return;
     }
 

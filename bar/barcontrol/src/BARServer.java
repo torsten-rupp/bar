@@ -2752,8 +2752,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     // create error
     if (command.getErrorCode() != BARException.NONE)
     {
-Dprintf.dprintf("xxxxxxxxx command=%s",command);
-Dprintf.dprintf("%d: %s",command.getErrorCode(),command.getErrorData());
       throw new BARException(command.getErrorCode(),command.getErrorData());
     }
   }
