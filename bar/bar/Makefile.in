@@ -1179,7 +1179,7 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
 
 rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
-	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) ./bar-valgrind --daemon -D --no-default-config --config=/tmp/bar.cfg \
+	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full ./bar-valgrind --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
@@ -1553,6 +1553,7 @@ memcheck1: \
   $(TEST_FILES)
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1571,6 +1572,7 @@ memcheck2a: \
   $(TEST_FILES)
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1583,6 +1585,7 @@ memcheck2b: \
   $(TEST_FILES)
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1595,6 +1598,7 @@ memcheck2c: \
   $(TEST_FILES)
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1607,6 +1611,7 @@ memcheck2d: \
   $(TEST_FILES)
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1619,6 +1624,7 @@ memcheck2e: \
   $(TEST_FILES)
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1631,6 +1637,7 @@ memcheck2f: \
   $(TEST_FILES)
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1644,6 +1651,7 @@ memcheck3:  \
 	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1657,6 +1665,7 @@ memcheck4: \
 	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1670,6 +1679,7 @@ memcheck5: \
 	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1683,6 +1693,7 @@ memcheck6: \
 	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1696,6 +1707,7 @@ memcheck7: \
 	$(BAR_VALGRIND) -c intermediate/test.bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files >/dev/null
 	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1703,6 +1715,7 @@ memcheck7: \
           $(BAR_VALGRIND) dvd:///dev/dvd $(BAR_OPTIONS) >/dev/null
 	-$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
@@ -1715,6 +1728,7 @@ memcheck8: \
   $(TEST_FILES)
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) \
           --log-file=valgrind.log \
+          --leak-check=full \
           --leak-resolution=high \
           --track-fds=yes \
           --suppressions=valgrind.supp \
