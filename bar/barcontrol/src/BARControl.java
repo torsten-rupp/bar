@@ -2113,11 +2113,11 @@ if (false) {
         }
       }
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
       if (Settings.debugLevel > 0)
       {
-        printError("cannot get job list (error: %s)",exception.getText());
+        printError("cannot get job list (error: %s)",exception.getMessage());
         BARServer.disconnect();
         System.exit(EXITCODE_FAIL);
       }
@@ -2749,9 +2749,9 @@ assert jobData != null;
           {
             BARServer.executeCommand(StringParser.format("PASSWORDS_CLEAR"),0);
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n")+exception.getText());
+            Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n")+exception.getMessage());
           }
         }
       });
@@ -2943,7 +2943,7 @@ assert jobData != null;
             {
               BARServer.executeCommand(StringParser.format("DEBUG_PRINT_STATISTICS"),0);
             }
-            catch (BARException exception)
+            catch (Exception exception)
             {
               // ignored
             }
@@ -2996,7 +2996,7 @@ assert jobData != null;
                                            }
                                           );
                 }
-                catch (BARException exception)
+                catch (Exception exception)
                 {
                   // ignored
                 }
@@ -3063,7 +3063,7 @@ assert jobData != null;
                                            }
                                           );
                 }
-                catch (BARException exception)
+                catch (Exception exception)
                 {
                   // ignored
                 }
@@ -3081,6 +3081,29 @@ assert jobData != null;
                 }
               }
             });
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(menu,"Quit server");
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            try
+            {
+              BARServer.executeCommand(StringParser.format("QUIT"),
+                                       1  // debugLevel
+                                      );
+            }
+            catch (Exception exception)
+            {
+              // ignored
+            }
           }
         });
       }
@@ -3876,7 +3899,19 @@ assert jobData != null;
             public void run()
             {
               Dialogs.close(dialog,false);
-              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getText());
+              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
+            }
+          });
+          return;
+        }
+        catch (final IOException exception)
+        {
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.close(dialog,false);
+              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
             }
           });
           return;
@@ -3908,14 +3943,14 @@ assert jobData != null;
           BARServer.setMaster();
           result = true;
         }
-        catch (final BARException exception)
+        catch (final Exception exception)
         {
           display.syncExec(new Runnable()
           {
             public void run()
             {
               Dialogs.close(dialog,false);
-              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getText());
+              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
             }
           });
           result = false;
@@ -3948,9 +3983,9 @@ assert jobData != null;
 
       return true;
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+exception.getText());
+      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+exception.getMessage());
       return false;
     }
   }
@@ -4137,9 +4172,9 @@ assert jobData != null;
               System.out.println("FAIL!");
             }
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("Cannot set new master ("+exception.getText()+")");
+            printError("Cannot set new master ("+exception.getMessage()+")");
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4166,9 +4201,9 @@ assert jobData != null;
                                      1  // debug level
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot start job '%s' (error: %s)",Settings.runJobName,exception.getText());
+            printError("cannot start job '%s' (error: %s)",Settings.runJobName,exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4186,9 +4221,9 @@ assert jobData != null;
                                      1  // debug level
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot pause (error: %s)",exception.getText());
+            printError("cannot pause (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4208,9 +4243,9 @@ assert jobData != null;
                                      1  // debug level
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot suspend (error: %s)",exception.getText());
+            printError("cannot suspend (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4225,9 +4260,9 @@ assert jobData != null;
                                      1  // debug level
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot continue (error: %s)",Settings.runJobName,exception.getText());
+            printError("cannot continue (error: %s)",Settings.runJobName,exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4253,9 +4288,9 @@ assert jobData != null;
                                      1  // debug level
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,exception.getText());
+            printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4276,9 +4311,9 @@ assert jobData != null;
                                     );
             serverState = valueMap.getString("state");
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot get state (error: %s)",exception.getText());
+            printError("cannot get state (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4372,9 +4407,9 @@ assert jobData != null;
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d jobs",n[0]));
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot get job list (error: %s)",exception.getText());
+            printError("cannot get job list (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4391,9 +4426,9 @@ assert jobData != null;
                                      1  // debug level
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,exception.getText());
+            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4410,9 +4445,9 @@ assert jobData != null;
                                      1  // debug level
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,exception.getText());
+            printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4429,9 +4464,9 @@ assert jobData != null;
                                      1  // debug level
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,exception.getText());
+            printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4490,9 +4525,9 @@ assert jobData != null;
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d entities",n[0]));
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot list storages index (error: %s)",exception.getText());
+            printError("cannot list storages index (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4551,9 +4586,9 @@ assert jobData != null;
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d storages",n[0]));
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot list storages index (error: %s)",exception.getText());
+            printError("cannot list storages index (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4712,9 +4747,9 @@ assert jobData != null;
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d entries",n[0]));
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot list entries index (error: %s)",exception.getText());
+            printError("cannot list entries index (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4786,9 +4821,9 @@ assert jobData != null;
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d entries",n[0]));
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot list history (error: %s)",exception.getText());
+            printError("cannot list history (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4836,9 +4871,9 @@ assert jobData != null;
                                      1  // debugLevel
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot set restore list (error: %s)",exception.getText());
+            printError("cannot set restore list (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
@@ -4970,7 +5005,7 @@ Dprintf.dprintf("still not supported");
                                              }
                                            }
                                          }
-                                         catch (IllegalArgumentException exception)
+                                         catch (Exception exception)
                                          {
                                            if (Settings.debugLevel > 0)
                                            {
@@ -4982,9 +5017,9 @@ Dprintf.dprintf("still not supported");
                                      }
                                     );
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            printError("cannot restore storages (error: %s)",exception.getText());
+            printError("cannot restore storages (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }

@@ -471,10 +471,6 @@ public class TabStatus
           {
             tabStatus.update();
           }
-          catch (ConnectionError error)
-          {
-            // ignored
-          }
           catch (org.eclipse.swt.SWTException exception)
           {
             // ignore SWT exceptions
@@ -621,14 +617,7 @@ public class TabStatus
       public void handleEvent(Event event)
       {
         // make sure data is updated when jobs tab is shown
-        try
-        {
-          update();
-        }
-        catch (BARException exception)
-        {
-          // ignored
-        }
+        update();
       }
     });
 
@@ -1989,14 +1978,7 @@ public class TabStatus
    */
   public void startUpdate()
   {
-    try
-    {
-      update();
-    }
-    catch (BARException exception)
-    {
-      // ignored
-    }
+    update();
     tabStatusUpdateThread.start();
   }
 
@@ -2177,7 +2159,7 @@ public class TabStatus
           tabJobs.updateJobList(jobDataMap.values());
         }
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
         // ignored
       }
@@ -2303,11 +2285,11 @@ public class TabStatus
                                              0  // debugLevel
                                             );
                   }
-                  catch (BARException exception)
+                  catch (Exception exception)
                   {
                     Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",
                                                       selectedJobData.name.replaceAll("&","&&"),
-                                                      exception.getText()
+                                                      exception.getMessage()
                                                      )
                                  );
                     return;
@@ -2318,7 +2300,7 @@ public class TabStatus
           });
         }
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
         // ignored
       }
@@ -2364,7 +2346,7 @@ public class TabStatus
   /** update server status
    */
   private void updateStatus()
-    throws BARException
+    throws Exception
   {
     try
     {
@@ -2430,7 +2412,7 @@ public class TabStatus
 
       updateStatusFailCount = 0;
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
       updateStatusFailCount++;
       if (updateStatusFailCount > 5)
@@ -2589,7 +2571,7 @@ public class TabStatus
           }
         });
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
         // ignored
       }
@@ -2646,12 +2628,17 @@ public class TabStatus
   /** update status, job list, job data
    */
   private void update()
-    throws BARException
   {
-    // update job list
-    updateStatus();
-    updateJobList();
-    updateJobInfo();
+    try
+    {
+      updateStatus();
+      updateJobList();
+      updateJobInfo();
+    }
+    catch (Throwable throwable)
+    {
+      // ignored
+    }
   }
 
   /** start selected job
@@ -2676,12 +2663,12 @@ public class TabStatus
                                    0  // debugLevel
                                   );
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
           Dialogs.error(shell,
                         BARControl.tr("Cannot set crypt password for job ''{0}'' (error: {1})",
                                       selectedJobData.name.replaceAll("&","&&"),
-                                      exception.getText()
+                                      exception.getMessage()
                                      )
                        );
           return;
@@ -2709,12 +2696,12 @@ public class TabStatus
                                   );
         }
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
         Dialogs.error(shell,
                       BARControl.tr("Cannot start job ''{0}'' (error: {1})",
                                     selectedJobData.name.replaceAll("&","&&"),
-                                    exception.getText()
+                                    exception.getMessage()
                                    )
                      );
         return;
@@ -2897,9 +2884,9 @@ public class TabStatus
                                  0  // debugLevel
                                 );
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot pause job (error: {0})",exception.getText()));
+        Dialogs.error(shell,BARControl.tr("Cannot pause job (error: {0})",exception.getMessage()));
       }
     }
   }
@@ -2917,9 +2904,9 @@ public class TabStatus
         case SUSPENDED: BARServer.executeCommand(StringParser.format("CONTINUE"),0); break;
       }
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot suspend job (error: {0})",exception.getText()));
+      Dialogs.error(shell,BARControl.tr("Cannot suspend job (error: {0})",exception.getMessage()));
     }
   }
 
@@ -2970,9 +2957,9 @@ public class TabStatus
           break;
       }
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot change volume (error: {0})",exception.getText()));
+      Dialogs.error(shell,BARControl.tr("Cannot change volume (error: {0})",exception.getMessage()));
     }
   }
 
@@ -2984,9 +2971,9 @@ public class TabStatus
     {
       BARServer.executeCommand(StringParser.format("JOB_RESET jobUUID=%s",selectedJobData.uuid),0);
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot reset job (error: {0})",exception.getText()));
+      Dialogs.error(shell,BARControl.tr("Cannot reset job (error: {0})",exception.getMessage()));
     }
   }
 
@@ -3207,7 +3194,7 @@ public class TabStatus
         }
       });
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
       // ignored
     }

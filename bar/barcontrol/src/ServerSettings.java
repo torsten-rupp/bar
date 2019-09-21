@@ -664,9 +664,9 @@ public class ServerSettings
                                         (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                                        );
               }
-              catch (BARException exception)
+              catch (Exception exception)
               {
-                Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",exception.getText()));
+                Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",exception.getMessage()));
               }
             }
           }
@@ -717,9 +717,9 @@ public class ServerSettings
                                        (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
                                       );
                 }
-                catch (BARException exception)
+                catch (Exception exception)
                 {
-                  Dialogs.error(dialog,BARControl.tr("Save storage server settings fail:\n\n{0}",exception.getText()));
+                  Dialogs.error(dialog,BARControl.tr("Save storage server settings fail:\n\n{0}",exception.getMessage()));
                 }
               }
             }
@@ -774,9 +774,9 @@ public class ServerSettings
                                           (cloneServerData.maxStorageSize > 0) ? Units.formatByteSize(cloneServerData.maxStorageSize) : "-"
                                          );
                 }
-                catch (BARException exception)
+                catch (Exception exception)
                 {
-                  Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",exception.getText()));
+                  Dialogs.error(dialog,BARControl.tr("Add storage server fail:\n\n{0}",exception.getMessage()));
                 }
               }
             }
@@ -814,9 +814,9 @@ public class ServerSettings
                                           tableItem
                                          );
                 }
-                catch (BARException exception)
+                catch (Exception exception)
                 {
-                  Dialogs.error(dialog,BARControl.tr("Delete storage server settings fail:\n\n{0}",exception.getText()));
+                  Dialogs.error(dialog,BARControl.tr("Delete storage server settings fail:\n\n{0}",exception.getMessage()));
                 }
               }
             }
@@ -2290,9 +2290,9 @@ public class ServerSettings
                                );
       }
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
-      Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",exception.getText()));
+      Dialogs.error(dialog,BARControl.tr("Get server list fail:\n\n{0}",exception.getMessage()));
       return;
     }
 
@@ -2382,7 +2382,7 @@ public class ServerSettings
         BARServer.setServerOption(deviceWriteCommand         );
 
         BARServer.setServerOption(serverPort                 );
-  //      BARServer.setServerOption(serverTLSPort              );
+//        BARServer.setServerOption(serverTLSPort              );
         BARServer.setServerOption(serverCAFile               );
         BARServer.setServerOption(serverCertFile             );
         BARServer.setServerOption(serverKeyFile              );
@@ -2397,9 +2397,9 @@ public class ServerSettings
 
         BARServer.flushServerOption();
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
-        Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",exception.getText()));
+        Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",exception.getMessage()));
       }
     }
   }

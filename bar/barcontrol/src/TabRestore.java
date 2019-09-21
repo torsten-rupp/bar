@@ -2265,7 +2265,7 @@ Dprintf.dprintf("");
           }
         });
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
         // ignored
       }
@@ -2453,7 +2453,7 @@ Dprintf.dprintf("");
           }
         });
       }
-      catch (final BARException exception)
+      catch (Exception exception)
       {
         // ignored
       }
@@ -2656,7 +2656,7 @@ Dprintf.dprintf("");
           }
         });
       }
-      catch (final BARException exception)
+      catch (Exception exception)
       {
         // ignored
       }
@@ -2751,7 +2751,7 @@ Dprintf.dprintf("");
           storageCount = 0;
         }
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
         // ignored
       }
@@ -2908,7 +2908,7 @@ Dprintf.dprintf("");
                                                              );
           BARServer.asyncCommandWait(storageTableCommand);
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
           // ignored
         }
@@ -3654,19 +3654,19 @@ Dprintf.dprintf("");
             });
           }
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
           // ignored
         }
 
         // update entries count
-        if (!widgetEntryTable.isDisposed())
+        if (oldTotalEntryCount != totalEntryCount)
         {
-          if (oldTotalEntryCount != totalEntryCount)
+          display.syncExec(new Runnable()
           {
-            display.syncExec(new Runnable()
+            public void run()
             {
-              public void run()
+              if (!widgetEntryTable.isDisposed())
               {
                 widgetEntryTable.setRedraw(false);
 
@@ -3675,8 +3675,8 @@ Dprintf.dprintf("");
 
                 widgetEntryTable.setRedraw(true);
               }
-            });
-          }
+            }
+          });
         }
       }
       finally
@@ -3933,7 +3933,7 @@ Dprintf.dprintf("");
                                                            );
           BARServer.asyncCommandWait(entryTableCommand);
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
           // ignored
         }
@@ -6814,7 +6814,7 @@ Dprintf.dprintf("");
                                   );
         }
       }
-      catch (final BARException exception)
+      catch (Exception exception)
       {
         throw new CommunicationError(exception);
       }
@@ -6831,7 +6831,7 @@ Dprintf.dprintf("");
     {
       BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),1);
     }
-    catch (final BARException exception)
+    catch (Exception exception)
     {
       throw new CommunicationError(exception);
     }
@@ -6850,7 +6850,7 @@ Dprintf.dprintf("");
     {
       BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),1);
     }
-    catch (final BARException exception)
+    catch (Exception exception)
     {
       throw new CommunicationError(exception);
     }
@@ -6877,7 +6877,7 @@ Dprintf.dprintf("");
                                    1  // debugLevel
                                   );
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
           throw new CommunicationError(exception);
         }
@@ -6992,7 +6992,7 @@ Dprintf.dprintf("");
                 doit[0] = true;
               }
             }
-            catch (BARException exception)
+            catch (Exception exception)
             {
               // ignored
             }
@@ -7050,8 +7050,13 @@ Dprintf.dprintf("");
                 busyDialog.close();
                 if (exception.code != BARException.ABORTED)
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getText()));
+                  Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getMessage()));
                 }
+              }
+              catch (Exception exception)
+              {
+                busyDialog.close();
+                Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getMessage()));
               }
             }
           }
@@ -7217,7 +7222,7 @@ Dprintf.dprintf("");
         });
       }
     }
-    catch (final BARException exception)
+    catch (Exception exception)
     {
       // ignored
     }
@@ -7367,7 +7372,7 @@ Dprintf.dprintf("");
         });
       }
     }
-    catch (final BARException exception)
+    catch (Exception exception)
     {
       // ignored
     }
@@ -7465,7 +7470,7 @@ Dprintf.dprintf("");
         });
       }
     }
-    catch (final BARException exception)
+    catch (Exception exception)
     {
       // ignored
     }
@@ -7504,9 +7509,9 @@ Dprintf.dprintf("");
                                 );
         entityId = valueMap.getLong("entityId");
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
-        Dialogs.error(shell,BARControl.tr("Cannot create entity for\n\n''{0}''!\n\n(error: {1})",toJobUUID,exception.getText()));
+        Dialogs.error(shell,BARControl.tr("Cannot create entity for\n\n''{0}''!\n\n(error: {1})",toJobUUID,exception.getMessage()));
         return;
       }
 
@@ -7553,9 +7558,9 @@ Dprintf.dprintf("");
                                       );
             }
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
           }
         }
       }
@@ -7649,9 +7654,9 @@ Dprintf.dprintf("");
 
             indexData.setState(IndexStates.UPDATE_REQUESTED);
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
           }
         }
       }
@@ -7737,9 +7742,9 @@ Dprintf.dprintf("");
 
             indexData.setState(IndexStates.UPDATE_REQUESTED);
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
+            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
           }
         }
       }
@@ -7826,9 +7831,9 @@ Dprintf.dprintf("");
 
             indexData.setState(IndexStates.UPDATE_REQUESTED);
           }
-          catch (BARException exception)
+          catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
+            Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
           }
         }
       }
@@ -7932,9 +7937,9 @@ Dprintf.dprintf("");
 
                 indexData.setState(IndexStates.UPDATE_REQUESTED);
               }
-              catch (BARException exception)
+              catch (Exception exception)
               {
-                Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
+                Dialogs.error(shell,BARControl.tr("Cannot refresh index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
               }
             }
           }
@@ -7974,9 +7979,9 @@ Dprintf.dprintf("");
                                   );
           updateStorageTreeTableThread.triggerUpdate();
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state!\n\n(error: {0})",exception.getText()));
+          Dialogs.error(shell,BARControl.tr("Cannot refresh database indizes with error state!\n\n(error: {0})",exception.getMessage()));
         }
         finally
         {
@@ -8161,7 +8166,7 @@ Dprintf.dprintf("");
             busyDialog.close();
             updateStorageTreeTableThread.triggerUpdate();
           }
-          catch (final BARException exception)
+          catch (final Exception exception)
           {
             busyDialog.close();
             if (!busyDialog.isAborted())
@@ -8171,7 +8176,7 @@ Dprintf.dprintf("");
                 @Override
                 public void run()
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path\n\n''{0}''\n\n(error: {1})",storagePath,exception.getText()));
+                  Dialogs.error(shell,BARControl.tr("Cannot add index to database for storage path\n\n''{0}''\n\n(error: {1})",storagePath,exception.getMessage()));
                 }
               });
             }
@@ -8222,7 +8227,7 @@ Dprintf.dprintf("");
                                 );
         totalEntryCount = valueMap.getLong("totalEntryCount");
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
         // ignored
       }
@@ -8287,14 +8292,14 @@ Dprintf.dprintf("");
                   Widgets.removeTreeItem(widgetStorageTree,indexData);
                   Widgets.removeTableItem(widgetStorageTable,indexData);
                 }
-                catch (final BARException exception)
+                catch (final Exception exception)
                 {
                   display.syncExec(new Runnable()
                   {
                     @Override
                     public void run()
                     {
-                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''!\n\n(error: {1})",info,exception.getText()));
+                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
                     }
                   });
                 }
@@ -8380,14 +8385,14 @@ Dprintf.dprintf("");
                                 );
         errorTotalEntryCount = valueMap.getLong("totalEntryCount");
       }
-      catch (final BARException exception)
+      catch (final Exception exception)
       {
         display.syncExec(new Runnable()
         {
           @Override
           public void run()
           {
-            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state!\n\n(error: {0})",exception.getText()));
+            Dialogs.error(shell,BARControl.tr("Cannot get database indizes with error state!\n\n(error: {0})",exception.getMessage()));
           }
         });
         return;
@@ -8613,9 +8618,9 @@ Dprintf.dprintf("");
                                    }
                                   );
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
-          Dialogs.error(shell,BARControl.tr("Cannot get storages list!\n\n(error: {0})",exception.getText()));
+          Dialogs.error(shell,BARControl.tr("Cannot get storages list!\n\n(error: {0})",exception.getMessage()));
           return;
         }
 
@@ -8630,7 +8635,7 @@ Dprintf.dprintf("");
           totalEntryCount = valueMap.getLong("totalEntryCount");
           totalEntrySize  = valueMap.getLong("totalEntrySize" );
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
           // ignored
         }
@@ -8679,7 +8684,7 @@ Dprintf.dprintf("");
                                            0  // debugLevel
                                           );
                 }
-                catch (final BARException exception)
+                catch (final Exception exception)
                 {
                   if (!ignoreAllErrorsFlag)
                   {
@@ -8693,7 +8698,7 @@ Dprintf.dprintf("");
                         {
                           selection[0] = Dialogs.select(shell,
                                                         BARControl.tr("Confirmation"),
-                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,exception.getText()),
+                                                        BARControl.tr("Cannot delete storage\n\n''{0}''\n\n(error: {1})",info,exception.getMessage()),
                                                         new String[]{BARControl.tr("Continue"),BARControl.tr("Continue with all"),BARControl.tr("Abort")},
                                                         0
                                                        );
@@ -8807,7 +8812,7 @@ Dprintf.dprintf("");
                                 );
       }
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
       throw new CommunicationError(exception);
     }
@@ -8825,7 +8830,7 @@ Dprintf.dprintf("");
                                1  // debugLevel
                               );
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
       throw new CommunicationError(exception);
     }
@@ -8847,7 +8852,7 @@ Dprintf.dprintf("");
                                1  // debugLevel
                               );
     }
-    catch (BARException exception)
+    catch (Exception exception)
     {
       throw new CommunicationError(exception);
     }
@@ -8874,7 +8879,7 @@ Dprintf.dprintf("");
                                    1  // debugLevel
                                   );
         }
-        catch (BARException exception)
+        catch (Exception exception)
         {
           throw new CommunicationError(exception);
         }
@@ -8934,7 +8939,7 @@ Dprintf.dprintf("");
           doit[0] = true;
         }
       }
-      catch (BARException exception)
+      catch (Exception exception)
       {
         throw new CommunicationError(exception);
       }
@@ -8994,8 +8999,13 @@ Dprintf.dprintf("");
           busyDialog.close();
           if (exception.code != BARException.ABORTED)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",exception.getText()));
+            Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",exception.getMessage()));
           }
+        }
+        catch (Exception exception)
+        {
+          busyDialog.close();
+          Dialogs.error(shell,BARControl.tr("Cannot mark all index entries!\n\n(error: {0})",exception.getMessage()));
         }
       }
     }
@@ -9511,7 +9521,7 @@ Dprintf.dprintf("");
                                          }
                                         );
               }
-              catch (BARException exception)
+              catch (Exception exception)
               {
                 throw new CommunicationError(exception);
               }
@@ -9584,7 +9594,7 @@ Dprintf.dprintf("");
                                         );
 
               }
-              catch (BARException exception)
+              catch (Exception exception)
               {
                 throw new CommunicationError(exception);
               }
@@ -9774,12 +9784,25 @@ Dprintf.dprintf("");
                 @Override
                 public void run()
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getText()));
+                  Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getMessage()));
                 }
               });
               busyDialog.close();
               return;
             }
+          }
+          catch (final Exception exception)
+          {
+            display.syncExec(new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                Dialogs.error(shell,BARControl.tr("Cannot restore:\n\n{0}",exception.getMessage()));
+              }
+            });
+            busyDialog.close();
+            return;
           }
 //TODO: pass to caller?
           catch (CommunicationError error)
