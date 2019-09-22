@@ -4572,10 +4572,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       do
       {
         // next try
-        if (retryCount > MAX_RETRIES)
-        {
-          break;
-        }
         retryCount++;
 
         // pause, check abort
@@ -4598,7 +4594,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                               );
         if (error != ERROR_NONE)
         {
-          if (retryCount <= MAX_RETRIES)
+          if (retryCount < MAX_RETRIES)
           {
             // retry
             continue;
@@ -4635,7 +4631,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (error != ERROR_NONE)
         {
           Storage_close(&storageHandle);
-          if (retryCount <= MAX_RETRIES)
+          if (retryCount < MAX_RETRIES)
           {
             // retry
             continue;
@@ -4672,7 +4668,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       while (   (createInfo->failError == ERROR_NONE)                            // no eror
              && !Storage_isAborted(&createInfo->storageInfo)                     // not aborted
              && ((error != ERROR_NONE) && (Error_getErrno(error) != ENOSPC))     // some error and not "no space left"
-             && (retryCount <= MAX_RETRIES)                                      // still some retry left
+             && (retryCount < MAX_RETRIES)                                       // still some retry left
             );
       if (error != ERROR_NONE)
       {
