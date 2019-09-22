@@ -467,28 +467,25 @@ ERROR UNKNOWN_MAC_ALGORITHM            TR("unknown message authentication code a
 ERROR NO_FILE_NAME                     TR("no file name given")
 
 ERROR CREATE_FILE
-  stringSet(errorText,sizeof(errorText),TR("create file"));
+  stringSet(errorText,sizeof(errorText),TR("create file fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR OPEN_FILE
-  stringSet(errorText,sizeof(errorText),TR("open file"));
+  stringSet(errorText,sizeof(errorText),TR("open file fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR CREATE_DIRECTORY
-  stringSet(errorText,sizeof(errorText),TR("create directory"));
+  stringSet(errorText,sizeof(errorText),TR("create directory fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR IO
   stringSet(errorText,sizeof(errorText),TR("i/o error"));
