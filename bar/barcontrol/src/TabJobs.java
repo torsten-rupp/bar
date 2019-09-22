@@ -9709,7 +9709,7 @@ widgetArchivePartSize.setListVisible(true);
             Widgets.sortTableColumn(widgetScheduleTable,tableColumn,scheduleDataComparator);
           }
         };
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,100,false);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,120,false);
         tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
         tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week days"),   SWT.LEFT,250,true );
         Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleDataComparator(widgetScheduleTable,tableColumn));
@@ -15049,7 +15049,7 @@ throw new Error("NYI");
       {
         widgetYear = Widgets.newOptionMenu(subComposite);
         widgetYear.setToolTipText(BARControl.tr("Year to execute job. Leave to '*' for each year."));
-        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020"});
+        widgetYear.setItems(new String[]{"*","2008","2009","2010","2011","2012","2013","2014","2015","2016","2017","2018","2019","2020","2021","2022"});
         widgetYear.setText(scheduleData.getYear()); if (widgetYear.getText().equals("")) widgetYear.setText("*");
         if (widgetYear.getText().equals("")) widgetYear.setText("*");
         Widgets.layout(widgetYear,0,0,TableLayoutData.W);
@@ -15062,7 +15062,7 @@ throw new Error("NYI");
 
         widgetDay = Widgets.newOptionMenu(subComposite);
         widgetDay.setToolTipText(BARControl.tr("Day to execute job. Leave to '*' for each day."));
-        widgetDay.setItems(new String[]{"*","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
+        widgetDay.setItems(new String[]{"*","01","02","03","04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31"});
         widgetDay.setText(scheduleData.getDay()); if (widgetDay.getText().equals("")) widgetDay.setText("*");
         Widgets.layout(widgetDay,0,2,TableLayoutData.W);
       }
@@ -15439,7 +15439,7 @@ throw new Error("NYI");
       int index = widgetScheduleTable.getSelectionIndex();
       if (index >= 0)
       {
-        TableItem           tableItem    = widgetScheduleTable.getItem(index);
+        TableItem          tableItem    = widgetScheduleTable.getItem(index);
         final ScheduleData scheduleData = (ScheduleData)tableItem.getData();
 
         ScheduleData newScheduleData = scheduleData.clone();
