@@ -414,6 +414,8 @@ typedef intptr_t* Errors;
 * Output : -
 * Return : index
 * Notes  : internal usage only!
+*          additional format specifiers:
+*            %E convert errno to text (with lower case start)
 \***********************************************************************/
 
 #ifndef NDEBUG
@@ -579,6 +581,228 @@ static ErrorData errorData[$ERROR_DATA_INDEX_MAX_COUNT];   // last error data
 static uint      errorDataCount = 0;                       // last error data count (=max. when all data entries are used; recycle oldest entry if required)
 static uint      errorDataId    = 0;                       // total number of error data
 
+LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list arguments)
+{
+  bool       longFlag,longLongFlag;
+  char       quoteFlag;
+  union
+  {
+    bool       b;
+    int        i;
+    uint       ui;
+    long       l;
+    ulong      ul;
+    int64      ll;
+    uint64     ull;
+    float      f;
+    double     d;
+    char       ch;
+    const char *s;
+    void       *p;
+  } value;
+  const char *t;
+  char       buffer[256];
+
+  stringClear(string);
+  while (!stringIsEmpty(format))
+  {
+    switch (stringAt(format,0))
+    {
+      case '\\\\':
+        // escaped character
+        stringAppendChar(string,n,'\\\\');
+        format++;
+        if (!stringIsEmpty(format))
+        {
+          stringAppendChar(string,n,stringAt(format,0));
+          format++;
+        }
+        break;
+      case '%':
+        // format character
+        format++;
+
+        // check for longlong/long flag
+        longLongFlag = FALSE;
+        longFlag     = FALSE;
+        if (stringAt(format,0) == 'l')
+        {
+          format++;
+          if (stringAt(format,0) == 'l')
+          {
+            format++;
+            longLongFlag = TRUE;
+          }
+          else
+          {
+            longFlag = TRUE;
+          }
+        }
+
+        // quoting flag (ignore quote char)
+        if (   !stringIsEmpty(format)
+            && !isalpha(stringAt(format,0))
+            && (stringAt(format,0) != '%')
+            && (   (stringAt(format,1) == 's')
+                || (stringAt(format,1) == 'E')
+               )
+           )
+        {
+          quoteFlag = TRUE;
+          format++;
+        }
+        else
+        {
+          quoteFlag = FALSE;
+        }
+
+        if (!stringIsEmpty(format))
+        {
+          // handle format type
+          switch (stringAt(format,0))
+          {
+            case 'b':
+              // boolean
+              format++;
+
+              value.i = va_arg(arguments,int);
+              stringAppend(string,n,(value.i != 0) ? \"true\" : \"false\");
+              break;
+            case 'd':
+              // integer
+              format++;
+
+              if      (longLongFlag)
+              {
+                value.ll = va_arg(arguments,int64);
+                stringFormatAppend(string,n,\"%lld\",value.ll);
+              }
+              else if (longFlag)
+              {
+                value.l = va_arg(arguments,int64);
+                stringFormatAppend(string,n,\"%ld\",value.l);
+              }
+              else
+              {
+                value.i = va_arg(arguments,int);
+                stringFormatAppend(string,n,\"%d\",value.i);
+              }
+              break;
+            case 'u':
+              // unsigned integer
+              format++;
+
+              if      (longLongFlag)
+              {
+                value.ull = va_arg(arguments,uint64);
+                stringFormatAppend(string,n,\"%llu\",value.ull);
+              }
+              else if (longFlag)
+              {
+                value.ul = va_arg(arguments,ulong);
+                stringFormatAppend(string,n,\"%lu\",value.ul);
+              }
+              else
+              {
+                value.ui = va_arg(arguments,uint);
+                stringFormatAppend(string,n,\"%u\",value.ui);
+              }
+              break;
+            case 'f':
+              // float
+              format++;
+
+              if (longFlag)
+              {
+                value.d = va_arg(arguments,double);
+                stringFormatAppend(string,n,\"%lf\",value.d);
+              }
+              else
+              {
+                value.f = va_arg(arguments,float);
+                stringFormatAppend(string,n,\"%f\",value.f);
+              }
+              break;
+            case 'c':
+              // character
+              format++;
+
+              value.ch = va_arg(arguments,char);
+              stringAppendChar(string,n,value.ch);
+              break;
+            case 's':
+              // string
+              format++;
+
+              value.s = va_arg(arguments,const char*);
+
+              if (quoteFlag) stringAppendChar(string,n,'\\'');
+              if (value.s != NULL)
+              {
+                t = value.s;
+                while (!stringIsEmpty(t))
+                {
+                  switch (stringAt(t,0))
+                  {
+                    case '\\'':
+                      if (quoteFlag)
+                      {
+                        stringAppend(string,n,\"''\");
+                      }
+                      else
+                      {
+                        stringAppendChar(string,n,'\\'');
+                      }
+                      break;
+                    default:
+                      stringAppendChar(string,n,stringAt(t,0));
+                      break;
+                  }
+                  t++;
+                }
+              }
+              if (quoteFlag) stringAppendChar(string,n,'\\'');
+              break;
+            case 'p':
+              // pointer
+              format++;
+
+              value.p = va_arg(arguments,void*);
+              stringFormatAppend(string,n,\"%p\",value.p);
+              break;
+            case 'E':
+              // errno text
+              format++;
+
+              value.i = va_arg(arguments,int);
+
+              // start with lower case
+              stringSet(buffer,sizeof(buffer),strerror(value.i));
+              if (!stringIsEmpty(buffer)) buffer[0] = tolower(buffer[0]);
+
+              stringAppend(string,n,buffer);
+              break;
+            case '%':
+              // %%
+              format++;
+
+              stringAppendChar(string,n,'%');
+              break;
+            default:
+              stringAppendChar(string,n,'%');
+              stringAppendChar(string,n,stringAt(format,0));
+              break;
+          }
+        }
+        break;
+      default:
+        stringAppendChar(string,n,stringAt(format,0));
+        format++;
+        break;
+    }
+  }
+}
+
 #ifndef NDEBUG
 int _Error_dataToIndex(const char *fileName, ulong lineNb, const char *format, ...)
 #else
@@ -595,7 +819,7 @@ int _Error_dataToIndex(const char *format, ...)
   {
     // format error text
     va_start(arguments,format);
-    vsnprintf(text,sizeof(text),format,arguments);
+    vformatErrorText(text,sizeof(text),format,arguments);
     va_end(arguments);
   }
   else
@@ -1113,11 +1337,11 @@ while ($line=<STDIN>)
     my $name=$1;
     my $text=$2;
     $errorNumber++;
-    writeHFile("#line $lineNb \"errors.def\"");
+#    writeHFile("#line $lineNb \"errors.def\"");
     writeHFile("  $PREFIX$name = $errorNumber,");
 
     writeCFile("    case $PREFIX$name:");
-    writeCFile("#line $lineNb \"errors.def\"");
+#    writeCFile("#line $lineNb \"errors.def\"");
     writeCFile("      stringSet(errorText,sizeof(errorText),\"$text\");");
     writeCFile("      break;");
 
@@ -1135,12 +1359,12 @@ while ($line=<STDIN>)
     my $name    =$1;
     my $function=$2;
     $errorNumber++;
-    writeHFile("#line $lineNb \"errors.def\"");
+#    writeHFile("#line $lineNb \"errors.def\"");
     writeHFile("  $PREFIX$name = $errorNumber,");
 
 
     writeCFile("    case $PREFIX$name:");
-    writeCFile("#line $lineNb \"errors.def\"");
+#    writeCFile("#line $lineNb \"errors.def\"");
     writeCFile("      stringSet(errorText,sizeof(errorText),$function);");
     writeCFile("      break;");
 
@@ -1157,7 +1381,7 @@ while ($line=<STDIN>)
     # error <name>
     my $name=$1;
     $errorNumber++;
-    writeHFile("#line $lineNb \"errors.def\"");
+#    writeHFile("#line $lineNb \"errors.def\"");
     writeHFile("  $PREFIX$name = $errorNumber,");
     writeJava1("  public final static int $name = $errorNumber;");
     push(@names,$name);
@@ -1168,14 +1392,14 @@ while ($line=<STDIN>)
   {
     # include "file"
     my $file=$1;
-    writeCFileHeader("#line $lineNb \"errors.def\"");
+#    writeCFileHeader("#line $lineNb \"errors.def\"");
     writeCFileHeader("#include \"$file\"");
   }
   elsif ($line =~ /^INCLUDE\s+<(.*)>\s*$/)
   {
     # include <file>
     my $file=$1;
-    writeCFileHeader("#line $lineNb \"errors.def\"");
+#    writeCFileHeader("#line $lineNb \"errors.def\"");
     writeCFileHeader("#include <$file>");
   }
   elsif ($line =~ /^IMPORT\s+(.*)\s*$/)
@@ -1188,7 +1412,7 @@ while ($line=<STDIN>)
   {
     # none <text>
     my $text=$1;
-    writeCFile("#line $lineNb \"errors.def\"");
+#    writeCFile("#line $lineNb \"errors.def\"");
     writeCFile("    case ".$PREFIX."NONE: stringSet(errorText,sizeof(errorText),\"$text\"); break;");
   }
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
@@ -1198,7 +1422,7 @@ while ($line=<STDIN>)
   elsif ($line =~ /^\s*#/)
   {
     # C preprocessor
-    writeCFileHeader("#line $lineNb \"errors.def\"");
+#    writeCFileHeader("#line $lineNb \"errors.def\"");
     writeCFileHeader("$line");
   }
   else
@@ -1212,7 +1436,7 @@ while ($line=<STDIN>)
 
     foreach my $s (@names)
     {
-      writeCFile("#line $lineNb \"errors.def\"");
+#      writeCFile("#line $lineNb \"errors.def\"");
       writeCFile("    case $PREFIX$s:");
       writeJava2("      case $s:");
     }
