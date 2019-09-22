@@ -7692,8 +7692,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 
   // get FTS
   getFTSString(ftsName,name);
-fprintf(stderr,"%s, %d: '%s' %d\n",__FILE__,__LINE__,String_cString(name),String_length(name));
-fprintf(stderr,"%s, %d: '%s' %d\n",__FILE__,__LINE__,String_cString(ftsName),String_length(ftsName));
 
   // get id sets
   for (i = 0; i < indexIdCount; i++)
