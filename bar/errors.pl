@@ -709,7 +709,7 @@ LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list a
               }
               break;
             case 'f':
-              // float
+              // float/double
               format++;
 
               if (longFlag)
@@ -719,15 +719,15 @@ LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list a
               }
               else
               {
-                value.f = va_arg(arguments,float);
-                stringFormatAppend(string,n,\"%f\",value.f);
+                value.f = (float)va_arg(arguments,double);
+                stringFormatAppend(string,n,\"%lf\",value.f);
               }
               break;
             case 'c':
               // character
               format++;
 
-              value.ch = va_arg(arguments,char);
+              value.ch = (char)va_arg(arguments,int);
               stringAppendChar(string,n,value.ch);
               break;
             case 's':
