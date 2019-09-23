@@ -69,6 +69,7 @@ MKFIFO         = mkfifo
 MKTEMP         = mktemp
 NETCAT         = netcat
 PERL           = @PERL@
+PGREP          = pgrep
 READLINK       = readlink
 RMDIR          = rmdir
 RMF            = rm -f
@@ -89,6 +90,7 @@ TIME           = @TIME@
 TIMEOUT        = timeout
 TOUCH          = touch
 ULIMIT         = ulimit
+WAIT           = wait
 WC             = wc
 XARGS          = xargs
 
@@ -229,7 +231,7 @@ TEST_SERVER_PORT                 = 39909
 TEST_SERVER_SSL_PORT             = 39910
 TEST_SERVER_DIRECTORY            = intermediate/master
 TEST_SERVER_CONFIG               = $(TEST_SERVER_DIRECTORY)/bar.cfg
-TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/barserver.pid
+TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/bar.pid
 TEST_SERVER_JOBS_DIRECTORY       = $(TEST_SERVER_DIRECTORY)/jobs
 TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
 TEST_SERVER_CONTINUOUS_DATABASE  = $(TEST_SERVER_DIRECTORY)/continuous.db
@@ -241,7 +243,7 @@ TEST_SLAVE_USERNAME              ?= test
 TEST_SLAVE_PASSWORD              ?= test
 TEST_SLAVE_DIRECTORY             = intermediate/slave
 TEST_SLAVE_CONFIG                = $(TEST_SLAVE_DIRECTORY)/bar.cfg
-TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/barserver.pid
+TEST_SLAVE_PID_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.pid
 TEST_SLAVE_JOBS_DIRECTORY        = $(TEST_SLAVE_DIRECTORY)/jobs
 TEST_SLAVE_DATABASE              = $(TEST_SLAVE_DIRECTORY)/index.db
 TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
@@ -591,6 +593,16 @@ functionTestDeviceDump = \
     $(ECHO) $(SUDO) -n $(DD) if=$1 of=- \> $2; \
     ($(SUDO) -n $(DD) if=$1 of=-) >$2 2>/dev/null; \
   ) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
+
+# helper function to wait for process, kill process
+# call functionWaitProcess,<pid file>,<timeout [s]>
+functionWaitProcess = \
+  ( \
+    pid=`$(PGREP) --pidfile $1`; \
+    $(TIMEOUT) --signal=KILL $2 $(TAIL) --pid=$$pid -f /dev/null 2>/dev/null; \
+    $(KILL) $$pid 2>/dev/null; \
+    true; \
+  )
 
 # do tests
 #
@@ -3878,7 +3890,7 @@ test_server_operations_socket_server: \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
           \
           : start server; \
-          $(KILLALL) $(TEST_BAR) 2>/dev/null; \
+          $(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null; \
           $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_DIRECTORY); \
           $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
           $(INSTALL) bar.cfg $(SUB_DIR)/$(TEST_SERVER_CONFIG); \
@@ -3899,10 +3911,8 @@ test_server_operations_socket_server: \
             --max-threads=1 \
             $(ADDITIONAL_OPTIONS) \
             ; \
-rc=$$?; \
-echo $$rc; \
-          if test $$rc -eq 0; then \
-            $(SLEEP) 20; \
+          if test $$? -eq 0; then \
+            $(SLEEP) 10; \
           else \
             exit 1; \
           fi; \
@@ -3914,7 +3924,6 @@ test_server_operations_socket_client: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	( \
-          $(SLEEP) 5; \
           $(call functionServerCommandSocket,  1,localhost $(TEST_SERVER_PORT),VERSION); \
           $(call functionServerCommandSocket,  2,localhost $(TEST_SERVER_PORT),STATUS); \
           \
@@ -3931,6 +3940,8 @@ test_server_operations_socket_client: \
           $(call functionServerCommandSocket, 31,localhost $(TEST_SERVER_PORT),JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
           \
           $(call functionServerCommandSocket, 40,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=0); \
+          $(call functionServerCommandSocket, 41,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL date=*-1-2 weekDays=* time=1:20 interval=300 customText="test" noStorage=yes enabled=no); \
+          $(call functionServerCommandSocket, 41,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL date=*-1-2 weekDays=* time=1:20 interval=300 customText="test" noStorage=yes enabled=no); \
           \
           $(call functionServerCommandSocket, 50,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
           $(call functionServerCommandSocket, 51,localhost $(TEST_SERVER_PORT),MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
@@ -3981,10 +3992,10 @@ test_server_operations_socket_client: \
           $(call functionServerCommandSocket,170,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
           \
           $(call functionServerCommandSocket,180,localhost $(TEST_SERVER_PORT),QUIT); \
-	  $(SLEEP) 5; \
         ) $(LOG)
 
 test_server_operations_socket: \
+  $(TEST_BAR) \
   $(TEST_FILES)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
@@ -3995,16 +4006,19 @@ test_server_operations_socket: \
 	@#
 	@$(MAKE) test_server_operations_socket_server
 	@$(MAKE) test_server_operations_socket_client
-	if test -f $(TEST_SERVER_PID_FILE); then $(KILL) -9 `$(CAT) $(TEST_SERVER_PID_FILE)` 2>/dev/null; fi; \
+	$(call functionWaitProcess,$(TEST_SERVER_PID_FILE),60)
+	$(RMF) intermediate/test.bar;
 
 test_server_operations_batch: \
-  $(TEST_BAR)
+  $(TEST_BAR) \
+  $(TEST_FILES)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	$(call functionCleanTestFiles)
 	@#
 	# create test archive
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
 	@#
 	# run batch server
