@@ -6964,7 +6964,8 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            script=<directory>
+*            name=<name>
+*            script=<script>
 *          Result:
 *            line=<text>
 \***********************************************************************/
