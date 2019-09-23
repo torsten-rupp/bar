@@ -3990,6 +3990,7 @@ test_server_operations_socket: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	# create test archive
+	@$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
 	@#
 	@$(MAKE) test_server_operations_socket_server
