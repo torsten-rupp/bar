@@ -3924,74 +3924,93 @@ test_server_operations_socket_client: \
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	( \
-          $(call functionServerCommandSocket,  1,localhost $(TEST_SERVER_PORT),VERSION); \
-          $(call functionServerCommandSocket,  2,localhost $(TEST_SERVER_PORT),STATUS); \
+          $(call functionServerCommandSocket,   1,localhost $(TEST_SERVER_PORT),VERSION); \
+          $(call functionServerCommandSocket,   2,localhost $(TEST_SERVER_PORT),STATUS); \
           \
-          $(call functionServerCommandSocket, 10,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
-          $(call functionServerCommandSocket, 11,localhost $(TEST_SERVER_PORT),SERVER_OPTION_GET name=tmp-directory); \
-          $(call functionServerCommandSocket, 12,localhost $(TEST_SERVER_PORT),SERVER_OPTION_SET name=tmp-directory value=/tmp); \
-          $(call functionServerCommandSocket, 13,localhost $(TEST_SERVER_PORT),SERVER_OPTION_FLUSH); \
+          $(call functionServerCommandSocket, 100,localhost $(TEST_SERVER_PORT),SERVER_LIST); \
+          $(call functionServerCommandSocket, 101,localhost $(TEST_SERVER_PORT),SERVER_OPTION_GET name=tmp-directory); \
+          $(call functionServerCommandSocket, 102,localhost $(TEST_SERVER_PORT),SERVER_OPTION_SET name=tmp-directory value=/tmp); \
+          $(call functionServerCommandSocket, 103,localhost $(TEST_SERVER_PORT),SERVER_OPTION_FLUSH); \
           \
-          $(call functionServerCommandSocket, 20,localhost $(TEST_SERVER_PORT),DEVICE_LIST); \
-          $(call functionServerCommandSocket, 21,localhost $(TEST_SERVER_PORT),ROOT_LIST); \
-          $(call functionServerCommandSocket, 22,localhost $(TEST_SERVER_PORT),FILE_LIST directory=/tmp) 1>/dev/null; \
+          $(call functionServerCommandSocket, 200,localhost $(TEST_SERVER_PORT),DEVICE_LIST); \
+          $(call functionServerCommandSocket, 201,localhost $(TEST_SERVER_PORT),ROOT_LIST); \
+          $(call functionServerCommandSocket, 202,localhost $(TEST_SERVER_PORT),FILE_INFO name=/tmp); \
+          $(call functionServerCommandSocket, 203,localhost $(TEST_SERVER_PORT),FILE_LIST directory=/tmp); \
+          $(call functionServerCommandSocket, 204,localhost $(TEST_SERVER_PORT),FILE_ATTRIBUTE_GET name=/tmp attribute=NOBACKUP); \
+          $(call functionServerCommandSocket, 205,localhost $(TEST_SERVER_PORT),DIRECTORY_INFO name=/tmp timeouot=10); \
+          $(call functionServerCommandSocket, 206,localhost $(TEST_SERVER_PORT),TEST_SCRIPT name=test script=date); \
           \
-          $(call functionServerCommandSocket, 30,localhost $(TEST_SERVER_PORT),JOB_LIST) 1>/dev/null; \
-          $(call functionServerCommandSocket, 31,localhost $(TEST_SERVER_PORT),JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 300,localhost $(TEST_SERVER_PORT),JOB_LIST) ; \
+          $(call functionServerCommandSocket, 301,localhost $(TEST_SERVER_PORT),JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 302,localhost $(TEST_SERVER_PORT),JOB_INFO jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 303,localhost $(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=UUID); \
+          $(call functionServerCommandSocket, 304,localhost $(TEST_SERVER_PORT),JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 305,localhost $(TEST_SERVER_PORT),JOB_RESET jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 306,localhost $(TEST_SERVER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
           \
-          $(call functionServerCommandSocket, 40,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=0); \
-          $(call functionServerCommandSocket, 41,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL date=*-1-2 weekDays=* time=1:20 interval=300 customText="test" noStorage=yes enabled=no); \
-          $(call functionServerCommandSocket, 41,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL date=*-1-2 weekDays=* time=1:20 interval=300 customText="test" noStorage=yes enabled=no); \
+          $(call functionServerCommandSocket, 400,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=0); \
           \
-          $(call functionServerCommandSocket, 50,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 51,localhost $(TEST_SERVER_PORT),MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 52,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 53,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 54,localhost $(TEST_SERVER_PORT),SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 55,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket, 56,localhost $(TEST_SERVER_PORT),ARCHIVE_LIST name=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar) 1>/dev/null; \
+          $(call functionServerCommandSocket, 500,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 501,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 502,localhost $(TEST_SERVER_PORT),MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),MOUNT_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 504,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 505,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 506,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 507,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 509,localhost $(TEST_SERVER_PORT),SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 510,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL date=*-1-2 weekDays=* time=1:20 interval=300 custoText="test" noStorage=yes enabled=no); \
+          $(call functionServerCommandSocket, 511,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 512,localhost $(TEST_SERVER_PORT),PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL minKeep=1 maxKeep=2 maxAge=3); \
+          $(call functionServerCommandSocket, 513,localhost $(TEST_SERVER_PORT),PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 514,localhost $(TEST_SERVER_PORT),ARCHIVE_LIST name=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
           \
-          $(call functionServerCommandSocket, 60,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=CREATE); \
+          $(call functionServerCommandSocket, 600,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=CREATE); \
 	  $(SLEEP) 2; \
-          $(call functionServerCommandSocket, 70,localhost $(TEST_SERVER_PORT),CONTINUE); \
+          $(call functionServerCommandSocket, 700,localhost $(TEST_SERVER_PORT),CONTINUE); \
           \
-          $(call functionServerCommandSocket, 80,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_CLEAR); \
-          $(call functionServerCommandSocket, 81,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 82,localhost $(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 83,localhost $(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 84,localhost $(TEST_SERVER_PORT),WEBDAV_PASSWORD encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 85,localhost $(TEST_SERVER_PORT),CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=74657374); \
-          $(call functionServerCommandSocket, 86,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
+          $(call functionServerCommandSocket, 800,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_CLEAR); \
+          $(call functionServerCommandSocket, 801,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=74657374); \
+          $(call functionServerCommandSocket, 802,localhost $(TEST_SERVER_PORT),FTP_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+          $(call functionServerCommandSocket, 803,localhost $(TEST_SERVER_PORT),SSH_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+          $(call functionServerCommandSocket, 804,localhost $(TEST_SERVER_PORT),WEBDAV_PASSWORD encryptType=NONE encryptedPassword=74657374); \
+          $(call functionServerCommandSocket, 805,localhost $(TEST_SERVER_PORT),CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=74657374); \
+          $(call functionServerCommandSocket, 806,localhost $(TEST_SERVER_PORT),PASSWORDS_CLEAR); \
           \
-          $(call functionServerCommandSocket, 90,localhost $(TEST_SERVER_PORT),STORAGE_LIST_CLEAR); \
-          $(call functionServerCommandSocket, 91,localhost $(TEST_SERVER_PORT),STORAGE_LIST_ADD indexIds=1,2,3); \
+          $(call functionServerCommandSocket, 900,localhost $(TEST_SERVER_PORT),STORAGE_LIST_ADD indexIds=1,2,3); \
+          $(call functionServerCommandSocket, 901,localhost $(TEST_SERVER_PORT),STORAGE_LIST); \
+          $(call functionServerCommandSocket, 902,localhost $(TEST_SERVER_PORT),STORAGE_LIST_CLEAR); \
+          $(call functionServerCommandSocket, 903,localhost $(TEST_SERVER_PORT),ENTRY_LIST_ADD entryIds=1,2,3); \
+          $(call functionServerCommandSocket, 904,localhost $(TEST_SERVER_PORT),ENTRY_LIST); \
+          $(call functionServerCommandSocket, 905,localhost $(TEST_SERVER_PORT),ENTRY_LIST_CLEAR); \
           \
-          $(call functionServerCommandSocket,100,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
+          $(call functionServerCommandSocket,1000,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
           $(SLEEP) 2; \
-          $(call functionServerCommandSocket,110,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+          $(call functionServerCommandSocket,1100,localhost $(TEST_SERVER_PORT),INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
           \
-          $(call functionServerCommandSocket,120,localhost $(TEST_SERVER_PORT),INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+          $(call functionServerCommandSocket,1200,localhost $(TEST_SERVER_PORT),INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
           \
-          $(call functionServerCommandSocket,130,localhost $(TEST_SERVER_PORT),INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandSocket,131,localhost $(TEST_SERVER_PORT),INDEX_STORAGES_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandSocket,132,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-          $(call functionServerCommandSocket,133,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+          $(call functionServerCommandSocket,1300,localhost $(TEST_SERVER_PORT),INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
+          $(call functionServerCommandSocket,1301,localhost $(TEST_SERVER_PORT),INDEX_STORAGES_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
+          $(call functionServerCommandSocket,1302,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+          $(call functionServerCommandSocket,1303,localhost $(TEST_SERVER_PORT),INDEX_STORAGE_LIST name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
           \
-          $(call functionServerCommandSocket,140,localhost $(TEST_SERVER_PORT),INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandSocket,141,localhost $(TEST_SERVER_PORT),INDEX_ENTRIES_INFO name='test*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandSocket,142,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
-          $(call functionServerCommandSocket,143,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
+          $(call functionServerCommandSocket,1400,localhost $(TEST_SERVER_PORT),INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
+          $(call functionServerCommandSocket,1401,localhost $(TEST_SERVER_PORT),INDEX_ENTRIES_INFO name='test*' indexType='*' newestOnly=yes); \
+          $(call functionServerCommandSocket,1402,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
+          $(call functionServerCommandSocket,1403,localhost $(TEST_SERVER_PORT),INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
           \
-          $(call functionServerCommandSocket,150,localhost $(TEST_SERVER_PORT),INDEX_HISTORY_LIST); \
+          $(call functionServerCommandSocket,1500,localhost $(TEST_SERVER_PORT),INDEX_HISTORY_LIST); \
           $(SLEEP) 2; \
           \
-          $(call functionServerCommandSocket,160,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_STATISTICS); \
-          $(call functionServerCommandSocket,161,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_MEMORY_INFO); \
-          $(call functionServerCommandSocket,162,localhost $(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
+          $(call functionServerCommandSocket,1600,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_STATISTICS); \
+          $(call functionServerCommandSocket,1601,localhost $(TEST_SERVER_PORT),DEBUG_PRINT_MEMORY_INFO); \
+          $(call functionServerCommandSocket,1602,localhost $(TEST_SERVER_PORT),DEBUG_DUMP_MEMORY_INFO); \
           \
-          $(call functionServerCommandSocket,170,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket,1700,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
           \
-          $(call functionServerCommandSocket,180,localhost $(TEST_SERVER_PORT),QUIT); \
+          $(call functionServerCommandSocket,1800,localhost $(TEST_SERVER_PORT),QUIT); \
         ) $(LOG)
 
 test_server_operations_socket: \
@@ -4034,7 +4053,7 @@ test_server_operations_batch: \
           \
           $(call functionServerCommandBatch, 20,DEVICE_LIST); \
           $(call functionServerCommandBatch, 21,ROOT_LIST); \
-          $(call functionServerCommandBatch, 22,FILE_LIST directory=/tmp) 1>/dev/null; \
+          $(call functionServerCommandBatch, 22,FILE_LIST directory=/tmp); \
           \
           $(call functionServerCommandBatch, 30,JOB_LIST); \
           $(call functionServerCommandBatch, 31,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
@@ -4047,7 +4066,7 @@ test_server_operations_batch: \
           $(call functionServerCommandBatch, 53,EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
           $(call functionServerCommandBatch, 54,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
           $(call functionServerCommandBatch, 55,SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 56,ARCHIVE_LIST name=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar) 1>/dev/null; \
+          $(call functionServerCommandBatch, 56,ARCHIVE_LIST name=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
           \
           $(call functionServerCommandBatch, 60,PAUSE time=300 modeMask=CREATE); \
           $(SLEEP) 2; \
