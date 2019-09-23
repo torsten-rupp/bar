@@ -803,10 +803,9 @@ LOCAL void startPairingMaster(void)
                                 (clientNode->clientInfo.io.type == SERVER_IO_TYPE_NETWORK)
                              && String_equals(clientNode->clientInfo.io.network.name,globalOptions.masterInfo.name)
                             );
-fprintf(stderr,"%s, %d: globalOptions.masterInfo.name=%s\n",__FILE__,__LINE__,String_cString(globalOptions.masterInfo.name));
+//fprintf(stderr,"%s, %d: globalOptions.masterInfo.name=%s\n",__FILE__,__LINE__,String_cString(globalOptions.masterInfo.name));
       if (clientNode != NULL)
       {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         List_remove(&clientList,clientNode);
         deleteClient(clientNode);
       }
@@ -12259,10 +12258,16 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           }
           break;
         case ARCHIVE_ENTRY_TYPE_META:
-          break;
         case ARCHIVE_ENTRY_TYPE_SIGNATURE:
+          error = Archive_skipNextEntry(&archiveHandle);
+          if (error != ERROR_NONE)
+          {
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+            break;
+          }
           break;
         case ARCHIVE_ENTRY_TYPE_UNKNOWN:
+          (void)Archive_skipNextEntry(&archiveHandle);
           #ifndef NDEBUG
             HALT_INTERNAL_ERROR_UNREACHABLE();
           #endif /* NDEBUG */
@@ -17530,7 +17535,9 @@ LOCAL uint getAuthorizationWaitRestTime(const AuthorizationFailNode *authorizati
 * Name   : processCommand
 * Purpose: process client command
 * Input  : clientInfo  - client info
-*          commandLine - command line to process
+*          id          - unique id
+*          name        - command name
+*          argumentMap - arguments
 * Output : -
 * Return : -
 * Notes  : -
@@ -18019,6 +18026,7 @@ Errors Server_run(ServerModes       mode,
         pollfds[pollfdCount].revents = 0;
         pollServerTLSSocketIndex = pollfdCount;
         pollfdCount++;
+//TODO:
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverTLSSocketHandle));
       }
 
@@ -18456,8 +18464,10 @@ Errors Server_run(ServerModes       mode,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Terminated BAR server"
+             "Terminated BAR server%s",
+             (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
             );
+  printInfo(1,"Terminated BAR server%s\n",(serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
 
   return ERROR_NONE;
 }
