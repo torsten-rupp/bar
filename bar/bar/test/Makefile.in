@@ -4043,72 +4043,94 @@ test_server_operations_batch: \
 	# run batch server
 	( \
           $(SLEEP) 5; \
-          $(call functionServerCommandBatch,  1,VERSION); \
-          $(call functionServerCommandBatch,  2,STATUS); \
+          $(call functionServerCommandBatch,   1,VERSION); \
+          $(call functionServerCommandBatch,   2,STATUS); \
           \
-          $(call functionServerCommandBatch, 10,SERVER_LIST); \
-          $(call functionServerCommandBatch, 11,SERVER_OPTION_GET name=tmp-directory); \
-          $(call functionServerCommandBatch, 12,SERVER_OPTION_SET name=tmp-directory value=/tmp); \
-          $(call functionServerCommandBatch, 13,SERVER_OPTION_FLUSH); \
+          $(call functionServerCommandBatch, 100,SERVER_LIST); \
+          $(call functionServerCommandBatch, 101,SERVER_OPTION_GET name=tmp-directory); \
+          $(call functionServerCommandBatch, 102,SERVER_OPTION_SET name=tmp-directory value=/tmp); \
+          $(call functionServerCommandBatch, 103,SERVER_OPTION_FLUSH); \
           \
-          $(call functionServerCommandBatch, 20,DEVICE_LIST); \
-          $(call functionServerCommandBatch, 21,ROOT_LIST); \
-          $(call functionServerCommandBatch, 22,FILE_LIST directory=/tmp); \
+          $(call functionServerCommandBatch, 200,DEVICE_LIST); \
+          $(call functionServerCommandBatch, 201,ROOT_LIST); \
+          $(call functionServerCommandBatch, 202,FILE_INFO name=/tmp); \
+          $(call functionServerCommandBatch, 203,FILE_LIST directory=/tmp); \
+          $(call functionServerCommandBatch, 204,FILE_ATTRIBUTE_GET name=/tmp attribute=NOBACKUP); \
+          $(call functionServerCommandBatch, 205,DIRECTORY_INFO name=/tmp timeouot=10); \
+          $(call functionServerCommandBatch, 206,TEST_SCRIPT name=test script=date); \
           \
-          $(call functionServerCommandBatch, 30,JOB_LIST); \
-          $(call functionServerCommandBatch, 31,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 300,JOB_LIST); \
+          $(call functionServerCommandBatch, 301,JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 302,JOB_INFO jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 303,JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=UUID); \
+          $(call functionServerCommandBatch, 304,JOB_ABORT jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 305,JOB_RESET jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 306,JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
           \
-          $(call functionServerCommandBatch, 40,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=0); \
+          $(call functionServerCommandBatch, 400,JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=0); \
           \
-          $(call functionServerCommandBatch, 50,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 51,MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 52,EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 53,EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 54,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 55,SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandBatch, 56,ARCHIVE_LIST name=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
+          $(call functionServerCommandBatch, 500,INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 501,INCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 501,MOUNT_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 502,MOUNT_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 503,EXCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 504,EXCLUDE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 505,EXCLUDE_COMPRESS_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 506,EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 507,SOURCE_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 508,SCHEDULE_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 509,SOURCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 510,SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL date=*-1-2 weekDays=* time=1:20 interval=300 custoText="test" noStorage=yes enabled=no); \
+          $(call functionServerCommandBatch, 511,SCHEDULE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 512,PERSISTENCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL minKeep=1 maxKeep=2 maxAge=3); \
+          $(call functionServerCommandBatch, 513,PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch, 514,ARCHIVE_LIST name=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
           \
-          $(call functionServerCommandBatch, 60,PAUSE time=300 modeMask=CREATE); \
+          $(call functionServerCommandBatch, 600,PAUSE time=300 modeMask=CREATE); \
           $(SLEEP) 2; \
-          $(call functionServerCommandBatch, 70,CONTINUE); \
+          $(call functionServerCommandBatch, 700,CONTINUE); \
           \
-          $(call functionServerCommandBatch, 80,DECRYPT_PASSWORD_CLEAR); \
-          $(call functionServerCommandBatch, 81,DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 82,FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 83,SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 84,WEBDAV_PASSWORD encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 85,CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=test); \
-          $(call functionServerCommandBatch, 86,PASSWORDS_CLEAR); \
+          $(call functionServerCommandBatch, 800,DECRYPT_PASSWORD_CLEAR); \
+          $(call functionServerCommandBatch, 801,DECRYPT_PASSWORD_ADD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch, 802,FTP_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch, 803,SSH_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch, 804,WEBDAV_PASSWORD encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch, 805,CRYPT_PASSWORD jobUUID=$(TEST_JOB_UUID) encryptType=NONE encryptedPassword=test); \
+          $(call functionServerCommandBatch, 806,PASSWORDS_CLEAR); \
           \
-          $(call functionServerCommandBatch, 90,STORAGE_LIST_CLEAR); \
-          $(call functionServerCommandBatch, 91,STORAGE_LIST_ADD indexIds=1,2,3); \
+          $(call functionServerCommandBatch, 900,STORAGE_LIST_ADD indexIds=1,2,3); \
+          $(call functionServerCommandBatch, 901,STORAGE_LIST); \
+          $(call functionServerCommandBatch, 902,STORAGE_LIST_CLEAR); \
+          $(call functionServerCommandBatch, 903,localhost $(TEST_SERVER_PORT),ENTRY_LIST_ADD entryIds=1,2,3); \
+          $(call functionServerCommandBatch, 904,localhost $(TEST_SERVER_PORT),ENTRY_LIST); \
+          $(call functionServerCommandBatch, 905,localhost $(TEST_SERVER_PORT),ENTRY_LIST_CLEAR); \
           \
-          $(call functionServerCommandBatch,100,INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
+          $(call functionServerCommandBatch,1000,INDEX_STORAGE_ADD pattern=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
           $(SLEEP) 2; \
-          $(call functionServerCommandBatch,110,INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+          $(call functionServerCommandBatch,1100,INDEX_UUID_LIST indexStateSet='*' indexModeSet='*' name='*'); \
           \
-          $(call functionServerCommandBatch,120,INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
+          $(call functionServerCommandBatch,1200,INDEX_ENTITY_LIST indexStateSet='*' indexModeSet='*' name='*'); \
           \
-          $(call functionServerCommandBatch,130,INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandBatch,130,INDEX_STORAGES_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
-          $(call functionServerCommandBatch,131,INDEX_STORAGE_LIST entityId=* name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
-          $(call functionServerCommandBatch,131,INDEX_STORAGE_LIST entityId=* name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+          $(call functionServerCommandBatch,1300,INDEX_STORAGES_INFO name='*' indexStateSet='*' indexModeSet='*'); \
+          $(call functionServerCommandBatch,1300,INDEX_STORAGES_INFO name='test*' indexStateSet='*' indexModeSet='*'); \
+          $(call functionServerCommandBatch,1301,INDEX_STORAGE_LIST entityId=* name='*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
+          $(call functionServerCommandBatch,1301,INDEX_STORAGE_LIST entityId=* name='test*' indexStateSet='*' indexModeSet='*' offset=0 limit=100); \
           \
-          $(call functionServerCommandBatch,140,INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandBatch,140,INDEX_ENTRIES_INFO name='test*' indexType='*' newestOnly=yes); \
-          $(call functionServerCommandBatch,141,INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
-          $(call functionServerCommandBatch,141,INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
+          $(call functionServerCommandBatch,1400,INDEX_ENTRIES_INFO name='*' indexType='*' newestOnly=yes); \
+          $(call functionServerCommandBatch,1401,INDEX_ENTRIES_INFO name='test*' indexType='*' newestOnly=yes); \
+          $(call functionServerCommandBatch,1402,INDEX_ENTRY_LIST name='*' indexType='*' newestOnly=yes offset=0 limit=100); \
+          $(call functionServerCommandBatch,1403,INDEX_ENTRY_LIST name='test*' indexType='*' newestOnly=yes offset=0 limit=100); \
           \
-          $(call functionServerCommandBatch,150,INDEX_HISTORY_LIST); \
+          $(call functionServerCommandBatch,1500,INDEX_HISTORY_LIST); \
           $(SLEEP) 2; \
           \
-          $(call functionServerCommandBatch,160,DEBUG_PRINT_STATISTICS); \
-          $(call functionServerCommandBatch,161,DEBUG_PRINT_MEMORY_INFO); \
-          $(call functionServerCommandBatch,162,DEBUG_DUMP_MEMORY_INFO); \
+          $(call functionServerCommandBatch,1600,DEBUG_PRINT_STATISTICS); \
+          $(call functionServerCommandBatch,1601,DEBUG_PRINT_MEMORY_INFO); \
+          $(call functionServerCommandBatch,1602,DEBUG_DUMP_MEMORY_INFO); \
           \
-          $(call functionServerCommandBatch,170,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandBatch,1700,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
           \
-          $(call functionServerCommandBatch,180,QUIT); \
+          $(call functionServerCommandBatch,1800,QUIT); \
           $(SLEEP) 5; \
         ) | \
         ( \
