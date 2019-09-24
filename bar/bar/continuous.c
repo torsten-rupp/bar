@@ -722,15 +722,11 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
         }
 
         // update/add uuid
-        uuidNode = notifyInfo->uuidList.head;
-        while (   (uuidNode != NULL)
-               && (   !stringEquals(uuidNode->jobUUID,jobUUID)
-                   || !stringEquals(uuidNode->scheduleUUID,scheduleUUID)
-                  )
-              )
-        {
-          uuidNode = uuidNode->next;
-        }
+        uuidNode = LIST_FIND(&notifyInfo->uuidList,
+                             uuidNode,
+                                stringEquals(uuidNode->jobUUID,jobUUID)
+                             && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
+                            );
         if (uuidNode == NULL)
         {
           uuidNode = LIST_NEW_NODE(UUIDNode);
@@ -944,7 +940,7 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
             && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
            )
         {
-          uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_NULL);
         }
         else
         {
@@ -1749,7 +1745,6 @@ Errors Continuous_initNotify(ConstString     name,
   assert(!String_isEmpty(scheduleUUID));
   assert(entryList != NULL);
 
-//fprintf(stderr,"%s, %d: Continuous_initNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
   initNotifyMsg.type = INIT;
   initNotifyMsg.name = String_duplicate(name);
   stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
