@@ -8138,7 +8138,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
       filterAppend(filterString,indexTypeSet != INDEX_TYPE_SET_ANY_ENTRY,"AND","entries.type IN (%S)",getIndexTypeSetString(indexTypeSetString,indexTypeSet));
     }
-fprintf(stderr,"%s, %d: '%s'\n",__FILE__,__LINE__,String_cString(filterString));
     INDEX_DOX(error,
               indexHandle,
     {
@@ -8183,10 +8182,9 @@ fprintf(stderr,"%s, %d: '%s'\n",__FILE__,__LINE__,String_cString(filterString));
       }
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
         return error;
       }
-Database_debugPrintQueryInfo(&databaseQueryHandle);
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (!Database_getNextRow(&databaseQueryHandle,
                                "%lu %lf",
                                totalEntryCount,
@@ -8195,7 +8193,6 @@ Database_debugPrintQueryInfo(&databaseQueryHandle);
          )
       {
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
         return ERROR_DATABASE;
       }
       assert(totalEntrySize_ >= 0.0);
@@ -8242,17 +8239,15 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
       }
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: 3\n",__FILE__,__LINE__);
         return error;
       }
-Database_debugPrintQueryInfo(&databaseQueryHandle);
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (!Database_getNextRow(&databaseQueryHandle,
                                "%lf",
                                &totalEntryContentSize_
                               )
          )
       {
-fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
         Database_finalize(&databaseQueryHandle);
         return ERROR_DATABASE;
       }
@@ -8260,7 +8255,6 @@ fprintf(stderr,"%s, %d: 4\n",__FILE__,__LINE__);
 //      assert(totalEntryContentSize_ >= 0.0);
       if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
       Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: 5\n",__FILE__,__LINE__);
 
       return ERROR_NONE;
     });

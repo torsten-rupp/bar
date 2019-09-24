@@ -1586,6 +1586,8 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
         break;
       case CRYPT_KEY_DERIVE_FUNCTION:
         assert(dataLength < sizeof(NO_SALT));
+
+        gcryptError = 0;
         PASSWORD_DEPLOY_DO(plainPassword,password)
         {
           gcryptError = gcry_kdf_derive(plainPassword,

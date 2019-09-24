@@ -1422,6 +1422,7 @@ LOCAL Errors StorageFTP_getTmpName(String archiveName, const StorageInfo *storag
   assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
+  UNUSED_VARIABLE(archiveName);
   UNUSED_VARIABLE(storageInfo);
 
 //TODO: still not implemented

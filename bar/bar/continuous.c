@@ -551,29 +551,6 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 }
 
 /***********************************************************************\
-* Name   : freeNotifyDictionary
-* Purpose: free notify info dictionary entry
-* Input  : data     - data
-*          length   - length (not used)
-*          userData - user data (not used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeNotifyDictionary(const void *data, ulong length, void *userData)
-{
-  NotifyInfo *notifyInfo = (NotifyInfo*)data;
-  assert(notifyInfo != NULL);
-
-  UNUSED_VARIABLE(length);
-  UNUSED_VARIABLE(userData);
-
-  freeNotifyInfo(notifyInfo,NULL);
-  free(notifyInfo);
-}
-
-/***********************************************************************\
 * Name   : addNotify
 * Purpose: add notify for directory
 * Input  : directory - directory

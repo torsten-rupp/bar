@@ -1475,15 +1475,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       return error;
     }
-{
-long x;
-CURLcode r;
-r=curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_HTTP_CONNECTCODE,&x);
-fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,r,x);
-r=curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_RESPONSE_CODE,&x);
-fprintf(stderr,"%s, %d: r=%d x=%d\n",__FILE__,__LINE__,r,x);
-//asm("int3");
-}
+
     // free resources
     String_delete(url);
     String_delete(baseName);
