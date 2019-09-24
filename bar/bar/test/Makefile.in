@@ -287,6 +287,7 @@ TEST_PASSWORD_CRYPT_OTHER        =  Heinrich_Böll:Ansichten_eines_Clown
 
 TEST_JOB_NAME                    =  __test__
 TEST_JOB_UUID                    =  00000000-0000-0000-0000-000000000000
+TEST_SCHEDULE_UUID               =  00000000-0000-0000-0000-000000000000
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
@@ -1562,6 +1563,8 @@ test12 test_server: \
           BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_server_operations \
           ;
+
+x:
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -3935,10 +3938,10 @@ test_server_operations_socket_client: \
           \
           $(call functionServerCommandSocket, 200,localhost $(TEST_SERVER_PORT),DEVICE_LIST); \
           $(call functionServerCommandSocket, 201,localhost $(TEST_SERVER_PORT),ROOT_LIST); \
-          $(call functionServerCommandSocket, 202,localhost $(TEST_SERVER_PORT),FILE_INFO name=/tmp); \
-          $(call functionServerCommandSocket, 203,localhost $(TEST_SERVER_PORT),FILE_LIST directory=/tmp); \
-          $(call functionServerCommandSocket, 204,localhost $(TEST_SERVER_PORT),FILE_ATTRIBUTE_GET name=/tmp attribute=NOBACKUP); \
-          $(call functionServerCommandSocket, 205,localhost $(TEST_SERVER_PORT),DIRECTORY_INFO name=/tmp timeouot=10); \
+          $(call functionServerCommandSocket, 202,localhost $(TEST_SERVER_PORT),FILE_INFO name=data); \
+          $(call functionServerCommandSocket, 203,localhost $(TEST_SERVER_PORT),FILE_LIST directory=data); \
+          $(call functionServerCommandSocket, 204,localhost $(TEST_SERVER_PORT),FILE_ATTRIBUTE_GET name=data attribute=NOBACKUP); \
+          $(call functionServerCommandSocket, 205,localhost $(TEST_SERVER_PORT),DIRECTORY_INFO name=data timeouot=10); \
           $(call functionServerCommandSocket, 206,localhost $(TEST_SERVER_PORT),TEST_SCRIPT name=test script=date); \
           \
           $(call functionServerCommandSocket, 300,localhost $(TEST_SERVER_PORT),JOB_LIST) ; \
@@ -3965,12 +3968,23 @@ test_server_operations_socket_client: \
           $(call functionServerCommandSocket, 413,localhost $(TEST_SERVER_PORT),PERSISTENCE_LIST_CLEAR jobUUID=$(TEST_JOB_UUID)); \
           $(call functionServerCommandSocket, 414,localhost $(TEST_SERVER_PORT),ARCHIVE_LIST name=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
           \
-          $(call functionServerCommandSocket, 500,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=continuous); \
-          $(call functionServerCommandSocket, 501,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=100000); \
-          $(call functionServerCommandSocket, 502,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=FILE pattern=/tmp); \
-          $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
-          $(call functionServerCommandSocket, 410,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL date=*-*-* weekDays=* time=*:* interval=60 customText="test" noStorage=yes enabled=yes); \
+          $(call functionServerCommandSocket, 500,localhost $(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=archive-type); \
+          $(call functionServerCommandSocket, 501,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=continuous); \
+          $(call functionServerCommandSocket, 502,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=100000); \
+          $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=FILE pattern=data); \
+          $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=intermediate/not_existing); \
+          $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),SOURCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
+          $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
+          $(call functionServerCommandSocket, 504,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=CONTINUOUS date=*-*-* weekDays=* time=*:* interval=60 customText="test" noStorage=yes enabled=yes); \
 	  $(SLEEP) 10; \
+          $(call functionServerCommandSocket, 505,localhost $(TEST_SERVER_PORT),SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
+          $(call functionServerCommandSocket, 506,localhost $(TEST_SERVER_PORT),SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
+	  $(SLEEP) 10; \
+          $(call functionServerCommandSocket, 507,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
+          $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+          $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),SOURCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+          $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),EXCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
+          $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
           \
           $(call functionServerCommandSocket, 600,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=CREATE); \
 	  $(SLEEP) 2; \
