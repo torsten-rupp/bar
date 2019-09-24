@@ -7685,12 +7685,6 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
     return;
   }
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  if (!String_matchCString(jobUUID,STRING_BEGIN,"\\d{8}-\\d{4}-\\d{4}-\\d{4}-\\d{8}",NULL,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"expected UUID <xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx>");
-    String_delete(name);
-    return;
-  }
   master = String_new();
   StringMap_getString(argumentMap,"master",master,NULL);
 
@@ -7739,7 +7733,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       error = Job_write(jobNode);
       if (error != ERROR_NONE)
       {
-        printWarning("Cannot update job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
+        printWarning("Cannot create job '%s' (error: %s)",String_cString(jobNode->fileName),Error_getText(error));
       }
 
       // add new job to list
