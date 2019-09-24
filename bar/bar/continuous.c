@@ -1011,7 +1011,7 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
                )
            )
         {
-          uuidNode = List_remove(&notifyInfo->uuidList,uuidNode);
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_NULL);
         }
         else
         {
@@ -1079,9 +1079,7 @@ LOCAL void continuousInitThreadCode(void)
   StringList_init(&nameList);
   baseName = String_new();
 
-  maxWatches   = getMaxNotifyWatches();
-//  maxInstances = getMaxNotifyInstances();
-
+  maxWatches = getMaxNotifyWatches();
   while (   !quitFlag
          && MsgQueue_get(&initDoneNotifyMsgQueue,&initNotifyMsg,NULL,sizeof(initNotifyMsg),WAIT_FOREVER)
         )
@@ -1089,7 +1087,7 @@ LOCAL void continuousInitThreadCode(void)
     switch (initNotifyMsg.type)
     {
       case INIT:
-//fprintf(stderr,"%s, %d: INIT job=%s scheudle=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+//fprintf(stderr,"%s, %d: INIT job=%s schedule=%s\n",__FILE__,__LINE__,initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
                     "CONTINUOUS","Start initialize watches for '%s'",
@@ -1386,36 +1384,32 @@ fprintf(stderr,"\n");
             if      (IS_INOTIFY(inotifyEvent->mask,IN_CREATE))
             {
               // add directory and sub-directories to notify
-//              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle.timeout),
-//                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//              {
-                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+              LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+              {
+                // store into notify database
+                error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                if (error == ERROR_NONE)
                 {
-                  // store into notify database
-                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                  if (error == ERROR_NONE)
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Marked for storage '%s'",
-                                String_cString(absoluteName)
-                               );
-                  }
-                  else
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                "CONTINUOUS",
-                                "Store continuous entry fail (error: %s)",
-                                Error_getText(error)
-                               );
-                  }
-
-                  // add directory and sub-directories to notify
-                  addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_CONTINUOUS,
+                              "CONTINUOUS",
+                              "Marked for storage '%s'",
+                              String_cString(absoluteName)
+                             );
                 }
-//              });
+                else
+                {
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_CONTINUOUS,
+                              "CONTINUOUS",
+                              "Store continuous entry fail (error: %s)",
+                              Error_getText(error)
+                             );
+                }
+
+                // add directory and sub-directories to notify
+                addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+              }
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
             {
@@ -1776,7 +1770,7 @@ Errors Continuous_doneNotify(ConstString name,
   }
   else
   {
-    initNotifyMsg.scheduleUUID[0] = '\0';
+    stringClear(initNotifyMsg.scheduleUUID);
   }
 
   (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
