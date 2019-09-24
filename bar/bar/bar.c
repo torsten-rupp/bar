@@ -1197,6 +1197,70 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : openLog
+* Purpose: open log file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void openLog(void)
+{
+  SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (logFileName != NULL)
+    {
+      logFile = fopen(logFileName,"a");
+      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!",logFileName,strerror(errno));
+    }
+  }
+}
+
+/***********************************************************************\
+* Name   : closeLog
+* Purpose: close log file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void closeLog(void)
+{
+  SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (logFile != NULL)
+    {
+      fclose(logFile);
+      logFile = NULL;
+    }
+  }
+}
+
+/***********************************************************************\
+* Name   : reopenLog
+* Purpose: re-open log file
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void reopenLog(void)
+{
+  SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (logFileName != NULL)
+    {
+      fclose(logFile);
+      logFile = fopen(logFileName,"a");
+      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",logFileName,strerror(errno));
+    }
+  }
+}
+
+/***********************************************************************\
 * Name   : signalHandler
 * Purpose: general signal handler
 * Input  : signalNumber - signal number
@@ -1217,15 +1281,7 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
   if (signalNumber == SIGUSR1)
   {
     // reopen log file
-    SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      if (logFileName != NULL)
-      {
-        fclose(logFile);
-        logFile = fopen(logFileName,"a");
-        if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",logFileName,strerror(errno));
-      }
-    }
+    reopenLog();
   }
   else
   {
@@ -1242,6 +1298,9 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
 
     // output error message
     fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
+    #ifndef NDEBUG
+      debugPrintStackTrace();
+    #endif /* NDEBUG */
 
     // delete pid file
     deletePIDFile();
@@ -1254,6 +1313,7 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
 
     // Note: do not free resources to avoid further errors
 
+    // exit with signal number
     exit(128+signalNumber);
   }
 }
@@ -4518,70 +4578,6 @@ LOCAL bool validateOptions(void)
   }
 
   return TRUE;
-}
-
-/***********************************************************************\
-* Name   : openLog
-* Purpose: open log file
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void openLog(void)
-{
-  SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    if (logFileName != NULL)
-    {
-      logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot open log file '%s' (error: %s)!",logFileName,strerror(errno));
-    }
-  }
-}
-
-/***********************************************************************\
-* Name   : closeLog
-* Purpose: close log file
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void closeLog(void)
-{
-  SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    if (logFile != NULL)
-    {
-      fclose(logFile);
-      logFile = NULL;
-    }
-  }
-}
-
-/***********************************************************************\
-* Name   : reopenLog
-* Purpose: re-open log file
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void reopenLog(void)
-{
-  SEMAPHORE_LOCKED_DO(&logLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {
-    if (logFileName != NULL)
-    {
-      fclose(logFile);
-      logFile = fopen(logFileName,"a");
-      if (logFile == NULL) printWarning("Cannot re-open log file '%s' (error: %s)!",logFileName,strerror(errno));
-    }
-  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -10835,7 +10831,13 @@ int main(int argc, const char *argv[])
     {
       // run as daemon
       #if   defined(PLATFORM_LINUX)
-        if (daemon(1,0) == 0)
+        // Note: do not suppress stdin/out/err for GCOV version
+        #ifdef GCOV
+          #define DAEMON_NO_SUPPRESS_STDIO 1
+        #else /* not GCOV */
+          #define DAEMON_NO_SUPPRESS_STDIO 0
+        #endif /* GCOV */
+        if (daemon(1,DAEMON_NO_SUPPRESS_STDIO) == 0)
         {
           error = bar(argc,argv);
         }
