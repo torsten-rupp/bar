@@ -417,13 +417,13 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 /***********************************************************************\
 * Name   : newScheduleNode
 * Purpose: allocate new schedule node
-* Input  : -
+* Input  : scheduleUUID - schedule UUIDor NULL for generate new UUID
 * Output : -
 * Return : new schedule node
 * Notes  : -
 \***********************************************************************/
 
-LOCAL ScheduleNode *newScheduleNode(void)
+LOCAL ScheduleNode *newScheduleNode(ConstString scheduleUUID)
 {
   ScheduleNode *scheduleNode;
 
@@ -456,6 +456,15 @@ LOCAL ScheduleNode *newScheduleNode(void)
   scheduleNode->totalStorageSize          = 0LL;
   scheduleNode->totalEntryCount           = 0LL;
   scheduleNode->totalEntrySize            = 0LL;
+
+  if (!String_isEmpty(scheduleUUID))
+  {
+    String_set(scheduleNode->uuid,scheduleUUID);
+  }
+  else
+  {
+    Misc_getUUID(scheduleNode->uuid);
+  }
 
   return scheduleNode;
 }
@@ -577,77 +586,77 @@ LOCAL void insertPersistenceNode(PersistenceList *persistenceList,
 /***********************************************************************\
 * Name   : parseScheduleDateTime
 * Purpose: parse schedule date/time
-* Input  : date        - date string (<year|*>-<month|*>-<day|*>)
-*          weekDays    - week days string (<day>,...)
-*          time        - time string <hour|*>:<minute|*>
-* Output :
-* Return : scheduleNode or NULL on error
+* Input  : scheduleNode - schedule node variable
+*          date         - date string (<year|*>-<month|*>-<day|*>)
+*          weekDays     - week days string (<day>,...)
+*          time         - time string <hour|*>:<minute|*>
+* Output : scheduleNode - schedule node
+* Return : ERROR_NONE or error code
 * Notes  : month names: jan, feb, mar, apr, may, jun, jul, aug, sep, oct
 *          nov, dec
 *          week day names: mon, tue, wed, thu, fri, sat, sun
 \***********************************************************************/
 
-LOCAL ScheduleNode *parseScheduleDateTime(ConstString date,
-                                          ConstString weekDays,
-                                          ConstString time
-                                         )
+LOCAL Errors parseScheduleDateTime(ScheduleNode *scheduleNode,
+                                   ConstString  date,
+                                   ConstString  weekDays,
+                                   ConstString  time
+                                  )
 {
-  ScheduleNode *scheduleNode;
-  bool         errorFlag;
-  String       s0,s1,s2;
+  Errors error;
+  String s0,s1,s2;
 
+  assert(scheduleNode != NULL);
   assert(date != NULL);
   assert(weekDays != NULL);
   assert(time != NULL);
 
-  // allocate new schedule node
-  scheduleNode = newScheduleNode();
-  assert(scheduleNode != NULL);
-  Misc_getUUID(scheduleNode->uuid);
+  error = ERROR_NONE;
 
   // parse date
-  errorFlag = FALSE;
   s0 = String_new();
   s1 = String_new();
   s2 = String_new();
   if      (String_parse(date,STRING_BEGIN,"%S-%S-%S",NULL,s0,s1,s2))
   {
-    if (!parseDateTimeNumber(s0,&scheduleNode->date.year)) errorFlag = TRUE;
-    if (!parseDateMonth     (s1,&scheduleNode->date.month)) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s2,&scheduleNode->date.day)) errorFlag = TRUE;
+    if (   !parseDateTimeNumber(s0,&scheduleNode->date.year )
+        || !parseDateMonth     (s1,&scheduleNode->date.month)
+        || !parseDateTimeNumber(s2,&scheduleNode->date.day  )
+       )
+    {
+      error = ERROR_PARSE;
+    }
   }
   else
   {
-    errorFlag = TRUE;
+    error = ERROR_PARSE;
   }
 
   // parse week days
   if (!parseWeekDaySet(String_cString(weekDays),&scheduleNode->weekDaySet))
   {
-    errorFlag = TRUE;
+    error = ERROR_PARSE;
   }
 
   // parse time
   if (String_parse(time,STRING_BEGIN,"%S:%S",NULL,s0,s1))
   {
-    if (!parseDateTimeNumber(s0,&scheduleNode->time.hour  )) errorFlag = TRUE;
-    if (!parseDateTimeNumber(s1,&scheduleNode->time.minute)) errorFlag = TRUE;
+    if (   !parseDateTimeNumber(s0,&scheduleNode->time.hour  )
+        || !parseDateTimeNumber(s1,&scheduleNode->time.minute)
+       )
+    {
+      error = ERROR_PARSE;
+    }
   }
   else
   {
-    errorFlag = TRUE;
+    error = ERROR_PARSE;
   }
   String_delete(s2);
   String_delete(s1);
   String_delete(s0);
 
-  if (errorFlag)
-  {
-    LIST_DELETE_NODE(scheduleNode);
-    return NULL;
-  }
-
-  return scheduleNode;
+  return error;
 }
 
 #if 0
@@ -10079,6 +10088,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 * Return : -
 * Notes  : Arguments:
 *            jobUUID=<uuid>
+*            [scheduleUUID=<uuid>]
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
 *            date=<year>|*-<month>|*-<day>|*
 *            weekDays=<week day>,...|*
@@ -10094,6 +10104,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   String       title;
   String       date;
   String       weekDays;
@@ -10104,6 +10115,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
   bool         noStorage;
   bool         enabled;
   ScheduleNode *scheduleNode;
+  Errors       error;
   JobNode      *jobNode;
 
   assert(clientInfo != NULL);
@@ -10117,6 +10129,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
     return;
   }
+  StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL);
   title = String_new();
   StringMap_getString(argumentMap,"title",title,NULL);
   date = String_new();
@@ -10186,12 +10199,17 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
+  // create new schedule
+  scheduleNode = newScheduleNode(scheduleUUID);
+  assert(scheduleNode != NULL);
+
   // parse schedule
-  scheduleNode = parseScheduleDateTime(date,
-                                       weekDays,
-                                       time
-                                      );
-  if (scheduleNode == NULL)
+  error = parseScheduleDateTime(scheduleNode,
+                                date,
+                                weekDays,
+                                time
+                               );
+  if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,
                         id,
@@ -10202,6 +10220,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
                         weekDays,
                         time
                        );
+    deleteScheduleNode(scheduleNode);
     String_delete(customText);
     String_delete(time);
     String_delete(weekDays);
