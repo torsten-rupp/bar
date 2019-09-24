@@ -18459,10 +18459,10 @@ Errors Server_run(ServerModes       mode,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Terminated BAR server%s",
+             "Terminate BAR server%s",
              (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
             );
-  printInfo(1,"Terminated BAR server%s\n",(serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
+  printInfo(1,"Terminate BAR server%s\n",(serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
 
   return ERROR_NONE;
 }
@@ -18676,10 +18676,9 @@ processCommand(&clientInfo,commandString);
   Semaphore_done(&clientList.lock);
   AutoFree_done(&autoFreeList);
 
-
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Terminated BAR batch"
+             "Terminate BAR batch"
             );
 
   return ERROR_NONE;
