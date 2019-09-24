@@ -763,7 +763,7 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
   if (verboseFlag) { fprintf(stderr,"Create..."); fflush(stderr); }
 
   // check if exists
-  if (!forceFlag && File_exists(databaseFileName))
+  if (!forceFlag && File_existsCString(databaseFileName))
   {
     return ERROR_DATABASE_EXISTS;
   }
