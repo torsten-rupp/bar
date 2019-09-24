@@ -3873,11 +3873,8 @@ functionServerCommandBatch = \
   $(ECHO) $1 $2
 
 .PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
-xxxtest_server_operations: \
-  test_server_operations_batch \
-  test_server_operations_socket
-
 test_server_operations: \
+  test_server_operations_batch \
   test_server_operations_socket
 
 test_server_operations_socket_server: \
