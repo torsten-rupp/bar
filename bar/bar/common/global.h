@@ -2145,7 +2145,7 @@ static inline bool stringIsEmpty(const char *s)
 * Name   : stringSet
 * Purpose: set string
 * Input  : destination - destination string
-*          n           - size of string (including termination NUL)
+*          n           - size of string (including terminating NUL)
 *          source      - source string
 * Output : -
 * Return : destination string
@@ -2175,7 +2175,7 @@ static inline char* stringSet(char *destination, ulong n, const char *source)
 * Name   : stringFormat
 * Purpose: format string
 * Input  : string - string
-*          n      - size of string (including termination NUL)
+*          n      - size of string (including terminating NUL)
 *          format - format string
 *          ...    - optional arguments
 * Output : -
@@ -2202,7 +2202,7 @@ static inline char* stringFormat(char *string, ulong n, const char *format, ...)
 * Name   : stringFormatAppend
 * Purpose: format string and append
 * Input  : string - string
-*          n      - size of destination string (including termination
+*          n      - size of destination string (including terminating
 *                   NUL)
 *          format - format string
 *          ...    - optional arguments
@@ -2236,7 +2236,7 @@ static inline char* stringFormatAppend(char *string, ulong n, const char *format
 * Purpose: append string
 * Input  : destination - destination string
 *          n           - size of destination string (including
-*                        termination NUL)
+*                        terminating NUL)
 *          source      - source string
 * Output : -
 * Return : destination string
@@ -2266,7 +2266,7 @@ static inline char* stringAppend(char *destination, ulong n, const char *source)
 * Purpose: append chararacter
 * Input  : destination - destination string
 *          n           - size of destination string (including
-*                        termination NUL)
+*                        terminating NUL)
 *          ch          - character
 * Output : -
 * Return : destination string
@@ -2297,7 +2297,7 @@ static inline char* stringAppendChar(char *destination, ulong n, char ch)
 * Purpose: fill string
 * Input  : destination - destination string
 *          n           - size of destination string (including
-*                        termination NUL)
+*                        terminating NUL)
 *          length      - length
 *          ch          - character
 * Output : -
@@ -2392,6 +2392,62 @@ static inline char* stringTrim(char *string)
     s--;
   }
   s[1] = NUL;
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringNew
+* Purpose: new (emtpy) string
+* Input  : n - string size (including terminating NUL)
+* Output : -
+* Return : new string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringNew(ulong n)
+{
+  char *string;
+
+  assert(n > 0);
+
+  string = (char*)malloc(n*sizeof(char));
+  if (string != NULL)
+  {
+    string[0] = NUL;
+  }
+
+  return string;
+}
+
+/***********************************************************************\
+* Name   : stringNewBuffer
+* Purpose: new string from buffer
+* Input  : buffer - buffer (can be NULL)
+*          n      - string size (including terminating NUL)
+* Output : -
+* Return : new string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringNewBuffer(const char *buffer, ulong n)
+{
+  char *string;
+
+  assert(n > 0);
+
+  string = (char*)malloc(n*sizeof(char));
+  if (string != NULL)
+  {
+    if (buffer != NULL)
+    {
+      strncpy(string,buffer,n-1); string[n-1] = NUL;
+    }
+    else
+    {
+      string[0] = NUL;
+    }
+  }
 
   return string;
 }
