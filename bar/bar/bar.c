@@ -914,7 +914,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   // global job settings
   CONFIG_VALUE_IGNORE            ("host-name"),
   CONFIG_VALUE_IGNORE            ("host-port"),
-  CONFIG_VALUE_STRING            ("archive-name",                     &storageName,-1                                            ),
+  CONFIG_VALUE_STRING            ("archive-name",                     &storageName,-1                                                ),
   CONFIG_VALUE_SELECT            ("archive-type",                     &globalOptions.archiveType,-1,                                 CONFIG_VALUE_ARCHIVE_TYPES),
 
   CONFIG_VALUE_STRING            ("incremental-list-file",            &globalOptions.incrementalListFileName,-1                      ),
@@ -1664,13 +1664,6 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          String_unquote(value,STRING_QUOTES);
-          String_unescape(value,
-                          STRING_ESCAPE_CHARACTER,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                        );
           if (!ConfigValue_parse(String_cString(name),
                                  String_cString(value),
                                  CONFIG_VALUES,
@@ -1732,13 +1725,6 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          String_unquote(value,STRING_QUOTES);
-          String_unescape(value,
-                          STRING_ESCAPE_CHARACTER,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                        );
           if (!ConfigValue_parse(String_cString(name),
                                  String_cString(value),
                                  CONFIG_VALUES,
@@ -1800,13 +1786,6 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          String_unquote(value,STRING_QUOTES);
-          String_unescape(value,
-                          STRING_ESCAPE_CHARACTER,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                        );
           if (!ConfigValue_parse(String_cString(name),
                                  String_cString(value),
                                  CONFIG_VALUES,
@@ -1868,13 +1847,6 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          String_unquote(value,STRING_QUOTES);
-          String_unescape(value,
-                          STRING_ESCAPE_CHARACTER,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                        );
           if (!ConfigValue_parse(String_cString(name),
                                  String_cString(value),
                                  CONFIG_VALUES,
@@ -1935,13 +1907,6 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          String_unquote(value,STRING_QUOTES);
-          String_unescape(value,
-                          STRING_ESCAPE_CHARACTER,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                        );
           if (!ConfigValue_parse(String_cString(name),
                                  String_cString(value),
                                  CONFIG_VALUES,
@@ -1992,13 +1957,6 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          String_unquote(value,STRING_QUOTES);
-          String_unescape(value,
-                          STRING_ESCAPE_CHARACTER,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                        );
           if (!ConfigValue_parse(String_cString(name),
                                  String_cString(value),
                                  CONFIG_VALUES,
@@ -2043,7 +2001,6 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-      String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              CONFIG_VALUES,
@@ -3558,7 +3515,8 @@ LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, c
 
 /***********************************************************************\
 * Name   : configValueParseConfigFile
-* Purpose: command line option call back for parsing configuration file
+* Purpose: command line option call back for parsing configuration
+*          filename
 * Input  : -
 * Output : -
 * Return : TRUE iff parsed, FALSE otherwise
@@ -3567,6 +3525,8 @@ LOCAL bool cmdOptionParseDeprecatedStopOnError(void *userData, void *variable, c
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
+  String string;
+
   assert(value != NULL);
 
   UNUSED_VARIABLE(userData);
@@ -3575,7 +3535,21 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  StringList_appendCString(&configFileNameList,value);
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
+  // append to config filename list
+  StringList_append(&configFileNameList,string);
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -3596,6 +3570,7 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
 
 LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
+  String    string;
   MountNode *mountNode;
 
   assert(variable != NULL);
@@ -3605,6 +3580,16 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
   UNUSED_VARIABLE(name);
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
+
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
 
   if (!stringIsEmpty(value))
   {
@@ -3618,6 +3603,9 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
     }
     List_append((MountList*)variable,mountNode);
   }
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -7031,10 +7019,10 @@ Errors mountAll(const MountList *mountList)
     {
       assert(mountNode != NULL);
 
-      printWarning("Cannot mount '%s' (error: %s)",
-                   String_cString(mountNode->name),
-                   Error_getText(error)
-                  );
+      printError("Cannot mount '%s' (error: %s)",
+                 String_cString(mountNode->name),
+                 Error_getText(error)
+                );
 
       // revert mounts
       mountNode = mountNode->prev;
@@ -7368,6 +7356,8 @@ bool parseDateMonth(ConstString s, int *month)
 
 bool configValueParsePassword(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
+  String string;
+
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -7376,7 +7366,21 @@ bool configValueParsePassword(void *userData, void *variable, const char *name, 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  Password_setCString((Password*)variable,value);
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
+  // store password
+  Password_setString((Password*)variable,string);
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -7883,7 +7887,7 @@ LOCAL bool configValueParseEntryPattern(EntryTypes entryType, void *userData, vo
   const char* FILENAME_MAP_TO[]   = {"\n","\r","\\"};
 
   PatternTypes patternType;
-  String       pattern;
+  String       string;
   Errors       error;
 
   assert(variable != NULL);
@@ -7897,16 +7901,28 @@ LOCAL bool configValueParseEntryPattern(EntryTypes entryType, void *userData, vo
   else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
   else                                 { patternType = (PatternTypes)userData;                  }
 
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
   // append to list
-  pattern = String_mapCString(String_newCString(value),STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
-  error = EntryList_append((EntryList*)variable,entryType,pattern,patternType,NULL);
+  String_mapCString(string,STRING_BEGIN,FILENAME_MAP_FROM,FILENAME_MAP_TO,SIZE_OF_ARRAY(FILENAME_MAP_FROM));
+  error = EntryList_append((EntryList*)variable,entryType,string,patternType,NULL);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
-    String_delete(pattern);
+    String_delete(string);
     return FALSE;
   }
-  String_delete(pattern);
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -8031,6 +8047,7 @@ bool configValueFormatImageEntryPattern(void **formatUserData, void *userData, S
 bool configValueParsePattern(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes patternType;
+  String       string;
   Errors       error;
 
   assert(variable != NULL);
@@ -8045,13 +8062,27 @@ bool configValueParsePattern(void *userData, void *variable, const char *name, c
   else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
-  // append to list
-  error = PatternList_appendCString((PatternList*)variable,value,patternType,NULL);
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
+  // append to pattern list
+  error = PatternList_append((PatternList*)variable,string,patternType,NULL);
   if (error != ERROR_NONE)
   {
     stringSet(errorMessage,errorMessageSize,Error_getText(error));
+    String_delete(string);
     return FALSE;
   }
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -8128,40 +8159,49 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   mountName  = String_new();
   deviceName = String_new();
 
-  // get name
-//TODO: deprecated
+fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
+  // get name, device
   if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,NULL))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // Note: %y deprecated
   }
-//TODO: deprecated
   else if (String_parseCString(value,"%S,,%y",NULL,mountName,NULL))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // Note: %y deprecated
     String_clear(deviceName);
   }
-//TODO: deprecated
   else if (String_parseCString(value,"%S,%y",NULL,mountName,NULL))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // Note: %y deprecated
     String_clear(deviceName);
   }
   else if (String_parseCString(value,"%S,%S",NULL,mountName,deviceName))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   else if (String_parseCString(value,"%S",NULL,mountName))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_clear(deviceName);
   }
   else
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(deviceName);
     String_delete(mountName);
     return FALSE;
   }
+//TODO: remove
+//exit(1);
 
   if (!String_isEmpty(mountName))
   {
     // add to mount list
     mountNode = newMountNode(mountName,
-                             NULL  // deviceName
+                             deviceName
                             );
     if (mountNode == NULL)
     {
@@ -8219,6 +8259,7 @@ bool configValueFormatMount(void **formatUserData, void *userData, String line)
 bool configValueParseDeltaSource(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   PatternTypes    patternType;
+  String          string;
   DeltaSourceNode *deltaSourceNode;
 
   assert(variable != NULL);
@@ -8235,15 +8276,28 @@ bool configValueParseDeltaSource(void *userData, void *variable, const char *nam
   else if (strncmp(value,"g:",2) == 0) { patternType = PATTERN_TYPE_GLOB;           value += 2; }
   else                                 { patternType = PATTERN_TYPE_GLOB;                       }
 
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
   // append to delta source list
   deltaSourceNode = LIST_NEW_NODE(DeltaSourceNode);
   if (deltaSourceNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  deltaSourceNode->storageName = String_newCString(value);
+  deltaSourceNode->storageName = String_duplicate(string);
   deltaSourceNode->patternType = patternType;
   List_append((DeltaSourceList*)variable,deltaSourceNode);
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -8302,8 +8356,11 @@ bool configValueFormatDeltaSource(void **formatUserData, void *userData, String 
   }
 }
 
+//TODO: required? use %s, %S
 bool configValueParseString(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
+  String string;
+
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -8312,14 +8369,27 @@ bool configValueParseString(void *userData, void *variable, const char *name, co
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
   if ((*(String*)variable) != NULL)
   {
-    String_setCString(*(String*)variable,value);
+    String_set(*(String*)variable,string);
   }
   else
   {
-    (*(String*)variable) = String_newCString(value);
+    (*(String*)variable) = String_duplicate(string);
   }
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -9457,7 +9527,6 @@ LOCAL bool readFromJob(ConstString fileName)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-      String_unquote(value,STRING_QUOTES);
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              JOB_CONFIG_VALUES,
@@ -10633,7 +10702,7 @@ exit(1);
     return ERROR_INVALID_ARGUMENT;
   }
 
-  // read server job list (if possible)
+  // read jobs (if possible)
   (void)Job_rereadAll(globalOptions.jobsDirectory);
 
   // read options from job file

@@ -2076,6 +2076,8 @@ LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userD
 
 bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
+  String string;
+
   assert(variable != NULL);
   assert(value != NULL);
 
@@ -2084,7 +2086,20 @@ bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const 
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  String_setCString(((JobNode*)variable)->job.slaveHost.name,value);
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
+  String_set(((JobNode*)variable)->job.slaveHost.name,string);
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -2296,6 +2311,7 @@ LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variab
 
 LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
+  String    string;
   MountNode *mountNode;
 
   assert(variable != NULL);
@@ -2306,18 +2322,31 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
+  // unquote/unescape
+  string = String_newCString(value);
+  String_unquote(string,STRING_QUOTES);
+  String_unescape(string,
+                  STRING_ESCAPE_CHARACTER,
+                  STRING_ESCAPE_CHARACTERS_MAP_TO,
+                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                );
+
   if (!stringIsEmpty(value))
   {
     // add to mount list
-    mountNode = newMountNodeCString(value,
-                                    NULL  // deviceName
-                                   );
+    mountNode = newMountNode(string,
+                             NULL  // deviceName
+                            );
     if (mountNode == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
     List_append(&((JobNode*)variable)->job.options.mountList,mountNode);
   }
+
+  // free resources
+  String_delete(string);
 
   return TRUE;
 }
@@ -3167,13 +3196,6 @@ bool Job_read(JobNode *jobNode)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          String_unquote(value,STRING_QUOTES);
-          String_unescape(value,
-                          STRING_ESCAPE_CHARACTER,
-                          STRING_ESCAPE_CHARACTERS_MAP_TO,
-                          STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                          STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                        );
           if (!ConfigValue_parse(String_cString(name),
                                  String_cString(value),
                                  JOB_CONFIG_VALUES,
@@ -3262,13 +3284,6 @@ bool Job_read(JobNode *jobNode)
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            String_unquote(value,STRING_QUOTES);
-            String_unescape(value,
-                            STRING_ESCAPE_CHARACTER,
-                            STRING_ESCAPE_CHARACTERS_MAP_TO,
-                            STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                            STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                          );
             if (!ConfigValue_parse(String_cString(name),
                                    String_cString(value),
                                    JOB_CONFIG_VALUES,
@@ -3345,13 +3360,6 @@ bool Job_read(JobNode *jobNode)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-      String_unquote(value,STRING_QUOTES);
-      String_unescape(value,
-                      STRING_ESCAPE_CHARACTER,
-                      STRING_ESCAPE_CHARACTERS_MAP_TO,
-                      STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                      STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                    );
       if (!ConfigValue_parse(String_cString(name),
                              String_cString(value),
                              JOB_CONFIG_VALUES,
