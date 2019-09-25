@@ -2436,18 +2436,18 @@ LOCAL bool cmdOptionParseMount(void *userData, void *variable, const char *name,
   deviceName = String_new();
 
   // get name
-//TODO: deprecated
   if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,NULL))
   {
+    // Note: %y deprecated
   }
-//TODO: deprecated
   else if (String_parseCString(value,"%S,,%y",NULL,mountName,NULL))
   {
+    // Note: %y deprecated
     String_clear(deviceName);
   }
-//TODO: deprecated
   else if (String_parseCString(value,"%S,%y",NULL,mountName,NULL))
   {
+    // Note: %y deprecated
     String_clear(deviceName);
   }
   else if (String_parseCString(value,"%S,%S",NULL,mountName,deviceName))
@@ -8159,43 +8159,34 @@ bool configValueParseMount(void *userData, void *variable, const char *name, con
   mountName  = String_new();
   deviceName = String_new();
 
-fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
   // get name, device
   if      (String_parseCString(value,"%S,%S,%y",NULL,mountName,deviceName,NULL))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // Note: %y deprecated
   }
   else if (String_parseCString(value,"%S,,%y",NULL,mountName,NULL))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // Note: %y deprecated
     String_clear(deviceName);
   }
   else if (String_parseCString(value,"%S,%y",NULL,mountName,NULL))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     // Note: %y deprecated
     String_clear(deviceName);
   }
   else if (String_parseCString(value,"%S,%S",NULL,mountName,deviceName))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   else if (String_parseCString(value,"%S",NULL,mountName))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_clear(deviceName);
   }
   else
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(deviceName);
     String_delete(mountName);
     return FALSE;
   }
-//TODO: remove
-//exit(1);
 
   if (!String_isEmpty(mountName))
   {
@@ -8357,7 +8348,7 @@ bool configValueFormatDeltaSource(void **formatUserData, void *userData, String 
 }
 
 //TODO: required? use %s, %S
-bool configValueParseString(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+bool xxxconfigValueParseString(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   String string;
 
