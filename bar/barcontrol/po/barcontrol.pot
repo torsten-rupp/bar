@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-09-22 08:49+0200\n"
+"POT-Creation-Date: 2019-09-25 08:35+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -581,7 +581,7 @@ msgstr ""
 
 #: src/BARException.java:419 src/BARException.java:426
 #: src/BARException.java:433 src/BARException.java:443
-#: src/BARException.java:528 src/BARException.java:1038
+#: src/BARException.java:528 src/BARException.java:1035
 msgid " for ''%s''"
 msgstr ""
 
@@ -729,7 +729,7 @@ msgstr ""
 msgid "delta source ''%s'' not found"
 msgstr ""
 
-#: src/BARException.java:612 src/BARException.java:1308
+#: src/BARException.java:612 src/BARException.java:1305
 msgid "delta source not found"
 msgstr ""
 
@@ -930,408 +930,407 @@ msgid "no file name given"
 msgstr ""
 
 #: src/BARException.java:829
-msgid "create file"
+msgid "create file fail"
 msgstr ""
 
-#: src/BARException.java:834 src/BARException.java:842
-#: src/BARException.java:850 src/BARException.java:956
-#: src/BARException.java:964 src/BARException.java:975
-msgid " fail"
+#: src/BARException.java:836
+msgid "open file fail"
 msgstr ""
 
-#: src/BARException.java:837
-msgid "open file"
+#: src/BARException.java:843
+msgid "create directory fail"
 msgstr ""
 
-#: src/BARException.java:845
-msgid "create directory"
-msgstr ""
-
-#: src/BARException.java:853
+#: src/BARException.java:850
 msgid "i/o error"
 msgstr ""
 
-#: src/BARException.java:860
+#: src/BARException.java:857
 msgid "read file fail: "
 msgstr ""
 
-#: src/BARException.java:864
+#: src/BARException.java:861
 msgid "end of file: "
 msgstr ""
 
-#: src/BARException.java:868
+#: src/BARException.java:865
 msgid "write file fail: "
 msgstr ""
 
-#: src/BARException.java:872
+#: src/BARException.java:869
 msgid "delete file fail: "
 msgstr ""
 
-#: src/BARException.java:895
+#: src/BARException.java:892
 msgid "open directory: "
 msgstr ""
 
-#: src/BARException.java:899
+#: src/BARException.java:896
 msgid "read directory fail"
 msgstr ""
 
-#: src/BARException.java:904
+#: src/BARException.java:901
 msgid "file ''%s'' already exists"
 msgstr ""
 
-#: src/BARException.java:908
+#: src/BARException.java:905
 msgid "file already exists"
 msgstr ""
 
-#: src/BARException.java:914
+#: src/BARException.java:911
 msgid "file ''%s'' not found"
 msgstr ""
 
-#: src/BARException.java:918
+#: src/BARException.java:915
 msgid "file not found"
 msgstr ""
 
-#: src/BARException.java:922
+#: src/BARException.java:919
 msgid "access denied"
 msgstr ""
 
-#: src/BARException.java:925
+#: src/BARException.java:922
 msgid "not a directory"
 msgstr ""
 
-#: src/BARException.java:932
+#: src/BARException.java:929
 msgid "end of directory list"
 msgstr ""
 
-#: src/BARException.java:935
+#: src/BARException.java:932
 msgid "init file notify fail"
 msgstr ""
 
-#: src/BARException.java:938
+#: src/BARException.java:935
 msgid "insufficient file notify entries"
 msgstr ""
 
-#: src/BARException.java:947
+#: src/BARException.java:944
 msgid "CD/DVD/BD device not found"
 msgstr ""
 
-#: src/BARException.java:951
+#: src/BARException.java:948
 msgid "open CD/DVD/BD disk"
 msgstr ""
 
-#: src/BARException.java:959
+#: src/BARException.java:953 src/BARException.java:961
+#: src/BARException.java:972
+msgid " fail"
+msgstr ""
+
+#: src/BARException.java:956
 msgid "open ISO 9660 image"
 msgstr ""
 
-#: src/BARException.java:967
+#: src/BARException.java:964
 msgid "no device name given"
 msgstr ""
 
-#: src/BARException.java:970
+#: src/BARException.java:967
 msgid "open device"
 msgstr ""
 
-#: src/BARException.java:978
+#: src/BARException.java:975
 msgid "invalid device block size"
 msgstr ""
 
-#: src/BARException.java:981
+#: src/BARException.java:978
 msgid "read device fail"
 msgstr ""
 
-#: src/BARException.java:984
+#: src/BARException.java:981
 msgid "write device fail"
 msgstr ""
 
-#: src/BARException.java:987
+#: src/BARException.java:984
 msgid "error parsing device list"
 msgstr ""
 
-#: src/BARException.java:992
+#: src/BARException.java:989
 msgid "mount ''%s'' fail"
 msgstr ""
 
-#: src/BARException.java:996
+#: src/BARException.java:993
 msgid "mount fail"
 msgstr ""
 
-#: src/BARException.java:1002
+#: src/BARException.java:999
 msgid "unmount ''%s'' fail"
 msgstr ""
 
-#: src/BARException.java:1006
+#: src/BARException.java:1003
 msgid "unmount fail"
 msgstr ""
 
-#: src/BARException.java:1010
+#: src/BARException.java:1007
 msgid "no archive file name given"
 msgstr ""
 
-#: src/BARException.java:1013
+#: src/BARException.java:1010
 msgid "not an archive file"
 msgstr ""
 
-#: src/BARException.java:1018
+#: src/BARException.java:1015
 msgid "archive ''%s'' not found"
 msgstr ""
 
-#: src/BARException.java:1022
+#: src/BARException.java:1019
 msgid "archive not found"
 msgstr ""
 
-#: src/BARException.java:1026
+#: src/BARException.java:1023
 msgid "end of archive"
 msgstr ""
 
-#: src/BARException.java:1029
+#: src/BARException.java:1026
 msgid "no meta entry"
 msgstr ""
 
-#: src/BARException.java:1032
+#: src/BARException.java:1029
 msgid "no file entry"
 msgstr ""
 
-#: src/BARException.java:1035
+#: src/BARException.java:1032
 msgid "no file data entry"
 msgstr ""
 
-#: src/BARException.java:1042
+#: src/BARException.java:1039
 msgid "no directory entry"
 msgstr ""
 
-#: src/BARException.java:1045
+#: src/BARException.java:1042
 msgid "no link entry"
 msgstr ""
 
-#: src/BARException.java:1048
+#: src/BARException.java:1045
 msgid "no hard link entry"
 msgstr ""
 
-#: src/BARException.java:1051
+#: src/BARException.java:1048
 msgid "no special entry"
 msgstr ""
 
-#: src/BARException.java:1054
+#: src/BARException.java:1051
 msgid "no image entry"
 msgstr ""
 
-#: src/BARException.java:1057
+#: src/BARException.java:1054
 msgid "no image data entry"
 msgstr ""
 
-#: src/BARException.java:1060
+#: src/BARException.java:1057
 msgid "end of data"
 msgstr ""
 
-#: src/BARException.java:1063
+#: src/BARException.java:1060
 msgid "incomplete archive"
 msgstr ""
 
-#: src/BARException.java:1066
+#: src/BARException.java:1063
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: src/BARException.java:1069
+#: src/BARException.java:1066
 msgid "wrong CRC"
 msgstr ""
 
-#: src/BARException.java:1072
+#: src/BARException.java:1069
 msgid " at offset "
 msgstr ""
 
-#: src/BARException.java:1087
+#: src/BARException.java:1084
 msgid "entry is incomplete"
 msgstr ""
 
-#: src/BARException.java:1094
+#: src/BARException.java:1091
 msgid "wrong entry type"
 msgstr ""
 
-#: src/BARException.java:1101
+#: src/BARException.java:1098
 msgid "entries differ"
 msgstr ""
 
-#: src/BARException.java:1108
+#: src/BARException.java:1105
 msgid "corrupt data or invalid password"
 msgstr ""
 
-#: src/BARException.java:1115
+#: src/BARException.java:1112
 msgid "invalid chunk size"
 msgstr ""
 
-#: src/BARException.java:1118
+#: src/BARException.java:1115
 msgid "unknown chunk"
 msgstr ""
 
-#: src/BARException.java:1125
+#: src/BARException.java:1122
 msgid "invalid signature"
 msgstr ""
 
-#: src/BARException.java:1128
+#: src/BARException.java:1125
 msgid "invalid incremental file"
 msgstr ""
 
-#: src/BARException.java:1131
+#: src/BARException.java:1128
 msgid "wrong incremental file version"
 msgstr ""
 
-#: src/BARException.java:1134
+#: src/BARException.java:1131
 msgid "corrupt incremental file"
 msgstr ""
 
-#: src/BARException.java:1137
+#: src/BARException.java:1134
 msgid "invalid device specifier"
 msgstr ""
 
-#: src/BARException.java:1140
+#: src/BARException.java:1137
 msgid "load volume fail"
 msgstr ""
 
-#: src/BARException.java:1143
+#: src/BARException.java:1140
 msgid "parse command fail"
 msgstr ""
 
-#: src/BARException.java:1150
+#: src/BARException.java:1147
 msgid "expand command template fail"
 msgstr ""
 
-#: src/BARException.java:1153
+#: src/BARException.java:1150
 msgid "fork for execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1156
+#: src/BARException.java:1153
 msgid "i/o fail"
 msgstr ""
 
-#: src/BARException.java:1163 src/BARException.java:1178
+#: src/BARException.java:1160 src/BARException.java:1175
 msgid "execute external program"
 msgstr ""
 
-#: src/BARException.java:1166
+#: src/BARException.java:1163
 msgid "execute external program ''%s'' fail"
 msgstr ""
 
-#: src/BARException.java:1170
+#: src/BARException.java:1167
 msgid "execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1184
+#: src/BARException.java:1181
 msgid "fail"
 msgstr ""
 
-#: src/BARException.java:1191
+#: src/BARException.java:1188
 msgid "parsing data"
 msgstr ""
 
-#: src/BARException.java:1198
+#: src/BARException.java:1195
 msgid "unknown command"
 msgstr ""
 
-#: src/BARException.java:1205
+#: src/BARException.java:1202
 msgid "expected parameter"
 msgstr ""
 
-#: src/BARException.java:1218
+#: src/BARException.java:1215
 msgid "unknown value"
 msgstr ""
 
-#: src/BARException.java:1222
+#: src/BARException.java:1219
 msgid "invalid value"
 msgstr ""
 
-#: src/BARException.java:1229
+#: src/BARException.java:1226
 msgid "authorization"
 msgstr ""
 
-#: src/BARException.java:1238
+#: src/BARException.java:1235
 msgid "job not found"
 msgstr ""
 
-#: src/BARException.java:1248
+#: src/BARException.java:1245
 msgid "schedule not found"
 msgstr ""
 
-#: src/BARException.java:1258
+#: src/BARException.java:1255
 msgid "persistence not found"
 msgstr ""
 
-#: src/BARException.java:1268
+#: src/BARException.java:1265
 msgid "server not found"
 msgstr ""
 
-#: src/BARException.java:1278
+#: src/BARException.java:1275
 msgid "entry not found"
 msgstr ""
 
-#: src/BARException.java:1288
+#: src/BARException.java:1285
 msgid "pattern not found"
 msgstr ""
 
-#: src/BARException.java:1298
+#: src/BARException.java:1295
 msgid "mount not found"
 msgstr ""
 
-#: src/BARException.java:1312
+#: src/BARException.java:1309
 msgid "database"
 msgstr ""
 
-#: src/BARException.java:1319
+#: src/BARException.java:1316
 msgid "database already exists"
 msgstr ""
 
-#: src/BARException.java:1322
+#: src/BARException.java:1319
 msgid "unknown version on index"
 msgstr ""
 
-#: src/BARException.java:1325
+#: src/BARException.java:1322
 msgid "missing table"
 msgstr ""
 
-#: src/BARException.java:1332
+#: src/BARException.java:1329
 msgid "missing column"
 msgstr ""
 
-#: src/BARException.java:1339
+#: src/BARException.java:1336
 msgid "obsolete table"
 msgstr ""
 
-#: src/BARException.java:1346
+#: src/BARException.java:1343
 msgid "obsolete column"
 msgstr ""
 
-#: src/BARException.java:1353
+#: src/BARException.java:1350
 msgid "type mismatch"
 msgstr ""
 
-#: src/BARException.java:1360
+#: src/BARException.java:1357
 msgid "error creating index"
 msgstr ""
 
-#: src/BARException.java:1363
+#: src/BARException.java:1360
 msgid "index not found"
 msgstr ""
 
-#: src/BARException.java:1366
+#: src/BARException.java:1363
 msgid "index still not initialized"
 msgstr ""
 
-#: src/BARException.java:1369
+#: src/BARException.java:1366
 msgid "invalid index"
 msgstr ""
 
-#: src/BARException.java:1376
+#: src/BARException.java:1373
 msgid "timeout accessing index"
 msgstr ""
 
-#: src/BARException.java:1379
+#: src/BARException.java:1376
 msgid "master disconnected"
 msgstr ""
 
-#: src/BARException.java:1382
+#: src/BARException.java:1379
 msgid "slave disconnected"
 msgstr ""
 
-#: src/BARException.java:1385
+#: src/BARException.java:1382
 msgid "slave is not paired"
 msgstr ""
 
