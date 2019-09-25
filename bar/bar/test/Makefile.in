@@ -234,8 +234,16 @@ TEST_SERVER_CONFIG               = $(TEST_SERVER_DIRECTORY)/bar.cfg
 TEST_SERVER_PID_FILE             = $(TEST_SERVER_DIRECTORY)/bar.pid
 TEST_SERVER_JOBS_DIRECTORY       = $(TEST_SERVER_DIRECTORY)/jobs
 TEST_SERVER_DATABASE             = $(TEST_SERVER_DIRECTORY)/index.db
-TEST_SERVER_CONTINUOUS_DATABASE  = $(TEST_SERVER_DIRECTORY)/continuous.db
 TEST_SERVER_LOG_FILE             = $(TEST_SERVER_DIRECTORY)/bar.log
+
+TEST_MASTER_PORT                 = 39909
+TEST_MASTER_SSL_PORT             = 39910
+TEST_MASTER_DIRECTORY            = intermediate/master
+TEST_MASTER_CONFIG               = $(TEST_MASTER_DIRECTORY)/bar.cfg
+TEST_MASTER_PID_FILE             = $(TEST_MASTER_DIRECTORY)/bar.pid
+TEST_MASTER_JOBS_DIRECTORY       = $(TEST_MASTER_DIRECTORY)/jobs
+TEST_MASTER_DATABASE             = $(TEST_MASTER_DIRECTORY)/index.db
+TEST_MASTER_LOG_FILE             = $(TEST_MASTER_DIRECTORY)/bar.log
 
 TEST_SLAVE_HOST                  =
 TEST_SLAVE_PORT                  = 39911
@@ -811,8 +819,10 @@ test_data_clean:
 	$(RMRF) $(TEST_JOBS_DIRECTORY)
 	$(RMRF) $(TEST_SERVER_JOBS_DIRECTORY)
 	$(RMF)  $(TEST_SERVER_DATABASE)
-	$(RMF)  $(TEST_SERVER_CONTINUOUS_DATABASE)
 	$(RMF)  $(TEST_SERVER_LOG_FILE)
+	$(RMRF) $(TEST_MASTER_JOBS_DIRECTORY)
+	$(RMF)  $(TEST_MASTER_DATABASE)
+	$(RMF)  $(TEST_MASTER_LOG_FILE)
 	$(RMRF) $(TEST_SLAVE_JOBS_DIRECTORY)
 	$(RMF)  $(TEST_SLAVE_DATABASE)
 	$(RMF)  $(TEST_SLAVE_LOG_FILE)
@@ -2304,6 +2314,20 @@ data/hardlinkdata512M.dat data/hardlink512M1.dat data/hardlink512M2.dat:
 	($(CD) $(@D); $(RMF) hardlink512M1.dat hardlink512M2.dat; $(LN) hardlinkdata512M.dat hardlink512M1.dat; $(LN) hardlinkdata512M.dat hardlink512M2.dat)
 
 $(TEST_CONFIG):
+	$(INSTALL) -d $(@D)
+	( \
+          echo '# bar test configuration'; \
+        ) >$@
+	$(CHMOD) 600 $@
+
+$(TEST_SERVER_CONFIG):
+	$(INSTALL) -d $(@D)
+	( \
+          echo '# bar test configuration'; \
+        ) >$@
+	$(CHMOD) 600 $@
+
+$(TEST_SLAVE_CONFIG):
 	$(INSTALL) -d $(@D)
 	( \
           echo '# bar test configuration'; \
@@ -3868,14 +3892,20 @@ test_dvd_operations: \
 
 # send command to server
 functionServerCommandSocket = \
-  $(ECHO) $1 $3; $(ECHO) $1 $3|$(NETCAT) -w1 $2|$(TAIL) -n +2
+  $(ECHO) $2: $1 $3; $(ECHO) $1 $3|$(NETCAT) -w1 $2|$(TAIL) -n +2
 functionServerCommandBatch = \
   $(ECHO) $1 $2
+functionSlaveCommandSocket = \
+  $(ECHO) $2: $1 $3; $(ECHO) $1 $3|$(NETCAT) -w1 $2|$(TAIL) -n +2
 
 .PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
-test_server_operations: \
+xxxtest_server_operations: \
   test_server_operations_batch \
-  test_server_operations_socket
+  test_server_operations_socket \
+  test_master_slave_operations_create
+
+test_server_operations: \
+  test_master_slave_operations_create
 
 test_server_operations_socket_server: \
   $(TEST_BAR) \
@@ -4027,7 +4057,7 @@ test_server_operations_socket_client: \
           \
           $(call functionServerCommandSocket,1700,localhost $(TEST_SERVER_PORT),JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
           \
-          $(call functionServerCommandSocket,1800,localhost $(TEST_SERVER_PORT),QUIT); \
+          $(call functionServerCommandSocket,9999,localhost $(TEST_SERVER_PORT),QUIT); \
         ) $(LOG)
 
 test_server_operations_socket: \
@@ -4148,7 +4178,7 @@ test_server_operations_batch: \
           \
           $(call functionServerCommandBatch,1700,JOB_DELETE jobUUID=$(TEST_JOB_UUID)); \
           \
-          $(call functionServerCommandBatch,1800,QUIT); \
+          $(call functionServerCommandBatch,9999,QUIT); \
         ) | \
         ( \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
@@ -4182,32 +4212,32 @@ test_master_slave_operations_master: \
   $(TEST_SERVER_JOBS_DIRECTORY) \
   $(TEST_SLAVE_JOBS_DIRECTORY)
 	( \
-	  $(CD) $(UP_DIR); \
+          $(CD) $(UP_DIR); \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
           \
-	  : start master server; \
-          $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_DIRECTORY); \
-          $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
-          $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_SERVER_CONFIG); \
-          $(RMF) $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
+          : start master server; \
+          $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_DIRECTORY); \
+          $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY); \
+          $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_MASTER_CONFIG); \
+          $(RMF) $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
 	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
             -C $(SUB_DIR) \
-	    $(TEST_OPTIONS) \
+            $(TEST_OPTIONS) \
             --daemon \
             $(if $(TEST_DETACH),,-D) \
-	    --pid-file=$(TEST_SERVER_PID_FILE) \
+            --pid-file=$(TEST_MASTER_PID_FILE) \
             --server-mode=master \
-	    --server-port=$(TEST_SERVER_PORT) \
-	    --index-database=$(TEST_SERVER_DATABASE) \
-            --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
-	    --server-debug \
-            --log-file=$(TEST_SERVER_LOG_FILE) \
+            --server-port=$(TEST_MASTER_PORT) \
+            --index-database=$(TEST_MASTER_DATABASE) \
+            --jobs-directory=$(TEST_MASTER_JOBS_DIRECTORY) \
+            --server-debug \
+            --log-file=$(TEST_MASTER_LOG_FILE) \
             --log=all \
             --max-threads=1 \
             $(ADDITIONAL_OPTIONS) \
             ; \
           if test $$? -eq 0; then \
-	    $(SLEEP) 5; \
+            $(SLEEP) 10; \
           else \
             exit 1; \
           fi; \
@@ -4224,7 +4254,7 @@ test_master_slave_operations_slave: \
 	@$(call functionVerifyParameter,TEST_SLAVE_PASSWORD)
 	@#
 	( \
-	  $(CD) $(UP_DIR); \
+          $(CD) $(UP_DIR); \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
           \
 	  : start slave server; \
@@ -4237,16 +4267,17 @@ test_master_slave_operations_slave: \
             $(call functionSlaveExecute,$(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME)); \
 	    $(call functionSlaveExecute,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
-	      --no-default-config --config=$(TEST_SLAVE_CONFIG) \
+              --no-default-config --config=$(TEST_SLAVE_CONFIG) \
               --daemon \
               $(if $(TEST_DETACH),,-D) \
-	      --pid-file=$(TEST_SLAVE_PID_FILE) \
+              --pid-file=$(TEST_SLAVE_PID_FILE) \
               --server-mode=slave \
-	      --server-port=$(TEST_SLAVE_PORT) \
-	      --index-database=$(TEST_SLAVE_DATABASE) \
+              --server-port=$(TEST_SLAVE_PORT) \
+              --index-database=$(TEST_SLAVE_DATABASE) \
               --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
-	      --server-debug \
+              --server-debug \
               --log-file=$(TEST_SLAVE_LOG_FILE) \
+              --log-post-command="cat %file" \
               --log=all \
               --max-threads=1 \
               $(ADDITIONAL_OPTIONS) \
@@ -4258,22 +4289,23 @@ test_master_slave_operations_slave: \
             $(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
 	    $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
-	      --no-default-config --config=$(TEST_SLAVE_CONFIG) \
+              --no-default-config --config=$(TEST_SLAVE_CONFIG) \
               --daemon \
               $(if $(TEST_DETACH),,-D) \
-	      --pid-file=$(TEST_SLAVE_PID_FILE) \
+              --pid-file=$(TEST_SLAVE_PID_FILE) \
               --server-mode=slave \
-	      --server-port=$(TEST_SLAVE_PORT) \
-	      --index-database=$(TEST_SLAVE_DATABASE) \
+              --server-port=$(TEST_SLAVE_PORT) \
+              --index-database=$(TEST_SLAVE_DATABASE) \
               --jobs-directory=$(TEST_SLAVE_JOBS_DIRECTORY) \
-	      --server-debug \
+              --server-debug \
               --log-file=$(TEST_SLAVE_LOG_FILE) \
+              --log-post-command="cat %file" \
               --log=all \
               --max-threads=1 \
               $(ADDITIONAL_OPTIONS); \
           fi; \
           if test $$? -eq 0; then \
-	    $(SLEEP) 5; \
+	    $(SLEEP) 10; \
           else \
             exit 1; \
           fi; \
@@ -4287,25 +4319,24 @@ test_master_slave_operations_create: \
 	$(MAKE) test_master_slave_operations_master TEST_DETACH=1
 	@#
 	( \
-$(call functionSlaveExecute,"ps auxw|grep bar"); \
-        ) $(LOG)
-	@#
-	( \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=test); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_FLUSH); \
+          $(call functionServerCommandSocket,   1,localhost $(TEST_MASTER_PORT),JOB_NEW name=$(TEST_JOB_NAME) jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket,   2,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-name value=test); \
+          $(call functionServerCommandSocket,   3,localhost $(TEST_MASTER_PORT),INCLUDE_LIST jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket,   4,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
           \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL); \
-          for i in `seq 1 100`; do \
-          $(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
+          $(call functionServerCommandSocket, 100,localhost $(TEST_MASTER_PORT),JOB_START jobUUID=$(TEST_JOB_UUID) archiveType=NORMAL); \
+          for i in `seq 1 20`; do \
+          $(call functionServerCommandSocket, 200,localhost $(TEST_MASTER_PORT),JOB_STATUS jobUUID=$(TEST_JOB_UUID)); \
           $(SLEEP) 2; \
           done; \
+          \
+          $(call functionServerCommandSocket,9999,localhost $(TEST_MASTER_PORT),QUIT); \
+          $(call functionSlaveCommandSocket, 9999,localhost $(TEST_SLAVE_PORT), QUIT); \
         ) $(LOG)
 	@#
 	@#
-	@$(call functionServerCommandSocket,localhost $(TEST_SERVER_PORT),QUIT); \
-	@$(call functionSlaveExecute,"$(KILLALL) $(TEST_BAR)"); \
+	$(call functionWaitProcess,$(TEST_MASTER_PID_FILE),60)
+	$(call functionWaitProcess,$(TEST_SLAVE_PID_FILE),60)
 
 # ----------------------------------------------------------------------------
 
