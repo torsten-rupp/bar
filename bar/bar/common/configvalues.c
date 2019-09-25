@@ -988,17 +988,31 @@ LOCAL bool processValue(const ConfigValue *configValue,
       break;
     case CONFIG_VALUE_TYPE_CSTRING:
       {
+        String string;
+
+        // unquote/unescape
+        string = String_newCString(value);
+        String_unquote(string,STRING_QUOTES);
+        String_unescape(string,
+                        STRING_ESCAPE_CHARACTER,
+                        STRING_ESCAPE_CHARACTERS_MAP_TO,
+                        STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                        STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                      );
+
+        // free old string
         if ((*configValue->variable.cString) != NULL)
         {
           free(*configValue->variable.cString);
         }
 
+        // store string
         if (configValue->offset >= 0)
         {
           if (variable != NULL)
           {
             configVariable.cString = (char**)((byte*)variable+configValue->offset);
-            (*configVariable.cString) = stringDuplicate(value);
+            (*configVariable.cString) = stringNewBuffer(String_cString(string),String_length(string)+1);
           }
           else
           {
@@ -1006,19 +1020,35 @@ LOCAL bool processValue(const ConfigValue *configValue,
             if ((*configValue->variable.reference) != NULL)
             {
               configVariable.cString = (char**)((byte*)(*configValue->variable.reference)+configValue->offset);
-              (*configVariable.cString) = stringDuplicate(value);
+              (*configVariable.cString) = stringNewBuffer(String_cString(string),String_length(string)+1);
             }
           }
         }
         else
         {
           assert(configValue->variable.cString != NULL);
-          (*configValue->variable.cString) = stringDuplicate(value);
+          (*configValue->variable.cString) = stringNewBuffer(String_cString(string),String_length(string)+1);
         }
+
+        // free resources
+        String_delete(string);
       }
       break;
     case CONFIG_VALUE_TYPE_STRING:
       {
+        String string;
+
+        // unquote/unescape
+        string = String_newCString(value);
+        String_unquote(string,STRING_QUOTES);
+        String_unescape(string,
+                        STRING_ESCAPE_CHARACTER,
+                        STRING_ESCAPE_CHARACTERS_MAP_TO,
+                        STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                        STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                      );
+
+        // store string
         if (configValue->offset >= 0)
         {
           if (variable != NULL)
@@ -1026,7 +1056,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
             configVariable.string = (String*)((byte*)variable+configValue->offset);
             if ((*configVariable.string) == NULL) (*configVariable.string) = String_new();
             assert((*configVariable.string) != NULL);
-            String_setCString(*configVariable.string,value);
+            String_set(*configVariable.string,string);
           }
           else
           {
@@ -1036,7 +1066,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
               configVariable.string = (String*)((byte*)(*configValue->variable.reference)+configValue->offset);
               if ((*configVariable.string) == NULL) (*configVariable.string) = String_new();
               assert((*configVariable.string) != NULL);
-              String_setCString(*configVariable.string,value);
+              String_set(*configVariable.string,string);
             }
           }
         }
@@ -1045,8 +1075,11 @@ LOCAL bool processValue(const ConfigValue *configValue,
           assert(configValue->variable.string != NULL);
           if ((*configValue->variable.string) == NULL) (*configValue->variable.string) = String_new();
           assert((*configValue->variable.string) != NULL);
-          String_setCString(*configValue->variable.string,value);
+          String_set(*configValue->variable.string,string);
         }
+
+        // free resources
+        String_delete(string);
       }
       break;
     case CONFIG_VALUE_TYPE_SPECIAL:
