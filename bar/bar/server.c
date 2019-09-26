@@ -81,7 +81,7 @@
 
 #define MAX_SCHEDULE_CATCH_TIME                  30       // max. schedule catch time [days]
 
-#define PAIRING_MASTER_TIMEOUT                   120      // timeout pairing new master [s]
+#define DEFAULT_PAIRING_MASTER_TIMEOUT           120      // default timeout pairing new master [s]
 
 // sleep times
 #define SLEEP_TIME_PAIRING_THREAD                ( 1*60)  // [s]
@@ -111,6 +111,13 @@ typedef enum
   SERVER_STATE_PAUSE,
   SERVER_STATE_SUSPENDED,
 } ServerStates;
+
+// pairing modes
+typedef enum
+{
+  PAIRING_MODE_REQUEST,
+  PAIRING_MODE_AUTO
+} PairingModes;
 
 // expiration
 typedef struct ExpirationEntityNode
@@ -787,21 +794,23 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 /***********************************************************************\
 * Name   : startPairing
 * Purpose: start pairing master (if not already started)
-* Input  : -
+* Input  : timeout - timeout [s]
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void startPairingMaster(void)
+LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 {
   ClientNode *clientNode;
 
+fprintf(stderr,"%s, %d: startPairingMaster\n",__FILE__,__LINE__);
   if (!newMaster.pairingRequested)
   {
+fprintf(stderr,"%s, %d: newMaster.pairingRequested\n",__FILE__,__LINE__);
     // request new master pairing
     newMaster.pairingRequested = TRUE;
-    Misc_restartTimeout(&newMaster.pairingTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
+    Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
     String_clear(newMaster.name);
 
     // disconnect current master
@@ -822,7 +831,9 @@ LOCAL void startPairingMaster(void)
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Started pairing master"
+               (pairingMode == PAIRING_MODE_AUTO)
+                 ? "Started auto pairing master"
+                 : "Started pairing master"
               );
   }
 }
@@ -2070,7 +2081,7 @@ LOCAL void pairingThreadCode(void)
           // disconnect lost slave connections
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
-            if (Connector_isDisconnected(&slaveNode->connectorInfo))
+            if (!Connector_isConnected(&slaveNode->connectorInfo))
             {
               Connector_disconnect(&slaveNode->connectorInfo);
               slaveNode->state = SLAVE_STATE_OFFLINE;
@@ -2196,7 +2207,7 @@ LOCAL void pairingThreadCode(void)
           // get modified time
           if (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
           {
-            pairingStopTimestamp = fileInfo.timeModified+PAIRING_MASTER_TIMEOUT;
+            pairingStopTimestamp = fileInfo.timeModified+DEFAULT_PAIRING_MASTER_TIMEOUT;
           }
 
           // read file
@@ -2214,7 +2225,7 @@ LOCAL void pairingThreadCode(void)
           {
             if (Misc_getCurrentDateTime() < pairingStopTimestamp)
             {
-              startPairingMaster();
+              startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_REQUEST);
             }
             else
             {
@@ -2250,6 +2261,26 @@ LOCAL void pairingThreadCode(void)
     }
   }
   String_delete(line);
+
+  switch (serverMode)
+  {
+    case SERVER_MODE_MASTER:
+      // disconnect slaves
+      JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+      {
+        JOB_SLAVE_LIST_ITERATE(slaveNode)
+        {
+          if (Connector_isConnected(&slaveNode->connectorInfo))
+          {
+            Connector_disconnect(&slaveNode->connectorInfo);
+            slaveNode->state = SLAVE_STATE_OFFLINE;
+          }
+        }
+      }
+      break;
+    case SERVER_MODE_SLAVE:
+      break;
+  }
 }
 
 /*---------------------------------------------------------------------*/
@@ -5082,37 +5113,39 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            [timeout=<n [s]>]
 *          Result:
 *            name=<name>
 \***********************************************************************/
 
 LOCAL void serverCommand_masterWait(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  uint restTime;
+  uint timeout;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
-  UNUSED_VARIABLE(argumentMap);
+
+  // timeout
+  StringMap_getUInt(argumentMap,"timeout",&timeout,DEFAULT_PAIRING_MASTER_TIMEOUT);
 
   // wait for new master
-  startPairingMaster();
+  startPairingMaster(timeout,PAIRING_MODE_REQUEST);
   while (   String_isEmpty(newMaster.name)
          && !Misc_isTimeout(&newMaster.pairingTimeoutInfo)
          && !isCommandAborted(clientInfo,id)
         )
   {
     // update rest time
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"name=\"\" restTime=%u totalTime=%u",Misc_getRestTimeout(&newMaster.pairingTimeoutInfo)/MS_PER_S,PAIRING_MASTER_TIMEOUT);
+    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"name=\"\" restTime=%u totalTime=%u",Misc_getRestTimeout(&newMaster.pairingTimeoutInfo)/MS_PER_S,DEFAULT_PAIRING_MASTER_TIMEOUT);
 
     // sleep a short time
     Misc_udelay(1LL*US_PER_SECOND);
-    restTime--;
   }
   stopPairingMaster();
 
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S restTime=0 totalTime=%u",newMaster.name,PAIRING_MASTER_TIMEOUT);
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S restTime=0 totalTime=%u",newMaster.name,DEFAULT_PAIRING_MASTER_TIMEOUT);
 
   // free resources
 }
@@ -6912,7 +6945,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get path/file name
+  // get path/file name, timeout
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -17735,26 +17768,6 @@ Errors Server_run(ServerModes       mode,
             );
   printInfo(1,"Started BAR server%s\n",(serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
 
-  // auto-start pairing if unpaired slave
-  if (serverMode == SERVER_MODE_SLAVE)
-  {
-    if (!String_isEmpty(globalOptions.masterInfo.name))
-    {
-//TODO: log, remove?
-      printInfo(1,"Master: %s\n",String_cString(globalOptions.masterInfo.name));
-    }
-    else
-    {
-      newMaster.pairingRequested = TRUE;
-      Misc_restartTimeout(&newMaster.pairingTimeoutInfo,PAIRING_MASTER_TIMEOUT*MS_PER_S);
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Started auto-pairing master (%ds)",
-                 PAIRING_MASTER_TIMEOUT
-                );
-    }
-  }
-
   // create jobs directory if necessary
   if (!File_exists(globalOptions.jobsDirectory))
   {
@@ -17984,7 +17997,33 @@ Errors Server_run(ServerModes       mode,
   // run as server
   if (globalOptions.serverDebugLevel >= 1)
   {
-    printWarning("Server is running in debug mode. No authorization is done and additional debug commands are enabled!");
+    printWarning("Server is running in debug mode. No authorization is done, auto-pairing and additional debug commands are enabled!");
+  }
+
+  // auto-start pairing if unpaired slave or debug mode
+  if (serverMode == SERVER_MODE_SLAVE)
+  {
+    if (   String_isEmpty(globalOptions.masterInfo.name)
+        || (globalOptions.serverDebugLevel >= 1)
+       )
+    {
+      startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
+#if 0
+      newMaster.pairingRequested = TRUE;
+      Misc_restartTimeout(&newMaster.pairingTimeoutInfo,DEFAULT_PAIRING_MASTER_TIMEOUT*MS_PER_S);
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Started auto-pairing master (%ds)",
+                 DEFAULT_PAIRING_MASTER_TIMEOUT
+                );
+#endif
+    }
+
+    if (!String_isEmpty(globalOptions.masterInfo.name))
+    {
+//TODO: log, remove?
+      printInfo(1,"Master: %s\n",String_cString(globalOptions.masterInfo.name));
+    }
   }
 
   // Note: ignore SIGALRM in ppoll()
