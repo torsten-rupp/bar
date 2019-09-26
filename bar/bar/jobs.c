@@ -4177,7 +4177,7 @@ SlaveNode *Job_removeSlave(SlaveNode *slaveNode)
   assert(slaveNode != NULL);
   assert(Semaphore_isLocked(&slaveList.lock));
 
-  if (Connector_isDisconnected(&slaveNode->connectorInfo))
+  if (Connector_isConnected(&slaveNode->connectorInfo))
   {
     Connector_disconnect(&slaveNode->connectorInfo);
   }
