@@ -3995,7 +3995,7 @@ test_server_operations_socket_client: \
           $(call functionServerCommandSocket, 414,localhost $(TEST_SERVER_PORT),ARCHIVE_LIST name=$(BAR_STORAGE)intermediate/$(BAR_FILE).bar); \
           \
           $(call functionServerCommandSocket, 500,localhost $(TEST_SERVER_PORT),JOB_OPTION_GET jobUUID=$(TEST_JOB_UUID) name=archive-type); \
-          $(call functionServerCommandSocket, 501,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=continuous); \
+          $(call functionServerCommandSocket, 501,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=CONTINUOUS); \
           $(call functionServerCommandSocket, 502,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=intermediate/test.bar); \
           $(call functionServerCommandSocket, 502,localhost $(TEST_SERVER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-part-size value=100000); \
           $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=FILE pattern=data); \
@@ -4315,6 +4315,8 @@ test_master_slave_operations_slave: \
 
 test_master_slave_operations_create: \
   $(TEST_BAR)
+	@$(RMRF) $(TEST_FILES_CLEAN)
+	@#
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -4328,7 +4330,8 @@ test_master_slave_operations_create: \
           $(call functionServerCommandSocket,   3,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=remote-host-port value=$(TEST_SLAVE_PORT)); \
           $(call functionServerCommandSocket,   4,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=$(TEST_SLAVE_PORT)); \
           $(call functionServerCommandSocket,   5,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-name value=intermediate/test.bar); \
-          $(call functionServerCommandSocket,   6,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=normal); \
+          $(call functionServerCommandSocket,   6,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=archive-type value=NORMAL); \
+          $(call functionServerCommandSocket,   6,localhost $(TEST_MASTER_PORT),JOB_OPTION_SET jobUUID=$(TEST_JOB_UUID) name=restore-entries-mode value=OVERWRITE); \
           $(call functionServerCommandSocket,   7,localhost $(TEST_MASTER_PORT),INCLUDE_LIST_ADD jobUUID=$(TEST_JOB_UUID) entryType=FILE pattern=data); \
           $(call functionServerCommandSocket,   8,localhost $(TEST_MASTER_PORT),JOB_FLUSH); \
           \
