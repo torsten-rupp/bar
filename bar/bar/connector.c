@@ -75,6 +75,10 @@ typedef void(*ConnectorCommandFunction)(ConnectorInfo   *connectorInfo,
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define setConnectorState(...) __setConnectorState(__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***************************** Forwards ********************************/
 LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo);
 
@@ -83,6 +87,35 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo);
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+
+/***********************************************************************\
+* Name   : setConnectorState
+* Purpose: set connector state
+* Input  : connectorInfo - connector info
+*          state         - new connector state
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+LOCAL_INLINE void setConnectorState(ConnectorInfo   *connectorInfo,
+                                    ConnectorStates state
+                                   )
+#else /* not NDEBUG */
+LOCAL_INLINE void __setConnectorState(const char      *__fileName__,
+                                      ulong           __lineNb__,
+                                      ConnectorInfo   *connectorInfo,
+                                      ConnectorStates state
+                                     )
+#endif /* NDEBUG */
+{
+  assert(connectorInfo != NULL);
+
+  connectorInfo->state = state;
+//fprintf(stderr,"%s, %d: setConnectorState %p: %d\n",__fileName__,__lineNb__,connectorInfo,state);
+}
 
 /***********************************************************************\
 * Name   : connectorConnect
@@ -105,8 +138,6 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
-  // init variables
-
   // connect network server i/o
   error = ServerIO_connectNetwork(&connectorInfo->io,
                                   hostName,
@@ -116,9 +147,6 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   {
     return error;
   }
-
-  // set state
-  connectorInfo->state = CONNECTOR_STATE_CONNECTED;
 
 //TODO
   // start SSL
@@ -134,6 +162,7 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
                                   );
   if (error != ERROR_NONE)
   {
+    ServerIO_disconnect(&connectorInfo->io);
     return error;
   }
 #endif
@@ -143,8 +172,11 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
+fprintf(stderr,"%s, %d: connectorConnect %p %p %s\n",__FILE__,__LINE__,connectorInfo,Thread_getId(&connectorInfo->thread),Thread_getIdString(Thread_getId(&connectorInfo->thread)));
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
-  // free resources
+  // set state
+  setConnectorState(connectorInfo,CONNECTOR_STATE_CONNECTED);
 
   return ERROR_NONE;
 }
@@ -163,6 +195,7 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+  assert(Connector_isConnected(connectorInfo));
 
   // close storage
   if (connectorInfo->storageOpenFlag)
@@ -171,10 +204,14 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   }
   connectorInfo->storageOpenFlag = FALSE;
 
+fprintf(stderr,"%s, %d: connectorDisconnect %p %p %s\n",__FILE__,__LINE__,connectorInfo,Thread_getId(&connectorInfo->thread),Thread_getIdString(Thread_getId(&connectorInfo->thread)));
   // stop connector thread
   Thread_quit(&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
   Thread_done(&connectorInfo->thread);
@@ -183,7 +220,7 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   ServerIO_disconnect(&connectorInfo->io);
 
   // set state
-  connectorInfo->state = CONNECTOR_STATE_NONE;
+  setConnectorState(connectorInfo,CONNECTOR_STATE_NONE);
 }
 
 /***********************************************************************\
@@ -2778,7 +2815,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // process client requests
-  while (   (connectorInfo->state != CONNECTOR_STATE_DISCONNECTED)
+  while (   Connector_isConnected(connectorInfo)
          && !Thread_isQuit(&connectorInfo->thread)
         )
   {
@@ -2823,15 +2860,13 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
         }
         else
         {
-          // disconnect
-          connectorInfo->state = CONNECTOR_STATE_DISCONNECTED;
+          // not data -> stop
           break;
         }
       }
       else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
       {
-        // error -> disconnect
-        connectorInfo->state = CONNECTOR_STATE_DISCONNECTED;
+        // error -> stop
         break;
       }
     }
@@ -2929,7 +2964,7 @@ void Connector_done(ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
-  if (connectorInfo->state == CONNECTOR_STATE_CONNECTED)
+  if (Connector_isConnected(connectorInfo))
   {
     connectorDisconnect(connectorInfo);
   }
@@ -3036,7 +3071,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
   }
 
   // set state
-  connectorInfo->state = CONNECTOR_STATE_AUTHORIZED;
+  setConnectorState(connectorInfo,CONNECTOR_STATE_AUTHORIZED);
 
   // free resources
   String_delete(e);

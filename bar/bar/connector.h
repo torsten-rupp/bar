@@ -33,25 +33,27 @@
 
 /***************************** Variables *******************************/
 
+// connector states
+typedef enum
+{
+  CONNECTOR_STATE_NONE,
+  CONNECTOR_STATE_DISCONNECTED,
+  CONNECTOR_STATE_CONNECTED,
+  CONNECTOR_STATE_AUTHORIZED
+} ConnectorStates;
+
 // connector info
 typedef struct
 {
-bool         forceSSL;                     // force SSL connection to connector hose
+bool            forceSSL;                // force SSL connection to connector hose
+  ConnectorStates state;
+  bool            connectedFlag;           // TRUE if connected
+  ServerIO        io;
+  Thread          thread;
 
-  enum
-  {
-    CONNECTOR_STATE_NONE,
-    CONNECTOR_STATE_DISCONNECTED,
-    CONNECTOR_STATE_CONNECTED,
-    CONNECTOR_STATE_AUTHORIZED
-  }             state;
-  bool          connectedFlag;             // TRUE if connected
-  ServerIO      io;
-  Thread        thread;
-
-  StorageInfo   storageInfo;
-  StorageHandle storageHandle;
-  bool          storageOpenFlag;           // TRUE iff storage created and open
+  StorageInfo     storageInfo;
+  StorageHandle   storageHandle;
+  bool            storageOpenFlag;         // TRUE iff storage created and open
 } ConnectorInfo;
 
 /****************************** Macros *********************************/
@@ -149,45 +151,6 @@ Errors Connector_connect(ConnectorInfo *connectorInfo,
 void Connector_disconnect(ConnectorInfo *connectorInfo);
 
 /***********************************************************************\
-* Name   : Connector_isConnected
-* Purpose: check if connector is connected
-* Input  : connectorInfo - connector info
-* Output : -
-* Return : TRUE iff connected
-* Notes  : -
-\***********************************************************************/
-
-INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo);
-#if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
-INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
-{
-  assert(connectorInfo != NULL);
-
-  return    (connectorInfo->state == CONNECTOR_STATE_CONNECTED)
-         || (connectorInfo->state == CONNECTOR_STATE_AUTHORIZED);
-}
-#endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
-
-/***********************************************************************\
-* Name   : Connector_isDisconnected
-* Purpose: check if connector is disconnected
-* Input  : connectorInfo - connector info
-* Output : -
-* Return : TRUE iff disconnected
-* Notes  : -
-\***********************************************************************/
-
-INLINE bool Connector_isDisconnected(const ConnectorInfo *connectorInfo);
-#if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
-INLINE bool Connector_isDisconnected(const ConnectorInfo *connectorInfo)
-{
-  assert(connectorInfo != NULL);
-
-  return connectorInfo->state == CONNECTOR_STATE_DISCONNECTED;
-}
-#endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
-
-/***********************************************************************\
 * Name   : Connector_isAuthorized
 * Purpose: check if connector is authorized
 * Input  : connectorInfo - connector info
@@ -202,7 +165,27 @@ INLINE bool Connector_isAuthorized(const ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
-  return connectorInfo->state == CONNECTOR_STATE_AUTHORIZED;
+  return (connectorInfo->state == CONNECTOR_STATE_AUTHORIZED);
+}
+#endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Connector_isConnected
+* Purpose: check if connector is connected
+* Input  : connectorInfo - connector info
+* Output : -
+* Return : TRUE iff connected or authorized
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo);
+#if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
+INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
+{
+  assert(connectorInfo != NULL);
+
+  return    (connectorInfo->state == CONNECTOR_STATE_AUTHORIZED)
+         || (connectorInfo->state == CONNECTOR_STATE_CONNECTED);
 }
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
