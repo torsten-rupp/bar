@@ -3899,12 +3899,12 @@ functionSlaveCommandSocket = \
   $(ECHO) $2: $1 $3; $(ECHO) $1 $3|$(NETCAT) -w1 $2|$(TAIL) -n +2
 
 .PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
-xxxtest_server_operations: \
+test_server_operations: \
   test_server_operations_batch \
   test_server_operations_socket \
   test_master_slave_operations_create
 
-test_server_operations: \
+xxxtest_server_operations: \
   test_master_slave_operations_create
 
 test_server_operations_socket_server: \
