@@ -292,6 +292,25 @@ INLINE void Thread_yield(void)
 void Thread_delay(uint time);
 
 /***********************************************************************\
+* Name   : Thread_getId
+* Purpose: get thread id
+* Input  : thread - thread
+* Output : -
+* Return : current thread id
+* Notes  : -
+\***********************************************************************/
+
+INLINE ThreadId Thread_getId(const Thread *thread);
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
+INLINE ThreadId Thread_getId(const Thread *thread)
+{
+  assert(thread != NULL);
+
+  return (ThreadId)thread->handle;
+}
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
+
+/***********************************************************************\
 * Name   : Thread_getCurrentId
 * Purpose: get current thread id
 * Input  : -
