@@ -804,10 +804,8 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 {
   ClientNode *clientNode;
 
-fprintf(stderr,"%s, %d: startPairingMaster\n",__FILE__,__LINE__);
   if (!newMaster.pairingRequested)
   {
-fprintf(stderr,"%s, %d: newMaster.pairingRequested\n",__FILE__,__LINE__);
     // request new master pairing
     newMaster.pairingRequested = TRUE;
     Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
