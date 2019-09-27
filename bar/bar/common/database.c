@@ -4203,7 +4203,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     {
       #ifdef DATABASE_DEBUG_COPY_TABLE
         rowCount++;
-if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__LINE__,rowCount);
+//if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__LINE__,rowCount);
       #endif /* DATABASE_DEBUG_COPY_TABLE */
 
       // reset to data
@@ -4324,7 +4324,7 @@ if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__L
         }
       }
       String_appendCString(sqlInsertString,");");
-//      DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
+      DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
 
       // create insert statement
       sqliteResult = sqlite3_prepare_v2(toDatabaseHandle->handle,
