@@ -3899,12 +3899,9 @@ functionSlaveCommandSocket = \
   $(ECHO) $2: $1 $3; $(ECHO) $1 $3|$(NETCAT) -w1 $2|$(TAIL) -n +2
 
 .PHONY: test_server_operations test_server_operations_socket test_server_operations_batch
-xxxtest_server_operations: \
+test_server_operations: \
   test_server_operations_batch \
   test_server_operations_socket \
-  test_master_slave_operations_create
-
-test_server_operations: \
   test_master_slave_operations_create
 
 test_server_operations_socket_server: \
@@ -4003,10 +4000,10 @@ test_server_operations_socket_client: \
           $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),SOURCE_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
           $(call functionServerCommandSocket, 503,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_ADD jobUUID=$(TEST_JOB_UUID) pattern=data/zero1024.dat); \
           $(call functionServerCommandSocket, 504,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_ADD jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) archiveType=continuous date=*-*-* weekDays=* time=*:* interval=60 customText="test" noStorage=yes enabled=yes); \
-	  $(SLEEP) 10; \
+          $(SLEEP) 10; \
           $(call functionServerCommandSocket, 505,localhost $(TEST_SERVER_PORT),SCHEDULE_OPTION_GET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled); \
           $(call functionServerCommandSocket, 506,localhost $(TEST_SERVER_PORT),SCHEDULE_OPTION_SET jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID) name=enabled value=no); \
-	  $(SLEEP) 10; \
+          $(SLEEP) 10; \
           $(call functionServerCommandSocket, 507,localhost $(TEST_SERVER_PORT),SCHEDULE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) scheduleUUID=$(TEST_SCHEDULE_UUID)); \
           $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),EXCLUDE_COMPRESS_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
           $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),SOURCE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
@@ -4014,7 +4011,7 @@ test_server_operations_socket_client: \
           $(call functionServerCommandSocket, 508,localhost $(TEST_SERVER_PORT),INCLUDE_LIST_REMOVE jobUUID=$(TEST_JOB_UUID) id=1); \
           \
           $(call functionServerCommandSocket, 600,localhost $(TEST_SERVER_PORT),PAUSE time=300 modeMask=create); \
-	  $(SLEEP) 2; \
+          $(SLEEP) 2; \
           $(call functionServerCommandSocket, 700,localhost $(TEST_SERVER_PORT),CONTINUE); \
           \
           $(call functionServerCommandSocket, 800,localhost $(TEST_SERVER_PORT),DECRYPT_PASSWORD_CLEAR); \
@@ -4222,7 +4219,7 @@ test_master_slave_operations_master: \
           $(INSTALL) -d $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY); \
           $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_MASTER_CONFIG); \
           $(RMF) $(SUB_DIR)/$(TEST_MASTER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
-	  $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
+          $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
             -C $(SUB_DIR) \
             $(TEST_OPTIONS) \
             --daemon \
@@ -4259,7 +4256,7 @@ test_master_slave_operations_slave: \
           $(CD) $(UP_DIR); \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
           \
-	  : start slave server; \
+          : start slave server; \
           if test -n "$(TEST_SLAVE_HOST)"; then \
             $(call functionSlaveExecute,$(KILLALL) $(TEST_BAR)); \
             $(call functionSlaveCopy,$(TEST_BAR),$(TEST_BAR)); \
@@ -4267,7 +4264,7 @@ test_master_slave_operations_slave: \
             $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_JOBS_DIRECTORY)); \
             $(call functionSlaveCopy,bar.cfg,$(TEST_SLAVE_CONFIG)); \
             $(call functionSlaveExecute,$(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME)); \
-	    $(call functionSlaveExecute,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
+            $(call functionSlaveExecute,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
               --no-default-config --config=$(TEST_SLAVE_CONFIG) \
               --daemon \
@@ -4289,7 +4286,7 @@ test_master_slave_operations_slave: \
             $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_JOBS_DIRECTORY); \
             $(INSTALL) -m 600 bar.cfg $(SUB_DIR)/$(TEST_SLAVE_CONFIG); \
             $(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
-	    $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
+            $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
               --no-default-config --config=$(TEST_SLAVE_CONFIG) \
               --daemon \
@@ -4307,7 +4304,7 @@ test_master_slave_operations_slave: \
               $(ADDITIONAL_OPTIONS); \
           fi; \
           if test $$? -eq 0; then \
-	    $(SLEEP) 10; \
+            $(SLEEP) 10; \
           else \
             exit 1; \
           fi; \
