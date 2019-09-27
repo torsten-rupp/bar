@@ -1468,6 +1468,13 @@ ifneq ($(TEST_PASSWORD_WEBDAV),)
           CRYPT_NAMES="none" \
           QUIET=1
 endif
+	@$(MAKE) gcov_optical \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          OPTIONS="--dvd-blank-command=true --dvd-write-command=true --dvd-write-image-command=true" \
+          TEST_OPTICAL_SLEEP_TIME=0 \
+          TEST_OPTICAL_CREATE_ONLY=1 \
+          QUIET=1
 	@$(MAKE) gcov_server \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
