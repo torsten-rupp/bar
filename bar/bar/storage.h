@@ -356,27 +356,38 @@ typedef struct
     // device storage
     struct
     {
-      String     requestVolumeCommand;                       // command to request new volume
-      String     unloadVolumeCommand;                        // command to unload volume
-      String     loadVolumeCommand;                          // command to load volume
-      uint64     volumeSize;                                 // size of volume [bytes]
-      String     imagePreProcessCommand;                     // command to execute before creating image
-      String     imagePostProcessCommand;                    // command to execute after created image
-      String     imageCommand;                               // command to create volume image
-      String     eccPreProcessCommand;                       // command to execute before ECC calculation
-      String     eccPostProcessCommand;                      // command to execute after ECC calculation
-      String     eccCommand;                                 // command for ECC calculation
-      String     blankCommand;                               // command to blank medium before writing
-      String     writePreProcessCommand;                     // command to execute before writing volume
-      String     writePostProcessCommand;                    // command to execute after writing volume
-      String     writeCommand;                               // command to write volume
+      // read device
+      struct
+      {
+        #ifdef HAVE_ISO9660
+        #endif /* HAVE_ISO9660 */
+      } read;
 
-      String     directory;                                  // temporary directory for files
+      // write device
+      struct
+      {
+        String     requestVolumeCommand;                     // command to request new volume
+        String     unloadVolumeCommand;                      // command to unload volume
+        String     loadVolumeCommand;                        // command to load volume
+        uint64     volumeSize;                               // size of volume [bytes]
+        String     imagePreProcessCommand;                   // command to execute before creating image
+        String     imagePostProcessCommand;                  // command to execute after created image
+        String     imageCommand;                             // command to create volume image
+        String     eccPreProcessCommand;                     // command to execute before ECC calculation
+        String     eccPostProcessCommand;                    // command to execute after ECC calculation
+        String     eccCommand;                               // command for ECC calculation
+        String     blankCommand;                             // command to blank medium before writing
+        String     writePreProcessCommand;                   // command to execute before writing volume
+        String     writePostProcessCommand;                  // command to execute after writing volume
+        String     writeCommand;                             // command to write volume
 
-      uint       number;                                     // volume number
-      bool       newVolumeFlag;                              // TRUE iff new volume needed
-      StringList fileNameList;                               // list with file names
-      uint64     totalSize;                                  // current size [bytes]
+        String     directory;                                // temporary directory for files
+
+        uint       number;                                   // volume number
+        bool       newVolumeFlag;                            // TRUE iff new volume needed
+        StringList fileNameList;                             // list with file names
+        uint64     totalSize;                                // current size [bytes]
+      } write;
     } device;
 
     // master
@@ -531,8 +542,12 @@ typedef struct
     // device storage
     struct
     {
-      String     fileName;                                   // current file name
-      FileHandle fileHandle;
+      // write cd/dvd/bd
+      struct
+      {
+        String     fileName;                                 // current file name
+        FileHandle fileHandle;
+      } write;
     } device;
 
     // master storage
