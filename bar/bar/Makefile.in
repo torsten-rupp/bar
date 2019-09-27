@@ -1473,7 +1473,14 @@ endif
           CRYPT_NAMES="none" \
           OPTIONS="--dvd-blank-command=true --dvd-write-command=true --dvd-write-image-command=true" \
           TEST_OPTICAL_SLEEP_TIME=0 \
-          TEST_OPTICAL_CREATE_ONLY=1 \
+          TEST_OPTICAL_EMULATION=1 \
+          QUIET=1
+	@$(MAKE) gcov_device \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          OPTIONS="--device-blank-command=true --device-write-command=true --overwrite-archive-files" \
+          TEST_OPTICAL_SLEEP_TIME=0 \
+          TEST_OPTICAL_EMULATION=1 \
           QUIET=1
 	@$(MAKE) gcov_server \
           COMPRESS_NAMES="none" \

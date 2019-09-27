@@ -290,8 +290,11 @@ TEST_HOST_WEBDAV                 ?= $(TEST_HOST)
 TEST_LOGIN_NAME_WEBDAV           ?= $(TEST_LOGIN_NAME)
 TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
 
-TEST_OPTICAL_CREATE_ONLY         =
+TEST_OPTICAL_EMULATION           =
 TEST_OPTICAL_SLEEP_TIME          ?= 30
+
+TEST_DEVICE_EMULATION            =
+TEST_DEVICE_SLEEP_TIME           ?= 30
 
 TEST_PASSWORD_CRYPT              =  Franz_Kafka:Die_Verwandlung
 TEST_PASSWORD_CRYPT_OTHER        =  Heinrich_Böll:Ansichten_eines_Clown
@@ -379,9 +382,10 @@ help_output:
 	@$(ECHO) "  test_storage_(file|ftp|scp|sftp|webdav)[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test10[-debug|-valgrind], test_hugefiles[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test11[-debug|-valgrind], test_optical[-debug|-gcov|-gprof|-valgrind]"
-	@$(ECHO) "  test12[-debug|-valgrind], test_server[-debug|-gcov|-gprof|-valgrind]"
-	@$(ECHO) "  test13_master[-debug|-valgrind], test_master[-debug|-gcov|-gprof|-valgrind]"
-	@$(ECHO) "  test13_slave[-debug|-valgrind], test_slave[-debug|-gcov|-gprof|-valgrind]"
+	@$(ECHO) "  test12[-debug|-valgrind], test_device[-debug|-gcov|-gprof|-valgrind]"
+	@$(ECHO) "  test13[-debug|-valgrind], test_server[-debug|-gcov|-gprof|-valgrind]"
+	@$(ECHO) "  test14_master[-debug|-valgrind], test_master[-debug|-gcov|-gprof|-valgrind]"
+	@$(ECHO) "  test14_slave[-debug|-valgrind], test_slave[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test_combined[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test_arguments[-debug|-gcov|-gprof|-valgrind]"
 	@$(ECHO) "  test_misc[-debug|-gcov|-gprof|-valgrind]"
@@ -747,11 +751,11 @@ TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 1200 $(TIMEOUT) --signal=ABRT 800 $(TIME
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
-.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test13_master test13_slave
-.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug test12-debug test13-debug test13_master-debug test13_slave-debug
-.PHONY: test1-gcov test2-gcov test3-gcov test4-gcov test5-gcov test6-gcov test7-gcov test8-gcov test9-gcov test10-gcov test11-gcov test12-gcov test13-gcov test13_master-gcov test13_slave-gcov
-.PHONY: test1-gprof test2-gprof test3-gprof test4-gprof test5-gprof test6-gprof test7-gprof test8-gprof test9-gprof test10-gprof test11-gprof test12-gprof test13-gprof test13_master-gprof test13_slave-gprof
-.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind test12-valgrind test13-valgrind test13_master-valgrind test13_slave-valgrind
+.PHONY: test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test14_master test14_slave
+.PHONY: test1-debug test2-debug test3-debug test4-debug test5-debug test6-debug test7-debug test8-debug test9-debug test10-debug test11-debug test12-debug test13-debug test14-debug test14_master-debug test14_slave-debug
+.PHONY: test1-gcov test2-gcov test3-gcov test4-gcov test5-gcov test6-gcov test7-gcov test8-gcov test9-gcov test10-gcov test11-gcov test12-gcov test13-gcov test14-gcov test14_master-gcov test14_slave-gcov
+.PHONY: test1-gprof test2-gprof test3-gprof test4-gprof test5-gprof test6-gprof test7-gprof test8-gprof test9-gprof test10-gprof test11-gprof test12-gprof test13-gprof test14-gprof test14_master-gprof test14_slave-gprof
+.PHONY: test1-valgrind test2-valgrind test3-valgrind test4-valgrind test5-valgrind test6-valgrind test7-valgrind test8-valgrind test9-valgrind test10-valgrind test11-valgrind test12-valgrind test13-valgrind test14-valgrind test14_master-valgrind test14_slave-valgrind
 .PHONY: test_basic test_compress test_crypt test_asymmetric_crypt test_signatures test_split test_convert test_image test_storage test_optical test_combined test_server test_slave test_arguments test_misc
 .PHONY: test_basic-debug test_compress-debug test_crypt-debug test_asymmetric_crypt-debug test_signatures-debug test_split-debug test_convert-debug test_image-debug test_storage-debug test_optical-debug test_combined-debug test_server-debug test_slave-debug test_arguments-debug test_misc-debug
 .PHONY: test_basic-gcov test_compress-gcov test_crypt-gcov test_asymmetric_crypt-gcov test_signatures-gcov test_split-gcov test_convert-gcov test_image-gcov test_storage-gcov test_optical-gcov test_combined-gcov test_server-gcov test_slave-gcov test_arguments-gcov test_misc-gcov
@@ -1566,7 +1570,34 @@ test11-valgrind test_optical-valgrind: \
   $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_optical
 
-test12 test_server: \
+test12 test_device: \
+  $(TEST_CONFIG)
+	@$(ECHO_NO_LF) "Test 12: device..."
+	$(MAKE) \
+          BAR_FILE="test" \
+          BAR_PATTERN="test" \
+          BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
+          test_device_operations \
+          ;
+	@$(ECHO) "ok"
+
+test12-debug test_device-debug: \
+  $(TEST_BAR_DEBUG)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_device
+
+test12-gcov test_device-gcov: \
+  $(TEST_BAR_GCOV)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_device
+
+test12-gprof test_device-gprof: \
+  $(TEST_BAR_GPROF)
+	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_device
+
+test12-valgrind test_device-valgrind: \
+  $(TEST_BAR_VALGRIND)
+	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_device
+
+test13 test_server: \
   $(TEST_CONFIG) \
   $(TEST_JOBS_DIRECTORY) \
   $(TEST_SERVER_JOBS_DIRECTORY) \
@@ -1578,8 +1609,6 @@ test12 test_server: \
           BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=master --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_server_operations \
           ;
-
-x:
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1588,23 +1617,23 @@ x:
           ;
 	@$(ECHO) "ok"
 
-test12-debug test_server-debug: \
+test13-debug test_server-debug: \
   $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_server
 
-test12-gcov test_server-gcov: \
+test13-gcov test_server-gcov: \
   $(TEST_BAR_GCOV)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_server
 
-test12-gprof test_server-gprof: \
+test13-gprof test_server-gprof: \
   $(TEST_BAR_GPROF)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_server
 
-test12-valgrind test_server-valgrind: \
+test13-valgrind test_server-valgrind: \
   $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_server
 
-test13_master test_master: \
+test14_master test_master: \
   $(TEST_CONFIG) \
   $(TEST_SERVER_JOBS_DIRECTORY)
 	@$(ECHO_NO_LF) "Test 13: master..."
@@ -1616,23 +1645,23 @@ test13_master test_master: \
           ;
 	@$(ECHO) "ok"
 
-test13_master-debug test_master-debug: \
+test14_master-debug test_master-debug: \
   $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_master
 
-test13_master-gcov test_master-gcov: \
+test14_master-gcov test_master-gcov: \
   $(TEST_BAR_GCOV)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_master
 
-test13_master-gprof test_master-gprof: \
+test14_master-gprof test_master-gprof: \
   $(TEST_BAR_GPROF)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_master
 
-test13_master-valgrind test_master-valgrind: \
+test14_master-valgrind test_master-valgrind: \
   $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_master
 
-test13_slave test_slave: \
+test14_slave test_slave: \
   $(TEST_CONFIG) \
   $(TEST_SLAVE_JOBS_DIRECTORY)
 	@$(ECHO_NO_LF) "Test 13: slave..."
@@ -1644,19 +1673,19 @@ test13_slave test_slave: \
           ;
 	@$(ECHO) "ok"
 
-test13_slave-debug test_slave-debug: \
+test14_slave-debug test_slave-debug: \
   $(TEST_BAR_DEBUG)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_DEBUG) test_slave
 
-test13_slave-gcov test_slave-gcov: \
+test14_slave-gcov test_slave-gcov: \
   $(TEST_BAR_GCOV)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GCOV) test_slave
 
-test13_slave-gprof test_slave-gprof: \
+test14_slave-gprof test_slave-gprof: \
   $(TEST_BAR_GPROF)
 	@$(MAKE) TEST_BAR_PREFIX="" TEST_BAR=$(TEST_BAR_GPROF) test_slave
 
-test13_slave-valgrind test_slave-valgrind: \
+test14_slave-valgrind test_slave-valgrind: \
   $(TEST_BAR_VALGRIND)
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_slave
 
@@ -3886,14 +3915,36 @@ test_optical_operations: \
 	$(RMRF) $(TEST_FILES_CLEAN)
 	$(SLEEP) $(TEST_OPTICAL_SLEEP_TIME)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c dvd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank $(LOG))
-	test ! -z "$(TEST_OPTICAL_CREATE_ONLY)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t dvd:///$(BAR_FILE).bar $(LOG))
-	test ! -z "$(TEST_OPTICAL_CREATE_ONLY)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d dvd:///$(BAR_FILE).bar $(LOG))
-	test ! -z "$(TEST_OPTICAL_CREATE_ONLY)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L dvd:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t dvd:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d dvd:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L dvd:///$(BAR_FILE).bar $(LOG))
 	$(SLEEP) $(TEST_OPTICAL_SLEEP_TIME)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c dvd:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank  --ecc $(LOG))
-	test ! -z "$(TEST_OPTICAL_CREATE_ONLY)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t dvd:///$(BAR_FILE).bar $(LOG))
-	test ! -z "$(TEST_OPTICAL_CREATE_ONLY)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d dvd:///$(BAR_FILE).bar $(LOG))
-	test ! -z "$(TEST_OPTICAL_CREATE_ONLY)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L dvd:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t dvd:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d dvd:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L dvd:///$(BAR_FILE).bar $(LOG))
+
+.PHONY: test_device_operations
+test_device_operations: \
+  $(TEST_BAR) \
+  $(TEST_FILES)
+	# create device
+	@$(call functionInfo,test device opertations)
+	@$(call functionVerifyParameter,TEST_BAR)
+	@$(call functionVerifyParameter,BAR_FILE)
+	@#
+	@# ---
+	$(RMRF) $(TEST_FILES_CLEAN)
+	$(SLEEP) $(TEST_DEVICE_SLEEP_TIME)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c device:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank $(LOG))
+	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t device:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d device:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L device:///$(BAR_FILE).bar $(LOG))
+	$(SLEEP) $(TEST_DEVICE_SLEEP_TIME)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c device:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank  --ecc $(LOG))
+	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t device:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d device:///$(BAR_FILE).bar $(LOG))
+	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L device:///$(BAR_FILE).bar $(LOG))
 
 # send command to server
 functionServerCommandSocket = \
