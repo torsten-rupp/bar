@@ -2079,7 +2079,8 @@ LOCAL void pairingThreadCode(void)
           // disconnect lost slave connections
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
-            if (!Connector_isConnected(&slaveNode->connectorInfo))
+            if (   (slaveNode->state != SLAVE_STATE_OFFLINE)
+                && !Connector_isConnected(&slaveNode->connectorInfo))
             {
               Connector_disconnect(&slaveNode->connectorInfo);
               slaveNode->state = SLAVE_STATE_OFFLINE;
