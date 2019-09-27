@@ -1717,8 +1717,8 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
                               );
     if (error != ERROR_NONE)
     {
-      String_delete(storageHandle->opticalDisk.write.fileName);
       String_delete(directoryName);
+      String_delete(storageHandle->opticalDisk.write.fileName);
       return error;
     }
   }
