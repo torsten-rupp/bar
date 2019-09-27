@@ -1479,8 +1479,8 @@ endif
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
           OPTIONS="--device-blank-command=true --device-write-command=true --overwrite-archive-files" \
-          TEST_OPTICAL_SLEEP_TIME=0 \
-          TEST_OPTICAL_EMULATION=1 \
+          TEST_DEVICE_SLEEP_TIME=0 \
+          TEST_DEVICE_EMULATION=1 \
           QUIET=1
 	@$(MAKE) gcov_server \
           COMPRESS_NAMES="none" \
