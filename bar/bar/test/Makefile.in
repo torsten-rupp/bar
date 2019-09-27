@@ -4067,7 +4067,7 @@ test_server_operations_socket: \
 	@$(RMRF) $(TEST_FILES_CLEAN)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=0 $(LOG))
 	@#
-	@$(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null; \
+	@$(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null
 	@$(MAKE) test_server_operations_socket_server TEST_DETACH=1
 	@$(MAKE) test_server_operations_socket_client
 	$(call functionWaitProcess,$(TEST_SERVER_PID_FILE),60)
@@ -4317,7 +4317,7 @@ test_master_slave_operations_create: \
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
-	@$(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null; \
+	@$(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null
 	$(MAKE) test_master_slave_operations_slave TEST_DETACH=1
 	$(MAKE) test_master_slave_operations_master TEST_DETACH=1
 	@#
