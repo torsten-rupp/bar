@@ -301,6 +301,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                        VALUES \
                                                                                          ( \
                                                                                           %lld, \
+                                                                                          %lld, \
                                                                                           %'s \
                                                                                          ); \
                                                                                       ",
