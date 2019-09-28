@@ -85,6 +85,7 @@
   * upgrade binutils 2.32
   * added patch to fix memory leak in libssh2
   * removed ftplib
+  * added debug option --server-debug-index-operations
   * BARControl: read keys from .pem files, JKS is now
     obsolete
   * BARControl: added roles basic/normal/expert

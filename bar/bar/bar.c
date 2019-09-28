@@ -756,17 +756,18 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_BOOLEAN      ("quiet",                             0,  1,1,globalOptions.quietFlag,                         0,                                                             "suppress any output"                                                      ),
   CMD_OPTION_INCREMENT    ("verbose",                           'v',0,0,globalOptions.verboseLevel,                      0,0,6,                                                         "increment/set verbosity level"                                            ),
 
-  CMD_OPTION_INCREMENT    ("server-debug",                      0,  2,1,globalOptions.serverDebugLevel,                  0,0,2,                                                         "debug level for server"                                                   ),
-
   CMD_OPTION_BOOLEAN      ("version",                           0  ,0,0,versionFlag,                                     0,                                                             "output version"                                                           ),
   CMD_OPTION_BOOLEAN      ("help",                              'h',0,0,helpFlag,                                        0,                                                             "output this help"                                                         ),
   CMD_OPTION_BOOLEAN      ("xhelp",                             0,  0,0,xhelpFlag,                                       0,                                                             "output help to extended options"                                          ),
   CMD_OPTION_BOOLEAN      ("help-internal",                     0,  1,0,helpInternalFlag,                                0,                                                             "output help to internal options"                                          ),
 
   // deprecated
-  CMD_OPTION_DEPRECATED   ("server-jobs-directory",             0,  1,1,&globalOptions.jobsDirectory,                    0,CmdOptionParseDeprecatedStringOption,NULL,1,                 "--jobs-directory"                                                    ),
+  CMD_OPTION_DEPRECATED   ("server-jobs-directory",             0,  1,1,&globalOptions.jobsDirectory,                    0,CmdOptionParseDeprecatedStringOption,NULL,1,                 "--jobs-directory"                                                         ),
   CMD_OPTION_DEPRECATED   ("mount-device",                      0,  1,2,&globalOptions.mountList,                        0,cmdOptionParseDeprecatedMountDevice,NULL,1,                  "device to mount/unmount"                                                  ),
   CMD_OPTION_DEPRECATED   ("stop-on-error",                     0,  1,2,&globalOptions.noStopOnErrorFlag,                0,cmdOptionParseDeprecatedStopOnError,NULL,0,                  "no-stop-on-error"                                                         ),
+
+  CMD_OPTION_INCREMENT    ("server-debug",                      0,  2,1,globalOptions.serverDebugLevel,                  0,0,2,                                                         "debug level for server"                                                   ),
+  CMD_OPTION_BOOLEAN      ("server-debug-index-operations",     0,  2,1,globalOptions.serverDebugIndexOperationsFlag,    0,                                                             "run server index operations only"                                         ),
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -3830,6 +3831,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.verboseLevel                                    = DEFAULT_VERBOSE_LEVEL;
 
   globalOptions.serverDebugLevel                                = DEFAULT_SERVER_DEBUG_LEVEL;
+  globalOptions.serverDebugIndexOperationsFlag                  = FALSE;
 
   // --- job options default values
   globalOptions.archiveType                                     = ARCHIVE_TYPE_NORMAL;

@@ -17811,6 +17811,26 @@ Errors Server_run(ServerModes       mode,
     AUTOFREE_ADD(&autoFreeList,indexDatabaseFileName,{ Index_done(); });
   }
 
+  // open index
+  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+  if (indexHandle != NULL)
+  {
+    if (globalOptions.serverDebugIndexOperationsFlag)
+    {
+      // wait for index opertions
+      while (!Index_isInitialized())
+      {
+        Misc_udelay(1*US_PER_SECOND);
+      }
+
+      // terminate
+      Index_close(indexHandle);
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NONE;
+    }
+  }
+  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+
   // init server sockets
   serverFlag    = FALSE;
   serverTLSFlag = FALSE;
@@ -17901,9 +17921,6 @@ Errors Server_run(ServerModes       mode,
   {
     printWarning("No server password set!");
   }
-
-  // open index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // initial update statics data
   initAggregateInfo(&jobAggregateInfo);
@@ -18496,12 +18513,12 @@ Errors Server_run(ServerModes       mode,
   }
   Thread_done(&jobThread);
 
-  // done index
-  Index_close(indexHandle);
-
   // done server
   if (serverFlag   ) Network_doneServer(&serverSocketHandle);
   if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
+
+  // done index
+  Index_close(indexHandle);
 
   // free resources
   Crypt_doneHash(&newMaster.passwordHash);

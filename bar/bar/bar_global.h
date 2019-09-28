@@ -671,7 +671,8 @@ typedef struct
                                                                    6 - all SSH/FTP/WebDAV debug
                                                               */
 
-  uint                        serverDebugLevel;                // server debug level (for debug only)
+  uint                        serverDebugLevel;               // server debug level (for debug only)
+  bool                        serverDebugIndexOperationsFlag; // TRUE for server index operation only
 
   // --- job options default values
   ArchiveTypes                archiveType;                    // archive type for create
