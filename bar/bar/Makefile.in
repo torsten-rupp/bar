@@ -1471,14 +1471,14 @@ endif
 	@$(MAKE) gcov_optical \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
-          OPTIONS="--dvd-blank-command=true --dvd-write-command=true --dvd-write-image-command=true" \
+          OPTIONS="--cd-blank-command=true --cd-write-command=true --cd-write-image-command=true --dvd-blank-command=true --dvd-write-command=true --dvd-write-image-command=true --bd-blank-command=true --bd-write-command=true --bd-write-image-command=true" \
           TEST_OPTICAL_SLEEP_TIME=0 \
           TEST_OPTICAL_EMULATION=1 \
           QUIET=1
 	@$(MAKE) gcov_device \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
-          OPTIONS="--device-blank-command=true --device-write-command=true --overwrite-archive-files" \
+          OPTIONS="--cd-blank-command=true --cd-write-command=true --cd-write-image-command=true --dvd-blank-command=true --dvd-write-command=true --dvd-write-image-command=true --bd-blank-command=true --bd-write-command=true --bd-write-image-command=true" \
           TEST_DEVICE_SLEEP_TIME=0 \
           TEST_DEVICE_EMULATION=1 \
           QUIET=1
