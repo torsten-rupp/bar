@@ -1482,6 +1482,10 @@ endif
           TEST_DEVICE_SLEEP_TIME=0 \
           TEST_DEVICE_EMULATION=1 \
           QUIET=1
+	@$(MAKE) gcov_index \
+          COMPRESS_NAMES="none" \
+          CRYPT_NAMES="none" \
+          QUIET=1
 	@$(MAKE) gcov_server \
           COMPRESS_NAMES="none" \
           CRYPT_NAMES="none" \
