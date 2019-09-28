@@ -172,7 +172,6 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
-fprintf(stderr,"%s, %d: connectorConnect %p %p %s\n",__FILE__,__LINE__,connectorInfo,Thread_getId(&connectorInfo->thread),Thread_getIdString(Thread_getId(&connectorInfo->thread)));
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
   // set state
@@ -204,14 +203,10 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   }
   connectorInfo->storageOpenFlag = FALSE;
 
-fprintf(stderr,"%s, %d: connectorDisconnect %p %p %s\n",__FILE__,__LINE__,connectorInfo,Thread_getId(&connectorInfo->thread),Thread_getIdString(Thread_getId(&connectorInfo->thread)));
   // stop connector thread
   Thread_quit(&connectorInfo->thread);
   if (!Thread_join(&connectorInfo->thread))
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
-
     HALT_FATAL_ERROR("Cannot terminate connector thread!");
   }
   Thread_done(&connectorInfo->thread);
