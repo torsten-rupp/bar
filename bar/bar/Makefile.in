@@ -1415,6 +1415,10 @@ ifneq ($(LCOV),)
           COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
           CRYPT_NAMES="none" \
           QUIET=1
+	@$(MAKE) gcov_delta_compress \
+          COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
+          CRYPT_NAMES="none" \
+          QUIET=1
 	@$(MAKE) gcov_crypt \
           COMPRESS_NAMES="none" \
           xxxCRYPT_NAMES="$(MIN_CRYPT_NAMES)" \
