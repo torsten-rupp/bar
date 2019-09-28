@@ -357,8 +357,6 @@ typedef struct ArchiveEntryInfo
     } file;
     struct
     {
-      const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
-
       DeltaSourceHandle               deltaSourceHandle;               // delta source handle
       bool                            deltaSourceHandleInitFlag;       // TRUE if delta source is initialized
 
@@ -387,6 +385,8 @@ typedef struct ArchiveEntryInfo
     } image;
     struct
     {
+      const FileExtendedAttributeList *fileExtendedAttributeList;      // extended attribute list
+
       ChunkDirectory                  chunkDirectory;                  // base chunk
       ChunkDirectoryEntry             chunkDirectoryEntry;             // entry chunk
       ChunkDirectoryExtendedAttribute chunkDirectoryExtendedAttribute; // extended attribute chunk
