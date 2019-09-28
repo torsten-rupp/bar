@@ -9370,6 +9370,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
   archiveEntryInfo->archiveHandle                  = archiveHandle;
   archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_FILE;
 
+  archiveEntryInfo->file.fileExtendedAttributeList = fileExtendedAttributeList;
+
   archiveEntryInfo->file.deltaSourceHandleInitFlag = FALSE;
 
   archiveEntryInfo->file.byteBuffer                = NULL;
@@ -10557,8 +10559,10 @@ NULL//                             password
   // init variables
   AutoFree_init(&autoFreeList1);
 
-  archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_DIRECTORY;
+  archiveEntryInfo->archiveHandle                       = archiveHandle;
+  archiveEntryInfo->archiveEntryType                    = ARCHIVE_ENTRY_TYPE_DIRECTORY;
+
+  archiveEntryInfo->directory.fileExtendedAttributeList = fileExtendedAttributeList;
 
   // init directory chunk
   error = Chunk_init(&archiveEntryInfo->directory.chunkDirectory.info,
@@ -10978,8 +10982,10 @@ NULL//                             password
   // init variables
   AutoFree_init(&autoFreeList1);
 
-  archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_LINK;
+  archiveEntryInfo->archiveHandle                  = archiveHandle;
+  archiveEntryInfo->archiveEntryType               = ARCHIVE_ENTRY_TYPE_LINK;
+
+  archiveEntryInfo->link.fileExtendedAttributeList = fileExtendedAttributeList;
 
   // init link chunk
   error = Chunk_init(&archiveEntryInfo->link.chunkLink.info,
@@ -11414,6 +11420,9 @@ NULL//                             password
 
   archiveEntryInfo->archiveHandle                      = archiveHandle;
   archiveEntryInfo->archiveEntryType                   = ARCHIVE_ENTRY_TYPE_HARDLINK;
+
+  archiveEntryInfo->hardLink.fileNameList              = fileNameList;
+  archiveEntryInfo->hardLink.fileExtendedAttributeList = fileExtendedAttributeList;
 
   archiveEntryInfo->hardLink.deltaSourceHandleInitFlag = FALSE;
 
@@ -12074,8 +12083,10 @@ NULL//                             password
   // init variables
   AutoFree_init(&autoFreeList1);
 
-  archiveEntryInfo->archiveHandle    = archiveHandle;
-  archiveEntryInfo->archiveEntryType = ARCHIVE_ENTRY_TYPE_SPECIAL;
+  archiveEntryInfo->archiveHandle                     = archiveHandle;
+  archiveEntryInfo->archiveEntryType                  = ARCHIVE_ENTRY_TYPE_SPECIAL;
+
+  archiveEntryInfo->special.fileExtendedAttributeList = fileExtendedAttributeList;
 
   // init special chunk
   error = Chunk_init(&archiveEntryInfo->special.chunkSpecial.info,
