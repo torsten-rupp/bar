@@ -2506,8 +2506,6 @@ ifeq (@HAVE_XDELTA3@,1)
 	@#
 	$(RMF) intermediate/$(BAR_PATTERN)-B.bar restore/random512k.dat restore/hardlink.dat restore/hardlink1.dat restore/hardlink2.dat
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -c ../../intermediate/$(BAR_FILE)-B.bar random512k.dat hardlink.dat hardlink1.dat hardlink2.dat --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --force-delta-compression --overwrite-archive-files --verbose=2 $(LOG))
-
-x:
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)             -t intermediate/$(BAR_PATTERN)-B.bar --delta-source='intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -d ../../intermediate/$(BAR_PATTERN)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)/data/delta2 -x ../../intermediate/$(BAR_PATTERN)-B.bar --delta-source='../../intermediate/$(BAR_PATTERN)-A.bar' $(BAR_OPTIONS) --destination ../../restore $(LOG))
@@ -3999,6 +3997,7 @@ test_device_operations: \
 	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t device:///$(BAR_FILE).bar $(LOG))
 	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d device:///$(BAR_FILE).bar $(LOG))
 	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L device:///$(BAR_FILE).bar $(LOG))
+	@$(call functionCleanTestFiles)
 	$(SLEEP) $(TEST_DEVICE_SLEEP_TIME)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c device:///$(BAR_FILE).bar $(TEST_FILES) $(if $(BAR_OPTIONS),$(BAR_OPTIONS),--compress-algorithm=none --crypt-algorithm=none) --blank  --ecc $(LOG))
 	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t device:///$(BAR_FILE).bar $(LOG))
