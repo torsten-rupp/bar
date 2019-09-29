@@ -49,11 +49,11 @@
 /****************** Conditional compilation switches *******************/
 #define DATABASE_SUPPORT_TRANSACTIONS
 #define DATABASE_SUPPORT_INTERRUPT
-#define DATABASE_DEBUG_COPY_TABLE
-
 #define DATABASE_USE_ATOMIC_INCREMENT
+
 #define _DATABASE_DEBUG_LOCK
 #define _DATABASE_DEBUG_TIMEOUT
+#define _DATABASE_DEBUG_COPY_TABLE
 
 /***************************** Constants *******************************/
 #define MAX_FORCE_CHECKPOINT_TIME (10LL*60LL*1000LL) // timeout for force execution of a checkpoint [ms]
