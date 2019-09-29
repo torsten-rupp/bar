@@ -4886,7 +4886,7 @@ Dprintf.dprintf("------------------");
             BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S directoryContent=%y restoreEntryMode=%s",
                                                          Settings.destination,
                                                          true,
-                                                         Settings.overwriteEntriesFlag ? "OVERWRITE" : "STOP"
+                                                         Settings.overwriteEntriesFlag ? "overwrite" : "stop"
                                                         ),
                                      1,  // debugLevel
                                      new Command.ResultHandler()
