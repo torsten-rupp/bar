@@ -748,9 +748,11 @@ LOCAL bool StorageDevice_exists(const StorageInfo *storageInfo, ConstString arch
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  //TODO: still not implemented
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
+  return FALSE;
 }
 
 LOCAL bool StorageDevice_isFile(const StorageInfo *storageInfo, ConstString archiveName)
@@ -760,9 +762,11 @@ LOCAL bool StorageDevice_isFile(const StorageInfo *storageInfo, ConstString arch
 
   UNUSED_VARIABLE(storageInfo);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  //TODO: still not implemented
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
+  return FALSE;
 }
 
 LOCAL bool StorageDevice_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
@@ -772,9 +776,11 @@ LOCAL bool StorageDevice_isDirectory(const StorageInfo *storageInfo, ConstString
 
   UNUSED_VARIABLE(storageInfo);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  //TODO: still not implemented
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
+  return FALSE;
 }
 
 LOCAL bool StorageDevice_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
@@ -784,9 +790,11 @@ LOCAL bool StorageDevice_isReadable(const StorageInfo *storageInfo, ConstString 
 
   UNUSED_VARIABLE(storageInfo);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  //TODO: still not implemented
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
+  return FALSE;
 }
 
 LOCAL bool StorageDevice_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
@@ -796,9 +804,11 @@ LOCAL bool StorageDevice_isWritable(const StorageInfo *storageInfo, ConstString 
 
   UNUSED_VARIABLE(storageInfo);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  //TODO: still not implemented
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
+  return FALSE;
 }
 
 LOCAL Errors StorageDevice_getTmpName(String archiveName, const StorageInfo *storageInfo)
@@ -1033,17 +1043,18 @@ LOCAL Errors StorageDevice_rename(const StorageInfo *storageInfo,
                                   ConstString       toArchiveName
                                  )
 {
-  Errors error;
-
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
 
-UNUSED_VARIABLE(storageInfo);
-UNUSED_VARIABLE(fromArchiveName);
-UNUSED_VARIABLE(toArchiveName);
-error = ERROR_STILL_NOT_IMPLEMENTED;
+  UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(fromArchiveName);
+  UNUSED_VARIABLE(toArchiveName);
 
-  return error;
+  //TODO
+#ifndef WERROR
+#warning TODO still not implemented
+#endif
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageDevice_delete(const StorageInfo *storageInfo,
