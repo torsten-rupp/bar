@@ -2095,10 +2095,10 @@ endif
 	@#
 	# test not implemented functions
 	@$(call functionCleanTestFiles)
-	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) device://test/test.bar $(LOG))
-	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t device://test/test.bar $(LOG))
-	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d device://test/test.bar $(LOG))
-	$(call functionTestCheckExitcode,127,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x device://test/test.bar $(LOG))
+	$(call functionTestCheckExitcode,1,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) device://test/test.bar $(LOG))
+	$(call functionTestCheckExitcode,1,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -t device://test/test.bar $(LOG))
+	$(call functionTestCheckExitcode,1,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -d device://test/test.bar $(LOG))
+	$(call functionTestCheckExitcode,1,127,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -x device://test/test.bar $(LOG))
 	@#
 	@$(RMF) intermediate/test.cfg
 	@$(RMF) intermediate/test-deprecated.cfg
