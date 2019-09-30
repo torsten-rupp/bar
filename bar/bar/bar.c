@@ -1300,7 +1300,7 @@ LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
     // output error message
     fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
     #ifndef NDEBUG
-      debugPrintStackTrace();
+      debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1);
     #endif /* NDEBUG */
 
     // delete pid file
