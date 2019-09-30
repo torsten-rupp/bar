@@ -825,7 +825,8 @@ LOCAL Errors StorageDevice_getTmpName(String archiveName, const StorageInfo *sto
 
 LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
                                   ConstString   fileName,
-                                  uint64        fileSize
+                                  uint64        fileSize,
+                                  bool          forceFlag
                                  )
 {
   Errors error;
@@ -842,7 +843,8 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
   storageHandle->device.write.fileName = String_new();
 
   // check if file exists
-  if (   (storageHandle->storageInfo->jobOptions != NULL)
+  if (   !forceFlag
+      && (storageHandle->storageInfo->jobOptions != NULL)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
       && StorageDevice_exists(storageHandle->storageInfo,fileName)

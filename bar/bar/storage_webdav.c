@@ -1228,7 +1228,8 @@ LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *sto
 
 LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
                                   ConstString   fileName,
-                                  uint64        fileSize
+                                  uint64        fileSize,
+                                  bool          forceFlag
                                  )
 {
   #ifdef HAVE_CURL
@@ -1248,6 +1249,7 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo->type == STORAGE_TYPE_WEBDAV);
   assert(!String_isEmpty(fileName));
 
+//TODO: exists test?
   #ifdef HAVE_CURL
     // initialize variables
     storageHandle->webdav.curlMultiHandle      = NULL;

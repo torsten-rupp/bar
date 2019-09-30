@@ -2488,7 +2488,8 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   Errors Storage_create(StorageHandle *storageHandle,
                         StorageInfo   *storageInfo,
                         ConstString   archiveName,
-                        uint64        archiveSize
+                        uint64        archiveSize,
+                        bool          forceFlag
                        )
 #else /* not NDEBUG */
   Errors __Storage_create(const char    *__fileName__,
@@ -2496,7 +2497,8 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
                           StorageHandle *storageHandle,
                           StorageInfo   *storageInfo,
                           ConstString   archiveName,
-                          uint64        archiveSize
+                          uint64        archiveSize,
+                          bool          forceFlag
                          )
 #endif /* NDEBUG */
 {
@@ -2521,33 +2523,33 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   switch (storageInfo->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
-      error = StorageFile_create(storageHandle,archiveName,archiveSize);
+      error = StorageFile_create(storageHandle,archiveName,archiveSize,forceFlag);
       break;
     case STORAGE_TYPE_FTP:
-      error = StorageFTP_create(storageHandle,archiveName,archiveSize);
+      error = StorageFTP_create(storageHandle,archiveName,archiveSize,forceFlag);
       break;
     case STORAGE_TYPE_SSH:
       error = ERROR_FUNCTION_NOT_SUPPORTED;
       break;
     case STORAGE_TYPE_SCP:
-      error = StorageSCP_create(storageHandle,archiveName,archiveSize);
+      error = StorageSCP_create(storageHandle,archiveName,archiveSize,forceFlag);
       break;
     case STORAGE_TYPE_SFTP:
-      error = StorageSFTP_create(storageHandle,archiveName,archiveSize);
+      error = StorageSFTP_create(storageHandle,archiveName,archiveSize,forceFlag);
       break;
     case STORAGE_TYPE_WEBDAV:
-      error = StorageWebDAV_create(storageHandle,archiveName,archiveSize);
+      error = StorageWebDAV_create(storageHandle,archiveName,archiveSize,forceFlag);
       break;
     case STORAGE_TYPE_CD:
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
-      error = StorageOptical_create(storageHandle,archiveName,archiveSize);
+      error = StorageOptical_create(storageHandle,archiveName,archiveSize,forceFlag);
       break;
     case STORAGE_TYPE_DEVICE:
-      error = StorageDevice_create(storageHandle,archiveName,archiveSize);
+      error = StorageDevice_create(storageHandle,archiveName,archiveSize,forceFlag);
       break;
     case STORAGE_TYPE_MASTER:
-      error = StorageMaster_create(storageHandle,archiveName,archiveSize);
+      error = StorageMaster_create(storageHandle,archiveName,archiveSize,forceFlag);
       break;
     default:
       #ifndef NDEBUG

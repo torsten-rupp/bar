@@ -1372,6 +1372,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo);
 *          storageInfo   - storage info
 *          archiveName   - archive name (can be NULL)
 *          archiveSize   - archive size [bytes]
+*          forceFlag     - TRUE to force overwrite existing storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1381,7 +1382,8 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo);
   Errors Storage_create(StorageHandle *storageHandle,
                         StorageInfo   *storageInfo,
                         ConstString   archiveName,
-                        uint64        archiveSize
+                        uint64        archiveSize,
+                        bool          forceFlag
                        );
 #else /* not NDEBUG */
   Errors __Storage_create(const char    *__fileName__,
@@ -1389,7 +1391,8 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo);
                           StorageHandle *storageHandle,
                           StorageInfo   *storageInfo,
                           ConstString   archiveName,
-                          uint64        archiveSize
+                          uint64        archiveSize,
+                          bool          forceFlag
                          );
 #endif /* NDEBUG */
 

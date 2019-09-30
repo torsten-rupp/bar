@@ -864,7 +864,8 @@ LOCAL Errors StorageSFTP_getTmpName(String archiveName, const StorageInfo *stora
 
 LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
                                 ConstString   fileName,
-                                uint64        fileSize
+                                uint64        fileSize,
+                                bool          forceFlag
                                )
 {
   #ifdef HAVE_SSH2
@@ -878,7 +879,8 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
   UNUSED_VARIABLE(fileSize);
 
   // check if file exists
-  if (   (storageHandle->storageInfo->jobOptions != NULL)
+  if (   !forceFlag
+      && (storageHandle->storageInfo->jobOptions != NULL)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
       && StorageSFTP_exists(storageHandle->storageInfo,fileName)

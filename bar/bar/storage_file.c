@@ -324,7 +324,8 @@ LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *stora
 
 LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
                                 ConstString   fileName,
-                                uint64        fileSize
+                                uint64        fileSize,
+                                bool          forceFlag
                                )
 {
   Errors error;
@@ -338,7 +339,8 @@ LOCAL Errors StorageFile_create(StorageHandle *storageHandle,
   UNUSED_VARIABLE(fileSize);
 
   // check if file exists
-  if (   (storageHandle->storageInfo->jobOptions != NULL)
+  if (   !forceFlag
+      && (storageHandle->storageInfo->jobOptions != NULL)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
       && StorageFile_exists(storageHandle->storageInfo,fileName)

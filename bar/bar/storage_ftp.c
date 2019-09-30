@@ -1431,7 +1431,8 @@ LOCAL Errors StorageFTP_getTmpName(String archiveName, const StorageInfo *storag
 
 LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
                                ConstString   fileName,
-                               uint64        fileSize
+                               uint64        fileSize,
+                               bool          forceFlag
                               )
 {
   #if   defined(HAVE_CURL)
@@ -1453,7 +1454,8 @@ LOCAL Errors StorageFTP_create(StorageHandle *storageHandle,
   assert(!String_isEmpty(fileName));
 
   // check if file exists
-  if (   (storageHandle->storageInfo->jobOptions != NULL)
+  if (   !forceFlag
+      && (storageHandle->storageInfo->jobOptions != NULL)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
       && StorageFTP_exists(storageHandle->storageInfo,fileName)

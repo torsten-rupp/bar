@@ -330,7 +330,8 @@ LOCAL Errors StorageMaster_getTmpName(String archiveName, const StorageInfo *sto
 
 LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
                                   ConstString   fileName,
-                                  uint64        fileSize
+                                  uint64        fileSize,
+                                  bool          forceFlag
                                  )
 {
   Errors error;
@@ -341,6 +342,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
+  UNUSED_VARIABLE(forceFlag);
 
   // init variables
   storageHandle->master.index = 0LL;

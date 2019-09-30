@@ -404,24 +404,33 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
-#if 0
-//not needed
-    // save original storage file to temporary file before create converted storage file
-    Storage_getTmpName(tmpArchiveName,&convertInfo->storageInfo);
-    error = Storage_rename(&convertInfo->storageInfo,convertInfo->newArchiveName,tmpArchiveName);
-    if (error != ERROR_NONE)
+    // save original storage file to temporary file
+    if (Storage_exists(&convertInfo->storageInfo,convertInfo->archiveName))
     {
-      printInfo(0,"FAIL!\n");
-      printError("Cannot store '%s' (error: %s)",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      convertInfo->failError = error;
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
+      Storage_getTmpName(tmpArchiveName,&convertInfo->storageInfo);
+fprintf(stderr,"%s, %d: rename original %s -> %s\n",__FILE__,__LINE__,String_cString(convertInfo->archiveName),String_cString(tmpArchiveName));
+      error = Storage_rename(&convertInfo->storageInfo,convertInfo->archiveName,tmpArchiveName);
+      if (error != ERROR_NONE)
+      {
+        printInfo(0,"FAIL!\n");
+        printError("Cannot store '%s' (error: %s)",
+                   String_cString(printableStorageName),
+                   Error_getText(error)
+                  );
+        convertInfo->failError = error;
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+      AUTOFREE_ADD(&autoFreeList,&tmpArchiveName,
+      {
+
+        Storage_rename(&convertInfo->storageInfo,tmpArchiveName,convertInfo->newArchiveName);
+      });
     }
-    AUTOFREE_ADD(&autoFreeList,&tmpArchiveName,{ Storage_rename(&convertInfo->storageInfo,tmpArchiveName,convertInfo->newArchiveName); });
-#endif
+    else
+    {
+      String_clear(tmpArchiveName);
+    }
 
     // create storage file
     if (!String_isEmpty(convertInfo->jobOptions->destination))
@@ -498,7 +507,8 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         error = Storage_create(&storageHandle,
                                &convertInfo->storageInfo,
                                convertInfo->newArchiveName,
-                               fileInfo.size
+                               fileInfo.size,
+                               TRUE  // forceFlag
                               );
         if (error != ERROR_NONE)
         {
@@ -597,32 +607,9 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     }
 #endif
 
-    // save original storage file to temporary file
-    if (Storage_exists(&convertInfo->storageInfo,convertInfo->archiveName))
-    {
-      Storage_getTmpName(tmpArchiveName,&convertInfo->storageInfo);
-//fprintf(stderr,"%s, %d: rename original %s -> %s\n",__FILE__,__LINE__,String_cString(convertInfo->archiveName),String_cString(tmpArchiveName));
-      error = Storage_rename(&convertInfo->storageInfo,convertInfo->archiveName,tmpArchiveName);
-      if (error != ERROR_NONE)
-      {
-        printInfo(0,"FAIL!\n");
-        printError("Cannot store '%s' (error: %s)",
-                   String_cString(printableStorageName),
-                   Error_getText(error)
-                  );
-        convertInfo->failError = error;
-        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
-      }
-      AUTOFREE_ADD(&autoFreeList,&tmpArchiveName,{ Storage_rename(&convertInfo->storageInfo,tmpArchiveName,convertInfo->newArchiveName); });
-    }
-    else
-    {
-      String_clear(tmpArchiveName);
-    }
-
+#if 0
     // rename convert storage file to original name
-//fprintf(stderr,"%s, %d: rename converted %s -> %s\n",__FILE__,__LINE__,String_cString(convertInfo->newArchiveName),String_cString(convertInfo->archiveName));
+fprintf(stderr,"%s, %d: rename converted %s -> %s\n",__FILE__,__LINE__,String_cString(convertInfo->newArchiveName),String_cString(convertInfo->archiveName));
     error = Storage_rename(&convertInfo->storageInfo,
                            convertInfo->newArchiveName,
                            convertInfo->archiveName
@@ -638,24 +625,25 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
+#endif
 
     if (!String_isEmpty(tmpArchiveName))
     {
-    // delete saved original storage file
-//fprintf(stderr,"%s, %d: delete saved orginal %s\n",__FILE__,__LINE__,String_cString(tmpArchiveName));
-    error = Storage_delete(&convertInfo->storageInfo,tmpArchiveName);
-    if (error != ERROR_NONE)
-    {
-      printInfo(0,"FAIL!\n");
-      printError("Cannot store '%s' (error: %s)",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      convertInfo->failError = error;
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
-    }
-    AUTOFREE_REMOVE(&autoFreeList,&tmpArchiveName);
+      // delete saved original storage file
+fprintf(stderr,"%s, %d: delete saved orginal %s\n",__FILE__,__LINE__,String_cString(tmpArchiveName));
+      error = Storage_delete(&convertInfo->storageInfo,tmpArchiveName);
+      if (error != ERROR_NONE)
+      {
+        printInfo(0,"FAIL!\n");
+        printError("Cannot store '%s' (error: %s)",
+                   String_cString(printableStorageName),
+                   Error_getText(error)
+                  );
+        convertInfo->failError = error;
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        continue;
+      }
+      AUTOFREE_REMOVE(&autoFreeList,&tmpArchiveName);
     }
 
     // done

@@ -4590,7 +4590,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         error = Storage_create(&storageHandle,
                                &createInfo->storageInfo,
                                storageMsg.archiveName,
-                               fileInfo.size
+                               fileInfo.size,
+                               FALSE  // forceFlag
                               );
         if (error != ERROR_NONE)
         {

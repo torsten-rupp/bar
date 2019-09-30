@@ -1667,7 +1667,8 @@ LOCAL Errors StorageOptical_getTmpName(String archiveName, const StorageInfo *st
 
 LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
                                    ConstString   fileName,
-                                   uint64        fileSize
+                                   uint64        fileSize,
+                                   bool          forceFlag
                                   )
 {
   Errors error;
@@ -1691,7 +1692,8 @@ LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,
   storageHandle->opticalDisk.write.fileName           = String_new();
 
   // check if file exists
-  if (   (storageHandle->storageInfo->jobOptions != NULL)
+  if (   !forceFlag
+      && (storageHandle->storageInfo->jobOptions != NULL)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_APPEND)
       && (storageHandle->storageInfo->jobOptions->archiveFileMode != ARCHIVE_FILE_MODE_OVERWRITE)
       && !storageHandle->storageInfo->jobOptions->blankFlag

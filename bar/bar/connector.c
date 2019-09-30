@@ -770,7 +770,8 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
   error = Storage_create(&connectorInfo->storageHandle,
                          &connectorInfo->storageInfo,
                          archiveName,
-                         archiveSize
+                         archiveSize,
+                         FALSE  // forceFlag
                         );
   if (error != ERROR_NONE)
   {
