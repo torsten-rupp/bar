@@ -2332,21 +2332,29 @@ data/fifo:
 	$(INSTALL) -d $(@D)
 	($(CD) data; $(MKFIFO) fifo)
 data/name\'.dat:
-	$(INSTALL) -d $(@D)
-	@# Note: not using "$@"
-	$(ECHO) Hello World >data/name\'.dat
+	@# Note: work-around for special name, do not use '$@'
+	@if test ! -f data/name\'.dat; then \
+          $(ECHO) $(INSTALL) -d $(@D); $(INSTALL) -d $(@D); \
+          $(ECHO) $(ECHO) Hello World \>data/name\\\'.dat; $(ECHO) Hello World >data/name\'.dat; \
+        fi
 data/name\".dat:
-	$(INSTALL) -d $(@D)
-	@# Note: not using '$@'
-	$(ECHO) Hello World >data/name\".dat
+	@# Note: work-around for special name, do not use '$@'
+	@if test ! -f data/name\".dat; then \
+          $(ECHO) $(INSTALL) -d $(@D); $(INSTALL) -d $(@D); \
+          $(ECHO) $(ECHO) Hello World \>data/name\\\".dat; $(ECHO) Hello World >data/name\".dat; \
+        fi
 data/name\\.dat:
-	$(INSTALL) -d $(@D)
-	@# Note: not using '$@'
-	$(ECHO) Hello World >data/name\\.dat
+	@# Note: work-around for special name, do not use '$@'
+	@if test ! -f data/name\\.dat; then \
+          $(ECHO) $(INSTALL) -d $(@D); $(INSTALL) -d $(@D); \
+          $(ECHO) $(ECHO) Hello World \>data/name\\\\.dat; $(ECHO) Hello World >data/name\\.dat; \
+        fi
 data/name\\n.dat:
-	$(INSTALL) -d $(@D)
-	@# Note: not using '$@'
-	$(ECHO) Hello World >data/name\\n.dat
+	@# Note: work-around for special name, do not use '$@'
+	@if test ! -f data/name\".dat; then \
+          $(ECHO) $(INSTALL) -d $(@D); $(INSTALL) -d $(@D); \
+          $(ECHO) $(ECHO) Hello World \>data/name\\\".dat; $(ECHO) Hello World >data/name\".dat; \
+        fi
 data/name%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
 	$(ECHO) Hello World >'$@'
