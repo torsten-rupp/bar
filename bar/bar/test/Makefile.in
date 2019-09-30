@@ -306,16 +306,30 @@ TEST_SCHEDULE_UUID               =  00000000-0000-0000-0000-000000000000
 
 # crypt/compress used for all-test (do not select all available compress and
 # crypt algorithms, because this would take a long time)
-TEST_COMBINED_COMPRESS_NAMES=zip9
-ifeq (@HAVE_BZ2@,1)
-TEST_COMBINED_COMPRESS_NAMES += bzip9
+ifeq ($(COMBINED_COMPRESS_NAMES),)
+  COMBINED_COMPRESS_NAMES = none
+  COMBINED_COMPRESS_NAMES += zip9
+  ifeq (@HAVE_BZ2@,1)
+    COMBINED_COMPRESS_NAMES += bzip9
+  endif
+  ifeq (@HAVE_LZMA@,1)
+    COMBINED_COMPRESS_NAMES += lzma9
+  endif
+  ifeq (@HAVE_LZO@,1)
+    COMBINED_COMPRESS_NAMES += lzo5
+  endif
+  ifeq (@HAVE_LZ4@,1)
+    COMBINED_COMPRESS_NAMES += lz4-9
+  endif
+  ifeq (@HAVE_ZSTD@,1)
+    COMBINED_COMPRESS_NAMES += zstd19
+  endif
 endif
-ifeq (@HAVE_LZMA@,1)
-TEST_COMBINED_COMPRESS_NAMES += lzma9
-endif
-TEST_COMBINED_CRYPT_NAMES=none
-ifeq (@HAVE_GCRYPT@,1)
-TEST_COMBINED_CRYPT_NAMES += AES256
+ifeq ($(COMBINED_CRYPT_NAMES),)
+  COMBINED_CRYPT_NAMES = none
+  ifeq (@HAVE_GCRYPT@,1)
+    COMBINED_CRYPT_NAMES += AES256
+  endif
 endif
 
 # for tests only
@@ -1734,8 +1748,8 @@ test15_slave-valgrind test_slave-valgrind: \
 test_combined: \
   $(TEST_KEYS)
 	@$(ECHO_NO_LF) "Test combined..."
-	for compress in $(TEST_COMBINED_COMPRESS_NAMES); do \
-          for crypt in $(TEST_COMBINED_CRYPT_NAMES); do \
+	for compress in $(COMBINED_COMPRESS_NAMES); do \
+          for crypt in $(COMBINED_CRYPT_NAMES); do \
             $(MAKE) \
               BAR_FILE=test-### \
               BAR_PATTERN="test-*" \
