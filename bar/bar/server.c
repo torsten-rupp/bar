@@ -2339,6 +2339,7 @@ LOCAL void schedulerThreadCode(void)
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
     currentDateTime     = Misc_getCurrentDateTime();
+//TODO: avoid long running lock
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
     {
       JOB_LIST_ITERATEX(jobNode,!quitFlag && !jobListPendingFlag)
