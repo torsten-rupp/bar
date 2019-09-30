@@ -26,7 +26,6 @@
 #include "errors.h"
 #include "entrylists.h"
 #include "common/patternlists.h"
-//#include "sources.h"
 #include "crypt.h"
 #include "storage.h"
 #include "bar.h"
