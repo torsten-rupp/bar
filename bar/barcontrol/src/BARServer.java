@@ -863,6 +863,7 @@ class ReadThread extends Thread
         try
         {
           line = input.readLine();
+Dprintf.dprintf("line=%s",line);
           if (line == null)
           {
             if (!quitFlag)
@@ -992,6 +993,9 @@ class ReadThread extends Thread
         catch (SocketTimeoutException exception)
         {
           // ignored
+//TODO: remove
+Dprintf.dprintf("");
+System.exit(1);
         }
         catch (NumberFormatException exception)
         {
@@ -1029,6 +1033,9 @@ class ReadThread extends Thread
             }
           }
         }
+//TODO: remove
+Dprintf.dprintf("");
+System.exit(1);
       }
       catch (final SWTException exception)
       {
