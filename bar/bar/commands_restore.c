@@ -966,14 +966,14 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
     // output result
     if (!restoreInfo->storageFlags.dryRun)
     {
-      printInfo(1,"OK (%12llu bytes%s)\n",
+      printInfo(1,"OK (%llu bytes%s)\n",
                 fragmentSize,
                 s
                );
     }
     else
     {
-      printInfo(1,"OK (%12llu bytes%s, dry-run)\n",
+      printInfo(1,"OK (%llu bytes%s, dry-run)\n",
                 fragmentSize,
                 s
                );
@@ -1465,14 +1465,14 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
     // output result
     if (!restoreInfo->storageFlags.dryRun)
     {
-      printInfo(1,"OK (%12llu bytes%s)\n",
+      printInfo(1,"OK (%llu bytes%s)\n",
                 blockCount*deviceInfo.blockSize,
                 s
                );
     }
     else
     {
-      printInfo(1,"OK (%12llu bytes%s, dry-run)\n",
+      printInfo(1,"OK (%llu bytes%s, dry-run)\n",
                 blockCount*deviceInfo.blockSize,
                 s
                );
@@ -2623,14 +2623,14 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
         // output result
         if (!restoreInfo->storageFlags.dryRun)
         {
-          printInfo(1,"OK (%12llu bytes%s)\n",
+          printInfo(1,"OK (%llu bytes%s)\n",
                     fragmentSize,
                     s
                    );
         }
         else
         {
-          printInfo(1,"OK (%12llu bytes%s, dry-run)\n",
+          printInfo(1,"OK (%llu bytes%s, dry-run)\n",
                     fragmentSize,
                     s
                    );
