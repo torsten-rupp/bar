@@ -44,7 +44,7 @@ INSERT INTO files VALUES(33,1,'test/data/delta1/test.dat',524288,1569566935,1569
 INSERT INTO files VALUES(34,1,'test/data/name''.dat',12,1569653032,1569588848,1569588848,1000,1000,33204,0,12);
 CREATE TABLE images(  id              INTEGER PRIMARY KEY,  storageId       INTEGER,  name            TEXT,  fileSystemType  INTEGER,  size            INTEGER,  blockSize       INTEGER,  blockOffset     INTEGER,  blockCount      INTEGER,  FOREIGN KEY(storageId) REFERENCES storage(id));
 INSERT INTO "images" VALUES(1,1,'/dev/loop0',0,33554432,4096,0,8192);
-INSERT INTO "images" VALUES(1,2,'/dev/loop1',1,33554432,4096,0,8192);
+INSERT INTO "images" VALUES(2,2,'/dev/loop1',1,33554432,4096,0,8192);
 CREATE TABLE directories(  id              INTEGER PRIMARY KEY,  storageId       INTEGER,  name            TEXT,  timeLastAccess  INTEGER,  timeModified    INTEGER,  timeLastChanged INTEGER,  userId          INTEGER,  groupId         INTEGER,  permission      INTEGER,  FOREIGN KEY(storageId) REFERENCES storage(id));
 INSERT INTO directories VALUES(1,1,'test/data',1569566935,1569148357,1569148357,1000,1000,16877);
 INSERT INTO directories VALUES(2,1,'test/data/sub_dir_extended_attribute',1569566935,1569148357,1569148357,1000,1000,16877);

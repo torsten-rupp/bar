@@ -420,7 +420,7 @@ INSERT INTO fileEntries VALUES(67,2,85,12,0,12);
 INSERT INTO fileEntries VALUES(68,2,86,524288,0,524288);
 CREATE TABLE imageEntries(  id              INTEGER PRIMARY KEY,  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,    entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,  size            INTEGER,  fileSystemType  INTEGER,  blockSize       INTEGER,                   blockOffset     INTEGER,                   blockCount      INTEGER                  );
 INSERT INTO "imageEntries" VALUES(1,1,'/dev/loop0',0,33554432,4096,0,8192);
-INSERT INTO "imageEntries" VALUES(1,2,'/dev/loop1',1,33554432,4096,0,8192);
+INSERT INTO "imageEntries" VALUES(2,2,'/dev/loop1',1,33554432,4096,0,8192);
 CREATE TABLE directoryEntries(  id                    INTEGER PRIMARY KEY,  storageId             INTEGER NOT NULL REFERENCES storage(id),    entryId               INTEGER NOT NULL REFERENCES entries(id),  name                  TEXT,                                       totalEntryCount       INTEGER DEFAULT 0,    totalEntrySize        INTEGER DEFAULT 0,    totalEntryCountNewest INTEGER DEFAULT 0,    totalEntrySizeNewest  INTEGER DEFAULT 0   );
 INSERT INTO directoryEntries VALUES(1,1,1,'test/data',42,5253623,42,5253623);
 INSERT INTO directoryEntries VALUES(2,1,25,'test/data/sub_dir_extended_attribute',0,0,0,0);
