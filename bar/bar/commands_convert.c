@@ -366,14 +366,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
                 );
 
     // get printable storage name
-    if (!String_isEmpty(convertInfo->jobOptions->destination))
-    {
-      Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,convertInfo->archiveName);
-    }
-    else
-    {
-      Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,NULL);
-    }
+    Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,convertInfo->archiveName);
 
     // get file info
     error = File_getInfo(&fileInfo,storageMsg.fileName);
