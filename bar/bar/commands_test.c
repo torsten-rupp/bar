@@ -882,7 +882,6 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
               fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
             }
             assert(fragmentNode != NULL);
-//FragmentList_print(fragmentNode,String_cString(fileName),FALSE);
 
             // add range to file fragment list
             FragmentList_addRange(fragmentNode,fragmentOffset,fragmentSize);
