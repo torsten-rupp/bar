@@ -408,7 +408,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     if (Storage_exists(&convertInfo->storageInfo,convertInfo->archiveName))
     {
       Storage_getTmpName(tmpArchiveName,&convertInfo->storageInfo);
-fprintf(stderr,"%s, %d: rename original %s -> %s\n",__FILE__,__LINE__,String_cString(convertInfo->archiveName),String_cString(tmpArchiveName));
+//fprintf(stderr,"%s, %d: rename original %s -> %s\n",__FILE__,__LINE__,String_cString(convertInfo->archiveName),String_cString(tmpArchiveName));
       error = Storage_rename(&convertInfo->storageInfo,convertInfo->archiveName,tmpArchiveName);
       if (error != ERROR_NONE)
       {
@@ -607,30 +607,10 @@ fprintf(stderr,"%s, %d: rename original %s -> %s\n",__FILE__,__LINE__,String_cSt
     }
 #endif
 
-#if 0
-    // rename convert storage file to original name
-fprintf(stderr,"%s, %d: rename converted %s -> %s\n",__FILE__,__LINE__,String_cString(convertInfo->newArchiveName),String_cString(convertInfo->archiveName));
-    error = Storage_rename(&convertInfo->storageInfo,
-                           convertInfo->newArchiveName,
-                           convertInfo->archiveName
-                          );
-    if (error != ERROR_NONE)
-    {
-      printInfo(0,"FAIL!\n");
-      printError("Cannot rename temporary file to '%s' (error: %s)!",
-                 String_cString(printableStorageName),
-                 Error_getText(error)
-                );
-      if (convertInfo->failError == ERROR_NONE) convertInfo->failError = error;
-      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-      continue;
-    }
-#endif
-
     if (!String_isEmpty(tmpArchiveName))
     {
       // delete saved original storage file
-fprintf(stderr,"%s, %d: delete saved orginal %s\n",__FILE__,__LINE__,String_cString(tmpArchiveName));
+//fprintf(stderr,"%s, %d: delete saved orginal %s\n",__FILE__,__LINE__,String_cString(tmpArchiveName));
       error = Storage_delete(&convertInfo->storageInfo,tmpArchiveName);
       if (error != ERROR_NONE)
       {
