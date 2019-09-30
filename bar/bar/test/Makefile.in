@@ -331,6 +331,8 @@ IMAGE1A        = intermediate/dev1a.dat
 IMAGE1B        = intermediate/dev1b.dat
 MOUNT_POINT0   = intermediate/dev0
 MOUNT_POINT1   = intermediate/dev1
+DUMP0          = intermediate/dev0.dump
+DUMP1          = intermediate/dev1.dump
 
 # memory limits for tests
 MEMORY_LIMIT     = $(shell $(ECHO) 10*1024*1024|$(BC))    # 10G
@@ -3924,14 +3926,16 @@ test_image_operations_diff_image:
 	@$(call functionTestDeviceReset)
 	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
-	@$(call functionTestDeviceDump,$(DEVICE0),test/dev0.dump)
+	@$(call functionTestDeviceDump,$(DEVICE0),$(DUMP0))
 	@$(call functionTestDeviceDelete,$(DEVICE0))
 	@#
 	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
-	@$(call functionTestDeviceDump,$(DEVICE1),test/dev1.dump)
+	@$(call functionTestDeviceDump,$(DEVICE1),$(DUMP1))
 	@$(call functionTestDeviceDelete,$(DEVICE1))
 	@#
-	$(DIFF) test/dev0.dump test/dev1.dump
+	$(DIFF) $(DUMP0) $(DUMP1)
+	@#
+	@$(RMF) $(DUMP0) $(DUMP1)
 	@$(call functionDoneTestFiles)
 
 test_image_operations_create: \
