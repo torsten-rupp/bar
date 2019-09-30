@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <assert.h>
 
 /****************** Conditional compilation switches *******************/
@@ -116,11 +117,13 @@ void Stacktrace_done(void);
 /***********************************************************************\
 * Name   : Stacktrace_getSymbolInfo
 * Purpose: get symbol information
-* Input  : executableFileName - executable name
-*          addresses          - addresses
-*          addressCount       - number of addresses
-*          symbolFunction     - callback function for symbol
-*          symbolUserData     - callback user data
+* Input  : executableFileName     - executable name
+*          addresses              - addresses
+*          addressCount           - number of addresses
+*          symbolFunction         - callback function for symbol
+*          symbolUserData         - callback user data
+*          printErrorMessagesFlag - TRUE to print error messages on
+*                                   stderr
 * Output : -
 * Return : -
 * Notes  : -
@@ -130,7 +133,8 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                               const void * const addresses[],
                               uint               addressCount,
                               SymbolFunction     symbolFunction,
-                              void               *symbolUserData
+                              void               *symbolUserData,
+                              bool               printErrorMessagesFlag
                              );
 
 #ifdef __cplusplus

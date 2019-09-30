@@ -17,8 +17,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 #include <limits.h>
 #ifdef HAVE_BFD_H
   #include <bfd.h>
@@ -92,16 +93,21 @@ LOCAL void                    *stackTrace[MAX_STACKTRACE_SIZE+SKIP_STACK_FRAME_C
 /***********************************************************************\
 * Name   : readSymbolTable
 * Purpose: read symbol table from BFD
-* Input  : abfd - BFD handle
-* Output : symbols     - array with symbols
-*          symbolCount - number of entries in array
+* Input  : abfd             - BFD handle
+*          errorMessage     - error message variable (can be NULL)
+*          errorMessageSize - max. size of error message
+* Output : symbols      - array with symbols
+*          symbolCount  - number of entries in array
+*          errorMessage - error mesreadSymbolTablesage
 * Return : TRUE iff symbol table read
 * Notes  : -
 \***********************************************************************/
 
 LOCAL bool readSymbolTable(bfd           *abfd,
                            const asymbol **symbols[],
-                           ulong         *symbolCount
+                           ulong         *symbolCount,
+                           char          *errorMessage,
+                           uint          errorMessageSize
                           )
 {
   uint size;
@@ -113,7 +119,7 @@ LOCAL bool readSymbolTable(bfd           *abfd,
   // check if symbols available
   if ((bfd_get_file_flags(abfd) & HAS_SYMS) == 0)
   {
-    fprintf(stderr,"ERROR: no symbol table\n");
+    stringFormat(errorMessage,errorMessageSize,"no symbol table\n");
     return FALSE;
   }
 
@@ -137,12 +143,12 @@ LOCAL bool readSymbolTable(bfd           *abfd,
   }
   if      (n < 0)
   {
-    fprintf(stderr,"ERROR: error reading symbols\n");
+    stringFormat(errorMessage,errorMessageSize,"error reading symbols\n");
     return FALSE;
   }
   else if (n == 0)
   {
-    fprintf(stderr,"ERROR: no symbols found\n");
+    stringFormat(errorMessage,errorMessageSize,"no symbols found\n");
     return FALSE;
   }
   (void)size;
@@ -290,6 +296,12 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
 
   assert(symbolFunction != NULL);
 
+  // initialise variables
+  if (errorMessage != NULL)
+  {
+    stringClear(errorMessage);
+  }
+
   // find symbol
   addressInfo.symbols     = symbols;
   addressInfo.symbolCount = symbolCount;
@@ -300,7 +312,7 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
   {
     if (errorMessage != NULL)
     {
-      stringFormat(errorMessage,errorMessageSize,"section not found for address %p\n",(void*)address);
+      stringFormat(errorMessage,errorMessageSize,"section not found for address 0x%016"PRIxPTR"\n",(uintptr_t)address);
     }
     return FALSE;
   }
@@ -308,7 +320,7 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
   {
     if (errorMessage != NULL)
     {
-      stringFormat(errorMessage,errorMessageSize,"ERROR: symbol not found for address %p\n",(void*)address);
+      stringFormat(errorMessage,errorMessageSize,"symbol not found for address 0x%016"PRIxPTR"\n",(uintptr_t)address);
     }
     return FALSE;
   }
@@ -356,27 +368,27 @@ LOCAL bool addressToSymbolInfo(bfd                   *abfd,
                                                    );
   }
 
-  if (errorMessage != NULL)
-  {
-    stringClear(errorMessage);
-  }
-
   return TRUE;
 }
 
 /***********************************************************************\
 * Name   : openBFD
 * Purpose: open BFD and read symbol table
-* Input  : fileName - file name
-* Output : symbols     - symbol array
-*          symbolCount - number of entries in symbol array
+* Input  : fileName         - file name
+*          errorMessage     - error message variable (can be NULL)
+*          errorMessageSize - max. size of error message
+* Output : symbols      - symbol array
+*          symbolCount  - number of entries in symbol array
+*          errorMessage - error mesreadSymbolTablesage
 * Return : TRUE iff BFD opened
 * Notes  : -
 \***********************************************************************/
 
 LOCAL bfd* openBFD(const char    *fileName,
                    const asymbol **symbols[],
-                   ulong         *symbolCount
+                   ulong         *symbolCount,
+                   char          *errorMessage,
+                   uint          errorMessageSize
                   )
 {
   bfd  *abfd;
@@ -394,7 +406,7 @@ LOCAL bfd* openBFD(const char    *fileName,
 
   if (bfd_check_format(abfd,bfd_archive))
   {
-    fprintf(stderr,"ERROR: invalid format of file '%s' (error: %s)\n",fileName,strerror(errno));
+    stringFormat(errorMessage,errorMessageSize,"invalid format of file '%s' (error: %s)\n",fileName,strerror(errno));
     bfd_close(abfd);
     return NULL;
   }
@@ -405,12 +417,12 @@ LOCAL bfd* openBFD(const char    *fileName,
     {
       free(matching);
     }
-    fprintf(stderr,"ERROR: format does not match for file file '%s'\n",fileName);
+    stringFormat(errorMessage,errorMessageSize,"format does not match for file file '%s'\n",fileName);
     bfd_close(abfd);
     return NULL;
   }
 
-  if (!readSymbolTable(abfd,symbols,symbolCount))
+  if (!readSymbolTable(abfd,symbols,symbolCount,errorMessage,errorMessageSize))
   {
     bfd_close(abfd);
     return NULL;
@@ -446,9 +458,9 @@ LOCAL void closeBFD(bfd           *abfd,
 *          address          - address
 *          symbolFunction   - callback function for symbol
 *          symbolUserData   - callback user data
-*          errorMessage     - error message
+*          errorMessage     - error message variable (can be NULL)
 *          errorMessageSize - max. size of error message
-* Output : -
+* Output : errorMessage - error message
 * Return : TRUE iff symbol read
 * Notes  : -
 \***********************************************************************/
@@ -479,12 +491,12 @@ LOCAL bool getSymbolInfoFromFile(const char     *fileName,
     {
       debugSymbolFileName[n] = '\0';
       strncat(debugSymbolFileName,DEBUG_SYMBOL_FILE_EXTENSION,sizeof(debugSymbolFileName)-n);
-      abfd = openBFD(debugSymbolFileName,&symbols,&symbolCount);
+      abfd = openBFD(debugSymbolFileName,&symbols,&symbolCount,errorMessage,errorMessageSize);
     }
   }
   if (abfd == NULL)
   {
-    abfd = openBFD(fileName,&symbols,&symbolCount);
+    abfd = openBFD(fileName,&symbols,&symbolCount,errorMessage,errorMessageSize);
   }
   if (abfd == NULL)
   {
@@ -683,7 +695,8 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                               const void * const addresses[],
                               uint               addressCount,
                               SymbolFunction     symbolFunction,
-                              void               *symbolUserData
+                              void               *symbolUserData,
+                              bool               printErrorMessagesFlag
                              )
 {
 #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
@@ -703,7 +716,6 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
     dl_iterate_phdr(findMatchingFile,&fileMatchInfo);
     if (fileMatchInfo.found)
     {
-//fprintf(stderr,"%s, %d: load from %s\n",__FILE__,__LINE__,fileMatchInfo.fileName);
       symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
                                           (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
                                           symbolFunction,
@@ -721,10 +733,10 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                                             sizeof(errorMessage)
                                            );
       }
+//fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,fileMatchInfo.fileName,symbolFound);
     }
     else
     {
-//fprintf(stderr,"%s, %d: load from %s\n",__FILE__,__LINE__,executableFileName);
       symbolFound = getSymbolInfoFromFile(executableFileName,
                                           (bfd_vma)addresses[i],
                                           symbolFunction,
@@ -732,6 +744,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                                           errorMessage,
                                           sizeof(errorMessage)
                                          );
+//fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,executableFileName,symbolFound);
     }
 
     if (!symbolFound)
@@ -762,18 +775,20 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
         fileName = info.dli_fname;
 
         symbolFound = TRUE;
+//fprintf(stderr,"%s, %d: load via dladdr from %s\n",__FILE__,__LINE__,executableFileName);
       }
       else
       {
         symbolName = NULL;
         fileName   = NULL;
+//fprintf(stderr,"%s, %d: not found %s\n",__FILE__,__LINE__,executableFileName);
       }
 
       // handle line
       symbolFunction(addresses[i],fileName,symbolName,0,symbolUserData);
     }
 
-    if (!symbolFound)
+    if (!symbolFound && printErrorMessagesFlag)
     {
       fprintf(stderr,"ERROR: %s\n",errorMessage);
     }

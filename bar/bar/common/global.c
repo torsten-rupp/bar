@@ -453,7 +453,7 @@ void *__wrap_malloc(size_t size)
   if (size > ALLOC_LIMIT)
   {
     #ifdef ARCHTECTURE_X86
-      asm("int3");
+      asm("int3");  // breakpoint ok: malloc trace
     #endif
   }
 
@@ -477,7 +477,7 @@ void *__wrap_calloc(size_t nmemb, size_t size)
   if (nmemb*size > ALLOC_LIMIT)
   {
     #ifdef ARCHTECTURE_X86
-      asm("int3");
+      asm("int3");  // breakpoint ok: calloc trace
     #endif
   }
 
@@ -501,7 +501,7 @@ void *__wrap_realloc(void *ptr, size_t size)
   if (size > ALLOC_LIMIT)
   {
     #ifdef ARCHTECTURE_X86
-      asm("int3");
+      asm("int3");  // breakpoint ok: realloc trace
     #endif
   }
 
@@ -1224,11 +1224,10 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
                                           )
 {
   StackTraceOutputInfo *stackTraceOutputInfo = (StackTraceOutputInfo*)userData;
-
   assert(stackTraceOutputInfo != NULL);
 
-  // skip at least first two stack frames: this function and signal handler function
-  if (stackTraceOutputInfo->count > 1+stackTraceOutputInfo->skipFrameCount)
+  // skip at least first one stack frame: this function
+  if (stackTraceOutputInfo->count > stackTraceOutputInfo->skipFrameCount)
   {
     if (fileName   == NULL) fileName   = "<unknown file>";
     if (symbolName == NULL) symbolName = "<unknown symbol>";
@@ -1333,7 +1332,8 @@ void debugDumpStackTrace(FILE                           *handle,
                              stackTrace,
                              stackTraceSize,
                              debugDumpStackTraceOutputSymbol,
-                             &stackTraceOutputInfo
+                             &stackTraceOutputInfo,
+                             FALSE  // printErrorMessagesFlag
                             );
   #elif HAVE_BACKTRACE_SYMBOLS
     // get function names
