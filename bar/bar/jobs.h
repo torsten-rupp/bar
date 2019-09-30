@@ -653,11 +653,11 @@ INLINE void Job_listUnlock(void)
 
   #ifndef NDEBUG
     dt = Misc_getTimestamp()-jobList.lockTimestamp;
-    if (dt > 2*US_PER_S)
+    if ((dt > 2*US_PER_S) && (Semaphore_lockCount(&jobList.lock) == 1))
     {
-      fprintf(stderr,"Warning: job list locked %llums\n",dt/US_PER_MS);
+      fprintf(stderr,"Warning: long job list lock: %llums\n",dt/US_PER_MS);
       debugDumpStackTrace(stderr,
-                          2,
+                          0,
                           DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
                           jobList.lockStackTrace,
                           jobList.lockStackTraceSize,
