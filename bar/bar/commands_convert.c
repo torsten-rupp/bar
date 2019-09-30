@@ -421,11 +421,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         continue;
       }
-      AUTOFREE_ADD(&autoFreeList,&tmpArchiveName,
-      {
-
-        Storage_rename(&convertInfo->storageInfo,tmpArchiveName,convertInfo->newArchiveName);
-      });
+      AUTOFREE_ADD(&autoFreeList,&tmpArchiveName, { Storage_rename(&convertInfo->storageInfo,tmpArchiveName,convertInfo->archiveName); });
     }
     else
     {
@@ -439,7 +435,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       assert(convertInfo->destinationArchiveHandle.mode == ARCHIVE_MODE_CREATE);
 
       // create local file
-      error = File_open(&toFileHandle,convertInfo->newArchiveName,FILE_OPEN_CREATE);
+      error = File_open(&toFileHandle,convertInfo->archiveName,FILE_OPEN_CREATE);
       if (error != ERROR_NONE)
       {
         printInfo(0,"FAIL!\n");
@@ -506,7 +502,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         // create storage file
         error = Storage_create(&storageHandle,
                                &convertInfo->storageInfo,
-                               convertInfo->newArchiveName,
+                               convertInfo->archiveName,
                                fileInfo.size,
                                TRUE  // forceFlag
                               );
@@ -528,7 +524,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
           }
         }
         DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
-        AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_close(&storageHandle); Storage_delete(&convertInfo->storageInfo,convertInfo->newArchiveName); });
+        AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_close(&storageHandle); Storage_delete(&convertInfo->storageInfo,convertInfo->archiveName); });
 
         // copy data
         File_seek(&fileHandle,0);
@@ -591,7 +587,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       continue;
     }
-    AUTOFREE_ADD(&autoFreeList,convertInfo->newArchiveName,{ Storage_delete(&convertInfo->storageInfo,convertInfo->newArchiveName); });
 
     // close file
     File_close(&fileHandle);
