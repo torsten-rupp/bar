@@ -1499,15 +1499,15 @@ LOCAL void unlock(const char *__fileName__,
       {
         assert(semaphore->readLockCount > 0);
         assert(semaphore->readWriteLockCount == 0);
-//++fprintf(stderr,"%s, %d: thread=%s lock sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
-//++fprintf(stderr,"%s, %4d: thread=%s sem=%p count=%d owner=%d: %d %d %d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner,semaphore->lockedByCount,semaphore->readLockCount,semaphore->readWriteLockCount);
+//fprintf(stderr,"%s, %d: thread=%s lock sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
+//fprintf(stderr,"%s, %4d: thread=%s sem=%p count=%d owner=%d: %d %d %d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner,semaphore->lockedByCount,semaphore->readLockCount,semaphore->readWriteLockCount);
         assert(semaphore->lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
 
         // do one read-unlock
         semaphore->readLockCount--;
         #ifndef NDEBUG
           debugRemoveLockedThreadInfo(semaphore,__fileName__,__lineNb__);
-//++fprintf(stderr,"%s, %4d: thread=%s sem=%p count=%d owner=%d: %d %d %d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner,semaphore->lockedByCount,semaphore->readLockCount,semaphore->readWriteLockCount);
+//fprintf(stderr,"%s, %4d: thread=%s sem=%p count=%d owner=%d: %d %d %d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner,semaphore->lockedByCount,semaphore->readLockCount,semaphore->readWriteLockCount);
           assert(semaphore->lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
         #endif /* not NDEBUG */
         if (semaphore->readLockCount == 0)
@@ -1521,7 +1521,7 @@ LOCAL void unlock(const char *__fileName__,
         #ifndef NDEBUG
           debugSetSemaphoreState(semaphore,&semaphore->lastReadUnlock);
         #endif /* not NDEBUG */
-//++fprintf(stderr,"%s, %d: thread=%s unlock sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
+//fprintf(stderr,"%s, %d: thread=%s unlock sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
       }
       __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R");
       break;
@@ -1534,8 +1534,8 @@ LOCAL void unlock(const char *__fileName__,
       assert(Semaphore_isOwned(semaphore));
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
-//++fprintf(stderr,"%s, %d: thread=%s sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
-//++fprintf(stderr,"%s, %4d: thread=%s sem=%p count=%d owner=%d: %d %d %d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner,semaphore->lockedByCount,semaphore->readLockCount,semaphore->readWriteLockCount);
+//fprintf(stderr,"%s, %d: thread=%s sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
+//fprintf(stderr,"%s, %4d: thread=%s sem=%p count=%d owner=%d: %d %d %d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner,semaphore->lockedByCount,semaphore->readLockCount,semaphore->readWriteLockCount);
       assert(semaphore->lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
 
       // do one read/write-unlock
