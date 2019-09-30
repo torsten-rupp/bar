@@ -23,6 +23,7 @@
 #include "fragmentlists.h"
 
 /****************** Conditional compilation switches *******************/
+#define _FRAGMENTLISTS_DEBUG
 
 /***************************** Constants *******************************/
 
@@ -32,13 +33,14 @@
 
 /****************************** Macros *********************************/
 
-// get begin/end index i0,i1
+// get begin/end index i0,i1 of range
 #define I0(offset,length) (offset)
 #define I1(offset,length) (((length)>0)?(offset)+(length)-1:(offset))
 
 // begin/end index f0,f1 of fragment
 #define F0(fragmentRangeNode) I0(fragmentRangeNode->offset,fragmentRangeNode->length)
 #define F1(fragmentRangeNode) I1(fragmentRangeNode->offset,fragmentRangeNode->length)
+#define L(fragmentRangeNode) (fragmentRangeNode->length)
 
 #ifndef NDEBUG
   #define FRAGMENTNODE_VALID(fragmentNode) \
@@ -87,6 +89,7 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
   {
     size += fragmentRangeNode->length;
   }
+//if (size != fragmentNode->rangeListSum) fprintf(stderr,"%s, %d: %lu == %lu\n",__FILE__,__LINE__,size,fragmentNode->rangeListSum);
   assert(size == fragmentNode->rangeListSum);
 }
 #endif /* NDEBUG */
@@ -323,41 +326,137 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
-  // remove all fragments which are completely covered by new fragment
-  fragmentRangeNode = fragmentNode->rangeList.head;
-  while (fragmentRangeNode != NULL)
+  if (length > 0)
   {
-    if ((F0(fragmentRangeNode) >= I0(offset,length)) && (F1(fragmentRangeNode) <= I1(offset,length)))
-    {
-      deleteFragmentRangeNode = fragmentRangeNode;
-      fragmentRangeNode = fragmentRangeNode->next;
-      List_remove(&fragmentNode->rangeList,deleteFragmentRangeNode);
-      assert(fragmentNode->rangeListSum >= deleteFragmentRangeNode->length);
-      fragmentNode->rangeListSum -= deleteFragmentRangeNode->length;
-      LIST_DELETE_NODE(deleteFragmentRangeNode);
-    }
-    else
-    {
-      fragmentRangeNode = fragmentRangeNode->next;
-    }
-  }
+    #ifdef FRAGMENTLISTS_DEBUG
+      FragmentList_debugPrintInfo(fragmentNode,"before");
+    #endif /* FRAGMENTLISTS_DEBUG */
 
-  // find prev/next fragment
-  prevFragmentRangeNode = NULL;
-  fragmentRangeNode = fragmentNode->rangeList.head;
-  while ((fragmentRangeNode != NULL) && (F1(fragmentRangeNode) <= I1(offset,length)))
-  {
-    prevFragmentRangeNode = fragmentRangeNode;
-    fragmentRangeNode = fragmentRangeNode->next;
-  }
-  nextFragmentRangeNode = NULL;
-  fragmentRangeNode = fragmentNode->rangeList.tail;
-  while ((fragmentRangeNode != NULL) && (F0(fragmentRangeNode) >= I0(offset,length)))
-  {
-    nextFragmentRangeNode = fragmentRangeNode;
-    fragmentRangeNode = fragmentRangeNode->prev;
-  }
+    // remove all fragments which are completely covered by new fragment
+    fragmentRangeNode = fragmentNode->rangeList.head;
+    while (fragmentRangeNode != NULL)
+    {
+      if ((F0(fragmentRangeNode) >= I0(offset,length)) && (F1(fragmentRangeNode) <= I1(offset,length)))
+      {
+        deleteFragmentRangeNode = fragmentRangeNode;
+        fragmentRangeNode = fragmentRangeNode->next;
+        List_remove(&fragmentNode->rangeList,deleteFragmentRangeNode);
+        assert(fragmentNode->rangeListSum >= deleteFragmentRangeNode->length);
+        fragmentNode->rangeListSum -= deleteFragmentRangeNode->length;
+        #ifdef FRAGMENTLISTS_DEBUG
+          fprintf(stderr,"%s, %d: removed %lu:%lu\n",__FILE__,__LINE__,deleteFragmentRangeNode->offset,deleteFragmentRangeNode->length);
+        #endif /* FRAGMENTLISTS_DEBUG */
+        LIST_DELETE_NODE(deleteFragmentRangeNode);
+      }
+      else
+      {
+        fragmentRangeNode = fragmentRangeNode->next;
+      }
+    }
 
+    // find prev/next fragment
+    prevFragmentRangeNode = NULL;
+    fragmentRangeNode = fragmentNode->rangeList.head;
+    while ((fragmentRangeNode != NULL) && (F1(fragmentRangeNode) <= I1(offset,length)))
+    {
+      prevFragmentRangeNode = fragmentRangeNode;
+      fragmentRangeNode = fragmentRangeNode->next;
+    }
+    nextFragmentRangeNode = NULL;
+    fragmentRangeNode = fragmentNode->rangeList.tail;
+    while ((fragmentRangeNode != NULL) && (F0(fragmentRangeNode) >= I0(offset,length)))
+    {
+      nextFragmentRangeNode = fragmentRangeNode;
+      fragmentRangeNode = fragmentRangeNode->prev;
+    }
+
+    // check if existing fragment range can be extended or new fragment range have to be inserted
+    if (   ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
+        || ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
+       )
+    {
+      if      ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
+      {
+        // combine with previous existing fragment range
+        #ifdef FRAGMENTLISTS_DEBUG
+          fprintf(stderr,"%s, %d: combine %lu:%lu: prev %lu:%lu: o(p)=%lu I1(p)=%lu\n",__FILE__,__LINE__,
+                  offset,length,
+                  prevFragmentRangeNode->offset,
+                  prevFragmentRangeNode->length,
+                  prevFragmentRangeNode->offset,I1(offset,length)
+                 );
+        #endif /* FRAGMENTLISTS_DEBUG */
+        fragmentNode->rangeListSum += I1(offset,length)+1-F0(prevFragmentRangeNode)-L(prevFragmentRangeNode);
+        prevFragmentRangeNode->length = I1(offset,length)+1-F0(prevFragmentRangeNode);
+        prevFragmentRangeNode->offset = F0(prevFragmentRangeNode);
+
+<<<<<<< .mine
+        assert((F1(prevFragmentRangeNode)-F0(prevFragmentRangeNode)+1) == prevFragmentRangeNode->length);
+      }
+      else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
+      {
+        // combine with next existing fragment range
+        #ifdef FRAGMENTLISTS_DEBUG
+        fprintf(stderr,"%s, %d: combine %lu:%lu: next %lu:%lu: o(n)=%lu I1(n)=%lu\n",__FILE__,__LINE__,
+                offset,length,
+                nextFragmentRangeNode->offset,
+                nextFragmentRangeNode->length,
+                nextFragmentRangeNode->offset,I1(offset,length)
+               );
+        #endif /* FRAGMENTLISTS_DEBUG */
+        fragmentNode->rangeListSum += F1(nextFragmentRangeNode)+1-I0(offset,lenght)-L(nextFragmentRangeNode);
+        nextFragmentRangeNode->length = F1(nextFragmentRangeNode)+1-I0(offset,length);
+        nextFragmentRangeNode->offset = I0(offset,lenght);
+
+        assert((F1(nextFragmentRangeNode)-F0(nextFragmentRangeNode)+1) == nextFragmentRangeNode->length);
+      }
+      #ifdef FRAGMENTLISTS_DEBUG
+        FragmentList_debugPrintInfo(fragmentNode,"before combine");
+        fprintf(stderr,"%s, %d: fragmentNode->rangeListSum=%lu\n",__FILE__,__LINE__,fragmentNode->rangeListSum);
+      #endif /* FRAGMENTLISTS_DEBUG */
+
+      if ((prevFragmentRangeNode != NULL) && (nextFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= F0(nextFragmentRangeNode)))
+      {
+        // combine previous and next fragment range
+        #ifdef FRAGMENTLISTS_DEBUG
+          fprintf(stderr,"%s, %d: combine prev+next prev=%lu:%lu next=%lu:%lu F0(p)=%lu F1(p)=%lu F0(n)=%lu F1(n)=%lu L(p)=%lu L(n)=%lu\n",__FILE__,__LINE__,
+                  prevFragmentRangeNode->offset,prevFragmentRangeNode->length,
+                  nextFragmentRangeNode->offset,nextFragmentRangeNode->length,
+                  F0(prevFragmentRangeNode),
+                  F1(prevFragmentRangeNode),
+                  F0(nextFragmentRangeNode),
+                  F1(nextFragmentRangeNode),
+                  prevFragmentRangeNode->length,
+                  nextFragmentRangeNode->length
+                 );
+        #endif /* FRAGMENTLISTS_DEBUG */
+        #ifdef FRAGMENTLISTS_DEBUG
+          fprintf(stderr,"%s, %d: fragmentNode->rangeListSum=%lu\n",__FILE__,__LINE__,fragmentNode->rangeListSum);
+        #endif /* FRAGMENTLISTS_DEBUG */
+        fragmentNode->rangeListSum += (F1(nextFragmentRangeNode)-F0(prevFragmentRangeNode)+1)-L(prevFragmentRangeNode)-L(nextFragmentRangeNode);
+        #ifdef FRAGMENTLISTS_DEBUG
+          fprintf(stderr,"%s, %d: fragmentNode->rangeListSum=%lu\n",__FILE__,__LINE__,fragmentNode->rangeListSum);
+        #endif /* FRAGMENTLISTS_DEBUG */
+        prevFragmentRangeNode->length = F1(nextFragmentRangeNode)-F0(prevFragmentRangeNode)+1;
+
+        List_remove(&fragmentNode->rangeList,nextFragmentRangeNode);
+        LIST_DELETE_NODE(nextFragmentRangeNode);
+
+        assert((F1(prevFragmentRangeNode)-F0(prevFragmentRangeNode)+1) == prevFragmentRangeNode->length);
+      }
+||||||| .r9844
+  // check if existing fragment range can be extended or new fragment range have to be inserted
+  if (   ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
+      || ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
+     )
+  {
+    if      ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
+    {
+      // combine with previous existing fragment range
+      prevFragmentRangeNode->length = (offset+length)-prevFragmentRangeNode->offset;
+      prevFragmentRangeNode->offset = prevFragmentRangeNode->offset;
+      fragmentNode->rangeListSum += length;
+=======
   // check if existing fragment range can be extended or new fragment range have to be inserted
   if (   ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
       || ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
@@ -370,16 +469,53 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
       prevFragmentRangeNode->length = (offset+length)-prevFragmentRangeNode->offset;
       prevFragmentRangeNode->offset = prevFragmentRangeNode->offset;
       fragmentNode->rangeListSum += length;
+>>>>>>> .r9846
     }
+<<<<<<< .mine
+    else /* if (   ((prevFragmentRangeNode == NULL) || (F1(prevFragmentRangeNode)+1 < I0(offset,length)))
+                && ((nextFragmentRangeNode == NULL) || (F0(nextFragmentRangeNode)-1 > I1(offset,length)))
+               )
+         */
+||||||| .r9844
+    else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
+=======
 //TODO: error if ranges overlap?
     else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
+>>>>>>> .r9846
     {
-      // combine with next existing fragment range
-      nextFragmentRangeNode->length = (nextFragmentRangeNode->offset+nextFragmentRangeNode->length)-offset;
-      nextFragmentRangeNode->offset = offset;
+      // insert new fragment range
+      fragmentRangeNode = LIST_NEW_NODE(FragmentRangeNode);
+      if (fragmentRangeNode == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+      fragmentRangeNode->offset = offset;
+      fragmentRangeNode->length = length;
+      #ifdef FRAGMENTLISTS_DEBUG
+        fprintf(stderr,"%s, %d: add %lu:%lu\n",__FILE__,__LINE__,offset,length);
+      #endif /* FRAGMENTLISTS_DEBUG */
+      assert((F1(fragmentRangeNode)-F0(fragmentRangeNode)+1) == fragmentRangeNode->length);
+
+      List_insert(&fragmentNode->rangeList,fragmentRangeNode,nextFragmentRangeNode);
       fragmentNode->rangeListSum += length;
+      #ifdef FRAGMENTLISTS_DEBUG
+        fprintf(stderr,"%s, %d: insert %lu:%lu\n",__FILE__,__LINE__,fragmentRangeNode->offset,fragmentRangeNode->length);
+      #endif /* FRAGMENTLISTS_DEBUG */
     }
 
+<<<<<<< .mine
+    #ifdef FRAGMENTLISTS_DEBUG
+      FragmentList_debugPrintInfo(fragmentNode,"after");
+    #endif /* FRAGMENTLISTS_DEBUG */
+||||||| .r9844
+    if ((prevFragmentRangeNode != NULL) && (nextFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= F0(nextFragmentRangeNode)))
+    {
+      // combine previous and next fragment range
+      prevFragmentRangeNode->length += nextFragmentRangeNode->length;
+      List_remove(&fragmentNode->rangeList,nextFragmentRangeNode);
+      LIST_DELETE_NODE(nextFragmentRangeNode);
+    }
+=======
 //TODO: error if ranges overlap?
     if ((prevFragmentRangeNode != NULL) && (nextFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= F0(nextFragmentRangeNode)))
     {
@@ -388,22 +524,7 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
       List_remove(&fragmentNode->rangeList,nextFragmentRangeNode);
       LIST_DELETE_NODE(nextFragmentRangeNode);
     }
-  }
-  else /* if (   ((prevFragmentRangeNode == NULL) || (F1(prevFragmentRangeNode)+1 < I0(offset,length)))
-              && ((nextFragmentRangeNode == NULL) || (F0(nextFragmentRangeNode)-1 > I1(offset,length)))
-             )
-       */
-  {
-    // insert new fragment range
-    fragmentRangeNode = LIST_NEW_NODE(FragmentRangeNode);
-    if (fragmentRangeNode == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    fragmentRangeNode->offset = offset;
-    fragmentRangeNode->length = length;
-    List_insert(&fragmentNode->rangeList,fragmentRangeNode,nextFragmentRangeNode);
-    fragmentNode->rangeListSum += length;
+>>>>>>> .r9846
   }
 
   FRAGMENTNODE_VALID(fragmentNode);
@@ -500,5 +621,215 @@ void FragmentList_debugPrintInfo(const FragmentNode *fragmentNode, const char *n
 #ifdef __cplusplus
   }
 #endif
+
+#ifdef FRAGMENTLISTS_DEBUG
+void FragmentList_unitTests()
+{
+  StaticString (s,32);
+  FragmentList f;
+  FragmentNode *n;
+
+  String_setCString(s,"test");
+
+#if 1
+  /*  ##____
+      __##__
+      ____##
+  */
+  fprintf(stderr,"%s, %d:  1 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,0,2);
+  FragmentList_addRange(n,2,2);
+  FragmentList_addRange(n,4,2);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  ____##
+      __##__
+      ##____
+  */
+  fprintf(stderr,"%s, %d:  2 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,4,2);
+  FragmentList_addRange(n,2,2);
+  FragmentList_addRange(n,0,2);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+
+#if 1
+  /*  ##____
+      ____##
+      __##__
+  */
+  fprintf(stderr,"%s, %d:  3 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,0,2);
+  FragmentList_addRange(n,4,2);
+  FragmentList_addRange(n,2,2);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  ____##
+      ##____
+      __##__
+  */
+  fprintf(stderr,"%s, %d:  4 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,4,2);
+  FragmentList_addRange(n,0,2);
+  FragmentList_addRange(n,2,2);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  ###___
+      __##__
+      ___###
+  */
+  fprintf(stderr,"%s, %d:  5 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,0,3);
+  FragmentList_addRange(n,4,2);
+  FragmentList_addRange(n,3,3);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  ###___
+      __####
+  */
+  fprintf(stderr,"%s, %d:  6 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,0,3);
+  FragmentList_addRange(n,2,4);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  __####
+      ###___
+  */
+  fprintf(stderr,"%s, %d:  7 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,2,4);
+  FragmentList_addRange(n,0,3);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  ___###
+      __##__
+      ###___
+  */
+  fprintf(stderr,"%s, %d:  8 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,3,3);
+  FragmentList_addRange(n,4,2);
+  FragmentList_addRange(n,0,3);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  __##__
+      ######
+  */
+  fprintf(stderr,"%s, %d:  9 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,4,2);
+  FragmentList_addRange(n,0,6);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  ######
+      __##__
+  */
+  fprintf(stderr,"%s, %d: 10 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,0,6);
+  FragmentList_addRange(n,4,2);
+  assert(FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  ##____
+      ____##
+  */
+  fprintf(stderr,"%s, %d: 11 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,0,2);
+  FragmentList_addRange(n,4,2);
+  assert(!FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  ____##
+      ##____
+  */
+  fprintf(stderr,"%s, %d: 12 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,4,2);
+  FragmentList_addRange(n,0,2);
+  assert(!FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  #_____
+      __##__
+      _____#
+  */
+  fprintf(stderr,"%s, %d: 13 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,0,1);
+  FragmentList_addRange(n,2,2);
+  FragmentList_addRange(n,5,1);
+  assert(!FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+
+#if 1
+  /*  _____#
+      __##__
+      #_____
+  */
+  fprintf(stderr,"%s, %d: 14 -------------------------------------------\n",__FILE__,__LINE__);
+  FragmentList_init(&f);
+  n = FragmentList_add(&f,s,6,NULL,0,0);
+  FragmentList_addRange(n,5,1);
+  FragmentList_addRange(n,2,2);
+  FragmentList_addRange(n,0,1);
+  assert(!FragmentList_isComplete(n));
+  FragmentList_done(&f);
+#endif
+}
+#endif /* FRAGMENTLISTS_DEBUG */
 
 /* end of file */
