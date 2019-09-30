@@ -254,7 +254,6 @@ LOCAL void busyHandler(void *userData)
 
   assert (indexHandle != NULL);
 
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
   if (indexHandle->busyHandlerFunction != NULL)
   {
     indexHandle->busyHandlerFunction(indexHandle->busyHandlerUserData);
@@ -1466,7 +1465,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
   // prune storages of entity
   if (Index_getDatabaseId(entityIndexId) != INDEX_DEFAULT_ENTITY_ID)
   {
-//TODO: race condition! chemptyange entity lock while list storages
+//TODO: race condition! change entity lock while list storages
     // get locked count
     error = Database_getInteger64(&indexHandle->databaseHandle,
                                   &lockedCount,
@@ -1483,28 +1482,33 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
     if (lockedCount == 0LL)
     {
       Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
-      error = Database_getIds(&indexHandle->databaseHandle,
-                              &databaseIds,
-                              "storage",
-                              "id",
-                              "WHERE entityId=%lld \
-                              ",
-                              Index_getDatabaseId(entityIndexId)
-                             );
-      if (error == ERROR_NONE)
+      INDEX_DOX(error,
+                indexHandle,
       {
-        Array_done(&databaseIds);
-        return error;
-      }
-      ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
-      {
-        error = pruneStorage(indexHandle,INDEX_ID_STORAGE(databaseId));
-      }
-      if (error != ERROR_NONE)
-      {
-        Array_done(&databaseIds);
-        return error;
-      }
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &databaseIds,
+                                "storage",
+                                "id",
+                                "WHERE entityId=%lld \
+                                ",
+                                Index_getDatabaseId(entityIndexId)
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
+        {
+          error = pruneStorage(indexHandle,INDEX_ID_STORAGE(databaseId));
+        }
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        return ERROR_NONE;
+      });
       Array_done(&databaseIds);
 
       // check if storage exists
@@ -1636,28 +1640,35 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
 
   // prune entities of uuid
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "entities",
-                          "entities.id",
-                          "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           WHERE uuids.id=%lld \
-                          ",
-                          Index_getDatabaseId(uuidId)
-                         );
-  if (error == ERROR_NONE)
+  INDEX_DOX(error,
+            indexHandle,
   {
-    Array_done(&databaseIds);
-    return error;
-  }
-  ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
-  {
-    error = pruneEntity(indexHandle,INDEX_ID_ENTITY(databaseId));
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
+    error = Database_getIds(&indexHandle->databaseHandle,
+                            &databaseIds,
+                            "entities",
+                            "entities.id",
+                            "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                             WHERE uuids.id=%lld \
+                            ",
+                            Index_getDatabaseId(uuidId)
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
+    {
+      error = pruneEntity(indexHandle,INDEX_ID_ENTITY(databaseId));
+    }
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    
+    return ERROR_NONE;
+  });
+  Array_done(&databaseIds);
 
   // check if entity exists
   existsEntityFlag = Database_exists(&indexHandle->databaseHandle,
@@ -3006,28 +3017,33 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
 
   // assign storage entries to other storage
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "storage",
-                          "id",
-                          "WHERE entityId=%lld \
-                          ",
-                          Index_getDatabaseId(entityIndexId)
-                         );
-  if (error != ERROR_NONE)
+  INDEX_DOX(error,
+            indexHandle,
   {
-    Array_done(&databaseIds);
-    return error;
-  }
-  ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
-  {
-    error = assignStorageToStorage(indexHandle,INDEX_ID_STORAGE(databaseId),toStorageIndexId);
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
+    error = Database_getIds(&indexHandle->databaseHandle,
+                            &databaseIds,
+                            "storage",
+                            "id",
+                            "WHERE entityId=%lld \
+                            ",
+                            Index_getDatabaseId(entityIndexId)
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
+    {
+      error = assignStorageToStorage(indexHandle,INDEX_ID_STORAGE(databaseId),toStorageIndexId);
+    }
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    
+    return ERROR_NONE;
+  });
   Array_done(&databaseIds);
 
   // delete entity if empty
@@ -3228,28 +3244,33 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
   assert(Index_getType(toStorageIndexId) == INDEX_TYPE_STORAGE);
 
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "entities",
-                          "id",
-                          "WHERE entities.jobUUID=%'S \
-                          ",
-                          jobUUID
-                         );
-  if (error != ERROR_NONE)
+  INDEX_DOX(error,
+            indexHandle,
   {
-    Array_done(&databaseIds);
-    return error;
-  }
-  ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
-  {
-    error = assignEntityToStorage(indexHandle,INDEX_ID_ENTITY(databaseId),toStorageIndexId);
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
+    error = Database_getIds(&indexHandle->databaseHandle,
+                            &databaseIds,
+                            "entities",
+                            "id",
+                            "WHERE entities.jobUUID=%'S \
+                            ",
+                            jobUUID
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
+    {
+      error = assignEntityToStorage(indexHandle,INDEX_ID_ENTITY(databaseId),toStorageIndexId);
+    }
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    
+    return ERROR_NONE;
+  });
   Array_done(&databaseIds);
 
   return ERROR_NONE;
@@ -3282,28 +3303,33 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
   assert(Index_getType(toEntityIndexId) == INDEX_TYPE_ENTITY);
 
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &databaseIds,
-                          "entities",
-                          "id",
-                          "WHERE entities.jobUUID=%'S \
-                          ",
-                          jobUUID
-                         );
-  if (error != ERROR_NONE)
+  INDEX_DOX(error,
+            indexHandle,
   {
-    Array_done(&databaseIds);
-    return error;
-  }
-  ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
-  {
-    error = assignEntityToEntity(indexHandle,INDEX_ID_ENTITY(databaseId),toEntityIndexId,toArchiveType);
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&databaseIds);
-    return error;
-  }
+    error = Database_getIds(&indexHandle->databaseHandle,
+                            &databaseIds,
+                            "entities",
+                            "id",
+                            "WHERE entities.jobUUID=%'S \
+                            ",
+                            jobUUID
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    ARRAY_ITERATEX(&databaseIds,iterator,databaseId,error == ERROR_NONE)
+    {
+      error = assignEntityToEntity(indexHandle,INDEX_ID_ENTITY(databaseId),toEntityIndexId,toArchiveType);
+    }
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    
+    return ERROR_NONE;
+  });
   Array_done(&databaseIds);
 
   return ERROR_NONE;
