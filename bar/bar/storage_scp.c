@@ -724,8 +724,8 @@ LOCAL Errors StorageSCP_getTmpName(String archiveName, const StorageInfo *storag
 
   UNUSED_VARIABLE(storageInfo);
 
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
+//TODO
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageSCP_create(StorageHandle *storageHandle,

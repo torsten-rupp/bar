@@ -1223,13 +1223,7 @@ LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *sto
   UNUSED_VARIABLE(storageInfo);
 
 //TODO
-return ERROR_STILL_NOT_IMPLEMENTED;
-  File_splitFileName(archiveName,&directoryName,&baseName);
-  result = File_getTmpFileName(archiveName,String_cString(baseName),directoryName);
-  String_delete(baseName);
-  String_delete(directoryName);
-
-  return result;
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,

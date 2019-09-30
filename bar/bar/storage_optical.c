@@ -1661,8 +1661,8 @@ LOCAL Errors StorageOptical_getTmpName(String archiveName, const StorageInfo *st
 
   UNUSED_VARIABLE(storageInfo);
 
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
+//TODO
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageOptical_create(StorageHandle *storageHandle,

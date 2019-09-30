@@ -324,8 +324,8 @@ LOCAL Errors StorageMaster_getTmpName(String archiveName, const StorageInfo *sto
 
   UNUSED_VARIABLE(storageInfo);
 
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_getTmpFileName(archiveName,String_cString(archiveName),NULL);
+//TODO
+  return ERROR_STILL_NOT_IMPLEMENTED;
 }
 
 LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,

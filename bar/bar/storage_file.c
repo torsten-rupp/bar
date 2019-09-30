@@ -312,7 +312,10 @@ LOCAL Errors StorageFile_getTmpName(String archiveName, const StorageInfo *stora
   UNUSED_VARIABLE(storageInfo);
 
   File_splitFileName(archiveName,&directoryName,&baseName);
-  result = File_getTmpFileName(archiveName,String_cString(baseName),directoryName);
+  result = File_getTmpFileName(archiveName,
+                               String_cString(baseName),
+                               !String_isEmpty(directoryName) ? directoryName : tmpDirectory
+                              );
   String_delete(baseName);
   String_delete(directoryName);
 

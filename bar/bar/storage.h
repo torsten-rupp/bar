@@ -1358,7 +1358,7 @@ bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName);
 * Purpose: get temporary archive name
 * Input  : archiveName - archive name variable
 *          storageInfo - storage info
-* Output : archiveName - new archive name
+* Output : archiveName - temporary archive name
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
