@@ -363,6 +363,7 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
       || ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
      )
   {
+//TODO: error if ranges overlap?
     if      ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
     {
       // combine with previous existing fragment range
@@ -370,6 +371,7 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
       prevFragmentRangeNode->offset = prevFragmentRangeNode->offset;
       fragmentNode->rangeListSum += length;
     }
+//TODO: error if ranges overlap?
     else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
     {
       // combine with next existing fragment range
@@ -378,6 +380,7 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
       fragmentNode->rangeListSum += length;
     }
 
+//TODO: error if ranges overlap?
     if ((prevFragmentRangeNode != NULL) && (nextFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= F0(nextFragmentRangeNode)))
     {
       // combine previous and next fragment range
