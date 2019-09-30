@@ -4324,7 +4324,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
         }
       }
       String_appendCString(sqlInsertString,");");
-      DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
+//      DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
 
       // create insert statement
       sqliteResult = sqlite3_prepare_v2(toDatabaseHandle->handle,
