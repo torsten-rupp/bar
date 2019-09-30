@@ -390,7 +390,6 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
         prevFragmentRangeNode->length = I1(offset,length)+1-F0(prevFragmentRangeNode);
         prevFragmentRangeNode->offset = F0(prevFragmentRangeNode);
 
-<<<<<<< .mine
         assert((F1(prevFragmentRangeNode)-F0(prevFragmentRangeNode)+1) == prevFragmentRangeNode->length);
       }
       else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
@@ -444,44 +443,11 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
 
         assert((F1(prevFragmentRangeNode)-F0(prevFragmentRangeNode)+1) == prevFragmentRangeNode->length);
       }
-||||||| .r9844
-  // check if existing fragment range can be extended or new fragment range have to be inserted
-  if (   ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
-      || ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
-     )
-  {
-    if      ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
-    {
-      // combine with previous existing fragment range
-      prevFragmentRangeNode->length = (offset+length)-prevFragmentRangeNode->offset;
-      prevFragmentRangeNode->offset = prevFragmentRangeNode->offset;
-      fragmentNode->rangeListSum += length;
-=======
-  // check if existing fragment range can be extended or new fragment range have to be inserted
-  if (   ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
-      || ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
-     )
-  {
-//TODO: error if ranges overlap?
-    if      ((prevFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= I0(offset,length)))
-    {
-      // combine with previous existing fragment range
-      prevFragmentRangeNode->length = (offset+length)-prevFragmentRangeNode->offset;
-      prevFragmentRangeNode->offset = prevFragmentRangeNode->offset;
-      fragmentNode->rangeListSum += length;
->>>>>>> .r9846
     }
-<<<<<<< .mine
     else /* if (   ((prevFragmentRangeNode == NULL) || (F1(prevFragmentRangeNode)+1 < I0(offset,length)))
                 && ((nextFragmentRangeNode == NULL) || (F0(nextFragmentRangeNode)-1 > I1(offset,length)))
                )
          */
-||||||| .r9844
-    else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
-=======
-//TODO: error if ranges overlap?
-    else if ((nextFragmentRangeNode != NULL) && (I1(offset,length)+1 >= F0(nextFragmentRangeNode)))
->>>>>>> .r9846
     {
       // insert new fragment range
       fragmentRangeNode = LIST_NEW_NODE(FragmentRangeNode);
@@ -503,28 +469,9 @@ void FragmentList_addRange(FragmentNode *fragmentNode,
       #endif /* FRAGMENTLISTS_DEBUG */
     }
 
-<<<<<<< .mine
     #ifdef FRAGMENTLISTS_DEBUG
       FragmentList_debugPrintInfo(fragmentNode,"after");
     #endif /* FRAGMENTLISTS_DEBUG */
-||||||| .r9844
-    if ((prevFragmentRangeNode != NULL) && (nextFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= F0(nextFragmentRangeNode)))
-    {
-      // combine previous and next fragment range
-      prevFragmentRangeNode->length += nextFragmentRangeNode->length;
-      List_remove(&fragmentNode->rangeList,nextFragmentRangeNode);
-      LIST_DELETE_NODE(nextFragmentRangeNode);
-    }
-=======
-//TODO: error if ranges overlap?
-    if ((prevFragmentRangeNode != NULL) && (nextFragmentRangeNode != NULL) && (F1(prevFragmentRangeNode)+1 >= F0(nextFragmentRangeNode)))
-    {
-      // combine previous and next fragment range
-      prevFragmentRangeNode->length += nextFragmentRangeNode->length;
-      List_remove(&fragmentNode->rangeList,nextFragmentRangeNode);
-      LIST_DELETE_NODE(nextFragmentRangeNode);
-    }
->>>>>>> .r9846
   }
 
   FRAGMENTNODE_VALID(fragmentNode);
