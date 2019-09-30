@@ -4830,7 +4830,6 @@ Errors error;
 #warning TODO
 #endif
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); StringMap_debugPrint(0,argumentMap);
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
 //TODO
 #ifndef WERROR
