@@ -15,8 +15,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <unistd.h>
 #include <time.h>
 #ifdef HAVE_CURL
   #include <curl/curl.h>
@@ -648,40 +650,209 @@ LOCAL Errors StorageSCP_postProcess(const StorageInfo *storageInfo,
 
 LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archiveName)
 {
+  bool existsFlag;
+  #ifdef HAVE_SSH2
+    Errors          error;
+    SocketHandle    socketHandle;
+    LIBSSH2_CHANNEL *channel;
+    struct stat     fileInfo;
+  #endif /* HAVE_SSH2 */
+
   assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  existsFlag = FALSE;
 
-  return FALSE;
+  #ifdef HAVE_SSH2
+    // init variables
+
+    // connect
+    error = Network_connect(&socketHandle,
+                            SOCKET_TYPE_SSH,
+                            storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->scp.publicKey.data,
+                            storageInfo->scp.publicKey.length,
+                            storageInfo->scp.privateKey.data,
+                            storageInfo->scp.privateKey.length,
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
+
+    // check if file can be read
+    channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
+                                String_cString(archiveName),
+                                &fileInfo
+                               );
+    if (channel != NULL)
+    {
+      existsFlag = TRUE;
+      (void)libssh2_channel_close(channel);
+      (void)libssh2_channel_wait_closed(channel);
+      (void)libssh2_channel_free(channel);
+    }
+
+    // disconnect
+    Network_disconnect(&socketHandle);
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+  #endif /* HAVE_SSH2 */
+
+  return existsFlag;
 }
 
 LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
 {
+  bool result;
+  #ifdef HAVE_SSH2
+    Errors          error;
+    SocketHandle    socketHandle;
+    LIBSSH2_CHANNEL *channel;
+    struct stat     fileInfo;
+  #endif /* HAVE_SSH2 */
+
   assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  result = FALSE;
 
-  return FALSE;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  #ifdef HAVE_SSH2
+    // init variables
+
+    // connect
+    error = Network_connect(&socketHandle,
+                            SOCKET_TYPE_SSH,
+                            storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->scp.publicKey.data,
+                            storageInfo->scp.publicKey.length,
+                            storageInfo->scp.privateKey.data,
+                            storageInfo->scp.privateKey.length,
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // check if file can be read
+    channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
+                                String_cString(archiveName),
+                                &fileInfo
+                               );
+    if ((channel != NULL) && S_ISREG(fileInfo.st_mode))
+    {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      result = TRUE;
+      (void)libssh2_channel_close(channel);
+      (void)libssh2_channel_wait_closed(channel);
+      (void)libssh2_channel_free(channel);
+    }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // disconnect
+    Network_disconnect(&socketHandle);
+fprintf(stderr,"%s, %d: result=%d\n",__FILE__,__LINE__,result);
+
+    return ERROR_NONE;
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SSH2 */
+
+  return result;
 }
 
 LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
 {
+  bool result;
+  #ifdef HAVE_SSH2
+    Errors          error;
+    SocketHandle    socketHandle;
+    LIBSSH2_CHANNEL *channel;
+    struct stat     fileInfo;
+  #endif /* HAVE_SSH2 */
+
   assert(storageInfo != NULL);
+  assert(storageInfo->type == STORAGE_TYPE_SCP);
   assert(!String_isEmpty(archiveName));
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  result = FALSE;
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  #ifdef HAVE_SSH2
+    // init variables
+
+    // connect
+    error = Network_connect(&socketHandle,
+                            SOCKET_TYPE_SSH,
+                            storageInfo->storageSpecifier.hostName,
+                            storageInfo->storageSpecifier.hostPort,
+                            storageInfo->storageSpecifier.loginName,
+                            storageInfo->storageSpecifier.loginPassword,
+                            storageInfo->scp.publicKey.data,
+                            storageInfo->scp.publicKey.length,
+                            storageInfo->scp.privateKey.data,
+                            storageInfo->scp.privateKey.length,
+                              SOCKET_FLAG_NONE
+                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0)
+                           );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+    libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // check if file can be read
+    channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
+                                String_cString(archiveName),
+                                &fileInfo
+                               );
+    if ((channel != NULL) && S_ISDIR(fileInfo.st_mode))
+    {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+      result = TRUE;
+      (void)libssh2_channel_close(channel);
+      (void)libssh2_channel_wait_closed(channel);
+      (void)libssh2_channel_free(channel);
+    }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+
+    // disconnect
+    Network_disconnect(&socketHandle);
+fprintf(stderr,"%s, %d: result=%d\n",__FILE__,__LINE__,result);
+
+    return ERROR_NONE;
+  #else /* not HAVE_SSH2 */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif /* HAVE_SSH2 */
+
+  return result;
 }
 
 LOCAL bool StorageSCP_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
@@ -705,9 +876,7 @@ LOCAL bool StorageSCP_isWritable(const StorageInfo *storageInfo, ConstString arc
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  return FALSE;
 }
 
 LOCAL Errors StorageSCP_getTmpName(String archiveName, const StorageInfo *storageInfo)
@@ -899,10 +1068,10 @@ LOCAL Errors StorageSCP_open(StorageHandle *storageHandle,
     DEBUG_ADD_RESOURCE_TRACE(&storageHandle->scp,StorageHandleSCP);
 
     // open channel and file for reading
-    storageHandle->scp.channel = libssh2_scp_recv(Network_getSSHSession(&storageHandle->scp.socketHandle),
-                                                      String_cString(archiveName),
-                                                      &fileInfo
-                                                     );
+    storageHandle->scp.channel = libssh2_scp_recv2(Network_getSSHSession(&storageHandle->scp.socketHandle),
+                                                   String_cString(archiveName),
+                                                   &fileInfo
+                                                  );
     if (storageHandle->scp.channel == NULL)
     {
       char *sshErrorText;
