@@ -1496,7 +1496,7 @@ endif
           QUIET=1
 	@$(MAKE) gcov_combined \
           COMBINED_COMPRESS_NAMES="$(MIN_COMPRESS_NAMES)" \
-          COMBINED_CRYPT_NAMES="" \
+          COMBINED_CRYPT_NAMES="none $(if @HAVE_GCRYPT@,AES256)" \
           QUIET=1
 	@$(MAKE) gcov_arguments \
           COMPRESS_NAMES="none" \
