@@ -59,7 +59,7 @@
 LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
 {
   ulong maxCompressBytes,maxDataBytes;
-  int bzlibError;
+  int   bzlibResult;
 
   assert(compressInfo != NULL);
 
@@ -79,10 +79,11 @@ LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
         compressInfo->bzlib.stream.avail_in  = maxDataBytes;
         compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->bzlib.stream.avail_out = maxCompressBytes;
-        bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
-        if (bzlibError != BZ_RUN_OK)
+        bzlibResult = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_RUN);
+//fprintf(stderr,"%s, %d: bzlibResult=%d input=%u,%u output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxDataBytes-compressInfo->bzlib.stream.avail_in,maxDataBytes,maxCompressBytes-compressInfo->bzlib.stream.avail_out,maxCompressBytes);
+        if (bzlibResult != BZ_RUN_OK)
         {
-          return ERROR_(DEFLATE_FAIL,bzlibError);
+          return ERROR_(DEFLATE_FAIL,bzlibResult);
         }
         RingBuffer_decrement(&compressInfo->dataRingBuffer,
                              maxDataBytes-compressInfo->bzlib.stream.avail_in
@@ -111,14 +112,15 @@ LOCAL Errors CompressBZ2_compressData(CompressInfo *compressInfo)
         compressInfo->bzlib.stream.avail_in  = 0;
         compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->compressRingBuffer);
         compressInfo->bzlib.stream.avail_out = maxCompressBytes;
-        bzlibError = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_FINISH);
-        if      (bzlibError == BZ_STREAM_END)
+        bzlibResult = BZ2_bzCompress(&compressInfo->bzlib.stream,BZ_FINISH);
+//fprintf(stderr,"%s, %d: bzlibResult=%d output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxCompressBytes-compressInfo->bzlib.stream.avail_out,maxCompressBytes);
+        if      (bzlibResult == BZ_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
         }
-        else if (bzlibError != BZ_FINISH_OK)
+        else if (bzlibResult != BZ_FINISH_OK)
         {
-          return ERROR_(DEFLATE_FAIL,bzlibError);
+          return ERROR_(DEFLATE_FAIL,bzlibResult);
         }
         RingBuffer_increment(&compressInfo->compressRingBuffer,
                              maxCompressBytes-compressInfo->bzlib.stream.avail_out
@@ -164,6 +166,7 @@ LOCAL Errors CompressBZ2_decompressData(CompressInfo *compressInfo)
         compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->bzlib.stream.avail_out = maxDataBytes;
         bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
+//fprintf(stderr,"%s, %d: bzlibResult=%d input=%u,%u output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxCompressBytes-compressInfo->bzlib.stream.avail_in,maxCompressBytes,maxDataBytes-compressInfo->bzlib.stream.avail_out,maxDataBytes);
         if      (bzlibResult == BZ_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
@@ -203,6 +206,7 @@ LOCAL Errors CompressBZ2_decompressData(CompressInfo *compressInfo)
         compressInfo->bzlib.stream.next_out  = (char*)RingBuffer_cArrayIn(&compressInfo->dataRingBuffer);
         compressInfo->bzlib.stream.avail_out = maxDataBytes;
         bzlibResult = BZ2_bzDecompress(&compressInfo->bzlib.stream);
+//fprintf(stderr,"%s, %d: bzlibResult=%d output=%u,%u\n",__FILE__,__LINE__,bzlibResult,maxDataBytes-compressInfo->bzlib.stream.avail_out,maxDataBytes);
         if      (bzlibResult == BZ_STREAM_END)
         {
           compressInfo->endOfDataFlag = TRUE;
