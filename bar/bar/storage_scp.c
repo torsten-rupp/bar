@@ -655,9 +655,7 @@ LOCAL bool StorageSCP_exists(const StorageInfo *storageInfo, ConstString archive
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  return FALSE;
 }
 
 LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
@@ -669,9 +667,7 @@ LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archive
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  return FALSE;
 }
 
 LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
@@ -697,9 +693,7 @@ LOCAL bool StorageSCP_isReadable(const StorageInfo *storageInfo, ConstString arc
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  return FALSE;
 }
 
 LOCAL bool StorageSCP_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
