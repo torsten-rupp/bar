@@ -83,7 +83,8 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.size = maxCompressBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
         zstdResult = ZSTD_compressStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
-        if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
+//fprintf(stderr,"%s, %d: zstdResult=%u input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
+        if (ZSTD_isError(zstdResult))
         {
           return ERRORX_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
         }
@@ -93,8 +94,8 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
         RingBuffer_increment(&compressInfo->compressRingBuffer,
                              compressInfo->zstd.outBuffer.pos
                             );
-        compressInfo->zstd.totalIn  += compressInfo->zstd.inBuffer.pos;
-        compressInfo->zstd.totalOut += compressInfo->zstd.outBuffer.pos;
+        compressInfo->zstd.totalIn  += (uint64)compressInfo->zstd.inBuffer.pos;
+        compressInfo->zstd.totalOut += (uint64)compressInfo->zstd.outBuffer.pos;
 //fprintf(stderr,"%s, %d: %ld -> %ld\n",__FILE__,__LINE__,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.outBuffer.pos);
 
         // update compress state
@@ -117,18 +118,19 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.size = maxCompressBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
         zstdResult = ZSTD_endStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer);
+//fprintf(stderr,"%s, %d: zstdResult=%u output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if      (zstdResult == 0)
         {
           compressInfo->endOfDataFlag = TRUE;
         }
-        else if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
+        else if (ZSTD_isError(zstdResult))
         {
           return ERRORX_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
         }
         RingBuffer_increment(&compressInfo->compressRingBuffer,
                              compressInfo->zstd.outBuffer.pos
                             );
-        compressInfo->zstd.totalOut += compressInfo->zstd.outBuffer.pos;
+        compressInfo->zstd.totalOut += (uint64)compressInfo->zstd.outBuffer.pos;
 //fprintf(stderr,"%s, %d: %ld -> %ld\n",__FILE__,__LINE__,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.outBuffer.pos);
       }
     }
@@ -173,9 +175,16 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.size = maxDataBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
         zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
-        if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
+//fprintf(stderr,"%s, %d: zstdResult=%u input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
+        if      (   (zstdResult == 0)
+                 && ((compressInfo->zstd.totalOut+(uint64)compressInfo->zstd.outBuffer.pos) >= compressInfo->length)
+                )
         {
-          return ERRORX_(INFLATE_FAIL,zstdResult,ZSTD_getErrorName(zstdResult));
+          compressInfo->endOfDataFlag = TRUE;
+        }
+        else if (ZSTD_isError(zstdResult))
+        {
+          return ERRORX_(INFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
         }
         RingBuffer_decrement(&compressInfo->compressRingBuffer,
                              compressInfo->zstd.inBuffer.pos
@@ -183,8 +192,8 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         RingBuffer_increment(&compressInfo->dataRingBuffer,
                              compressInfo->zstd.outBuffer.pos
                             );
-        compressInfo->zstd.totalIn  += compressInfo->zstd.inBuffer.pos;
-        compressInfo->zstd.totalOut += compressInfo->zstd.outBuffer.pos;
+        compressInfo->zstd.totalIn  += (uint64)compressInfo->zstd.inBuffer.pos;
+        compressInfo->zstd.totalOut += (uint64)compressInfo->zstd.outBuffer.pos;
 
         // update compress state
         compressInfo->compressState = COMPRESS_STATE_RUNNING;
@@ -209,18 +218,19 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.size = maxDataBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
         zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
-        if (compressInfo->zstd.outBuffer.pos < compressInfo->zstd.outBuffer.size)
+fprintf(stderr,"%s, %d: zstdResult=%u input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
+        if      (compressInfo->zstd.outBuffer.pos < compressInfo->zstd.outBuffer.size)
         {
           compressInfo->endOfDataFlag = TRUE;
         }
         else if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
         {
-          return ERRORX_(INFLATE_FAIL,zstdResult,ZSTD_getErrorName(zstdResult));
+          return ERRORX_(INFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
         }
         RingBuffer_increment(&compressInfo->dataRingBuffer,
                              compressInfo->zstd.outBuffer.pos
                             );
-        compressInfo->zstd.totalOut += compressInfo->zstd.outBuffer.pos;
+        compressInfo->zstd.totalOut += (uint64)compressInfo->zstd.outBuffer.pos;
       }
     }
   }
@@ -340,16 +350,16 @@ LOCAL Errors CompressZStd_reset(CompressInfo *compressInfo)
   {
     case COMPRESS_MODE_DEFLATE:
       zstdResult = ZSTD_resetCStream(compressInfo->zstd.cStream,0);
-      if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
+      if (ZSTD_isError(zstdResult))
       {
-        return ERROR_(DEFLATE_FAIL,zstdResult);
+        return ERROR_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
       }
       break;
     case COMPRESS_MODE_INFLATE:
       zstdResult = ZSTD_resetDStream(compressInfo->zstd.dStream);
-      if (ZSTD_getErrorCode(zstdResult) != ZSTD_error_no_error)
+      if (ZSTD_isError(zstdResult))
       {
-        return ERROR_(INFLATE_FAIL,zstdResult);
+        return ERROR_(INFLATE_FAIL,ZSTD_getErrorCode(zstdResult));
       }
       break;
     #ifndef NDEBUG
@@ -366,14 +376,14 @@ LOCAL uint64 CompressZStd_getInputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
-  return (uint64)compressInfo->zstd.totalIn;
+  return compressInfo->zstd.totalIn;
 }
 
 LOCAL uint64 CompressZStd_getOutputLength(CompressInfo *compressInfo)
 {
   assert(compressInfo != NULL);
 
-  return (uint64)compressInfo->zstd.totalOut;
+  return compressInfo->zstd.totalOut;
 }
 
 #ifdef __cplusplus
