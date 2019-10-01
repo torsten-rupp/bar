@@ -1919,6 +1919,14 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
   AUTOFREE_ADD(&autoFreeList,convertThreads,{ free(convertThreads); });
 
+  // Note: still not supported
+  if (jobOptions->archivePartSize > 0LL)
+  {
+    printWarning(_("Archive part size not supported for convert - ignored")); 
+  }
+//TODO
+  jobOptions->archivePartSize = 0LL;
+
   // init convert info
   initConvertInfo(&convertInfo,
                   jobUUID,
