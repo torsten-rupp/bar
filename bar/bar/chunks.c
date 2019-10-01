@@ -159,7 +159,7 @@ LOCAL Errors initChunkBuffer(ChunkBuffer     *chunkBuffer,
       n        = 0;
       i        = 0;
       doneFlag = FALSE;
-      while (   (definition[i] != 0)
+      while (   (definition[i] != CHUNK_DATATYPE_NONE)
              && !doneFlag
             )
       {
@@ -653,7 +653,7 @@ LOCAL void initDefinition(const char      *__fileName__,
   if (definition != NULL)
   {
     i = 0;
-    while (definition[i+0] != 0)
+    while (definition[i+0] != CHUNK_DATATYPE_NONE)
     {
       switch (definition[i+0])
       {
@@ -802,7 +802,7 @@ LOCAL Errors doneDefinition(const char      *__fileName__,
   if (definition != NULL)
   {
     i = 0;
-    while (definition[i+0] != 0)
+    while (definition[i+0] != CHUNK_DATATYPE_NONE)
     {
       switch (definition[i+0])
       {
@@ -1138,7 +1138,7 @@ LOCAL void resetDefinition(ChunkDefinition *definition,
   if (definition != NULL)
   {
     i = 0;
-    while (definition[i+0] != 0)
+    while (definition[i+0] != CHUNK_DATATYPE_NONE)
     {
       switch (definition[i+0])
       {
@@ -1351,7 +1351,7 @@ LOCAL Errors readDefinition(const ChunkIO   *chunkIO,
     // read definition
     crc = crc32(0,Z_NULL,0);
     i   = 0;
-    while (   (definition[i+0] != 0)
+    while (   (definition[i+0] != CHUNK_DATATYPE_NONE)
            && (error == ERROR_NONE)
           )
     {
@@ -1765,7 +1765,7 @@ LOCAL Errors writeDefinition(const ChunkIO   *chunkIO,
     // write definition
     crc = crc32(0,Z_NULL,0);
     i   = 0;
-    while (definition[i+0] != 0)
+    while (definition[i+0] != CHUNK_DATATYPE_NONE)
     {
       switch (definition[i+0])
       {
