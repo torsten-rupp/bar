@@ -72,8 +72,12 @@ PERL           = @PERL@
 PGREP          = pgrep
 READLINK       = readlink
 RMDIR          = rmdir
-RMF            = rm -f
-RMRF           = rm -rf
+#TODO: revert
+#RMF            = rm -f
+RMF            = rm -fv
+#TODO: revert
+#RMRF           = rm -rf
+RMRF           = rm -rfv
 SCP            = scp
 SED            = sed
 SETFATTR       = @SETFATTR@
@@ -2491,10 +2495,14 @@ test_file_operations_base: \
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
-	@$(call functionCleanTestFiles)
+#TODO: @
+	$(call functionCleanTestFiles)
 	@# Note: create twice to test delete+create=overwrite
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
+	@#
+	$(call functionCleanTestFiles)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --verbose=2 $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)    $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -l $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) $(LOG))
@@ -4075,6 +4083,7 @@ test_index_operations: \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
           $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
             -C $(SUB_DIR) \
+            $(TEST_OPTIONS) \
             --daemon -D \
             --server-port=$(TEST_SERVER_PORT) \
             --index-database=intermediate/index.db \
@@ -4093,6 +4102,7 @@ test_index_operations: \
             $(ULIMIT) -Sv $(MEMORY_LIMIT); \
             $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
+              $(TEST_OPTIONS) \
               --daemon -D \
               --server-port=$(TEST_SERVER_PORT) \
               --index-database=intermediate/index.db \
@@ -4476,7 +4486,7 @@ test_master_slave_operations_master: \
           $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
             -C $(SUB_DIR) \
             $(TEST_OPTIONS) \
-            --no-default-config --config=$(TEST_MASTER_CONFIG) \
+            --config=$(TEST_MASTER_CONFIG) \
             --daemon \
             $(if $(TEST_DETACH),,-D) \
             --pid-file=$(TEST_MASTER_PID_FILE) \
@@ -4520,7 +4530,8 @@ test_master_slave_operations_slave: \
             $(call functionSlaveExecute,$(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME)); \
             $(call functionSlaveExecute,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
-              --no-default-config --config=$(TEST_SLAVE_CONFIG) \
+              $(TEST_OPTIONS) \
+              --config=$(TEST_SLAVE_CONFIG) \
               --daemon \
               $(if $(TEST_DETACH),,-D) \
               --pid-file=$(TEST_SLAVE_PID_FILE) \
@@ -4542,6 +4553,7 @@ test_master_slave_operations_slave: \
             $(RMF) $(TEST_SLAVE_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
             $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
               -C $(SUB_DIR) \
+              $(TEST_OPTIONS) \
               --no-default-config --config=$(TEST_SLAVE_CONFIG) \
               --daemon \
               $(if $(TEST_DETACH),,-D) \
