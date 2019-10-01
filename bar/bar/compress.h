@@ -169,6 +169,7 @@ typedef struct
   CompressModes      compressMode;              // mode: deflate (compress)/inflate (decompress)
   CompressAlgorithms compressAlgorithm;         // compression algorithm to use
   ulong              blockLength;               // block length to use [bytes]
+  uint64             length;                    // data length [bytes]
 
   CompressStates     compressState;             // compress/decompress state
   bool               endOfDataFlag;             // TRUE if end-of-data detected
@@ -590,6 +591,7 @@ INLINE bool Compress_isDeltaCompressed(CompressAlgorithms compressAlgorithm)
                        CompressModes      compressMode,
                        CompressAlgorithms compressAlgorithm,
                        ulong              blockLength,
+                       uint64             length,
                        DeltaSourceHandle  *deltaSourceHandle
                       );
 #else /* not NDEBUG */
@@ -599,6 +601,7 @@ INLINE bool Compress_isDeltaCompressed(CompressAlgorithms compressAlgorithm)
                          CompressModes      compressMode,
                          CompressAlgorithms compressAlgorithm,
                          ulong              blockLength,
+                         uint64             length,
                          DeltaSourceHandle  *deltaSourceHandle
                         );
 #endif /* NDEBUG */
