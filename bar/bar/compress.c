@@ -691,6 +691,7 @@ bool Compress_isValidAlgorithm(uint16 n)
                        CompressModes      compressMode,
                        CompressAlgorithms compressAlgorithm,
                        ulong              blockLength,
+                       uint64             length,
                        DeltaSourceHandle  *deltaSourceHandle
                       )
 #else /* not NDEBUG */
@@ -700,6 +701,7 @@ bool Compress_isValidAlgorithm(uint16 n)
                          CompressModes      compressMode,
                          CompressAlgorithms compressAlgorithm,
                          ulong              blockLength,
+                         uint64             length,
                          DeltaSourceHandle  *deltaSourceHandle
                         )
 #endif /* NDEBUG */
@@ -716,6 +718,7 @@ bool Compress_isValidAlgorithm(uint16 n)
   compressInfo->compressMode      = compressMode;
   compressInfo->compressAlgorithm = compressAlgorithm;
   compressInfo->blockLength       = blockLength;
+  compressInfo->length            = length;
   compressInfo->compressState     = COMPRESS_STATE_INIT;
   compressInfo->endOfDataFlag     = FALSE;
   compressInfo->flushFlag         = FALSE;
