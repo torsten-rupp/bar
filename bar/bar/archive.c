@@ -3789,7 +3789,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // update fragment size
         archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
-fprintf(stderr,"%s, %d: archiveEntryInfo->file.chunkFileData.fragmentSize=%llu\n",__FILE__,__LINE__,archiveEntryInfo->file.chunkFileData.fragmentSize);
         error = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
         if (error != ERROR_NONE)
         {
@@ -12719,16 +12718,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               if (archiveEntryInfo->file.headerWrittenFlag)
               {
                 // update fragment size
-#if 0
-ChunkFileData f;
-fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,(byte*)&f.fragmentSize-(byte*)&f,offsetof(ChunkFileData,fragmentSize));
-fprintf(stderr,"%s, %d: %d %d, %d %d\n",__FILE__,__LINE__,
-CHUNK_DEFINITION_FILE_DATA[0],CHUNK_DEFINITION_FILE_DATA[1],
-CHUNK_DEFINITION_FILE_DATA[2],CHUNK_DEFINITION_FILE_DATA[3]
-);
-#endif
                 archiveEntryInfo->file.chunkFileData.fragmentSize = Compress_getInputLength(&archiveEntryInfo->file.deltaCompressInfo);
-//fprintf(stderr,"%s, %d: archiveEntryInfo->file.chunkFileData.fragmentSize=%llu\n",__FILE__,__LINE__,archiveEntryInfo->file.chunkFileData.fragmentSize);
                 tmpError = Chunk_update(&archiveEntryInfo->file.chunkFileData.info);
                 if ((error == ERROR_NONE) && (tmpError != ERROR_NONE)) error = tmpError;
 
