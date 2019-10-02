@@ -83,7 +83,7 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.size = maxCompressBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
         zstdResult = ZSTD_compressStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
-//fprintf(stderr,"%s, %d: zstdResult=%u input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
+//fprintf(stderr,"%s, %d: zstdResult=%lu input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if (ZSTD_isError(zstdResult))
         {
           return ERRORX_(DEFLATE_FAIL,ZSTD_getErrorCode(zstdResult),ZSTD_getErrorName(zstdResult));
@@ -118,7 +118,7 @@ LOCAL Errors CompressZStd_compressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.size = maxCompressBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
         zstdResult = ZSTD_endStream(compressInfo->zstd.cStream,&compressInfo->zstd.outBuffer);
-//fprintf(stderr,"%s, %d: zstdResult=%u output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
+//fprintf(stderr,"%s, %d: zstdResult=%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if      (zstdResult == 0)
         {
           compressInfo->endOfDataFlag = TRUE;
@@ -175,7 +175,7 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.size = maxDataBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
         zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
-//fprintf(stderr,"%s, %d: zstdResult=%u input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
+//fprintf(stderr,"%s, %d: zstdResult=%lu input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if      (   (zstdResult == 0)
                  && ((compressInfo->zstd.totalOut+(uint64)compressInfo->zstd.outBuffer.pos) >= compressInfo->length)
                 )
@@ -218,7 +218,7 @@ LOCAL Errors CompressZStd_decompressData(CompressInfo *compressInfo)
         compressInfo->zstd.outBuffer.size = maxDataBytes;
         compressInfo->zstd.outBuffer.pos  = 0;
         zstdResult = ZSTD_decompressStream(compressInfo->zstd.dStream,&compressInfo->zstd.outBuffer,&compressInfo->zstd.inBuffer);
-fprintf(stderr,"%s, %d: zstdResult=%u input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
+//fprintf(stderr,"%s, %d: zstdResult=%lu input=%lu,%lu output=%lu,%lu\n",__FILE__,__LINE__,zstdResult,compressInfo->zstd.inBuffer.pos,compressInfo->zstd.inBuffer.size,compressInfo->zstd.outBuffer.pos,compressInfo->zstd.outBuffer.size);
         if      (compressInfo->zstd.outBuffer.pos < compressInfo->zstd.outBuffer.size)
         {
           compressInfo->endOfDataFlag = TRUE;

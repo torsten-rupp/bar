@@ -727,7 +727,6 @@ LOCAL bool StorageSCP_isFile(const StorageInfo *storageInfo, ConstString archive
 
   result = FALSE;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   #ifdef HAVE_SSH2
     // init variables
 
@@ -751,7 +750,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return error;
     }
     libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // check if file can be read
     channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
@@ -760,17 +758,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                );
     if ((channel != NULL) && S_ISREG(fileInfo.st_mode))
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       result = TRUE;
       (void)libssh2_channel_close(channel);
       (void)libssh2_channel_wait_closed(channel);
       (void)libssh2_channel_free(channel);
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // disconnect
     Network_disconnect(&socketHandle);
-fprintf(stderr,"%s, %d: result=%d\n",__FILE__,__LINE__,result);
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
@@ -799,7 +794,6 @@ LOCAL bool StorageSCP_isDirectory(const StorageInfo *storageInfo, ConstString ar
 
   result = FALSE;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   #ifdef HAVE_SSH2
     // init variables
 
@@ -823,7 +817,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return error;
     }
     libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // check if file can be read
     channel = libssh2_scp_recv2(Network_getSSHSession(&socketHandle),
@@ -832,17 +825,14 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                );
     if ((channel != NULL) && S_ISDIR(fileInfo.st_mode))
     {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       result = TRUE;
       (void)libssh2_channel_close(channel);
       (void)libssh2_channel_wait_closed(channel);
       (void)libssh2_channel_free(channel);
     }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
     // disconnect
     Network_disconnect(&socketHandle);
-fprintf(stderr,"%s, %d: result=%d\n",__FILE__,__LINE__,result);
 
     return ERROR_NONE;
   #else /* not HAVE_SSH2 */
@@ -885,6 +875,7 @@ LOCAL Errors StorageSCP_getTmpName(String archiveName, const StorageInfo *storag
   assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
+  UNUSED_VARIABLE(archiveName);
   UNUSED_VARIABLE(storageInfo);
 
 //TODO

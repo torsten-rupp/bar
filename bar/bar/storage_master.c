@@ -322,6 +322,7 @@ LOCAL Errors StorageMaster_getTmpName(String archiveName, const StorageInfo *sto
   assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
+  UNUSED_VARIABLE(archiveName);
   UNUSED_VARIABLE(storageInfo);
 
 //TODO

@@ -856,6 +856,7 @@ LOCAL Errors StorageSFTP_getTmpName(String archiveName, const StorageInfo *stora
   assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
+  UNUSED_VARIABLE(archiveName);
   UNUSED_VARIABLE(storageInfo);
 
 //TODO

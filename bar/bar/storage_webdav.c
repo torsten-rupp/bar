@@ -1213,13 +1213,11 @@ return ERROR_STILL_NOT_IMPLEMENTED;
 
 LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
-  String directoryName,baseName;
-  Errors result;
-
   assert(archiveName != NULL);
   assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
+  UNUSED_VARIABLE(archiveName);
   UNUSED_VARIABLE(storageInfo);
 
 //TODO
@@ -1250,6 +1248,8 @@ LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
   assert(!String_isEmpty(fileName));
 
 //TODO: exists test?
+UNUSED_VARIABLE(forceFlag);
+
   #ifdef HAVE_CURL
     // initialize variables
     storageHandle->webdav.curlMultiHandle      = NULL;

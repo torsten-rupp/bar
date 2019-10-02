@@ -113,6 +113,11 @@ LOCAL_INLINE void __setConnectorState(const char      *__fileName__,
 {
   assert(connectorInfo != NULL);
 
+  #ifndef NDEBUG
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
+  #endif /* not NDEBUG */
+
   connectorInfo->state = state;
 //fprintf(stderr,"%s, %d: setConnectorState %p: %d\n",__fileName__,__lineNb__,connectorInfo,state);
 }

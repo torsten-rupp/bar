@@ -8349,44 +8349,6 @@ bool configValueFormatDeltaSource(void **formatUserData, void *userData, String 
   }
 }
 
-//TODO: required? use %s, %S
-bool xxxconfigValueParseString(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  String string;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  // unquote/unescape
-  string = String_newCString(value);
-  String_unquote(string,STRING_QUOTES);
-  String_unescape(string,
-                  STRING_ESCAPE_CHARACTER,
-                  STRING_ESCAPE_CHARACTERS_MAP_TO,
-                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                );
-
-  if ((*(String*)variable) != NULL)
-  {
-    String_set(*(String*)variable,string);
-  }
-  else
-  {
-    (*(String*)variable) = String_duplicate(string);
-  }
-
-  // free resources
-  String_delete(string);
-
-  return TRUE;
-}
-
 bool configValueParseCompressAlgorithms(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   char                          algorithm1[256],algorithm2[256];

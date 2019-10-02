@@ -1659,6 +1659,7 @@ LOCAL Errors StorageOptical_getTmpName(String archiveName, const StorageInfo *st
   assert(!String_isEmpty(archiveName));
   assert(storageInfo != NULL);
 
+  UNUSED_VARIABLE(archiveName);
   UNUSED_VARIABLE(storageInfo);
 
 //TODO

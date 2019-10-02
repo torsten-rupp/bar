@@ -749,9 +749,6 @@ LOCAL bool StorageDevice_exists(const StorageInfo *storageInfo, ConstString arch
   UNUSED_VARIABLE(archiveName);
 
   //TODO: still not implemented
-#ifndef WERROR
-#warning TODO still not implemented
-#endif
   return FALSE;
 }
 
@@ -761,11 +758,9 @@ LOCAL bool StorageDevice_isFile(const StorageInfo *storageInfo, ConstString arch
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
 
   //TODO: still not implemented
-#ifndef WERROR
-#warning TODO still not implemented
-#endif
   return FALSE;
 }
 
@@ -775,11 +770,9 @@ LOCAL bool StorageDevice_isDirectory(const StorageInfo *storageInfo, ConstString
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
 
   //TODO: still not implemented
-#ifndef WERROR
-#warning TODO still not implemented
-#endif
   return FALSE;
 }
 
@@ -789,11 +782,9 @@ LOCAL bool StorageDevice_isReadable(const StorageInfo *storageInfo, ConstString 
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
 
   //TODO: still not implemented
-#ifndef WERROR
-#warning TODO still not implemented
-#endif
   return FALSE;
 }
 
@@ -803,11 +794,9 @@ LOCAL bool StorageDevice_isWritable(const StorageInfo *storageInfo, ConstString 
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);
+  UNUSED_VARIABLE(archiveName);
 
   //TODO: still not implemented
-#ifndef WERROR
-#warning TODO still not implemented
-#endif
   return FALSE;
 }
 
