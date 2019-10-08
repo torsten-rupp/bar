@@ -799,6 +799,7 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
   UNUSED_VARIABLE(addressCount);
   UNUSED_VARIABLE(symbolFunction);
   UNUSED_VARIABLE(symbolUserData);
+  UNUSED_VARIABLE(printErrorMessagesFlag);
 #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
 }
 
