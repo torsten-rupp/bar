@@ -2550,8 +2550,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
     removeCommand(command);
 
-    // set error aborted
-    command.setError(BARException.ABORTED,"aborted");
+    // set aborted
+    command.setErrorCode(BARException.NONE);
     command.resultList.clear();
     command.setAborted();
   }
