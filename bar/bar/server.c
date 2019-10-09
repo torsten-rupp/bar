@@ -4683,13 +4683,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                 );
     }
   }
-  if (error != ERROR_NONE)
-  {
-    String_delete(encryptedUUID);
-    String_delete(encryptedPassword);
-    String_delete(name);
-    return;
-  }
 
   // set authorization state
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -17762,10 +17755,16 @@ Errors Server_run(ServerModes       mode,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started BAR server%s",
+             "Started BAR server %d.%d%s",
+             VERSION_MAJOR,
+             VERSION_MINOR,
              (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
             );
-  printInfo(1,"Started BAR server%s\n",(serverMode == SERVER_MODE_SLAVE) ? " slave" : "");
+  printInfo(1,"Started BAR server %d.%d%s\n",
+             VERSION_MAJOR,
+             VERSION_MINOR,
+            (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
+           );
 
   // create jobs directory if necessary
   if (!File_exists(globalOptions.jobsDirectory))
