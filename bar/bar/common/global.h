@@ -2172,6 +2172,38 @@ static inline char* stringSet(char *destination, ulong n, const char *source)
 }
 
 /***********************************************************************\
+* Name   : stringSetBuffer
+* Purpose: set string
+* Input  : destination - destination string
+*          n           - size of string (including terminating NUL)
+*          buffer      - buffer
+*          bufferSize  - buffer size
+* Output : -
+* Return : destination string
+* Notes  : string is always NULL or NUL-terminated
+\***********************************************************************/
+
+static inline char* stringSetBuffer(char *destination, ulong n, const char *buffer, ulong bufferSize)
+{
+  assert(n > 0);
+
+  if (destination != NULL)
+  {
+    if (buffer != NULL)
+    {
+      strncpy(destination,buffer,MIN(n-1,bufferSize)); destination[MIN(n-1,bufferSize)] = NUL;
+    }
+    else
+    {
+      destination[0] = NUL;
+    }
+  }
+
+  return destination;
+}
+
+
+/***********************************************************************\
 * Name   : stringFormat
 * Purpose: format string
 * Input  : string - string
@@ -2423,25 +2455,23 @@ static inline char* stringNew(ulong n)
 /***********************************************************************\
 * Name   : stringNewBuffer
 * Purpose: new string from buffer
-* Input  : buffer - buffer (can be NULL)
-*          n      - string size (including terminating NUL)
+* Input  : buffer     - buffer (can be NULL)
+*          bufferSize - buffer size
 * Output : -
 * Return : new string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringNewBuffer(const char *buffer, ulong n)
+static inline char* stringNewBuffer(const char *buffer, ulong bufferSize)
 {
   char *string;
 
-  assert(n > 0);
-
-  string = (char*)malloc(n*sizeof(char));
+  string = (char*)malloc(bufferSize*sizeof(char)+1);
   if (string != NULL)
   {
     if (buffer != NULL)
     {
-      strncpy(string,buffer,n-1); string[n-1] = NUL;
+      strncpy(string,buffer,bufferSize); string[bufferSize] = NUL;
     }
     else
     {
