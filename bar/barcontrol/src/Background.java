@@ -59,6 +59,12 @@ abstract class BackgroundRunnable implements Runnable
     }
     System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
   }
+
+  /** call to abort execution
+   */
+  public void abort()
+  {
+  }
 }
 
 /** background task
