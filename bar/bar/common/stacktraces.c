@@ -52,6 +52,8 @@
 #define SKIP_STACK_FRAME_COUNT      2
 
 /**************************** Datatypes ********************************/
+
+#ifdef HAVE_BFD_H
 // section info
 typedef struct
 {
@@ -76,6 +78,7 @@ typedef struct
   void       *base;
   void       *hdr;
 } FileMatchInfo;
+#endif
 
 /**************************** Variables ********************************/
 LOCAL stack_t                 oldSignalHandlerStackInfo;
