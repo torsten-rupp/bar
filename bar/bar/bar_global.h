@@ -603,7 +603,8 @@ typedef struct
 {
   const char *pairingFileName;                                // name of file to start/clear pairing
   String     name;                                            // name of paired master
-  Hash       passwordHash;                                    // password/UUID hash
+  Hash       uuidHash;                                        // master UUID hash
+//TODO: required?
   Key        publicKey;
 } MasterInfo;
 

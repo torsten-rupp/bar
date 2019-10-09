@@ -115,8 +115,9 @@ typedef enum
 // pairing modes
 typedef enum
 {
-  PAIRING_MODE_REQUEST,
-  PAIRING_MODE_AUTO
+  PAIRING_MODE_NONE,
+  PAIRING_MODE_AUTO,
+  PAIRING_MODE_REQUEST
 } PairingModes;
 
 // expiration
@@ -348,10 +349,11 @@ LOCAL struct
 LOCAL uint64                pauseEndDateTime;            // pause end date/time [s]
 LOCAL struct
 {
-  bool        pairingRequested;                          // TRUE if master pairing requested
-  TimeoutInfo pairingTimeoutInfo;                        // master pairing timeout info
-  String      name;                                      // new master name
-  CryptHash   passwordHash;                              // new master password hash
+//bool        pairingRequested;                          // TRUE if master pairing requested
+  PairingModes pairingMode;
+  TimeoutInfo  pairingTimeoutInfo;                       // master pairing timeout info
+  String       name;                                     // new master name
+  CryptHash    uuidHash;                                 // new master UUID hash
 } newMaster;
 LOCAL IndexHandle           *indexHandle;                // index handle
 LOCAL bool                  quitFlag;                    // TRUE iff quit requested
@@ -703,10 +705,10 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
   switch (clientInfo->io.type)
   {
     case SERVER_IO_TYPE_NONE:
-      stringFormat(buffer,bufferSize,"not connected");
+      stringFormat(buffer,bufferSize,"'unknown'");
       break;
     case SERVER_IO_TYPE_BATCH:
-      stringFormat(buffer,bufferSize,"batch");
+      stringFormat(buffer,bufferSize,"'batch'");
       break;
     case SERVER_IO_TYPE_NETWORK:
       stringFormat(buffer,bufferSize,"%s:%d",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
@@ -804,10 +806,9 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 {
   ClientNode *clientNode;
 
-  if (!newMaster.pairingRequested)
+  if (newMaster.pairingMode == PAIRING_MODE_NONE)
   {
     // request new master pairing
-    newMaster.pairingRequested = TRUE;
     Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
     String_clear(newMaster.name);
 
@@ -833,6 +834,9 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
                  ? "Started auto pairing master"
                  : "Started pairing master"
               );
+
+    // set pairing mode
+    newMaster.pairingMode = pairingMode;
   }
 }
 
@@ -847,14 +851,17 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 
 LOCAL void stopPairingMaster(void)
 {
-  if (newMaster.pairingRequested)
+  if (newMaster.pairingMode != PAIRING_MODE_NONE)
   {
-    newMaster.pairingRequested = FALSE;
-
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Stopped pairing master"
+               (newMaster.pairingMode == PAIRING_MODE_AUTO)
+                 ? "Stopped auto pairing master"
+                 : "Stopped pairing master"
               );
+
+    // stop pairing
+    newMaster.pairingMode = PAIRING_MODE_NONE;
   }
 }
 
@@ -869,7 +876,7 @@ LOCAL void stopPairingMaster(void)
 
 LOCAL void clearPairedMaster(void)
 {
-  newMaster.pairingRequested = FALSE;
+  // clear master
   if (!String_isEmpty(globalOptions.masterInfo.name))
   {
     String_clear(globalOptions.masterInfo.name);
@@ -879,6 +886,9 @@ LOCAL void clearPairedMaster(void)
                "Cleared paired master"
               );
   }
+
+  // stop pairing
+  newMaster.pairingMode = PAIRING_MODE_NONE;
 }
 
 /***********************************************************************\
@@ -2073,7 +2083,7 @@ LOCAL void pairingThreadCode(void)
     switch (serverMode)
     {
       case SERVER_MODE_MASTER:
-        // disconnect lost slave connections, collect slaves to connect/pair
+        // try pairing all slaves
         JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           // disconnect lost slave connections
@@ -2139,6 +2149,7 @@ LOCAL void pairingThreadCode(void)
                                        );
               if (error == ERROR_NONE)
               {
+fprintf(stderr,"%s, %d: connected %s:%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port);
                 slaveNode->state = SLAVE_STATE_ONLINE;
               }
               else
@@ -2152,17 +2163,20 @@ LOCAL void pairingThreadCode(void)
                 && !Connector_isAuthorized(&slaveNode->connectorInfo)
                )
             {
+fprintf(stderr,"%s, %d: try authorized %s:%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port);
               error = Connector_authorize(&slaveNode->connectorInfo);
               if (error == ERROR_NONE)
               {
                 slaveNode->state = SLAVE_STATE_PAIRED;
+fprintf(stderr,"%s, %d: authorized %s:%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port);
               }
               else
               {
+fprintf(stderr,"%s, %d: authorized fail %s\n",__FILE__,__LINE__,Error_getText(error));
                 anyUnpairedFlag = TRUE;
               }
             }
-//fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port,jobNode->slaveState);
+fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port,jobNode->slaveState);
           }
 
           // store state
@@ -2244,7 +2258,7 @@ LOCAL void pairingThreadCode(void)
           }
         }
 
-        if (   newMaster.pairingRequested
+        if (   (newMaster.pairingMode != PAIRING_MODE_NONE)
             || String_isEmpty(globalOptions.masterInfo.name)
            )
         {
@@ -4546,8 +4560,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   Errors               error;
   void                 *buffer;
   uint                 bufferLength;
-  CryptHash            uuidCryptHash;
-  char                 bufferx[256];
+  CryptHash            uuidHash;
+  char                 s[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -4574,9 +4588,9 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     String_delete(name);
     return;
   }
-//fprintf(stderr,"%s, %d: encryptType=%d\n",__FILE__,__LINE__,encryptType);
-//fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-//fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+fprintf(stderr,"%s, %d: encryptType=%d\n",__FILE__,__LINE__,encryptType);
+fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
+fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   error = ERROR_UNKNOWN;
   if      (!String_isEmpty(encryptedPassword))
@@ -4597,9 +4611,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       {
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Authorization client %s:%d fail - invalid password",
-                   String_cString(clientInfo->io.network.name),
-                   clientInfo->io.network.port
+                   "Authorization client %s fail - invalid password",
+                   getClientInfo(clientInfo,s,sizeof(s))
                   );
         error = ERROR_INVALID_PASSWORD;
       }
@@ -4623,43 +4636,43 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                                 );
     if (error == ERROR_NONE)
     {
-      if (!newMaster.pairingRequested)
+      if (newMaster.pairingMode == PAIRING_MODE_NONE)
       {
-        // not pairing -> verify master password
+        // not pairing -> verify master UUID
 
         // calculate hash from UUID
-        (void)Crypt_initHash(&uuidCryptHash,PASSWORD_HASH_ALGORITHM);
-        Crypt_updateHash(&uuidCryptHash,buffer,bufferLength);
+        (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
+        Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
 
-        // verify master password (UUID hash)
-//fprintf(stderr,"%s, %d: globalOptions.masterInfo.passwordHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.passwordHash.length); debugDumpMemory(globalOptions.masterInfo.passwordHash.data,globalOptions.masterInfo.passwordHash.length,0);
+        // verify master UUID (UUID hash)
+fprintf(stderr,"%s, %d: globalOptions.masterInfo.uuidHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.uuidHash.length); debugDumpMemory(globalOptions.masterInfo.uuidHash.data,globalOptions.masterInfo.uuidHash.length,0);
 //TODO: lock required?
-        if (!equalsHash(&globalOptions.masterInfo.passwordHash,&uuidCryptHash))
+        if (!equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
         {
           error = ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
                     ? ERROR_NOT_PAIRED
                     : ERROR_INVALID_PASSWORD;
           logMessage(NULL,  // logHandle,
                      LOG_TYPE_ALWAYS,
-                     "Authorization client %s:%d fail (error: %s)",
-                     String_cString(clientInfo->io.network.name),
-                     clientInfo->io.network.port,
+                     "Authorization client %s fail (error: %s)",
+                     getClientInfo(clientInfo,s,sizeof(s)),
                      Error_getText(error)
                     );
         }
 
         // free resources
-        Crypt_doneHash(&uuidCryptHash);
+        Crypt_doneHash(&uuidHash);
       }
       else
       {
         // pairing -> store master name+UUID hash
+fprintf(stderr,"%s, %d: store master name+UUID hash\n",__FILE__,__LINE__);
 
         // calculate hash from UUID
-        (void)Crypt_resetHash(&newMaster.passwordHash);
-        Crypt_updateHash(&newMaster.passwordHash,buffer,bufferLength);
+        (void)Crypt_resetHash(&newMaster.uuidHash);
+        Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
 
         // store name
 //TODO: lock?
@@ -4676,9 +4689,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Authorization client %s:%d fail (error: %s)",
-                 String_cString(clientInfo->io.network.name),
-                 clientInfo->io.network.port,
+                 "Authorization client %s fail (error: %s)",
+                 getClientInfo(clientInfo,s,sizeof(s)),
                  Error_getText(error)
                 );
     }
@@ -4695,8 +4707,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     else
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
-      printInfo(1,"Client authorization failure: '%s'\n",getClientInfo(clientInfo,bufferx,sizeof(bufferx)));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"authorization failure");
+      printInfo(1,"Client authorization failure %s: %s \n",getClientInfo(clientInfo,s,sizeof(s)),Error_getText(error));
     }
   }
 
@@ -5168,7 +5180,7 @@ LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHan
 
 fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   // set new master
-  if (!setHash(&globalOptions.masterInfo.passwordHash,&newMaster.passwordHash))
+  if (!setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"");
     return;
@@ -5216,7 +5228,7 @@ LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexH
   UNUSED_VARIABLE(argumentMap);
 
   String_clear(globalOptions.masterInfo.name);
-  clearHash(&globalOptions.masterInfo.passwordHash);
+  clearHash(&globalOptions.masterInfo.uuidHash);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
 
@@ -5897,7 +5909,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   String          modeMask;
   StringTokenizer stringTokenizer;
   ConstString     token;
-  char            buffer[256];
+  char            s[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -5969,8 +5981,8 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     if (pauseFlags.indexUpdate) String_joinCString(modeMask,"indexUpdate",',');
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Pause server by '%s' for %dmin: %s",
-               getClientInfo(clientInfo,buffer,sizeof(buffer)),
+               "Pause server by %s for %dmin: %s",
+               getClientInfo(clientInfo,s,sizeof(s)),
                pauseTime/60,
                String_cString(modeMask)
               );
@@ -6001,7 +6013,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
   String          modeMask;
   StringTokenizer stringTokenizer;
   ConstString     token;
-  char            buffer[256];
+  char            s[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6050,8 +6062,8 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     }
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Suspended server by '%s'",
-               getClientInfo(clientInfo,buffer,sizeof(buffer))
+               "Suspended server by %s",
+               getClientInfo(clientInfo,s,sizeof(s))
               );
   }
 
@@ -6076,7 +6088,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  char buffer[256];
+  char s[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6094,8 +6106,8 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     pauseFlags.indexUpdate = FALSE;
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Continued server by '%s'",
-               getClientInfo(clientInfo,buffer,sizeof(buffer))
+               "Continued server by %s",
+               getClientInfo(clientInfo,s,sizeof(s))
               );
   }
 
@@ -7511,7 +7523,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
   StorageFlags storageFlags;
   bool         flag;
   JobNode      *jobNode;
-  char         buffer[256];
+  char         s[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7561,7 +7573,7 @@ LOCAL void serverCommand_jobStart(ClientInfo *clientInfo, IndexHandle *indexHand
                   archiveType,
                   storageFlags,
                   Misc_getCurrentDateTime(),
-                  getClientInfo(clientInfo,buffer,sizeof(buffer))
+                  getClientInfo(clientInfo,s,sizeof(s))
                  );
     }
   }
@@ -7590,7 +7602,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   JobNode      *jobNode;
-  char         buffer[64];
+  char         s[64];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7619,7 +7631,7 @@ LOCAL void serverCommand_jobAbort(ClientInfo *clientInfo, IndexHandle *indexHand
     if (Job_isActive(jobNode->jobState))
     {
       Job_abort(jobNode);
-      String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,buffer,sizeof(buffer)));
+      String_setCString(jobNode->abortedByInfo,getClientInfo(clientInfo,s,sizeof(s)));
     }
   }
 
@@ -11251,7 +11263,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
   JobNode      *jobNode;
   ScheduleNode *scheduleNode;
-  char         buffer[256];
+  char         s[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -11299,7 +11311,7 @@ LOCAL void serverCommand_scheduleTrigger(ClientInfo *clientInfo, IndexHandle *in
                   scheduleNode->archiveType,
                   scheduleNode->noStorage ? STORAGE_FLAGS_NO_STORAGE : STORAGE_FLAGS_NONE,
                   Misc_getCurrentDateTime(),
-                  getClientInfo(clientInfo,buffer,sizeof(buffer))
+                  getClientInfo(clientInfo,s,sizeof(s))
                  );
     }
   }
@@ -17710,7 +17722,7 @@ Errors Server_run(ServerModes       mode,
   uint                  clientWaitRestTime;
   ClientNode            *clientNode;
   uint                  pollfdIndex;
-  char                  buffer[256];
+  char                  s[256];
   String                name;
   uint                  id;
   AggregateInfo         jobAggregateInfo,scheduleAggregateInfo;
@@ -17739,10 +17751,10 @@ Errors Server_run(ServerModes       mode,
   pauseFlags.restore             = FALSE;
   pauseFlags.indexUpdate         = FALSE;
   pauseEndDateTime               = 0LL;
-  newMaster.pairingRequested     = FALSE;
+  newMaster.pairingMode          = PAIRING_MODE_NONE;
   Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
   newMaster.name                 = String_new();
-  Crypt_initHash(&newMaster.passwordHash,PASSWORD_HASH_ALGORITHM);
+  Crypt_initHash(&newMaster.uuidHash,PASSWORD_HASH_ALGORITHM);
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
@@ -17751,7 +17763,7 @@ Errors Server_run(ServerModes       mode,
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
   AUTOFREE_ADD(&autoFreeList,newMaster.name,{ String_delete(newMaster.name); });
-  AUTOFREE_ADD(&autoFreeList,&newMaster.passwordHash,{ Crypt_doneHash(&newMaster.passwordHash); });
+  AUTOFREE_ADD(&autoFreeList,&newMaster.uuidHash,{ Crypt_doneHash(&newMaster.uuidHash); });
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
@@ -18023,15 +18035,6 @@ Errors Server_run(ServerModes       mode,
        )
     {
       startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
-#if 0
-      newMaster.pairingRequested = TRUE;
-      Misc_restartTimeout(&newMaster.pairingTimeoutInfo,DEFAULT_PAIRING_MASTER_TIMEOUT*MS_PER_S);
-      logMessage(NULL,  // logHandle,
-                 LOG_TYPE_ALWAYS,
-                 "Started auto-pairing master (%ds)",
-                 DEFAULT_PAIRING_MASTER_TIMEOUT
-                );
-#endif
     }
 
     if (!String_isEmpty(globalOptions.masterInfo.name))
@@ -18171,16 +18174,16 @@ Errors Server_run(ServerModes       mode,
             if (clientWaitRestTime > 0)
             {
               printInfo(1,
-                        "Connected client '%s' (delayed %us)\n",
-                        getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer)),
+                        "Connected client %s (delayed %us)\n",
+                        getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
                         clientWaitRestTime
                        );
             }
             else
             {
               printInfo(1,
-                        "Connected client '%s'\n",
-                        getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer))
+                        "Connected client %s\n",
+                        getClientInfo(&clientNode->clientInfo,s,sizeof(s))
                        );
             }
           }
@@ -18252,16 +18255,16 @@ Errors Server_run(ServerModes       mode,
           if (clientWaitRestTime > 0)
           {
             printInfo(1,
-                      "Connected client '%s' (TLS/SSL, delayed %us)\n",
-                      getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer)),
+                      "Connected client %s (TLS/SSL, delayed %us)\n",
+                      getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
                       clientWaitRestTime
                      );
           }
           else
           {
             printInfo(1,
-                      "Connected client '%s' (TLS/SSL)\n",
-                      getClientInfo(&clientNode->clientInfo,buffer,sizeof(buffer))
+                      "Connected client %s (TLS/SSL)\n",
+                      getClientInfo(&clientNode->clientInfo,s,sizeof(s))
                      );
           }
         }
@@ -18326,7 +18329,7 @@ Errors Server_run(ServerModes       mode,
 
                 if (serverMode == SERVER_MODE_MASTER)
                 {
-                  printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
+                  printInfo(1,"Disconnected client %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
                 }
 
                 // done client and free resources
@@ -18356,7 +18359,7 @@ Errors Server_run(ServerModes       mode,
 
               if (serverMode == SERVER_MODE_MASTER)
               {
-                printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
+                printInfo(1,"Disconnected client %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
               }
 
               // done client and free resources
@@ -18381,7 +18384,7 @@ Errors Server_run(ServerModes       mode,
 
           if (serverMode == SERVER_MODE_MASTER)
           {
-            printInfo(1,"Disconnected client '%s'\n",getClientInfo(&disconnectClientNode->clientInfo,buffer,sizeof(buffer)));
+            printInfo(1,"Disconnected client %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
           }
 
           // done client and free resources
@@ -18448,6 +18451,42 @@ Errors Server_run(ServerModes       mode,
                            oldestAuthorizationFailNode,
                            CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
                           );
+      }
+    }
+
+    // auto pairing master
+    if (serverMode == SERVER_MODE_SLAVE)
+    {
+      if (newMaster.pairingMode == PAIRING_MODE_AUTO)
+      {
+        // set new master
+        String_set(globalOptions.masterInfo.name,newMaster.name);
+        setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash);
+
+        // stop auto-pairing master
+        stopPairingMaster();
+
+        if (!String_isEmpty(globalOptions.masterInfo.name))
+        {
+          // update config file
+          error = updateConfig();
+          if (error == ERROR_NONE)
+          {
+            logMessage(NULL,  // logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Auto paired master: %s\n",
+                       String_cString(globalOptions.masterInfo.name)
+                      );
+          }
+          else
+          {
+            logMessage(NULL,  // logHandle,
+                       LOG_TYPE_ERROR,
+                       "Cannot store master pairing for %s: %s\n",
+                       String_cString(globalOptions.masterInfo.name),Error_getText(error)
+                      );
+          }
+        }
       }
     }
   }
@@ -18520,7 +18559,7 @@ Errors Server_run(ServerModes       mode,
   Index_close(indexHandle);
 
   // free resources
-  Crypt_doneHash(&newMaster.passwordHash);
+  Crypt_doneHash(&newMaster.uuidHash);
   String_delete(newMaster.name);
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&serverStateLock);

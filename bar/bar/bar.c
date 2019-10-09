@@ -883,8 +883,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_BEGIN_SECTION     ("master",-1),
 //TODO
   CONFIG_VALUE_STRING            ("name",                             &globalOptions.masterInfo.name,-1                              ),
-//TODO: rename to password?
-  CONFIG_VALUE_SPECIAL           ("password-hash",                    &globalOptions.masterInfo.passwordHash,-1,                     configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
+  CONFIG_VALUE_SPECIAL           ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
 //TODO: required to save?
   CONFIG_VALUE_SPECIAL           ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_END_SECTION(),
@@ -3785,7 +3784,7 @@ LOCAL void initGlobalOptions(void)
   globalOptions.incrementalDataDirectory                        = String_newCString(DEFAULT_INCREMENTAL_DATA_DIRECTORY);
   globalOptions.masterInfo.pairingFileName                      = DEFAULT_PAIRING_MASTER_FILE_NAME;
   globalOptions.masterInfo.name                                 = String_new();
-  initHash(&globalOptions.masterInfo.passwordHash);
+  initHash(&globalOptions.masterInfo.uuidHash);
   initKey(&globalOptions.masterInfo.publicKey);
   List_init(&globalOptions.maxBandWidthList);
   globalOptions.maxBandWidthList.n                              = 0L;
@@ -4091,7 +4090,7 @@ LOCAL void doneGlobalOptions(void)
 
   List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
   doneKey(&globalOptions.masterInfo.publicKey);
-  doneHash(&globalOptions.masterInfo.passwordHash);
+  doneHash(&globalOptions.masterInfo.uuidHash);
   String_delete(globalOptions.masterInfo.name);
   String_delete(globalOptions.incrementalDataDirectory);
   String_delete(globalOptions.jobsDirectory);
@@ -6053,8 +6052,8 @@ bool equalsHash(Hash *hash, const CryptHash *cryptHash)
 
   return    (hash->cryptHashAlgorithm == cryptHash->cryptHashAlgorithm)
          && Crypt_equalsHashBuffer(cryptHash,
-                                   globalOptions.masterInfo.passwordHash.data,
-                                   globalOptions.masterInfo.passwordHash.length
+                                   hash->data,
+                                   hash->length
                                   );
 }
 
