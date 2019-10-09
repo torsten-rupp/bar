@@ -8771,6 +8771,7 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   CryptHash           cryptHash;
   CryptHashAlgorithms cryptHashAlgorithm;
   long                offset;
+  String              string;
   uint                dataLength;
   void                *data;
 
@@ -8852,12 +8853,22 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
   {
     // <plain data> -> calculate hash
 
+    // unquote/unescape
+    string = String_newCString(value);
+    String_unquote(string,STRING_QUOTES);
+    String_unescape(string,
+                    STRING_ESCAPE_CHARACTER,
+                    STRING_ESCAPE_CHARACTERS_MAP_TO,
+                    STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                    STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                  );
+
     // use default hash alogorithm
     cryptHashAlgorithm = PASSWORD_HASH_ALGORITHM;
 
     // calculate hash
     Crypt_initHash(&cryptHash,cryptHashAlgorithm);
-    Crypt_updateHash(&cryptHash,value,stringLength(value));
+    Crypt_updateHash(&cryptHash,String_cString(string),String_length(string));
 //fprintf(stderr,"%s, %d: value='%s'\n",__FILE__,__LINE__,value); Crypt_dumpHash(&cryptHash);
 
     dataLength = Crypt_getHashLength(&cryptHash);
@@ -8867,6 +8878,8 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
       data = allocSecure((size_t)dataLength);
       if (data == NULL)
       {
+        Crypt_doneHash(&cryptHash);
+        String_delete(string);
         return FALSE;
       }
 
@@ -8880,6 +8893,7 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
 
     // free resources
     Crypt_doneHash(&cryptHash);
+    String_delete(string);
 
     // mark config modified
     configModified = TRUE;
