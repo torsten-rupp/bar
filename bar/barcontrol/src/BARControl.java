@@ -1634,6 +1634,7 @@ public class BARControl
     new Option("--ca-file",                      null,Options.Types.STRING,     "serverCAFileName"),
     new Option("--cert-file",                    null,Options.Types.STRING,     "serverCertificateFileName"),
     new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
+    new Option("--no-ssl",                       null,Options.Types.BOOLEAN,    "noSSL"),
     new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "forceSSL"),
     new Option("--password",                     null,Options.Types.STRING,     "serverPassword"),
     new Option("--login-dialog",                 null,Options.Types.BOOLEAN,    "loginDialogFlag"),
@@ -1938,6 +1939,7 @@ public class BARControl
     System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME+" or ");
     System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME);
     System.out.println("                                                      )" );
+    System.out.println("         --no-ssl                                   - no SSL connection");
     System.out.println("         --force-ssl                                - force SSL connection");
     System.out.println("         --login-dialog                             - force to open login dialog");
     System.out.println("         --pair-master                              - start pairing new master");
@@ -2510,7 +2512,7 @@ if (false) {
             final Settings.Server defaultServer = Settings.getLastServer();
             loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                       (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                      Settings.forceSSL,
+                                      !Settings.noSSL && Settings.forceSSL,
                                       Settings.role
                                      );
             if (getLoginData(loginData,false))
@@ -2521,6 +2523,7 @@ if (false) {
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
+                                  Settings.noSSL,
                                   loginData.forceSSL,
                                   loginData.password,
                                   Settings.serverCAFileName,
@@ -3154,6 +3157,7 @@ assert jobData != null;
                             loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
+                            Settings.noSSL,
                             loginData.forceSSL,
                             loginData.password,
                             Settings.serverCAFileName,
@@ -3193,6 +3197,7 @@ assert jobData != null;
                             loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
+                            Settings.noSSL,
                             loginData.forceSSL,
                             loginData.password,
                             Settings.serverCAFileName,
@@ -3611,7 +3616,7 @@ assert jobData != null;
               loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        Settings.forceSSL,
+                                        !Settings.noSSL && Settings.forceSSL,
                                         (!server.password.isEmpty()) ? server.password : "",
                                         Settings.role
                                        );
@@ -3621,6 +3626,7 @@ assert jobData != null;
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
+                                  Settings.noSSL,
                                   loginData.forceSSL,
                                   loginData.password,
                                   Settings.serverCAFileName,
@@ -3650,6 +3656,7 @@ assert jobData != null;
                                     loginData.serverName,
                                     loginData.serverPort,
                                     loginData.serverTLSPort,
+                                    true,  // noSSL,
                                     false,  // forceSSL
                                     loginData.password,
                                     (String)null,  // serverCAFileName
@@ -3675,7 +3682,7 @@ assert jobData != null;
               loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        Settings.forceSSL,
+                                        !Settings.noSSL && Settings.forceSSL,
                                         Settings.role
                                        );
               if (getLoginData(loginData,false))
@@ -3686,6 +3693,7 @@ assert jobData != null;
                                     loginData.serverName,
                                     loginData.serverPort,
                                     loginData.serverTLSPort,
+                                    Settings.noSSL,
                                     loginData.forceSSL,
                                     loginData.password,
                                     Settings.serverCAFileName,
@@ -4042,7 +4050,7 @@ assert jobData != null;
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                Settings.forceSSL,
+                                !Settings.noSSL && Settings.forceSSL,
                                 (server != null) ? server.password : "",
                                 Settings.role
                                );
@@ -4080,6 +4088,7 @@ assert jobData != null;
           BARServer.connect(loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
+                            Settings.noSSL,
                             loginData.forceSSL,
                             loginData.password,
                             Settings.serverCAFileName,
@@ -5066,6 +5075,7 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
+                                Settings.noSSL,
                                 loginData.forceSSL,
                                 loginData.password,
                                 Settings.serverCAFileName,
@@ -5088,6 +5098,7 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
+                                Settings.noSSL,
                                 loginData.forceSSL,
                                 "",  // password
                                 Settings.serverCAFileName,
@@ -5125,6 +5136,7 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
+                                Settings.noSSL,
                                 loginData.forceSSL,
                                 loginData.password,
                                 Settings.serverCAFileName,
@@ -5159,6 +5171,7 @@ Dprintf.dprintf("still not supported");
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
+                                  true, // noSSL,
                                   false,  // forceSSL
                                   loginData.password,
                                   (String)null,  // serverCAFileName

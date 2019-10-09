@@ -427,6 +427,8 @@ public class Settings
   public static String                         serverCertificateFileName       = null;
   @SettingValue(name="server-key-file")
   public static String                         serverKeyFileName               = null;
+  @SettingValue(name="no-ssl")
+  public static boolean                        noSSL                           = false;
   @SettingValue(name="force-ssl")
   public static boolean                        forceSSL                        = false;
   @SettingValue(name="role")

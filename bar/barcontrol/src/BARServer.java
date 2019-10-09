@@ -1547,6 +1547,7 @@ public static BufferedWriter              output;
    * @param name host name
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
+   * @param noSSL TRUE to disable SSL
    * @param forceSSL TRUE to force SSL
    * @param password server password
    * @param caFileName server CA file name
@@ -1557,6 +1558,7 @@ public static BufferedWriter              output;
                              String  name,
                              int     port,
                              int     tlsPort,
+                             boolean noSSL,
                              boolean forceSSL,
                              String  password,
                              String  caFileName,
@@ -1631,6 +1633,7 @@ public static BufferedWriter              output;
         if (   (keyData.caFileName          != null)
             && (keyData.certificateFileName != null)
             && (keyData.keyFileName         != null)
+            && !noSSL
            )
         {
           File caFile          = new File(keyData.caFileName);
@@ -1756,7 +1759,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if ((socket == null) && (tlsPort != 0))
+    if ((socket == null) && (tlsPort != 0) && !noSSL)
     {
       // try to create TLS socket with PEM
       for (KeyData keyData : keyData_)
@@ -1988,7 +1991,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if ((socket == null) && (tlsPort != 0))
+    if ((socket == null) && (tlsPort != 0) && !noSSL)
     {
       // try to create TLS socket with JKS
       for (KeyData keyData : keyData_)
@@ -2230,6 +2233,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name host name
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
+   * @param noSSL TRUE to disable SSL
    * @param forceSSL TRUE to force SSL
    * @param password server password
    * @param caFileName server CA file name
@@ -2239,6 +2243,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static void connect(String  name,
                              int     port,
                              int     tlsPort,
+                             boolean noSSL,
                              boolean forceSSL,
                              String  password,
                              String  caFileName,
@@ -2250,6 +2255,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             name,
             port,
             tlsPort,
+            noSSL,
             forceSSL,
             password,
             caFileName,
