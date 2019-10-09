@@ -1498,7 +1498,6 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       }
       else
       {
-fprintf(stderr,"%s, %d: data='%s'\n",__FILE__,__LINE__,String_cString(data));
         // parse error -> discard
         #ifndef NDEBUG
           if (globalOptions.serverDebugLevel >= 1)
