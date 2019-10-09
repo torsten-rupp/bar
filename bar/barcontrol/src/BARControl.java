@@ -3841,6 +3841,7 @@ assert jobData != null;
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
+          pairMasterRunnable[0].abort();
           Dialogs.close(dialog,false);
         }
       });
@@ -3848,14 +3849,16 @@ assert jobData != null;
 
     // install handlers
 
-    // set new master
+    // set new master runnable
     pairMasterRunnable[0] = new BackgroundRunnable(dialog,widgetProgressBar)
     {
+      private Command command = null;
+
       public void run(final Shell dialog, final ProgressBar widgetProgressBar)
       {
         try
         {
-          BARServer.executeCommand(StringParser.format("MASTER_WAIT"),
+          command = BARServer.asyncExecuteCommand(StringParser.format("MASTER_WAIT"),
                                    1,  // debugLevel
                                    new Command.ResultHandler()
                                    {
@@ -3870,8 +3873,15 @@ assert jobData != null;
                                        {
                                          public void run()
                                          {
-                                           widgetProgressBar.setRange(0,totalTime);
-                                           widgetProgressBar.setSelection("%.0fs",restTime);
+                                           if (!widgetProgressBar.isDisposed())
+                                           {
+                                             widgetProgressBar.setRange(0,totalTime);
+                                             widgetProgressBar.setSelection("%.0fs",restTime);
+                                           }
+                                           else
+                                           {
+                                             abort();
+                                           }
                                          }
                                        });
                                      }
@@ -3888,17 +3898,27 @@ assert jobData != null;
                                        {
                                          public void run()
                                          {
-                                           widgetMasterName.setText(data.masterName);
-
-                                           if (!widgetOKButton.isDisposed() && !data.masterName.isEmpty())
+                                           if (   !widgetMasterName.isDisposed()
+                                               && !widgetOKButton.isDisposed()
+                                              )
                                            {
-                                             widgetOKButton.setEnabled(true);
+                                             widgetMasterName.setText(data.masterName);
+
+                                             if (!data.masterName.isEmpty())
+                                             {
+                                               widgetOKButton.setEnabled(true);
+                                             }
+                                           }
+                                           else
+                                           {
+                                             abort();
                                            }
                                          }
                                        });
                                      }
                                    }
                                   );
+          BARServer.asyncCommandWait(command);
         }
         catch (final BARException exception)
         {
@@ -3936,6 +3956,11 @@ assert jobData != null;
             }
           }
         });
+      }
+
+      public void abort()
+      {
+        if (command != null) command.abort();
       }
     };
     Background.run(pairMasterRunnable[0]);
@@ -4134,8 +4159,8 @@ assert jobData != null;
                                      }
                                     );
 
-  //TODO
-  /*
+//TODO
+/*
             // wait for pairing
             int          time         = PAIRING_MASTER_TIMEOUT;
             while (masterName[0].isEmpty() && (time > 0))
@@ -4170,7 +4195,7 @@ assert jobData != null;
               try { Thread.sleep(1000); } catch (InterruptedException exception) {  }
               time--;
             }
-  */
+*/
             System.out.print("\b\b\b\b");
             if (!masterName[0].isEmpty())
             {
