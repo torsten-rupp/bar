@@ -7486,35 +7486,38 @@ done
 
 # sudo tests
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr \* data/\*'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr \* data/\*'" >&5
 $as_echo_n "checking for execution of '$SUDO chattr \* data/\*'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr \\* data/\\*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr \\* data/\\*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="chattr \* data/\*"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="chattr \* data/\*                           "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7522,35 +7525,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr \* configure-\*'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chattr \* configure-\*'" >&5
 $as_echo_n "checking for execution of '$SUDO chattr \* configure-\*'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr \\* configure-\\*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chattr \\* configure-\\*|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="chattr \* configure-\*"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="chattr \* configure-\*                      "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7558,35 +7564,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO mount /dev/loop[01] test/dev[01]'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO mount /dev/loop[01] test/dev[01]'" >&5
 $as_echo_n "checking for execution of '$SUDO mount /dev/loop[01] test/dev[01]'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo mount /dev/loop[01] test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo mount /dev/loop[01] test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="mount /dev/loop[01] test/dev[01]"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="mount /dev/loop[01] test/dev[01]        "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7594,35 +7603,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO umount test/dev[01]'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO umount test/dev[01]'" >&5
 $as_echo_n "checking for execution of '$SUDO umount test/dev[01]'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo umount test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo umount test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="umount test/dev[01]"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="umount test/dev[01]                       "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7630,35 +7642,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup -d /dev/loop[01]'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup -d /dev/loop[01]'" >&5
 $as_echo_n "checking for execution of '$SUDO losetup -d /dev/loop[01]'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup -d /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup -d /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="losetup -d /dev/loop[01]"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="losetup -d /dev/loop[01]                  "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7666,35 +7681,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup /dev/loop[01] test/dev[01].dat'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup /dev/loop[01] test/dev[01].dat'" >&5
 $as_echo_n "checking for execution of '$SUDO losetup /dev/loop[01] test/dev[01].dat'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup /dev/loop[01] test/dev[01].dat|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup /dev/loop[01] test/dev[01].dat|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="losetup /dev/loop[01] test/dev[01]\.dat"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="losetup /dev/loop[01] test/dev[01]\.dat "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7702,35 +7720,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab]\.dat'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab]\.dat'" >&5
 $as_echo_n "checking for execution of '$SUDO losetup /dev/loop[01] test/dev0[ab]\.dat'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup /dev/loop[01] test/dev0[ab]\\.dat|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo losetup /dev/loop[01] test/dev0[ab]\\.dat|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="losetup /dev/loop[01] test/dev0[ab]\.dat"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="losetup /dev/loop[01] test/dev0[ab]\.dat"
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7738,35 +7759,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chmod o\+rw /dev/loop[01]'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO chmod o\+rw /dev/loop[01]'" >&5
 $as_echo_n "checking for execution of '$SUDO chmod o\+rw /dev/loop[01]'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chmod o\\+rw /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo chmod o\\+rw /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="chmod o\+rw /dev/loop[01]"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="chmod o\+rw /dev/loop[01]                 "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7774,35 +7798,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO dd if=/dev/loop[01] of=-'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO dd if=/dev/loop[01] of=-'" >&5
 $as_echo_n "checking for execution of '$SUDO dd if=/dev/loop[01] of=-'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo dd if=/dev/loop[01] of=-|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo dd if=/dev/loop[01] of=-|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="dd if=/dev/loop[01] of=-"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="dd if=/dev/loop[01] of=-                  "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7810,35 +7837,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO mkfs -t \* /dev/loop[01]'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO mkfs -t \* /dev/loop[01]'" >&5
 $as_echo_n "checking for execution of '$SUDO mkfs -t \* /dev/loop[01]'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo mkfs -t \\* /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo mkfs -t \\* /dev/loop[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="mkfs -t \* /dev/loop[01]"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="mkfs -t \* /dev/loop[01]                  "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7846,35 +7876,38 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO cp -r -p data/\* test/dev[01]'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO cp -r -p data/\* test/dev[01]'" >&5
 $as_echo_n "checking for execution of '$SUDO cp -r -p data/\* test/dev[01]'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo cp -r -p data/\\* test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo cp -r -p data/\\* test/dev[01]|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="cp -r -p data/\* test/dev[01]"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="cp -r -p data/\* test/dev[01]             "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
@@ -7882,42 +7915,44 @@ elif :; then :
 fi
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO diff -r test/dev0 test/dev1'" >&5
+  if test -z "$UNOCONV"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for execution of '$SUDO diff -r test/dev0 test/dev1'" >&5
 $as_echo_n "checking for execution of '$SUDO diff -r test/dev0 test/dev1'... " >&6; }
-  as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo diff -r test/dev0 test/dev1|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
-  if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
+    as_ac_cv_prog_sudo_command=`$as_echo "ac_cv_prog_sudo_command_\`echo diff -r test/dev0 test/dev1|tr -c -d a-zA-Z0-9_\`" | $as_tr_sh`
+    if eval \${$as_ac_cv_prog_sudo_command+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      ac_pattern="diff -r test/dev0 test/dev1"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+        # escape command
+        ac_pattern="diff -r test/dev0 test/dev1                 "
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_result" >&5
 $as_echo "$ac_result" >&6; }
-      eval "$as_ac_cv_prog_sudo_command=\$ac_result"
+        eval "$as_ac_cv_prog_sudo_command=\$ac_result"
 
 
 fi
 
+  else
+    ac_result=no
+  fi
   if test "$ac_result" != no; then :
 
 elif :; then :
   HAVE_SUDO_COMMAND_DIFF=0
 fi
 
-#AC_ERROR(xxx)
 
 
 case $host_os in

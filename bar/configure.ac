@@ -585,30 +585,33 @@ dnl --- check sudo command
 dnl usage: AC_PROG_SUDO_COMMAND(<text>,<command>,<if found>,<if not found>)
 AC_DEFUN([AC_PROG_SUDO_COMMAND],
 [
-  AC_MSG_CHECKING([for execution of '$SUDO $1'])
-  AS_VAR_PUSHDEF([ac_cv_prog_sudo_command],[ac_cv_prog_sudo_command_`echo $1|tr -c -d a-zA-Z0-9_`])dnl
-  AC_CACHE_VAL(
-    [ac_cv_prog_sudo_command],
-    [
-      ac_pattern="$2"
-#      ac_pattern=`echo "$ac_pattern"|sed 's/\([[*+?.]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\[[\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/\(\]]\)/\\\\\1/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
-      ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
-#      ac_pattern=`echo "$ac_pattern"|sed 's/*/\\\\*/g'`
+  if test -z "$UNOCONV"; then
+    AC_MSG_CHECKING([for execution of '$SUDO $1'])
+    AS_VAR_PUSHDEF([ac_cv_prog_sudo_command],[ac_cv_prog_sudo_command_`echo $1|tr -c -d a-zA-Z0-9_`])dnl
+    AC_CACHE_VAL(
+      [ac_cv_prog_sudo_command],
+      [
+        # escape command
+        ac_pattern="$2"
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\[[\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/\(\]]\)/\\\\\1/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/=/\\\\\\\\=/g'`
+        ac_pattern=`echo "$ac_pattern"|sed 's/ \\+/\\\\s+/g'`
 
-      SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
-      # 1</dev/null 2>/dev/null
-      if   test $? -eq 0; then
-        ac_result=yes
-      else
-        ac_result=no
-      fi
-      AC_MSG_RESULT($ac_result)
-      AS_VAR_SET([ac_cv_prog_sudo_command],$ac_result)
-    ]
-  )
+        # test sudo
+        SUDO_ASKPASS=false $SUDO -n -l | grep -E "$ac_pattern" 1>/dev/null 2>/dev/null
+        if   test $? -eq 0; then
+          ac_result=yes
+        else
+          ac_result=no
+        fi
+        AC_MSG_RESULT($ac_result)
+        AS_VAR_SET([ac_cv_prog_sudo_command],$ac_result)
+      ]
+    )
+  else
+    ac_result=no
+  fi
   AS_IF([test "$ac_result" != no],[$3],:,[$4])
   AS_VAR_POPDEF([ac_cv_prog_sudo_command])dnl
   AC_PROVIDE([$0])dnl
@@ -1355,19 +1358,18 @@ AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
 # sudo tests
-AC_PROG_SUDO_COMMAND([chattr \* data/\*],                           [chattr \* data/\*],                           ,HAVE_SUDO_COMMAND_CHATTR=0)
-AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                      [chattr \* configure-\*],                      ,HAVE_SUDO_COMMAND_CHATTR=0)
-AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] test/dev[[01]]],        [mount /dev/loop[[01]] test/dev[[01]]],        ,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
-AC_PROG_SUDO_COMMAND([umount test/dev[[01]]],                       [umount test/dev[[01]]],                       ,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
-AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                  [losetup -d /dev/loop[[01]]],                  ,HAVE_SUDO_COMMAND_LOSETUP=0)
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] test/dev[[01]].dat],  [losetup /dev/loop[[01]] test/dev[[01]]\.dat], ,HAVE_SUDO_COMMAND_LOSETUP=0)
-AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] test/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] test/dev0[[ab]]\.dat],,HAVE_SUDO_COMMAND_LOSETUP=0)
-AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                 [chmod o\+rw /dev/loop[[01]]],                 ,HAVE_SUDO_COMMAND_CHMOD=0)
-AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                  [dd if=/dev/loop[[01]] of=-],                  ,HAVE_SUDO_COMMAND_DD=0)
-AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                  [mkfs -t \* /dev/loop[[01]]],                  ,HAVE_SUDO_COMMAND_MKFS=0)
-AC_PROG_SUDO_COMMAND([cp -r -p data/\* test/dev[[01]]],             [cp -r -p data/\* test/dev[[01]]],             ,HAVE_SUDO_COMMAND_CP=0)
-AC_PROG_SUDO_COMMAND([diff -r test/dev0 test/dev1],                 [diff -r test/dev0 test/dev1],                 ,HAVE_SUDO_COMMAND_DIFF=0)
-#AC_ERROR(xxx)
+AC_PROG_SUDO_COMMAND([chattr \* data/\*],                           [chattr \* data/\*]                           ,,HAVE_SUDO_COMMAND_CHATTR=0      )
+AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                      [chattr \* configure-\*]                      ,,HAVE_SUDO_COMMAND_CHATTR=0      )
+AC_PROG_SUDO_COMMAND([mount /dev/loop[[01]] test/dev[[01]]],        [mount /dev/loop[[01]] test/dev[[01]]]        ,,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
+AC_PROG_SUDO_COMMAND([umount test/dev[[01]]],                       [umount test/dev[[01]]]                       ,,HAVE_SUDO_COMMAND_MOUNT_UMOUNT=0)
+AC_PROG_SUDO_COMMAND([losetup -d /dev/loop[[01]]],                  [losetup -d /dev/loop[[01]]]                  ,,HAVE_SUDO_COMMAND_LOSETUP=0     )
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] test/dev[[01]].dat],  [losetup /dev/loop[[01]] test/dev[[01]]\.dat] ,,HAVE_SUDO_COMMAND_LOSETUP=0     )
+AC_PROG_SUDO_COMMAND([losetup /dev/loop[[01]] test/dev0[[ab]]\.dat],[losetup /dev/loop[[01]] test/dev0[[ab]]\.dat],,HAVE_SUDO_COMMAND_LOSETUP=0     )
+AC_PROG_SUDO_COMMAND([chmod o\+rw /dev/loop[[01]]],                 [chmod o\+rw /dev/loop[[01]]]                 ,,HAVE_SUDO_COMMAND_CHMOD=0       )
+AC_PROG_SUDO_COMMAND([dd if=/dev/loop[[01]] of=-],                  [dd if=/dev/loop[[01]] of=-]                  ,,HAVE_SUDO_COMMAND_DD=0          )
+AC_PROG_SUDO_COMMAND([mkfs -t \* /dev/loop[[01]]],                  [mkfs -t \* /dev/loop[[01]]]                  ,,HAVE_SUDO_COMMAND_MKFS=0        )
+AC_PROG_SUDO_COMMAND([cp -r -p data/\* test/dev[[01]]],             [cp -r -p data/\* test/dev[[01]]]             ,,HAVE_SUDO_COMMAND_CP=0          )
+AC_PROG_SUDO_COMMAND([diff -r test/dev0 test/dev1],                 [diff -r test/dev0 test/dev1]                 ,,HAVE_SUDO_COMMAND_DIFF=0        )
 
 dnl -------- mandatory headers/functions/definitions/libraries ---------
 
