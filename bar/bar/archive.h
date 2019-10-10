@@ -519,61 +519,35 @@ bool Archive_parseType(const char *name, ArchiveTypes *archiveType, void *userDa
 /***********************************************************************\
 * Name   : Archive_archiveTypeToString
 * Purpose: get name of archive type
-* Input  : archiveType  - archive type
-*          defaultValue - default value
-* Output : -
-* Return : archive type string
-* Notes  : -
-\***********************************************************************/
-
-const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue);
-
-/***********************************************************************\
-* Name   : Archive_archiveTypeToShortString
-* Purpose: get short name of archive type
-* Input  : archiveType  - archive type
-*          defaultValue - default value
-* Output : -
-* Return : archive type short string
-* Notes  : -
-\***********************************************************************/
-
-const char *Archive_archiveTypeToShortString(ArchiveTypes archiveType, const char *defaultValue);
-
-/***********************************************************************\
-* Name   : Archive_archiveEntryTypeToString
-* Purpose: get name of archive entry type
-* Input  : archiveEntryType - archive entry type
-*          defaultValue     - default value
-* Output : -
-* Return : archive entry type string
-* Notes  : -
-\***********************************************************************/
-
-const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType, const char *defaultValue);
-
-/***********************************************************************\
-* Name   : Archive_typeToString
-* Purpose: get name of archive type
-* Input  : archiveType  - archive type
-*          defaultValue - default value
-* Output : -
-* Return : archive type string
-* Notes  : -
-\***********************************************************************/
-
-const char *Archive_typeToString(ArchiveTypes archiveType, const char *defaultValue);
-
-/***********************************************************************\
-* Name   : Archive_typeToShortString
-* Purpose: get short name of archive type
 * Input  : archiveType - archive type
 * Output : -
 * Return : archive type string
 * Notes  : -
 \***********************************************************************/
 
-const char *Archive_typeToShortString(ArchiveTypes archiveType);
+const char *Archive_archiveTypeToString(ArchiveTypes archiveType);
+
+/***********************************************************************\
+* Name   : Archive_archiveTypeToShortString
+* Purpose: get short name of archive type
+* Input  : archiveType - archive type
+* Output : -
+* Return : archive type short string
+* Notes  : -
+\***********************************************************************/
+
+const char *Archive_archiveTypeToShortString(ArchiveTypes archiveType);
+
+/***********************************************************************\
+* Name   : Archive_archiveEntryTypeToString
+* Purpose: get name of archive entry type
+* Input  : archiveEntryType - archive entry type
+* Output : -
+* Return : archive entry type string
+* Notes  : -
+\***********************************************************************/
+
+const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType);
 
 /***********************************************************************\
 * Name   : Archive_parseArchiveEntryType

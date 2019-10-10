@@ -5618,8 +5618,8 @@ void logPostProcess(LogHandle        *logHandle,
         // log post command for job log file
         TEXT_MACRO_N_STRING (textMacros[0],"%file",   logHandle->logFileName,                            TEXT_MACRO_PATTERN_STRING);
         TEXT_MACRO_N_STRING (textMacros[1],"%name",   jobName,                                           TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%type",   Archive_archiveTypeToString(archiveType,"UNKNOWN"),TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_CSTRING(textMacros[3],"%T",      Archive_archiveTypeToShortString(archiveType,"U"), ".");
+        TEXT_MACRO_N_CSTRING(textMacros[2],"%type",   Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_STRING);
+        TEXT_MACRO_N_CSTRING(textMacros[3],"%T",      Archive_archiveTypeToShortString(archiveType), ".");
         TEXT_MACRO_N_STRING (textMacros[4],"%text",   scheduleCustomText,                                TEXT_MACRO_PATTERN_STRING);
         TEXT_MACRO_N_CSTRING(textMacros[5],"%state",  Job_getStateText(jobState,storageFlags),           NULL);
         TEXT_MACRO_N_STRING (textMacros[6],"%message",String_cString(message),NULL);

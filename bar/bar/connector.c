@@ -3338,7 +3338,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                    scheduleUUID,
                                    NULL,  // scheduleCustomText
                                    FALSE,  // noStorage
-                                   Archive_archiveTypeToString(archiveType,NULL),
+                                   Archive_archiveTypeToString(archiveType),
                                    storageFlags.dryRun,
                                    storageFlags.noStorage
                                   );

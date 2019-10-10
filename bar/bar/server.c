@@ -117,7 +117,7 @@ typedef enum
 {
   PAIRING_MODE_NONE,
   PAIRING_MODE_AUTO,
-  PAIRING_MODE_REQUEST
+  PAIRING_MODE_MANUAL
 } PairingModes;
 
 // expiration
@@ -349,7 +349,6 @@ LOCAL struct
 LOCAL uint64                pauseEndDateTime;            // pause end date/time [s]
 LOCAL struct
 {
-//bool        pairingRequested;                          // TRUE if master pairing requested
   PairingModes pairingMode;
   TimeoutInfo  pairingTimeoutInfo;                       // master pairing timeout info
   String       name;                                     // new master name
@@ -794,6 +793,44 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 }
 
 /***********************************************************************\
+* Name   : setPairedMaster
+* Purpose: set paired master
+* Input  : -
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors setPairedMaster(void)
+{
+  Errors error;
+
+  assert(newMaster.pairingMode == PAIRING_MODE_NONE);
+
+  // set paired master
+  String_set(globalOptions.masterInfo.name,newMaster.name);
+  if (!setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash))
+  {
+    return ERROR_INSUFFICIENT_MEMORY;
+  }
+
+  // update config file
+  error = updateConfig();
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  logMessage(NULL,  // logHandle,
+            LOG_TYPE_ALWAYS,
+            "Paired master '%s'",
+            String_cString(globalOptions.masterInfo.name)
+           );
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : startPairing
 * Purpose: start pairing master (if not already started)
 * Input  : timeout - timeout [s]
@@ -804,16 +841,45 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 
 LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 {
-  ClientNode *clientNode;
-
   if (newMaster.pairingMode == PAIRING_MODE_NONE)
   {
-    // request new master pairing
-    Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
+    // start pairing new master
+    newMaster.pairingMode = pairingMode;
     String_clear(newMaster.name);
+    Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
 
-    // disconnect current master
-    SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               (pairingMode == PAIRING_MODE_AUTO)
+                 ? "Started auto pairing master"
+                 : "Started pairing master"
+              );
+  }
+}
+
+/***********************************************************************\
+* Name   : stopPairingMaster
+* Purpose: stop pairing master (if started)
+* Input  : name     - master name
+*          uuidHash - UUID hash
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
+{
+  ClientNode *clientNode;
+  Errors     error;
+
+  assert(name != NULL);
+  assert(uuidHash != NULL);
+
+  // set/clear paired master
+  if (!String_isEmpty(name))
+  {
+    // disconnect currently paired master
+    SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       clientNode = LIST_FIND(&clientList,
                              clientNode,
@@ -828,29 +894,28 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
       }
     }
 
+    // pair new master
+    String_set(globalOptions.masterInfo.name,newMaster.name);
+    if (!setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash))
+    {
+      return ERROR_INSUFFICIENT_MEMORY;
+    }
+
+    // update config file
+    error = updateConfig();
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
     logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               (pairingMode == PAIRING_MODE_AUTO)
-                 ? "Started auto pairing master"
-                 : "Started pairing master"
-              );
-
-    // set pairing mode
-    newMaster.pairingMode = pairingMode;
+              LOG_TYPE_ALWAYS,
+              "Paired master '%s'",
+              String_cString(globalOptions.masterInfo.name)
+             );
   }
-}
 
-/***********************************************************************\
-* Name   : stopPairingMaster
-* Purpose: stop pairing master (if started)
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void stopPairingMaster(void)
-{
+  // stop pairing
   if (newMaster.pairingMode != PAIRING_MODE_NONE)
   {
     logMessage(NULL,  // logHandle,
@@ -860,7 +925,32 @@ LOCAL void stopPairingMaster(void)
                  : "Stopped pairing master"
               );
 
-    // stop pairing
+    newMaster.pairingMode = PAIRING_MODE_NONE;
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : abortPairingMaster
+* Purpose: abort pairing master (if started)
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void abortPairingMaster(void)
+{
+  if (newMaster.pairingMode != PAIRING_MODE_NONE)
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               (newMaster.pairingMode == PAIRING_MODE_AUTO)
+                 ? "Aborted auto pairing master"
+                 : "Aborted pairing master"
+              );
+
     newMaster.pairingMode = PAIRING_MODE_NONE;
   }
 }
@@ -870,16 +960,28 @@ LOCAL void stopPairingMaster(void)
 * Purpose: clear paired master
 * Input  : -
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void clearPairedMaster(void)
+LOCAL Errors clearPairedMaster(void)
 {
-  // clear master
+  Errors error;
+
+  assert(newMaster.pairingMode == PAIRING_MODE_NONE);
+
   if (!String_isEmpty(globalOptions.masterInfo.name))
   {
+    // clear paired master
     String_clear(globalOptions.masterInfo.name);
+    clearHash(&globalOptions.masterInfo.uuidHash);
+
+    // update config file
+    error = updateConfig();
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
 
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
@@ -887,8 +989,7 @@ LOCAL void clearPairedMaster(void)
               );
   }
 
-  // stop pairing
-  newMaster.pairingMode = PAIRING_MODE_NONE;
+  return ERROR_NONE;
 }
 
 /***********************************************************************\
@@ -1474,7 +1575,7 @@ LOCAL void jobThreadCode(void)
                    "Started job '%s'%s %s%s%s",
                    String_cString(jobName),
                    !String_isEmpty(s) ? String_cString(s) : "",
-                   Archive_archiveTypeToString(archiveType,"UNKNOWN"),
+                   Archive_archiveTypeToString(archiveType),
                    !String_isEmpty(byName) ? " by " : "",
                    String_cString(byName)
                   );
@@ -1577,8 +1678,8 @@ LOCAL void jobThreadCode(void)
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType),NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType),NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
           error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
@@ -1710,11 +1811,11 @@ NULL,//                                                        scheduleTitle,
         {
           TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,                                                      NULL);
           TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,                                                  NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType,"UNKNOWN"),           NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType,"U"),            NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType),                     NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
           TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
           TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,                                 NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),       NULL);
+          TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
           TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
           error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
                                   executeStartDateTime,
@@ -2238,11 +2339,11 @@ fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cSt
           {
             if (Misc_getCurrentDateTime() < pairingStopTimestamp)
             {
-              startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_REQUEST);
+              startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_MANUAL);
             }
             else
             {
-              stopPairingMaster();
+              abortPairingMaster();
             }
           }
           else
@@ -2254,9 +2355,11 @@ fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cSt
         {
           if (Misc_isTimeout(&newMaster.pairingTimeoutInfo))
           {
-            stopPairingMaster();
+            abortPairingMaster();
           }
         }
+
+//TODO: setPairedMaster
 
         if (   (newMaster.pairingMode != PAIRING_MODE_NONE)
             || String_isEmpty(globalOptions.masterInfo.name)
@@ -3424,7 +3527,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                             "Purged expired entity of job '%s': %s, created at %s, %"PRIu64" entries/%.1f%s (%"PRIu64" bytes)",
                           #endif /* SIMULATE_PURGE */
                           String_cString(expiredJobName),
-                          Archive_archiveTypeToString(expiredArchiveType,"NORMAL"),
+                          Archive_archiveTypeToString(expiredArchiveType),
                           String_cString(Misc_formatDateTime(String_clear(string),expiredCreatedDateTime,NULL)),
                           expiredTotalEntryCount,
                           BYTES_SHORT(expiredTotalEntrySize),
@@ -4576,8 +4679,8 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   }
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
-  encryptedPassword  = String_new();
-  encryptedUUID      = String_new();
+  encryptedPassword = String_new();
+  encryptedUUID     = String_new();
   if (   !StringMap_getString(argumentMap,"encryptedPassword",encryptedPassword,NULL)
       && !StringMap_getString(argumentMap,"encryptedUUID",encryptedUUID,NULL)
      )
@@ -4636,18 +4739,22 @@ fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cStri
                                 );
     if (error == ERROR_NONE)
     {
+      assert(buffer != NULL);
+      assert(bufferLength > 0);
+
+fprintf(stderr,"%s, %d: newMaster.pairingMode=%d\n",__FILE__,__LINE__,newMaster.pairingMode);
       if (newMaster.pairingMode == PAIRING_MODE_NONE)
       {
         // not pairing -> verify master UUID
+fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
 
         // calculate hash from UUID
         (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
         Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
-
         // verify master UUID (UUID hash)
-fprintf(stderr,"%s, %d: globalOptions.masterInfo.uuidHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.uuidHash.length); debugDumpMemory(globalOptions.masterInfo.uuidHash.data,globalOptions.masterInfo.uuidHash.length,0);
+fprintf(stderr,"%s, %d: globalOptions.masterInfo.uuidHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.uuidHash.length);
+if (globalOptions.masterInfo.uuidHash.data != NULL) debugDumpMemory(globalOptions.masterInfo.uuidHash.data,globalOptions.masterInfo.uuidHash.length,0);
 //TODO: lock required?
         if (!equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
         {
@@ -4667,19 +4774,18 @@ fprintf(stderr,"%s, %d: globalOptions.masterInfo.uuidHash length=%d: \n",__FILE_
       }
       else
       {
-        // pairing -> store master name+UUID hash
-fprintf(stderr,"%s, %d: store master name+UUID hash\n",__FILE__,__LINE__);
+        // pairing -> set master name+UUID hash
+fprintf(stderr,"%s, %d: set master name+UUID hash\n",__FILE__,__LINE__);
+//TODO: lock required?
+        if (String_isEmpty(newMaster.name))
+        {
+          // store name,
+          String_set(newMaster.name,name);
 
-        // calculate hash from UUID
-        (void)Crypt_resetHash(&newMaster.uuidHash);
-        Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
-
-        // store name
-//TODO: lock?
-        String_set(newMaster.name,name);
-
-        // stop pairing
-        stopPairingMaster();
+          // calculate hash from UUID
+          (void)Crypt_resetHash(&newMaster.uuidHash);
+          Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
+        }
       }
 
       // free resources
@@ -4708,7 +4814,8 @@ fprintf(stderr,"%s, %d: store master name+UUID hash\n",__FILE__,__LINE__);
     {
       clientInfo->authorizationState = AUTHORIZATION_STATE_FAIL;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"authorization failure");
-      printInfo(1,"Client authorization failure %s: %s \n",getClientInfo(clientInfo,s,sizeof(s)),Error_getText(error));
+//TODO: remove/replace
+printInfo(1,"Client authorization failure %s: %s \n",getClientInfo(clientInfo,s,sizeof(s)),Error_getText(error));
     }
   }
 
@@ -5108,105 +5215,6 @@ LOCAL void serverCommand_masterGet(ClientInfo *clientInfo, IndexHandle *indexHan
 }
 
 /***********************************************************************\
-* Name   : serverCommand_masterWait
-* Purpose: wait for new master
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            [timeout=<n [s]>]
-*          Result:
-*            name=<name>
-\***********************************************************************/
-
-LOCAL void serverCommand_masterWait(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  uint timeout;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-
-  // timeout
-  StringMap_getUInt(argumentMap,"timeout",&timeout,DEFAULT_PAIRING_MASTER_TIMEOUT);
-
-  // wait for new master
-  startPairingMaster(timeout,PAIRING_MODE_REQUEST);
-  while (   String_isEmpty(newMaster.name)
-         && !Misc_isTimeout(&newMaster.pairingTimeoutInfo)
-         && !isCommandAborted(clientInfo,id)
-        )
-  {
-    // update rest time
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"name=\"\" restTime=%u totalTime=%u",Misc_getRestTimeout(&newMaster.pairingTimeoutInfo)/MS_PER_S,DEFAULT_PAIRING_MASTER_TIMEOUT);
-
-    // sleep a short time
-    Misc_udelay(1LL*US_PER_SECOND);
-  }
-  stopPairingMaster();
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S restTime=0 totalTime=%u",newMaster.name,DEFAULT_PAIRING_MASTER_TIMEOUT);
-
-  // free resources
-}
-
-/***********************************************************************\
-* Name   : serverCommand_masterSet
-* Purpose: set new master
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*          Result:
-*            name=<name>
-\***********************************************************************/
-
-LOCAL void serverCommand_masterSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  Errors error;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-  UNUSED_VARIABLE(argumentMap);
-
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-  // set new master
-  if (!setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"");
-    return;
-  }
-  String_set(globalOptions.masterInfo.name,newMaster.name);
-
-  // update config file
-  error = updateConfig();
-  if (error != ERROR_NONE)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-    return;
-  }
-
-  logMessage(NULL,  // logHandle,
-            LOG_TYPE_ALWAYS,
-            "Paired master '%s'",
-            String_cString(globalOptions.masterInfo.name)
-           );
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
-
-  // free resources
-}
-
-/***********************************************************************\
 * Name   : serverCommand_masterClear
 * Purpose: clear master
 * Input  : clientInfo  - client info
@@ -5221,18 +5229,144 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
 
 LOCAL void serverCommand_masterClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  Errors error;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  String_clear(globalOptions.masterInfo.name);
-  clearHash(&globalOptions.masterInfo.uuidHash);
+  error = clearPairedMaster();
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+    return;
+  }
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_masterPairingStart
+* Purpose: start pairing new master
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            timeout=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void serverCommand_masterPairingStart(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  uint   timeout;
+  Errors error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get timeout
+  StringMap_getUInt(argumentMap,"timeout",&timeout,DEFAULT_PAIRING_MASTER_TIMEOUT);
+
+  // start pairing
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+  abortPairingMaster();
+  startPairingMaster(timeout,PAIRING_MODE_MANUAL);
+
+  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+}
+
+/***********************************************************************\
+* Name   : serverCommand_masterPairingStop
+* Purpose: stop pairing new master
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            pair=yes|no
+*          Result:
+*            name=<name>
+\***********************************************************************/
+
+LOCAL void serverCommand_masterPairingStop(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  bool   pairFlag;
+  Errors error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get pair state
+  if (!StringMap_getBool(argumentMap,"pair",&pairFlag,FALSE))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pair=yes|no");
+    return;
+  }
+
+  if (pairFlag)
+  {
+    error = stopPairingMaster(newMaster.name,&newMaster.uuidHash);
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      return;
+    }
+  }
+  else
+  {
+    abortPairingMaster();
+  }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"name=%'S",globalOptions.masterInfo.name);
+}
 
-  // free resources
+/***********************************************************************\
+* Name   : serverCommand_masterPairingStatus
+* Purpose: get pairing status new master
+* Input  : clientInfo  - client info
+*          indexHandle - index handle
+*          id          - command id
+*          argumentMap - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*          Result:
+*            name=<name>
+*            restTime=<n> [s]
+*            totalTime=<n> [s]
+\***********************************************************************/
+
+LOCAL void serverCommand_masterPairingStatus(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  bool   pairFlag;
+  Errors error;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(argumentMap);
+
+  ServerIO_sendResult(&clientInfo->io,
+                      id,
+                      TRUE,
+                      ERROR_NONE,
+                      "name=%'S restTime=%lu totalTime=%lu",
+                      newMaster.name,
+                      Misc_getRestTimeout(&newMaster.pairingTimeoutInfo)/MS_PER_S,
+                      Misc_getTotalTimeout(&newMaster.pairingTimeoutInfo)/MS_PER_S
+                     );
 }
 
 /***********************************************************************\
@@ -10090,7 +10224,7 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                             "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                             scheduleNode->uuid,
-                            (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType,NULL) : "*",
+                            (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType) : "*",
                             date,
                             weekDays,
                             time,
@@ -14180,7 +14314,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                         jobName,
                         scheduleUUID,
                         entityId,
-                        Archive_archiveTypeToString(archiveType,"normal"),
+                        Archive_archiveTypeToString(archiveType),
                         createdDateTime,
                         lastErrorMessage,
                         totalSize,
@@ -14448,7 +14582,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                         jobName,
                         entityId,
                         scheduleUUID,
-                        Archive_archiveTypeToString(archiveType,"normal"),
+                        Archive_archiveTypeToString(archiveType),
                         storageId,
                         hostName,
                         printableStorageName,
@@ -14494,28 +14628,46 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 *            [sortMode=ARCHIVE|NAME|TYPE|SIZE|LAST_CHANGED]
 *            [ordering=ASCENDING|DESCENDING]
 *          Result:
-*            jobName=<name> archiveType=<type> \
-*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> name=<name> entryType=FILE size=<n [bytes]> dateTime=<time stamp> \
+*            jobName=<name> \
++            archiveType=<type> \
+*            hostName=<name> \
+*            storageName=<name> storageDateTime=<time stamp> \
+*            entryId=<n> name=<name> entryType=FILE size=<n [bytes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
-*            jobName=<name> archiveType=<type> \
-*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=IMAGE name=<name> size=<n [bztes]> dateTime=<time stamp> \
+*            jobName=<name> \
++            archiveType=<type> \
+*            hostName=<name> \
++            storageName=<name> storageDateTime=<time stamp> \
++            entryId=<n> entryType=IMAGE name=<name> size=<n [bztes]> dateTime=<time stamp> \
 *            blockOffset=<n [bytes]> blockCount=<n>
 *
-*            jobName=<name> archiveType=<type> \
-*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=DIRECTORY name=<name> size=<n [bztes]> dateTime=<time stamp> \
+*            jobName=<name> \
++            archiveType=<type> \
+*            hostName=<name> \
++            storageName=<name> storageDateTime=<time stamp> \
++            entryId=<n> entryType=DIRECTORY name=<name> size=<n [bztes]> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 *
-*            jobName=<name> archiveType=<type> \
-*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=LINK linkName=<name> name=<name> \
+*            jobName=<name> \
++            archiveType=<type> \
+*            hostName=<name> \
++            storageName=<name> storageDateTime=<time stamp> \
++            entryId=<n> entryType=LINK linkName=<name> name=<name> \
 *            dateTime=<time stamp> userId=<n> groupId=<n> permission=<n>
 *
-*            jobName=<name> archiveType=<type> \
-*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=HARDLINK name=<name> dateTime=<time stamp>
+*            jobName=<name> \
++            archiveType=<type> \
+*            hostName=<name> \
++            storageName=<name> storageDateTime=<time stamp> \
++            entryId=<n> entryType=HARDLINK name=<name> dateTime=<time stamp>
 *            userId=<n> groupId=<n> permission=<n> fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
-*            jobName=<name> archiveType=<type> \
-*            hostName=<name> storageName=<name> storageDateTime=<time stamp> entryId=<n> entryType=SPECIAL name=<name> dateTime=<time stamp> \
+*            jobName=<name> \
++            archiveType=<type> \
+*            hostName=<name> \
++            storageName=<name> storageDateTime=<time stamp> \
++            entryId=<n> entryType=SPECIAL name=<name> dateTime=<time stamp> \
 *            userId=<n> groupId=<n> permission=<n>
 \***********************************************************************/
 
@@ -14527,7 +14679,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
                           jobName, \
-                          Archive_archiveTypeToString(archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType), \
                           hostName, \
                           storageName, \
                           storageDateTime, \
@@ -14549,7 +14701,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=IMAGE name=%'S fileSystemType=%s size=%"PRIu64" blockOffset=%"PRIu64" blockCount=%"PRIu64"", \
                           jobName, \
-                          Archive_archiveTypeToString(archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType), \
                           hostName, \
                           storageName, \
                           storageDateTime, \
@@ -14568,7 +14720,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=DIRECTORY name=%'S size=%"PRIu64" dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
-                          Archive_archiveTypeToString(archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType), \
                           hostName, \
                           storageName, \
                           storageDateTime, \
@@ -14588,7 +14740,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=LINK name=%'S destinationName=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
-                          Archive_archiveTypeToString(archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType), \
                           hostName, \
                           storageName, \
                           storageDateTime, \
@@ -14608,7 +14760,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=HARDLINK name=%'S size=%lld dateTime=%"PRIu64" userId=%u groupId=%u permission=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
                           jobName, \
-                          Archive_archiveTypeToString(archiveType,"normal"), \
+                          Archive_archiveTypeToString(archiveType), \
                           hostName, \
                           storageName, \
                           storageDateTime, \
@@ -14630,7 +14782,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
                           "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=SPECIAL name=%'S dateTime=%"PRIu64" userId=%u groupId=%u permission=%u", \
                           jobName, \
-                          Archive_archiveTypeToString(archiveType,NULL), \
+                          Archive_archiveTypeToString(archiveType), \
                           hostName, \
                           storageName, \
                           storageDateTime, \
@@ -14951,7 +15103,7 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
                         jobName,
                         scheduleUUID,
                         hostName,
-                        Archive_archiveTypeToString(archiveType,"normal"),
+                        Archive_archiveTypeToString(archiveType),
                         createdDateTime,
                         errorMessage,
                         duration,
@@ -16666,9 +16818,13 @@ SERVER_COMMANDS[] =
   { "SERVER_OPTION_FLUSH",         serverCommand_serverOptionFlush,        AUTHORIZATION_STATE_OK      },
 
   { "MASTER_GET",                  serverCommand_masterGet,                AUTHORIZATION_STATE_OK      },
-  { "MASTER_WAIT",                 serverCommand_masterWait,               AUTHORIZATION_STATE_OK      },
-  { "MASTER_SET",                  serverCommand_masterSet,                AUTHORIZATION_STATE_OK      },
+// TODO: remove
+//  { "MASTER_WAIT",                 serverCommand_masterWait,               AUTHORIZATION_STATE_OK      },
+//  { "MASTER_SET",                  serverCommand_masterSet,                AUTHORIZATION_STATE_OK      },
   { "MASTER_CLEAR",                serverCommand_masterClear,              AUTHORIZATION_STATE_OK      },
+  { "MASTER_PAIRING_START",        serverCommand_masterPairingStart,       AUTHORIZATION_STATE_OK      },
+  { "MASTER_PAIRING_STOP",         serverCommand_masterPairingStop,        AUTHORIZATION_STATE_OK      },
+  { "MASTER_PAIRING_STATUS",       serverCommand_masterPairingStatus,      AUTHORIZATION_STATE_OK      },
 
   { "SERVER_LIST",                 serverCommand_serverList,               AUTHORIZATION_STATE_OK      },
   { "SERVER_LIST_ADD",             serverCommand_serverListAdd,            AUTHORIZATION_STATE_OK      },
@@ -18459,34 +18615,22 @@ Errors Server_run(ServerModes       mode,
     {
       if (newMaster.pairingMode == PAIRING_MODE_AUTO)
       {
-        // set new master
-        String_set(globalOptions.masterInfo.name,newMaster.name);
-        setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash);
-
-        // stop auto-pairing master
-        stopPairingMaster();
-
-        if (!String_isEmpty(globalOptions.masterInfo.name))
+        // set paired master
+        if (!String_isEmpty(newMaster.name))
         {
-          // update config file
-          error = updateConfig();
-          if (error == ERROR_NONE)
-          {
-            logMessage(NULL,  // logHandle,
-                       LOG_TYPE_ALWAYS,
-                       "Auto paired master: %s\n",
-                       String_cString(globalOptions.masterInfo.name)
-                      );
-          }
-          else
+          error = setPairedMaster();
+          if (error != ERROR_NONE)
           {
             logMessage(NULL,  // logHandle,
                        LOG_TYPE_ERROR,
-                       "Cannot store master pairing for %s: %s\n",
-                       String_cString(globalOptions.masterInfo.name),Error_getText(error)
+                       "Cannot pair master %s: %s\n",
+                       String_cString(newMaster.name),Error_getText(error)
                       );
           }
         }
+
+        // stop auto-pairing master
+abortPairingMaster();
       }
     }
   }

@@ -5326,73 +5326,25 @@ bool Archive_parseType(const char *name, ArchiveTypes *archiveType, void *userDa
   }
 }
 
-const char *Archive_archiveTypeToString(ArchiveTypes archiveType, const char *defaultValue)
+const char *Archive_archiveTypeToString(ArchiveTypes archiveType)
 {
   return ((ARRAY_FIRST(ARCHIVE_TYPES).archiveType <= archiveType) && (archiveType <= ARRAY_LAST(ARCHIVE_TYPES).archiveType))
            ? ARCHIVE_TYPES[archiveType-ARRAY_FIRST(ARCHIVE_TYPES).archiveType].name
-           : defaultValue;
+           : "unknown";
 }
 
-const char *Archive_archiveTypeToShortString(ArchiveTypes archiveType, const char *defaultValue)
+const char *Archive_archiveTypeToShortString(ArchiveTypes archiveType)
 {
   return ((ARRAY_FIRST(ARCHIVE_TYPES).archiveType <= archiveType) && (archiveType <= ARRAY_LAST(ARCHIVE_TYPES).archiveType))
-           ? ARCHIVE_TYPES[archiveType-ARRAY_FIRST(ARCHIVE_TYPES).archiveType].name
-           : defaultValue;
+           ? ARCHIVE_TYPES[archiveType-ARRAY_FIRST(ARCHIVE_TYPES).archiveType].shortName
+           : "?";
 }
 
-const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType, const char *defaultValue)
+const char *Archive_archiveEntryTypeToString(ArchiveEntryTypes archiveEntryType)
 {
   return ((ARRAY_FIRST(ARCHIVE_ENTRY_TYPES).archiveEntryType <= archiveEntryType) && (archiveEntryType <= ARRAY_LAST(ARCHIVE_ENTRY_TYPES).archiveEntryType))
            ? ARCHIVE_ENTRY_TYPES[archiveEntryType-ARRAY_FIRST(ARCHIVE_ENTRY_TYPES).archiveEntryType].name
-           : defaultValue;
-}
-
-const char *Archive_typeToString(ArchiveTypes archiveType, const char *defaultValue)
-{
-  uint       z;
-  const char *name;
-
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-         && (ARCHIVE_TYPES[z].archiveType != archiveType)
-        )
-  {
-    z++;
-  }
-  if (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-  {
-    name = ARCHIVE_TYPES[z].name;
-  }
-  else
-  {
-    name = defaultValue;
-  }
-
-  return name;
-}
-
-const char *Archive_typeToShortString(ArchiveTypes archiveType)
-{
-  uint       z;
-  const char *name;
-
-  z = 0;
-  while (   (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-         && (ARCHIVE_TYPES[z].archiveType != archiveType)
-        )
-  {
-    z++;
-  }
-  if (z < SIZE_OF_ARRAY(ARCHIVE_TYPES))
-  {
-    name = ARCHIVE_TYPES[z].shortName;
-  }
-  else
-  {
-    name = "U";
-  }
-
-  return name;
+           : "unknown";
 }
 
 bool Archive_parseArchiveEntryType(const char *name, ArchiveEntryTypes *archiveEntryType)

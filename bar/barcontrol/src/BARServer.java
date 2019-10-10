@@ -2364,6 +2364,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   /** set master
    * @return master name
    */
+/*TODO: obsolete?
   public static String setMaster()
     throws BARException, IOException
   {
@@ -2376,6 +2377,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
     return masterName;
   }
+*/
 
   /** update master
    * @return master name
@@ -2866,6 +2868,22 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   /** execute command
    * @param command command to send to BAR server
    * @param debugLevel debug level (0..n)
+   * @param handler handler
+   * @param busyIndicator busy indicator or null
+   */
+  public static void executeCommand(String          commandString,
+                                    int             debugLevel,
+                                    Command.Handler handler,
+                                    BusyIndicator   busyIndicator
+                                   )
+    throws BARException, IOException
+  {
+    executeCommand(commandString,debugLevel,(Command.ResultHandler)null,handler,busyIndicator);
+  }
+
+  /** execute command
+   * @param command command to send to BAR server
+   * @param debugLevel debug level (0..n)
    * @param resultHandler result handler
    */
   public static void executeCommand(String                commandString,
@@ -2874,7 +2892,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                    )
     throws BARException, IOException
   {
-    executeCommand(commandString,debugLevel,resultHandler,(BusyIndicator)null);
+    executeCommand(commandString,debugLevel,resultHandler,(Command.Handler)null);
   }
 
   /** execute command
@@ -2888,7 +2906,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                    )
     throws BARException, IOException
   {
-    executeCommand(commandString,debugLevel,handler);
+    executeCommand(commandString,debugLevel,(Command.ResultHandler)null,handler);
   }
 
   /** execute command

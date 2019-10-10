@@ -3745,10 +3745,12 @@ assert jobData != null;
     class Data
     {
       String masterName;
+      int    restTime;
 
       Data()
       {
         this.masterName = "";
+        this.restTime   = 0;
       }
     };
 
@@ -3806,6 +3808,37 @@ assert jobData != null;
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
+          try
+          {
+            BARServer.executeCommand(StringParser.format("MASTER_PAIRING_STOP pair=yes"),
+                                     1  // debugLevel
+                                    );
+          }
+          catch (final BARException exception)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                Dialogs.close(dialog,false);
+                Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
+              }
+            });
+            return;
+          }
+          catch (final IOException exception)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                Dialogs.close(dialog,false);
+                Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
+              }
+            });
+            return;
+          }
+
           Dialogs.close(dialog,true);
         }
       });
@@ -3825,6 +3858,37 @@ assert jobData != null;
         {
           widgetOKButton.setEnabled(false);
           widgetRestartButton.setEnabled(false);
+
+          try
+          {
+            BARServer.executeCommand(StringParser.format("MASTER_PAIRING_START"),
+                                     1  // debugLevel
+                                    );
+          }
+          catch (final BARException exception)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                Dialogs.close(dialog,false);
+                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master:\n\n")+exception.getMessage());
+              }
+            });
+            return;
+          }
+          catch (final IOException exception)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                Dialogs.close(dialog,false);
+                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master:\n\n")+exception.getMessage());
+              }
+            });
+            return;
+          }
           Background.run(pairMasterRunnable[0]);
         }
       });
@@ -3841,7 +3905,40 @@ assert jobData != null;
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
+          // stop pairing
           pairMasterRunnable[0].abort();
+          try
+          {
+            BARServer.executeCommand(StringParser.format("MASTER_PAIRING_STOP pair=no"),
+                                     1  // debugLevel
+                                    );
+          }
+          catch (final BARException exception)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                Dialogs.close(dialog,false);
+                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master:\n\n")+exception.getMessage());
+              }
+            });
+            return;
+          }
+          catch (final IOException exception)
+          {
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                Dialogs.close(dialog,false);
+                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master:\n\n")+exception.getMessage());
+              }
+            });
+            return;
+          }
+
+          // close dialog
           Dialogs.close(dialog,false);
         }
       });
@@ -3849,99 +3946,74 @@ assert jobData != null;
 
     // install handlers
 
-    // set new master runnable
+    // new master runnable
     pairMasterRunnable[0] = new BackgroundRunnable(dialog,widgetProgressBar)
     {
-      private Command command = null;
+      private final boolean abortFlag[] = {false};
 
       public void run(final Shell dialog, final ProgressBar widgetProgressBar)
       {
         try
         {
-          command = BARServer.asyncExecuteCommand(StringParser.format("MASTER_WAIT"),
-                                   1,  // debugLevel
-                                   new Command.ResultHandler()
-                                   {
-                                     @Override
-                                     public void handle(int i, ValueMap valueMap)
-                                       throws BARException
+          final long restTime[]  = {0};
+          final long totalTime[] = {0};
+
+          do
+          {
+            BARServer.executeCommand(StringParser.format("MASTER_PAIRING_STATUS"),
+                                     1,  // debugLevel
+                                     new Command.Handler()
                                      {
-                                       final int restTime  = valueMap.getInt("restTime" );
-                                       final int totalTime = valueMap.getInt("totalTime");
-
-                                       display.syncExec(new Runnable()
+                                       @Override
+                                       public void handle(int errorCode, String errorData, ValueMap valueMap)
                                        {
-                                         public void run()
-                                         {
-                                           if (!widgetProgressBar.isDisposed())
-                                           {
-                                             widgetProgressBar.setRange(0,totalTime);
-                                             widgetProgressBar.setSelection("%.0fs",restTime);
-                                           }
-                                           else
-                                           {
-                                             abort();
-                                           }
-                                         }
-                                       });
-                                     }
-                                   },
-                                   new Command.Handler()
-                                   {
-                                     @Override
-                                     public void handle(int errorCode, String errorData, ValueMap valueMap)
-                                     {
-                                       data.masterName = valueMap.getString("name");
+                                         data.masterName = valueMap.getString("name");
 
-                                       // enable/disable OK button
-                                       display.syncExec(new Runnable()
-                                       {
-                                         public void run()
-                                         {
-                                           if (   !widgetMasterName.isDisposed()
-                                               && !widgetOKButton.isDisposed()
-                                              )
-                                           {
-                                             widgetMasterName.setText(data.masterName);
+                                         restTime[0]  = valueMap.getInt("restTime" );
+                                         totalTime[0] = valueMap.getInt("totalTime");
 
-                                             if (!data.masterName.isEmpty())
+                                         display.syncExec(new Runnable()
+                                         {
+                                           public void run()
+                                           {
+                                             if (!widgetProgressBar.isDisposed())
                                              {
-                                               widgetOKButton.setEnabled(true);
+                                               widgetProgressBar.setRange(0,totalTime[0]);
+                                               widgetProgressBar.setSelection("%.0fs",restTime[0]);
+
+                                               widgetMasterName.setText(data.masterName);
+
+                                               if (!data.masterName.isEmpty())
+                                               {
+                                                 widgetOKButton.setEnabled(true);
+                                               }
+                                             }
+                                             else
+                                             {
+                                               abort();
                                              }
                                            }
-                                           else
-                                           {
-                                             abort();
-                                           }
-                                         }
-                                       });
+                                         });
+                                       }
                                      }
-                                   }
-                                  );
-          BARServer.asyncCommandWait(command);
+                                    );
+
+            // sleep a short time
+            if ((restTime[0] > 0) && !abortFlag[0])
+            {
+              try { Thread.sleep(1000); } catch (Throwable throwable) { /* ignored */ }
+            }
+          }
+          while ((restTime[0] > 0) && !abortFlag[0]);
         }
         catch (final BARException exception)
         {
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              Dialogs.close(dialog,false);
-              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
-            }
-          });
+          printStackTrace(exception);
           return;
         }
         catch (final IOException exception)
         {
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              Dialogs.close(dialog,false);
-              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
-            }
-          });
+          printStackTrace(exception);
           return;
         }
 
@@ -3960,44 +4032,43 @@ assert jobData != null;
 
       public void abort()
       {
-        if (command != null) command.abort();
+        abortFlag[0] = true;
       }
     };
+
+    // start pairing
+    try
+    {
+      BARServer.executeCommand(StringParser.format("MASTER_PAIRING_START"),
+                               1  // debugLevel
+                              );
+    }
+    catch (final BARException exception)
+    {
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot start pairing master:\n\n")+exception.getMessage());
+        }
+      });
+      return false;
+    }
+    catch (final IOException exception)
+    {
+      display.syncExec(new Runnable()
+      {
+        public void run()
+        {
+          Dialogs.error(shell,BARControl.tr("Cannot start pairing master:\n\n")+exception.getMessage());
+        }
+      });
+      return false;
+    }
     Background.run(pairMasterRunnable[0]);
 
     // run dialog
     Boolean result = (Boolean)Dialogs.run(dialog);
-    if ((result != null) && result)
-    {
-      if (!data.masterName.isEmpty())
-      {
-        try
-        {
-          BARServer.setMaster();
-          result = true;
-        }
-        catch (final Exception exception)
-        {
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              Dialogs.close(dialog,false);
-              Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
-            }
-          });
-          result = false;
-        }
-      }
-      else
-      {
-        result = false;
-      }
-    }
-    else
-    {
-      result = false;
-    }
 
     updateMaster();
 
@@ -4028,6 +4099,7 @@ assert jobData != null;
   private void updateMaster()
   {
     String name = BARServer.getMaster();
+Dprintf.dprintf("updateMaster name=%s",name);
 
     if (!name.isEmpty())
     {
@@ -4136,6 +4208,7 @@ assert jobData != null;
           try
           {
             final String masterName[] = new String[]{""};
+//TODO
             BARServer.executeCommand(StringParser.format("MASTER_SET"),
                                      1,  // debugLevel
                                      new Command.ResultHandler()

@@ -1665,7 +1665,7 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
     {
       return error;
     }
-    
+
     return ERROR_NONE;
   });
   Array_done(&databaseIds);
@@ -3041,7 +3041,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
     {
       return error;
     }
-    
+
     return ERROR_NONE;
   });
   Array_done(&databaseIds);
@@ -3268,7 +3268,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
     {
       return error;
     }
-    
+
     return ERROR_NONE;
   });
   Array_done(&databaseIds);
@@ -3327,7 +3327,7 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
     {
       return error;
     }
-    
+
     return ERROR_NONE;
   });
   Array_done(&databaseIds);
@@ -5211,7 +5211,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
                                     hostName,
-                                    Archive_archiveTypeToString(archiveType,NULL),
+                                    Archive_archiveTypeToString(archiveType),
                                     createdDateTime,
                                     errorMessage,
                                     duration,
@@ -5984,7 +5984,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                     "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s archiveType=%s createdDateTime=%llu locked=%y",
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
-                                    Archive_archiveTypeToString(archiveType,NULL),
+                                    Archive_archiveTypeToString(archiveType),
                                     createdDateTime,
                                     locked
                                    );

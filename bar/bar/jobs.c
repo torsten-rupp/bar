@@ -3116,7 +3116,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
       // write <last execution time stamp>+<type>
       if (lastExecutedDateTime > 0LL)
       {
-        error = File_printLine(&fileHandle,"%lld %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType,"UNKNOWN"));
+        error = File_printLine(&fileHandle,"%lld %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType));
         if (error != ERROR_NONE)
         {
           File_close(&fileHandle);
@@ -3646,7 +3646,7 @@ Errors Job_write(JobNode *jobNode)
       LIST_ITERATE(&jobNode->job.options.persistenceList,persistenceNode)
       {
         // insert new persistence sections
-        String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType,"normal"));
+        String_format(line,"[persistence %s]",Archive_archiveTypeToString(persistenceNode->archiveType));
         StringList_insert(&jobLinesList,line,nextStringNode);
 
         CONFIG_VALUE_ITERATE(JOB_CONFIG_VALUES,"persistence",i)

@@ -133,8 +133,9 @@
 # salt length
 const SALT_LENGTH                    = 128
 
-# archive type
+# archive types (Note: enumerate continous, no gaps!)
 const ARCHIVE_TYPE_NONE              = 0
+
 const ARCHIVE_TYPE_NORMAL            = 1
 const ARCHIVE_TYPE_FULL              = 2
 const ARCHIVE_TYPE_INCREMENTAL       = 3
@@ -248,7 +249,8 @@ const COMPRESS_ALGORITHM_ZSTD_17     = 87
 const COMPRESS_ALGORITHM_ZSTD_18     = 88
 const COMPRESS_ALGORITHM_ZSTD_19     = 89
 
-const FILE_SYSTEM_TYPE_NONE          = 0
+ const FILE_SYSTEM_TYPE_NONE          = 0
+
 const FILE_SYSTEM_TYPE_EXT2          = 1
 const FILE_SYSTEM_TYPE_EXT3          = 2
 const FILE_SYSTEM_TYPE_EXT4          = 3
@@ -259,13 +261,17 @@ const FILE_SYSTEM_TYPE_REISERFS1     = 7
 const FILE_SYSTEM_TYPE_REISERFS3     = 8
 const FILE_SYSTEM_TYPE_REISERFS4     = 9
 
+# hash algorithms
 const HASH_ALGORITHM_NONE            = 0
+
 const HASH_ALGORITHM_SHA2_224        = 1
 const HASH_ALGORITHM_SHA2_256        = 2
 const HASH_ALGORITHM_SHA2_384        = 3
 const HASH_ALGORITHM_SHA2_512        = 4
 
+# MAC algorithms
 const MAC_ALGORITHM_NONE             = 0
+
 const MAC_ALGORITHM_SHA2_224         = 1
 const MAC_ALGORITHM_SHA2_256         = 2
 const MAC_ALGORITHM_SHA2_384         = 3

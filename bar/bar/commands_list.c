@@ -340,7 +340,7 @@ LOCAL void printMetaInfo(ConstString          userName,
   printConsole(stdout,"Host name    : %s\n",String_cString(hostName));
   printConsole(stdout,"Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
   printConsole(stdout,"Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
-  printConsole(stdout,"Type         : %s\n",Archive_archiveTypeToString(archiveType,"UNKNOWN"));
+  printConsole(stdout,"Type         : %s\n",Archive_archiveTypeToString(archiveType));
   printConsole(stdout,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
   printConsole(stdout,"Signatures   : ");
   switch (allCryptSignatureState)

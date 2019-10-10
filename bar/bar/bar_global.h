@@ -133,6 +133,7 @@ typedef enum
 // archive types
 typedef enum
 {
+//TODO: remove?
   ARCHIVE_TYPE_NONE,
 
   ARCHIVE_TYPE_NORMAL       = CHUNK_CONST_ARCHIVE_TYPE_NORMAL,        // normal archives; no incremental list file
@@ -141,6 +142,7 @@ typedef enum
   ARCHIVE_TYPE_DIFFERENTIAL = CHUNK_CONST_ARCHIVE_TYPE_DIFFERENTIAL,  // differential achives, use incremental list file
   ARCHIVE_TYPE_CONTINUOUS   = CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS,    // continuous archives, use continuous collected file list
 
+//TODO: separate?
   ARCHIVE_TYPE_ANY,
 
   ARCHIVE_TYPE_UNKNOWN
