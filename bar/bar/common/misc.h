@@ -84,7 +84,11 @@ typedef struct
 #endif
 
 // timeout info
-typedef uint64 TimeoutInfo;
+typedef struct
+{
+  long   timeout;
+  uint64 endTimestamp;
+} TimeoutInfo;
 
 // text macros
 typedef enum
@@ -297,7 +301,8 @@ INLINE void Misc_initTimeout(TimeoutInfo *timeoutInfo, long timeout)
 {
   assert(timeoutInfo != NULL);
 
-  (*timeoutInfo) = (timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeout*US_PER_MS : 0LL;
+  timeoutInfo->timeout      = timeout;
+  timeoutInfo->endTimestamp = (timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeout*US_PER_MS : 0LL;
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
@@ -336,7 +341,8 @@ INLINE void Misc_restartTimeout(TimeoutInfo *timeoutInfo, long timeout)
 {
   assert(timeoutInfo != NULL);
 
-  (*timeoutInfo) = (timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeout*US_PER_MS : 0LL;
+  timeoutInfo->timeout      = timeout;
+  timeoutInfo->endTimestamp = (timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeout*US_PER_MS : 0LL;
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
@@ -355,7 +361,7 @@ INLINE void Misc_stopTimeout(TimeoutInfo *timeoutInfo)
 {
   assert(timeoutInfo != NULL);
 
-  (*timeoutInfo) = 0LL;
+  timeoutInfo->endTimestamp = 0LL;
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
@@ -372,19 +378,40 @@ INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo);
 #if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
 INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo)
 {
-  int64 restTime;
+  uint64 timestamp;
 
   assert(timeoutInfo != NULL);
 
-  if ((*timeoutInfo) != 0LL)
+  if (timeoutInfo->timeout != WAIT_FOREVER)
   {
-    restTime = (int64)(*timeoutInfo)-(int64)Misc_getTimestamp();
-    return (restTime >= 0LL) ? (long)(restTime/US_PER_MS) : 0L;
+    timestamp = Misc_getTimestamp();
+    return (timestamp < timeoutInfo->endTimestamp) ? (long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS) : 0L;
   }
   else
   {
     return WAIT_FOREVER;
   }
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Misc_getTotalTimeout
+* Purpose: get total timeout
+* Input  : timeoutInfo - timeout info
+* Output : -
+* Return : total timeout [ms]
+* Notes  : -
+\***********************************************************************/
+
+INLINE long Misc_getTotalTimeout(const TimeoutInfo *timeoutInfo);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE long Misc_getTotalTimeout(const TimeoutInfo *timeoutInfo)
+{
+  uint64 timestamp;
+
+  assert(timeoutInfo != NULL);
+
+  return timeoutInfo->timeout;
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
@@ -403,7 +430,7 @@ INLINE bool Misc_isTimeout(const TimeoutInfo *timeoutInfo)
 {
   assert(timeoutInfo != NULL);
 
-  return (Misc_getTimestamp() > (*timeoutInfo));
+  return (Misc_getTimestamp() > timeoutInfo->endTimestamp);
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
