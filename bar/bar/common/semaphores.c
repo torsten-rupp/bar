@@ -1263,7 +1263,7 @@ LOCAL bool lock(const char         *__fileName__,
       {
         __SEMAPHORE_LOCK(semaphore,semaphoreLockType,DEBUG_FLAG_READ,"R");
       }
-      assert(semaphore->readWriteLockCount == 0);
+      assert((semaphore->readWriteLockCount == 0) || Semaphore_isOwned(semaphore));
 //++fprintf(stderr,"%s, %d: thread=%s lock sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
 //++fprintf(stderr,"%s, %4d: thread=%s sem=%p count=%d owner=%d: %d %d %d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner,semaphore->lockedByCount,semaphore->readLockCount,semaphore->readWriteLockCount);
       assert(semaphore->lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
