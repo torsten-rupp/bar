@@ -3180,7 +3180,9 @@ void Crypt_resetHash(CryptHash *cryptHash)
   switch (cryptHash->cryptHashAlgorithm)
   {
     case CRYPT_HASH_ALGORITHM_NONE:
-//TODO
+      if (cryptHash->none.data != NULL) freeSecure(cryptHash->none.data);
+      cryptHash->none.data       = NULL;
+      cryptHash->none.dataLength = 0;
       break;
     case CRYPT_HASH_ALGORITHM_SHA2_224:
     case CRYPT_HASH_ALGORITHM_SHA2_256:
