@@ -249,7 +249,8 @@ const COMPRESS_ALGORITHM_ZSTD_17     = 87
 const COMPRESS_ALGORITHM_ZSTD_18     = 88
 const COMPRESS_ALGORITHM_ZSTD_19     = 89
 
- const FILE_SYSTEM_TYPE_NONE          = 0
+# file systems
+const FILE_SYSTEM_TYPE_NONE          = 0
 
 const FILE_SYSTEM_TYPE_EXT2          = 1
 const FILE_SYSTEM_TYPE_EXT3          = 2
