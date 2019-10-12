@@ -1460,7 +1460,6 @@ public class BARServer
   public final static String            DEFAULT_KEY_FILE_NAME         = "bar-key.pem";          // default key file name
   public final static String            DEFAULT_JAVA_KEY_FILE_NAME    = "bar.jks";              // default Java key file name
 
-  public static String                  masterName;                                             // master name or null
   public static char                    fileSeparator;
 
   private final static int              SOCKET_READ_TIMEOUT    = 30*1000;                       // timeout reading socket [ms]
@@ -2178,15 +2177,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       mode = valueMap.getEnum("mode",Modes.class,Modes.MASTER);
 
-      // get master name
-      syncExecuteCommand(input,
-                         output,
-                         "MASTER_GET",
-                         2,  // debugLevel
-                         valueMap
-                        );
-      masterName = valueMap.getString("name",null);
-
       // get file separator character
       syncExecuteCommand(input,
                          output,
@@ -2351,60 +2341,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static Modes getMode()
   {
     return mode;
-  }
-
-  /** get master
-   * @return master name
-   */
-  public static String getMaster()
-  {
-    return masterName;
-  }
-
-  /** set master
-   * @return master name
-   */
-/*TODO: obsolete?
-  public static String setMaster()
-    throws BARException, IOException
-  {
-    ValueMap valueMap = new ValueMap();
-    BARServer.executeCommand(StringParser.format("MASTER_SET"),
-                             1,  // debug level
-                             valueMap
-                            );
-    masterName = valueMap.getString("name");
-
-    return masterName;
-  }
-*/
-
-  /** update master
-   * @return master name
-   */
-/*TODO: obsolete?
-  public static String updateMaster()
-    throws BARException
-  {
-    ValueMap valueMap = new ValueMap();
-    BARServer.executeCommand(StringParser.format("MASTER_GET"),
-                             1,  // debug level
-                             valueMap
-                            );
-    masterName = valueMap.getString("name");
-
-    return masterName;
-  }
-*/
-
-  /** clear master
-   */
-  public static void clearMaster()
-    throws BARException, IOException
-  {
-    BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),0);
-
-    masterName = "";
   }
 
   /** quit BAR server (for debug only)

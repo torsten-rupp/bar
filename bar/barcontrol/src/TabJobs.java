@@ -15591,9 +15591,9 @@ throw new Error("NYI");
                                  @Override
                                  public void handle(int i, ValueMap valueMap)
                                  {
-                                   int          persistenceId   = valueMap.getInt    ("persistenceId",                 0                );
-                                   long         entityId        = valueMap.getLong   ("entityId",                      0L               );
-                                   ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",ArchiveTypes.class,ArchiveTypes.NONE);
+                                   int          persistenceId   = valueMap.getInt    ("persistenceId",                 0                   );
+                                   long         entityId        = valueMap.getLong   ("entityId",                      0L                  );
+                                   ArchiveTypes archiveType     = valueMap.getEnum   ("archiveType",ArchiveTypes.class,ArchiveTypes.UNKNOWN);
                                    int          minKeep         = (!valueMap.getString("minKeep","*").equals("*"))
                                                                     ? valueMap.getInt("minKeep")
                                                                     : Keep.ALL;
@@ -15603,11 +15603,11 @@ throw new Error("NYI");
                                    int          maxAge          = (!valueMap.getString("maxAge","*").equals("*"))
                                                                     ? valueMap.getInt("maxAge")
                                                                     : Age.FOREVER;
-                                   long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L               );
-                                   long         totalSize       = valueMap.getLong   ("size"                                            );
-                                   long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L               );
-                                   long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",                0L               );
-                                   boolean      inTransit       = valueMap.getBoolean("inTransit",                     false            );
+                                   long         createdDateTime = valueMap.getLong   ("createdDateTime",               0L                  );
+                                   long         totalSize       = valueMap.getLong   ("size"                                               );
+                                   long         totalEntryCount = valueMap.getLong   ("totalEntryCount",               0L                  );
+                                   long         totalEntrySize  = valueMap.getLong   ("totalEntrySize",                0L                  );
+                                   boolean      inTransit       = valueMap.getBoolean("inTransit",                     false               );
 
                                    if      (entityId != 0L)
                                    {

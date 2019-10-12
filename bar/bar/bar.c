@@ -10792,6 +10792,8 @@ int main(int argc, const char *argv[])
 
   assert(argc >= 0);
 
+//FragmentList_unitTests(); exit(1);
+
   // init
   error = initAll();
   if (error != ERROR_NONE)

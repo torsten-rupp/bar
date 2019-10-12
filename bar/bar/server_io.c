@@ -927,6 +927,7 @@ SOCKET_TYPE_PLAIN,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
   #endif /* NDEBUG */
 
+fprintf(stderr,"%s, %d: __ServerIO_disconnect\n",__FILE__,__LINE__);
 //TODO
 #if 0
   // signal disconnect to wait result

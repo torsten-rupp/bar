@@ -119,7 +119,8 @@ LOCAL_INLINE void __setConnectorState(const char      *__fileName__,
   #endif /* not NDEBUG */
 
   connectorInfo->state = state;
-//fprintf(stderr,"%s, %d: setConnectorState %p: %d\n",__fileName__,__lineNb__,connectorInfo,state);
+
+{ const char *S[]={"NONE","CONNECTED","AUTHORIZED","DISCONNECTED"}; fprintf(stderr,"%s, %d: setConnectorState %p: %s,%d -> %s\n",__fileName__,__lineNb__,connectorInfo,(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK) ? String_cString(connectorInfo->io.network.name):"",(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK) ? connectorInfo->io.network.port:0,S[state]); }
 }
 
 /***********************************************************************\
@@ -199,7 +200,6 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
-  assert(Connector_isConnected(connectorInfo));
 
   // close storage
   if (connectorInfo->storageOpenFlag)
@@ -2861,15 +2861,21 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
         }
         else
         {
-          // not data -> stop
-          break;
+          // disconnect -> stop
+          setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
         }
       }
       else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
       {
-        // error -> stop
-        break;
+        // error/disconnect -> stop
+        setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
       }
+      #ifndef NDEBUG
+        else
+        {
+          HALT_INTERNAL_ERROR("unknown poll events 0x%x",pollfds[0].revents);
+        }
+      #endif /* NDEBUG */
     }
   }
 
@@ -3016,7 +3022,6 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
   Errors error;
   String hostName;
   String encryptedUUID;
-  String n,e;
 
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -3024,11 +3029,6 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
   // init variables
   hostName      = String_new();
   encryptedUUID = String_new();
-  n             = String_new();
-  e             = String_new();
-
-  // get modules/exponent from public key
-//  Crypt_getPublicKeyModulusExponent(&connectorInfo->io.publicKey,e,n);
 
   // get host name/encrypted UUID for authorization
   error = ServerIO_encryptData(&connectorInfo->io,
@@ -3038,8 +3038,6 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
                               );
   if (error != ERROR_NONE)
   {
-    String_delete(e);
-    String_delete(n);
     String_delete(encryptedUUID);
     String_delete(hostName);
     return error;
@@ -3054,18 +3052,13 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    NULL,  // resultMap
                                    "AUTHORIZE encryptType=%s name=%'S encryptedUUID=%'S",
-//TODO: remove
-//                                   "AUTHORIZE encryptType=%s n=%S e=%S name=%'S encryptedUUID=%'S",
-//                                   n,
-//                                   e,
                                    ServerIO_encryptTypeToString(connectorInfo->io.encryptType,"NONE"),
                                    hostName,
                                    encryptedUUID
                                   );
+fprintf(stderr,"%s, %d: AUTHORIZE %s\n",__FILE__,__LINE__,Error_getText(error));
   if (error != ERROR_NONE)
   {
-    String_delete(e);
-    String_delete(n);
     String_delete(encryptedUUID);
     String_delete(hostName);
     return error;
@@ -3075,8 +3068,6 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
   setConnectorState(connectorInfo,CONNECTOR_STATE_AUTHORIZED);
 
   // free resources
-  String_delete(e);
-  String_delete(n);
   String_delete(encryptedUUID);
   String_delete(hostName);
 

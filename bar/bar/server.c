@@ -204,10 +204,12 @@ typedef struct
 // authorization states
 typedef enum
 {
-  AUTHORIZATION_STATE_WAITING,
-  AUTHORIZATION_STATE_OK,
-  AUTHORIZATION_STATE_FAIL,
+  AUTHORIZATION_STATE_WAITING = 1 << 0,
+  AUTHORIZATION_STATE_CLIENT  = 1 << 1,
+  AUTHORIZATION_STATE_MASTER  = 1 << 2,
+  AUTHORIZATION_STATE_FAIL    = 1 << 3,
 } AuthorizationStates;
+typedef ulong AuthorizationStateSet;
 
 // authorization fail node
 typedef struct AuthorizationFailNode
@@ -311,7 +313,7 @@ typedef void(*ServerCommandFunction)(ClientInfo      *clientInfo,
 typedef struct
 {
   ServerCommandFunction serverCommandFunction;
-  AuthorizationStates   authorizationState;
+  AuthorizationStateSet authorizationStateSet;
   uint                  id;
   StringMap             argumentMap;
 } Command;
@@ -813,6 +815,11 @@ LOCAL Errors setPairedMaster(void)
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
+  logMessage(NULL,  // logHandle,
+            LOG_TYPE_ALWAYS,
+            "Paired master '%s'",
+            String_cString(globalOptions.masterInfo.name)
+           );
 
   // update config file
   error = updateConfig();
@@ -820,12 +827,6 @@ LOCAL Errors setPairedMaster(void)
   {
     return error;
   }
-
-  logMessage(NULL,  // logHandle,
-            LOG_TYPE_ALWAYS,
-            "Paired master '%s'",
-            String_cString(globalOptions.masterInfo.name)
-           );
 
   return ERROR_NONE;
 }
@@ -841,19 +842,49 @@ LOCAL Errors setPairedMaster(void)
 
 LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 {
+  ClientNode *clientNode,*disconnectClientNode;
+
   if (newMaster.pairingMode == PAIRING_MODE_NONE)
   {
-    // start pairing new master
-    newMaster.pairingMode = pairingMode;
-    String_clear(newMaster.name);
-    Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
-
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                (pairingMode == PAIRING_MODE_AUTO)
-                 ? "Started auto pairing master"
-                 : "Started pairing master"
+                 ? "Start auto pairing master"
+                 : "Start pairing master"
               );
+  }
+  else
+  {
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               (pairingMode == PAIRING_MODE_AUTO)
+                 ? "Restart auto pairing master"
+                 : "Restart pairing master"
+              );
+  }
+
+  // start pairing new master
+  newMaster.pairingMode = pairingMode;
+  String_clear(newMaster.name);
+  Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
+
+  // disconnect all currently connected masters for re-pairing
+  SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    clientNode = clientList.head;
+    while (clientNode != NULL)
+    {
+      if (IS_SET(clientNode->clientInfo.authorizationState,AUTHORIZATION_STATE_MASTER))
+      {
+        disconnectClientNode = clientNode;
+        clientNode = List_remove(&clientList,disconnectClientNode);
+        deleteClient(disconnectClientNode);
+      }
+      else
+      {
+        clientNode = clientNode->next;
+      }
+    }
   }
 }
 
@@ -869,8 +900,7 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 
 LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
 {
-  ClientNode *clientNode;
-  Errors     error;
+  Errors error;
 
   assert(name != NULL);
   assert(uuidHash != NULL);
@@ -878,54 +908,34 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
   // set/clear paired master
   if (!String_isEmpty(name))
   {
-    // disconnect currently paired master
-    SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      clientNode = LIST_FIND(&clientList,
-                             clientNode,
-                                (clientNode->clientInfo.io.type == SERVER_IO_TYPE_NETWORK)
-                             && String_equals(clientNode->clientInfo.io.network.name,globalOptions.masterInfo.name)
-                            );
-//fprintf(stderr,"%s, %d: globalOptions.masterInfo.name=%s\n",__FILE__,__LINE__,String_cString(globalOptions.masterInfo.name));
-      if (clientNode != NULL)
-      {
-        List_remove(&clientList,clientNode);
-        deleteClient(clientNode);
-      }
-    }
-
     // pair new master
     String_set(globalOptions.masterInfo.name,newMaster.name);
     if (!setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash))
     {
       return ERROR_INSUFFICIENT_MEMORY;
     }
-
-    // update config file
-    error = updateConfig();
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
     logMessage(NULL,  // logHandle,
               LOG_TYPE_ALWAYS,
               "Paired master '%s'",
               String_cString(globalOptions.masterInfo.name)
              );
   }
+  newMaster.pairingMode = PAIRING_MODE_NONE;
+  logMessage(NULL,  // logHandle,
+             LOG_TYPE_ALWAYS,
+             (newMaster.pairingMode == PAIRING_MODE_AUTO)
+               ? "Stopped auto pairing master"
+               : "Stopped pairing master"
+            );
 
-  // stop pairing
-  if (newMaster.pairingMode != PAIRING_MODE_NONE)
+  if (!String_isEmpty(name))
   {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               (newMaster.pairingMode == PAIRING_MODE_AUTO)
-                 ? "Stopped auto pairing master"
-                 : "Stopped pairing master"
-              );
-
-    newMaster.pairingMode = PAIRING_MODE_NONE;
+    // update config file
+    error = updateConfig();
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
   }
 
   return ERROR_NONE;
@@ -966,7 +976,8 @@ LOCAL void abortPairingMaster(void)
 
 LOCAL Errors clearPairedMaster(void)
 {
-  Errors error;
+  ClientNode *clientNode,*disconnectClientNode;
+  Errors     error;
 
   assert(newMaster.pairingMode == PAIRING_MODE_NONE);
 
@@ -975,6 +986,29 @@ LOCAL Errors clearPairedMaster(void)
     // clear paired master
     String_clear(globalOptions.masterInfo.name);
     clearHash(&globalOptions.masterInfo.uuidHash);
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Cleared paired master"
+              );
+
+    // disconnect all currently connected masters
+    SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    {
+      clientNode = clientList.head;
+      while (clientNode != NULL)
+      {
+        if (IS_SET(clientNode->clientInfo.authorizationState,AUTHORIZATION_STATE_MASTER))
+        {
+          disconnectClientNode = clientNode;
+          clientNode = List_remove(&clientList,disconnectClientNode);
+          deleteClient(disconnectClientNode);
+        }
+        else
+        {
+          clientNode = clientNode->next;
+        }
+      }
+    }
 
     // update config file
     error = updateConfig();
@@ -982,11 +1016,6 @@ LOCAL Errors clearPairedMaster(void)
     {
       return error;
     }
-
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Cleared paired master"
-              );
   }
 
   return ERROR_NONE;
@@ -2187,14 +2216,12 @@ LOCAL void pairingThreadCode(void)
         // try pairing all slaves
         JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          // disconnect lost slave connections
+          // disocnnect disconnected slaves
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
-            if (   (slaveNode->state != SLAVE_STATE_OFFLINE)
-                && !Connector_isConnected(&slaveNode->connectorInfo))
+            if (Connector_isDisconnected(&slaveNode->connectorInfo))
             {
               Connector_disconnect(&slaveNode->connectorInfo);
-              slaveNode->state = SLAVE_STATE_OFFLINE;
             }
           }
 
@@ -2241,46 +2268,46 @@ LOCAL void pairingThreadCode(void)
           // try connect new slaves, authorize
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
-            if (!Connector_isConnected(&slaveNode->connectorInfo))
-            {
-              // try connect to slave
-              error = Connector_connect(&slaveNode->connectorInfo,
-                                        slaveNode->name,
-                                        slaveNode->port
-                                       );
-              if (error == ERROR_NONE)
+            if (!Connector_isDisconnected(&slaveNode->connectorInfo))
               {
-fprintf(stderr,"%s, %d: connected %s:%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port);
-                slaveNode->state = SLAVE_STATE_ONLINE;
-              }
-              else
+              if (!Connector_isConnected(&slaveNode->connectorInfo))
               {
-                anyOfflineFlag = TRUE;
+                // try connect to slave
+                error = Connector_connect(&slaveNode->connectorInfo,
+                                          slaveNode->name,
+                                          slaveNode->port
+                                         );
+                if (error != ERROR_NONE)
+                {
+                  anyOfflineFlag = TRUE;
+                }
               }
-            }
 
-            // try authorize on slave
-            if (   Connector_isConnected(&slaveNode->connectorInfo)
-                && !Connector_isAuthorized(&slaveNode->connectorInfo)
-               )
-            {
-fprintf(stderr,"%s, %d: try authorized %s:%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port);
-              error = Connector_authorize(&slaveNode->connectorInfo);
-              if (error == ERROR_NONE)
+              // try authorize on slave
+              if (   Connector_isConnected(&slaveNode->connectorInfo)
+                  && !Connector_isAuthorized(&slaveNode->connectorInfo)
+                 )
               {
-                slaveNode->state = SLAVE_STATE_PAIRED;
-fprintf(stderr,"%s, %d: authorized %s:%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port);
+                error = Connector_authorize(&slaveNode->connectorInfo);
+                if (error != ERROR_NONE)
+                {
+                  anyUnpairedFlag = TRUE;
+                }
               }
-              else
-              {
-fprintf(stderr,"%s, %d: authorized fail %s\n",__FILE__,__LINE__,Error_getText(error));
-                anyUnpairedFlag = TRUE;
-              }
+#if 0
+fprintf(stderr,"%s, %d: checked %s:%d : slavestate=%d slaveNode=%p connectstate=%d Connector_isConnected=%d\n",__FILE__,__LINE__,
+String_cString(slaveNode->name),
+slaveNode->port,
+jobNode->slaveState,
+slaveNode,
+slaveNode->connectorInfo.state,
+Connector_isConnected(&slaveNode->connectorInfo)
+);
+#endif
             }
-fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cString(jobNode->job.slaveHost.name),jobNode->job.slaveHost.port,jobNode->slaveState);
           }
 
-          // store state
+          // store slave state in job
           JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             JOB_LIST_ITERATE(jobNode)
@@ -2293,7 +2320,9 @@ fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cSt
                                                );
                 if (slaveNode != NULL)
                 {
-                  jobNode->slaveState = slaveNode->state;
+                  if      (Connector_isAuthorized(&slaveNode->connectorInfo)) jobNode->slaveState = SLAVE_STATE_PAIRED;
+                  else if (Connector_isConnected(&slaveNode->connectorInfo))  jobNode->slaveState = SLAVE_STATE_ONLINE;
+                  else                                                        jobNode->slaveState = SLAVE_STATE_OFFLINE;
                 }
               }
             }
@@ -2389,7 +2418,6 @@ fprintf(stderr,"%s, %d: checked %s:%d : state=%d\n",__FILE__,__LINE__,String_cSt
           if (Connector_isConnected(&slaveNode->connectorInfo))
           {
             Connector_disconnect(&slaveNode->connectorInfo);
-            slaveNode->state = SLAVE_STATE_OFFLINE;
           }
         }
       }
@@ -4665,7 +4693,9 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   uint                 bufferLength;
   CryptHash            uuidHash;
   char                 s[256];
+  AuthorizationStates  authorizationState;
 
+fprintf(stderr,"%s, %d: serverCommand_authorize\n",__FILE__,__LINE__);
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -4695,7 +4725,8 @@ fprintf(stderr,"%s, %d: encryptType=%d\n",__FILE__,__LINE__,encryptType);
 fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
 fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
-  error = ERROR_UNKNOWN;
+  error              = ERROR_UNKNOWN;
+  authorizationState = AUTHORIZATION_STATE_FAIL;
   if      (!String_isEmpty(encryptedPassword))
   {
     // client => verify password
@@ -4725,10 +4756,13 @@ fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cStri
       // Note: server in debug mode -> no password check
       error = ERROR_NONE;
     }
+
+    authorizationState = AUTHORIZATION_STATE_CLIENT;
   }
   else if (!String_isEmpty(encryptedUUID))
   {
     // master => verify/pair new master
+fprintf(stderr,"%s, %d: ----------\n",__FILE__,__LINE__);
 
     // decrypt UUID
     error = ServerIO_decryptData(&clientInfo->io,
@@ -4742,19 +4776,18 @@ fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cStri
       assert(buffer != NULL);
       assert(bufferLength > 0);
 
-fprintf(stderr,"%s, %d: newMaster.pairingMode=%d\n",__FILE__,__LINE__,newMaster.pairingMode);
       if (newMaster.pairingMode == PAIRING_MODE_NONE)
       {
         // not pairing -> verify master UUID
-fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+//fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
 
         // calculate hash from UUID
         (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
         Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
         // verify master UUID (UUID hash)
-fprintf(stderr,"%s, %d: globalOptions.masterInfo.uuidHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.uuidHash.length);
-if (globalOptions.masterInfo.uuidHash.data != NULL) debugDumpMemory(globalOptions.masterInfo.uuidHash.data,globalOptions.masterInfo.uuidHash.length,0);
+//fprintf(stderr,"%s, %d: globalOptions.masterInfo.uuidHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.uuidHash.length);
+//if (globalOptions.masterInfo.uuidHash.data != NULL) debugDumpMemory(globalOptions.masterInfo.uuidHash.data,globalOptions.masterInfo.uuidHash.length,0);
 //TODO: lock required?
         if (!equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
         {
@@ -4774,8 +4807,8 @@ if (globalOptions.masterInfo.uuidHash.data != NULL) debugDumpMemory(globalOption
       }
       else
       {
-        // pairing -> set master name+UUID hash
-fprintf(stderr,"%s, %d: set master name+UUID hash\n",__FILE__,__LINE__);
+        // pairing -> store new master name+UUID hash
+fprintf(stderr,"%s, %d: store new master name+UUID hash\n",__FILE__,__LINE__);
 //TODO: lock required?
         if (String_isEmpty(newMaster.name))
         {
@@ -4786,6 +4819,8 @@ fprintf(stderr,"%s, %d: set master name+UUID hash\n",__FILE__,__LINE__);
           (void)Crypt_resetHash(&newMaster.uuidHash);
           Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
         }
+
+        error = ERROR_NOT_PAIRED;
       }
 
       // free resources
@@ -4800,6 +4835,8 @@ fprintf(stderr,"%s, %d: set master name+UUID hash\n",__FILE__,__LINE__);
                  Error_getText(error)
                 );
     }
+
+    authorizationState = AUTHORIZATION_STATE_MASTER;
   }
 
   // set authorization state
@@ -4807,7 +4844,7 @@ fprintf(stderr,"%s, %d: set master name+UUID hash\n",__FILE__,__LINE__);
   {
     if (error == ERROR_NONE)
     {
-      clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
+      clientInfo->authorizationState = authorizationState;
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
     }
     else
@@ -5275,8 +5312,7 @@ LOCAL void serverCommand_masterPairingStart(ClientInfo *clientInfo, IndexHandle 
   StringMap_getUInt(argumentMap,"timeout",&timeout,DEFAULT_PAIRING_MASTER_TIMEOUT);
 
   // start pairing
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-  abortPairingMaster();
+fprintf(stderr,"%s, %d: serverCommand_masterPairingStart\n",__FILE__,__LINE__);
   startPairingMaster(timeout,PAIRING_MODE_MANUAL);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -16802,166 +16838,166 @@ const struct
 {
   const char            *name;
   ServerCommandFunction serverCommandFunction;
-  AuthorizationStates   authorizationState;
+  AuthorizationStateSet authorizationStateSet;
 }
 SERVER_COMMANDS[] =
 {
-  { "ERROR_INFO",                  serverCommand_errorInfo,                AUTHORIZATION_STATE_OK      },
-  { "START_SSL",                   serverCommand_startSSL,                 AUTHORIZATION_STATE_WAITING },
-  { "AUTHORIZE",                   serverCommand_authorize,                AUTHORIZATION_STATE_WAITING },
-  { "VERSION",                     serverCommand_version,                  AUTHORIZATION_STATE_OK      },
-  { "QUIT",                        serverCommand_quit,                     AUTHORIZATION_STATE_OK      },
-  { "ACTION_RESULT",               serverCommand_actionResult,             AUTHORIZATION_STATE_OK      },
+  { "ERROR_INFO",                  serverCommand_errorInfo,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "START_SSL",                   serverCommand_startSSL,                 AUTHORIZATION_STATE_WAITING                           },
+  { "AUTHORIZE",                   serverCommand_authorize,                AUTHORIZATION_STATE_WAITING                           },
+  { "VERSION",                     serverCommand_version,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "QUIT",                        serverCommand_quit,                     AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "ACTION_RESULT",               serverCommand_actionResult,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "SERVER_OPTION_GET",           serverCommand_serverOptionGet,          AUTHORIZATION_STATE_OK      },
-  { "SERVER_OPTION_SET",           serverCommand_serverOptionSet,          AUTHORIZATION_STATE_OK      },
-  { "SERVER_OPTION_FLUSH",         serverCommand_serverOptionFlush,        AUTHORIZATION_STATE_OK      },
+  { "SERVER_OPTION_GET",           serverCommand_serverOptionGet,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SERVER_OPTION_SET",           serverCommand_serverOptionSet,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SERVER_OPTION_FLUSH",         serverCommand_serverOptionFlush,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "MASTER_GET",                  serverCommand_masterGet,                AUTHORIZATION_STATE_OK      },
+  { "MASTER_GET",                  serverCommand_masterGet,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 // TODO: remove
-//  { "MASTER_WAIT",                 serverCommand_masterWait,               AUTHORIZATION_STATE_OK      },
-//  { "MASTER_SET",                  serverCommand_masterSet,                AUTHORIZATION_STATE_OK      },
-  { "MASTER_CLEAR",                serverCommand_masterClear,              AUTHORIZATION_STATE_OK      },
-  { "MASTER_PAIRING_START",        serverCommand_masterPairingStart,       AUTHORIZATION_STATE_OK      },
-  { "MASTER_PAIRING_STOP",         serverCommand_masterPairingStop,        AUTHORIZATION_STATE_OK      },
-  { "MASTER_PAIRING_STATUS",       serverCommand_masterPairingStatus,      AUTHORIZATION_STATE_OK      },
+//  { "MASTER_WAIT",                 serverCommand_masterWait,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+//  { "MASTER_SET",                  serverCommand_masterSet,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MASTER_CLEAR",                serverCommand_masterClear,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MASTER_PAIRING_START",        serverCommand_masterPairingStart,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MASTER_PAIRING_STOP",         serverCommand_masterPairingStop,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MASTER_PAIRING_STATUS",       serverCommand_masterPairingStatus,      AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "SERVER_LIST",                 serverCommand_serverList,               AUTHORIZATION_STATE_OK      },
-  { "SERVER_LIST_ADD",             serverCommand_serverListAdd,            AUTHORIZATION_STATE_OK      },
-  { "SERVER_LIST_UPDATE",          serverCommand_serverListUpdate,         AUTHORIZATION_STATE_OK      },
-  { "SERVER_LIST_REMOVE",          serverCommand_serverListRemove,         AUTHORIZATION_STATE_OK      },
+  { "SERVER_LIST",                 serverCommand_serverList,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SERVER_LIST_ADD",             serverCommand_serverListAdd,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SERVER_LIST_UPDATE",          serverCommand_serverListUpdate,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SERVER_LIST_REMOVE",          serverCommand_serverListRemove,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
 //TODO: obsolete?
-  { "GET",                         serverCommand_get,                      AUTHORIZATION_STATE_OK      },
-  { "ABORT",                       serverCommand_abort,                    AUTHORIZATION_STATE_OK      },
-  { "STATUS",                      serverCommand_status,                   AUTHORIZATION_STATE_OK      },
-  { "PAUSE",                       serverCommand_pause,                    AUTHORIZATION_STATE_OK      },
-  { "SUSPEND",                     serverCommand_suspend,                  AUTHORIZATION_STATE_OK      },
-  { "CONTINUE",                    serverCommand_continue,                 AUTHORIZATION_STATE_OK      },
-  { "DEVICE_LIST",                 serverCommand_deviceList,               AUTHORIZATION_STATE_OK      },
-  { "ROOT_LIST",                   serverCommand_rootList,                 AUTHORIZATION_STATE_OK      },
-  { "FILE_INFO",                   serverCommand_fileInfo,                 AUTHORIZATION_STATE_OK      },
-  { "FILE_LIST",                   serverCommand_fileList,                 AUTHORIZATION_STATE_OK      },
-  { "FILE_ATTRIBUTE_GET",          serverCommand_fileAttributeGet,         AUTHORIZATION_STATE_OK      },
-  { "FILE_ATTRIBUTE_SET",          serverCommand_fileAttributeSet,         AUTHORIZATION_STATE_OK      },
-  { "FILE_ATTRIBUTE_CLEAR",        serverCommand_fileAttributeClear,       AUTHORIZATION_STATE_OK      },
-  { "DIRECTORY_INFO",              serverCommand_directoryInfo,            AUTHORIZATION_STATE_OK      },
-  { "TEST_SCRIPT",                 serverCommand_testScript,               AUTHORIZATION_STATE_OK      },
+  { "GET",                         serverCommand_get,                      AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "ABORT",                       serverCommand_abort,                    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "STATUS",                      serverCommand_status,                   AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "PAUSE",                       serverCommand_pause,                    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SUSPEND",                     serverCommand_suspend,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "CONTINUE",                    serverCommand_continue,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "DEVICE_LIST",                 serverCommand_deviceList,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "ROOT_LIST",                   serverCommand_rootList,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "FILE_INFO",                   serverCommand_fileInfo,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "FILE_LIST",                   serverCommand_fileList,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "FILE_ATTRIBUTE_GET",          serverCommand_fileAttributeGet,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "FILE_ATTRIBUTE_SET",          serverCommand_fileAttributeSet,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "FILE_ATTRIBUTE_CLEAR",        serverCommand_fileAttributeClear,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "DIRECTORY_INFO",              serverCommand_directoryInfo,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "TEST_SCRIPT",                 serverCommand_testScript,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "JOB_LIST",                    serverCommand_jobList,                  AUTHORIZATION_STATE_OK      },
-  { "JOB_INFO",                    serverCommand_jobInfo,                  AUTHORIZATION_STATE_OK      },
-  { "JOB_START",                   serverCommand_jobStart,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_ABORT",                   serverCommand_jobAbort,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_RESET",                   serverCommand_jobReset,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_NEW",                     serverCommand_jobNew,                   AUTHORIZATION_STATE_OK      },
-  { "JOB_CLONE",                   serverCommand_jobClone,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_RENAME",                  serverCommand_jobRename,                AUTHORIZATION_STATE_OK      },
-  { "JOB_DELETE",                  serverCommand_jobDelete,                AUTHORIZATION_STATE_OK      },
-  { "JOB_FLUSH",                   serverCommand_jobFlush,                 AUTHORIZATION_STATE_OK      },
-  { "JOB_OPTION_GET",              serverCommand_jobOptionGet,             AUTHORIZATION_STATE_OK      },
-  { "JOB_OPTION_SET",              serverCommand_jobOptionSet,             AUTHORIZATION_STATE_OK      },
-  { "JOB_OPTION_DELETE",           serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_OK      },
-  { "JOB_STATUS",                  serverCommand_jobStatus,                AUTHORIZATION_STATE_OK      },
+  { "JOB_LIST",                    serverCommand_jobList,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_INFO",                    serverCommand_jobInfo,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_START",                   serverCommand_jobStart,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_ABORT",                   serverCommand_jobAbort,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_RESET",                   serverCommand_jobReset,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_NEW",                     serverCommand_jobNew,                   AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_CLONE",                   serverCommand_jobClone,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_RENAME",                  serverCommand_jobRename,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_DELETE",                  serverCommand_jobDelete,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_FLUSH",                   serverCommand_jobFlush,                 AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_OPTION_GET",              serverCommand_jobOptionGet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_OPTION_SET",              serverCommand_jobOptionSet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_OPTION_DELETE",           serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "JOB_STATUS",                  serverCommand_jobStatus,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "INCLUDE_LIST",                serverCommand_includeList,              AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST_CLEAR",          serverCommand_includeListClear,         AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST_ADD",            serverCommand_includeListAdd,           AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST_UPDATE",         serverCommand_includeListUpdate,        AUTHORIZATION_STATE_OK      },
-  { "INCLUDE_LIST_REMOVE",         serverCommand_includeListRemove,        AUTHORIZATION_STATE_OK      },
+  { "INCLUDE_LIST",                serverCommand_includeList,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INCLUDE_LIST_CLEAR",          serverCommand_includeListClear,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INCLUDE_LIST_ADD",            serverCommand_includeListAdd,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INCLUDE_LIST_UPDATE",         serverCommand_includeListUpdate,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INCLUDE_LIST_REMOVE",         serverCommand_includeListRemove,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "MOUNT_LIST",                  serverCommand_mountList,                AUTHORIZATION_STATE_OK      },
-  { "MOUNT_LIST_CLEAR",            serverCommand_mountListClear,           AUTHORIZATION_STATE_OK      },
-  { "MOUNT_LIST_ADD",              serverCommand_mountListAdd,             AUTHORIZATION_STATE_OK      },
-  { "MOUNT_LIST_UPDATE",           serverCommand_mountListUpdate,          AUTHORIZATION_STATE_OK      },
-  { "MOUNT_LIST_REMOVE",           serverCommand_mountListRemove,          AUTHORIZATION_STATE_OK      },
+  { "MOUNT_LIST",                  serverCommand_mountList,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MOUNT_LIST_CLEAR",            serverCommand_mountListClear,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MOUNT_LIST_ADD",              serverCommand_mountListAdd,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MOUNT_LIST_UPDATE",           serverCommand_mountListUpdate,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "MOUNT_LIST_REMOVE",           serverCommand_mountListRemove,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "EXCLUDE_LIST",                serverCommand_excludeList,              AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST_CLEAR",          serverCommand_excludeListClear,         AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST_ADD",            serverCommand_excludeListAdd,           AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST_UPDATE",         serverCommand_excludeListUpdate,        AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_LIST_REMOVE",         serverCommand_excludeListRemove,        AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_LIST",                serverCommand_excludeList,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "EXCLUDE_LIST_CLEAR",          serverCommand_excludeListClear,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "EXCLUDE_LIST_ADD",            serverCommand_excludeListAdd,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "EXCLUDE_LIST_UPDATE",         serverCommand_excludeListUpdate,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "EXCLUDE_LIST_REMOVE",         serverCommand_excludeListRemove,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "SOURCE_LIST",                 serverCommand_sourceList,               AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST_CLEAR",           serverCommand_sourceListClear,          AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST_ADD",             serverCommand_sourceListAdd,            AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST_UPDATE",          serverCommand_sourceListUpdate,         AUTHORIZATION_STATE_OK      },
-  { "SOURCE_LIST_REMOVE",          serverCommand_sourceListRemove,         AUTHORIZATION_STATE_OK      },
+  { "SOURCE_LIST",                 serverCommand_sourceList,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SOURCE_LIST_CLEAR",           serverCommand_sourceListClear,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SOURCE_LIST_ADD",             serverCommand_sourceListAdd,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SOURCE_LIST_UPDATE",          serverCommand_sourceListUpdate,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SOURCE_LIST_REMOVE",          serverCommand_sourceListRemove,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "EXCLUDE_COMPRESS_LIST",       serverCommand_excludeCompressList,      AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST_CLEAR", serverCommand_excludeCompressListClear, AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST_ADD",   serverCommand_excludeCompressListAdd,   AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST_UPDATE",serverCommand_excludeCompressListUpdate,AUTHORIZATION_STATE_OK      },
-  { "EXCLUDE_COMPRESS_LIST_REMOVE",serverCommand_excludeCompressListRemove,AUTHORIZATION_STATE_OK      },
+  { "EXCLUDE_COMPRESS_LIST",       serverCommand_excludeCompressList,      AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "EXCLUDE_COMPRESS_LIST_CLEAR", serverCommand_excludeCompressListClear, AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "EXCLUDE_COMPRESS_LIST_ADD",   serverCommand_excludeCompressListAdd,   AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "EXCLUDE_COMPRESS_LIST_UPDATE",serverCommand_excludeCompressListUpdate,AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "EXCLUDE_COMPRESS_LIST_REMOVE",serverCommand_excludeCompressListRemove,AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "SCHEDULE_LIST",               serverCommand_scheduleList,             AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST_ADD",           serverCommand_scheduleListAdd,          AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_LIST_REMOVE",        serverCommand_scheduleListRemove,       AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_OPTION_GET",         serverCommand_scheduleOptionGet,        AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_OPTION_SET",         serverCommand_scheduleOptionSet,        AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_OPTION_DELETE",      serverCommand_scheduleOptionDelete,     AUTHORIZATION_STATE_OK      },
-  { "SCHEDULE_TRIGGER",            serverCommand_scheduleTrigger,          AUTHORIZATION_STATE_OK      },
+  { "SCHEDULE_LIST",               serverCommand_scheduleList,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SCHEDULE_LIST_ADD",           serverCommand_scheduleListAdd,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SCHEDULE_LIST_REMOVE",        serverCommand_scheduleListRemove,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SCHEDULE_OPTION_GET",         serverCommand_scheduleOptionGet,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SCHEDULE_OPTION_SET",         serverCommand_scheduleOptionSet,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SCHEDULE_OPTION_DELETE",      serverCommand_scheduleOptionDelete,     AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SCHEDULE_TRIGGER",            serverCommand_scheduleTrigger,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "PERSISTENCE_LIST",            serverCommand_persistenceList,          AUTHORIZATION_STATE_OK      },
-  { "PERSISTENCE_LIST_CLEAR",      serverCommand_persistenceListClear,     AUTHORIZATION_STATE_OK      },
-  { "PERSISTENCE_LIST_ADD",        serverCommand_persistenceListAdd,       AUTHORIZATION_STATE_OK      },
-  { "PERSISTENCE_LIST_UPDATE",     serverCommand_persistenceListUpdate,    AUTHORIZATION_STATE_OK      },
-  { "PERSISTENCE_LIST_REMOVE",     serverCommand_persistenceListRemove,    AUTHORIZATION_STATE_OK      },
+  { "PERSISTENCE_LIST",            serverCommand_persistenceList,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "PERSISTENCE_LIST_CLEAR",      serverCommand_persistenceListClear,     AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "PERSISTENCE_LIST_ADD",        serverCommand_persistenceListAdd,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "PERSISTENCE_LIST_UPDATE",     serverCommand_persistenceListUpdate,    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "PERSISTENCE_LIST_REMOVE",     serverCommand_persistenceListRemove,    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "DECRYPT_PASSWORD_CLEAR",      serverCommand_decryptPasswordsClear,    AUTHORIZATION_STATE_OK      },
-  { "DECRYPT_PASSWORD_ADD",        serverCommand_decryptPasswordAdd,       AUTHORIZATION_STATE_OK      },
-  { "FTP_PASSWORD",                serverCommand_ftpPassword,              AUTHORIZATION_STATE_OK      },
-  { "SSH_PASSWORD",                serverCommand_sshPassword,              AUTHORIZATION_STATE_OK      },
-  { "WEBDAV_PASSWORD",             serverCommand_webdavPassword,           AUTHORIZATION_STATE_OK      },
-  { "CRYPT_PASSWORD",              serverCommand_cryptPassword,            AUTHORIZATION_STATE_OK      },
-  { "PASSWORDS_CLEAR",             serverCommand_passwordsClear,           AUTHORIZATION_STATE_OK      },
+  { "DECRYPT_PASSWORD_CLEAR",      serverCommand_decryptPasswordsClear,    AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "DECRYPT_PASSWORD_ADD",        serverCommand_decryptPasswordAdd,       AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "FTP_PASSWORD",                serverCommand_ftpPassword,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "SSH_PASSWORD",                serverCommand_sshPassword,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "WEBDAV_PASSWORD",             serverCommand_webdavPassword,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "CRYPT_PASSWORD",              serverCommand_cryptPassword,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "PASSWORDS_CLEAR",             serverCommand_passwordsClear,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "VOLUME_LOAD",                 serverCommand_volumeLoad,               AUTHORIZATION_STATE_OK      },
-  { "VOLUME_UNLOAD",               serverCommand_volumeUnload,             AUTHORIZATION_STATE_OK      },
+  { "VOLUME_LOAD",                 serverCommand_volumeLoad,               AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "VOLUME_UNLOAD",               serverCommand_volumeUnload,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "ARCHIVE_LIST",                serverCommand_archiveList,              AUTHORIZATION_STATE_OK      },
+  { "ARCHIVE_LIST",                serverCommand_archiveList,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
 //TODO: replace by single list?
-  { "STORAGE_LIST",                serverCommand_storageList,              AUTHORIZATION_STATE_OK      },
-  { "STORAGE_LIST_CLEAR",          serverCommand_storageListClear,         AUTHORIZATION_STATE_OK      },
-  { "STORAGE_LIST_ADD",            serverCommand_storageListAdd,           AUTHORIZATION_STATE_OK      },
-  { "STORAGE_LIST_REMOVE",         serverCommand_storageListRemove,        AUTHORIZATION_STATE_OK      },
-  { "STORAGE_LIST_INFO",           serverCommand_storageListInfo,          AUTHORIZATION_STATE_OK      },
-  { "ENTRY_LIST",                  serverCommand_entryList,                AUTHORIZATION_STATE_OK      },
-  { "ENTRY_LIST_CLEAR",            serverCommand_entryListClear,           AUTHORIZATION_STATE_OK      },
-  { "ENTRY_LIST_ADD",              serverCommand_entryListAdd,             AUTHORIZATION_STATE_OK      },
-  { "ENTRY_LIST_REMOVE",           serverCommand_entryListRemove,          AUTHORIZATION_STATE_OK      },
-  { "ENTRY_LIST_INFO",             serverCommand_entryListInfo,            AUTHORIZATION_STATE_OK      },
+  { "STORAGE_LIST",                serverCommand_storageList,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "STORAGE_LIST_CLEAR",          serverCommand_storageListClear,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "STORAGE_LIST_ADD",            serverCommand_storageListAdd,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "STORAGE_LIST_REMOVE",         serverCommand_storageListRemove,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "STORAGE_LIST_INFO",           serverCommand_storageListInfo,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "ENTRY_LIST",                  serverCommand_entryList,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "ENTRY_LIST_CLEAR",            serverCommand_entryListClear,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "ENTRY_LIST_ADD",              serverCommand_entryListAdd,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "ENTRY_LIST_REMOVE",           serverCommand_entryListRemove,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "ENTRY_LIST_INFO",             serverCommand_entryListInfo,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_OK      },
+  { "STORAGE_DELETE",              serverCommand_storageDelete,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "RESTORE",                     serverCommand_restore,                  AUTHORIZATION_STATE_OK      },
-  { "RESTORE_CONTINUE",            serverCommand_restoreContinue,          AUTHORIZATION_STATE_OK      },
+  { "RESTORE",                     serverCommand_restore,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "RESTORE_CONTINUE",            serverCommand_restoreContinue,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "INDEX_UUID_LIST",             serverCommand_indexUUIDList,            AUTHORIZATION_STATE_OK      },
-  { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_OK      },
-  { "INDEX_ENTRY_LIST",            serverCommand_indexEntryList,           AUTHORIZATION_STATE_OK      },
-  { "INDEX_HISTORY_LIST",          serverCommand_indexHistoryList,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_UUID_LIST",             serverCommand_indexUUIDList,            AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INDEX_ENTITY_LIST",           serverCommand_indexEntityList,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INDEX_STORAGE_LIST",          serverCommand_indexStorageList,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INDEX_ENTRY_LIST",            serverCommand_indexEntryList,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INDEX_HISTORY_LIST",          serverCommand_indexHistoryList,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_OK      },
-  { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_OK      },
+  { "INDEX_ENTITY_ADD",            serverCommand_indexEntityAdd,           AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INDEX_STORAGE_ADD",           serverCommand_indexStorageAdd,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "INDEX_ASSIGN",                serverCommand_indexAssign,              AUTHORIZATION_STATE_OK      },
-  { "INDEX_REFRESH",               serverCommand_indexRefresh,             AUTHORIZATION_STATE_OK      },
-  { "INDEX_REMOVE",                serverCommand_indexRemove,              AUTHORIZATION_STATE_OK      },
+  { "INDEX_ASSIGN",                serverCommand_indexAssign,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INDEX_REFRESH",               serverCommand_indexRefresh,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INDEX_REMOVE",                serverCommand_indexRemove,              AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
-  { "INDEX_STORAGES_INFO",         serverCommand_indexStoragesInfo,        AUTHORIZATION_STATE_OK      },
-  { "INDEX_ENTRIES_INFO",          serverCommand_indexEntriesInfo,         AUTHORIZATION_STATE_OK      },
+  { "INDEX_STORAGES_INFO",         serverCommand_indexStoragesInfo,        AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "INDEX_ENTRIES_INFO",          serverCommand_indexEntriesInfo,         AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
   // obsolete
-  { "OPTION_GET",                  serverCommand_jobOptionGet,             AUTHORIZATION_STATE_OK      },
-  { "OPTION_SET",                  serverCommand_jobOptionSet,             AUTHORIZATION_STATE_OK      },
-  { "OPTION_DELETE",               serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_OK      },
+  { "OPTION_GET",                  serverCommand_jobOptionGet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "OPTION_SET",                  serverCommand_jobOptionSet,             AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "OPTION_DELETE",               serverCommand_jobOptionDelete,          AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
 
   #ifndef NDEBUG
-  { "DEBUG_PRINT_STATISTICS",      serverCommand_debugPrintStatistics,     AUTHORIZATION_STATE_OK      },
-  { "DEBUG_PRINT_MEMORY_INFO",     serverCommand_debugPrintMemoryInfo,     AUTHORIZATION_STATE_OK      },
-  { "DEBUG_DUMP_MEMORY_INFO",      serverCommand_debugDumpMemoryInfo,      AUTHORIZATION_STATE_OK      },
+  { "DEBUG_PRINT_STATISTICS",      serverCommand_debugPrintStatistics,     AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "DEBUG_PRINT_MEMORY_INFO",     serverCommand_debugPrintMemoryInfo,     AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
+  { "DEBUG_DUMP_MEMORY_INFO",      serverCommand_debugDumpMemoryInfo,      AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   #endif /* NDEBUG */
 };
 
@@ -16991,21 +17027,21 @@ LOCAL void freeCommand(Command *command, void *userData)
 * Purpose: find command
 * Input  : name - command name
 * Output : serverCommandFunction - server command function
-*          authorizationState    - required authorization state
+*          authorizationStateSet - required authorization state set
 * Return : TRUE if command found, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 LOCAL bool findCommand(ConstString           name,
                        ServerCommandFunction *serverCommandFunction,
-                       AuthorizationStates   *authorizationState
+                       AuthorizationStateSet *authorizationStateSet
                       )
 {
   uint i;
 
   assert(name != NULL);
   assert(serverCommandFunction != NULL);
-  assert(authorizationState != NULL);
+  assert(authorizationStateSet != NULL);
 
   // find command by name
   i = 0;
@@ -17018,7 +17054,7 @@ LOCAL bool findCommand(ConstString           name,
     return FALSE;
   }
   (*serverCommandFunction) = SERVER_COMMANDS[i].serverCommandFunction;
-  (*authorizationState   ) = SERVER_COMMANDS[i].authorizationState;
+  (*authorizationStateSet) = SERVER_COMMANDS[i].authorizationStateSet;
 
   return TRUE;
 }
@@ -17028,7 +17064,7 @@ LOCAL bool findCommand(ConstString           name,
 * Purpose: put command into queue for asynchronous execution
 * Input  : clientInfo            - client info
 *          serverCommandFunction - server command function
-*          authorizationState    - required authorization state
+*          authorizationStateSet - required authorization state set
 *          id                    - command id
 *          argumentMap           - argument map
 * Output : -
@@ -17038,7 +17074,7 @@ LOCAL bool findCommand(ConstString           name,
 
 LOCAL void putCommand(ClientInfo            *clientInfo,
                       ServerCommandFunction serverCommandFunction,
-                      AuthorizationStates   authorizationState,
+                      AuthorizationStateSet authorizationStateSet,
                       uint                  id,
                       const StringMap       argumentMap
                      )
@@ -17050,7 +17086,7 @@ LOCAL void putCommand(ClientInfo            *clientInfo,
   assert(argumentMap != NULL);
 
   command.serverCommandFunction = serverCommandFunction;
-  command.authorizationState    = authorizationState;
+  command.authorizationStateSet = authorizationStateSet;
   command.id                    = id;
   command.argumentMap           = StringMap_duplicate(argumentMap);
   (void)MsgQueue_put(&clientInfo->commandQueue,&command,sizeof(Command));
@@ -17139,7 +17175,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
         )
   {
     // check authorization (if not in server debug mode)
-    if ((globalOptions.serverDebugLevel >= 1) || (command.authorizationState == clientInfo->authorizationState))
+    if ((globalOptions.serverDebugLevel >= 1) || IS_SET(command.authorizationStateSet,clientInfo->authorizationState))
     {
       // add command info
       commandInfoNode = NULL;
@@ -17320,7 +17356,7 @@ LOCAL Errors initBatchClient(ClientInfo *clientInfo,
   }
 
   // batch client do not require authorization
-  clientInfo->authorizationState = AUTHORIZATION_STATE_OK;
+  clientInfo->authorizationState = AUTHORIZATION_STATE_CLIENT;
 
   return ERROR_NONE;
 }
@@ -17358,6 +17394,7 @@ LOCAL void initClient(ClientInfo *clientInfo)
 
   // initialize
   Semaphore_init(&clientInfo->lock,SEMAPHORE_TYPE_BINARY);
+
   clientInfo->authorizationState    = AUTHORIZATION_STATE_WAITING;
   clientInfo->authorizationFailNode = NULL;
 
@@ -17686,6 +17723,11 @@ LOCAL void incrementAuthorizationFail(ClientNode *clientNode)
   }
   clientNode->clientInfo.authorizationFailNode->count++;
   clientNode->clientInfo.authorizationFailNode->lastTimestamp = Misc_getTimestamp();
+fprintf(stderr,"%s, %d: incrementAuthorizationFail %ums\n",__FILE__,__LINE__,
+(uint64)MIN(SQUARE(clientNode->clientInfo.authorizationFailNode->count)*AUTHORIZATION_PENALITY_TIME,
+                       MAX_AUTHORIZATION_PENALITY_TIME
+                      )
+                      );
 }
 
 /***********************************************************************\
@@ -17753,12 +17795,12 @@ LOCAL uint getAuthorizationWaitRestTime(const AuthorizationFailNode *authorizati
 LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, const StringMap argumentMap)
 {
   ServerCommandFunction serverCommandFunction;
-  AuthorizationStates   authorizationState;
+  AuthorizationStateSet authorizationStateSet;
 
   assert(clientInfo != NULL);
 
   // find command
-  if (!findCommand(name,&serverCommandFunction,&authorizationState))
+  if (!findCommand(name,&serverCommandFunction,&authorizationStateSet))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
     return;
@@ -17769,7 +17811,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
   {
     case SERVER_IO_TYPE_BATCH:
       // check authorization (if not in server debug mode)
-      if ((globalOptions.serverDebugLevel >= 1) || (authorizationState == clientInfo->authorizationState))
+      if ((globalOptions.serverDebugLevel >= 1) || IS_SET(authorizationStateSet,clientInfo->authorizationState))
       {
         // execute
         serverCommandFunction(clientInfo,
@@ -17790,7 +17832,7 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
       {
         case AUTHORIZATION_STATE_WAITING:
           // check authorization (if not in server debug mode)
-          if ((globalOptions.serverDebugLevel >= 1) || (authorizationState == AUTHORIZATION_STATE_WAITING))
+          if ((globalOptions.serverDebugLevel >= 1) || IS_SET(authorizationStateSet,AUTHORIZATION_STATE_WAITING))
           {
             // execute command
             serverCommandFunction(clientInfo,
@@ -17806,9 +17848,10 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_AUTHORIZATION,"authorization failure");
           }
           break;
-        case AUTHORIZATION_STATE_OK:
+        case AUTHORIZATION_STATE_CLIENT:
+        case AUTHORIZATION_STATE_MASTER:
           // send command to client thread for asynchronous processing
-          putCommand(clientInfo,serverCommandFunction,authorizationState,id,argumentMap);
+          putCommand(clientInfo,serverCommandFunction,authorizationStateSet,id,argumentMap);
           break;
         case AUTHORIZATION_STATE_FAIL:
           break;
@@ -18473,7 +18516,8 @@ Errors Server_run(ServerModes       mode,
                 {
                   case AUTHORIZATION_STATE_WAITING:
                     break;
-                  case AUTHORIZATION_STATE_OK:
+                  case AUTHORIZATION_STATE_CLIENT:
+                  case AUTHORIZATION_STATE_MASTER:
                     // reset authorization failure
                     resetAuthorizationFail(disconnectClientNode);
                     break;
@@ -18503,7 +18547,8 @@ Errors Server_run(ServerModes       mode,
               {
                 case AUTHORIZATION_STATE_WAITING:
                   break;
-                case AUTHORIZATION_STATE_OK:
+                case AUTHORIZATION_STATE_CLIENT:
+                case AUTHORIZATION_STATE_MASTER:
                   // reset authorization failure
                   resetAuthorizationFail(disconnectClientNode);
                   break;
@@ -18521,6 +18566,12 @@ Errors Server_run(ServerModes       mode,
               // done client and free resources
               deleteClient(disconnectClientNode);
             }
+            #ifndef NDEBUG
+              else
+              {
+                HALT_INTERNAL_ERROR("unknown poll events 0x%x",pollfds[0].revents);
+              }
+            #endif /* NDEBUG */
           }
         }
       }

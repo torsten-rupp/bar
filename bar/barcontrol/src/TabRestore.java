@@ -7485,7 +7485,7 @@ Dprintf.dprintf("");
     if (!indexDataHashSet.isEmpty())
     {
       Long dateTime = new Long(0);
-      if (archiveType != ArchiveTypes.NONE)
+      if (archiveType != ArchiveTypes.UNKNOWN)
       {
         dateTime = Dialogs.date(shell,BARControl.tr("Assign entity date"),(String)null,BARControl.tr("Assign"));
         if (dateTime == null)

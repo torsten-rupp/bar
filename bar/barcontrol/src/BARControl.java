@@ -819,12 +819,13 @@ class ArchiveNameParts
  */
 enum ArchiveTypes
 {
-  NONE,
   NORMAL,
   FULL,
   INCREMENTAL,
   DIFFERENTIAL,
-  CONTINUOUS;
+  CONTINUOUS,
+
+  UNKNOWN;
 
   /** convert to string
    * @return string
@@ -834,13 +835,12 @@ enum ArchiveTypes
   {
     switch (this)
     {
-      case NONE:         return null;
       case NORMAL:       return BARControl.tr("normal");
       case FULL:         return BARControl.tr("full");
       case INCREMENTAL:  return BARControl.tr("incremental");
       case DIFFERENTIAL: return BARControl.tr("differential");
       case CONTINUOUS:   return BARControl.tr("continuous");
-      default:           return BARControl.tr("normal");
+      default:           return BARControl.tr("unknown");
     }
   }
 };
@@ -2808,18 +2808,6 @@ assert jobData != null;
               break;
             case SLAVE:
               masterMenuItem.setEnabled(true);
-
-              String name = BARServer.getMaster();
-              if (!name.isEmpty())
-              {
-                masterMenuItem.setText(BARControl.tr("Master")+": "+name);
-                masterMenuItem.setSelection(true);
-              }
-              else
-              {
-                masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
-                masterMenuItem.setSelection(false);
-              }
               break;
           }
         }
@@ -3270,7 +3258,6 @@ assert jobData != null;
         Shell widget = (Shell)event.widget;
 
         widget.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
-
         updateMaster();
       }
     });
@@ -3737,6 +3724,39 @@ assert jobData != null;
     }
   }
 
+  /** update master info
+   */
+  private void updateMaster()
+  {
+    String masterName = null;
+    try
+    {
+      ValueMap resultMap = new ValueMap();
+      BARServer.executeCommand(StringParser.format("MASTER_GET"),
+                               0, // debugLevel
+                               resultMap
+                              );
+      assert resultMap.size() > 0;
+
+      masterName = resultMap.getString("name");
+    }
+    catch (Exception exception)
+    {
+      // ignored
+    }
+
+    if (!masterName.isEmpty())
+    {
+      masterMenuItem.setText(BARControl.tr("Master")+": "+masterName);
+      masterMenuItem.setSelection(true);
+    }
+    else
+    {
+      masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
+      masterMenuItem.setSelection(false);
+    }
+  }
+
   /** pair new master
    * @return true iff paired, false otherwise
    */
@@ -3999,12 +4019,12 @@ assert jobData != null;
                                     );
 
             // sleep a short time
-            if ((restTime[0] > 0) && !abortFlag[0])
+            if (data.masterName.isEmpty() && (restTime[0] > 0) && !abortFlag[0])
             {
               try { Thread.sleep(1000); } catch (Throwable throwable) { /* ignored */ }
             }
           }
-          while ((restTime[0] > 0) && !abortFlag[0]);
+          while (data.masterName.isEmpty() && (restTime[0] > 0) && !abortFlag[0]);
         }
         catch (final BARException exception)
         {
@@ -4069,6 +4089,7 @@ assert jobData != null;
 
     // run dialog
     Boolean result = (Boolean)Dialogs.run(dialog);
+Dprintf.dprintf("");
 
     updateMaster();
 
@@ -4082,7 +4103,9 @@ assert jobData != null;
   {
     try
     {
-      BARServer.clearMaster();
+      BARServer.executeCommand(StringParser.format("MASTER_CLEAR"),
+                               0  // debugLevel
+                              );
       updateMaster();
 
       return true;
@@ -4091,25 +4114,6 @@ assert jobData != null;
     {
       Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+exception.getMessage());
       return false;
-    }
-  }
-
-  /** update master info
-   */
-  private void updateMaster()
-  {
-    String name = BARServer.getMaster();
-Dprintf.dprintf("updateMaster name=%s",name);
-
-    if (!name.isEmpty())
-    {
-      masterMenuItem.setText(BARControl.tr("Master")+": "+name);
-      masterMenuItem.setSelection(true);
-    }
-    else
-    {
-      masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
-      masterMenuItem.setSelection(false);
     }
   }
 
@@ -4208,67 +4212,43 @@ Dprintf.dprintf("updateMaster name=%s",name);
           try
           {
             final String masterName[] = new String[]{""};
-//TODO
-            BARServer.executeCommand(StringParser.format("MASTER_SET"),
-                                     1,  // debugLevel
-                                     new Command.ResultHandler()
-                                     {
-                                       @Override
-                                       public void handle(int i, ValueMap valueMap)
-                                         throws BARException
-                                       {
-                                         final int restTime = valueMap.getInt("restTime",0);
+            final long restTime[]     = {0};
+            final long totalTime[]    = {0};
 
-                                         System.out.print(String.format("\b\b\b\b%3ds",restTime));
-                                       }
-                                     },
-                                     new Command.Handler()
-                                     {
-                                       @Override
-                                       public void handle(int errorCode, String errorData, ValueMap valueMap)
-                                       {
-                                         masterName[0] = valueMap.getString("name");
-                                       }
-                                     }
+            BARServer.executeCommand(StringParser.format("MASTER_PAIRING_START"),
+                                     1  // debugLevel
                                     );
 
-//TODO
-/*
-            // wait for pairing
-            int          time         = PAIRING_MASTER_TIMEOUT;
-            while (masterName[0].isEmpty() && (time > 0))
+            do
             {
-              // update rest time
-              System.out.print(String.format("\b\b\b\b%3ds",time));
+              BARServer.executeCommand(StringParser.format("MASTER_PAIRING_STATUS"),
+                                       1,  // debugLevel
+                                       new Command.Handler()
+                                       {
+                                         @Override
+                                         public void handle(int errorCode, String errorData, ValueMap valueMap)
+                                         {
+                                           masterName[0] = valueMap.getString("name");
+                                           restTime[0]   = valueMap.getInt("restTime" );
+                                           totalTime[0]  = valueMap.getInt("totalTime");
 
-              // check if master paired
-              error = BARServer.executeCommand(StringParser.format("MASTER_GET"),
-                                               1,  // debugLevel
-                                               new Command.ResultHandler()
-                                               {
-                                                 @Override
-                                                 public void handle(int i, ValueMap valueMap)
-                                                   throws BARException
-                                                 public int handle(int i, ValueMap valueMap)
-                                                 {
-                                                   masterName[0] = valueMap.getString("name");
+                                           System.out.print(String.format("\b\b\b\b%3ds",restTime));
+                                         }
+                                       }
+                                      );
 
-                                                   return BARException.NONE;
-                                                 }
-                                               }
-                                              );
-              if (error.code != BARException.NONE)
+              // sleep a short time
+              if (masterName[0].isEmpty() && (restTime[0] > 0))
               {
-                printError("Cannot get master pairing name ("+error.getText()+")");
-                BARServer.disconnect();
-                System.exit(EXITCODE_FAIL);
+                try { Thread.sleep(1000); } catch (Throwable throwable) { /* ignored */ }
               }
-
-              // sleep
-              try { Thread.sleep(1000); } catch (InterruptedException exception) {  }
-              time--;
             }
-*/
+            while (masterName[0].isEmpty() && (restTime[0] > 0));
+
+            BARServer.executeCommand(StringParser.format("MASTER_PAIRING_STOP pair=%y",!masterName[0].isEmpty()),
+                                     1  // debugLevel
+                                    );
+
             System.out.print("\b\b\b\b");
             if (!masterName[0].isEmpty())
             {
@@ -4278,6 +4258,12 @@ Dprintf.dprintf("updateMaster name=%s",name);
             {
               System.out.println("FAIL!");
             }
+          }
+          catch (final BARException exception)
+          {
+            printError("Cannot set new master ("+exception.getMessage()+")");
+            BARServer.disconnect();
+            System.exit(EXITCODE_FAIL);
           }
           catch (Exception exception)
           {

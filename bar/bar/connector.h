@@ -33,13 +33,19 @@
 
 /***************************** Variables *******************************/
 
-// connector states
+/* connector states
+
+   NONE -> CONNECTED -> AUTHORIZED -> DISCONNECTED -\
+    ^                                               |
+    \-----------------------------------------------/
+
+*/
 typedef enum
 {
   CONNECTOR_STATE_NONE,
-  CONNECTOR_STATE_DISCONNECTED,
   CONNECTOR_STATE_CONNECTED,
-  CONNECTOR_STATE_AUTHORIZED
+  CONNECTOR_STATE_AUTHORIZED,
+  CONNECTOR_STATE_DISCONNECTED
 } ConnectorStates;
 
 // connector info
@@ -47,7 +53,6 @@ typedef struct
 {
 bool            forceSSL;                // force SSL connection to connector hose
   ConnectorStates state;
-  bool            connectedFlag;           // TRUE if connected
   ServerIO        io;
   Thread          thread;
 
@@ -184,8 +189,27 @@ INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
-  return    (connectorInfo->state == CONNECTOR_STATE_AUTHORIZED)
-         || (connectorInfo->state == CONNECTOR_STATE_CONNECTED);
+  return    (connectorInfo->state == CONNECTOR_STATE_CONNECTED)
+         || (connectorInfo->state == CONNECTOR_STATE_AUTHORIZED);
+}
+#endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Connector_isDisconnected
+* Purpose: check if connector is disconnected
+* Input  : connectorInfo - connector info
+* Output : -
+* Return : TRUE iff disconnected
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Connector_isDisconnected(const ConnectorInfo *connectorInfo);
+#if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
+INLINE bool Connector_isDisconnected(const ConnectorInfo *connectorInfo)
+{
+  assert(connectorInfo != NULL);
+
+  return (connectorInfo->state == CONNECTOR_STATE_DISCONNECTED);
 }
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
