@@ -190,6 +190,7 @@ typedef struct JobNode
 
   // job running state
   JobStates           jobState;
+//TODO: required?
   SlaveStates         slaveState;
 
   StatusInfo          statusInfo;
@@ -274,7 +275,6 @@ typedef struct SlaveNode
   String        name;
   uint          port;
   ConnectorInfo connectorInfo;
-  SlaveStates   state;
   uint          lockCount;
 } SlaveNode;
 

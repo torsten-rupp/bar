@@ -4164,7 +4164,6 @@ SlaveNode *Job_addSlave(ConstString name, uint port)
   }
   slaveNode->name  = String_duplicate(name);
   slaveNode->port  = port;
-  slaveNode->state = SLAVE_STATE_OFFLINE;
   Connector_init(&slaveNode->connectorInfo);
 
   List_append(&slaveList,slaveNode);
