@@ -391,7 +391,7 @@ typedef struct PersistenceNode
 typedef struct
 {
   LIST_HEADER(PersistenceNode);
-  uint64 lastModificationTimestamp;                           // last modification timestamp
+  uint64 lastModificationDateTime;                            // last modification date/time
 } PersistenceList;
 
 // band width usage

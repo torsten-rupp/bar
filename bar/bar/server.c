@@ -2204,7 +2204,7 @@ LOCAL void pairingThreadCode(void)
   FileHandle fileHandle;
   FileInfo   fileInfo;
   String     line;
-  uint64     pairingStopTimestamp;
+  uint64     pairingStopDateTime;
   bool       clearPairing;
 
   line = String_new();
@@ -2216,12 +2216,21 @@ LOCAL void pairingThreadCode(void)
         // try pairing all slaves
         JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          // disocnnect disconnected slaves
+          // disconnect disconnected slaves
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
             if (Connector_isDisconnected(&slaveNode->connectorInfo))
             {
               Connector_disconnect(&slaveNode->connectorInfo);
+              if (slaveNode->authorizedFlag)
+              {
+                slaveNode->authorizedFlag = FALSE;
+                logMessage(NULL,  // logHandle,
+                           LOG_TYPE_INFO,
+                           "Slave %s:%d disconnected",
+                           String_cString(slaveNode->name),slaveNode->port
+                          );
+              }
             }
           }
 
@@ -2250,20 +2259,21 @@ LOCAL void pairingThreadCode(void)
             slaveNode = JOB_SLAVE_LIST_HEAD();
             while (slaveNode != NULL)
             {
-              if (JOB_LIST_CONTAINS(jobNode,
-                                       (slaveNode->port == jobNode->job.slaveHost.port)
-                                    && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
-                                   )
+              if (   !Job_isSlaveLocked(slaveNode)
+                  && !JOB_LIST_CONTAINS(jobNode,
+                                           (slaveNode->port == jobNode->job.slaveHost.port)
+                                        && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
+                                       )
                  )
-              {
-                slaveNode = slaveNode->next;
-              }
-              else
               {
                 slaveNode = Job_removeSlave(slaveNode);
               }
+              else
+              {
+                slaveNode = slaveNode->next;
+              }
             }
-          }
+          }  // JOB_LIST_LOCKED_DO
 
           // try connect new slaves, authorize
           JOB_SLAVE_LIST_ITERATE(slaveNode)
@@ -2277,7 +2287,19 @@ LOCAL void pairingThreadCode(void)
                                           slaveNode->name,
                                           slaveNode->port
                                          );
-                if (error != ERROR_NONE)
+                if (error == ERROR_NONE)
+                {
+                  if (Misc_getCurrentDateTime() > (slaveNode->lastOnlineDateTime+10*S_PER_MINUTE))
+                  {
+                    logMessage(NULL,  // logHandle,
+                               LOG_TYPE_INFO,
+                               "Slave %s:%d online",
+                               String_cString(slaveNode->name),slaveNode->port
+                              );
+                  }
+                  slaveNode->lastOnlineDateTime = Misc_getCurrentDateTime();
+                }
+                else
                 {
                   anyOfflineFlag = TRUE;
                 }
@@ -2289,7 +2311,16 @@ LOCAL void pairingThreadCode(void)
                  )
               {
                 error = Connector_authorize(&slaveNode->connectorInfo);
-                if (error != ERROR_NONE)
+                if (error == ERROR_NONE)
+                {
+                  slaveNode->authorizedFlag = TRUE;
+                  logMessage(NULL,  // logHandle,
+                             LOG_TYPE_INFO,
+                             "Slave %s:%d authorized",
+                             String_cString(slaveNode->name),slaveNode->port
+                            );
+                }
+                else
                 {
                   anyUnpairedFlag = TRUE;
                 }
@@ -2320,9 +2351,18 @@ Connector_isConnected(&slaveNode->connectorInfo)
                                                );
                 if (slaveNode != NULL)
                 {
-                  if      (Connector_isAuthorized(&slaveNode->connectorInfo)) jobNode->slaveState = SLAVE_STATE_PAIRED;
-                  else if (Connector_isConnected(&slaveNode->connectorInfo))  jobNode->slaveState = SLAVE_STATE_ONLINE;
-                  else                                                        jobNode->slaveState = SLAVE_STATE_OFFLINE;
+                  if      (Connector_isAuthorized(&slaveNode->connectorInfo))
+                  {
+                    jobNode->slaveState = SLAVE_STATE_PAIRED;
+                  }
+                  else if (Connector_isConnected(&slaveNode->connectorInfo))
+                  {
+                    jobNode->slaveState = SLAVE_STATE_ONLINE;
+                  }
+                  else
+                  {
+                    jobNode->slaveState = SLAVE_STATE_OFFLINE;
+                  }
                 }
               }
             }
@@ -2342,7 +2382,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
         break;
       case SERVER_MODE_SLAVE:
         // check if pairing/clear master requested
-        pairingStopTimestamp = 0LL;
+        pairingStopDateTime = 0LL;
         if (File_openCString(&fileHandle,globalOptions.masterInfo.pairingFileName,FILE_OPEN_READ) == ERROR_NONE)
         {
           clearPairing = FALSE;
@@ -2350,7 +2390,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
           // get modified time
           if (File_getInfoCString(&fileInfo,globalOptions.masterInfo.pairingFileName) == ERROR_NONE)
           {
-            pairingStopTimestamp = fileInfo.timeModified+DEFAULT_PAIRING_MASTER_TIMEOUT;
+            pairingStopDateTime = fileInfo.timeModified+DEFAULT_PAIRING_MASTER_TIMEOUT;
           }
 
           // read file
@@ -2366,7 +2406,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
           // check if clear/start/stop pairing
           if (!clearPairing)
           {
-            if (Misc_getCurrentDateTime() < pairingStopTimestamp)
+            if (Misc_getCurrentDateTime() < pairingStopDateTime)
             {
               startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_MANUAL);
             }
@@ -3451,7 +3491,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
             {
               List_init(&expirationEntityList);
 
-              if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationTimestamp+10*S_PER_MINUTE))
+              if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationDateTime+10*S_PER_MINUTE))
                   && getJobExpirationEntityList(&expirationEntityList,indexHandle,jobNode)
                   && !List_isEmpty(&expirationEntityList)  // only expire if persistence list is not empty
                  )
@@ -4586,7 +4626,6 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
     return;
   }
   error = (Errors)n;
-fprintf(stderr,"%s, %d: '%s'\n",__FILE__,__LINE__,Error_getText(error));
 
   // format result
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
@@ -4695,7 +4734,6 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
   char                 s[256];
   AuthorizationStates  authorizationState;
 
-fprintf(stderr,"%s, %d: serverCommand_authorize\n",__FILE__,__LINE__);
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
@@ -4721,9 +4759,9 @@ fprintf(stderr,"%s, %d: serverCommand_authorize\n",__FILE__,__LINE__);
     String_delete(name);
     return;
   }
-fprintf(stderr,"%s, %d: encryptType=%d\n",__FILE__,__LINE__,encryptType);
-fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
-fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
+//fprintf(stderr,"%s, %d: encryptType=%d\n",__FILE__,__LINE__,encryptType);
+//fprintf(stderr,"%s, %d: encryptedPassword='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedPassword),String_length(encryptedPassword));
+//fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cString(encryptedUUID),String_length(encryptedUUID));
 
   error              = ERROR_UNKNOWN;
   authorizationState = AUTHORIZATION_STATE_FAIL;
@@ -4762,7 +4800,6 @@ fprintf(stderr,"%s, %d: encryptedUUID='%s' %lu\n",__FILE__,__LINE__,String_cStri
   else if (!String_isEmpty(encryptedUUID))
   {
     // master => verify/pair new master
-fprintf(stderr,"%s, %d: ----------\n",__FILE__,__LINE__);
 
     // decrypt UUID
     error = ServerIO_decryptData(&clientInfo->io,
@@ -4808,7 +4845,6 @@ fprintf(stderr,"%s, %d: ----------\n",__FILE__,__LINE__);
       else
       {
         // pairing -> store new master name+UUID hash
-fprintf(stderr,"%s, %d: store new master name+UUID hash\n",__FILE__,__LINE__);
 //TODO: lock required?
         if (String_isEmpty(newMaster.name))
         {
@@ -5312,7 +5348,6 @@ LOCAL void serverCommand_masterPairingStart(ClientInfo *clientInfo, IndexHandle 
   StringMap_getUInt(argumentMap,"timeout",&timeout,DEFAULT_PAIRING_MASTER_TIMEOUT);
 
   // start pairing
-fprintf(stderr,"%s, %d: serverCommand_masterPairingStart\n",__FILE__,__LINE__);
   startPairingMaster(timeout,PAIRING_MODE_MANUAL);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -7247,7 +7282,6 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
               );
   }
 
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
 
   // free resources
@@ -10706,7 +10740,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
 
     // clear persistence list
     List_clear(&jobNode->job.options.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-    jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
     // notify about changed lists
     Job_persistenceChanged(jobNode);
@@ -10829,7 +10863,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       insertPersistenceNode(&jobNode->job.options.persistenceList,persistenceNode);
 
       // set last-modified timestamp
-      jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+      jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
       // get id
       persistenceId = persistenceNode->id;
@@ -10987,7 +11021,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
 //    insertForeverPersistenceNodes(&jobNode->job.options.persistenceList);
 
     // set last-modified timestamp
-    jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
     // notify about changed lists
     Job_persistenceChanged(jobNode);
@@ -11071,7 +11105,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
 //    insertForeverPersistenceNodes(&jobNode->job.options.persistenceList);
 
     // set last-modified timestamp
-    jobNode->job.options.persistenceList.lastModificationTimestamp = Misc_getCurrentDateTime();
+    jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
     // notify about changed persistence
     Job_persistenceChanged(jobNode);
@@ -17723,11 +17757,6 @@ LOCAL void incrementAuthorizationFail(ClientNode *clientNode)
   }
   clientNode->clientInfo.authorizationFailNode->count++;
   clientNode->clientInfo.authorizationFailNode->lastTimestamp = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: incrementAuthorizationFail %ums\n",__FILE__,__LINE__,
-(uint64)MIN(SQUARE(clientNode->clientInfo.authorizationFailNode->count)*AUTHORIZATION_PENALITY_TIME,
-                       MAX_AUTHORIZATION_PENALITY_TIME
-                      )
-                      );
 }
 
 /***********************************************************************\
@@ -18674,7 +18703,7 @@ Errors Server_run(ServerModes       mode,
           {
             logMessage(NULL,  // logHandle,
                        LOG_TYPE_ERROR,
-                       "Cannot pair master %s: %s\n",
+                       "Cannot pair master %s: %s",
                        String_cString(newMaster.name),Error_getText(error)
                       );
           }
@@ -18897,8 +18926,6 @@ Errors Server_batch(int        inputDescriptor,
          && 1
         )
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-ServerIO_receiveData(&clientInfo.io);
     if (ServerIO_getCommand(&clientInfo.io,
                             &id,
                             name,

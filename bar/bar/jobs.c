@@ -1187,7 +1187,7 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   DeltaSourceList_clear(&jobOptions->deltaSourceList);
   List_clear(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
   List_clear(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  jobOptions->persistenceList.lastModificationTimestamp = 0LL;
+  jobOptions->persistenceList.lastModificationDateTime = 0LL;
 
   jobOptions->archiveType                = ARCHIVE_TYPE_NORMAL;
 
@@ -3920,7 +3920,7 @@ void Job_initOptions(JobOptions *jobOptions)
                                );
   List_init(&jobOptions->scheduleList);
   List_init(&jobOptions->persistenceList);
-  jobOptions->persistenceList.lastModificationTimestamp = 0LL;
+  jobOptions->persistenceList.lastModificationDateTime  = 0LL;
 
   jobOptions->archiveType                               = globalOptions.archiveType;
 
@@ -4035,7 +4035,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
                      NULL,  // fromListToNode
                      CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
                     );
-  jobOptions->persistenceList.lastModificationTimestamp = 0LL;
+  jobOptions->persistenceList.lastModificationDateTime  = 0LL;
 
   jobOptions->archiveType                               = fromJobOptions->archiveType;
 
@@ -4162,9 +4162,11 @@ SlaveNode *Job_addSlave(ConstString name, uint port)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  slaveNode->name  = String_duplicate(name);
-  slaveNode->port  = port;
+  slaveNode->name               = String_duplicate(name);
+  slaveNode->port               = port;
   Connector_init(&slaveNode->connectorInfo);
+  slaveNode->lastOnlineDateTime = 0LL;
+  slaveNode->authorizedFlag     = FALSE;
 
   List_append(&slaveList,slaveNode);
 
@@ -4175,6 +4177,7 @@ SlaveNode *Job_removeSlave(SlaveNode *slaveNode)
 {
   assert(slaveNode != NULL);
   assert(Semaphore_isLocked(&slaveList.lock));
+  assert(slaveNode->lockCount == 0);
 
   if (Connector_isConnected(&slaveNode->connectorInfo))
   {

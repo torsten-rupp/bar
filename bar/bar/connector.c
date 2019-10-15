@@ -119,8 +119,7 @@ LOCAL_INLINE void __setConnectorState(const char      *__fileName__,
   #endif /* not NDEBUG */
 
   connectorInfo->state = state;
-
-{ const char *S[]={"NONE","CONNECTED","AUTHORIZED","DISCONNECTED"}; fprintf(stderr,"%s, %d: setConnectorState %p: %s,%d -> %s\n",__fileName__,__lineNb__,connectorInfo,(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK) ? String_cString(connectorInfo->io.network.name):"",(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK) ? connectorInfo->io.network.port:0,S[state]); }
+//{ const char *S[]={"NONE","CONNECTED","AUTHORIZED","DISCONNECTED"}; fprintf(stderr,"%s, %d: setConnectorState %p: %s,%d -> %s\n",__fileName__,__lineNb__,connectorInfo,(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK) ? String_cString(connectorInfo->io.network.name):"",(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK) ? connectorInfo->io.network.port:0,S[state]); }
 }
 
 /***********************************************************************\
@@ -178,7 +177,6 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   {
     HALT_FATAL_ERROR("Cannot initialize connector thread!");
   }
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
   // set state
   setConnectorState(connectorInfo,CONNECTOR_STATE_CONNECTED);
@@ -3056,7 +3054,6 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
                                    hostName,
                                    encryptedUUID
                                   );
-fprintf(stderr,"%s, %d: AUTHORIZE %s\n",__FILE__,__LINE__,Error_getText(error));
   if (error != ERROR_NONE)
   {
     String_delete(encryptedUUID);

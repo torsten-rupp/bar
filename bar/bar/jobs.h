@@ -275,7 +275,9 @@ typedef struct SlaveNode
   String        name;
   uint          port;
   ConnectorInfo connectorInfo;
-  uint          lockCount;
+  uint64        lastOnlineDateTime;
+  bool          authorizedFlag;
+  uint          lockCount;                              // >0 iff locked
 } SlaveNode;
 
 typedef struct
@@ -1422,6 +1424,26 @@ SlaveNode *Job_addSlave(ConstString name, uint port);
 \***********************************************************************/
 
 SlaveNode *Job_removeSlave(SlaveNode *slaveNode);
+
+/***********************************************************************\
+* Name   : Job_isSlaveLocked
+* Purpose: check if slave is locked
+* Input  : slaveNode - slave node
+* Output : -
+* Return : TRUE iff slave is locked
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Job_isSlaveLocked(SlaveNode *slaveNode);
+#if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+INLINE bool Job_isSlaveLocked(SlaveNode *slaveNode)
+{
+  assert(slaveNode != NULL);
+  assert(Semaphore_isLocked(&slaveList.lock));
+
+  return slaveNode->lockCount > 0;
+}
+#endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Job_connectorLock
