@@ -1616,7 +1616,7 @@ class Dialogs
           if (extendedMessage != null)
           {
             label = new Label(composite,SWT.LEFT);
-            label.setText(Dialogs.tr("Extended error:"));
+            label.setText(Dialogs.tr("Extended error")+":");
             label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
             row++;
             text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
@@ -1877,7 +1877,7 @@ class Dialogs
           if (extendedMessage != null)
           {
             label = new Label(composite,SWT.LEFT);
-            label.setText(Dialogs.tr("Extended message:"));
+            label.setText(Dialogs.tr("Extended message")+":");
             label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
             row++;
             text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);
@@ -2094,7 +2094,7 @@ class Dialogs
           if (extendedMessage != null)
           {
             label = new Label(composite,SWT.LEFT);
-            label.setText(Dialogs.tr("Extended error:"));
+            label.setText(Dialogs.tr("Extended error")+":");
             label.setLayoutData(new TableLayoutData(row,1,TableLayoutData.NSWE,0,0,4));
             row++;
             text = new Text(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.READ_ONLY);

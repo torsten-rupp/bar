@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-16 15:02+0200\n"
-"PO-Revision-Date: 2019-09-29 11:50+0200\n"
+"POT-Creation-Date: 2019-10-16 17:09+0200\n"
+"PO-Revision-Date: 2019-10-16 17:08+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
 "Language: de\n"
@@ -47,9 +47,8 @@ msgid "continuous"
 msgstr "fortlaufend"
 
 #: src/BARControl.java:843 src/BARException.java:262
-#, fuzzy
 msgid "unknown"
-msgstr "Unbekanntes Datenfragment"
+msgstr "unbekannt"
 
 #: src/BARControl.java:883 src/TabStatus.java:1344 src/TabStatus.java:1433
 #: src/TabStatus.java:1528 src/TabStatus.java:1570 src/TabStatus.java:1640
@@ -148,25 +147,24 @@ msgid "forever"
 msgstr ""
 
 #: src/BARControl.java:1286 src/BARControl.java:1287
-#, fuzzy, java-format
+#, java-format
 msgid "{0} {0,choice,0#years|1#year|1<years}"
-msgstr "{0} ({1} {1,choice,0#Bytes|1#Byte|1<Bytes})"
+msgstr "{0} ({1} {1,choice,0#Jahre|1#Jahr|1<Jahre})"
 
 #: src/BARControl.java:1288 src/BARControl.java:1289
-#, fuzzy, java-format
+#, java-format
 msgid "{0} {0,choice,0#months|1#month|1<months}"
-msgstr ""
-"{0} {0,choice,0#Einhängepunkte|1#Einhängepunkt|1<Einhängepunkte} entfernen?"
+msgstr "{0} {0,choice,0#Monate|1#Monat|1<Monate} entfernen?"
 
 #: src/BARControl.java:1290 src/BARControl.java:1291
-#, fuzzy, java-format
+#, java-format
 msgid "{0} {0,choice,0#weeks|1#week|1<weeks}"
-msgstr "{0} ({1} {1,choice,0#Bytes|1#Byte|1<Bytes})"
+msgstr "{0} ({1} {1,choice,0#Wochen|1#Woche|1<Wochen})"
 
 #: src/BARControl.java:1292
-#, fuzzy, java-format
+#, java-format
 msgid "{0} {0,choice,0#days|1#day|1<days}"
-msgstr "{0} ({1} {1,choice,0#Bytes|1#Byte|1<Bytes})"
+msgstr "{0} ({1} {1,choice,0#Tage|1#Tag|1<Tage})"
 
 #: src/BARControl.java:1870
 msgid "INTERNAL ERROR"
@@ -256,9 +254,8 @@ msgid "Server settings"
 msgstr "Server Einstellungen"
 
 #: src/BARControl.java:2778 src/BARControl.java:3758
-#, fuzzy
 msgid "Pair master"
-msgstr "Auftrag ''{0}'' starten?"
+msgstr "Hauptinstanz koppeln"
 
 #: src/BARControl.java:2818 src/BARControl.java:3421
 msgid "Role"
@@ -375,54 +372,30 @@ msgid "OK"
 msgstr "OK"
 
 #: src/BARControl.java:3847 src/BARControl.java:3859
-#, fuzzy
-msgid ""
-"Cannot set new master:\n"
-"\n"
-msgstr ""
-"Gespeicherte Passworte auf Server löschen:\n"
-"\n"
+msgid "Cannot set new master"
+msgstr "Hauptinstanz kann nicht gekoppelt werden"
 
 #: src/BARControl.java:3870
-#, fuzzy
 msgid "Restart"
-msgstr "Wiederherstellen"
+msgstr "Neustart"
 
 #: src/BARControl.java:3898 src/BARControl.java:3910
-#, fuzzy
-msgid ""
-"Cannot restart pairing master:\n"
-"\n"
-msgstr ""
-"Gespeicherte Passworte auf Server löschen:\n"
-"\n"
+msgid "Cannot restart pairing master"
+msgstr "Hauptinstanz kann nicht gekoppelt werden"
 
 #: src/BARControl.java:3946 src/BARControl.java:3958
-#, fuzzy
-msgid ""
-"Cannot stop pairing master:\n"
-"\n"
-msgstr ""
-"Gespeicherte Passworte auf Server löschen:\n"
-"\n"
+msgid "Cannot stop pairing master"
+msgstr "Beenden Kopplung Hauptinstanz fehlgeschlagen"
 
 #: src/BARControl.java:4075 src/BARControl.java:4086
-#, fuzzy
-msgid ""
-"Cannot start pairing master:\n"
-"\n"
-msgstr ""
-"Gespeicherte Passworte auf Server löschen:\n"
-"\n"
+msgid "Cannot start pairing master"
+msgstr "Starten Kopplung Hauptinstanz fehlgeschlagen"
 
 #: src/BARControl.java:4118
-#, fuzzy
 msgid ""
 "Cannot clear master:\n"
 "\n"
-msgstr ""
-"Gespeicherte Passworte auf Server löschen:\n"
-"\n"
+msgstr "Aufhebung Kopplung Hauptinstanz fehlgeschlagen\n"
 
 #: src/BARControl.java:5018 src/BARServer.java:1357
 #, java-format
@@ -454,24 +427,20 @@ msgid "insufficient memory"
 msgstr "Speicher nicht ausreichend"
 
 #: src/BARException.java:268
-#, fuzzy
 msgid "initialize fail"
-msgstr "Initializierung fehlgeschlagen"
+msgstr "Initialisierung fehlgeschlagen"
 
 #: src/BARException.java:271
-#, fuzzy
 msgid "invalid argument"
 msgstr "Ungültiger Wert"
 
 #: src/BARException.java:274
-#, fuzzy
 msgid "configuration error"
-msgstr "Fehler loggen."
+msgstr "Konfigurationsfehler"
 
 #: src/BARException.java:277
-#, fuzzy
 msgid "no writable configuration file"
-msgstr "Fehler loggen."
+msgstr "Konfigurationsdatei kann nicht geschrieben werden"
 
 #: src/BARException.java:280 src/TabStatus.java:103 src/TabStatus.java:194
 msgid "aborted"
@@ -494,16 +463,14 @@ msgid "run as daemon fail"
 msgstr ""
 
 #: src/BARException.java:295
-#, fuzzy
 msgid "inter-process communication fail"
-msgstr "Befehl für Erzeugung eines Abbilds."
+msgstr "Prozesskommunikation fehlgeschlagen"
 
 #: src/BARException.java:298
-#, fuzzy
 msgid "initialize password fail"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
+msgstr "Fehler bei Passwortinitialisierung"
 
-#: src/BARException.java:301 src/BARException.java:343
+#: src/BARException.java:301 src/BARException.java:340
 msgid "no password given"
 msgstr "Kein Passwort"
 
@@ -512,1026 +479,808 @@ msgid "invalid password"
 msgstr "Ungültiges Passwort"
 
 #: src/BARException.java:307
-#, fuzzy
 msgid "process data fail"
-msgstr "Kompression fehlgeschlag"
+msgstr "Datenverarbeitung fehlgeschlagen"
 
 #: src/BARException.java:310
-#, fuzzy
 msgid "invalid pattern"
-msgstr "Eintrag in der Filterliste ändern."
+msgstr "Ungültiges Muster"
 
 #: src/BARException.java:317
-#, fuzzy
 msgid "no host name given"
-msgstr "Archivname"
+msgstr "Kein Rechnername angegeben"
 
-#: src/BARException.java:322
-#, fuzzy
-msgid "host ''%s'' not found"
-msgstr "Auftrag nicht gefunden"
-
-#: src/BARException.java:326
-#, fuzzy
+#: src/BARException.java:320
 msgid "host not found"
-msgstr "Auftrag nicht gefunden"
+msgstr "Rechner nicht gefunden"
 
-#: src/BARException.java:330
-#, fuzzy
+#: src/BARException.java:327
 msgid "connect fail"
 msgstr "Verbindung fehlgeschlagen"
 
-#: src/BARException.java:337
-#, fuzzy
+#: src/BARException.java:334
 msgid "too many concurrent connections"
-msgstr "Klicken um nach max. Anzahl gleichzeitiger Verbindungen zu sortieren."
+msgstr "Zu viele Verbindungen gleichzeitig"
 
-#: src/BARException.java:340
-#, fuzzy
+#: src/BARException.java:337
 msgid "no login name given"
-msgstr "Login Name."
+msgstr "Kein Login-Name angegeben"
 
-#: src/BARException.java:346
-#, fuzzy
+#: src/BARException.java:343
 msgid "sending data fail"
-msgstr "Fehler beim Verarbeiten der Daten"
+msgstr "Senden der Daten fehlgeschlagen"
 
-#: src/BARException.java:353
+#: src/BARException.java:350
 msgid "receiving data fail"
 msgstr ""
 
-#: src/BARException.java:356
-#, fuzzy
+#: src/BARException.java:353
 msgid "execute command fail"
-msgstr "Ausschluss-Skript"
+msgstr "Befehlsausführung fehlgeschlagen"
 
-#: src/BARException.java:359
+#: src/BARException.java:356
 msgid "timeout receive/send data"
 msgstr ""
 
-#: src/BARException.java:362
+#: src/BARException.java:359
 msgid "no response from remote program"
 msgstr ""
 
-#: src/BARException.java:365
+#: src/BARException.java:362
 msgid "invalid response from remote program"
 msgstr ""
 
-#: src/BARException.java:368
-#, fuzzy
+#: src/BARException.java:365
 msgid "initialize TLS (SSL) fail"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
+msgstr "Initialisierung vonTLS (SSL) fehlgeschlagen"
+
+#: src/BARException.java:368
+msgid "no TLS (SSL) certificate authority file"
+msgstr "Keine TLS (SSL) Zertifikats-Authorisierungsdatei"
 
 #: src/BARException.java:371
-#, fuzzy
-msgid "no TLS (SSL) certificate authority file"
-msgstr "BAR Zertifikatsdatei Zertifizierungsstelle."
+msgid "no TLS (SSL) certificate file"
+msgstr "Kein TLS (SSL) Zertifikatsdatei"
 
 #: src/BARException.java:374
-#, fuzzy
-msgid "no TLS (SSL) certificate file"
-msgstr "BAR Zertifikatsdatei."
+msgid "no or unreadable TLS (SSL) key file"
+msgstr "Keine oder nicht lesbarer TLS (SSL)-Schlüsseldatei"
 
 #: src/BARException.java:377
-#, fuzzy
-msgid "no or unreadable TLS (SSL) key file"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
+msgid "invalid TLS (SSL) certificate authority"
+msgstr "Ungültige TLS (SSL)-Zertifizierungsstelle"
 
 #: src/BARException.java:380
-#, fuzzy
-msgid "invalid TLS (SSL) certificate authority"
-msgstr "BAR Zertifikatsdatei Zertifizierungsstelle."
+msgid "invalid TLS (SSL) certificate"
+msgstr "Ungültiges TLS (SSL)-Zertifikat"
 
 #: src/BARException.java:383
-#, fuzzy
-msgid "invalid TLS (SSL) certificate"
-msgstr "BAR Zertifikatsdatei Zertifizierungsstelle."
-
-#: src/BARException.java:386
-#, fuzzy
 msgid "TLS (SSL) certificate expired"
-msgstr "BAR Zertifikatsdatei."
+msgstr "TLS (SSL)-Zertifikat abgelaufen"
 
-#: src/BARException.java:393
-#, fuzzy
+#: src/BARException.java:390
 msgid "TLS (SSL) certificate is still not active"
-msgstr "BAR Zertifikatsdatei."
+msgstr "TLS (SSL)-Zertifikat noch nicht aktiv"
 
-#: src/BARException.java:400
-#, fuzzy
+#: src/BARException.java:397
 msgid "TLS (SSL) handshake failure"
-msgstr "BAR Zertifikatsdatei."
+msgstr "TLS (SSL)-Protokollfehler"
+
+#: src/BARException.java:404
+msgid "invalid SSH specifier"
+msgstr "Ungültiger SSH-Prefix"
 
 #: src/BARException.java:407
-#, fuzzy
-msgid "invalid SSH specifier"
-msgstr "Ungültiges Webdav-Passwort"
+msgid "no SSH public key"
+msgstr "Kein öffentlicher SSH-Schlüssel"
 
 #: src/BARException.java:410
-#, fuzzy
-msgid "no SSH public key"
-msgstr "Öffentlicher SSH-Schlüssel"
+msgid "no SSH private key"
+msgstr "Kein privater SSH-Schlüssel"
 
 #: src/BARException.java:413
-#, fuzzy
-msgid "no SSH private key"
-msgstr "Privater SSH-Schlüssel"
-
-#: src/BARException.java:416
 msgid "no SSH password given"
 msgstr "Kein SSH-Passwort"
 
-#: src/BARException.java:419 src/BARException.java:426
-#: src/BARException.java:433 src/BARException.java:443
-#: src/BARException.java:528 src/BARException.java:1035
+#: src/BARException.java:416 src/BARException.java:423
+#: src/BARException.java:430 src/BARException.java:440
+#: src/BARException.java:525 src/BARException.java:970
 msgid " for ''%s''"
 msgstr " für ''%s''"
 
-#: src/BARException.java:423
+#: src/BARException.java:420
 msgid "invalid SSH password"
 msgstr "Ungültiges SSH-Passwort"
 
-#: src/BARException.java:430
-#, fuzzy
+#: src/BARException.java:427
 msgid "invalid SSH private key"
-msgstr "Privater SSH-Schlüssel"
+msgstr "Ungültiger privater SSH-Schlüssel"
+
+#: src/BARException.java:434
+msgid "initialize SSH session fail"
+msgstr "Initialisierung SSH-Sitzung fehlgeschlagen"
 
 #: src/BARException.java:437
-#, fuzzy
-msgid "initialize SSH session fail"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
-
-#: src/BARException.java:440
-#, fuzzy
 msgid "SSH authentication fail"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "SSH-Authentifizierung fehlgeschlagen"
 
-#: src/BARException.java:453
+#: src/BARException.java:450
 msgid "ssh protocol error"
 msgstr ""
 
-#: src/BARException.java:457
+#: src/BARException.java:454
 msgid "job ''%s'' already exists"
 msgstr ""
 
-#: src/BARException.java:460
+#: src/BARException.java:457
 msgid "job ''%s'' running"
 msgstr ""
 
-#: src/BARException.java:463
-#, fuzzy
+#: src/BARException.java:460
 msgid "create job fail"
-msgstr "Zertifikatsdatei"
+msgstr "Erzeugen eines neuen Auftrags fehlgeschlagen"
 
-#: src/BARException.java:470
-#, fuzzy
+#: src/BARException.java:467
 msgid "delete job fail"
-msgstr "Datei auswählen"
+msgstr "Löschen eines Auftrags fehlgeschlagen"
 
-#: src/BARException.java:477
-#, fuzzy
+#: src/BARException.java:474
 msgid "rename job fail"
-msgstr "Auftrag umbenennen"
+msgstr "Umbenennen eines Auftrags fehlgeschlagen"
+
+#: src/BARException.java:481
+msgid "initialize storage fail"
+msgstr "Initialisierung der Archivierung fehlgeschlagen"
 
 #: src/BARException.java:484
-#, fuzzy
-msgid "initialize storage fail"
-msgstr "Archivedateiname editieren"
+msgid "no storage name given"
+msgstr "Kein Archivname angegeben"
 
 #: src/BARException.java:487
-#, fuzzy
-msgid "no storage name given"
-msgstr "Archivname"
+msgid "invalid storage"
+msgstr "Ungültiger Archivename"
 
 #: src/BARException.java:490
-#, fuzzy
-msgid "invalid storage"
-msgstr "nicht speichern"
+msgid "invalid FTP specifier"
+msgstr "Ungültiger FTP-Prefix"
 
 #: src/BARException.java:493
-#, fuzzy
-msgid "invalid FTP specifier"
-msgstr "Ungültiges Webdav-Passwort"
-
-#: src/BARException.java:496
-#, fuzzy
 msgid "initialize FTP session fail"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
+msgstr "Initialisierung FTP-Sitzung fehlgeschlagen"
 
-#: src/BARException.java:499 src/BARException.java:512
+#: src/BARException.java:496 src/BARException.java:509
 msgid ": %s"
 msgstr ""
 
-#: src/BARException.java:503
+#: src/BARException.java:500
 msgid "no FTP password given"
 msgstr "Kein FTP-Passwort"
 
-#: src/BARException.java:506
+#: src/BARException.java:503
 msgid "invalid FTP password"
 msgstr "Ungültiges FTP-Passwort"
 
-#: src/BARException.java:509
+#: src/BARException.java:506
 msgid "invalid FTP user/password"
 msgstr "Ungültiger FTP-Benutzer/Passwort"
 
-#: src/BARException.java:516
-#, fuzzy
+#: src/BARException.java:513
 msgid "get FTP file size fail"
-msgstr "Datei auswählen"
+msgstr "Ermitteln der FTP-Dateigröße fehlgeschlagen"
+
+#: src/BARException.java:516
+msgid "invalid WebDAV specifier"
+msgstr "Ungültiger WebDAV-Prefix"
 
 #: src/BARException.java:519
-#, fuzzy
-msgid "invalid WebDAV specifier"
-msgstr "Ungültiges Webdav-Passwort"
+msgid "initialize WebDAV session fail"
+msgstr "Initialisierung WebDAV-Sitzung fehlgeschlagen"
 
 #: src/BARException.java:522
-#, fuzzy
-msgid "initialize WebDAV session fail"
-msgstr "Min. Kompressionsgröße"
-
-#: src/BARException.java:525
-#, fuzzy
 msgid "no WebDAV password given"
-msgstr "Kein Webdav Passwort"
+msgstr "Kein WebDAV-Passwort"
+
+#: src/BARException.java:529
+msgid "invalid WebDAV password"
+msgstr "Ungültiges WebDAV-Passwort"
 
 #: src/BARException.java:532
-#, fuzzy
-msgid "invalid WebDAV password"
-msgstr "Ungültiges Webdav-Passwort"
+msgid "invalid WebDAV user/password"
+msgstr "Ungültiger WebDAV-Benutzer/Passwort"
 
 #: src/BARException.java:535
-#, fuzzy
-msgid "invalid WebDAV user/password"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
-
-#: src/BARException.java:538
 msgid "WebDAV bad request"
 msgstr ""
 
-#: src/BARException.java:541
-#, fuzzy
+#: src/BARException.java:538
 msgid "get WebDAV file size"
-msgstr "Datei auswählen"
+msgstr "Ermitteln der WebDAV-Dateigröße fehlgeschlagen"
 
-#: src/BARException.java:549
-msgid "WebDAV upload"
-msgstr ""
+#: src/BARException.java:544
+msgid "fail"
+msgstr "fehlgeschlagen"
 
-#: src/BARException.java:557
-msgid "WebDAV download"
-msgstr ""
+#: src/BARException.java:547
+msgid "WebDAV upload fail"
+msgstr "Senden von Daten mit WebDAV "
 
-#: src/BARException.java:565
-#, fuzzy
+#: src/BARException.java:554
+msgid "WebDAV download fail"
+msgstr "Empfangen Daten mit WebDAV "
+
+#: src/BARException.java:561
 msgid "WebDAV fail"
-msgstr "Initializierung fehlgeschlagen"
+msgstr "Initialisierung WebDAV fehlgeschlagen"
 
-#: src/BARException.java:573
-#, fuzzy
+#: src/BARException.java:568
 msgid "initialize compress fail"
-msgstr "Min. Kompressionsgröße"
+msgstr "Initialisierung Kompression fehlgeschlagen"
 
-#: src/BARException.java:581
-#, fuzzy
+#: src/BARException.java:575
 msgid "initialize decompress fail"
-msgstr "Min. Kompressionsgröße"
+msgstr "Initialisierung Dekompression fehlgeschlagen"
 
-#: src/BARException.java:589
+#: src/BARException.java:582
 msgid "compress fail"
 msgstr "Kompression fehlgeschlag"
 
-#: src/BARException.java:596
+#: src/BARException.java:589
 msgid "decompress fail"
 msgstr "Dekompression fehlgeschlagen"
 
-#: src/BARException.java:603
-#, fuzzy
+#: src/BARException.java:596
 msgid "end of compressed file"
-msgstr "Min. Kompressionsgröße"
+msgstr "Komprimierte Datei unvollständig"
 
-#: src/BARException.java:608
-#, fuzzy
-msgid "delta source ''%s'' not found"
-msgstr "Wähle lokale Archivedatei aus"
-
-#: src/BARException.java:612 src/BARException.java:1305
-#, fuzzy
+#: src/BARException.java:599 src/BARException.java:1225
 msgid "delta source not found"
-msgstr "Wähle lokale Archivedatei aus"
+msgstr "Delta-Quelle nicht gefunden"
 
-#: src/BARException.java:616
-#, fuzzy
+#: src/BARException.java:606
 msgid "invalid compress algorithm"
-msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
+msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren"
 
-#: src/BARException.java:619
-#, fuzzy
+#: src/BARException.java:609
 msgid "unknown compress algorithm"
-msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
+msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren"
 
-#: src/BARException.java:622
+#: src/BARException.java:612
 msgid "compress algorithm not supported"
 msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren"
 
-#: src/BARException.java:625
+#: src/BARException.java:615
 msgid "unsupported block length"
 msgstr ""
 
-#: src/BARException.java:630
-#, fuzzy
-msgid "initialize crypt fail: %s"
-msgstr ""
-"Fehler beim Ermitteln der Dateiliste:\n"
-"\n"
-"{0}"
-
-#: src/BARException.java:634
-#, fuzzy
+#: src/BARException.java:618
 msgid "initialize crypt fail"
-msgstr "Öffentliche Schlüsseldatei"
+msgstr "Initialisierung Verschlüsselung fehlgeschlagen"
 
-#: src/BARException.java:638
-#, fuzzy
+#: src/BARException.java:625
 msgid "no decrypt key for cipher"
-msgstr "Kein Verschlüsselungspasswort"
+msgstr "Keinen Schlüssel für Entschlüsslung gefunden"
 
-#: src/BARException.java:641
+#: src/BARException.java:628
 msgid "no password given for cipher"
 msgstr "Kein Verschlüsselungspasswort"
 
-#: src/BARException.java:644
+#: src/BARException.java:631
 msgid "invalid decryption password"
 msgstr "Ungültiges Verschlüsselungspasswort"
 
-#: src/BARException.java:647
-#, fuzzy
+#: src/BARException.java:634
 msgid "encryption passwords mismatch"
-msgstr "Entschlüsselungspasswort"
+msgstr "Nicht gleiche Entschlüsselungspassworte angegeben"
 
-#: src/BARException.java:650
-#, fuzzy
+#: src/BARException.java:637
 msgid "initialize cipher fail"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
+msgstr "Initialisierung von Verschlüssung fehlgeschlagen"
 
-#: src/BARException.java:657
-#, fuzzy
+#: src/BARException.java:644
 msgid "encrypt fail"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "Verschlüsselung fehlgeschlag"
 
-#: src/BARException.java:664
-#, fuzzy
+#: src/BARException.java:651
 msgid "decrypt fail"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "Entschlüsselung fehlgeschlagen"
 
-#: src/BARException.java:673
-#, fuzzy
-msgid "create public/private key ''%s'' fail"
-msgstr "Wählen Sie die private Schlüsseldatei aus"
-
-#: src/BARException.java:677
-#, fuzzy
+#: src/BARException.java:658
 msgid "create public/private key fail"
-msgstr "Wählen Sie die private Schlüsseldatei aus"
+msgstr "Erzeugen des öffentlichen/privaten Schlüsselpaars fehlgeschlagen"
 
-#: src/BARException.java:681
-#, fuzzy
+#: src/BARException.java:665
 msgid "invalid encoding"
-msgstr "Ungültiger Index"
+msgstr "Ungültiger Kodierung"
 
-#: src/BARException.java:686
-#, fuzzy
-msgid "initialize key fail (error: %s)"
-msgstr ""
-"Fehler beim Ermitteln der Dateiliste:\n"
-"\n"
-"{0}"
-
-#: src/BARException.java:690
-#, fuzzy
+#: src/BARException.java:668
 msgid "initialize key fail"
-msgstr "Öffentliche Schlüsseldatei"
+msgstr "Initialisierung Schlüssel fehlgeschlagen"
+
+#: src/BARException.java:675
+msgid "public/private key not found"
+msgstr "Öffentlicher/privater Schlüssel nicht gefunden"
+
+#: src/BARException.java:682
+msgid "read public/private key fail"
+msgstr "Lesen des öffentlichen/privaten Schlüsselpaars fehlgeschlagen"
+
+#: src/BARException.java:689
+msgid "invalid key"
+msgstr "Ungültiger Schlüssel"
 
 #: src/BARException.java:696
-#, fuzzy
-msgid "public/private key ''%s'' not found"
-msgstr "Wählen Sie die private Schlüsseldatei aus"
-
-#: src/BARException.java:700
-#, fuzzy
-msgid "public/private key not found"
-msgstr "Wählen Sie die private Schlüsseldatei aus"
-
-#: src/BARException.java:706
-#, fuzzy
-msgid "read public/private key ''%s'' fail"
-msgstr "Wählen Sie die private Schlüsseldatei aus"
-
-#: src/BARException.java:710
-#, fuzzy
-msgid "read public/private key fail"
-msgstr "Wählen Sie die private Schlüsseldatei aus"
-
-#: src/BARException.java:716
-#, fuzzy
-msgid "invalid key: %s"
-msgstr "Privater Schlüssel"
-
-#: src/BARException.java:720
-#, fuzzy
-msgid "invalid key"
-msgstr "Privater Schlüssel"
-
-#: src/BARException.java:724
-#, fuzzy
 msgid "invalid key length"
-msgstr "Privater Schlüssel"
+msgstr "Ungültige Schlüssellänge"
 
-#: src/BARException.java:727
-#, fuzzy
+#: src/BARException.java:699
 msgid "invalid block length"
-msgstr "Privater Schlüssel"
+msgstr "Ungültige Blocklänge"
 
-#: src/BARException.java:730
-#, fuzzy
+#: src/BARException.java:702
 msgid "invalid salt length"
-msgstr "Eintrag in der Filterliste ändern."
+msgstr "Ungültige Länge Verschlüssungswert"
 
-#: src/BARException.java:733
-#, fuzzy
+#: src/BARException.java:705
 msgid "no public encryption key"
-msgstr "Öffentlicher SSH-Schlüssel"
+msgstr "Kein öffentlicher Schlüssel"
 
-#: src/BARException.java:736
-#, fuzzy
+#: src/BARException.java:708
 msgid "no private encryption key"
-msgstr "Privater SSH-Schlüssel"
+msgstr "Kein privater Schlüssel"
 
-#: src/BARException.java:741
-#, fuzzy
-msgid "key ''%s'' is not a public encryption key"
-msgstr "Öffentlicher SSH-Schlüssel"
+#: src/BARException.java:711
+msgid "key is not a public encryption key"
+msgstr "Kein öffentlicher Schlüssel für Verschlüsselung"
+
+#: src/BARException.java:718
+msgid "key is not a private encryption key"
+msgstr "Kein privater Schlüssel für Verschlüsselung"
+
+#: src/BARException.java:725
+msgid "no public signature key"
+msgstr "Kein öffentlicher Signatur-Schlüssel"
+
+#: src/BARException.java:728
+msgid "no private signature key"
+msgstr "Kein privater Signatur-Schlüssel"
+
+#: src/BARException.java:731
+msgid "key is not a public signature key"
+msgstr "Schlüssel ist kein öffentlicher Signatur-Schlüssel"
+
+#: src/BARException.java:738
+msgid "key is not a private signature key"
+msgstr "Schlüssel ist kein privater Signatur-Schlüssel"
 
 #: src/BARException.java:745
-#, fuzzy
-msgid "key is not a public encryption key"
-msgstr "Öffentlicher SSH-Schlüssel"
+msgid "key encryption fail"
+msgstr "Verschlüsselung von Schlüssel fehlgeschlagen"
 
-#: src/BARException.java:751 src/BARException.java:755
-#, fuzzy
-msgid "key ''%s'' is not a private encryption key"
-msgstr "Öffentlicher SSH-Schlüssel"
+#: src/BARException.java:752
+msgid "key decryption fail"
+msgstr "Entschlüsselung von Schlüssel fehlgeschlagen"
 
 #: src/BARException.java:759
-#, fuzzy
-msgid "no public signature key"
-msgstr "Öffentlicher SSH-Schlüssel"
+msgid "wrong private decryption key"
+msgstr "Falscher privater Verschlüsselungs-Schlüssel"
 
 #: src/BARException.java:762
-#, fuzzy
-msgid "no private signature key"
-msgstr "Privater SSH-Schlüssel"
+msgid "invalid encryption algorithm"
+msgstr "Ungültiger Verschlüsselungsalgorithmus"
 
-#: src/BARException.java:767
-#, fuzzy
-msgid "key ''%s'' is not a public signature key"
-msgstr "Öffentlicher SSH-Schlüssel"
+#: src/BARException.java:765
+msgid "unknown encryption algorithm"
+msgstr "Unbekannter Verschlüsselungsalgorithmus"
+
+#: src/BARException.java:768
+msgid "initialize hash fail"
+msgstr "Initialisierung Hash fehlgeschlagen"
 
 #: src/BARException.java:771
-#, fuzzy
-msgid "key is not a public signature key"
-msgstr "Öffentlicher SSH-Schlüssel"
-
-#: src/BARException.java:777 src/BARException.java:781
-#, fuzzy
-msgid "key ''%s'' is not a private signature key"
-msgstr "Öffentlicher SSH-Schlüssel"
-
-#: src/BARException.java:785
-#, fuzzy
-msgid "key encryption fail"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARException.java:792
-#, fuzzy
-msgid "key decryption fail"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARException.java:799
-#, fuzzy
-msgid "wrong private decryption key"
-msgstr "Privater SSH-Schlüssel"
-
-#: src/BARException.java:802
-#, fuzzy
-msgid "invalid encryption algorithm"
-msgstr "Klicken um nach verwendetem Verschlüsselungsalgorithmus zu sortieren."
-
-#: src/BARException.java:805
-#, fuzzy
-msgid "unknown encryption algorithm"
-msgstr "Klicken um nach verwendetem Verschlüsselungsalgorithmus zu sortieren."
-
-#: src/BARException.java:808
-#, fuzzy
-msgid "initialize hash fail"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
-
-#: src/BARException.java:811
-#, fuzzy
 msgid "invalid hash algorithm"
-msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
+msgstr "Ungültiger Hash-Algorithmus"
 
-#: src/BARException.java:814
-#, fuzzy
+#: src/BARException.java:774
 msgid "unknown hash algorithm"
-msgstr "Klicken um nach verwendetem Kompressionsalgorithmus zu sortieren."
+msgstr "Unbekannter Hash-Algorithmus"
+
+#: src/BARException.java:777
+msgid "initialize message authentication code fail"
+msgstr "Initialisierung von MAC fehlgeschlagen"
+
+#: src/BARException.java:780
+msgid "invalid message authentication code algorithm"
+msgstr "Ungültiger MAC-Algorithmus"
+
+#: src/BARException.java:783
+msgid "unknown message authentication code algorithm"
+msgstr "Unbekannter MAC-Algorithmus"
+
+#: src/BARException.java:786
+msgid "no file name given"
+msgstr "kein Dateiname angegeben"
+
+#: src/BARException.java:789
+msgid "create file fail"
+msgstr "Erzeugen der Datei festgeschlagen"
+
+#: src/BARException.java:796
+msgid "open file fail"
+msgstr "Öffnen der Datei fehlgeschlagen"
+
+#: src/BARException.java:803
+msgid "create directory fail"
+msgstr "Erzeugen des Verzeichnisses festgeschlagen"
+
+#: src/BARException.java:810
+msgid "i/o error"
+msgstr "Ein-/Ausgabefehler"
 
 #: src/BARException.java:817
-#, fuzzy
-msgid "initialize message authentication code fail"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
+msgid "read file fail"
+msgstr "Datei lesen fehlgeschlagen"
 
-#: src/BARException.java:820
-#, fuzzy
-msgid "invalid message authentication code algorithm"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
+#: src/BARException.java:824
+msgid "end of file"
+msgstr "Unerwartetes Dateiende"
 
-#: src/BARException.java:823
-#, fuzzy
-msgid "unknown message authentication code algorithm"
-msgstr "Ungültiger Webdav-Benutzer/Passwort"
+#: src/BARException.java:831
+msgid "write file fail"
+msgstr "Datei schreiben fehlgeschlagen"
 
-#: src/BARException.java:826
-#, fuzzy
-msgid "no file name given"
-msgstr "Log-Dateiname."
+#: src/BARException.java:838
+msgid "delete file fail"
+msgstr "Datei löschen fehlgeschlagen"
 
-#: src/BARException.java:829
-#, fuzzy
-msgid "create file fail"
-msgstr "Zertifikatsdatei"
-
-#: src/BARException.java:836
-#, fuzzy
-msgid "open file fail"
-msgstr "Schlüsseldatei."
-
-#: src/BARException.java:843
-#, fuzzy
-msgid "create directory fail"
-msgstr "Fehler beim Lesen des Verzeichnisses"
-
-#: src/BARException.java:850
-#, fuzzy
-msgid "i/o error"
-msgstr "Fehler"
-
-#: src/BARException.java:857
-#, fuzzy
-msgid "read file fail: "
-msgstr "Archivedateien überschreiben"
-
-#: src/BARException.java:861
-#, fuzzy
-msgid "end of file: "
-msgstr "Dateiende"
-
-#: src/BARException.java:865
-#, fuzzy
-msgid "write file fail: "
-msgstr "Archivedateien überschreiben"
-
-#: src/BARException.java:869
-#, fuzzy
-msgid "delete file fail: "
-msgstr "Datei auswählen"
-
-#: src/BARException.java:892
-msgid "open directory: "
+#: src/BARException.java:845
+msgid "open directory"
 msgstr "Fehler beim Öffnen des Verzeichnisses"
 
-#: src/BARException.java:896
+#: src/BARException.java:852
 msgid "read directory fail"
 msgstr "Fehler beim Lesen des Verzeichnisses"
 
-#: src/BARException.java:901
-msgid "file ''%s'' already exists"
-msgstr ""
-
-#: src/BARException.java:905
+#: src/BARException.java:855
 msgid "file already exists"
 msgstr ""
 
-#: src/BARException.java:911
-#, fuzzy
-msgid "file ''%s'' not found"
-msgstr "Datenbank-Index nicht gefunden"
-
-#: src/BARException.java:915
-#, fuzzy
+#: src/BARException.java:862
 msgid "file not found"
-msgstr "Datenbank-Index nicht gefunden"
+msgstr "Datei nicht gefunden"
 
-#: src/BARException.java:919
+#: src/BARException.java:869
 msgid "access denied"
 msgstr ""
 
-#: src/BARException.java:922
+#: src/BARException.java:872
 msgid "not a directory"
 msgstr "Kein Verzeichnis"
 
-#: src/BARException.java:929
-#, fuzzy
+#: src/BARException.java:879
 msgid "end of directory list"
-msgstr "Verzeichnis mit Aufträgen"
+msgstr "Unerwartetes Verzeichnisende"
 
-#: src/BARException.java:932
-#, fuzzy
+#: src/BARException.java:882
 msgid "init file notify fail"
-msgstr "Öffentliche Schlüsseldatei"
+msgstr "Initialisierung von Dateiänderungsbenachrichtigungen fehlgeschlagen"
 
-#: src/BARException.java:935
-#, fuzzy
+#: src/BARException.java:885
 msgid "insufficient file notify entries"
-msgstr "Speicher nicht ausreichend"
+msgstr "Nicht ausreichend Dateiänderungsbenachrichtigungen"
 
-#: src/BARException.java:944
-#, fuzzy
+#: src/BARException.java:888
 msgid "CD/DVD/BD device not found"
-msgstr "Gerät"
+msgstr "CD/DVD/BD-Gerät nicht gefunden"
 
-#: src/BARException.java:948
-#, fuzzy
-msgid "open CD/DVD/BD disk"
-msgstr "Gerät"
+#: src/BARException.java:895
+msgid "open CD/DVD/BD disk fail"
+msgstr "Öffnen CD/DVD/BD-Medium fehlgeschlage"
 
-#: src/BARException.java:953 src/BARException.java:961
-#: src/BARException.java:972
-msgid " fail"
-msgstr "fehlgeschlagen"
+#: src/BARException.java:902
+msgid "open ISO 9660 image fail"
+msgstr "Öffnen ISO 9669-Abbild fehlgeschlagen"
 
-#: src/BARException.java:956
-msgid "open ISO 9660 image"
-msgstr ""
-
-#: src/BARException.java:964
-#, fuzzy
+#: src/BARException.java:909
 msgid "no device name given"
-msgstr "Anzumeldendes Gerät"
+msgstr "Kein Gerätename angegeben"
 
-#: src/BARException.java:967
-#, fuzzy
-msgid "open device"
-msgstr "Anzumeldendes Gerät"
+#: src/BARException.java:912
+msgid "open device fail"
+msgstr "Öffnen des Geräts fehlgeschlagen"
 
-#: src/BARException.java:975
-#, fuzzy
+#: src/BARException.java:919
 msgid "invalid device block size"
-msgstr "Ungültige Inkrementdatei"
+msgstr "Ungültige Blockgröße des Geräts"
 
-#: src/BARException.java:978
-#, fuzzy
+#: src/BARException.java:922
 msgid "read device fail"
-msgstr "Archivedateien überschreiben"
+msgstr "Lesen von Gerät fehlgeschlagen"
 
-#: src/BARException.java:981
-#, fuzzy
+#: src/BARException.java:925
 msgid "write device fail"
-msgstr "Archivedateien überschreiben"
+msgstr "Schreiben auf Gerät fehlgeschlagen"
 
-#: src/BARException.java:984
+#: src/BARException.java:928
 msgid "error parsing device list"
 msgstr ""
 
-#: src/BARException.java:989
-#, fuzzy
-msgid "mount ''%s'' fail"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARException.java:993
-#, fuzzy
+#: src/BARException.java:931
 msgid "mount fail"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "Dateisystem einhängen fehlgeschlagen"
 
-#: src/BARException.java:999
-#, fuzzy
-msgid "unmount ''%s'' fail"
-msgstr "Verbindung fehlgeschlagen"
-
-#: src/BARException.java:1003
-#, fuzzy
+#: src/BARException.java:938
 msgid "unmount fail"
-msgstr "Verbindung fehlgeschlagen"
+msgstr "Dateisystem aushängen fehlgeschlagen"
 
-#: src/BARException.java:1007
-#, fuzzy
+#: src/BARException.java:945
 msgid "no archive file name given"
-msgstr "Archivierungs Modus:"
+msgstr "kein Archivname angegeben"
 
-#: src/BARException.java:1010
-#, fuzzy
+#: src/BARException.java:948
 msgid "not an archive file"
-msgstr "Archivedateien überschreiben"
+msgstr "Keine Archivdatei"
 
-#: src/BARException.java:1015
-#, fuzzy
-msgid "archive ''%s'' not found"
-msgstr "Datenbank-Index nicht gefunden"
-
-#: src/BARException.java:1019
+#: src/BARException.java:951
 msgid "archive not found"
 msgstr "Archiv nicht gefunden"
 
-#: src/BARException.java:1023
-#, fuzzy
+#: src/BARException.java:958
 msgid "end of archive"
-msgstr "Archive wiederherstellen"
+msgstr "Unerwartetes Ende des Archivs"
 
-#: src/BARException.java:1026
+#: src/BARException.java:961
 msgid "no meta entry"
 msgstr "Kein Meta-Eintrag"
 
-#: src/BARException.java:1029
+#: src/BARException.java:964
 msgid "no file entry"
 msgstr "Kein Datei-Eintrag"
 
-#: src/BARException.java:1032
+#: src/BARException.java:967
 msgid "no file data entry"
 msgstr "Kein Dateidaten-Eintrag"
 
-#: src/BARException.java:1039
+#: src/BARException.java:974
 msgid "no directory entry"
 msgstr "Kein Verzeichnis-Eintrag"
 
-#: src/BARException.java:1042
+#: src/BARException.java:977
 msgid "no link entry"
 msgstr "Kein symbolischer Verweis-Eintrag"
 
-#: src/BARException.java:1045
+#: src/BARException.java:980
 msgid "no hard link entry"
 msgstr "Kein Hardlink-Eintrag"
 
-#: src/BARException.java:1048
+#: src/BARException.java:983
 msgid "no special entry"
 msgstr "Kein Spezial-Eintrag"
 
-#: src/BARException.java:1051
+#: src/BARException.java:986
 msgid "no image entry"
 msgstr "Kein Abbild-Eintrag"
 
-#: src/BARException.java:1054
-#, fuzzy
+#: src/BARException.java:989
 msgid "no image data entry"
-msgstr "Kein Dateidaten-Eintrag"
+msgstr "Kein Abbilddaten-Eintrag"
 
-#: src/BARException.java:1057
-#, fuzzy
+#: src/BARException.java:992
 msgid "end of data"
-msgstr "Archive wiederherstellen"
+msgstr "Unerwartetes Datenende"
 
-#: src/BARException.java:1060
+#: src/BARException.java:995
 msgid "incomplete archive"
 msgstr "Unvollständiges Archiv"
 
-#: src/BARException.java:1063
+#: src/BARException.java:998
 msgid "insufficient split number digits in name"
 msgstr ""
 
-#: src/BARException.java:1066
+#: src/BARException.java:1001
 msgid "wrong CRC"
 msgstr ""
 
-#: src/BARException.java:1069
+#: src/BARException.java:1004
 msgid " at offset "
 msgstr ""
 
-#: src/BARException.java:1084
+#: src/BARException.java:1016
 msgid "entry is incomplete"
 msgstr ""
 
-#: src/BARException.java:1091
+#: src/BARException.java:1023
 msgid "wrong entry type"
 msgstr "Falscher Eintrags-Typ"
 
-#: src/BARException.java:1098
+#: src/BARException.java:1030
 msgid "entries differ"
 msgstr "Einträge verschieden"
 
-#: src/BARException.java:1105
-#, fuzzy
+#: src/BARException.java:1037
 msgid "corrupt data or invalid password"
-msgstr "Ungültiges Passwort"
+msgstr "Ungültige Daten oder ungültiges Passwort"
 
-#: src/BARException.java:1112
-#, fuzzy
+#: src/BARException.java:1044
 msgid "invalid chunk size"
-msgstr "Privater Schlüssel"
+msgstr "Unbekanntes Datenfragment-Größe"
 
-#: src/BARException.java:1115
+#: src/BARException.java:1047
 msgid "unknown chunk"
 msgstr "Unbekanntes Datenfragment"
 
-#: src/BARException.java:1122
+#: src/BARException.java:1054
 msgid "invalid signature"
 msgstr "Ungültige Signaturen"
 
-#: src/BARException.java:1125
+#: src/BARException.java:1057
 msgid "invalid incremental file"
 msgstr "Ungültige Inkrementdatei"
 
-#: src/BARException.java:1128
+#: src/BARException.java:1060
 msgid "wrong incremental file version"
 msgstr "Falsche Version der Inkrementdatei"
 
-#: src/BARException.java:1131
+#: src/BARException.java:1063
 msgid "corrupt incremental file"
 msgstr "Inkrementdatei beschädigt"
 
-#: src/BARException.java:1134
-#, fuzzy
+#: src/BARException.java:1066
 msgid "invalid device specifier"
-msgstr "Ungültiges Webdav-Passwort"
+msgstr "Ungültiges Geräte-Prefix"
 
-#: src/BARException.java:1137
-#, fuzzy
+#: src/BARException.java:1069
 msgid "load volume fail"
-msgstr "Archivedateien überschreiben"
+msgstr "Medium laden fehlgeschlagen"
 
-#: src/BARException.java:1140
-#, fuzzy
+#: src/BARException.java:1072
 msgid "parse command fail"
-msgstr "Befehl für Erzeugung eines Abbilds."
+msgstr "Ungültige Befehlssyntax"
 
-#: src/BARException.java:1147
-#, fuzzy
+#: src/BARException.java:1079
 msgid "expand command template fail"
-msgstr "Befehl zum Laden einer CD"
+msgstr "Befehlserzeugung fehlgeschlagen"
 
-#: src/BARException.java:1150
+#: src/BARException.java:1082
 msgid "fork for execute external program fail"
 msgstr ""
 
-#: src/BARException.java:1153
-#, fuzzy
-msgid "i/o fail"
-msgstr "Verbindung fehlgeschlagen"
+#: src/BARException.java:1085
+msgid "i/o redirect fail"
+msgstr "Ein-/Ausgabeumleitung fehlgeschlagen"
 
-#: src/BARException.java:1160 src/BARException.java:1175
-msgid "execute external program"
-msgstr ""
-
-#: src/BARException.java:1163
-msgid "execute external program ''%s'' fail"
-msgstr ""
-
-#: src/BARException.java:1167
-#, fuzzy
+#: src/BARException.java:1092
 msgid "execute external program fail"
-msgstr "Ausschluss-Skript"
+msgstr "Befehlsausführung fehlgeschlagen"
 
-#: src/BARException.java:1181
-#, fuzzy
-msgid "fail"
-msgstr "Initializierung fehlgeschlagen"
+#: src/BARException.java:1103
+msgid "terminate external program fail"
+msgstr "Beenden externes Programm fehlgeschlagen"
 
-#: src/BARException.java:1188
-#, fuzzy
-msgid "parsing data"
+#: src/BARException.java:1114
+msgid "parsing data fail"
 msgstr "Fehler beim Verarbeiten der Daten"
 
-#: src/BARException.java:1195
-#, fuzzy
+#: src/BARException.java:1121
 msgid "unknown command"
-msgstr "Unbekanntes Datenfragment"
+msgstr "Unbekanntes Kommando"
 
-#: src/BARException.java:1202
+#: src/BARException.java:1128
 msgid "expected parameter"
 msgstr "Parameter erwartet"
 
-#: src/BARException.java:1215
+#: src/BARException.java:1141
 msgid "unknown value"
 msgstr "Unbekannter Wert"
 
-#: src/BARException.java:1219
+#: src/BARException.java:1145
 msgid "invalid value"
 msgstr "Ungültiger Wert"
 
-#: src/BARException.java:1226
-#, fuzzy
+#: src/BARException.java:1152
 msgid "authorization"
 msgstr "Authorisierungsfehler"
 
-#: src/BARException.java:1235
+#: src/BARException.java:1155
 msgid "job not found"
 msgstr "Auftrag nicht gefunden"
 
-#: src/BARException.java:1245
-#, fuzzy
+#: src/BARException.java:1162
 msgid "schedule not found"
-msgstr "Datenbank-Index nicht gefunden"
+msgstr "Zeitplan nicht gefunden"
 
-#: src/BARException.java:1255
-#, fuzzy
+#: src/BARException.java:1175
 msgid "persistence not found"
-msgstr "Datenbank-Index nicht gefunden"
+msgstr "Persistenzeintrag nicht gefunden"
 
-#: src/BARException.java:1265
-#, fuzzy
+#: src/BARException.java:1185
 msgid "server not found"
-msgstr "Archiv nicht gefunden"
+msgstr "Rechner nicht gefunden"
 
-#: src/BARException.java:1275
-#, fuzzy
+#: src/BARException.java:1195
 msgid "entry not found"
-msgstr "Datenbank-Index nicht gefunden"
+msgstr "Dateneintrag nicht gefunden"
 
-#: src/BARException.java:1285
-#, fuzzy
+#: src/BARException.java:1205
 msgid "pattern not found"
-msgstr "Datenbank-Index nicht gefunden"
+msgstr "Muster nicht gefunden"
 
-#: src/BARException.java:1295
-#, fuzzy
+#: src/BARException.java:1215
 msgid "mount not found"
-msgstr "Auftrag nicht gefunden"
+msgstr "Dateisystem-Einhängepunkt nicht gefunden"
 
-#: src/BARException.java:1309
-#, fuzzy
+#: src/BARException.java:1229
 msgid "database"
 msgstr "Datenbankfehler"
 
-#: src/BARException.java:1316
+#: src/BARException.java:1236
 msgid "database already exists"
 msgstr ""
 
-#: src/BARException.java:1319
+#: src/BARException.java:1239
 msgid "unknown version on index"
 msgstr "Unbekannte Indexversion"
 
-#: src/BARException.java:1322
+#: src/BARException.java:1242
 msgid "missing table"
 msgstr "Datenbank-Tabelle nicht gefunden"
 
-#: src/BARException.java:1329
+#: src/BARException.java:1249
 msgid "missing column"
 msgstr "Datenbank-Spalte nicht gefunden"
 
-#: src/BARException.java:1336
+#: src/BARException.java:1256
 msgid "obsolete table"
 msgstr "Überflüssige Datenbanktabelle"
 
-#: src/BARException.java:1343
+#: src/BARException.java:1263
 msgid "obsolete column"
 msgstr "Überflüssige Datenbankspalte"
 
-#: src/BARException.java:1350
+#: src/BARException.java:1270
 msgid "type mismatch"
 msgstr "Unpassender Datentyp"
 
-#: src/BARException.java:1357
+#: src/BARException.java:1277
 msgid "error creating index"
 msgstr "Fehler beim Erstellen des Datenbank-Index"
 
-#: src/BARException.java:1360
+#: src/BARException.java:1280
 msgid "index not found"
 msgstr "Datenbank-Index nicht gefunden"
 
-#: src/BARException.java:1363
+#: src/BARException.java:1283
 msgid "index still not initialized"
 msgstr "Index noch nicht initialisiert"
 
-#: src/BARException.java:1366
+#: src/BARException.java:1286
 msgid "invalid index"
 msgstr "Ungültiger Index"
 
-#: src/BARException.java:1373
+#: src/BARException.java:1293
 msgid "timeout accessing index"
 msgstr "Zeitüberschreitung bei Zugriff auf Index"
 
-#: src/BARException.java:1376
-#, fuzzy
+#: src/BARException.java:1296
 msgid "master disconnected"
-msgstr "Verbinden"
+msgstr "Verbindung zu Hauptinstanz verloren"
 
-#: src/BARException.java:1379
-#, fuzzy
+#: src/BARException.java:1299
 msgid "slave disconnected"
-msgstr "Verbinden"
+msgstr "Verbindung zu Nebeninstanz verloren"
 
-#: src/BARException.java:1382
-#, fuzzy
+#: src/BARException.java:1302
 msgid "slave is not paired"
-msgstr "Verbinden"
+msgstr "Nebeninstanz nicht gekoppelt"
 
 #: src/BARServer.java:1001
-#, fuzzy, java-format
+#, java-format
 msgid "Timeout reading data from server ''{0}''"
-msgstr "Einstellungen für Speicherserver ''{0}'' löschen?"
+msgstr "Zeitüberschreitung beim Lesen von Rechner ''{0}''"
 
 #: src/BARServer.java:1046
-#, fuzzy, java-format
+#, java-format
 msgid "Lost connection to server ''{0}''"
-msgstr "Einstellungen für Speicherserver ''{0}'' löschen?"
+msgstr "Verbindung zu Rechner ''{0}'' verloren"
 
 #: src/BARServer.java:1294 src/Dialogs.java:2441 src/Dialogs.java:2544
 #: src/Dialogs.java:2618 src/TabRestore.java:8700 src/TabStatus.java:2757
@@ -1597,7 +1346,7 @@ msgid ""
 msgstr ""
 "''{0}'' ist keine gültige Zeitangabe!\n"
 "\n"
-"Bitte geben Sie eine Zeit ein im Format ''n<{1}|{2}|{3}|{4}|{5}''."
+"Bitte geben Sie eine Zeit ein im Format ''n<{1}|{2}|{3}|{4}|{5}''"
 
 #: src/BARWidgets.java:1085
 msgid "Select path name. Ctrl+Click to select local directory."
@@ -1635,7 +1384,8 @@ msgid "Error"
 msgstr "Fehler"
 
 #: src/Dialogs.java:1619 src/Dialogs.java:2097
-msgid "Extended error:"
+#, fuzzy
+msgid "Extended error"
 msgstr "Erweiterte Fehlermeldung:"
 
 #: src/Dialogs.java:1857
@@ -1644,7 +1394,7 @@ msgstr "Warnung"
 
 #: src/Dialogs.java:1880
 #, fuzzy
-msgid "Extended message:"
+msgid "Extended message"
 msgstr "Erweiterte Fehlermeldung:"
 
 #: src/Dialogs.java:2381 src/Dialogs.java:2412
@@ -1753,6 +1503,7 @@ msgid "Nice level"
 msgstr "\"Nice\"-Level"
 
 #: src/ServerSettings.java:418
+#, fuzzy
 msgid "Process nice level."
 msgstr "Prozess \"Nice\"-Level"
 
@@ -5669,6 +5420,64 @@ msgstr "Durchschnittliche Ausführungszeit"
 #: src/TabStatus.java:3150
 msgid "differental"
 msgstr "differentiell"
+
+#, fuzzy
+#~ msgid "i/o fail"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#~ msgid "host ''%s'' not found"
+#~ msgstr "Rechner '%s' nicht gefunden"
+
+#~ msgid "delta source ''%s'' not found"
+#~ msgstr "Delta-Quelle '%s' nicht gefunden"
+
+#, fuzzy
+#~ msgid "key ''%s'' is not a public encryption key"
+#~ msgstr "Öffentlicher SSH-Schlüssel"
+
+#, fuzzy
+#~ msgid "key ''%s'' is not a public signature key"
+#~ msgstr "Öffentlicher SSH-Schlüssel"
+
+#, fuzzy
+#~ msgid "file ''%s'' not found"
+#~ msgstr "Datenbank-Index nicht gefunden"
+
+#, fuzzy
+#~ msgid "mount ''%s'' fail"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "unmount ''%s'' fail"
+#~ msgstr "Verbindung fehlgeschlagen"
+
+#, fuzzy
+#~ msgid "archive ''%s'' not found"
+#~ msgstr "Datenbank-Index nicht gefunden"
+
+#, fuzzy
+#~ msgid "invalid key: %s"
+#~ msgstr "Privater Schlüssel"
+
+#, fuzzy
+#~ msgid "public/private key ''%s'' not found"
+#~ msgstr "Wählen Sie die private Schlüsseldatei aus"
+
+#, fuzzy
+#~ msgid "read public/private key ''%s'' fail"
+#~ msgstr "Wählen Sie die private Schlüsseldatei aus"
+
+#~ msgid "initialize key fail (error: %s)"
+#~ msgstr "Initialisierung Schlüssel fehlgeschlagen"
+
+#~ msgid "create public/private key ''%s'' fail"
+#~ msgstr "Erzeugen des öffentlichen/privaten Schlüsselpaars fehlgeschlagen"
+
+#~ msgid "initialize crypt fail: %s"
+#~ msgstr "Initialisierung Verschlüsselung fehlgeschlagen: %s"
+
+#~ msgid " fail"
+#~ msgstr "fehlgeschlagen"
 
 #~ msgid "Error: "
 #~ msgstr "Fehler:"

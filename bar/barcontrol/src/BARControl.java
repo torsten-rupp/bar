@@ -3844,7 +3844,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot set new master")+":\n\n"+exception.getMessage());
               }
             });
             return;
@@ -3856,7 +3856,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n")+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot set new master")+":\n\n"+exception.getMessage());
               }
             });
             return;
@@ -3895,7 +3895,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master:\n\n")+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master")+":\n\n"+exception.getMessage());
               }
             });
             return;
@@ -3907,7 +3907,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master:\n\n")+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master")+":\n\n"+exception.getMessage());
               }
             });
             return;
@@ -3943,7 +3943,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master:\n\n")+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master")+":\n\n"+exception.getMessage());
               }
             });
             return;
@@ -3955,7 +3955,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master:\n\n")+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master")+":\n\n"+exception.getMessage());
               }
             });
             return;
@@ -4072,7 +4072,7 @@ assert jobData != null;
       {
         public void run()
         {
-          Dialogs.error(shell,BARControl.tr("Cannot start pairing master:\n\n")+exception.getMessage());
+          Dialogs.error(shell,BARControl.tr("Cannot start pairing master")+":\n\n"+exception.getMessage());
         }
       });
       return false;
@@ -4083,7 +4083,7 @@ assert jobData != null;
       {
         public void run()
         {
-          Dialogs.error(shell,BARControl.tr("Cannot start pairing master:\n\n")+exception.getMessage());
+          Dialogs.error(shell,BARControl.tr("Cannot start pairing master")+":\n\n"+exception.getMessage());
         }
       });
       return false;

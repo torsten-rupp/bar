@@ -316,7 +316,7 @@ classes/app/i18n/Messages_jp.class: po/japanese.po
 
 .PHONE: poeditde
 poeditde:
-	poedit po/german.po
+	GTK_IM_MODULE= poedit po/german.po
 
 .PHONE: poeditjp
 poeditjp:

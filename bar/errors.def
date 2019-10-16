@@ -48,13 +48,10 @@ ERROR INVALID_PATTERN
 // --- network ----------------------------------------------------------
 ERROR NO_HOST_NAME                     TR("no host name given")
 ERROR HOST_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("host not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("host '%s' not found"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("host not found"));
+    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
 
 ERROR CONNECT_FAIL
@@ -224,32 +221,30 @@ ERROR WEBDAV_GET_SIZE
   stringSet(errorText,sizeof(errorText),TR("get WebDAV file size"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText)," %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText)," fail");
+  stringAppend(errorText,sizeof(errorText)," ");
+  stringAppend(errorText,sizeof(errorText),TR("fail"));
 
 ERROR WEBDAV_UPLOAD
-  stringSet(errorText,sizeof(errorText),TR("WebDAV upload"));
+  stringSet(errorText,sizeof(errorText),TR("WebDAV upload fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText)," fail");
 
 ERROR WEBDAV_DOWNLOAD
-  stringSet(errorText,sizeof(errorText),TR("WebDAV download"));
+  stringSet(errorText,sizeof(errorText),TR("WebDAV download fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText)," fail");
 
 ERROR WEBDAV_FAIL
   stringSet(errorText,sizeof(errorText),TR("WebDAV fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),": ");
-    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 // --- compress ---------------------------------------------------------
@@ -257,16 +252,14 @@ ERROR INIT_COMPRESS
   stringSet(errorText,sizeof(errorText),TR("initialize compress fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),": ");
-    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR INIT_DECOMPRESS
   stringSet(errorText,sizeof(errorText),TR("initialize decompress fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),": ");
-    stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR DEFLATE_FAIL
@@ -285,13 +278,10 @@ ERROR INFLATE_FAIL
 
 ERROR COMPRESS_EOF                     TR("end of compressed file")
 ERROR DELTA_SOURCE_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("delta source not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("delta source '%s' not found"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("delta source not found"));
+    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
 
 ERROR INVALID_COMPRESS_ALGORITHM       TR("invalid compress algorithm")
@@ -301,13 +291,10 @@ ERROR COMPRESS_ALGORITHM_NOT_SUPPORTED TR("compress algorithm not supported")
 // --- crypt ------------------------------------------------------------
 ERROR UNSUPPORTED_BLOCK_LENGTH         TR("unsupported block length")
 ERROR INIT_CRYPT
+  stringSet(errorText,sizeof(errorText),TR("initialize crypt fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("initialize crypt fail: %s"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("initialize crypt fail"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR NO_DECRYPT_KEY                   TR("no decrypt key for cipher")
@@ -337,55 +324,40 @@ ERROR DECRYPT_FAIL
   }
 
 ERROR CREATE_KEY_FAIL
+  stringSet(errorText,sizeof(errorText),TR("create public/private key fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("create public/private key '%s' fail"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("create public/private key fail"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR INVALID_ENCODING                 TR("invalid encoding")
 
 ERROR INIT_KEY
+  stringSet(errorText,sizeof(errorText),TR("initialize key fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("initialize key fail (error: %s)"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("initialize key fail"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR KEY_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("public/private key not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("public/private key '%s' not found"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("public/private key not found"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR READ_KEY_FAIL
+  stringSet(errorText,sizeof(errorText),TR("read public/private key fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("read public/private key '%s' fail"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("read public/private key fail"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR INVALID_KEY
+  stringSet(errorText,sizeof(errorText),TR("invalid key"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("invalid key: %s"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("invalid key"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR INVALID_KEY_LENGTH               TR("invalid key length")
@@ -395,45 +367,33 @@ ERROR INVALID_SALT_LENGTH              TR("invalid salt length")
 ERROR NO_PUBLIC_CRYPT_KEY              TR("no public encryption key")
 ERROR NO_PRIVATE_CRYPT_KEY             TR("no private encryption key")
 ERROR NOT_A_PUBLIC_CRYPT_KEY
+  stringSet(errorText,sizeof(errorText),TR("key is not a public encryption key"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("key '%s' is not a public encryption key"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("key is not a public encryption key"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR NOT_A_PRIVATE_CRYPT_KEY
+  stringSet(errorText,sizeof(errorText),TR("key is not a private encryption key"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("key '%s' is not a private encryption key"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("key '%s' is not a private encryption key"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR NO_PUBLIC_SIGNATURE_KEY          TR("no public signature key")
 ERROR NO_PRIVATE_SIGNATURE_KEY         TR("no private signature key")
 ERROR NOT_A_PUBLIC_SIGNATURE_KEY
+  stringSet(errorText,sizeof(errorText),TR("key is not a public signature key"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("key '%s' is not a public signature key"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("key is not a public signature key"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR NOT_A_PRIVATE_SIGNATURE_KEY
+  stringSet(errorText,sizeof(errorText),TR("key is not a private signature key"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("key '%s' is not a private signature key"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("key '%s' is not a private signature key"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR KEY_ENCRYPT_FAIL
@@ -495,66 +455,56 @@ ERROR IO
   }
 
 ERROR READ_FILE
-  stringSet(errorText,sizeof(errorText),TR("read file fail: "));
-  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  stringSet(errorText,sizeof(errorText),TR("read file fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
 
 ERROR END_OF_FILE
-  stringSet(errorText,sizeof(errorText),TR("end of file: "));
-  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  stringSet(errorText,sizeof(errorText),TR("end of file"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
 
 ERROR WRITE_FILE
-  stringSet(errorText,sizeof(errorText),TR("write file fail: "));
-  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  stringSet(errorText,sizeof(errorText),TR("write file fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
 
 ERROR DELETE_FILE
-  stringSet(errorText,sizeof(errorText),TR("delete file fail: "));
-  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  stringSet(errorText,sizeof(errorText),TR("delete file fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
 
 ERROR OPEN_DIRECTORY
-/*
-TODO: remove
-    errorText[0] = '\0';
-    switch (ERROR_CODE)
-    {
-      case ERROR_CREATE_FILE:
-        stringAppend(errorText,sizeof(errorText),TR("create file: "));
-        break;
-      case ERROR_OPEN_FILE:
-        stringAppend(errorText,sizeof(errorText),TR("open file: "));
-        break;
-      case ERROR_CREATE_DIRECTORY:
-        stringAppend(errorText,sizeof(errorText),TR("create directory: "));
-        break;
-      case ERROR_OPEN_DIRECTORY:
-        stringAppend(errorText,sizeof(errorText),TR("open directory: "));
-        break;
-    }
-*/
-  stringSet(errorText,sizeof(errorText),TR("open directory: "));
-  stringAppend(errorText,sizeof(errorText),ERROR_DATA);
+  stringSet(errorText,sizeof(errorText),TR("open directory"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
 
 ERROR READ_DIRECTORY                   TR("read directory fail")
 
 // Note: because of name clash with Windows include use FILE_EXISTS_ instead of FILE_EXISTS
 ERROR FILE_EXISTS_
+  stringSet(errorText,sizeof(errorText),TR("file already exists"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("file '%s' already exists"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("file already exists"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 // Note: because of name clash with Windows include use FILE_NOT_FOUND_ instead of FILE_NOT_FOUND
 ERROR FILE_NOT_FOUND_
+  stringSet(errorText,sizeof(errorText),TR("file not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("file '%s' not found"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("file not found"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR FILE_ACCESS_DENIED               TR("access denied")
@@ -563,7 +513,7 @@ ERROR NOT_A_DIRECTORY
   stringSet(errorText,sizeof(errorText),TR("not a directory"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR END_OF_DIRECTORY                 TR("end of directory list")
@@ -573,41 +523,35 @@ ERROR INSUFFICIENT_FILE_NOTIFY         TR("insufficient file notify entries")
 
 // --- optical disk i/o -------------------------------------------------
 ERROR OPTICAL_DISK_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("CD/DVD/BD device not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),"CD/DVD/BD device '%s' not found",ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("CD/DVD/BD device not found"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR OPEN_OPTICAL_DISK
-  stringSet(errorText,sizeof(errorText),TR("open CD/DVD/BD disk"));
+  stringSet(errorText,sizeof(errorText),TR("open CD/DVD/BD disk fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR OPEN_ISO9660_FILE
-  stringSet(errorText,sizeof(errorText),TR("open ISO 9660 image"));
+  stringSet(errorText,sizeof(errorText),TR("open ISO 9660 image fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 // --- device i/o -------------------------------------------------------
 ERROR NO_DEVICE_NAME                   TR("no device name given")
 
 ERROR OPEN_DEVICE
-  stringSet(errorText,sizeof(errorText),TR("open device"));
+  stringSet(errorText,sizeof(errorText),TR("open device fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText),TR(" fail"));
 
 ERROR INVALID_DEVICE_BLOCK_SIZE        TR("invalid device block size")
 ERROR READ_DEVICE                      TR("read device fail")
@@ -615,36 +559,27 @@ ERROR WRITE_DEVICE                     TR("write device fail")
 ERROR PARSE_DEVICE_LIST                TR("error parsing device list")
 
 ERROR MOUNT
+  stringSet(errorText,sizeof(errorText),TR("mount fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("mount '%s' fail"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("mount fail"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR UMOUNT
+  stringSet(errorText,sizeof(errorText),TR("unmount fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR("unmount '%s' fail"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("unmount fail"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 // --- archive ----------------------------------------------------------
 ERROR NO_ARCHIVE_FILE_NAME             TR("no archive file name given")
 ERROR NOT_AN_ARCHIVE_FILE              TR("not an archive file")
 ERROR ARCHIVE_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("archive not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),TR("archive '%s' not found"),ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("archive not found"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR END_OF_ARCHIVE                   TR("end of archive")
@@ -677,41 +612,38 @@ ERROR CRC_
   }
 
 ERROR ENTRY_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),"entry not found");
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),"entry '%s' not found",ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),"entry not found");
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR ENTRY_INCOMPLETE
   stringSet(errorText,sizeof(errorText),TR("entry is incomplete"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR WRONG_ENTRY_TYPE
   stringSet(errorText,sizeof(errorText),TR("wrong entry type"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR ENTRIES_DIFFER
   stringSet(errorText,sizeof(errorText),TR("entries differ"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR CORRUPT_DATA
   stringSet(errorText,sizeof(errorText),TR("corrupt data or invalid password"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR INVALID_CHUNK_SIZE               TR("invalid chunk size")
@@ -744,35 +676,29 @@ ERROR PARSE_COMMAND
 ERROR EXPAND_TEMPLATE                  TR("expand command template fail")
 ERROR FORK_FAIL                        TR("fork for execute external program fail")
 ERROR IO_REDIRECT_FAIL
-  stringSet(errorText,sizeof(errorText),TR("i/o fail"));
+  stringSet(errorText,sizeof(errorText),TR("i/o redirect fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR EXEC_FAIL
-  stringSet(errorText,sizeof(errorText),TR("execute external program"));
+  stringSet(errorText,sizeof(errorText),TR("execute external program fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),TR("execute external program '%s' fail"),ERROR_DATA);
-  }
-  else
-  {
-    stringFormat(errorText,sizeof(errorText),TR("execute external program fail"));
+    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
   if (ERROR_ERRNO != 0)
   {
-    stringFormatAppend(errorText,sizeof(errorText),", exitcode %d",ERROR_ERRNO);
+    stringFormatAppend(errorText,sizeof(errorText)," (exitcode: %d)",ERROR_ERRNO);
   }
 
 ERROR EXEC_TERMINATE
-  stringSet(errorText,sizeof(errorText),TR("execute external program"));
+  stringSet(errorText,sizeof(errorText),TR("terminate external program fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": '%s'",ERROR_DATA);
   }
-  stringAppend(errorText,sizeof(errorText)," ");
-  stringAppend(errorText,sizeof(errorText),TR("fail"));
   if (ERROR_ERRNO != 0)
   {
     stringFormatAppend(errorText,sizeof(errorText)," (signal: %d)",ERROR_ERRNO);
@@ -780,24 +706,24 @@ ERROR EXEC_TERMINATE
 
 // --- BARControl protocol ----------------------------------------------
 ERROR PARSE
-  stringSet(errorText,sizeof(errorText),TR("parsing data"));
+  stringSet(errorText,sizeof(errorText),TR("parsing data fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," %s",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR UNKNOWN_COMMAND
   stringSet(errorText,sizeof(errorText),TR("unknown command"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR EXPECTED_PARAMETER
   stringSet(errorText,sizeof(errorText),TR("expected parameter"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," %s",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR UNKNOWN_VALUE
@@ -814,28 +740,22 @@ ERROR INVALID_VALUE
   stringSet(errorText,sizeof(errorText),TR("invalid value"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText)," '%s'",ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR AUTHORIZATION                    TR("authorization")
 ERROR JOB_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("job not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),"job %s not found",ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("job not found"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR SCHEDULE_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("schedule not found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormat(errorText,sizeof(errorText),"schedule %s not found",ERROR_DATA);
-  }
-  else
-  {
-    stringSet(errorText,sizeof(errorText),TR("schedule not found"));
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR PERSISTENCE_ID_NOT_FOUND
