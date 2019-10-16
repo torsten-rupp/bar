@@ -1530,9 +1530,7 @@ public class BARServer
   private static Modes                       mode;
 
   private static Socket                      socket;
-//  private static BufferedWriter              output;
-//TODO
-public static BufferedWriter              output;
+  private static BufferedWriter              output;
   private static BufferedReader              input;
   private static ReadThread                  readThread;
   private static CommandThread               commandThread;
@@ -2177,7 +2175,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                          2,  // debugLevel
                          valueMap
                         );
-//TODO        throw new ConnectionError("Cannot get protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': "+errorMessage[0]);
       if ((valueMap.getInt("major") != PROTOCOL_VERSION_MAJOR) && !Settings.debugIgnoreProtocolVersion)
       {
         throw new CommunicationError("Incompatible protocol version for '"+name+((socket.getPort() != Settings.DEFAULT_SERVER_PORT) ? ":"+socket.getPort() : "")+"': expected "+PROTOCOL_VERSION_MAJOR+", got "+valueMap.getInt("major"));
