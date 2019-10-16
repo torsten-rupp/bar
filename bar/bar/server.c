@@ -319,6 +319,8 @@ typedef struct
 } Command;
 
 /***************************** Variables *******************************/
+LOCAL String                hostName;
+
 LOCAL ServerModes           serverMode;
 LOCAL uint                  serverPort;
 #ifdef HAVE_GNU_TLS
@@ -1439,7 +1441,6 @@ LOCAL void jobThreadCode(void)
   String           jobName;
   String           storageName;
   String           directory;
-  String           hostName;
   EntryList        includeEntryList;
   PatternList      excludePatternList;
   String           scheduleCustomText;
@@ -1469,7 +1470,6 @@ LOCAL void jobThreadCode(void)
   jobName            = String_new();
   storageName        = String_new();
   directory          = String_new();
-  hostName           = String_new();
   EntryList_init(&includeEntryList);
   PatternList_init(&excludePatternList);
   scheduleCustomText = String_new();
@@ -1537,7 +1537,6 @@ LOCAL void jobThreadCode(void)
       String_set(jobName,jobNode->name);
       String_set(storageName,jobNode->job.archiveName);
       String_set(jobUUID,jobNode->job.uuid);
-      Network_getHostName(hostName);
       EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK(NULL,NULL));
       Job_duplicateOptions(&jobOptions,&jobNode->job.options);
@@ -2177,7 +2176,6 @@ NULL,//                                                        scheduleTitle,
   String_delete(scheduleCustomText);
   PatternList_done(&excludePatternList);
   EntryList_done(&includeEntryList);
-  String_delete(hostName);
   String_delete(directory);
   String_delete(storageName);
   String_delete(jobName);
@@ -17961,6 +17959,7 @@ Errors Server_run(ServerModes       mode,
 
   // initialize variables
   AutoFree_init(&autoFreeList);
+  hostName                       = Network_getHostName(String_new());
   serverMode                     = mode;
   serverPort                     = port;
   #ifdef HAVE_GNU_TLS
@@ -17985,6 +17984,7 @@ Errors Server_run(ServerModes       mode,
   Crypt_initHash(&newMaster.uuidHash,PASSWORD_HASH_ALGORITHM);
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
+  AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
   AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
@@ -18000,10 +18000,11 @@ Errors Server_run(ServerModes       mode,
              VERSION_MINOR,
              (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
             );
-  printInfo(1,"Started BAR server %d.%d%s\n",
-             VERSION_MAJOR,
-             VERSION_MINOR,
-            (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
+  printInfo(1,"Started BAR server %d.%d%s on '%s'\n",
+            VERSION_MAJOR,
+            VERSION_MINOR,
+            (serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
+            String_cString(hostName)
            );
 
   // create jobs directory if necessary
@@ -18034,11 +18035,9 @@ Errors Server_run(ServerModes       mode,
   // init index database
   if (!stringIsEmpty(indexDatabaseFileName))
   {
-    printInfo(1,"Init index database '%s'...",indexDatabaseFileName);
     error = Index_init(indexDatabaseFileName);
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL!\n");
       printError("Cannot init index database '%s' (error: %s)!",
                  indexDatabaseFileName,
                  Error_getText(error)
@@ -18046,7 +18045,6 @@ Errors Server_run(ServerModes       mode,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    printInfo(1,"OK\n");
     AUTOFREE_ADD(&autoFreeList,indexDatabaseFileName,{ Index_done(); });
   }
 
@@ -18791,6 +18789,7 @@ abortPairingMaster();
   List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
   List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
+  String_delete(hostName);
   AutoFree_done(&autoFreeList);
 
   logMessage(NULL,  // logHandle,
