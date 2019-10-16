@@ -407,8 +407,6 @@ INLINE long Misc_getTotalTimeout(const TimeoutInfo *timeoutInfo);
 #if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
 INLINE long Misc_getTotalTimeout(const TimeoutInfo *timeoutInfo)
 {
-  uint64 timestamp;
-
   assert(timeoutInfo != NULL);
 
   return timeoutInfo->timeout;
