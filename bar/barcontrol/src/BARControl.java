@@ -3134,7 +3134,7 @@ assert jobData != null;
     boolean connectOkFlag = false;
 
     // try to reconnect
-    if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection lost"),BARControl.tr("Error: ")+message,BARControl.tr("Try again"),BARControl.tr("Cancel")))
+    if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection lost"),message,BARControl.tr("Try again"),BARControl.tr("Cancel")))
     {
       // try to connect to last server
       while (!connectOkFlag)
@@ -3156,7 +3156,7 @@ assert jobData != null;
         }
         catch (ConnectionError reconnectError)
         {
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
           {
             quitFlag = true;
             break;
@@ -3164,7 +3164,7 @@ assert jobData != null;
         }
         catch (CommunicationError reconnectError)
         {
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
           {
             quitFlag = true;
             break;
@@ -3196,7 +3196,7 @@ assert jobData != null;
         }
         catch (ConnectionError reconnectError)
         {
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
           {
             quitFlag = true;
             break;
@@ -3204,7 +3204,7 @@ assert jobData != null;
         }
         catch (CommunicationError reconnectError)
         {
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
           {
             quitFlag = true;
             break;
@@ -3298,12 +3298,15 @@ assert jobData != null;
       }
       catch (SWTException exception)
       {
-        Throwable connectionError = exception.getCause();
-        while ((connectionError != null) && !(connectionError instanceof ConnectionError))
+        // check if connection error
+        Throwable throwable = exception.getCause();
+        while ((throwable != null) && !(throwable instanceof ConnectionError))
         {
-          connectionError = connectionError.getCause();
+          throwable = throwable.getCause();
         }
-        if (connectionError != null)
+
+        // try reconnect
+        if (throwable != null)
         {
           connectOkFlag = tryReconnect(exception.getCause().getMessage());
         }
@@ -5235,7 +5238,7 @@ Dprintf.dprintf("still not supported");
             }
             catch (CommunicationError error)
             {
-              if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+              if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
               {
                 continue;
               }
@@ -5270,7 +5273,7 @@ Dprintf.dprintf("still not supported");
               }
               catch (CommunicationError error)
               {
-                if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+                if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
                 {
                   continue;
                 }
@@ -5289,7 +5292,7 @@ Dprintf.dprintf("still not supported");
           // check if connected
           if (!connectOkFlag)
           {
-            if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Error: ")+errorMessage,BARControl.tr("Try again"),BARControl.tr("Cancel")))
+            if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),errorMessage,BARControl.tr("Try again"),BARControl.tr("Cancel")))
             {
               System.exit(EXITCODE_FAIL);
             }

@@ -827,6 +827,7 @@ class ReadThread extends Thread
 
   // --------------------------- variables --------------------------------
   private Display               display;
+  private String                serverName;
   private BufferedReader        input;
   private boolean               quitFlag = false;
   private HashMap<Long,Command> commandHashMap = new HashMap<Long,Command>();
@@ -838,10 +839,11 @@ class ReadThread extends Thread
   /** create read thread
    * @param input input stream
    */
-  ReadThread(Display display, BufferedReader input)
+  ReadThread(Display display, final String serverName, BufferedReader input)
   {
-    this.display = display;
-    this.input   = input;
+    this.display    = display;
+    this.serverName = serverName;
+    this.input      = input;
     setDaemon(true);
     setName("BARControl Server Read");
   }
@@ -992,10 +994,13 @@ Dprintf.dprintf("line=%s",line);
         }
         catch (SocketTimeoutException exception)
         {
-          // ignored
-//TODO: remove
-Dprintf.dprintf("");
-System.exit(1);
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              throw new ConnectionError(BARControl.tr("Timeout reading data from server ''{0}''",serverName));
+            }
+          });
         }
         catch (NumberFormatException exception)
         {
@@ -1033,9 +1038,14 @@ System.exit(1);
             }
           }
         }
-//TODO: remove
-Dprintf.dprintf("");
-System.exit(1);
+
+        display.syncExec(new Runnable()
+        {
+          public void run()
+          {
+            throw new ConnectionError(BARControl.tr("Lost connection to server ''{0}''",serverName));
+          }
+        });
       }
       catch (final SWTException exception)
       {
@@ -1521,6 +1531,7 @@ public class BARServer
 
   private static Socket                      socket;
 //  private static BufferedWriter              output;
+//TODO
 public static BufferedWriter              output;
   private static BufferedReader              input;
   private static ReadThread                  readThread;
@@ -2213,7 +2224,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     }
 
     // start read thread, command thread
-    readThread = new ReadThread(display,input);
+    readThread = new ReadThread(display,name,input);
     readThread.start();
     commandThread = new CommandThread(display,output);
     commandThread.start();
