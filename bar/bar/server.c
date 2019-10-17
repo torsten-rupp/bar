@@ -11238,7 +11238,7 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
 *            name=<name>
-*            value=<value>
+*            value=<name>
 *          Result:
 \***********************************************************************/
 
