@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-17 16:17+0200\n"
+"POT-Creation-Date: 2019-10-17 16:24+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -2641,6 +2641,34 @@ msgstr "パートサイズ"
 msgid "Total size limit for storage."
 msgstr "保存ファイル１パートあたりの制限サイズ。"
 
+#: src/TabJobs.java:1259 src/TabJobs.java:15185
+msgid "Mon"
+msgstr "月"
+
+#: src/TabJobs.java:1260 src/TabJobs.java:15190
+msgid "Tue"
+msgstr "火"
+
+#: src/TabJobs.java:1261 src/TabJobs.java:15195
+msgid "Wed"
+msgstr "水"
+
+#: src/TabJobs.java:1262 src/TabJobs.java:15200
+msgid "Thu"
+msgstr "木"
+
+#: src/TabJobs.java:1263 src/TabJobs.java:15205
+msgid "Fri"
+msgstr "金"
+
+#: src/TabJobs.java:1264 src/TabJobs.java:15210
+msgid "Sat"
+msgstr "土"
+
+#: src/TabJobs.java:1265 src/TabJobs.java:15215
+msgid "Sun"
+msgstr "日"
+
 #: src/TabJobs.java:2255 src/TabRestore.java:5061
 msgid "Jobs"
 msgstr "タスク"
@@ -4207,39 +4235,11 @@ msgstr "タスク実行月。毎月の場合'*'のままにしてください。
 msgid "Day to execute job. Leave to '*' for each day."
 msgstr "タスク実行日。毎日の場合'*'のままにしてください。"
 
-#: src/TabJobs.java:15185
-msgid "Mon"
-msgstr "月"
-
 #: src/TabJobs.java:15186 src/TabJobs.java:15191 src/TabJobs.java:15196
 #: src/TabJobs.java:15201 src/TabJobs.java:15206 src/TabJobs.java:15211
 #: src/TabJobs.java:15216
 msgid "Week days to execute job."
 msgstr "タスク実行曜日。"
-
-#: src/TabJobs.java:15190
-msgid "Tue"
-msgstr "火"
-
-#: src/TabJobs.java:15195
-msgid "Wed"
-msgstr "水"
-
-#: src/TabJobs.java:15200
-msgid "Thu"
-msgstr "木"
-
-#: src/TabJobs.java:15205
-msgid "Fri"
-msgstr "金"
-
-#: src/TabJobs.java:15210
-msgid "Sat"
-msgstr "土"
-
-#: src/TabJobs.java:15215
-msgid "Sun"
-msgstr "日"
 
 #: src/TabJobs.java:15221
 msgid "Toggle week days set."

@@ -2075,7 +2075,7 @@ public class TabStatus
                                           jobData.name,
                                           (status == States.RUNNING) ? jobData.formatStateText() : BARControl.tr("suspended"),
                                           jobData.slaveHostName,
-                                          jobData.archiveType.toString(),
+                                          jobData.archiveType.getText(),
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
                                           jobData.formatCompressAlgorithm(),
                                           jobData.formatCryptAlgorithm(),

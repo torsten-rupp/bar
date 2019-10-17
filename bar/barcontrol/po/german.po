@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-17 16:17+0200\n"
+"POT-Creation-Date: 2019-10-17 16:24+0200\n"
 "PO-Revision-Date: 2019-10-17 16:10+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -2385,6 +2385,34 @@ msgstr "Max. Speicherplatzgröße"
 msgid "Total size limit for storage."
 msgstr "Größenlimit für eine Speicherung."
 
+#: src/TabJobs.java:1259 src/TabJobs.java:15185
+msgid "Mon"
+msgstr "Mo"
+
+#: src/TabJobs.java:1260 src/TabJobs.java:15190
+msgid "Tue"
+msgstr "Di"
+
+#: src/TabJobs.java:1261 src/TabJobs.java:15195
+msgid "Wed"
+msgstr "Mi"
+
+#: src/TabJobs.java:1262 src/TabJobs.java:15200
+msgid "Thu"
+msgstr "Do"
+
+#: src/TabJobs.java:1263 src/TabJobs.java:15205
+msgid "Fri"
+msgstr "Fr"
+
+#: src/TabJobs.java:1264 src/TabJobs.java:15210
+msgid "Sat"
+msgstr "Sa"
+
+#: src/TabJobs.java:1265 src/TabJobs.java:15215
+msgid "Sun"
+msgstr "So"
+
 #: src/TabJobs.java:2255 src/TabRestore.java:5061
 msgid "Jobs"
 msgstr "Aufträge"
@@ -3962,39 +3990,11 @@ msgstr "Monat für die Ausführung des Auftrags. '*' für jeden Monat."
 msgid "Day to execute job. Leave to '*' for each day."
 msgstr "Tag für die Ausführung des Auftrags. '*' für jeden Tag."
 
-#: src/TabJobs.java:15185
-msgid "Mon"
-msgstr "Mo"
-
 #: src/TabJobs.java:15186 src/TabJobs.java:15191 src/TabJobs.java:15196
 #: src/TabJobs.java:15201 src/TabJobs.java:15206 src/TabJobs.java:15211
 #: src/TabJobs.java:15216
 msgid "Week days to execute job."
 msgstr "Woche für die Ausführung des Auftrags. '*' für jede Woche."
-
-#: src/TabJobs.java:15190
-msgid "Tue"
-msgstr "Di"
-
-#: src/TabJobs.java:15195
-msgid "Wed"
-msgstr "Mi"
-
-#: src/TabJobs.java:15200
-msgid "Thu"
-msgstr "Do"
-
-#: src/TabJobs.java:15205
-msgid "Fri"
-msgstr "Fr"
-
-#: src/TabJobs.java:15210
-msgid "Sat"
-msgstr "Sa"
-
-#: src/TabJobs.java:15215
-msgid "Sun"
-msgstr "So"
 
 #: src/TabJobs.java:15221
 msgid "Toggle week days set."
