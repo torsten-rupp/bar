@@ -90,7 +90,7 @@ class JobData
 
       switch (this)
       {
-        case NONE:                    return "-";
+        case NONE:                    return "";
         case WAITING:                 return BARControl.tr("waiting");
         case RUNNING:                 return BARControl.tr("running");
         case DRY_RUNNING:             return BARControl.tr("dry Run");

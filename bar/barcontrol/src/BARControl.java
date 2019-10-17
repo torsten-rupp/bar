@@ -183,6 +183,26 @@ enum StorageTypes
     return type;
   }
 
+  /** get (translated) text
+   * @return text
+   */
+  public String getText()
+  {
+    switch (this)
+    {
+      case FILESYSTEM: return BARControl.tr("filesystem");
+      case FTP:        return "ftp";
+      case SCP:        return "scp";
+      case SFTP:       return "sftp";
+      case WEBDAV:     return "webdav";
+      case CD:         return "cd";
+      case DVD:        return "dvd";
+      case BD:         return "bd";
+      case DEVICE:     return BARControl.tr("device");
+      default:         return "";
+    }
+  }
+
   /** convert to string
    * @return string
    */
@@ -851,12 +871,12 @@ enum ArchiveTypes
   {
     switch (this)
     {
-      case NORMAL:       return "NORMAL";
-      case FULL:         return "FULL";
-      case INCREMENTAL:  return "INCREMENTAL";
-      case DIFFERENTIAL: return "DIFFERENTIAL";
-      case CONTINUOUS:   return "CONTINUOUS";
-      default:           return "UNKNOWN";
+      case NORMAL:       return "normal";
+      case FULL:         return "full";
+      case INCREMENTAL:  return "incremental";
+      case DIFFERENTIAL: return "differential";
+      case CONTINUOUS:   return "continuous";
+      default:           return "unknown";
     }
   }
 };
@@ -1343,6 +1363,23 @@ enum PasswordTypes
   public boolean isCrypt()
   {
     return (this == CRYPT);
+  }
+
+  /** get (translated) text
+   * @return text
+   */
+  public String getText()
+  {
+    switch (this)
+    {
+      case NONE:   return "";
+      case FTP:    return "FTP";
+      case SSH:    return "SSH";
+      case WEBDAV: return "WebDAV";
+      case CRYPT:  return BARControl.tr("encryption");
+    }
+
+    return "";
   }
 
   /** convert to string

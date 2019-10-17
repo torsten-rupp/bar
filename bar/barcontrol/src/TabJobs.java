@@ -11105,9 +11105,13 @@ throw new Error("NYI");
         Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),error.getMessage()));
         return false;
       }
-    }
 
-    return true;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 
   //-----------------------------------------------------------------------
@@ -15502,11 +15506,9 @@ throw new Error("NYI");
       {
         TableItem     tableItem    = widgetScheduleTable.getItem(index);
         ScheduleData scheduleData = (ScheduleData)tableItem.getData();
-Dprintf.dprintf("");
 
         if (scheduleEdit(scheduleData,BARControl.tr("Edit schedule"),BARControl.tr("Save")))
         {
-Dprintf.dprintf("");
           try
           {
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate());
@@ -15518,7 +15520,6 @@ Dprintf.dprintf("");
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
 
-Dprintf.dprintf("scheduleData.getWeekDays()=%s",scheduleData.getWeekDays());
             Widgets.updateTableItem(tableItem,
                                     scheduleData,
                                     scheduleData.getDate(),
@@ -15531,7 +15532,6 @@ Dprintf.dprintf("scheduleData.getWeekDays()=%s",scheduleData.getWeekDays());
           }
           catch (Exception exception)
           {
-Dprintf.dprintf("exceptio=%s",exception);
             Dialogs.error(shell,
                           BARControl.tr("Cannot update schedule entry:\n\n{0}",
                                         exception.getMessage()

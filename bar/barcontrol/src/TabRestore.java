@@ -113,6 +113,9 @@ public class TabRestore
 
     UNKNOWN;
 
+    /** get all states
+     * @return all states
+     */
     public static EnumSet<IndexStates> ALL()
     {
       return EnumSet.of(IndexStates.OK,IndexStates.ERROR);
