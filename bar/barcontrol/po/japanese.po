@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-17 13:29+0200\n"
+"POT-Creation-Date: 2019-10-17 13:38+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -1671,6 +1671,15 @@ msgstr "はい"
 #: src/Dialogs.java:2381 src/Dialogs.java:2412
 msgid "No"
 msgstr "いいえ"
+
+#: src/Dialogs.java:4170 src/TabRestore.java:3030
+#, fuzzy
+msgid "directory"
+msgstr "ディレクトリサイズ"
+
+#: src/Dialogs.java:4171 src/TabJobs.java:11976 src/TabRestore.java:3028
+msgid "file"
+msgstr "ファイル"
 
 #: src/Dialogs.java:4405
 msgid "Path"
@@ -3912,10 +3921,6 @@ msgstr ""
 msgid "Select entry"
 msgstr "選択した"
 
-#: src/TabJobs.java:11976 src/TabRestore.java:3028
-msgid "file"
-msgstr "ファイル"
-
 #: src/TabJobs.java:11991 src/TabRestore.java:3029
 msgid "image"
 msgstr "画像"
@@ -4485,11 +4490,6 @@ msgstr ""
 "スケジュールを削除できません:\n"
 "\n"
 "{0}"
-
-#: src/TabRestore.java:3030
-#, fuzzy
-msgid "directory"
-msgstr "ディレクトリサイズ"
 
 #: src/TabRestore.java:3031
 msgid "link"
@@ -5148,12 +5148,12 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:9230 src/TabRestore.java:9668
+#: src/TabRestore.java:9230 src/TabRestore.java:9667
 #, fuzzy
 msgid "Restore archives"
 msgstr "復元作業"
 
-#: src/TabRestore.java:9231 src/TabRestore.java:9669
+#: src/TabRestore.java:9231 src/TabRestore.java:9668
 #, fuzzy
 msgid "Restore entries"
 msgstr "復元作業"
@@ -5223,27 +5223,27 @@ msgstr ""
 msgid "Start restore"
 msgstr "復元"
 
-#: src/TabRestore.java:9668
+#: src/TabRestore.java:9667
 #, fuzzy, java-format
 msgid "Restore archives to: {0}"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:9669
+#: src/TabRestore.java:9668
 #, fuzzy, java-format
 msgid "Restore entries to: {0}"
 msgstr "最新エントリー限定"
 
-#: src/TabRestore.java:9679
+#: src/TabRestore.java:9678
 #, fuzzy
 msgid "Failed entries"
 msgstr "エントリ合計"
 
-#: src/TabRestore.java:9785
+#: src/TabRestore.java:9784
 #, fuzzy
 msgid "Aborting"
 msgstr "中止"
 
-#: src/TabRestore.java:9812 src/TabRestore.java:9826
+#: src/TabRestore.java:9811 src/TabRestore.java:9825
 #, fuzzy, java-format
 msgid ""
 "Cannot restore:\n"
@@ -5256,7 +5256,7 @@ msgstr ""
 "\n"
 "(エラー: {1})"
 
-#: src/TabRestore.java:9842
+#: src/TabRestore.java:9841
 #, fuzzy, java-format
 msgid ""
 "Error while restoring:\n"
@@ -5267,7 +5267,7 @@ msgstr ""
 "\n"
 "{0}"
 
-#: src/TabRestore.java:9855
+#: src/TabRestore.java:9854
 #, fuzzy, java-format
 msgid ""
 "Connection error while restoring\n"

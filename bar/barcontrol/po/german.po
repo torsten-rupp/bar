@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-17 13:29+0200\n"
+"POT-Creation-Date: 2019-10-17 13:38+0200\n"
 "PO-Revision-Date: 2019-10-17 13:18+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -1477,6 +1477,14 @@ msgstr "Ja"
 #: src/Dialogs.java:2381 src/Dialogs.java:2412
 msgid "No"
 msgstr "Nein"
+
+#: src/Dialogs.java:4170 src/TabRestore.java:3030
+msgid "directory"
+msgstr "Verzeichnis"
+
+#: src/Dialogs.java:4171 src/TabJobs.java:11976 src/TabRestore.java:3028
+msgid "file"
+msgstr "Datei"
 
 #: src/Dialogs.java:4405
 msgid "Path"
@@ -3676,10 +3684,6 @@ msgstr ""
 msgid "Select entry"
 msgstr "Eintrag wählen"
 
-#: src/TabJobs.java:11976 src/TabRestore.java:3028
-msgid "file"
-msgstr "Datei"
-
 #: src/TabJobs.java:11991 src/TabRestore.java:3029
 msgid "image"
 msgstr "Abbild"
@@ -4234,10 +4238,6 @@ msgstr ""
 "Fehler beim Löschen des Auftrags:\n"
 "\n"
 "{0}"
-
-#: src/TabRestore.java:3030
-msgid "directory"
-msgstr "Verzeichnis"
 
 #: src/TabRestore.java:3031
 msgid "link"
@@ -4865,11 +4865,11 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:9230 src/TabRestore.java:9668
+#: src/TabRestore.java:9230 src/TabRestore.java:9667
 msgid "Restore archives"
 msgstr "Archive wiederherstellen"
 
-#: src/TabRestore.java:9231 src/TabRestore.java:9669
+#: src/TabRestore.java:9231 src/TabRestore.java:9668
 msgid "Restore entries"
 msgstr "Einträge wiederherstellen"
 
@@ -4937,25 +4937,25 @@ msgstr "umbennen wenn vorhanden"
 msgid "Start restore"
 msgstr "Wiederherstellen"
 
-#: src/TabRestore.java:9668
+#: src/TabRestore.java:9667
 #, java-format
 msgid "Restore archives to: {0}"
 msgstr "Archive wiederherstellen in: {0}"
 
-#: src/TabRestore.java:9669
+#: src/TabRestore.java:9668
 #, java-format
 msgid "Restore entries to: {0}"
 msgstr "Einträge wiederherstellen in: {0}"
 
-#: src/TabRestore.java:9679
+#: src/TabRestore.java:9678
 msgid "Failed entries"
 msgstr "Fehlgeschlagene Einträge"
 
-#: src/TabRestore.java:9785
+#: src/TabRestore.java:9784
 msgid "Aborting"
 msgstr "Wird abgebrochen"
 
-#: src/TabRestore.java:9812 src/TabRestore.java:9826
+#: src/TabRestore.java:9811 src/TabRestore.java:9825
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -4966,7 +4966,7 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:9842
+#: src/TabRestore.java:9841
 #, java-format
 msgid ""
 "Error while restoring:\n"
@@ -4977,7 +4977,7 @@ msgstr ""
 "\n"
 "(Fehler: {0})"
 
-#: src/TabRestore.java:9855
+#: src/TabRestore.java:9854
 #, java-format
 msgid ""
 "Connection error while restoring\n"

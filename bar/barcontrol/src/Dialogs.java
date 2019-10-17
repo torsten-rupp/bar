@@ -4167,8 +4167,8 @@ class Dialogs
                 TableItem tableItem = new TableItem(table,SWT.NONE,index);
                 tableItem.setData(file);
                 tableItem.setText(0,file.getName());
-                if (file.isDirectory()) tableItem.setText(1,"DIR");
-                else                    tableItem.setText(1,"FILE");
+                if (file.isDirectory()) tableItem.setText(1,tr("directory"));
+                else                    tableItem.setText(1,tr("file"));
                 tableItem.setText(2,simpleDateFormat.format(new Date(file.lastModified())));
                 if (file.isDirectory()) tableItem.setText(3,"");
                 else                    tableItem.setText(3,Long.toString(file.length()));

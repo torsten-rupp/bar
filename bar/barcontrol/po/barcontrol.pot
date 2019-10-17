@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-17 13:29+0200\n"
+"POT-Creation-Date: 2019-10-17 13:38+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1442,6 +1442,14 @@ msgstr ""
 
 #: src/Dialogs.java:2381 src/Dialogs.java:2412
 msgid "No"
+msgstr ""
+
+#: src/Dialogs.java:4170 src/TabRestore.java:3030
+msgid "directory"
+msgstr ""
+
+#: src/Dialogs.java:4171 src/TabJobs.java:11976 src/TabRestore.java:3028
+msgid "file"
 msgstr ""
 
 #: src/Dialogs.java:4405
@@ -3428,10 +3436,6 @@ msgstr ""
 msgid "Select entry"
 msgstr ""
 
-#: src/TabJobs.java:11976 src/TabRestore.java:3028
-msgid "file"
-msgstr ""
-
 #: src/TabJobs.java:11991 src/TabRestore.java:3029
 msgid "image"
 msgstr ""
@@ -3911,10 +3915,6 @@ msgid ""
 "Cannot delete entity:\n"
 "\n"
 "{0}"
-msgstr ""
-
-#: src/TabRestore.java:3030
-msgid "directory"
 msgstr ""
 
 #: src/TabRestore.java:3031
@@ -4456,11 +4456,11 @@ msgid ""
 "(error: {0})"
 msgstr ""
 
-#: src/TabRestore.java:9230 src/TabRestore.java:9668
+#: src/TabRestore.java:9230 src/TabRestore.java:9667
 msgid "Restore archives"
 msgstr ""
 
-#: src/TabRestore.java:9231 src/TabRestore.java:9669
+#: src/TabRestore.java:9231 src/TabRestore.java:9668
 msgid "Restore entries"
 msgstr ""
 
@@ -4520,25 +4520,25 @@ msgstr ""
 msgid "Start restore"
 msgstr ""
 
-#: src/TabRestore.java:9668
+#: src/TabRestore.java:9667
 #, java-format
 msgid "Restore archives to: {0}"
 msgstr ""
 
-#: src/TabRestore.java:9669
+#: src/TabRestore.java:9668
 #, java-format
 msgid "Restore entries to: {0}"
 msgstr ""
 
-#: src/TabRestore.java:9679
+#: src/TabRestore.java:9678
 msgid "Failed entries"
 msgstr ""
 
-#: src/TabRestore.java:9785
+#: src/TabRestore.java:9784
 msgid "Aborting"
 msgstr ""
 
-#: src/TabRestore.java:9812 src/TabRestore.java:9826
+#: src/TabRestore.java:9811 src/TabRestore.java:9825
 #, java-format
 msgid ""
 "Cannot restore:\n"
@@ -4546,7 +4546,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabRestore.java:9842
+#: src/TabRestore.java:9841
 #, java-format
 msgid ""
 "Error while restoring:\n"
@@ -4554,7 +4554,7 @@ msgid ""
 "{0}"
 msgstr ""
 
-#: src/TabRestore.java:9855
+#: src/TabRestore.java:9854
 #, java-format
 msgid ""
 "Connection error while restoring\n"
