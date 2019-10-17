@@ -10654,7 +10654,7 @@ widgetArchivePartSize.setListVisible(true);
     final Button widgetAdd;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -10666,7 +10666,7 @@ widgetArchivePartSize.setListVisible(true);
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
       widgetAdd.setEnabled(false);
@@ -10796,7 +10796,7 @@ throw new Error("NYI");
     final Button widgetClone;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -10809,7 +10809,7 @@ throw new Error("NYI");
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetClone = Widgets.newButton(composite,BARControl.tr("Clone"));
       widgetClone.setEnabled(false);
@@ -10946,7 +10946,7 @@ throw new Error("NYI");
     final Button widgetRename;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Old name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -10965,7 +10965,7 @@ throw new Error("NYI");
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetRename = Widgets.newButton(composite,BARControl.tr("Rename"));
       widgetRename.setEnabled(false);
@@ -11918,7 +11918,7 @@ throw new Error("NYI");
     final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Pattern")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -12009,7 +12009,7 @@ throw new Error("NYI");
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
       widgetSave.setEnabled(false);
@@ -12352,7 +12352,7 @@ throw new Error("NYI");
     final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Pattern")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -12398,7 +12398,7 @@ throw new Error("NYI");
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
       widgetSave.setEnabled((pattern[0] != null) && !pattern[0].isEmpty());
@@ -12784,7 +12784,7 @@ throw new Error("NYI");
     final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Name")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -12874,7 +12874,7 @@ throw new Error("NYI");
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
       widgetSave.setEnabled((mountData.name != null) && !mountData.name.isEmpty());
@@ -13445,7 +13445,7 @@ abort();
     final Button widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0},4));
-    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Pattern")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -13491,7 +13491,7 @@ abort();
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE,4);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,4);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
       widgetSave.setEnabled((pattern[0] != null) && !pattern[0].isEmpty());
@@ -14800,13 +14800,13 @@ throw new Error("NYI");
     final Button                widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     storageFileNameEditor = new StorageFileNameEditor(composite,storageFileName.getString());
 
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,2,0,TableLayoutData.WE);
+    Widgets.layout(composite,2,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,BARControl.tr("Save"));
 //TODO
@@ -15119,7 +15119,7 @@ throw new Error("NYI");
     final Button   widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Date")+":",Settings.hasNormalRole());
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -15318,7 +15318,7 @@ throw new Error("NYI");
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
@@ -15778,7 +15778,7 @@ throw new Error("NYI");
     final Button   widgetSave;
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Type")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -15892,7 +15892,7 @@ throw new Error("NYI");
     // buttons
     composite = Widgets.newComposite(dialog,SWT.NONE);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,buttonText);
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);

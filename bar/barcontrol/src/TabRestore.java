@@ -8038,7 +8038,7 @@ Dprintf.dprintf("");
     final Button widgetAdd;
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(null,new double[]{0.0,1.0,0.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.WE);
+    Widgets.layout(composite,0,0,TableLayoutData.WE,0,0,2);
     {
       label = Widgets.newLabel(composite,BARControl.tr("Storage path")+":");
       Widgets.layout(label,0,0,TableLayoutData.W);
@@ -8092,7 +8092,7 @@ Dprintf.dprintf("");
     // buttons
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetAdd = Widgets.newButton(composite,BARControl.tr("Add"));
       widgetAdd.setEnabled(false);
@@ -9245,7 +9245,7 @@ Dprintf.dprintf("");
     final Button widgetRestore;
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},new double[]{0.0,1.0}));
-    Widgets.layout(composite,0,0,TableLayoutData.NSWE);
+    Widgets.layout(composite,0,0,TableLayoutData.NSWE,0,0,2);
     {
       switch (restoreType)
       {
@@ -9423,7 +9423,7 @@ Dprintf.dprintf("");
     // buttons
     composite = Widgets.newComposite(dialog);
     composite.setLayout(new TableLayout(0.0,1.0));
-    Widgets.layout(composite,1,0,TableLayoutData.WE);
+    Widgets.layout(composite,1,0,TableLayoutData.WE,0,0,2);
     {
       widgetRestore = Widgets.newButton(composite,BARControl.tr("Start restore"));
       widgetRestore.setEnabled(false);
