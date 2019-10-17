@@ -4572,7 +4572,19 @@ widgetArchivePartSize.setListVisible(true);
 
             combo = Widgets.newOptionMenu(subComposite);
             combo.setToolTipText(BARControl.tr("Delta compression method to use."));
-            combo.setItems(new String[]{"none","xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"});
+            Widgets.setComboItems(combo,
+                                  new String[]{"",       "none",
+                                               "xdelta1","xdelta1",
+                                               "xdelta2","xdelta2",
+                                               "xdelta3","xdelta3",
+                                               "xdelta4","xdelta4",
+                                               "xdelta5","xdelta5",
+                                               "xdelta6","xdelta6",
+                                               "xdelta7","xdelta7",
+                                               "xdelta8","xdelta8",
+                                               "xdelta9","xdelta9"
+                                              }
+                                 );
             Widgets.layout(combo,0,1,TableLayoutData.W);
             combo.addSelectionListener(new SelectionListener()
             {
@@ -4584,7 +4596,7 @@ widgetArchivePartSize.setListVisible(true);
               public void widgetSelected(SelectionEvent selectionEvent)
               {
                 Combo  widget = (Combo)selectionEvent.widget;
-                String string = widget.getText();
+                String string = Widgets.getSelectedComboItem(widget);
 
                 try
                 {
@@ -4606,15 +4618,80 @@ widgetArchivePartSize.setListVisible(true);
 
           combo = Widgets.newOptionMenu(composite);
           combo.setToolTipText(BARControl.tr("Byte compression method to use."));
-          combo.setItems(new String[]{"none",
-                                      "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
-                                      "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
-                                      "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
-                                      "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                      "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
-                                      "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
-                                     }
-                        );
+          Widgets.setComboItems(combo,
+                                new String[]{" ",     "none",
+                                             "zip0",  "zip0",
+                                             "zip1",  "zip1",
+                                             "zip2",  "zip2",
+                                             "zip3",  "zip3",
+                                             "zip4",  "zip4",
+                                             "zip5",  "zip5",
+                                             "zip6",  "zip6",
+                                             "zip7",  "zip7",
+                                             "zip8",  "zip8",
+                                             "zip9",  "zip9",
+                                             "bzip1", "bzip1",
+                                             "bzip2", "bzip2",
+                                             "bzip3", "bzip3",
+                                             "bzip4", "bzip4",
+                                             "bzip5", "bzip5",
+                                             "bzip6", "bzip6",
+                                             "bzip7", "bzip7",
+                                             "bzip8", "bzip8",
+                                             "bzip9", "bzip9",
+                                             "lzma1", "lzma1",
+                                             "lzma2", "lzma2",
+                                             "lzma3", "lzma3",
+                                             "lzma4", "lzma4",
+                                             "lzma5", "lzma5",
+                                             "lzma6", "lzma6",
+                                             "lzma7", "lzma7",
+                                             "lzma8", "lzma8",
+                                             "lzma9", "lzma9",
+                                             "lzo1",  "lzo1",
+                                             "lzo2",  "lzo2",
+                                             "lzo3",  "lzo3",
+                                             "lzo4",  "lzo4",
+                                             "lzo5",  "lzo5",
+                                             "lz4-0", "lz4-0",
+                                             "lz4-1", "lz4-1",
+                                             "lz4-2", "lz4-2",
+                                             "lz4-3", "lz4-3",
+                                             "lz4-4", "lz4-4",
+                                             "lz4-5", "lz4-5",
+                                             "lz4-6", "lz4-6",
+                                             "lz4-7", "lz4-7",
+                                             "lz4-8", "lz4-8",
+                                             "lz4-9", "lz4-9",
+                                             "lz4-10","lz4-10",
+                                             "lz4-11","lz4-11",
+                                             "lz4-12","lz4-12",
+                                             "lz4-13","lz4-13",
+                                             "lz4-14","lz4-14",
+                                             "lz4-15","lz4-15",
+                                             "lz4-16","lz4-16",
+                                             "zstd0", "zstd0",
+                                             "zstd1", "zstd1",
+                                             "zstd2", "zstd2",
+                                             "zstd3", "zstd3",
+                                             "zstd4", "zstd4",
+                                             "zstd5", "zstd5",
+                                             "zstd6", "zstd6",
+                                             "zstd7", "zstd7",
+                                             "zstd8", "zstd8",
+                                             "zstd9", "zstd9",
+                                             "zstd10","zstd10",
+                                             "zstd11","zstd11",
+                                             "zstd12","zstd12",
+                                             "zstd13","zstd13",
+                                             "zstd14","zstd14",
+                                             "zstd15","zstd15",
+                                             "zstd16","zstd16",
+                                             "zstd17","zstd17",
+                                             "zstd18","zstd18",
+                                             "zstd19","zstd19"
+                                            }
+                               );
           Widgets.layout(combo,0,2,TableLayoutData.W);
           combo.addSelectionListener(new SelectionListener()
           {
@@ -4626,7 +4703,7 @@ widgetArchivePartSize.setListVisible(true);
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Combo  widget = (Combo)selectionEvent.widget;
-              String string = widget.getText();
+              String string = Widgets.getSelectedComboItem(widget);
 
               try
               {
@@ -5012,23 +5089,24 @@ widgetArchivePartSize.setListVisible(true);
           {
             widgetCryptAlgorithms[i] = Widgets.newOptionMenu(composite);
             widgetCryptAlgorithms[i].setToolTipText(BARControl.tr("Encryption methods to use."));
-            widgetCryptAlgorithms[i].setItems(new String[]{"none",
-                                                           "3DES",
-                                                           "CAST5",
-                                                           "BLOWFISH",
-                                                           "AES128",
-                                                           "AES192",
-                                                           "AES256",
-                                                           "TWOFISH128",
-                                                           "TWOFISH256",
-                                                           "SERPENT128",
-                                                           "SERPENT192",
-                                                           "SERPENT256",
-                                                           "CAMELLIA128",
-                                                           "CAMELLIA192",
-                                                           "CAMELLIA256"
-                                                          }
-                                             );
+            Widgets.setComboItems(widgetCryptAlgorithms[i],
+                                  new String[]{"",           "none",
+                                               "3DES",       "3DES",
+                                               "CAST5",      "CAST5",
+                                               "BLOWFISH",   "BLOWFISH",
+                                               "AES128",     "AES128",
+                                               "AES192",     "AES192",
+                                               "AES256",     "AES256",
+                                               "TWOFISH128", "TWOFISH128",
+                                               "TWOFISH256", "TWOFISH256",
+                                               "SERPENT128", "SERPENT128",
+                                               "SERPENT192", "SERPENT192",
+                                               "SERPENT256", "SERPENT256",
+                                               "CAMELLIA128","CAMELLIA128",
+                                               "CAMELLIA192","CAMELLIA192",
+                                               "CAMELLIA256","CAMELLIA256"
+                                              }
+                                 );
             Widgets.layout(widgetCryptAlgorithms[i],0,i,TableLayoutData.W);
             widgetCryptAlgorithms[i].addSelectionListener(new SelectionListener()
             {
@@ -5046,8 +5124,10 @@ widgetArchivePartSize.setListVisible(true);
 //                  for (int i = 0; i < 4; i++)
                   for (int i = 0; i < 1; i++)
                   {
+                    String string = Widgets.getSelectedComboItem(widgetCryptAlgorithms[i]);
+
                     if (buffer.length() > 0) buffer.append('+');
-                    buffer.append(widgetCryptAlgorithms[i].getText());
+                    buffer.append(string);
                   }
                   cryptAlgorithm.set(buffer.toString());
                   BARServer.setJobOption(selectedJobData.uuid,cryptAlgorithm);
@@ -6666,7 +6746,7 @@ widgetArchivePartSize.setListVisible(true);
             subComposite.setLayout(new TableLayout(1.0,0.0));
             Widgets.layout(subComposite,1,0,TableLayoutData.WE);
             {
-              label = Widgets.newLabel(subComposite,BARControl.tr("Archive file mode:"));
+              label = Widgets.newLabel(subComposite,BARControl.tr("Archive file mode")+":");
               Widgets.layout(label,0,0,TableLayoutData.W);
 
               combo = Widgets.newOptionMenu(subComposite);
@@ -7004,7 +7084,7 @@ widgetArchivePartSize.setListVisible(true);
           }
 */
 
-          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode")+":");
           Widgets.layout(label,4,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,0.0));
@@ -7673,7 +7753,7 @@ widgetArchivePartSize.setListVisible(true);
           }
 */
 
-          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode")+":");
           Widgets.layout(label,4,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,0.0));
@@ -8343,7 +8423,7 @@ widgetArchivePartSize.setListVisible(true);
           }
 */
 
-          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode:"));
+          label = Widgets.newLabel(composite,BARControl.tr("Archive file mode")+":");
           Widgets.layout(label,4,0,TableLayoutData.W);
           subComposite = Widgets.newComposite(composite,SWT.NONE);
           subComposite.setLayout(new TableLayout(1.0,0.0));
@@ -15215,7 +15295,7 @@ throw new Error("NYI");
       Widgets.layout(label,5,0,TableLayoutData.W);
 
       widgetCustomText = Widgets.newText(composite,Settings.hasExpertRole());
-      widgetCustomText.setToolTipText(BARControl.tr("Custom text."));
+      widgetCustomText.setToolTipText(BARControl.tr("Custom text")+".");
       widgetCustomText.setText(scheduleData.customText);
       Widgets.layout(widgetCustomText,5,1,TableLayoutData.WE);
 
@@ -15738,7 +15818,7 @@ throw new Error("NYI");
       subComposite = Widgets.newComposite(composite,SWT.NONE);
       Widgets.layout(subComposite,1,1,TableLayoutData.WE);
       {
-        label = Widgets.newLabel(subComposite,BARControl.tr("min.")+":",Settings.hasExpertRole());
+        label = Widgets.newLabel(subComposite,BARControl.tr("min")+".:",Settings.hasExpertRole());
         Widgets.layout(label,0,0,TableLayoutData.W);
 
         widgetMinKeep = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
@@ -15759,7 +15839,7 @@ throw new Error("NYI");
         Widgets.setSelectedOptionMenuItem(widgetMinKeep,new Integer(persistenceData.minKeep));
         Widgets.layout(widgetMinKeep,0,1,TableLayoutData.W);
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("max.")+":",Settings.hasNormalRole());
+        label = Widgets.newLabel(subComposite,BARControl.tr("max")+".:",Settings.hasNormalRole());
         Widgets.layout(label,0,2,TableLayoutData.W);
 
         widgetMaxKeep = Widgets.newOptionMenu(subComposite,Settings.hasNormalRole());

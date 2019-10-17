@@ -827,11 +827,10 @@ enum ArchiveTypes
 
   UNKNOWN;
 
-  /** convert to string
-   * @return string
+  /** get (translated) text
+   * @return text
    */
-  @Override
-  public String toString()
+  public String getText()
   {
     switch (this)
     {
@@ -841,6 +840,23 @@ enum ArchiveTypes
       case DIFFERENTIAL: return BARControl.tr("differential");
       case CONTINUOUS:   return BARControl.tr("continuous");
       default:           return BARControl.tr("unknown");
+    }
+  }
+
+  /** convert to string
+   * @return string
+   */
+  @Override
+  public String toString()
+  {
+    switch (this)
+    {
+      case NORMAL:       return "NORMAL";
+      case FULL:         return "FULL";
+      case INCREMENTAL:  return "INCREMENTAL";
+      case DIFFERENTIAL: return "DIFFERENTIAL";
+      case CONTINUOUS:   return "CONTINUOUS";
+      default:           return "UNKNOWN";
     }
   }
 };
@@ -2402,15 +2418,15 @@ if (false) {
                           }
                           catch (URISyntaxException exception)
                           {
-                            Dialogs.error(shell,"Cannot open default web browser:\n\n"+exception.getMessage());
+                            Dialogs.error(shell,BARControl.tr("Cannot open default web browser:\n\n{0}",exception.getMessage()));
                           }
                           catch (IOException exception)
                           {
-                            Dialogs.error(shell,"Cannot open default web browser:\n\n"+reniceIOException(exception).getMessage());
+                            Dialogs.error(shell,BARControl.tr("Cannot open default web browser:\n\n{0}",reniceIOException(exception).getMessage()));
                           }
                           catch (Exception exception)
                           {
-                            Dialogs.error(shell,"Cannot open default web browser:\n\n"+exception.getMessage());
+                            Dialogs.error(shell,BARControl.tr("Cannot open default web browser:\n\n{0}",exception.getMessage()));
                           }
                         }
                         else
@@ -2614,7 +2630,7 @@ assert jobData != null;
 
       subMenu = Widgets.addMenu(menu,BARControl.tr("Pause"),BARServer.isMaster() && Settings.hasNormalRole());
       {
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("10min"));
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("10 min"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2628,7 +2644,7 @@ assert jobData != null;
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("60min"),SWT.CTRL+'P');
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("60 min"),SWT.CTRL+'P');
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2643,7 +2659,7 @@ assert jobData != null;
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("120min"));
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("120 min"));
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -2754,7 +2770,7 @@ assert jobData != null;
           }
           catch (Exception exception)
           {
-            Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n")+exception.getMessage());
+            Dialogs.error(shell,BARControl.tr("Cannot clear passwords on server:\n\n{0}",exception.getMessage()));
           }
         }
       });
@@ -3134,7 +3150,13 @@ assert jobData != null;
     boolean connectOkFlag = false;
 
     // try to reconnect
-    if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection lost"),message,BARControl.tr("Try again"),BARControl.tr("Cancel")))
+    if (Dialogs.confirmError(new Shell(),
+                             BARControl.tr("Connection lost"),
+                             message,
+                             BARControl.tr("Try again"),
+                             BARControl.tr("Cancel")
+                            )
+       )
     {
       // try to connect to last server
       while (!connectOkFlag)
@@ -3156,7 +3178,13 @@ assert jobData != null;
         }
         catch (ConnectionError reconnectError)
         {
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!Dialogs.confirmError(new Shell(),
+                                    BARControl.tr("Connection fail"),
+                                    reconnectError.getMessage(),
+                                    BARControl.tr("Try again"),
+                                    BARControl.tr("Cancel")
+                                   )
+             )
           {
             quitFlag = true;
             break;
@@ -3164,7 +3192,13 @@ assert jobData != null;
         }
         catch (CommunicationError reconnectError)
         {
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!Dialogs.confirmError(new Shell(),
+                                    BARControl.tr("Connection fail"),
+                                    reconnectError.getMessage(),
+                                    BARControl.tr("Try again"),
+                                    BARControl.tr("Cancel")
+                                   )
+             )
           {
             quitFlag = true;
             break;
@@ -3196,7 +3230,13 @@ assert jobData != null;
         }
         catch (ConnectionError reconnectError)
         {
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!Dialogs.confirmError(new Shell(),
+                                    BARControl.tr("Connection fail"),
+                                    reconnectError.getMessage(),
+                                    BARControl.tr("Try again"),
+                                    BARControl.tr("Cancel")
+                                   )
+             )
           {
             quitFlag = true;
             break;
@@ -3204,7 +3244,13 @@ assert jobData != null;
         }
         catch (CommunicationError reconnectError)
         {
-          if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),reconnectError.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+          if (!Dialogs.confirmError(new Shell(),
+                                    BARControl.tr("Connection fail"),
+                                    reconnectError.getMessage(),
+                                    BARControl.tr("Try again"),
+                                    BARControl.tr("Cancel")
+                                   )
+             )
           {
             quitFlag = true;
             break;
@@ -3638,7 +3684,13 @@ assert jobData != null;
             // try to connect to server without TLS/SSL
             if (!connectOkFlag && loginData.forceSSL)
             {
-              if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),BARControl.tr("Try without TLS/SSL"),BARControl.tr("Cancel")))
+              if (Dialogs.confirmError(new Shell(),
+                                       BARControl.tr("Connection fail"),
+                                       BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),
+                                       BARControl.tr("Try without TLS/SSL"),
+                                       BARControl.tr("Cancel")
+                                      )
+                 )
               {
                 try
                 {
@@ -3844,7 +3896,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot set new master")+":\n\n"+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n{0}",exception.getMessage()));
               }
             });
             return;
@@ -3856,7 +3908,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot set new master")+":\n\n"+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot set new master:\n\n{0}",exception.getMessage()));
               }
             });
             return;
@@ -3895,7 +3947,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master")+":\n\n"+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master:\n\n{0}",exception.getMessage()));
               }
             });
             return;
@@ -3907,7 +3959,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master")+":\n\n"+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot restart pairing master:\n\n{0}",exception.getMessage()));
               }
             });
             return;
@@ -3943,7 +3995,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master")+":\n\n"+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master:\n\n{0}",exception.getMessage()));
               }
             });
             return;
@@ -3955,7 +4007,7 @@ assert jobData != null;
               public void run()
               {
                 Dialogs.close(dialog,false);
-                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master")+":\n\n"+exception.getMessage());
+                Dialogs.error(shell,BARControl.tr("Cannot stop pairing master:\n\n{0}",exception.getMessage()));
               }
             });
             return;
@@ -4072,7 +4124,7 @@ assert jobData != null;
       {
         public void run()
         {
-          Dialogs.error(shell,BARControl.tr("Cannot start pairing master")+":\n\n"+exception.getMessage());
+          Dialogs.error(shell,BARControl.tr("Cannot start pairing master:\n\n{0}",exception.getMessage()));
         }
       });
       return false;
@@ -4083,7 +4135,7 @@ assert jobData != null;
       {
         public void run()
         {
-          Dialogs.error(shell,BARControl.tr("Cannot start pairing master")+":\n\n"+exception.getMessage());
+          Dialogs.error(shell,BARControl.tr("Cannot start pairing master:\n\n{0}",exception.getMessage()));
         }
       });
       return false;
@@ -4115,7 +4167,7 @@ Dprintf.dprintf("");
     }
     catch (Exception exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n")+exception.getMessage());
+      Dialogs.error(shell,BARControl.tr("Cannot clear master:\n\n{0}",exception.getMessage()));
       return false;
     }
   }
@@ -5234,11 +5286,18 @@ Dprintf.dprintf("still not supported");
             }
             catch (ConnectionError error)
             {
+error.printStackTrace();
               errorMessage = error.getMessage();
             }
             catch (CommunicationError error)
             {
-              if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+              if (Dialogs.confirmError(new Shell(),
+                                       BARControl.tr("Connection fail"),
+                                       error.getMessage(),
+                                       BARControl.tr("Try again"),
+                                       BARControl.tr("Cancel")
+                                      )
+                 )
               {
                 continue;
               }
@@ -5250,7 +5309,13 @@ Dprintf.dprintf("still not supported");
           }
           if (!connectOkFlag && loginData.forceSSL)
           {
-            if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),BARControl.tr("Try without TLS/SSL"),BARControl.tr("Cancel")))
+            if (Dialogs.confirmError(new Shell(),
+                                     BARControl.tr("Connection fail"),
+                                     BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),
+                                     BARControl.tr("Try without TLS/SSL"),
+                                     BARControl.tr("Cancel")
+                                    )
+               )
             {
               try
               {
@@ -5269,11 +5334,18 @@ Dprintf.dprintf("still not supported");
               }
               catch (ConnectionError error)
               {
+error.printStackTrace();
                 errorMessage = error.getMessage();
               }
               catch (CommunicationError error)
               {
-                if (Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),error.getMessage(),BARControl.tr("Try again"),BARControl.tr("Cancel")))
+                if (Dialogs.confirmError(new Shell(),
+                                         BARControl.tr("Connection fail"),
+                                         error.getMessage(),
+                                         BARControl.tr("Try again"),
+                                         BARControl.tr("Cancel")
+                                        )
+                   )
                 {
                   continue;
                 }
@@ -5292,7 +5364,13 @@ Dprintf.dprintf("still not supported");
           // check if connected
           if (!connectOkFlag)
           {
-            if (!Dialogs.confirmError(new Shell(),BARControl.tr("Connection fail"),errorMessage,BARControl.tr("Try again"),BARControl.tr("Cancel")))
+            if (!Dialogs.confirmError(new Shell(),
+                                      BARControl.tr("Connection fail"),
+                                      errorMessage,
+                                      BARControl.tr("Try again"),
+                                      BARControl.tr("Cancel")
+                                     )
+               )
             {
               System.exit(EXITCODE_FAIL);
             }

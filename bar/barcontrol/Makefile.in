@@ -586,25 +586,37 @@ endif
 .PHONY: run runde runjp rundebug runxdebug runxxdebug
 run: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runde: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) $(O)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundevde: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=de -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=39909 --tls-port=0 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 runjp: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) $(O)
+else
+	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
+endif
+rundevjp: $(OBJECTS)
+ifneq ($(JAVA),)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -Duser.language=jp -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) $(OPTIONS) --port=39909 --tls-port=0 $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif
 rundebug: $(OBJECTS)
 ifneq ($(JAVA),)
-	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS)
+	$(ENVIRONMENT) $(JAVA) $(JAVA_FLAGS) -classpath $(CLASSPATH) BARControl $(BARCONTROL_OPTIONS) --debug=1 $(OPTIONS) $(O)
 else
 	@$(ECHO) "ERROR: no 'java' command - cannot execute BARControl"
 endif

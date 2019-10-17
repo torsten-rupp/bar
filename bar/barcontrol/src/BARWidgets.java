@@ -772,10 +772,10 @@ public class BARWidgets
             widget.setData("showedErrorDialog",true);
             Dialogs.error(shell,BARControl.tr("''{0}'' is not valid time!\n\nEnter a time in the format ''n<{1}|{2}|{3}|{4}|{5}>''",
                                               string,
-                                              BARControl.tr("weeks"),
-                                              BARControl.tr("days"),
+                                              BARControl.tr("week"),
+                                              BARControl.tr("day"),
                                               BARControl.tr("h"),
-                                              BARControl.tr("mins"),
+                                              BARControl.tr("min"),
                                               BARControl.tr("s")
                                              )
                          );

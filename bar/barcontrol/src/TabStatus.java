@@ -200,10 +200,11 @@ class JobData
     {
       if (buffer.length() > 0)
       {
+        buffer.append(" ");
         switch (slaveState)
         {
-          case OFFLINE: buffer.append(BARControl.tr(" (offline)"));      break;
-          case ONLINE:  buffer.append(BARControl.tr(" (wait pairing)")); break;
+          case OFFLINE: buffer.append(BARControl.tr("(offline)"));      break;
+          case ONLINE:  buffer.append(BARControl.tr("(wait pairing)")); break;
         }
       }
       else
@@ -250,16 +251,19 @@ class JobData
     }
     else
     {
-      return "none";
+      return "";
     }
   }
 
   /** format job crypt algorithm (including "*" for asymmetric)
    * @return crypt algorithm string
    */
-  String formatCryptAlgorithm()
+//TODO: all public
+  public String formatCryptAlgorithm()
   {
-    return cryptAlgorithm+(cryptType.equals("ASYMMETRIC") ? "*" : "");
+    boolean cryptIsNone = cryptAlgorithm.equals("none");
+
+    return !cryptIsNone ? cryptAlgorithm+(cryptType.equals("ASYMMETRIC") ? "*" : "") : "";
   }
 
   /** format last executed date/time
@@ -908,7 +912,7 @@ public class TabStatus
 
         Widgets.addMenuItemSeparator(subMenu);
 
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Normal"),BARServer.isMaster());
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("normal"),BARServer.isMaster());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -937,7 +941,7 @@ public class TabStatus
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Full"),BARServer.isMaster());
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("full"),BARServer.isMaster());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -966,7 +970,7 @@ public class TabStatus
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Incremental"),BARServer.isMaster());
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("incremental"),BARServer.isMaster());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -995,7 +999,7 @@ public class TabStatus
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Differential"),BARServer.isMaster());
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("differential"),BARServer.isMaster());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -1024,7 +1028,7 @@ public class TabStatus
           }
         });
 
-        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("Dry-run"),BARServer.isMaster());
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("dry-run"),BARServer.isMaster());
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override

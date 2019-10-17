@@ -3008,6 +3008,33 @@ Dprintf.dprintf("");
 
     ANY;
 
+    /** check if entry has a size
+     * @return true iff entry has a size
+     */
+    public boolean hasSize()
+    {
+      return    (this == FILE)
+             || (this == IMAGE)
+             || (this == HARDLINK);
+    }
+
+    /** get (translated) text
+     * @return text
+     */
+    public String getText()
+    {
+      switch (this)
+      {
+        case FILE:      return BARControl.tr("file");
+        case IMAGE:     return BARControl.tr("image");
+        case DIRECTORY: return BARControl.tr("directory");
+        case LINK:      return BARControl.tr("link");
+        case HARDLINK:  return BARControl.tr("hardlink");
+        case SPECIAL:   return BARControl.tr("special");
+        default:        return "*";
+      }
+    }
+
     /** convert data to string
      * @return string
      */
@@ -3960,7 +3987,7 @@ Dprintf.dprintf("");
                                            (Object)entryIndexData,
                                            entryIndexData.storageName,
                                            entryIndexData.name,
-                                           entryIndexData.entryType.toString(),
+                                           entryIndexData.entryType.getText(),
                                            Units.formatByteSize(entryIndexData.size),
                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                           );
@@ -3970,7 +3997,7 @@ Dprintf.dprintf("");
                                            (Object)entryIndexData,
                                            entryIndexData.storageName,
                                            entryIndexData.name,
-                                           entryIndexData.entryType.toString(),
+                                           entryIndexData.entryType.getText(),
                                            Units.formatByteSize(entryIndexData.size),
                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                           );
@@ -3980,7 +4007,7 @@ Dprintf.dprintf("");
                                            (Object)entryIndexData,
                                            entryIndexData.storageName,
                                            entryIndexData.name,
-                                           entryIndexData.entryType.toString(),
+                                           entryIndexData.entryType.getText(),
                                            (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                           );
@@ -3990,7 +4017,7 @@ Dprintf.dprintf("");
                                            (Object)entryIndexData,
                                            entryIndexData.storageName,
                                            entryIndexData.name,
-                                           entryIndexData.entryType.toString(),
+                                           entryIndexData.entryType.getText(),
                                            "",
                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                           );
@@ -4000,7 +4027,7 @@ Dprintf.dprintf("");
                                            (Object)entryIndexData,
                                            entryIndexData.storageName,
                                            entryIndexData.name,
-                                           entryIndexData.entryType.toString(),
+                                           entryIndexData.entryType.getText(),
                                            Units.formatByteSize(entryIndexData.size),
                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                           );
@@ -4010,7 +4037,7 @@ Dprintf.dprintf("");
                                            (Object)entryIndexData,
                                            entryIndexData.storageName,
                                            entryIndexData.name,
-                                           entryIndexData.entryType.toString(),
+                                           entryIndexData.entryType.getText(),
                                            Units.formatByteSize(entryIndexData.size),
                                            SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                           );
@@ -4608,7 +4635,7 @@ Dprintf.dprintf("");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.toString());
+      label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.getText());
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4774,7 +4801,7 @@ Dprintf.dprintf("");
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.archiveType.toString());
+      label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.archiveType.getText());
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -4828,7 +4855,7 @@ Dprintf.dprintf("");
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.entryType.toString());
+      label = Widgets.newLabel(widgetEntryTableToolTip,entryIndexData.entryType.getText());
       label.setForeground(COLOR_FOREGROUND);
       label.setBackground(COLOR_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
@@ -9564,11 +9591,11 @@ Dprintf.dprintf("");
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             final long   entryId  = valueMap.getLong  ("entryId" );
-                                             final String name     = valueMap.getString("name"    );
-                                             final String type     = valueMap.getString("type"    );
-                                             final long   size     = valueMap.getLong  ("size"    );
-                                             final long   dateTime = valueMap.getLong  ("dateTime");
+                                             final long       entryId  = valueMap.getLong  ("entryId" );
+                                             final String     name     = valueMap.getString("name"    );
+                                             final EntryTypes type     = valueMap.getEnum  ("type",EntryTypes.class);
+                                             final long       size     = valueMap.getLong  ("size"    );
+                                             final long       dateTime = valueMap.getLong  ("dateTime");
 
                                              display.syncExec(new Runnable()
                                              {
@@ -9579,11 +9606,8 @@ Dprintf.dprintf("");
                                                     Widgets.addTableItem(widgetRestoreTable,
                                                                          entryId,
                                                                          name,
-                                                                         type,
-                                                                         (   type.equals("FILE")
-                                                                          || type.equals("IMAGE")
-                                                                          || type.equals("HARDLINK")
-                                                                         ) ? Units.formatByteSize(size) : "",
+                                                                         type.getText(),
+                                                                         type.hasSize() ? Units.formatByteSize(size) : "",
                                                                          SIMPLE_DATE_FORMAT.format(new Date(dateTime*1000))
                                                                         );
                                                   }

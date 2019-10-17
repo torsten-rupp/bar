@@ -519,12 +519,12 @@ public class ServerSettings
                                    BARControl.tr("Index database keep time for not existing storages."),
                                    indexDatabaseKeepTime,
                                    new String[]{"0",
-                                                BARControl.tr("1day"),
-                                                BARControl.tr("3days"),
-                                                BARControl.tr("1week"),
-                                                BARControl.tr("2weeks"),
-                                                BARControl.tr("3weeks"),
-                                                BARControl.tr("30days")
+                                                BARControl.tr("1 day"),
+                                                BARControl.tr("3 days"),
+                                                BARControl.tr("1 week"),
+                                                BARControl.tr("2 weeks"),
+                                                BARControl.tr("3 weeks"),
+                                                BARControl.tr("30 days")
                                                }
                                   );
         Widgets.layout(combo,0,0,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
@@ -608,7 +608,7 @@ public class ServerSettings
       tableColumn = Widgets.addTableColumn(widgetServerTable,1,BARControl.tr("Name"),SWT.LEFT,512,true );
       tableColumn.setToolTipText(BARControl.tr("Click to sort by name."));
       tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-      tableColumn = Widgets.addTableColumn(widgetServerTable,2,BARControl.tr("#"),   SWT.LEFT, 32,false);
+      tableColumn = Widgets.addTableColumn(widgetServerTable,2,"#",SWT.LEFT, 32,false);
       tableColumn.setToolTipText(BARControl.tr("Click to sort by max. number of concurrent connections."));
       tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
       tableColumn = Widgets.addTableColumn(widgetServerTable,3,BARControl.tr("Size"),SWT.LEFT, 64,false);
@@ -622,7 +622,7 @@ public class ServerSettings
       subComposite.setLayout(new TableLayout(1.0,0.0,2));
       Widgets.layout(subComposite,row,0,TableLayoutData.E,0,2);
       {
-        widgetAddServer = Widgets.newButton(subComposite,BARControl.tr("Add\u2026"));
+        widgetAddServer = Widgets.newButton(subComposite,BARControl.tr("Add")+"\u2026");
         Widgets.layout(widgetAddServer,0,0,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         widgetAddServer.addSelectionListener(new SelectionListener()
         {
@@ -672,7 +672,7 @@ public class ServerSettings
           }
         });
 
-        widgetEditServer = Widgets.newButton(subComposite,BARControl.tr("Edit\u2026"));
+        widgetEditServer = Widgets.newButton(subComposite,BARControl.tr("Edit")+"\u2026");
         Widgets.layout(widgetEditServer,0,1,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         widgetEditServer.addSelectionListener(new SelectionListener()
         {
@@ -726,7 +726,7 @@ public class ServerSettings
           }
         });
 
-        button = Widgets.newButton(subComposite,BARControl.tr("Clone\u2026"));
+        button = Widgets.newButton(subComposite,BARControl.tr("Clone")+"\u2026");
         Widgets.layout(button,0,2,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         button.addSelectionListener(new SelectionListener()
         {
@@ -783,7 +783,7 @@ public class ServerSettings
           }
         });
 
-        widgetRemoveServer = Widgets.newButton(subComposite,BARControl.tr("Remove\u2026"));
+        widgetRemoveServer = Widgets.newButton(subComposite,BARControl.tr("Remove")+"\u2026");
         Widgets.layout(widgetRemoveServer,0,3,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
         widgetRemoveServer.addSelectionListener(new SelectionListener()
         {

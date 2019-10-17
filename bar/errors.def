@@ -186,7 +186,7 @@ ERROR FTP_SESSION_FAIL
   stringSet(errorText,sizeof(errorText),TR("initialize FTP session fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR(": %s"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR NO_FTP_PASSWORD                  TR("no FTP password given")
@@ -195,7 +195,7 @@ ERROR FTP_AUTHENTICATION
   stringSet(errorText,sizeof(errorText),TR("invalid FTP user/password"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringFormatAppend(errorText,sizeof(errorText),TR(": %s"),ERROR_DATA);
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
 ERROR FTP_GET_SIZE                     TR("get FTP file size fail")
@@ -607,7 +607,9 @@ ERROR CRC_
   stringSet(errorText,sizeof(errorText),TR("wrong CRC"));
   if (!stringIsEmpty(ERROR_DATA))
   {
-    stringAppend(errorText,sizeof(errorText),TR(" at offset "));
+    stringAppend(errorText,sizeof(errorText)," ");
+    stringAppend(errorText,sizeof(errorText),TR("at offset"));
+    stringAppend(errorText,sizeof(errorText)," ");
     stringAppend(errorText,sizeof(errorText),ERROR_DATA);
   }
 
@@ -743,7 +745,7 @@ ERROR INVALID_VALUE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
-ERROR AUTHORIZATION                    TR("authorization")
+ERROR AUTHORIZATION                    TR("authorization fail")
 ERROR JOB_NOT_FOUND
   stringSet(errorText,sizeof(errorText),TR("job not found"));
   if (!stringIsEmpty(ERROR_DATA))

@@ -865,7 +865,7 @@ class ReadThread extends Thread
         try
         {
           line = input.readLine();
-Dprintf.dprintf("line=%s",line);
+//Dprintf.dprintf("line=%s",line);
           if (line == null)
           {
             if (!quitFlag)
@@ -1147,7 +1147,7 @@ Dprintf.dprintf("line=%s",line);
       }
       else
       {
-        throw new ConnectionError("disconnected");
+        throw new ConnectionError(BARControl.tr("disconnected"));
       }
     }
 
@@ -1724,27 +1724,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (BARException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+error.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' (error: {2})",name,port,error.getMessage())+")";
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,port,exception.getMessage())+")";
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: no route to host)",name,port)+")";
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "unknown host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
             }
             catch (IOException exception)
             {
@@ -1838,19 +1838,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,tlsPort,exception.getMessage())+")";
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,tlsPort,exception.getMessage())+")";
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "unknown host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,tlsPort,exception.getMessage())+")";
             }
             catch (IOException exception)
             {
@@ -1956,27 +1956,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             catch (BARException exception)
             {
               try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' (error: "+error.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' (error: {2})",name,port,error.getMessage())+")";
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,port,exception.getMessage())+")";
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: no route to host)",name,port)+")";
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "unknown host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
             }
             catch (IOException exception)
             {
@@ -2065,19 +2065,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,tlsPort,exception.getMessage())+")";
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (error: "+exception.getMessage()+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: no route to host)",name,tlsPort)+")";
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = "unknown host '"+name+((tlsPort != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,tlsPort,exception.getMessage())+")";
             }
             catch (IOException exception)
             {
@@ -2123,15 +2123,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (ConnectException exception)
       {
-        connectErrorMessage = exception.getMessage();
+        connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
       }
       catch (NoRouteToHostException exception)
       {
-        connectErrorMessage = "host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"' unreachable (no route to host)";
+        connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: no route to host)",name,port)+")";
       }
       catch (UnknownHostException exception)
       {
-        connectErrorMessage = "unknown host '"+name+((port != Settings.DEFAULT_SERVER_PORT) ? ":"+port : "")+"'";
+        connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
       }
       catch (Exception exception)
       {
@@ -2149,7 +2149,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     if (socket == null)
     {
       if   ((tlsPort != 0) || (port!= 0)) throw new ConnectionError(connectErrorMessage);
-      else                                throw new ConnectionError("no server ports specified");
+      else                                throw new ConnectionError(BARControl.tr("no server ports specified"));
     }
 
     // authorize, get version/file separator
