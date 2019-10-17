@@ -1490,6 +1490,42 @@ public class TabJobs
       return enabled;
     }
 
+    /** convert week days to string
+     * @return week days string
+     */
+    String weekDaysToString()
+    {
+      assert    (weekDays == ANY)
+             || ((weekDays & ~(  (1 << ScheduleData.MON)
+                               | (1 << ScheduleData.TUE)
+                               | (1 << ScheduleData.WED)
+                               | (1 << ScheduleData.THU)
+                               | (1 << ScheduleData.FRI)
+                               | (1 << ScheduleData.SAT)
+                               | (1 << ScheduleData.SUN)
+                              )) == 0
+                ) : weekDays;
+
+      if (weekDays == ANY)
+      {
+        return "*";
+      }
+      else
+      {
+        StringBuilder buffer = new StringBuilder();
+
+        if ((weekDays & (1 << ScheduleData.MON)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Mon"); }
+        if ((weekDays & (1 << ScheduleData.TUE)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Tue"); }
+        if ((weekDays & (1 << ScheduleData.WED)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Wed"); }
+        if ((weekDays & (1 << ScheduleData.THU)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Thu"); }
+        if ((weekDays & (1 << ScheduleData.FRI)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Fri"); }
+        if ((weekDays & (1 << ScheduleData.SAT)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sat"); }
+        if ((weekDays & (1 << ScheduleData.SUN)) != 0) { if (buffer.length() > 0) buffer.append(','); buffer.append("Sun"); }
+
+        return buffer.toString();
+      }
+    }
+
     /** convert data to string
      */
     public String toString()
@@ -12198,7 +12234,7 @@ throw new Error("NYI");
     if (selectedJobData != null)
     {
       EntryData entryData = new EntryData(EntryTypes.FILE,"");
-      if (includeEdit(entryData,"Add new include pattern","Add"))
+      if (includeEdit(entryData,BARControl.tr("Add new include pattern"),BARControl.tr("Add")))
       {
         includeListAdd(entryData);
       }
@@ -12242,7 +12278,7 @@ throw new Error("NYI");
       {
         EntryData entryData = ((EntryData)tableItems[0].getData()).clone();
 
-        if (includeEdit(entryData,"Clone include pattern","Add"))
+        if (includeEdit(entryData,BARControl.tr("Clone include pattern"),BARControl.tr("Add")))
         {
           // update include list
           includeListRemove(entryData.pattern);
@@ -12586,7 +12622,7 @@ throw new Error("NYI");
     if (selectedJobData != null)
     {
       String[] pattern = new String[1];
-      if (excludeEdit(pattern,"Add new exclude pattern","Add"))
+      if (excludeEdit(pattern,BARControl.tr("Add new exclude pattern"),BARControl.tr("Add")))
       {
         excludeListAdd(pattern[0]);
       }
@@ -12628,7 +12664,7 @@ throw new Error("NYI");
       if (patterns.length > 0)
       {
         String[] pattern = new String[]{new String(patterns[0])};
-        if (excludeEdit(pattern,"Clone exclude pattern","Add"))
+        if (excludeEdit(pattern,BARControl.tr("Clone exclude pattern"),BARControl.tr("Add")))
         {
           // update exclude list
           excludeListRemove(new String[]{pattern[0]});
@@ -13122,7 +13158,7 @@ throw new Error("NYI");
     assert selectedJobData != null;
 
     MountData mountData = new MountData(name);
-    if (mountEdit(mountData,"Add new mount","Add"))
+    if (mountEdit(mountData,BARControl.tr("Add new mount"),BARControl.tr("Add")))
     {
       mountListAdd(mountData);
     }
@@ -13168,7 +13204,7 @@ throw new Error("NYI");
       {
         MountData cloneMountData = (MountData)tableItems[0].getData();
 
-        if (mountEdit(cloneMountData,"Clone mount","Add"))
+        if (mountEdit(cloneMountData,BARControl.tr("Clone mount"),BARControl.tr("Add")))
         {
           mountListAdd(cloneMountData);
         }
@@ -13675,7 +13711,7 @@ throw new Error("NYI");
     if (selectedJobData != null)
     {
       String[] pattern = new String[1];
-      if (compressExcludeEdit(pattern,"Add new compress exclude pattern","Add"))
+      if (compressExcludeEdit(pattern,BARControl.tr("Add new compress exclude pattern"),BARControl.tr("Add")))
       {
         compressExcludeListAdd(pattern[0]);
       }
@@ -15294,14 +15330,14 @@ throw new Error("NYI");
       widgetInterval = Widgets.newOptionMenu(composite,Settings.hasExpertRole());
       widgetInterval.setEnabled(scheduleData.archiveType == ArchiveTypes.CONTINUOUS);
       widgetInterval.setToolTipText(BARControl.tr("Interval time for continuous storage."));
-      Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",        0,
-                                                             "5min",    5,
-                                                             "10min",  10,
-                                                             "30min",  30,
-                                                             "1h",   1*60,
-                                                             "2h",   3*60,
-                                                             "4h",   4*60,
-                                                             "8h",   8*60
+      Widgets.setOptionMenuItems(widgetInterval,new Object[]{"",                        0,
+                                                             BARControl.tr("5 min"),    5,
+                                                             BARControl.tr("10 min"),  10,
+                                                             BARControl.tr("30 min"),  30,
+                                                             BARControl.tr("1 h"),   1*60,
+                                                             BARControl.tr("2 h"),   3*60,
+                                                             BARControl.tr("4 h"),   4*60,
+                                                             BARControl.tr("8 h"),   8*60
                                                             }
                                 );
       Widgets.setSelectedOptionMenuItem(widgetInterval,new Integer(scheduleData.interval));
@@ -15428,7 +15464,10 @@ throw new Error("NYI");
         }
         if ((scheduleData.day != ScheduleData.ANY) && (scheduleData.weekDays != ScheduleData.ANY))
         {
-          if (!Dialogs.confirm(dialog,BARControl.tr("The job may not be triggered if the specified day is not in the set of spedified weekdays.\nReally keep this setting?")))
+          if (!Dialogs.confirm(dialog,
+                               BARControl.tr("The job may not be triggered if the specified day is not in the set of spedified weekdays.\nReally keep this setting?")
+                              )
+             )
           {
             return;
           }
@@ -15512,7 +15551,7 @@ throw new Error("NYI");
           try
           {
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate());
-            BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.getWeekDays());
+            BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"weekdays",scheduleData.weekDaysToString());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"time",scheduleData.getTime());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"archive-type",scheduleData.archiveType.toString());
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"interval",scheduleData.interval);
@@ -15877,7 +15916,7 @@ throw new Error("NYI");
 
         widgetMaxKeep = Widgets.newOptionMenu(subComposite,Settings.hasNormalRole());
         widgetMaxKeep.setToolTipText(BARControl.tr("Max. number of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{"unlimited",Keep.ALL,
+        Widgets.setOptionMenuItems(widgetMaxKeep,new Object[]{BARControl.tr("unlimited"),Keep.ALL,
                                                               "1",1,
                                                               "2",2,
                                                               "3",3,
@@ -15898,7 +15937,7 @@ throw new Error("NYI");
 
         widgetMaxAge = Widgets.newOptionMenu(subComposite,Settings.hasExpertRole());
         widgetMaxAge.setToolTipText(BARControl.tr("Max. age of archives to keep."));
-        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{"forever",Age.FOREVER,
+        Widgets.setOptionMenuItems(widgetMaxAge,new Object[]{BARControl.tr("forever"),Age.FOREVER,
                                                              BARControl.tr("1 day"),1,
                                                              BARControl.tr("2 days"),2,
                                                              BARControl.tr("3 days"),3,
@@ -16098,7 +16137,7 @@ throw new Error("NYI");
     if (selectedJobData != null)
     {
       PersistenceData persistenceData = new PersistenceData();
-      if (persistenceEdit(persistenceData,"Add new persistence","Add"))
+      if (persistenceEdit(persistenceData,BARControl.tr("Add new persistence"),BARControl.tr("Add")))
       {
         persistenceListAdd(persistenceData);
       }
@@ -16139,7 +16178,7 @@ throw new Error("NYI");
         PersistenceData persistenceData      = (PersistenceData)treeItems[0].getData();
         PersistenceData clonePersistenceData = (PersistenceData)persistenceData.clone();
 
-        if (persistenceEdit(clonePersistenceData,"Clone persistence","Add"))
+        if (persistenceEdit(clonePersistenceData,BARControl.tr("Clone persistence"),BARControl.tr("Add")))
         {
           persistenceListAdd(clonePersistenceData);
         }
