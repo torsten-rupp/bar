@@ -4065,10 +4065,13 @@ public class TabJobs
         {
           widgetMountTable = Widgets.newTable(subTab);
           widgetMountTable.setToolTipText(BARControl.tr("List of devices to mount, right-click for context menu."));
-//????
-// automatic column width calculation?
-//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
           Widgets.layout(widgetMountTable,0,0,TableLayoutData.NSWE);
+          tableColumn = Widgets.addTableColumn(widgetMountTable,0,BARControl.tr("Name"),  SWT.LEFT,600,true);
+          tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+          tableColumn = Widgets.addTableColumn(widgetMountTable,1,BARControl.tr("Device"),SWT.LEFT,100,true);
+          tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
+          Widgets.setTableColumnWidth(widgetMountTable,Settings.mountListColumns.width);
+
           widgetMountTable.addMouseListener(new MouseListener()
           {
             @Override
@@ -4108,10 +4111,6 @@ public class TabJobs
               }
             }
           });
-          tableColumn = Widgets.addTableColumn(widgetMountTable,0,BARControl.tr("Name"),  SWT.LEFT,600,true);
-          tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
-          tableColumn = Widgets.addTableColumn(widgetMountTable,1,BARControl.tr("Device"),SWT.LEFT,100,true);
-          tableColumn.addSelectionListener(Widgets.DEFAULT_TABLE_SELECTION_LISTENER_STRING);
 
           menu = Widgets.newPopupMenu(shell);
           {
@@ -4348,7 +4347,9 @@ public class TabJobs
                        )
                    )
                 {
-                  Dialogs.warning(shell,BARControl.tr("When writing to a CD/DVD/BD without splitting enabled\nthe resulting archive file may not fit on medium."));
+                  Dialogs.warning(shell,
+                                  BARControl.tr("When writing to a CD/DVD/BD without splitting enabled\nthe resulting archive file may not fit on medium.")
+                                 );
                 }
               }
               catch (Exception exception)
@@ -6657,7 +6658,9 @@ widgetArchivePartSize.setListVisible(true);
                     if (!(Boolean)widget.getData("showedErrorDialog"))
                     {
                       widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                      Dialogs.error(shell,
+                                    BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
+                                   );
                       widget.forceFocus();
                     }
                   }
@@ -6684,7 +6687,9 @@ widgetArchivePartSize.setListVisible(true);
                     if (!(Boolean)widget.getData("showedErrorDialog"))
                     {
                       widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                      Dialogs.error(shell,
+                                    BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
+                                   );
                       widget.forceFocus();
                     }
                   }
@@ -6720,7 +6725,9 @@ widgetArchivePartSize.setListVisible(true);
                     if (!(Boolean)widget.getData("showedErrorDialog"))
                     {
                       widget.setData("showedErrorDialog",true);
-                      Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                      Dialogs.error(shell,
+                                    BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
+                                   );
                       widget.forceFocus();
                     }
                   }
@@ -9603,8 +9610,33 @@ widgetArchivePartSize.setListVisible(true);
         // schedule table
         widgetScheduleTable = Widgets.newTable(tab,SWT.CHECK);
         Widgets.layout(widgetScheduleTable,0,0,TableLayoutData.NSWE);
-//TODO: automatic column width calculation?
-//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
+        SelectionListener scheduleTableColumnSelectionListener = new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            TableColumn            tableColumn            = (TableColumn)selectionEvent.widget;
+            ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable,tableColumn);
+            Widgets.sortTableColumn(widgetScheduleTable,tableColumn,scheduleDataComparator);
+          }
+        };
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,120,false);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week days"),   SWT.LEFT,250,true );
+        Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleDataComparator(widgetScheduleTable,tableColumn));
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,3,BARControl.tr("Archive type"),SWT.LEFT,100,true );
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        tableColumn = Widgets.addTableColumn(widgetScheduleTable,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
+        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
+        Widgets.setTableColumnWidth(widgetScheduleTable,Settings.scheduleListColumns.width);
+
         widgetScheduleTable.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -9775,31 +9807,6 @@ widgetArchivePartSize.setListVisible(true);
             }
           }
         });
-        SelectionListener scheduleTableColumnSelectionListener = new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            TableColumn            tableColumn            = (TableColumn)selectionEvent.widget;
-            ScheduleDataComparator scheduleDataComparator = new ScheduleDataComparator(widgetScheduleTable,tableColumn);
-            Widgets.sortTableColumn(widgetScheduleTable,tableColumn,scheduleDataComparator);
-          }
-        };
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,0,BARControl.tr("Date"),        SWT.LEFT,120,false);
-        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,1,BARControl.tr("Week days"),   SWT.LEFT,250,true );
-        Widgets.sortTableColumn(widgetScheduleTable,tableColumn,new ScheduleDataComparator(widgetScheduleTable,tableColumn));
-        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,2,BARControl.tr("Time"),        SWT.LEFT,100,false);
-        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,3,BARControl.tr("Archive type"),SWT.LEFT,100,true );
-        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
-        tableColumn = Widgets.addTableColumn(widgetScheduleTable,4,BARControl.tr("Custom text"), SWT.LEFT, 90,true );
-        tableColumn.addSelectionListener(scheduleTableColumnSelectionListener);
 
         menu = Widgets.newPopupMenu(shell);
         {
@@ -9955,16 +9962,15 @@ widgetArchivePartSize.setListVisible(true);
         widgetPersistenceTree = Widgets.newTree(tab);
         widgetPersistenceTree.setLayout(new TableLayout(1.0,new double[]{1.0,0.0,0.0,0.0,0.0,0.0}));
         Widgets.layout(widgetPersistenceTree,0,0,TableLayoutData.NSWE);
-//????
-// automatic column width calculation?
-//widgetIncludeTable.setLayout(new TableLayout(new double[]{0.5,0.0,0.5,0.0,0.0},new double[]{0.0,1.0}));
-        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Archive type"),SWT.LEFT, 100,false );
-        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("min. keep"   ),SWT.RIGHT, 90,false );
-        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("max. keep"   ),SWT.RIGHT, 90,false );
-        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("max. age"    ),SWT.RIGHT, 90,false );
-        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Created"     ),SWT.LEFT, 140,false );
-        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Age [days]"  ),SWT.RIGHT, 90,false );
-        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Total size"  ),SWT.RIGHT,120,false );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Archive type"),SWT.LEFT, 100,true );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("min. keep"   ),SWT.RIGHT, 90,true );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("max. keep"   ),SWT.RIGHT, 90,true );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("max. age"    ),SWT.RIGHT, 90,true );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Created"     ),SWT.LEFT, 140,true );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Age [days]"  ),SWT.RIGHT, 90,true );
+        Widgets.addTreeColumn(widgetPersistenceTree,BARControl.tr("Total size"  ),SWT.RIGHT,120,true );
+        Widgets.setTreeColumnWidth(widgetPersistenceTree,Settings.persistenceTreeColumns.width);
+
         widgetPersistenceTree.addListener(SWT.EraseItem, new Listener()
         {
           public void handleEvent(Event event)
@@ -11894,7 +11900,6 @@ throw new Error("NYI");
     }
     catch (Exception exception)
     {
-//TODO
       // ignored
     }
   }
@@ -12161,8 +12166,12 @@ throw new Error("NYI");
     }
     catch (Exception exception)
     {
-//TODO
-      // ignored
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot remove include entry:\n\n{0}",
+                                  exception.getMessage()
+                                 )
+                   );
+      return;
     }
 
     // update file tree/device images
@@ -12545,8 +12554,12 @@ throw new Error("NYI");
     }
     catch (Exception exception)
     {
-//TODO
-      // ignored
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot remove exclude entry:\n\n{0}",
+                                  exception.getMessage()
+                                 )
+                   );
+      return;
     }
 
     // update file tree/device images
@@ -13020,11 +13033,11 @@ throw new Error("NYI");
     }
 
     // update table item
-    Widgets.setTableItem(widgetMountTable,
-                         mountData,
-                         mountData.name,
-                         (mountData.device != null) ? mountData.device : ""
-                        );
+    Widgets.updateTableItem(widgetMountTable,
+                            mountData,
+                            mountData.name,
+                            (mountData.device != null) ? mountData.device : ""
+                           );
 
     // remove duplicate names
     TableItem tableItems[] = widgetMountTable.getItems();
@@ -13388,8 +13401,12 @@ abort();
     }
     catch (Exception exception)
     {
-//TODO
-      // ignored
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot remove source pattern:\n\n{0}",
+                                  exception.getMessage()
+                                 )
+                   );
+      return;
     }
   }
 
@@ -13417,8 +13434,12 @@ abort();
     }
     catch (Exception exception)
     {
-//TODO
-      // ignored
+      Dialogs.error(shell,
+                    BARControl.tr("Cannot clear source patterns:\n\n{0}",
+                                  exception.getMessage()
+                                 )
+                   );
+      return;
     }
   }
 
@@ -13721,8 +13742,12 @@ throw new Error("NYI");
     }
     catch (Exception exception)
     {
-//TODO
-      // ignored
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot remove compress exclude entry:\n\n{0}",
+                                    exception.getMessage()
+                                   )
+                     );
+        return;
     }
 
     // update file tree/device images
@@ -15044,14 +15069,14 @@ throw new Error("NYI");
                 // update/create table item
                 if (tableItem != null)
                 {
-                  Widgets.setTableItem(tableItem,
-                                       scheduleData,
-                                       scheduleData.getDate(),
-                                       scheduleData.getWeekDays(),
-                                       scheduleData.getTime(),
-                                       scheduleData.archiveType.toString(),
-                                       scheduleData.customText
-                                      );
+                  Widgets.updateTableItem(tableItem,
+                                          scheduleData,
+                                          scheduleData.getDate(),
+                                          scheduleData.getWeekDays(),
+                                          scheduleData.getTime(),
+                                          scheduleData.archiveType.toString(),
+                                          scheduleData.customText
+                                         );
                   tableItem.setChecked(scheduleData.enabled);
 
                   // keep table item
@@ -15477,9 +15502,11 @@ throw new Error("NYI");
       {
         TableItem     tableItem    = widgetScheduleTable.getItem(index);
         ScheduleData scheduleData = (ScheduleData)tableItem.getData();
+Dprintf.dprintf("");
 
         if (scheduleEdit(scheduleData,BARControl.tr("Edit schedule"),BARControl.tr("Save")))
         {
+Dprintf.dprintf("");
           try
           {
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"date",scheduleData.getDate());
@@ -15491,19 +15518,26 @@ throw new Error("NYI");
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"no-storage",scheduleData.noStorage);
             BARServer.setScheduleOption(selectedJobData.uuid,scheduleData.uuid,"enabled",scheduleData.enabled);
 
-            Widgets.setTableItem(tableItem,
-                                 scheduleData,
-                                 scheduleData.getDate(),
-                                 scheduleData.getWeekDays(),
-                                 scheduleData.getTime(),
-                                 scheduleData.archiveType,
-                                 scheduleData.customText
-                                );
+Dprintf.dprintf("scheduleData.getWeekDays()=%s",scheduleData.getWeekDays());
+            Widgets.updateTableItem(tableItem,
+                                    scheduleData,
+                                    scheduleData.getDate(),
+                                    scheduleData.getWeekDays(),
+                                    scheduleData.getTime(),
+                                    scheduleData.archiveType,
+                                    scheduleData.customText
+                                   );
             tableItem.setChecked(scheduleData.enabled);
           }
           catch (Exception exception)
           {
-            // ignored
+Dprintf.dprintf("exceptio=%s",exception);
+            Dialogs.error(shell,
+                          BARControl.tr("Cannot update schedule entry:\n\n{0}",
+                                        exception.getMessage()
+                                       )
+                         );
+            return;
           }
         }
       }
@@ -15749,8 +15783,7 @@ throw new Error("NYI");
     }
     catch (Exception exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot get persistence list (error: {0})",exception.getMessage()));
-      return;
+      // ignored
     }
     Widgets.removeTreeItems(widgetPersistenceTree,removedTreeItems);
   }
@@ -16310,7 +16343,7 @@ throw new Error("NYI");
       catch (Exception exception)
       {
         Dialogs.error(shell,
-                      BARControl.tr("Cannot entity index data:\n\n{0}",
+                      BARControl.tr("Cannot refresh entity index data:\n\n{0}",
                                     exception.getMessage()
                                    )
                      );

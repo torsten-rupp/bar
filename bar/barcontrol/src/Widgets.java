@@ -6785,12 +6785,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     return null;
   }
 
-  /** set table item
+  /** update table item
    * @param tableItem table item to update
    * @param data item data
    * @param values values list
    */
-  public static void setTableItem(final TableItem tableItem, final Object data, final Object... values)
+  public static void updateTableItem(final TableItem tableItem, final Object data, final Object... values)
   {
     if (!tableItem.isDisposed())
     {
@@ -6837,19 +6837,19 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     }
   }
 
-  /** set table item
+  /** update table item
    * @param table table
    * @param data item data
    * @param values values list
-   * @return true if updated, false if not found
+   * @return updated or added table item
    */
-  public static boolean setTableItem(final Table table, final Object data, final Object... values)
+  public static TableItem updateTableItem(final Table table, final Object data, final Object... values)
   {
     /** table update runnable
      */
     class UpdateRunnable implements Runnable
     {
-      boolean updatedFlag = false;
+      TableItem updatedTableItem = null;
 
       /** run
        */
@@ -6893,7 +6893,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     }
                   }
                 }
-                updatedFlag = true;
+                updatedTableItem = tableItem;
                 break;
               }
             }
@@ -6906,15 +6906,74 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       }
     }
 
-    boolean updatedFlag = false;
+    /** table add runnable
+     */
+    class AddRunnable implements Runnable
+    {
+      TableItem addedTableItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!table.isDisposed())
+        {
+          addedTableItem = new TableItem(table,SWT.NONE);
+          addedTableItem.setData(data);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                addedTableItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                addedTableItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                addedTableItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                addedTableItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                addedTableItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                addedTableItem.setText(i,values[i].toString());
+              }
+            }
+          }
+        }
+      }
+    };
+
+    TableItem tableItem = null;
     if (!table.isDisposed())
     {
+      Display display = table.getDisplay();
+
+      // try update existing tree item
       UpdateRunnable updateRunnable = new UpdateRunnable();
-      table.getDisplay().syncExec(updateRunnable);
-      updatedFlag = updateRunnable.updatedFlag;
+      display.syncExec(updateRunnable);
+      tableItem = updateRunnable.updatedTableItem;
+
+      if (tableItem == null)
+      {
+        // add new table item
+        AddRunnable addRunnable = new AddRunnable();
+        display.syncExec(addRunnable);
+        tableItem = addRunnable.addedTableItem;
+      }
     }
 
-    return updatedFlag;
+    return tableItem;
   }
 
   /** set table item color
@@ -7896,7 +7955,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
-   * @return updated or inserted tree item
+   * @return updated or added tree item
    */
   public static TreeItem updateTreeItem(final TreeItem parentTreeItem, final Object data, final int flags, final Object... values)
   {
@@ -7904,7 +7963,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
      */
     class UpdateRunnable implements Runnable
     {
-      TreeItem subTreeItem = null;
+      TreeItem updatedTreeItem = null;
 
       /** run
        */
@@ -7924,12 +7983,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
         for (TreeItem existingTreeItem : existingTreeItems)
         {
           updateTreeItem(existingTreeItem);
-          if (subTreeItem == null)
+          if (updatedTreeItem == null)
           {
             // update sub-tree item
             updateTreeItem(existingTreeItem.getItems());
           }
-          if (subTreeItem != null) break;
+          if (updatedTreeItem != null) break;
         }
       }
 
@@ -7974,7 +8033,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 }
               }
             }
-            subTreeItem = existingTreeItem;
+            updatedTreeItem = existingTreeItem;
           }
         }
         catch (ClassCastException exception)
@@ -7988,7 +8047,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
      */
     class AddRunnable implements Runnable
     {
-      TreeItem subTreeItem = null;
+      TreeItem addedTreeItem = null;
 
       /** run
        */
@@ -8003,11 +8062,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
               parentTreeItem.removeAll();
             }
           }
-          subTreeItem = new TreeItem(parentTreeItem,
-                                     SWT.NONE
-                                    );
-          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(subTreeItem,SWT.NONE);
-          subTreeItem.setData(data);
+          addedTreeItem = new TreeItem(parentTreeItem,
+                                       SWT.NONE
+                                      );
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(addedTreeItem,SWT.NONE);
+          addedTreeItem.setData(data);
           if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
           {
             if (!parentTreeItem.getExpanded())
@@ -8017,7 +8076,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           }
           else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
           {
-            new TreeItem(subTreeItem,SWT.NONE);
+            new TreeItem(addedTreeItem,SWT.NONE);
           }
           for (int i = 0; i < values.length; i++)
           {
@@ -8025,27 +8084,27 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             {
               if      (values[i] instanceof String)
               {
-                subTreeItem.setText(i,(String)values[i]);
+                addedTreeItem.setText(i,(String)values[i]);
               }
               else if (values[i] instanceof Integer)
               {
-                subTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                addedTreeItem.setText(i,Integer.toString((Integer)values[i]));
               }
               else if (values[i] instanceof Long)
               {
-                subTreeItem.setText(i,Long.toString((Long)values[i]));
+                addedTreeItem.setText(i,Long.toString((Long)values[i]));
               }
               else if (values[i] instanceof Double)
               {
-                subTreeItem.setText(i,Double.toString((Double)values[i]));
+                addedTreeItem.setText(i,Double.toString((Double)values[i]));
               }
               else if (values[i] instanceof Image)
               {
-                subTreeItem.setImage(i,(Image)values[i]);
+                addedTreeItem.setImage(i,(Image)values[i]);
               }
               else
               {
-                subTreeItem.setText(i,values[i].toString());
+                addedTreeItem.setText(i,values[i].toString());
               }
             }
           }
@@ -8061,14 +8120,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       // try update existing tree item
       UpdateRunnable updateRunnable = new UpdateRunnable();
       display.syncExec(updateRunnable);
-      subTreeItem = updateRunnable.subTreeItem;
+      subTreeItem = updateRunnable.updatedTreeItem;
 
       if (subTreeItem == null)
       {
-        // insert new tree item
+        // add new tree item
         AddRunnable addRunnable = new AddRunnable();
         display.syncExec(addRunnable);
-        subTreeItem = addRunnable.subTreeItem;
+        subTreeItem = addRunnable.addedTreeItem;
       }
     }
 
@@ -8088,7 +8147,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
      */
     class UpdateRunnable implements Runnable
     {
-      TreeItem treeItem = null;
+      TreeItem updatedTreeItem = null;
 
       /** run
        */
@@ -8108,12 +8167,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
         for (TreeItem existingTreeItem : existingTreeItems)
         {
           updateTreeItem(existingTreeItem);
-          if (treeItem == null)
+          if (updatedTreeItem == null)
           {
             // update sub-tree item
             updateTreeItem(existingTreeItem.getItems());
           }
-          if (treeItem != null) break;
+          if (updatedTreeItem != null) break;
         }
       }
 
@@ -8154,11 +8213,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 }
                 else
                 {
-                  treeItem.setText(i,values[i].toString());
+                  existingTreeItem.setText(i,values[i].toString());
                 }
               }
             }
-            treeItem = existingTreeItem;
+            updatedTreeItem = existingTreeItem;
           }
         }
         catch (ClassCastException exception)
@@ -8172,7 +8231,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
      */
     class AddRunnable implements Runnable
     {
-      TreeItem treeItem = null;
+      TreeItem addedTreeItem = null;
 
       /** run
        */
@@ -8180,38 +8239,38 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       {
         if (!tree.isDisposed())
         {
-          treeItem = new TreeItem(tree,
-                                  SWT.NONE
-                                 );
-          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
-          treeItem.setData(data);
+          addedTreeItem = new TreeItem(tree,
+                                       SWT.NONE
+                                      );
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(addedTreeItem,SWT.NONE);
+          addedTreeItem.setData(data);
           for (int i = 0; i < values.length; i++)
           {
             if (values[i] != null)
             {
               if      (values[i] instanceof String)
               {
-                treeItem.setText(i,(String)values[i]);
+                addedTreeItem.setText(i,(String)values[i]);
               }
               else if (values[i] instanceof Integer)
               {
-                treeItem.setText(i,Integer.toString((Integer)values[i]));
+                addedTreeItem.setText(i,Integer.toString((Integer)values[i]));
               }
               else if (values[i] instanceof Long)
               {
-                treeItem.setText(i,Long.toString((Long)values[i]));
+                addedTreeItem.setText(i,Long.toString((Long)values[i]));
               }
               else if (values[i] instanceof Double)
               {
-                treeItem.setText(i,Double.toString((Double)values[i]));
+                addedTreeItem.setText(i,Double.toString((Double)values[i]));
               }
               else if (values[i] instanceof Image)
               {
-                treeItem.setImage(i,(Image)values[i]);
+                addedTreeItem.setImage(i,(Image)values[i]);
               }
               else
               {
-                treeItem.setText(i,values[i].toString());
+                addedTreeItem.setText(i,values[i].toString());
               }
             }
           }
@@ -8227,14 +8286,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       // try update existing tree item
       UpdateRunnable updateRunnable = new UpdateRunnable();
       display.syncExec(updateRunnable);
-      treeItem = updateRunnable.treeItem;
+      treeItem = updateRunnable.updatedTreeItem;
 
       if (treeItem == null)
       {
         // insert new tree item
         AddRunnable addRunnable = new AddRunnable();
         display.syncExec(addRunnable);
-        treeItem = addRunnable.treeItem;
+        treeItem = addRunnable.addedTreeItem;
       }
     }
 
@@ -8255,7 +8314,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
      */
     class UpdateRunnable implements Runnable
     {
-      TreeItem treeItem = null;
+      TreeItem updatedTreeItem = null;
 
       /** run
        */
@@ -8302,7 +8361,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     }
                   }
                 }
-                treeItem = existingTreeItem;
+                updatedTreeItem = existingTreeItem;
                 break;
               }
             }
@@ -8319,7 +8378,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
      */
     class InsertRunnable implements Runnable
     {
-      TreeItem treeItem = null;
+      TreeItem addedTreeItem = null;
 
       /** run
        */
@@ -8327,39 +8386,39 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       {
         if (!tree.isDisposed())
         {
-          treeItem = new TreeItem(tree,
-                                  SWT.NONE,
-                                  getTreeItemIndex(tree,comparator,data)
-                                 );
-          treeItem.setData(data);
-          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
+          addedTreeItem = new TreeItem(tree,
+                                       SWT.NONE,
+                                       getTreeItemIndex(tree,comparator,data)
+                                      );
+          addedTreeItem.setData(data);
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(addedTreeItem,SWT.NONE);
           for (int i = 0; i < values.length; i++)
           {
             if (values[i] != null)
             {
               if      (values[i] instanceof String)
               {
-                treeItem.setText(i,(String)values[i]);
+                addedTreeItem.setText(i,(String)values[i]);
               }
               else if (values[i] instanceof Integer)
               {
-                treeItem.setText(i,Integer.toString((Integer)values[i]));
+                addedTreeItem.setText(i,Integer.toString((Integer)values[i]));
               }
               else if (values[i] instanceof Long)
               {
-                treeItem.setText(i,Long.toString((Long)values[i]));
+                addedTreeItem.setText(i,Long.toString((Long)values[i]));
               }
               else if (values[i] instanceof Double)
               {
-                treeItem.setText(i,Double.toString((Double)values[i]));
+                addedTreeItem.setText(i,Double.toString((Double)values[i]));
               }
               else if (values[i] instanceof Image)
               {
-                treeItem.setImage(i,(Image)values[i]);
+                addedTreeItem.setImage(i,(Image)values[i]);
               }
               else
               {
-                treeItem.setText(i,values[i].toString());
+                addedTreeItem.setText(i,values[i].toString());
               }
             }
           }
@@ -8375,14 +8434,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       // try update existing tree item
       UpdateRunnable updateRunnable = new UpdateRunnable();
       display.syncExec(updateRunnable);
-      treeItem = updateRunnable.treeItem;
+      treeItem = updateRunnable.updatedTreeItem;
 
       if (treeItem == null)
       {
         // insert new tree item
         InsertRunnable insertRunnable = new InsertRunnable();
         display.syncExec(insertRunnable);
-        treeItem = insertRunnable.treeItem;
+        treeItem = insertRunnable.addedTreeItem;
       }
     }
 

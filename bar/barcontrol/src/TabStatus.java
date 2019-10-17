@@ -659,7 +659,7 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
-        Settings.jobListColumns  = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetJobTable));
+        Settings.jobListColumns = new Settings.ColumnSizes(Widgets.getTableColumnWidth(widgetJobTable));
       }
     };
     tableColumn = Widgets.addTableColumn(widgetJobTable,0,BARControl.tr("Name"),          SWT.LEFT, 110,true );
@@ -2070,18 +2070,18 @@ public class TabStatus
                 // update/create table item
                 if (tableItem != null)
                 {
-                  Widgets.setTableItem(tableItem,
-                                       jobData,
-                                       jobData.name,
-                                       (status == States.RUNNING) ? jobData.formatStateText() : BARControl.tr("suspended"),
-                                       jobData.slaveHostName,
-                                       jobData.archiveType.toString(),
-                                       (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
-                                       jobData.formatCompressAlgorithm(),
-                                       jobData.formatCryptAlgorithm(),
-                                       jobData.formatLastExecutedDateTime(),
-                                       jobData.formatEstimatedRestTime()
-                                      );
+                  Widgets.updateTableItem(tableItem,
+                                          jobData,
+                                          jobData.name,
+                                          (status == States.RUNNING) ? jobData.formatStateText() : BARControl.tr("suspended"),
+                                          jobData.slaveHostName,
+                                          jobData.archiveType.toString(),
+                                          (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                          jobData.formatCompressAlgorithm(),
+                                          jobData.formatCryptAlgorithm(),
+                                          jobData.formatLastExecutedDateTime(),
+                                          jobData.formatEstimatedRestTime()
+                                         );
 
                   // keep table item
                   removeTableItemSet.remove(tableItem);

@@ -406,6 +406,12 @@ public class Settings
   public static SettingUtils.SimpleStringArray jobListColumnOrder              = new SettingUtils.SimpleStringArray();
   @SettingValue(type=SettingValueAdapterWidthArray.class, name="job-list-columns")
   public static ColumnSizes                    jobListColumns                  = new ColumnSizes(110,130,90,90,80,80,100,150,120);
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="persistence-tree-columns")
+  public static ColumnSizes                    mountListColumns                = new ColumnSizes(600,100);
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="schedule-list-columns")
+  public static ColumnSizes                    scheduleListColumns             = new ColumnSizes(120,250,100,100,90);
+  @SettingValue(type=SettingValueAdapterWidthArray.class, name="persistence-tree-columns")
+  public static ColumnSizes                    persistenceTreeColumns          = new ColumnSizes(100,90,90,90,140,90,120);
 
   @SettingComment(text={"","Pause default settings"})
   @SettingValue(name="pause-create")

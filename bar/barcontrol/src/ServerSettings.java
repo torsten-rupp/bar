@@ -709,13 +709,13 @@ public class ServerSettings
                                            resultMapList
                                           );
 
-                  Widgets.setTableItem(tableItem,
-                                       serverData,
-                                       serverData.type.toString(),
-                                       serverData.name,
-                                       (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                                       (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                                      );
+                  Widgets.updateTableItem(tableItem,
+                                          serverData,
+                                          serverData.type.toString(),
+                                          serverData.name,
+                                          (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                          (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                         );
                 }
                 catch (Exception exception)
                 {
