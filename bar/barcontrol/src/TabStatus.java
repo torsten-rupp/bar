@@ -81,12 +81,13 @@ class JobData
     ABORTED,
     DISCONNECTED;
 
-    /** convert data to string
-     * @return string
+    /** get state text
+     * @return state text
      */
-    @Override
-    public String toString()
+    public String getText()
     {
+      StringBuilder buffer = new StringBuilder();
+
       switch (this)
       {
         case NONE:                    return "-";
@@ -114,7 +115,7 @@ class JobData
   {
     OFFLINE,
     ONLINE,
-    PAIRED
+    PAIRED;
   };
 
   String       uuid;
@@ -175,26 +176,11 @@ class JobData
   /** get state text
    * @return state text
    */
-  String getStateText()
+  public String formatStateText()
   {
     StringBuilder buffer = new StringBuilder();
 
-    switch (state)
-    {
-      case WAITING:                 buffer.append(BARControl.tr("waiting"));                 break;
-      case RUNNING:                 buffer.append(BARControl.tr("running"));                 break;
-      case DRY_RUNNING:             buffer.append(BARControl.tr("dry Run"));                 break;
-      case REQUEST_FTP_PASSWORD:    buffer.append(BARControl.tr("request FTP password"));    break;
-      case REQUEST_SSH_PASSWORD:    buffer.append(BARControl.tr("request SSH password"));    break;
-      case REQUEST_WEBDAV_PASSWORD: buffer.append(BARControl.tr("request webDAV password")); break;
-      case REQUEST_CRYPT_PASSWORD:  buffer.append(BARControl.tr("request crypt password"));  break;
-      case REQUEST_VOLUME:          buffer.append(BARControl.tr("request volume"));          break;
-      case DONE:                    buffer.append(BARControl.tr("done"));                    break;
-      case ERROR:                   buffer.append(BARControl.tr("ERROR"));                   break;
-      case ABORTED:                 buffer.append(BARControl.tr("aborted"));                 break;
-      case DISCONNECTED:            buffer.append(BARControl.tr("disconnected"));            break;
-      default:                                                                               break;
-    }
+    buffer.append(state.getText());
 
     if (!slaveHostName.isEmpty() && (slaveState != SlaveStates.PAIRED))
     {
@@ -228,7 +214,7 @@ class JobData
   /** format job compress algorithms
    * @return compress algorithm string
    */
-  String formatCompressAlgorithm()
+  public String formatCompressAlgorithm()
   {
     boolean deltaCompressIsNone = deltaCompressAlgorithm.equals("none");
     boolean byteCompressIsNone  = byteCompressAlgorithm.equals("none");
@@ -258,7 +244,6 @@ class JobData
   /** format job crypt algorithm (including "*" for asymmetric)
    * @return crypt algorithm string
    */
-//TODO: all public
   public String formatCryptAlgorithm()
   {
     boolean cryptIsNone = cryptAlgorithm.equals("none");
@@ -269,7 +254,7 @@ class JobData
   /** format last executed date/time
    * @return date/time string
    */
-  String formatLastExecutedDateTime()
+  public String formatLastExecutedDateTime()
   {
     if (lastExecutedDateTime > 0)
     {
@@ -284,7 +269,7 @@ class JobData
   /** format estimated rest time
    * @return estimated rest time string
    */
-  String formatEstimatedRestTime()
+  public String formatEstimatedRestTime()
   {
     long   estimatedRestDays    = estimatedRestTime/(24*60*60);
     long   estimatedRestHours   = estimatedRestTime%(24*60*60)/(60*60);
@@ -2088,7 +2073,7 @@ public class TabStatus
                   Widgets.setTableItem(tableItem,
                                        jobData,
                                        jobData.name,
-                                       (status == States.RUNNING) ? jobData.getStateText() : BARControl.tr("suspended"),
+                                       (status == States.RUNNING) ? jobData.formatStateText() : BARControl.tr("suspended"),
                                        jobData.slaveHostName,
                                        jobData.archiveType.toString(),
                                        (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
