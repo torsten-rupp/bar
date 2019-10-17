@@ -9382,7 +9382,7 @@ Dprintf.dprintf("");
         label = Widgets.newLabel(subComposite,BARControl.tr("Entry mode")+":");
         Widgets.layout(label,0,0,TableLayoutData.W);
         widgetRestoreEntryMode = Widgets.newOptionMenu(subComposite);
-        widgetRestoreEntryMode.setToolTipText(BARControl.tr("If set to 'rename' then the new entry is renamed if entry already exists.\nIf set to 'overwrite' then existing entries are overwritten.\nIf set to 'overwrite' then overwrite existing files.\nOtherwise stop with an error if entry exists."));
+        widgetRestoreEntryMode.setToolTipText(BARControl.tr("If set to 'rename' then the new entry is renamed if entry already exists.\nIf set to 'overwrite' then existing entries are overwritten.\nOtherwise stop with an error if entry exists."));
         Widgets.setComboItems(widgetRestoreEntryMode,new Object[]{BARControl.tr("stop if exists"  ),RestoreEntryModes.STOP,
                                                                   BARControl.tr("rename if exists"),RestoreEntryModes.RENAME,
                                                                   BARControl.tr("overwrite"       ),RestoreEntryModes.OVERWRITE,

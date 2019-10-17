@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-16 17:09+0200\n"
+"POT-Creation-Date: 2019-10-17 09:26+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -135,10 +135,6 @@ msgstr ""
 
 #: src/BARControl.java:1132
 msgid "seconds"
-msgstr ""
-
-#: src/BARControl.java:1268
-msgid "-"
 msgstr ""
 
 #: src/BARControl.java:1285
@@ -1746,7 +1742,7 @@ msgstr ""
 msgid "Commands"
 msgstr ""
 
-#: src/ServerSettings.java:837 src/TabJobs.java:6257
+#: src/ServerSettings.java:837
 msgid "CD"
 msgstr ""
 
@@ -1893,7 +1889,7 @@ msgstr ""
 msgid "CD image write command."
 msgstr ""
 
-#: src/ServerSettings.java:1024 src/TabJobs.java:6326
+#: src/ServerSettings.java:1024
 msgid "DVD"
 msgstr ""
 
@@ -1933,7 +1929,7 @@ msgstr ""
 msgid "DVD image write command."
 msgstr ""
 
-#: src/ServerSettings.java:1210 src/TabJobs.java:6402
+#: src/ServerSettings.java:1210
 msgid "BD"
 msgstr ""
 
@@ -2798,40 +2794,20 @@ msgstr ""
 msgid "Store created storage files into file system destination."
 msgstr ""
 
-#: src/TabJobs.java:6097
-msgid "ftp"
-msgstr ""
-
 #: src/TabJobs.java:6098
 msgid "Store created storage files on FTP server."
-msgstr ""
-
-#: src/TabJobs.java:6129
-msgid "scp"
 msgstr ""
 
 #: src/TabJobs.java:6130
 msgid "Store created storage files on SSH server via SCP protocol."
 msgstr ""
 
-#: src/TabJobs.java:6161
-msgid "sftp"
-msgstr ""
-
 #: src/TabJobs.java:6162
 msgid "Store created storage files on SSH server via SFTP protocol."
 msgstr ""
 
-#: src/TabJobs.java:6193
-msgid "webdav"
-msgstr ""
-
 #: src/TabJobs.java:6194
 msgid "Store created storage files on WebDAV server."
-msgstr ""
-
-#: src/TabJobs.java:6225
-msgid "webdavs"
 msgstr ""
 
 #: src/TabJobs.java:6226
@@ -4509,7 +4485,6 @@ msgstr ""
 msgid ""
 "If set to 'rename' then the new entry is renamed if entry already exists.\n"
 "If set to 'overwrite' then existing entries are overwritten.\n"
-"If set to 'overwrite' then overwrite existing files.\n"
 "Otherwise stop with an error if entry exists."
 msgstr ""
 

@@ -1265,7 +1265,7 @@ class Keep
    */
   public static String format(int keep)
   {
-    if (keep == ALL) return BARControl.tr("-");
+    if (keep == ALL) return "-";
     else             return String.format("%d",keep);
   }
 }

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-16 17:09+0200\n"
+"POT-Creation-Date: 2019-10-17 09:26+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -136,10 +136,6 @@ msgstr ""
 
 #: src/BARControl.java:1132
 msgid "seconds"
-msgstr ""
-
-#: src/BARControl.java:1268
-msgid "-"
 msgstr ""
 
 #: src/BARControl.java:1285
@@ -2008,7 +2004,7 @@ msgstr ""
 msgid "Commands"
 msgstr ""
 
-#: src/ServerSettings.java:837 src/TabJobs.java:6257
+#: src/ServerSettings.java:837
 msgid "CD"
 msgstr "CD"
 
@@ -2165,7 +2161,7 @@ msgstr ""
 msgid "CD image write command."
 msgstr ""
 
-#: src/ServerSettings.java:1024 src/TabJobs.java:6326
+#: src/ServerSettings.java:1024
 msgid "DVD"
 msgstr "DVD"
 
@@ -2210,7 +2206,7 @@ msgstr ""
 msgid "DVD image write command."
 msgstr ""
 
-#: src/ServerSettings.java:1210 src/TabJobs.java:6402
+#: src/ServerSettings.java:1210
 msgid "BD"
 msgstr "BD"
 
@@ -3168,43 +3164,22 @@ msgstr "ファイルシステム"
 msgid "Store created storage files into file system destination."
 msgstr "作成保存ファイルを保存先ファイルシステムに保存。"
 
-#: src/TabJobs.java:6097
-msgid "ftp"
-msgstr "ftp"
-
 #: src/TabJobs.java:6098
 msgid "Store created storage files on FTP server."
 msgstr "作成保存ファイルをFTPサーバに保存。"
-
-#: src/TabJobs.java:6129
-msgid "scp"
-msgstr "scp"
 
 #: src/TabJobs.java:6130
 msgid "Store created storage files on SSH server via SCP protocol."
 msgstr "作成保存ファイルをSCPプロトコルによってSSHサーバに保存。"
 
-#: src/TabJobs.java:6161
-msgid "sftp"
-msgstr "sftp"
-
 #: src/TabJobs.java:6162
 msgid "Store created storage files on SSH server via SFTP protocol."
 msgstr "作成保存ファイルをSFTPプロトコルによってSSHサーバに保存。"
-
-#: src/TabJobs.java:6193
-msgid "webdav"
-msgstr "webDAV"
 
 #: src/TabJobs.java:6194
 #, fuzzy
 msgid "Store created storage files on WebDAV server."
 msgstr "作成保存ファイルをWebDAVサーバに保存。"
-
-#: src/TabJobs.java:6225
-#, fuzzy
-msgid "webdavs"
-msgstr "webDAV"
 
 #: src/TabJobs.java:6226
 #, fuzzy
@@ -5208,7 +5183,6 @@ msgstr ""
 msgid ""
 "If set to 'rename' then the new entry is renamed if entry already exists.\n"
 "If set to 'overwrite' then existing entries are overwritten.\n"
-"If set to 'overwrite' then overwrite existing files.\n"
 "Otherwise stop with an error if entry exists."
 msgstr ""
 "有効にすると、現存アーカイブファイルを上書きします。無効にすると、現存アーカ"
@@ -5679,6 +5653,22 @@ msgstr "現存エントリの上書き"
 #, fuzzy
 msgid "differental"
 msgstr "差分"
+
+#~ msgid "ftp"
+#~ msgstr "ftp"
+
+#~ msgid "scp"
+#~ msgstr "scp"
+
+#~ msgid "sftp"
+#~ msgstr "sftp"
+
+#~ msgid "webdav"
+#~ msgstr "webDAV"
+
+#, fuzzy
+#~ msgid "webdavs"
+#~ msgstr "webDAV"
 
 #, fuzzy
 #~ msgid "i/o fail"

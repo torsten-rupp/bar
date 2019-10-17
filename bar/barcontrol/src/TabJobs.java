@@ -6094,7 +6094,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("ftp"),Settings.hasExpertRole());
+          button = Widgets.newRadio(composite,"ftp",Settings.hasExpertRole());
           button.setToolTipText(BARControl.tr("Store created storage files on FTP server."));
           Widgets.layout(button,0,1,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -6126,7 +6126,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("scp"),Settings.hasExpertRole());
+          button = Widgets.newRadio(composite,"scp",Settings.hasExpertRole());
           button.setToolTipText(BARControl.tr("Store created storage files on SSH server via SCP protocol."));
           Widgets.layout(button,0,2,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -6158,7 +6158,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("sftp"));
+          button = Widgets.newRadio(composite,"sftp");
           button.setToolTipText(BARControl.tr("Store created storage files on SSH server via SFTP protocol."));
           Widgets.layout(button,0,3,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -6190,7 +6190,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("webdav"));
+          button = Widgets.newRadio(composite,"webdav");
           button.setToolTipText(BARControl.tr("Store created storage files on WebDAV server."));
           Widgets.layout(button,0,4,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -6222,7 +6222,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("webdavs"));
+          button = Widgets.newRadio(composite,"webdavs");
           button.setToolTipText(BARControl.tr("Store created storage files on SSL WebDAV server."));
           Widgets.layout(button,0,5,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -6254,7 +6254,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("CD"));
+          button = Widgets.newRadio(composite,"CD");
           button.setToolTipText(BARControl.tr("Store created storage files on CD."));
           Widgets.layout(button,0,6,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -6323,7 +6323,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("DVD"));
+          button = Widgets.newRadio(composite,"DVD");
           button.setToolTipText(BARControl.tr("Store created storage files on DVD."));
           Widgets.layout(button,0,7,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
@@ -6399,7 +6399,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          button = Widgets.newRadio(composite,BARControl.tr("BD"));
+          button = Widgets.newRadio(composite,"BD");
           button.setToolTipText(BARControl.tr("Store created storage files on BD."));
           Widgets.layout(button,0,8,TableLayoutData.W);
           button.addSelectionListener(new SelectionListener()
