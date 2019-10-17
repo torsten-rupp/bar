@@ -10371,7 +10371,7 @@ widgetArchivePartSize.setListVisible(true);
             }
           });
 
-          widgetPersistenceTreeRemove = Widgets.newButton(composite,BARControl.tr("Remove"));
+          widgetPersistenceTreeRemove = Widgets.newButton(composite,BARControl.tr("Remove")+"\u2026");
           widgetPersistenceTreeRemove.setToolTipText(BARControl.tr("Remove persistence entry."));
           Widgets.layout(widgetPersistenceTreeRemove,0,3,TableLayoutData.DEFAULT,0,0,0,0,110,SWT.DEFAULT);
           widgetPersistenceTreeRemove.addSelectionListener(new SelectionListener()
