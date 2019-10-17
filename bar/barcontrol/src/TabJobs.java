@@ -15768,7 +15768,7 @@ throw new Error("NYI");
                                                                                 persistenceDataComparator,
                                                                                 persistenceData,
                                                                                 Widgets.TREE_ITEM_FLAG_FOLDER,
-                                                                                persistenceData.archiveType.toString(),
+                                                                                persistenceData.archiveType.getText(),
                                                                                 Keep.format(persistenceData.minKeep),
                                                                                 Keep.format(persistenceData.maxKeep),
                                                                                 Age.format(persistenceData.maxAge)
