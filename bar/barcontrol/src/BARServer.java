@@ -994,7 +994,7 @@ class ReadThread extends Thread
         }
         catch (SocketTimeoutException exception)
         {
-          display.syncExec(new Runnable()
+          display.asyncExec(new Runnable()
           {
             public void run()
             {
@@ -1039,7 +1039,7 @@ class ReadThread extends Thread
           }
         }
 
-        display.syncExec(new Runnable()
+        display.asyncExec(new Runnable()
         {
           public void run()
           {
@@ -1052,7 +1052,7 @@ class ReadThread extends Thread
         System.err.println("INTERNAL ERROR: "+exception.getCause());
         BARControl.printStackTrace(exception);
         System.err.println("Version "+BARControl.VERSION);
-        display.syncExec(new Runnable()
+        display.asyncExec(new Runnable()
         {
           public void run()
           {
@@ -1066,7 +1066,7 @@ class ReadThread extends Thread
         System.err.println("INTERNAL ERROR: "+error.getMessage());
         BARControl.printStackTrace(error);
         System.err.println("Version "+BARControl.VERSION);
-        display.syncExec(new Runnable()
+        display.asyncExec(new Runnable()
         {
           public void run()
           {
@@ -1080,7 +1080,7 @@ class ReadThread extends Thread
         System.err.println("INTERNAL ERROR: "+error.getMessage());
         BARControl.printStackTrace(error);
         System.err.println("Version "+BARControl.VERSION);
-        display.syncExec(new Runnable()
+        display.asyncExec(new Runnable()
         {
           public void run()
           {
@@ -1097,7 +1097,7 @@ class ReadThread extends Thread
           BARControl.printStackTrace(throwable);
           System.err.println("Version "+BARControl.VERSION);
         }
-        display.syncExec(new Runnable()
+        display.asyncExec(new Runnable()
         {
           public void run()
           {
