@@ -15005,77 +15005,77 @@ throw new Error("NYI");
     try
     {
       // get schedule list
-      HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
-
       try
       {
-//TODO: use handler
-        ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+        final HashMap<String,ScheduleData> newScheduleDataMap = new HashMap<String,ScheduleData>();
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      jobData.uuid
                                                     ),
                                  1,  // debugLevel
-                                 valueMapList
-                                );
-        for (ValueMap valueMap : valueMapList)
-        {
-          // get data
-          String       scheduleUUID         = valueMap.getString ("scheduleUUID"                  );
-          String       date                 = valueMap.getString ("date"                          );
-          String       weekDays             = valueMap.getString ("weekDays"                      );
-          String       time                 = valueMap.getString ("time"                          );
-          ArchiveTypes archiveType          = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
-          int          interval             = valueMap.getInt    ("interval",0                    );
-          String       customText           = valueMap.getString ("customText"                    );
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     // get data
+                                     String       scheduleUUID         = valueMap.getString ("scheduleUUID"                  );
+                                     String       date                 = valueMap.getString ("date"                          );
+                                     String       weekDays             = valueMap.getString ("weekDays"                      );
+                                     String       time                 = valueMap.getString ("time"                          );
+                                     ArchiveTypes archiveType          = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
+                                     int          interval             = valueMap.getInt    ("interval",0                    );
+                                     String       customText           = valueMap.getString ("customText"                    );
 //TODO: remove
-          int          minKeep              = 0;//valueMap.getInt    ("minKeep"                       );
-          int          maxKeep              = 0;//valueMap.getInt    ("maxKeep"                       );
-          int          maxAge               = 0;//valueMap.getInt    ("maxAge"                        );
-          boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
-          boolean      enabled              = valueMap.getBoolean("enabled"                       );
-          long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
-          long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
-          long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
-          long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
+                                     int          minKeep              = 0;//valueMap.getInt    ("minKeep"                       );
+                                     int          maxKeep              = 0;//valueMap.getInt    ("maxKeep"                       );
+                                     int          maxAge               = 0;//valueMap.getInt    ("maxAge"                        );
+                                     boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
+                                     boolean      enabled              = valueMap.getBoolean("enabled"                       );
+                                     long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
+                                     long         totalEntities        = valueMap.getLong   ("totalEntities"                 );
+                                     long         totalEntryCount      = valueMap.getLong   ("totalEntryCount"               );
+                                     long         totalEntrySize       = valueMap.getLong   ("totalEntrySize"                );
 
-          ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
-          if (scheduleData != null)
-          {
-            scheduleData.setDate(date);
-            scheduleData.setWeekDays(weekDays);
-            scheduleData.setTime(time);
-            scheduleData.archiveType          = archiveType;
-            scheduleData.interval             = interval;
-            scheduleData.customText           = customText;
-            scheduleData.lastExecutedDateTime = lastExecutedDateTime;
-            scheduleData.totalEntities        = totalEntities;
-            scheduleData.totalEntryCount      = totalEntryCount;
-            scheduleData.totalEntrySize       = totalEntrySize;
-            scheduleData.noStorage            = noStorage;
-            scheduleData.enabled              = enabled;
-          }
-          else
-          {
-            scheduleData = new ScheduleData(scheduleUUID,
-                                             date,
-                                             weekDays,
-                                             time,
-                                             archiveType,
-                                             interval,
-                                             customText,
-                                             minKeep,
-                                             maxKeep,
-                                             maxAge,
-                                             noStorage,
-                                             enabled,
-                                             lastExecutedDateTime,
-                                             totalEntities,
-                                             totalEntryCount,
-                                             totalEntrySize
-                                            );
-          }
-          newScheduleDataMap.put(scheduleUUID,scheduleData);
-        }
+                                     ScheduleData scheduleData = scheduleDataMap.get(scheduleUUID);
+                                     if (scheduleData != null)
+                                     {
+                                       scheduleData.setDate(date);
+                                       scheduleData.setWeekDays(weekDays);
+                                       scheduleData.setTime(time);
+                                       scheduleData.archiveType          = archiveType;
+                                       scheduleData.interval             = interval;
+                                       scheduleData.customText           = customText;
+                                       scheduleData.lastExecutedDateTime = lastExecutedDateTime;
+                                       scheduleData.totalEntities        = totalEntities;
+                                       scheduleData.totalEntryCount      = totalEntryCount;
+                                       scheduleData.totalEntrySize       = totalEntrySize;
+                                       scheduleData.noStorage            = noStorage;
+                                       scheduleData.enabled              = enabled;
+                                     }
+                                     else
+                                     {
+                                       scheduleData = new ScheduleData(scheduleUUID,
+                                                                        date,
+                                                                        weekDays,
+                                                                        time,
+                                                                        archiveType,
+                                                                        interval,
+                                                                        customText,
+                                                                        minKeep,
+                                                                        maxKeep,
+                                                                        maxAge,
+                                                                        noStorage,
+                                                                        enabled,
+                                                                        lastExecutedDateTime,
+                                                                        totalEntities,
+                                                                        totalEntryCount,
+                                                                        totalEntrySize
+                                                                       );
+                                     }
+                                     newScheduleDataMap.put(scheduleUUID,scheduleData);
+                                   }
+                                 }
+                                );
         scheduleDataMap = newScheduleDataMap;
       }
       catch (Exception exception)
