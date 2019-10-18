@@ -2146,27 +2146,29 @@ if (false) {
    * @param jobName job name
    * @return job UUID or null if not found
    */
-  private static String getJobUUID(String jobName)
+  private static String getJobUUID(final String jobName)
   {
+    final String jobUUID[] = {null};
+
     try
     {
-//TODO: handler
-      ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
       BARServer.executeCommand(StringParser.format("JOB_LIST"),
                                1,  // debug level
-                               valueMapList
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   String jobUUID_ = valueMap.getString("jobUUID");
+                                   String name     = valueMap.getString("name" );
+
+                                   if (jobName.equalsIgnoreCase(name))
+                                   {
+                                     jobUUID[0] = jobUUID_;
+                                   }
+                                 }
+                               }
                               );
-
-      for (ValueMap valueMap : valueMapList)
-      {
-        String jobUUID = valueMap.getString("jobUUID");
-        String name    = valueMap.getString("name" );
-
-        if (jobName.equalsIgnoreCase(name))
-        {
-          return jobUUID;
-        }
-      }
     }
     catch (Exception exception)
     {
@@ -2178,7 +2180,7 @@ if (false) {
       }
     }
 
-    return null;
+    return jobUUID[0];
   }
 
   /** init loaded classes/JARs watchdog
