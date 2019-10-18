@@ -2839,7 +2839,10 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            widgetStorageTable.setRedraw(false);
+            if (!widgetStorageTable.isDisposed())
+            {
+              widgetStorageTable.setRedraw(false);
+            }
           }
         });
       }
@@ -2921,27 +2924,30 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            int i = 0;
-            int n = widgetStorageTable.getItemCount();
-            for (StorageIndexData storageIndexData : storageIndexDataList)
+            if (!widgetStorageTable.isDisposed())
             {
-              if ((offset+i) < n)
+              int i = 0;
+              int n = widgetStorageTable.getItemCount();
+              for (StorageIndexData storageIndexData : storageIndexDataList)
               {
-                TableItem tableItem = widgetStorageTable.getItem(offset+i);
+                if ((offset+i) < n)
+                {
+                  TableItem tableItem = widgetStorageTable.getItem(offset+i);
 
-                Widgets.updateTableItem(tableItem,
-                                        (Object)storageIndexData,
-                                        storageIndexData.name,
-                                        storageIndexData.hostName,
-                                        Units.formatByteSize(storageIndexData.totalEntrySize),
-                                        "",  // date/time drawn in event handler
-                                        storageIndexData.indexState.toString()
-                                       );
-                tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
-                tableItem.setBackground(storageIndexData.jobUUID.isEmpty() ? COLOR_NO_JOB_INFO : null);
+                  Widgets.updateTableItem(tableItem,
+                                          (Object)storageIndexData,
+                                          storageIndexData.name,
+                                          storageIndexData.hostName,
+                                          Units.formatByteSize(storageIndexData.totalEntrySize),
+                                          "",  // date/time drawn in event handler
+                                          storageIndexData.indexState.toString()
+                                         );
+                  tableItem.setChecked(checkedIndexIdSet.contains(storageIndexData.id));
+                  tableItem.setBackground(storageIndexData.jobUUID.isEmpty() ? COLOR_NO_JOB_INFO : null);
+                }
+
+                i++;
               }
-
-              i++;
             }
           }
         });
@@ -2953,7 +2959,10 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            widgetStorageTable.setRedraw(true);
+            if (!widgetStorageTable.isDisposed())
+            {
+              widgetStorageTable.setRedraw(true);
+            }
           }
         });
       }
