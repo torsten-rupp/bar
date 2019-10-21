@@ -1709,11 +1709,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (BARException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' (error: {2})",name,Integer.toString(port),error.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
             }
             catch (SocketTimeoutException exception)
             {
@@ -1941,11 +1941,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             catch (BARException exception)
             {
               try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' (error: {2})",name,Integer.toString(port),exception.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' (error: {2})",name,Integer.toString(port),error.getMessage());
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' failed (error: {2})",name,Integer.toString(port),error.getMessage());
             }
             catch (SocketTimeoutException exception)
             {

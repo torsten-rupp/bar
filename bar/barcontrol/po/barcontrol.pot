@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-21 14:55+0200\n"
+"POT-Creation-Date: 2019-10-21 16:14+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1383,7 +1383,7 @@ msgstr ""
 #: src/BARServer.java:1712 src/BARServer.java:1716 src/BARServer.java:1944
 #: src/BARServer.java:1948
 #, java-format
-msgid "host ''{0}:{1}'' (error: {2})"
+msgid "connection to host ''{0}:{1}'' failed (error: {2})"
 msgstr ""
 
 #: src/BARServer.java:1720 src/BARServer.java:1826 src/BARServer.java:1834
