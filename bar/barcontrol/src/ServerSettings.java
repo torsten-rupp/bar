@@ -691,8 +691,6 @@ public class ServerSettings
               {
                 try
                 {
-                  ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-
                   BARServer.executeCommand(StringParser.format("SERVER_LIST_UPDATE id=%d name=%'S serverType=%s loginName=%'S port=%d password=%'S publicKey=%'S privateKey=%'S maxConnectionCount=%d maxStorageSize=%ld",
                                                                serverData.id,
                                                                serverData.name,
@@ -705,8 +703,7 @@ public class ServerSettings
                                                                serverData.maxConnectionCount,
                                                                serverData.maxStorageSize
                                                               ),
-                                           0,
-                                           resultMapList
+                                           0  // debugLevel
                                           );
 
                   Widgets.updateTableItem(tableItem,
@@ -2227,7 +2224,6 @@ public class ServerSettings
     Widgets.removeAllTableItems(widgetServerTable);
 
     ServerData serverData;
-
     serverData = new ServerData(0,"default",ServerTypes.FTP);
     Widgets.insertTableItem(widgetServerTable,
                             serverDataComparator,
@@ -2259,36 +2255,38 @@ public class ServerSettings
 
     try
     {
-      ArrayList<ValueMap> resultMapList = new ArrayList<ValueMap>();
-//TODO: handler
       BARServer.executeCommand(StringParser.format("SERVER_LIST"),
-                                           0,
-                                           resultMapList
-                                          );
-      for (ValueMap resultMap : resultMapList)
-      {
-        // get data
-        int         id                 = resultMap.getInt   ("id"                          );
-        String      name               = resultMap.getString("name"                        );
-        ServerTypes serverType         = resultMap.getEnum  ("serverType",ServerTypes.class);
-        int         port               = resultMap.getInt   ("port",0                      );
-        String      loginName          = resultMap.getString("loginName",""                );
-        int         maxConnectionCount = resultMap.getInt   ("maxConnectionCount",0        );
-        long        maxStorageSize     = resultMap.getLong  ("maxStorageSize"              );
+                               0,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                   throws BARException
+                                 {
+                                   // get data
+                                   int         id                 = valueMap.getInt   ("id"                          );
+                                   String      name               = valueMap.getString("name"                        );
+                                   ServerTypes serverType         = valueMap.getEnum  ("serverType",ServerTypes.class);
+                                   int         port               = valueMap.getInt   ("port",0                      );
+                                   String      loginName          = valueMap.getString("loginName",""                );
+                                   int         maxConnectionCount = valueMap.getInt   ("maxConnectionCount",0        );
+                                   long        maxStorageSize     = valueMap.getLong  ("maxStorageSize"              );
 
-        // create server data
-        serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
+                                   // create server data
+                                   ServerData serverData = new ServerData(id,name,serverType,loginName,port,maxConnectionCount,maxStorageSize);
 
-        // add table entry
-        Widgets.insertTableItem(widgetServerTable,
-                                serverDataComparator,
-                                serverData,
-                                serverType.toString(),
-                                serverData.name,
-                                (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
-                                (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
-                               );
-      }
+                                   // add table entry
+                                   Widgets.insertTableItem(widgetServerTable,
+                                                           serverDataComparator,
+                                                           serverData,
+                                                           serverType.toString(),
+                                                           serverData.name,
+                                                           (serverData.maxConnectionCount > 0) ? serverData.maxConnectionCount : "-",
+                                                           (serverData.maxStorageSize > 0) ? Units.formatByteSize(serverData.maxStorageSize) : "-"
+                                                          );
+                                 }
+                               }
+                              );
     }
     catch (Exception exception)
     {

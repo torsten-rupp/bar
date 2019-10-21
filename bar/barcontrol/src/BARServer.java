@@ -626,78 +626,6 @@ class Command
     return errorCode;
   }
 
-  /** get result string list array
-   * @param resultList result string list
-   * @return BARException.NONE or error code
-   */
-  public synchronized int getResults(List<String> resultList)
-  {
-    if (errorCode == BARException.NONE)
-    {
-      resultList.clear();
-      resultList.addAll(this.resultList);
-      this.resultList.clear();
-    }
-    else
-    {
-      resultList.add(this.errorData);
-    }
-
-    return errorCode;
-  }
-
-  /** get result list
-   * @param errorMessage error message
-   * @param valueMapList value map list
-   * @return BARException.NONE or error code
-   */
-//TODO: remove
-  public synchronized int getResults(String[] errorMessage, List<ValueMap> valueMapList)
-  {
-    if (errorCode == BARException.NONE)
-    {
-      while (!resultList.isEmpty())
-      {
-        String line = getNextResult();
-        if (!line.isEmpty())
-        {
-          ValueMap valueMap = new ValueMap();
-          StringParser.parse(line,valueMap);
-          valueMapList.add(valueMap);
-        }
-      }
-      if (errorMessage != null) errorMessage[0] = "";
-    }
-    else
-    {
-      if (errorMessage != null) errorMessage[0] = this.errorData;
-    }
-
-    return errorCode;
-  }
-  /** get result list
-   * @param valueMapList value map list
-   * @return BARException.NONE or error code
-   */
-  public synchronized int getResults2(List<ValueMap> valueMapList)
-  {
-    if (errorCode == BARException.NONE)
-    {
-      while (!resultList.isEmpty())
-      {
-        String line = getNextResult();
-        if (!line.isEmpty())
-        {
-          ValueMap valueMap = new ValueMap();
-          StringParser.parse(line,valueMap);
-          valueMapList.add(valueMap);
-        }
-      }
-    }
-
-    return errorCode;
-  }
-
   /** get next result
    * @param errorMessage error message
    * @param valueMap value map
@@ -1487,10 +1415,10 @@ public class BARServer
     MASTER,
     SLAVE;
 
-    /** get mode text
+    /** get (translated) mode text
      * @return mode text
      */
-    public String toString()
+    public String getText()
     {
       String text = null;
 
@@ -1498,6 +1426,63 @@ public class BARServer
       {
         case MASTER: text = BARControl.tr("Master"); break;
         case SLAVE:  text = BARControl.tr("Slave");  break;
+      }
+
+      return text;
+    }
+  };
+
+  /** running states
+   */
+  enum States
+  {
+    RUNNING,
+    PAUSED,
+    SUSPENDED;
+
+    /** get (translated) running state text
+     * @return running state text
+     */
+    public String getText()
+    {
+      String text = null;
+
+      switch (this)
+      {
+        case RUNNING:   text = BARControl.tr("running");   break;
+        case PAUSED:    text = BARControl.tr("paused");    break;
+        case SUSPENDED: text = BARControl.tr("suspended"); break;
+        default:        text = "";                         break;
+      }
+
+      return text;
+    }
+  };
+
+  /** pause modes
+   */
+  enum PauseModes
+  {
+    NONE,
+    CREATE,
+    RESTORE,
+    UPDATE_INDEX,
+    NETWORK;
+
+    /** get (translated) pause mode text
+     * @return pause mode text
+     */
+    public String getText()
+    {
+      String text = null;
+
+      switch (this)
+      {
+        case NONE:         text = BARControl.tr("none");         break;
+        case CREATE:       text = BARControl.tr("create");       break;
+        case RESTORE:      text = BARControl.tr("restore");      break;
+        case UPDATE_INDEX: text = BARControl.tr("update index"); break;
+        case NETWORK:      text = BARControl.tr("network");      break;
       }
 
       return text;
@@ -2856,49 +2841,6 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   /** execute command
    * @param commandString command to send to BAR server
    * @param debugLevel debug level (0..n)
-   * @param valueMapList value map list
-   * @param busyIndicator busy indicator or null
-   */
-  public static void executeCommand(String               commandString,
-                                    int                  debugLevel,
-                                    final List<ValueMap> valueMapList,
-                                    BusyIndicator        busyIndicator
-                                   )
-    throws BARException, IOException
-  {
-    if (valueMapList != null) valueMapList.clear();
-
-    executeCommand(commandString,
-                   debugLevel,
-                   null,  // resultHandler
-                   new Command.Handler()
-                   {
-                     public void handle(Command command)
-                     {
-                       command.getResults2(valueMapList);
-                     }
-                   },
-                   busyIndicator
-                  );
-  }
-
-  /** execute command
-   * @param command command to send to BAR server
-   * @param debugLevel debug level (0..n)
-   * @param valueMapList value map list
-   */
-  public static void executeCommand(String         commandString,
-                                    int            debugLevel,
-                                    List<ValueMap> valueMapList
-                                   )
-    throws BARException, IOException
-  {
-    executeCommand(commandString,debugLevel,valueMapList,(BusyIndicator)null);
-  }
-
-  /** execute command
-   * @param commandString command to send to BAR server
-   * @param debugLevel debug level (0..n)
    * @param valueMap value map
    * @param busyIndicator busy indicator or null
    */
@@ -3978,19 +3920,92 @@ throw new Error("NYI");
     @Override
     public boolean open(RemoteFile path)
     {
-      synchronized(valueMapList)
+      synchronized(fileList)
       {
-        valueMapList.clear();
+        fileList.clear();
         try
         {
           BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
                                                        path.getAbsolutePath()
                                                       ),
                                    1,  // debugLevel
-                                   valueMapList
-                                  );
+                                   new Command.ResultHandler()
+                                   {
+                                     @Override
+                                     public void handle(int i, ValueMap valueMap)
+                                     {
+                                       RemoteFile file = null;
 
-          iterator = valueMapList.listIterator();
+                                       try
+                                       {
+                                         FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
+                                         switch (fileType)
+                                         {
+                                           case FILE:
+                                             {
+                                               String  name         = valueMap.getString ("name"         );
+                                               long    size         = valueMap.getLong   ("size"         );
+                                               long    dateTime     = valueMap.getLong   ("dateTime"     );
+                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                                               file = new RemoteFile(name,FileTypes.FILE,size,dateTime);
+                                             }
+                                             break;
+                                           case DIRECTORY:
+                                             {
+                                               String  name         = valueMap.getString ("name"          );
+                                               long    dateTime     = valueMap.getLong   ("dateTime"      );
+                                               boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
+                                               boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
+
+                                               file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime);
+                                             }
+                                             break;
+                                           case LINK:
+                                             {
+                                               String  name         = valueMap.getString ("name"    );
+                                               long    dateTime     = valueMap.getLong   ("dateTime");
+                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                                               file = new RemoteFile(name,FileTypes.LINK,dateTime);
+                                             }
+                                             break;
+                                           case HARDLINK:
+                                             {
+                                               String  name         = valueMap.getString ("name"    );
+                                               long    size         = valueMap.getLong   ("size"    );
+                                               long    dateTime     = valueMap.getLong   ("dateTime");
+                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
+
+                                               file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime);
+                                             }
+                                             break;
+                                           case SPECIAL:
+                                             {
+                                               String  name         = valueMap.getString ("name"          );
+                                               long    size         = valueMap.getLong   ("size",    0L   );
+                                               long    dateTime     = valueMap.getLong   ("dateTime"      );
+                                               boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
+                                               boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
+
+                                               file = new RemoteFile(name,FileTypes.SPECIAL,dateTime);
+                                             }
+                                             break;
+                                         }
+                                       }
+                                       catch (IllegalArgumentException exception)
+                                       {
+                                         if (Settings.debugLevel > 0)
+                                         {
+                                           System.err.println("ERROR: "+exception.getMessage());
+                                         }
+                                       }
+
+                                       fileList.add(file);
+                                     }
+                                   }
+                                  );
+          iterator = fileList.listIterator();
           return true;
         }
         catch (Exception exception)
@@ -4010,87 +4025,16 @@ throw new Error("NYI");
     }
 
     /** get next entry in directory
-     * @return entry
+     * @return entry or null
      */
     @Override
     public RemoteFile getNext()
     {
-      RemoteFile file = null;
-
-      if (iterator.hasNext())
-      {
-        ValueMap valueMap = iterator.next();
-        try
-        {
-          FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
-          switch (fileType)
-          {
-            case FILE:
-              {
-                String  name         = valueMap.getString ("name"         );
-                long    size         = valueMap.getLong   ("size"         );
-                long    dateTime     = valueMap.getLong   ("dateTime"     );
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.FILE,size,dateTime);
-              }
-              break;
-            case DIRECTORY:
-              {
-                String  name         = valueMap.getString ("name"          );
-                long    dateTime     = valueMap.getLong   ("dateTime"      );
-                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime);
-              }
-              break;
-            case LINK:
-              {
-                String  name         = valueMap.getString ("name"    );
-                long    dateTime     = valueMap.getLong   ("dateTime");
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.LINK,dateTime);
-              }
-              break;
-            case HARDLINK:
-              {
-                String  name         = valueMap.getString ("name"    );
-                long    size         = valueMap.getLong   ("size"    );
-                long    dateTime     = valueMap.getLong   ("dateTime");
-                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime);
-              }
-              break;
-            case SPECIAL:
-              {
-                String  name         = valueMap.getString ("name"          );
-                long    size         = valueMap.getLong   ("size",    0L   );
-                long    dateTime     = valueMap.getLong   ("dateTime"      );
-                boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                file = new RemoteFile(name,FileTypes.SPECIAL,dateTime);
-              }
-              break;
-          }
-        }
-        catch (IllegalArgumentException exception)
-        {
-          if (Settings.debugLevel > 0)
-          {
-            System.err.println("ERROR: "+exception.getMessage());
-          }
-        }
-      }
-
-      return file;
+      return iterator.hasNext() ? iterator.next() : null;
     }
 
-    private ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
-    private Iterator<ValueMap>  iterator;
+    private ArrayList<RemoteFile> fileList = new ArrayList<RemoteFile>();
+    private Iterator<RemoteFile>  iterator;
   };
 
   //-----------------------------------------------------------------------

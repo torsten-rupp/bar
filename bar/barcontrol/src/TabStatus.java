@@ -81,7 +81,7 @@ class JobData
     ABORTED,
     DISCONNECTED;
 
-    /** get state text
+    /** get (translated) state text
      * @return state text
      */
     public String getText()
@@ -484,26 +484,6 @@ public class TabStatus
     }
   }
 
-  /** running states
-   */
-  enum States
-  {
-    RUNNING,
-    PAUSED,
-    SUSPENDED,
-  };
-
-  /** pause modes
-   */
-  enum PauseModes
-  {
-    NONE,
-    CREATE,
-    RESTORE,
-    UPDATE_INDEX,
-    NETWORK;
-  };
-
   // colors
   private final Color            COLOR_RUNNING;
   private final Color            COLOR_REQUEST;
@@ -568,7 +548,7 @@ public class TabStatus
   private HashMap<String,JobData>         jobDataMap              = new HashMap<String,JobData>();
   private HashSet<UpdateJobStateListener> updateJobStateListeners = new HashSet<UpdateJobStateListener>();
   private JobData                         selectedJobData         = null;
-  private States                          status                  = States.RUNNING;
+  private BARServer.States                serverState             = BARServer.States.RUNNING;
   private int                             updateStatusFailCount   = 0;
 
   /** create status tab
@@ -2073,7 +2053,7 @@ public class TabStatus
                   Widgets.updateTableItem(tableItem,
                                           jobData,
                                           jobData.name,
-                                          (status == States.RUNNING) ? jobData.formatStateText() : BARControl.tr("suspended"),
+                                          (serverState == BARServer.States.RUNNING) ? jobData.formatStateText() : BARControl.tr("suspended"),
                                           jobData.slaveHostName,
                                           jobData.archiveType.getText(),
                                           (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
@@ -2093,7 +2073,7 @@ public class TabStatus
                                                       findJobTableItemIndex(jobData),
                                                       jobData,
                                                       jobData.name,
-                                                      (status == States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
+                                                      (serverState == BARServer.States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
                                                       jobData.slaveHostName,
                                                       jobData.archiveType.toString(),
                                                       (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
@@ -2232,59 +2212,63 @@ public class TabStatus
       try
       {
         // get schedule list
-        ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
+//TODO
+Dprintf.dprintf("TODO: remove");
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      selectedJobData.uuid
                                                     ),
                                  0,  // debugLevel
-                                 valueMapList
-                                );
-        for (ValueMap valueMap : valueMapList)
-        {
-          // get data
-          final String       scheduleUUID = valueMap.getString ("scheduleUUID"                  );
-          final String       date         = valueMap.getString ("date"                          );
-          final String       weekDays     = valueMap.getString ("weekDays"                      );
-          final String       time         = valueMap.getString ("time"                          );
-          final ArchiveTypes archiveType  = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     // get data
+                                     final String       scheduleUUID = valueMap.getString ("scheduleUUID"                  );
+                                     final String       date         = valueMap.getString ("date"                          );
+                                     final String       weekDays     = valueMap.getString ("weekDays"                      );
+                                     final String       time         = valueMap.getString ("time"                          );
+                                     final ArchiveTypes archiveType  = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
 
-          display.syncExec(new Runnable()
-          {
-            public void run()
-            {
-              MenuItem menuItem = Widgets.addMenuItem(menuTriggerJob,String.format("%s %s %s %s",date,weekDays,time,archiveType));
-              menuItem.addSelectionListener(new SelectionListener()
-              {
-                @Override
-                public void widgetDefaultSelected(SelectionEvent selectionEvent)
-                {
-                }
-                @Override
-                public void widgetSelected(SelectionEvent selectionEvent)
-                {
-                  try
-                  {
-                    BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",
-                                                                 selectedJobData.uuid,
-                                                                 scheduleUUID
-                                                                ),
-                                             0  // debugLevel
-                                            );
-                  }
-                  catch (Exception exception)
-                  {
-                    Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",
-                                                      selectedJobData.name.replaceAll("&","&&"),
-                                                      exception.getMessage()
-                                                     )
-                                 );
-                    return;
-                  }
-                }
-              });
-            }
-          });
-        }
+                                     display.syncExec(new Runnable()
+                                     {
+                                       public void run()
+                                       {
+                                         MenuItem menuItem = Widgets.addMenuItem(menuTriggerJob,String.format("%s %s %s %s",date,weekDays,time,archiveType));
+                                         menuItem.addSelectionListener(new SelectionListener()
+                                         {
+                                           @Override
+                                           public void widgetDefaultSelected(SelectionEvent selectionEvent)
+                                           {
+                                           }
+                                           @Override
+                                           public void widgetSelected(SelectionEvent selectionEvent)
+                                           {
+                                             try
+                                             {
+                                               BARServer.executeCommand(StringParser.format("SCHEDULE_TRIGGER jobUUID=%s scheduleUUID=%s",
+                                                                                            selectedJobData.uuid,
+                                                                                            scheduleUUID
+                                                                                           ),
+                                                                        0  // debugLevel
+                                                                       );
+                                             }
+                                             catch (Exception exception)
+                                             {
+                                               Dialogs.error(shell,BARControl.tr("Cannot trigger schedule of job ''{0}'':\n\n{1}",
+                                                                                 selectedJobData.name.replaceAll("&","&&"),
+                                                                                 exception.getMessage()
+                                                                                )
+                                                            );
+                                               return;
+                                             }
+                                           }
+                                         });
+                                       }
+                                     });
+                                   }
+                                 }
+                                );
       }
       catch (Exception exception)
       {
@@ -2341,9 +2325,9 @@ public class TabStatus
                                3,  // debugLevel
                                valueMap
                               );
-      status = valueMap.getEnum("state",States.class,States.RUNNING);
+      serverState = valueMap.getEnum("state",BARServer.States.class,BARServer.States.RUNNING);
 
-      switch (status)
+      switch (serverState)
       {
         case PAUSED:
           final long pauseTime = valueMap.getLong("time");
@@ -2883,7 +2867,7 @@ public class TabStatus
   {
     try
     {
-      switch (status)
+      switch (serverState)
       {
         case RUNNING:   BARServer.executeCommand(StringParser.format("SUSPEND") ,0); break;
         case PAUSED:

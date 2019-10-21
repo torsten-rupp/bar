@@ -4484,10 +4484,9 @@ assert jobData != null;
 
         if (Settings.listFlag)
         {
-          final int           n[]          = new int[]{0};
 
           // get server state
-          String serverState = null;
+          final BARServer.States serverState[] = {BARServer.States.RUNNING};
           try
           {
             ValueMap valueMap = new ValueMap();
@@ -4495,7 +4494,7 @@ assert jobData != null;
                                      1,  // debug level
                                      valueMap
                                     );
-            serverState = valueMap.getString("state");
+            serverState[0] = valueMap.getEnum("state",BARServer.States.class,BARServer.States.RUNNING);
           }
           catch (Exception exception)
           {
@@ -4503,33 +4502,11 @@ assert jobData != null;
             BARServer.disconnect();
             System.exit(EXITCODE_FAIL);
           }
-          if      (serverState.equalsIgnoreCase("running"))
-          {
-            serverState = null;
-          }
-          else if (serverState.equalsIgnoreCase("pause"))
-          {
-            serverState = "pause";
-          }
-          else if (serverState.equalsIgnoreCase("suspended"))
-          {
-            serverState = "suspended";
-          }
-          else
-          {
-            printWarning("unknown server response '%s'",serverState);
-            BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
-          }
 
           // get joblist
+          final int n[] = {0};
           try
           {
-            ArrayList<ValueMap> valueMapList = new ArrayList<ValueMap>();
-            BARServer.executeCommand(StringParser.format("JOB_LIST"),
-                                     1,  // debug level
-                                     valueMapList
-                                    );
             System.out.println(String.format("%-32s %-20s %-10s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
                                              "Name",
                                              "Host name",
@@ -4545,51 +4522,59 @@ assert jobData != null;
                                             )
                               );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            for (ValueMap valueMap_ : valueMapList)
-            {
-              // get data
-              String jobUUID                = valueMap_.getString("jobUUID"                 );
-              String name                   = valueMap_.getString("name"                    );
-              String hostName               = valueMap_.getString("hostName",             "");
-              String state                  = valueMap_.getString("state"                   );
-              String archiveType            = valueMap_.getString("archiveType"             );
-              long   archivePartSize        = valueMap_.getLong  ("archivePartSize"         );
-              String deltaCompressAlgorithm = valueMap_.getString("deltaCompressAlgorithm"  );
-              String byteCompressAlgorithm  = valueMap_.getString("byteCompressAlgorithm"   );
-              String cryptAlgorithm         = valueMap_.getString("cryptAlgorithm"          );
-              String cryptType              = valueMap_.getString("cryptType"               );
-              String cryptPasswordMode      = valueMap_.getString("cryptPasswordMode"       );
-              long   lastExecutedDateTime   = valueMap_.getLong  ("lastExecutedDateTime"    );
-              long   estimatedRestTime      = valueMap_.getLong  ("estimatedRestTime"       );
+            BARServer.executeCommand(StringParser.format("JOB_LIST"),
+                                     1,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         // get data
+                                         String jobUUID                = valueMap.getString("jobUUID"                 );
+                                         String name                   = valueMap.getString("name"                    );
+                                         String hostName               = valueMap.getString("hostName",             "");
+                                         String state                  = valueMap.getString("state"                   );
+                                         String archiveType            = valueMap.getString("archiveType"             );
+                                         long   archivePartSize        = valueMap.getLong  ("archivePartSize"         );
+                                         String deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"  );
+                                         String byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"   );
+                                         String cryptAlgorithm         = valueMap.getString("cryptAlgorithm"          );
+                                         String cryptType              = valueMap.getString("cryptType"               );
+                                         String cryptPasswordMode      = valueMap.getString("cryptPasswordMode"       );
+                                         long   lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"    );
+                                         long   estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"       );
 
-              String compressAlgorithms;
-              if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
-              else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
-              else if (                                                    !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = byteCompressAlgorithm;
-              else                                                                                                          compressAlgorithms = "-";
-              if (cryptAlgorithm.equalsIgnoreCase("none"))
-              {
-                cryptAlgorithm    = "-";
-                cryptType         = "-";
-                cryptPasswordMode = "-";
-              }
+                                         String compressAlgorithms;
+                                         if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
+                                         else if (!deltaCompressAlgorithm.equalsIgnoreCase("none")                                                   ) compressAlgorithms = deltaCompressAlgorithm;
+                                         else if (                                                    !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = byteCompressAlgorithm;
+                                         else                                                                                                          compressAlgorithms = "-";
+                                         if (cryptAlgorithm.equalsIgnoreCase("none"))
+                                         {
+                                           cryptAlgorithm    = "-";
+                                           cryptType         = "-";
+                                           cryptPasswordMode = "-";
+                                         }
 
-              System.out.println(String.format("%-32s %-20s %-10s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
-                                               name,
-                                               hostName,
-                                               (serverState == null) ? state : serverState,
-                                               archiveType,
-                                               archivePartSize,
-                                               compressAlgorithms,
-                                               cryptAlgorithm,
-                                               cryptType,
-                                               cryptPasswordMode,
-                                               DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
-                                               estimatedRestTime
-                                              )
-                                );
-              n[0]++;
-            }
+                                         System.out.println(String.format("%-32s %-20s %-10s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
+                                                                          name,
+                                                                          hostName,
+                                                                          (serverState[0] == BARServer.States.RUNNING) ? state : serverState[0],
+                                                                          archiveType,
+                                                                          archivePartSize,
+                                                                          compressAlgorithms,
+                                                                          cryptAlgorithm,
+                                                                          cryptType,
+                                                                          cryptPasswordMode,
+                                                                          DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
+                                                                          estimatedRestTime
+                                                                         )
+                                                           );
+                                         n[0]++;
+                                       }
+                                     }
+                                    );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
             System.out.println(String.format("%d jobs",n[0]));
           }
@@ -5066,7 +5051,6 @@ assert jobData != null;
 
 
           // restore
-Dprintf.dprintf("------------------");
           try
           {
             BARServer.executeCommand(StringParser.format("RESTORE type=ARCHIVES destination=%'S directoryContent=%y restoreEntryMode=%s",
