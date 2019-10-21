@@ -1354,15 +1354,14 @@ class WidgetEventListener<T>
   }
 }
 
-//????
 /** list data entry
  */
-class ListItem
+class ListItem<T>
 {
   String text;
-  Object data;
+  T      data;
 
-  ListItem(String text, Object data)
+  ListItem(String text, T data)
   {
     this.text = text;
     this.data = data;
@@ -4175,9 +4174,9 @@ e composite widget
 
   /** get insert position in sorted list
    * @param list list
-   * @param data data
    * @param comparator data comparator
-   * @return index in list
+   * @param data data
+   * @return index in list or 0
    */
   public static <T> int getListItemIndex(List list, Comparator<T> comparator, T data)
   {
@@ -4390,6 +4389,121 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     return listItem;
   }
 
+  /** update/insert list item
+   * @param list list
+   * @param data item data
+   * @param text item text
+   * @param updated/inserted list item
+   */
+  public static <T> ListItem updateInsertListItem(final List list, final Comparator<T> comparator, final T data, final String text)
+  {
+    /** list update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      ListItem listItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!list.isDisposed())
+        {
+          list.getDisplay().syncExec(new Runnable()
+          {
+            public void run()
+            {
+              ArrayList<ListItem<T>> listItems = (ArrayList<ListItem<T>>)list.getData();
+              assert((listItems == null) || listItems.size() == list.getItemCount());
+
+              if (comparator != null)
+              {
+                for (int i = 0; i < listItems.size(); i++)
+                {
+                  ListItem<T> listItem_ = listItems.get(i);
+
+                  if (comparator.compare(data,listItem_.data) == 0)
+                  {
+                    listItem.text = text;
+                    list.setItem(i,text);
+                    listItem = listItem_;
+                    break;
+                  }
+                }
+                if (listItem == null)
+                {
+                  listItem = new ListItem(text,data);
+
+                  int i = 0;
+                  while (i < listItems.size())
+                  {
+                    if (comparator.compare(data,listItems.get(i).data) > 0)
+                    {
+                      list.add(text,i);
+                      listItems.add(i,listItem);
+                      break;
+                    }
+                    i++;
+                  }
+                  if (i >= listItems.size())
+                  {
+                    list.add(text);
+                    listItems.add(listItem);
+                  }
+                }
+              }
+              else
+              {
+                for (int i = 0; i < listItems.size(); i++)
+                {
+                  ListItem<T> listItem_ = listItems.get(i);
+
+                  if (listItem_.text.equals(text))
+                  {
+                    listItem_.data = data;
+                    listItem = listItem_;
+                    break;
+                  }
+                }
+                if (listItem == null)
+                {
+                  listItem = new ListItem(text,data);
+
+                  int i = 0;
+                  while (i < listItems.size())
+                  {
+                    if (listItems.get(i).text.compareTo(text) > 0)
+                    {
+                      list.add(text,i);
+                      listItems.add(i,listItem);
+                      break;
+                    }
+                    i++;
+                  }
+                  if (i >= listItems.size())
+                  {
+                    list.add(text);
+                    listItems.add(listItem);
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+    }
+
+    ListItem listItem = null;
+    if (!list.isDisposed())
+    {
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      list.getDisplay().syncExec(updateRunnable);
+      listItem = updateRunnable.listItem;
+    }
+
+    return listItem;
+  }
+
   /** swap list items
    * @param list list
    * @param i,j indizes of list items to swap
@@ -4407,7 +4521,6 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     ListItem listItem1 = listItems.get(j);
     listItems.set(i,listItem1);
     listItems.set(j,listItem0);
-
   }
 
   /** move list item
@@ -4958,36 +5071,62 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
   /** get index of combo item
    * @param combo combo
+   * @param comparator data comparator
    * @param data item data
-   * @return index or -1
+   * @return index [0..n]
    */
-  public static <T> int getComboIndex(final Combo combo, final T data)
+  public static <T> int getComboItemIndex(Combo combo, Comparator<T> comparator, T data)
   {
-    final int index[] = new int[]{-1};
+    int index = 0;
 
     if (!combo.isDisposed())
     {
-      combo.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+      ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
 
-          for (int i = 0; i < dataArray.size(); i++)
-          {
-            if (   ((dataArray.get(i) == null) && (data == null))
-                || ((dataArray.get(i) != null) && dataArray.get(i).equals(data))
-               )
-            {
-              index[0] = i;
-              break;
-            }
-          }
+      index = dataArray.size();
+      for (int i = 0; i < dataArray.size(); i++)
+      {
+        if (comparator.compare((T)dataArray.get(i),data) > 0)
+//        if (   ((dataArray.get(i) == null) && (data == null))
+//            || ((dataArray.get(i) != null) && dataArray.get(i).equals(data))
+//           )
+        {
+          index = i;
+          break;
         }
-      });
+      }
     }
 
-    return index[0];
+    return index;
+  }
+
+  /** get index of combo item
+   * @param combo combo
+   * @param data item data
+   * @return index [0..n]
+   */
+  public static <T> int getComboItemIndex(Combo combo, T data)
+  {
+    int index = 0;
+
+    if (!combo.isDisposed())
+    {
+      ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+
+      index = dataArray.size();
+      for (int i = 0; i < dataArray.size(); i++)
+      {
+        if (   ((dataArray.get(i) == null) && (data == null))
+            || ((dataArray.get(i) != null) && dataArray.get(i).equals(data))
+           )
+        {
+          index = i;
+          break;
+        }
+      }
+    }
+
+    return index;
   }
 
   /** insert combo item
@@ -5005,9 +5144,10 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
         public void run()
         {
           ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+          assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
           combo.add(text,index);
-          dataArray.add(index,data);
+          dataArray.add(index,data);          
         }
       });
     }
@@ -5027,6 +5167,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
         public void run()
         {
           ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+          assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
           combo.add(text);
           dataArray.add(data);
@@ -5056,8 +5197,9 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
               public void run()
               {
                 ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+                assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
-                if (!combo.getItem(index).equals(text)) combo.setItem(index,text);
+                combo.setItem(index,text);
                 dataArray.set(index,data);
               }
             });
@@ -5067,13 +5209,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     }
   }
 
-  /** update combo item
+  /** update/insert combo item
    * @param combo combo
+   * @param comparator comparator
    * @param data item data
    * @param text item text
-   * @param true if updated, false if not found
+   * @param true if updated, false inserted
    */
-  public static <T> boolean updateComboItem(final Combo combo, final T data, final String text)
+  public static <T> boolean updateInsertComboItem(final Combo combo, final Comparator<T> comparator, final T data, final String text)
   {
     /** combo update runnable
      */
@@ -5092,16 +5235,68 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             public void run()
             {
               ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+              assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
-              for (int i = 0; i < dataArray.size(); i++)
+              if (comparator != null)
               {
-                if (   ((dataArray.get(i) == null) && (data == null))
-                    || ((dataArray.get(i) != null) && dataArray.get(i).equals(data))
-                   )
+                for (int i = 0; i < dataArray.size(); i++)
                 {
-                  combo.setItem(i,text);
-                  updatedFlag = true;
-                  break;
+                  if (comparator.compare(data,dataArray.get(i)) == 0)
+                  {
+                    combo.setItem(i,text);
+                    updatedFlag = true;
+                    break;
+                  }
+                }
+                if (!updatedFlag)
+                {
+                  int i = 0;
+                  while (i < dataArray.size())
+                  {
+                    if (comparator.compare(data,dataArray.get(i)) > 0)
+                    {
+                      combo.add(text,i);
+                      dataArray.add(i,data);
+                      break;
+                    }
+                    i++;
+                  }
+                  if (i >= dataArray.size())
+                  {
+                    combo.add(text);
+                    dataArray.add(data);
+                  }
+                }
+              }
+              else
+              {
+                for (int i = 0; i < dataArray.size(); i++)
+                {
+                  if (combo.getItem(i).equals(text))
+                  {
+                    dataArray.set(i,data);
+                    updatedFlag = true;
+                    break;
+                  }
+                }
+                if (!updatedFlag)
+                {
+                  int i = 0;
+                  while (i < dataArray.size())
+                  {
+                    if (combo.getItem(i).compareTo(text) > 0)
+                    {
+                      combo.add(text,i);
+                      dataArray.add(i,data);
+                      break;
+                    }
+                    i++;
+                  }
+                  if (i >= dataArray.size())
+                  {
+                    combo.add(text);
+                    dataArray.add(data);
+                  }
                 }
               }
             }
@@ -5119,6 +5314,17 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     return updateRunnable.updatedFlag;
   }
 
+  /** update/insert combo item
+   * @param combo combo
+   * @param data item data
+   * @param text item text
+   * @param true if updated, false if not found
+   */
+  public static <T> boolean updateInsertComboItem(Combo combo, T data, String text)
+  {
+    return updateInsertComboItem(combo,(Comparator)null,data,text);
+  }
+
   /** remove combo item
    * @param combo combo
    * @param index item index
@@ -5134,6 +5340,8 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           if (!combo.isDisposed())
           {
             ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+            assert((dataArray == null) || dataArray.size() == combo.getItemCount());
+
             combo.remove(index);
             dataArray.remove(index);
           }
@@ -5149,6 +5357,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   public static <T> void removeComboItem(final Combo combo, final T data)
   {
     ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+    assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
     for (int i = 0; i < dataArray.size(); i++)
     {
@@ -5215,6 +5424,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   public static <T> T[] getComboItems(Combo combo, T[] array)
   {
     ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+    assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
     if (array.length != dataArray.size())
     {
@@ -5236,12 +5446,13 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    */
   public static <T> T[] getComboItems(Combo combo, Class clazz)
   {
-    ArrayList<Object> comboItems = (ArrayList<Object>)combo.getData();
+    ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+    assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
-    T[] array = (T[])Array.newInstance(clazz,comboItems.size());
-    for (int i = 0; i < comboItems.size(); i++)
+    T[] array = (T[])Array.newInstance(clazz,dataArray.size());
+    for (int i = 0; i < dataArray.size(); i++)
     {
-      array[i] = (T)comboItems.get(i);
+      array[i] = (T)dataArray.get(i);
     }
 
     return array;
@@ -5286,6 +5497,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           if (!combo.isDisposed())
           {
             ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+            assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
             int index = combo.getSelectionIndex();
             if ((index >= 0) && (index < dataArray.size()))
@@ -5324,6 +5536,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           if (!combo.isDisposed())
           {
             ArrayList<T> dataArray = (ArrayList<T>)combo.getData();
+            assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
             for (int i = 0; i < dataArray.size(); i++)
             {
@@ -5523,12 +5736,23 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
   /** get insert position
    * @param combo option menu combo
+   * @param comparator data comparator
    * @param data data
-   * @return index
+   * @return index [0..n]
+   */
+  public static <T> int getOptionMenuIndex(Combo combo, Comparator<T> comparator, T data)
+  {
+    return getComboItemIndex(combo,comparator,data);
+  }
+
+  /** get insert position
+   * @param combo option menu combo
+   * @param data data
+   * @return index [0..n]
    */
   public static <T> int getOptionMenuIndex(Combo combo, T data)
   {
-    return getComboIndex(combo,data);
+    return getComboItemIndex(combo,data);
   }
 
   /** insert option menu item
@@ -5566,32 +5790,42 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param index index (0..n-1)
    * @param data item data
    * @param text item text
-   * @param true if updated, false if not found
    */
   public static <T> void updateOptionMenuItem(Combo combo, int index, T data, String text)
   {
     updateComboItem(combo,index,data,text);
   }
 
-  /** update option menu item
+  /** update/insert option menu item
    * @param combo option menu combo
    * @param data item data
    * @param text item text
-   * @param true if updated, false if not found
+   * @param true if updated, false on insert
    */
-  public static <T> boolean updateOptionMenuItem(Combo combo, T data, String text)
+  public static <T> boolean updateInsertOptionMenuItem(Combo combo, Comparator<T> comparator, T data, String text)
   {
-    return updateComboItem(combo,data,text);
+    return updateInsertComboItem(combo,comparator,data,text);
   }
 
-  /** update option menu item
+  /** update/insert option menu item
    * @param combo option menu combo
    * @param data item data
-   * @param true if updated, false if not found
+   * @param text item text
+   * @param true if updated, false on insert
    */
-  public static <T> boolean updateOptionMenuItem(Combo combo, T data)
+  public static <T> boolean updateInsertOptionMenuItem(Combo combo, T data, String text)
   {
-    return updateComboItem(combo,data,data.toString());
+    return updateInsertComboItem(combo,data,text);
+  }
+
+  /** update/insert option menu item
+   * @param combo option menu combo
+   * @param data item data
+   * @param true if updated, false on insert
+   */
+  public static <T> boolean updateInsertOptionMenuItem(Combo combo, T data)
+  {
+    return updateInsertComboItem(combo,data,data.toString());
   }
 
   /** remove option menu item
