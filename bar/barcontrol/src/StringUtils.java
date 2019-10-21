@@ -74,6 +74,21 @@ public class StringUtils
     return -1;
   }
 
+  /** find string in string list
+   * @param stringList string list
+   * @param string string to find
+   * @return index or -1 if not found
+   */
+  public static int indexOf(List<String> stringList, String string)
+  {
+    for (int i = 0; i < stringList.size(); i++)
+    {
+      if (stringList.get(i).equals(string)) return i;
+    }
+
+    return -1;
+  }
+
   /** check if string contains in string array
    * @param strings string array
    * @param string string to find
@@ -82,6 +97,74 @@ public class StringUtils
   public static boolean contains(String strings[], String string)
   {
     return indexOf(strings,string) >= 0;
+  }
+
+  /** check if string contains in string list
+   * @param stringList string list
+   * @param string string to find
+   * @return true if string list contains string
+   */
+  public static boolean contains(List<String> stringList, String string)
+  {
+    return indexOf(stringList,string) >= 0;
+  }
+
+  /** trim characters from strings at string beginning
+   * @param strings strings
+   * @param chars characters to trim
+   * @return trimmed strings
+   */
+  public static String[] trimBegin(String strings[], String chars)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+
+    for (String string : strings)
+    {
+      int i = 0;
+      while (   (i < string.length())
+             && (chars.indexOf(string.charAt(i)) >= 0)
+            )
+      {
+        i++;
+      }
+      stringList.add(string.substring(i));
+    }
+
+    return stringList.toArray(new String[stringList.size()]);
+  }
+
+  /** trim characters from strings at string beginning
+   * @param strings strings
+   * @param chars characters to trim
+   * @return trimmed strings
+   */
+  public static String[] trimBegin(String strings[], char ch)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+
+    for (String string : strings)
+    {
+      int i = 0;
+      while (   (i < string.length())
+             && (string.charAt(i) == ch)
+            )
+      {
+        i++;
+      }
+      stringList.add(string.substring(i));
+    }
+
+    return stringList.toArray(new String[stringList.size()]);
+  }
+
+  /** trim characters from strings at string beginning
+   * @param strings strings
+   * @param chars characters to trim
+   * @return trimmed strings
+   */
+  public static String[] trimBegin(String strings[])
+  {
+    return trimBegin(strings,WHITE_SPACES);
   }
 
   /** trim characters from string at string beginning
@@ -127,6 +210,65 @@ public class StringUtils
   public static String trimBegin(String string)
   {
     return trimBegin(string,WHITE_SPACES);
+  }
+
+  /** trim characters from strings at string end
+   * @param strings strings
+   * @param chars characters to trim
+   * @return trimmed strings
+   */
+  public static String[] trimEnd(String strings[], String chars)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+
+    for (String string : strings)
+    {
+      int i = string.length()-1;
+      while (   (i >= 0)
+             && (chars.indexOf(string.charAt(i)) >= 0)
+            )
+      {
+        i--;
+      }
+
+      stringList.add(string.substring(i));
+    }
+
+    return stringList.toArray(new String[stringList.size()]);
+  }
+
+  /** trim characters from strings at string end
+   * @param strings strings
+   * @param chars characters to trim
+   * @return trimmed strings
+   */
+  public static String[] trimEnd(String strings[], char ch)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+
+    for (String string : strings)
+    {
+      int i = string.length()-1;
+      while (   (i > 0)
+             && (string.charAt(i) == ch)
+            )
+      {
+        i--;
+      }
+
+      stringList.add(string.substring(i));
+    }
+
+    return stringList.toArray(new String[stringList.size()]);
+  }
+
+  /** trim characters from string at strings end
+   * @param strings strings
+   * @return trimmed strings
+   */
+  public static String[] trimEnd(String strings[])
+  {
+    return trimEnd(strings,WHITE_SPACES);
   }
 
   /** trim characters from string at string end
@@ -195,7 +337,31 @@ public class StringUtils
       i1--;
     }
 
-    return string.substring(i0,i1-i0+1);
+    return string.substring(i0,i1+1);
+  }
+
+  /** trim characters from string
+   * @param string string
+   * @param ch character to trim
+   */
+  public static String trim(String string, char ch)
+  {
+    int i0 = 0;
+    while (   (i0 < string.length())
+           && (string.charAt(i0) == ch)
+          )
+    {
+      i0++;
+    }
+    int i1 = string.length()-1;
+    while (   (i1 >= i0)
+           && (string.charAt(i1) == ch)
+          )
+    {
+      i1--;
+    }
+
+    return string.substring(i0,i1+1);
   }
 
   /** trim characters from string at string beginning
@@ -205,6 +371,77 @@ public class StringUtils
   public static String trim(String string)
   {
     return trim(string,WHITE_SPACES);
+  }
+
+  /** trim characters from string
+   * @param string string
+   * @param chars characters to trim
+   */
+  public static String[] trim(String strings[], String chars)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+
+    for (String string : strings)
+    {
+      int i0 = 0;
+      while (   (i0 < string.length())
+             && (chars.indexOf(string.charAt(i0)) >= 0)
+            )
+      {
+        i0++;
+      }
+      int i1 = string.length()-1;
+      while (   (i1 >= i0)
+             && (chars.indexOf(string.charAt(i1)) >= 0)
+            )
+      {
+        i1--;
+      }
+
+      stringList.add(string.substring(i0,i1+1));
+    }
+
+    return stringList.toArray(new String[stringList.size()]);
+  }
+
+  /** trim characters from string
+   * @param string string
+   * @param ch character to trim
+   */
+  public static String[] trim(String strings[], char ch)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+
+    for (String string : strings)
+    {
+      int i0 = 0;
+      while (   (i0 < string.length())
+             && (string.charAt(i0) == ch)
+            )
+      {
+        i0++;
+      }
+      int i1 = string.length()-1;
+      while (   (i1 >= i0)
+             && (string.charAt(i1) == ch)
+            )
+      {
+        i1--;
+      }
+
+      stringList.add(string.substring(i0,i1+1));
+    }
+
+    return stringList.toArray(new String[stringList.size()]);
+  }
+
+  /** trim characters from string at string beginning
+   * @param string string
+   * @return trimmed string
+   */
+  public static String[] trim(String strings[])
+  {
+    return trim(strings,WHITE_SPACES);
   }
 
   /** escape quote character and \ in string, enclose in quote character
@@ -316,14 +553,14 @@ public class StringUtils
       {
         char ch = string.charAt(index);
 
-        if      ((ch == '\\') && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
+        if      ((ch == ESCAPE_CHAR) && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
         {
           buffer.append(quoteChar);
           index += 2;
         }
-        else if ((ch == '\\') && ((index+1) < endIndex) && (string.charAt(index+1) == '\\'))
+        else if ((ch == ESCAPE_CHAR) && ((index+1) < endIndex))
         {
-          buffer.append('\\');
+          buffer.append(string.charAt(index+1));
           index += 2;
         }
         else
@@ -480,7 +717,7 @@ public class StringUtils
       {
         char ch = string.charAt(index);
 
-        if ((ch == '\\') && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
+        if ((ch == ESCAPE_CHAR) && ((index+1) < endIndex) && quotedFlag && (string.charAt(index+1) == quoteChar))
         {
           buffer.append(quoteChar);
           index += 2;
@@ -1359,6 +1596,38 @@ public class StringUtils
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string)
   {
     return split(stringList,string,WHITE_SPACES);
+  }
+
+  /** convert to string array
+   * @param strings strings
+   * @return string array
+   */
+  public String[] toArray(Object... objects)
+  {
+    ArrayList<String> stringList = new ArrayList<String>();
+    for (Object object : objects)
+    {
+      if      (object instanceof String[])
+      {
+        for (String string : (String[])object)
+        {
+          stringList.add(string);
+        }
+      }
+      else if (object instanceof List)
+      {
+        for (Object element : (List)object)
+        {
+          stringList.add(element.toString());
+        }
+      }
+      else
+      {
+        stringList.add(object.toString());
+      }
+    }
+
+    return stringList.toArray(new String[stringList.size()]);
   }
 
   /** split string
