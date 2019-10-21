@@ -466,7 +466,7 @@ public class TabStatus
             if (Settings.debugLevel > 2)
             {
               BARControl.printStackTrace(exception);
-              System.exit(1);
+              System.exit(ExitCodes.FAIL);
             }
           }
         }
@@ -2822,7 +2822,7 @@ public class TabStatus
             BARServer.disconnect();
             System.err.println("ERROR: "+exception.getMessage());
             BARControl.printStackTrace(exception);
-            System.exit(1);
+            System.exit(ExitCodes.INTERNAL_ERROR);
           }
         }
       });

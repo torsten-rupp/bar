@@ -1871,7 +1871,7 @@ Dprintf.dprintf("");
               BARServer.disconnect();
               BARControl.printInternalError(throwable);
               BARControl.showFatalError(throwable);
-              System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+              System.exit(ExitCodes.INTERNAL_ERROR);
             }
           }
           finally
@@ -1958,7 +1958,7 @@ Dprintf.dprintf("");
           BARServer.disconnect();
           BARControl.printInternalError(throwable);
           BARControl.showFatalError(throwable);
-          System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+          System.exit(ExitCodes.INTERNAL_ERROR);
         }
       }
     }
@@ -3372,7 +3372,7 @@ Dprintf.dprintf("");
             BARServer.disconnect();
             BARControl.printInternalError(throwable);
             BARControl.showFatalError(throwable);
-            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+            System.exit(ExitCodes.INTERNAL_ERROR);
           }
           finally
           {
@@ -3453,7 +3453,7 @@ Dprintf.dprintf("");
           BARServer.disconnect();
           BARControl.printInternalError(throwable);
           BARControl.showFatalError(throwable);
-          System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+          System.exit(ExitCodes.INTERNAL_ERROR);
         }
       }
     }
@@ -6112,21 +6112,6 @@ Dprintf.dprintf("");
             updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
           }
         });
-//???
-        widgetStorageFilter.addFocusListener(new FocusListener()
-        {
-          @Override
-          public void focusGained(FocusEvent focusEvent)
-          {
-          }
-          @Override
-          public void focusLost(FocusEvent focusEvent)
-          {
-//TODO
-//            Text widget = (Text)focusEvent.widget;
-//            updateStorageTreeTableThread.triggerUpdateStorageName(widget.getText());
-          }
-        });
 
         subComposite = Widgets.newComposite(composite,Settings.hasNormalRole());
         subComposite.setLayout(new TableLayout(null,0.0));
@@ -6654,20 +6639,6 @@ Dprintf.dprintf("");
           {
             Text widget = (Text)keyEvent.widget;
             updateEntryTableThread.triggerUpdateEntryName(widget.getText());
-          }
-        });
-//???
-        widgetEntryFilter.addFocusListener(new FocusListener()
-        {
-          @Override
-          public void focusGained(FocusEvent focusEvent)
-          {
-          }
-          @Override
-          public void focusLost(FocusEvent focusEvent)
-          {
-//            Text widget = (Text)focusEvent.widget;
-//            updateEntryTableThread.triggerUpdateEntryName(widget.getText());
           }
         });
 
@@ -8356,7 +8327,7 @@ Dprintf.dprintf("");
 
                 updateStorageTreeTableThread.triggerUpdate();
               }
-  //TODO: pass error to caller?
+//TODO: pass error to caller?
               catch (final CommunicationError error)
               {
                 display.syncExec(new Runnable()
@@ -8387,7 +8358,7 @@ Dprintf.dprintf("");
                 BARServer.disconnect();
                 BARControl.printInternalError(throwable);
                 BARControl.showFatalError(throwable);
-                System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+                System.exit(ExitCodes.INTERNAL_ERROR);
               }
 
               // update entry list
@@ -8471,7 +8442,7 @@ Dprintf.dprintf("");
                     {
                       System.err.println("ERROR: "+exception.getMessage());
                       BARControl.printStackTrace(exception);
-                      System.exit(1);
+                      System.exit(ExitCodes.INTERNAL_ERROR);
                     }
                   }
                 }
@@ -8539,7 +8510,7 @@ Dprintf.dprintf("");
                 BARServer.disconnect();
                 BARControl.printInternalError(throwable);
                 BARControl.showFatalError(throwable);
-                System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+                System.exit(ExitCodes.INTERNAL_ERROR);
               }
             }
           });
@@ -8800,7 +8771,7 @@ Dprintf.dprintf("");
               BARServer.disconnect();
               BARControl.printInternalError(throwable);
               BARControl.showFatalError(throwable);
-              System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+              System.exit(ExitCodes.INTERNAL_ERROR);
             }
           }
         });
@@ -9637,7 +9608,7 @@ Dprintf.dprintf("");
           {
             System.err.println("ERROR: "+exception.getMessage());
             BARControl.printStackTrace(exception);
-            System.exit(1);
+            System.exit(ExitCodes.INTERNAL_ERROR);
           }
         }
         finally
@@ -9854,7 +9825,7 @@ Dprintf.dprintf("");
             BARServer.disconnect();
             BARControl.printInternalError(throwable);
             BARControl.showFatalError(throwable);
-            System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+            System.exit(ExitCodes.INTERNAL_ERROR);
           }
           finally
           {

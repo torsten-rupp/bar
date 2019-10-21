@@ -780,7 +780,7 @@ public class TabJobs
           BARServer.disconnect();
           System.err.println("ERROR: "+exception.getMessage());
           BARControl.printStackTrace(exception);
-          System.exit(1);
+          System.exit(ExitCodes.FAIL);
         }
       }
     }

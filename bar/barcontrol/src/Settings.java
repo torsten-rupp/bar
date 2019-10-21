@@ -434,9 +434,9 @@ public class Settings
   @SettingValue(name="server-key-file")
   public static String                         serverKeyFileName               = null;
   @SettingValue(name="no-ssl")
-  public static boolean                        noSSL                           = false;
+  public static boolean                        serverNoSSL                     = false;
   @SettingValue(name="force-ssl")
-  public static boolean                        forceSSL                        = false;
+  public static boolean                        serverForceSSL                  = false;
   @SettingValue(name="role")
   public static BARControl.Roles               role                            = BARControl.Roles.BASIC;
 
@@ -475,13 +475,13 @@ public class Settings
   public static boolean                        overwriteEntriesFlag            = false;
 
   // flags
-//TODO: preference
+//TODO: preference dialog
   @SettingValue
   public static Boolean                        showEntriesExceededInfo         = new Boolean(true);
-//TODO: preference
+//TODO: preference dialog
   @SettingValue
   public static Boolean                        showEntriesMarkInfo             = new Boolean(true);
-//TODO: preference
+//TODO: preference dialog
   @SettingValue
   public static Boolean                        showNewVersionInformation       = new Boolean(true);
 

@@ -1574,12 +1574,6 @@ public class BARControl
 
   // --------------------------- constants --------------------------------
 
-  // exit codes
-  public static int EXITCODE_OK             =   0;
-  public static int EXITCODE_FAIL           =   1;
-  public static int EXITCODE_RESTART        =  64;
-  public static int EXITCODE_INTERNAL_ERROR = 127;
-
   /** roles
    */
   public static enum Roles
@@ -1681,15 +1675,15 @@ public class BARControl
   private static final Option[] OPTIONS =
   {
     new Option("--config",                       null,Options.Types.STRING,     "configFileName"),
-//TODO: use server structure
     new Option("--port",                         "-p",Options.Types.INTEGER,    "serverPort"),
     new Option("--tls-port",                     null,Options.Types.INTEGER,    "serverTLSPort"),
     new Option("--ca-file",                      null,Options.Types.STRING,     "serverCAFileName"),
     new Option("--cert-file",                    null,Options.Types.STRING,     "serverCertificateFileName"),
     new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
-    new Option("--no-ssl",                       null,Options.Types.BOOLEAN,    "noSSL"),
-    new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "forceSSL"),
+    new Option("--no-ssl",                       null,Options.Types.BOOLEAN,    "serverNoSSL"),
+    new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "serverForceSSL"),
     new Option("--password",                     null,Options.Types.STRING,     "serverPassword"),
+
     new Option("--login-dialog",                 null,Options.Types.BOOLEAN,    "loginDialogFlag"),
     new Option("--pair-master",                  null,Options.Types.BOOLEAN,    "pairMasterFlag"),
 
@@ -2082,14 +2076,14 @@ public class BARControl
     if (Settings.helpFlag || Settings.xhelpFlag)
     {
       printUsage();
-      System.exit(EXITCODE_OK);
+      System.exit(ExitCodes.OK);
     }
 
     // version
     if (Settings.versionFlag)
     {
       printVersion();
-      System.exit(EXITCODE_OK);
+      System.exit(ExitCodes.OK);
     }
 
     // add/update server
@@ -2176,7 +2170,7 @@ if (false) {
       {
         printError("cannot get job list (error: %s)",exception.getMessage());
         BARServer.disconnect();
-        System.exit(EXITCODE_FAIL);
+        System.exit(ExitCodes.FAIL);
       }
     }
 
@@ -2258,7 +2252,7 @@ if (false) {
                   {
                     case 0:
                       // send close event with restart
-                      Widgets.notify(shell,SWT.Close,EXITCODE_RESTART);
+                      Widgets.notify(shell,SWT.Close,ExitCodes.RESTART);
                       break;
                     case 1:
                       break;
@@ -2567,7 +2561,7 @@ if (false) {
             final Settings.Server defaultServer = Settings.getLastServer();
             loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                       (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                      !Settings.noSSL && Settings.forceSSL,
+                                      !Settings.serverNoSSL && Settings.serverForceSSL,
                                       Settings.role
                                      );
             if (getLoginData(loginData,false))
@@ -2578,7 +2572,7 @@ if (false) {
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
-                                  Settings.noSSL,
+                                  Settings.serverNoSSL,
                                   loginData.forceSSL,
                                   loginData.password,
                                   Settings.serverCAFileName,
@@ -2629,8 +2623,6 @@ if (false) {
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
-//TODO: required?
-assert jobData != null;
           menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
                               && (jobData.state != JobData.States.DRY_RUNNING)
                               && (jobData.state != JobData.States.WAITING    )
@@ -2657,8 +2649,6 @@ assert jobData != null;
         public void handle(Widget widget, JobData jobData)
         {
           MenuItem menuItem = (MenuItem)widget;
-//TODO: required?
-assert jobData != null;
           menuItem.setEnabled(   (jobData.state == JobData.States.WAITING       )
                               || (jobData.state == JobData.States.RUNNING       )
                               || (jobData.state == JobData.States.DRY_RUNNING   )
@@ -3206,7 +3196,7 @@ assert jobData != null;
                             loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
-                            Settings.noSSL,
+                            Settings.serverNoSSL,
                             loginData.forceSSL,
                             loginData.password,
                             Settings.serverCAFileName,
@@ -3258,7 +3248,7 @@ assert jobData != null;
                             loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
-                            Settings.noSSL,
+                            Settings.serverNoSSL,
                             loginData.forceSSL,
                             loginData.password,
                             Settings.serverCAFileName,
@@ -3399,20 +3389,20 @@ assert jobData != null;
         {
           printInternalError(exception);
           showFatalError(exception);
-          System.exit(EXITCODE_INTERNAL_ERROR);
+          System.exit(ExitCodes.INTERNAL_ERROR);
         }
       }
       catch (AssertionError error)
       {
         printInternalError(error);
         showFatalError(error);
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (InternalError error)
       {
         printInternalError(error);
         showFatalError(error);
-        System.exit(EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (Throwable throwable)
       {
@@ -3421,7 +3411,7 @@ assert jobData != null;
           printInternalError(throwable);
         }
         showFatalError(throwable);
-        System.exit(EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
     }
   }
@@ -3691,7 +3681,7 @@ assert jobData != null;
               loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        !Settings.noSSL && Settings.forceSSL,
+                                        !Settings.serverNoSSL && Settings.serverForceSSL,
                                         (!server.password.isEmpty()) ? server.password : "",
                                         Settings.role
                                        );
@@ -3701,7 +3691,7 @@ assert jobData != null;
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
-                                  Settings.noSSL,
+                                  Settings.serverNoSSL,
                                   loginData.forceSSL,
                                   loginData.password,
                                   Settings.serverCAFileName,
@@ -3763,7 +3753,7 @@ assert jobData != null;
               loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        !Settings.noSSL && Settings.forceSSL,
+                                        !Settings.serverNoSSL && Settings.serverForceSSL,
                                         Settings.role
                                        );
               if (getLoginData(loginData,false))
@@ -3774,7 +3764,7 @@ assert jobData != null;
                                     loginData.serverName,
                                     loginData.serverPort,
                                     loginData.serverTLSPort,
-                                    Settings.noSSL,
+                                    Settings.serverNoSSL,
                                     loginData.forceSSL,
                                     loginData.password,
                                     Settings.serverCAFileName,
@@ -4244,7 +4234,7 @@ assert jobData != null;
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                !Settings.noSSL && Settings.forceSSL,
+                                !Settings.serverNoSSL && Settings.serverForceSSL,
                                 (server != null) ? server.password : "",
                                 Settings.role
                                );
@@ -4282,7 +4272,7 @@ assert jobData != null;
           BARServer.connect(loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
-                            Settings.noSSL,
+                            Settings.serverNoSSL,
                             loginData.forceSSL,
                             loginData.password,
                             Settings.serverCAFileName,
@@ -4293,7 +4283,7 @@ assert jobData != null;
         catch (ConnectionError error)
         {
           printError("cannot connect to server (error: %s)",error.getMessage());
-          System.exit(EXITCODE_FAIL);
+          System.exit(ExitCodes.FAIL);
         }
 
         // execute commands
@@ -4356,13 +4346,13 @@ assert jobData != null;
           {
             printError("Cannot set new master ("+exception.getMessage()+")");
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
           catch (Exception exception)
           {
             printError("Cannot set new master ("+exception.getMessage()+")");
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4374,7 +4364,7 @@ assert jobData != null;
           {
             printError("job '%s' not found",Settings.runJobName);
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
 
           // start job
@@ -4391,7 +4381,7 @@ assert jobData != null;
           {
             printError("cannot start job '%s' (error: %s)",Settings.runJobName,exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4411,7 +4401,7 @@ assert jobData != null;
           {
             printError("cannot pause (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4433,7 +4423,7 @@ assert jobData != null;
           {
             printError("cannot suspend (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4450,7 +4440,7 @@ assert jobData != null;
           {
             printError("cannot continue (error: %s)",Settings.runJobName,exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4462,7 +4452,7 @@ assert jobData != null;
           {
             printError("job '%s' not found",Settings.abortJobName);
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
 
           // abort job
@@ -4478,7 +4468,7 @@ assert jobData != null;
           {
             printError("cannot abort job '%s' (error: %s)",Settings.abortJobName,exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4500,7 +4490,7 @@ assert jobData != null;
           {
             printError("cannot get state (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
 
           // get joblist
@@ -4582,7 +4572,7 @@ assert jobData != null;
           {
             printError("cannot get job list (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4601,7 +4591,7 @@ assert jobData != null;
           {
             printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4620,7 +4610,7 @@ assert jobData != null;
           {
             printError("cannot refresh index for storage '%s' from index (error: %s)",Settings.indexDatabaseRefreshStorageName,exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4639,7 +4629,7 @@ assert jobData != null;
           {
             printError("cannot remove index for storage '%s' from index (error: %s)",Settings.indexDatabaseRemoveStorageName,exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4700,7 +4690,7 @@ assert jobData != null;
           {
             printError("cannot list storages index (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4761,7 +4751,7 @@ assert jobData != null;
           {
             printError("cannot list storages index (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4922,7 +4912,7 @@ assert jobData != null;
           {
             printError("cannot list entries index (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -4996,7 +4986,7 @@ assert jobData != null;
           {
             printError("cannot list history (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -5046,7 +5036,7 @@ assert jobData != null;
           {
             printError("cannot set restore list (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
 
 
@@ -5078,6 +5068,7 @@ assert jobData != null;
                                              String        errorMessage = valueMap.getString("errorMessage","");
                                              String        storage      = valueMap.getString("storage","");
                                              String        entry        = valueMap.getString("entry","");
+//TODO
 Dprintf.dprintf("action=%s",action);
 System.exit(33);
 
@@ -5138,7 +5129,7 @@ System.exit(33);
                                                  break;
                                                case REQUEST_VOLUME:
 Dprintf.dprintf("still not supported");
-//System.exit(EXITCODE_FAIL);
+//System.exit(ExitCodes.FAIL);
                                                  break;
                                                case CONFIRM:
                                                  System.err.println(BARControl.tr("Cannot restore ''{0}'': {1} - skipped", !entry.isEmpty() ? entry : storage,errorMessage));
@@ -5180,7 +5171,7 @@ Dprintf.dprintf("still not supported");
                                            if (Settings.debugLevel > 0)
                                            {
                                              System.err.println("ERROR: "+exception.getMessage());
-                                             System.exit(EXITCODE_FAIL);
+                                             System.exit(ExitCodes.FAIL);
                                            }
                                          }
                                        }
@@ -5191,7 +5182,7 @@ Dprintf.dprintf("still not supported");
           {
             printError("cannot restore storages (error: %s)",exception.getMessage());
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
 
@@ -5202,7 +5193,7 @@ Dprintf.dprintf("still not supported");
           {
             printError("cannot quit server");
             BARServer.disconnect();
-            System.exit(EXITCODE_FAIL);
+            System.exit(ExitCodes.FAIL);
           }
         }
       }
@@ -5236,7 +5227,7 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
-                                Settings.noSSL,
+                                Settings.serverNoSSL,
                                 loginData.forceSSL,
                                 loginData.password,
                                 Settings.serverCAFileName,
@@ -5259,7 +5250,7 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
-                                Settings.noSSL,
+                                Settings.serverNoSSL,
                                 loginData.forceSSL,
                                 "",  // password
                                 Settings.serverCAFileName,
@@ -5279,7 +5270,7 @@ Dprintf.dprintf("still not supported");
           // get login data
           if (!getLoginData(loginData,true))
           {
-            System.exit(EXITCODE_OK);
+            System.exit(ExitCodes.OK);
           }
           if ((loginData.serverPort == 0) && (loginData.serverTLSPort == 0))
           {
@@ -5297,7 +5288,7 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
-                                Settings.noSSL,
+                                Settings.serverNoSSL,
                                 loginData.forceSSL,
                                 loginData.password,
                                 Settings.serverCAFileName,
@@ -5308,7 +5299,6 @@ Dprintf.dprintf("still not supported");
             }
             catch (ConnectionError error)
             {
-error.printStackTrace();
               errorMessage = error.getMessage();
             }
             catch (CommunicationError error)
@@ -5325,7 +5315,7 @@ error.printStackTrace();
               }
               else
               {
-                System.exit(EXITCODE_FAIL);
+                System.exit(ExitCodes.FAIL);
               }
             }
           }
@@ -5345,7 +5335,7 @@ error.printStackTrace();
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
-                                  true, // noSSL,
+                                  true, // serverNoSSL,
                                   false,  // forceSSL
                                   loginData.password,
                                   (String)null,  // serverCAFileName
@@ -5373,13 +5363,13 @@ error.printStackTrace();
                 }
                 else
                 {
-                  System.exit(EXITCODE_FAIL);
+                  System.exit(ExitCodes.FAIL);
                 }
               }
             }
             else
             {
-              System.exit(EXITCODE_FAIL);
+              System.exit(ExitCodes.FAIL);
             }
           }
 
@@ -5394,12 +5384,12 @@ error.printStackTrace();
                                      )
                )
             {
-              System.exit(EXITCODE_FAIL);
+              System.exit(ExitCodes.FAIL);
             }
           }
         }
-        Settings.forceSSL = loginData.forceSSL;
-        Settings.role     = loginData.role;
+        Settings.serverForceSSL = loginData.forceSSL;
+        Settings.role           = loginData.role;
 
         do
         {

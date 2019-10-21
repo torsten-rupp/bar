@@ -103,7 +103,7 @@ public class Options
           else
           {
             printError("Value expected for option '%s'",option.name);
-            System.exit(1);
+            System.exit(ExitCodes.FAIL);
           }
         }
         else
@@ -130,7 +130,7 @@ public class Options
           else
           {
             printError("Value expected for option '%s'",option.shortName);
-            System.exit(1);
+            System.exit(ExitCodes.FAIL);
           }
         }
         else
@@ -162,7 +162,7 @@ public class Options
                 }
               }
             }
-            
+
             // get field
             Field field = clazz.getField(fieldNames[fieldNames.length-1]);
 
@@ -193,7 +193,7 @@ public class Options
                   catch (NumberFormatException exception)
                   {
                     printError("Invalid number '%s' for option %s",string,option.name);
-                    System.exit(1);
+                    System.exit(ExitCodes.FAIL);
                   }
                 }
                 break;
@@ -225,7 +225,7 @@ public class Options
                   catch (NumberFormatException exception)
                   {
                     printError("Invalid number '%s' for option %s",string,option.name);
-                    System.exit(1);
+                    System.exit(ExitCodes.FAIL);
                   }
                 }
                 break;
@@ -254,7 +254,7 @@ public class Options
                   catch (ParseException exception)
                   {
                     printError("Invalid number '%s' for option %s",string,option.name);
-                    System.exit(1);
+                    System.exit(ExitCodes.FAIL);
                   }
                 }
                 break;
@@ -301,12 +301,12 @@ public class Options
                   else
                   {
                     printError("INTERNAL ERROR: unsupported enumerationt type '%s' for option %s",foundOption.enumeration.getClass(),option.name);
-                    System.exit(1);
+                    System.exit(ExitCodes.FAIL);
                   }
                   if (!foundFlag)
                   {
                     printError("Unknown value '%s' for option %s",string,option.name);
-                    System.exit(1);
+                    System.exit(ExitCodes.FAIL);
                   }
                 }
                 break;
@@ -340,7 +340,7 @@ public class Options
                   if (!foundFlag)
                   {
                     printError("Unknown value '%s' for option %s",name,option.name);
-                    System.exit(1);
+                    System.exit(ExitCodes.FAIL);
                   }
                 }
                 field.set(null,enumSet);
@@ -353,7 +353,7 @@ public class Options
                 catch (NumberFormatException exception)
                 {
                   printError("Invalid number '%s'",string);
-                  System.exit(1);
+                  System.exit(ExitCodes.FAIL);
                 }
                 break;
               case SPECIAL:
@@ -394,7 +394,7 @@ public class Options
   private static void internalError(String format, Object... args)
   {
     System.err.println("INTERNAL ERROR: "+String.format(Locale.US,format,args));
-    System.exit(128);
+    System.exit(ExitCodes.INTERNAL_ERROR);
   }
 }
 

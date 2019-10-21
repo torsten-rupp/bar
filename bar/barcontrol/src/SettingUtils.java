@@ -1626,7 +1626,7 @@ public class SettingUtils
                     {
                       System.err.println("INTERNAL ERROR at '"+file.getAbsolutePath()+"', line "+lineNb+": "+throwable.getMessage());
                       throwable.printStackTrace();
-                      System.exit(127);
+                      System.exit(ExitCodes.INTERNAL_ERROR);
                     }
                   }
                 }
@@ -1683,7 +1683,7 @@ public class SettingUtils
               {
                 System.err.println("INTERNAL ERROR: migrate value '"+settingValue.name()+"': "+throwable.getMessage());
                 throwable.printStackTrace();
-                System.exit(127);
+                System.exit(ExitCodes.INTERNAL_ERROR);
               }
             }
           }

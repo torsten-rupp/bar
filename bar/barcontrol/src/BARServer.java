@@ -987,7 +987,7 @@ class ReadThread extends Thread
             BARControl.showFatalError(exception);
           }
         });
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (final AssertionError error)
       {
@@ -1001,7 +1001,7 @@ class ReadThread extends Thread
             BARControl.showFatalError(error);
           }
         });
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (final InternalError error)
       {
@@ -1015,7 +1015,7 @@ class ReadThread extends Thread
             BARControl.showFatalError(error);
           }
         });
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (final Throwable throwable)
       {
@@ -1032,7 +1032,7 @@ class ReadThread extends Thread
             BARControl.showFatalError(throwable);
           }
         });
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
     }
   }
@@ -1354,7 +1354,7 @@ BARServer.sendResult(command.id,1,true,BARException.LOAD_VOLUME_FAIL);
         BARServer.sendResult(command.id,1,true,0,"action=ABORT");
 
         BARControl.printInternalError(throwable);
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
     }
   }
@@ -1704,32 +1704,32 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               // connection established => done
               socket = sslSocket;
-              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with PEM key+startSSL (CA: "+caFile.getPath()+", Certificate: "+certificateFile.getPath()+", Key: "+keyFile.getPath()+")");
+              if (Settings.debugLevel > 0) System.err.println("Network: TLS socket with PEM key+startSSL (CA: "+caFile.getPath()+", Certificate: "+certificateFile.getPath()+", Key: "+keyFile.getPath());
               break;
             }
             catch (BARException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' (error: {2})",name,port,error.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' (error: {2})",name,Integer.toString(port),error.getMessage());
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,port,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: no route to host)",name,port)+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
             }
             catch (IOException exception)
             {
@@ -1823,19 +1823,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,tlsPort,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(tlsPort));
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,tlsPort,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,tlsPort,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(tlsPort));
             }
             catch (IOException exception)
             {
@@ -1941,27 +1941,27 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             catch (BARException exception)
             {
               try { plainSocket.close(); } catch (IOException dummyException) { /* ignored */ }
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectionError error)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' (error: {2})",name,port,error.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' (error: {2})",name,Integer.toString(port),error.getMessage());
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,port,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(port),exception.getMessage());
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: no route to host)",name,port)+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
             }
             catch (IOException exception)
             {
@@ -2050,19 +2050,19 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             }
             catch (SocketTimeoutException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: {2})",name,tlsPort,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: {2})",name,Integer.toString(tlsPort),exception.getMessage());
             }
             catch (ConnectException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(tlsPort));
             }
             catch (NoRouteToHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: no route to host)",name,tlsPort)+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(tlsPort));
             }
             catch (UnknownHostException exception)
             {
-              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,tlsPort,exception.getMessage())+")";
+              if (connectErrorMessage == null) connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(tlsPort));
             }
             catch (IOException exception)
             {
@@ -2108,15 +2108,15 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
       catch (ConnectException exception)
       {
-        connectErrorMessage = BARControl.tr("connection to host '{0}:{1}' refused",name,port);
+        connectErrorMessage = BARControl.tr("connection to host ''{0}:{1}'' refused",name,Integer.toString(port));
       }
       catch (NoRouteToHostException exception)
       {
-        connectErrorMessage = BARControl.tr("host '{0}:{1}' unreachable (error: no route to host)",name,port)+")";
+        connectErrorMessage = BARControl.tr("host ''{0}:{1}'' unreachable (error: no route to host)",name,Integer.toString(port));
       }
       catch (UnknownHostException exception)
       {
-        connectErrorMessage = BARControl.tr("unknown host '{0}:{1}' (error: {2})",name,port,exception.getMessage())+")";
+        connectErrorMessage = BARControl.tr("unknown host ''{0}:{1}''",name,Integer.toString(port));
       }
       catch (Exception exception)
       {
@@ -2274,7 +2274,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         System.err.println("INTERNAL ERROR: "+throwable.getMessage());
         BARControl.printStackTrace(throwable);
-        System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+        System.exit(ExitCodes.INTERNAL_ERROR);
       }
     }
 
@@ -2306,7 +2306,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
         {
           System.err.println("INTERNAL ERROR: "+throwable.getMessage());
           BARControl.printStackTrace(throwable);
-          System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+          System.exit(ExitCodes.INTERNAL_ERROR);
         }
       }
     }

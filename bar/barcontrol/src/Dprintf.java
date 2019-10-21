@@ -296,7 +296,7 @@ public class Dprintf
   {
     printOutput(3,0,GROUP_ANY,"HALT: "+format,args);
     printStackTrace();
-    System.exit(1);
+    System.exit(ExitCodes.INTERNAL_ERROR);
   }
 
   /** output debug data and halt
@@ -307,7 +307,7 @@ public class Dprintf
   {
     printOutput(3,0,GROUP_ANY,"HALT: %s",object);
     printStackTrace();
-    System.exit(1);
+    System.exit(ExitCodes.INTERNAL_ERROR);
   }
 
   /** output debug data and halt
@@ -318,7 +318,7 @@ public class Dprintf
   {
     printOutput(3,0,GROUP_ANY,"HALT");
     printStackTrace();
-    System.exit(1);
+    System.exit(ExitCodes.INTERNAL_ERROR);
   }
 }
 

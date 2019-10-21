@@ -57,7 +57,7 @@ abstract class BackgroundRunnable implements Runnable
     {
       System.err.println("  "+stackTrace[z]);
     }
-    System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+    System.exit(ExitCodes.INTERNAL_ERROR);
   }
 
   /** call to abort execution
@@ -144,14 +144,14 @@ class BackgroundTask implements Runnable
       BARControl.printError("Unhandled background exception: %s",exception.getCause());
       System.err.println("Stack trace:");
       BARControl.printStackTrace(exception);
-      System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+      System.exit(ExitCodes.INTERNAL_ERROR);
     }
     catch (SWTException exception)
     {
       BARControl.printError("Unhandled SWT background exception: %s",exception);
       System.err.println("Stack trace:");
       BARControl.printStackTrace(exception);
-      System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+      System.exit(ExitCodes.INTERNAL_ERROR);
     }
     catch (Exception exception)
     {
