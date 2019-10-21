@@ -10042,6 +10042,8 @@ widgetArchivePartSize.setListVisible(true);
             event.detail &= ~SWT.BACKGROUND;
           }
         });
+/*
+TODO: delete entity
         widgetPersistenceTree.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -10056,12 +10058,11 @@ widgetArchivePartSize.setListVisible(true);
             TreeItem treeItems[] = tree.getSelection();
             if (treeItems.length >= 0)
             {
-//TODO
-//              PersistenceData persistenceData = (PersistenceData)treeItems[0].getData();
-//              BARServer.setPersistenceOption(selectedJobData.uuid,persistenceData.uuid,"enabled",persistenceData.enabled);
             }
           }
         });
+
+*/
         widgetPersistenceTree.addMouseListener(new MouseListener()
         {
           @Override
@@ -10501,9 +10502,9 @@ widgetArchivePartSize.setListVisible(true);
   }
 
   /** update job list
-   * @param jobData job data
+   * @param jobData_ job data
    */
-  public void updateJobList(final Collection<JobData> jobData)
+  public void updateJobList(final Collection<JobData> jobData_)
   {
     display.syncExec(new Runnable()
     {
@@ -10512,7 +10513,7 @@ widgetArchivePartSize.setListVisible(true);
       {
         if (!widgetJobList.isDisposed())
         {
-          // get option menu items
+          // get option menu data
           HashSet<JobData> removeJobDataSet = new HashSet<JobData>();
           for (JobData jobData : (JobData[])Widgets.getOptionMenuItems(widgetJobList,JobData.class))
           {
@@ -10522,35 +10523,20 @@ widgetArchivePartSize.setListVisible(true);
           // update job list
           synchronized(widgetJobList)
           {
-            for (JobData jobData_ : jobData)
+            for (JobData jobData : jobData_)
             {
-              int index = Widgets.getOptionMenuIndex(widgetJobList,jobData_);
-              if (index >= 0)
+              if (Widgets.updateInsertOptionMenuItem(widgetJobList,
+                                                     (Object)jobData,
+                                                     jobData.name
+                                                    )
+                 )
               {
-                // update item
-                Widgets.updateOptionMenuItem(widgetJobList,
-                                             index,
-                                             (Object)jobData_,
-                                             jobData_.name
-                                            );
-
-                // keep data
-                removeJobDataSet.remove(jobData_);
-              }
-              else
-              {
-                // insert new item
-                Widgets.insertOptionMenuItem(widgetJobList,
-//TODO
-//                                             Widgets.getListItemIndex(widgetJobList,String.CASE_INSENSITIVE_ORDER,name),
-                                             xxxfindJobListIndex(jobData_.name),
-                                             (Object)jobData_,
-                                             jobData_.name
-                                            );
+                removeJobDataSet.remove(jobData);
               }
             }
           }
 
+          // remove delete option menu items
           for (JobData jobData : removeJobDataSet)
           {
             Widgets.removeOptionMenuItem(widgetJobList,jobData);
@@ -11214,26 +11200,6 @@ throw new Error("NYI");
     clearCompressExcludeList();
     clearScheduleTable();
     clearPersistenceTable();
-  }
-
-  /** find index for insert of job in sorted job list
-   * @param jobs jobs
-   * @param name name to insert
-   * @return index in list
-   */
-  private int xxxfindJobListIndex(String name)
-  {
-    String names[] = widgetJobList.getItems();
-
-    int index = 0;
-    while (   (index < names.length)
-           && (names[index].compareTo(name) < 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
   }
 
   /** update job list
