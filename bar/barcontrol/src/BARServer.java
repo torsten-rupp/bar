@@ -2893,6 +2893,116 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     executeCommand(commandString,debugLevel,(ValueMap)null);
   }
 
+  /** get int value
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param name value name
+   * @return value
+   */
+  public static int getInt(String       commandString,
+                           int          debugLevel,
+                           final String name
+                          )
+    throws BARException, IOException
+  {
+    final int result[] = {0};
+
+    executeCommand(commandString,
+                   debugLevel,
+                   new Command.ResultHandler()
+                   {
+                     public void handle(int i, ValueMap valueMap)
+                     {
+                       result[0] = valueMap.getInt(name);
+                     }
+                   }
+                  );
+    return result[0];
+  }
+
+  /** get long value
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param name value name
+   * @return value
+   */
+  public static long getLong(String       commandString,
+                            int          debugLevel,
+                            final String name
+                           )
+    throws BARException, IOException
+  {
+    final long result[] = {0};
+
+    executeCommand(commandString,
+                   debugLevel,
+                   new Command.ResultHandler()
+                   {
+                     public void handle(int i, ValueMap valueMap)
+                     {
+                       result[0] = valueMap.getLong(name);
+                     }
+                   }
+                  );
+    return result[0];
+  }
+
+  /** get int value
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param name value name
+   * @return value
+   */
+  public static String getString(String       commandString,
+                                 int          debugLevel,
+                                 final String name
+                                )
+    throws BARException, IOException
+  {
+    final String result[] = {""};
+
+    executeCommand(commandString,
+                   debugLevel,
+                   new Command.ResultHandler()
+                   {
+                     public void handle(int i, ValueMap valueMap)
+                     {
+                       result[0] = valueMap.getString(name);
+                     }
+                   }
+                  );
+    return result[0];
+  }
+
+  /** get int value
+   * @param commandString command to send to BAR server
+   * @param debugLevel debug level (0..n)
+   * @param name value name
+   * @return value
+   */
+  public static <T extends Enum<T>> T getEnum(String       commandString,
+                                              int          debugLevel,
+                                              final String name,
+                                              final Class<T>     type,
+                                              T            defaultValue
+                                             )
+    throws BARException, IOException
+  {
+    final Object result[] = {defaultValue};
+
+    executeCommand(commandString,
+                   debugLevel,
+                   new Command.ResultHandler()
+                   {
+                     public void handle(int i, ValueMap valueMap)
+                     {
+                       result[0] = valueMap.getEnum(name,type);
+                     }
+                   }
+                  );
+    return (T)result[0];
+  }
+
   /** send result
    * @param commandId command id
    * @param debugLevel debug level (0..n)
