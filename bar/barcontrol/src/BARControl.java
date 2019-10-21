@@ -3912,7 +3912,7 @@ assert jobData != null;
       widgetOKButton = Widgets.newButton(composite);
       widgetOKButton.setText(BARControl.tr("OK"));
       widgetOKButton.setEnabled(false);
-      Widgets.layout(widgetOKButton,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetOKButton,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
       widgetOKButton.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -3960,7 +3960,7 @@ assert jobData != null;
       widgetRestartButton = Widgets.newButton(composite);
       widgetRestartButton.setText(BARControl.tr("Restart"));
       widgetRestartButton.setEnabled(false);
-      Widgets.layout(widgetRestartButton,0,1,TableLayoutData.NONE,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetRestartButton,0,1,TableLayoutData.NONE,0,0,0,0,100,SWT.DEFAULT);
       widgetRestartButton.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -4009,7 +4009,7 @@ assert jobData != null;
 
       button = Widgets.newButton(composite);
       button.setText(BARControl.tr("Cancel"));
-      Widgets.layout(button,0,2,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,2,TableLayoutData.E,0,0,0,0,100,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -4183,7 +4183,6 @@ assert jobData != null;
 
     // run dialog
     Boolean result = (Boolean)Dialogs.run(dialog);
-Dprintf.dprintf("");
 
     updateMaster();
 

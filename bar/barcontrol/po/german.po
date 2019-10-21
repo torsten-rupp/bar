@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-20 12:06+0200\n"
+"POT-Creation-Date: 2019-10-21 08:12+0200\n"
 "PO-Revision-Date: 2019-10-17 16:44+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -385,7 +385,7 @@ msgstr "Kopplung neue Hauptinstanz"
 
 #: src/BARControl.java:3893
 msgid "Wait for pairing"
-msgstr "Wart auf Kopplung"
+msgstr "Warte auf Kopplung"
 
 #: src/BARControl.java:3913 src/Dialogs.java:3470 src/Dialogs.java:3486
 #: src/Dialogs.java:3683 src/Dialogs.java:3948 src/Dialogs.java:5636
@@ -406,7 +406,7 @@ msgstr ""
 
 #: src/BARControl.java:3961
 msgid "Restart"
-msgstr "Neustart"
+msgstr "Wiederholen"
 
 #: src/BARControl.java:3989 src/BARControl.java:4001
 #, java-format
