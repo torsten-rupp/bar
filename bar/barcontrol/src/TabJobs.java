@@ -1136,9 +1136,6 @@ public class TabJobs
                  ArchiveTypes archiveType,
                  int          interval,
                  String       customText,
-                 int          minKeep,
-                 int          maxKeep,
-                 int          maxAge,
                  boolean      noStorage,
                  boolean      enabled,
                  long         lastExecutedDateTime,
@@ -10043,7 +10040,7 @@ widgetArchivePartSize.setListVisible(true);
           }
         });
 /*
-TODO: delete entity
+TODO: implement delete entity
         widgetPersistenceTree.addSelectionListener(new SelectionListener()
         {
           @Override
@@ -10565,7 +10562,7 @@ TODO: delete entity
         BARServer.getJobOption(jobData.uuid,excludeCommand);
         BARServer.getJobOption(jobData.uuid,archiveName);
         BARServer.getJobOption(jobData.uuid,archiveType);
-  //TODO: use widgetVairable+getJobOption
+//TODO: use widgetVariable+getJobOption
         archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
         archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
@@ -13217,6 +13214,7 @@ throw new Error("NYI");
     sourceHashSet.clear();
     deltaSource.set("");
 
+//TODO: use list
     try
     {
       BARServer.executeCommand(StringParser.format("SOURCE_LIST jobUUID=%s",
@@ -13235,8 +13233,6 @@ throw new Error("NYI");
                                    {
                                      sourceHashSet.add(pattern);
                                      deltaSource.set(pattern);
-//TODO
-abort();
                                    }
                                  }
                                }
@@ -14840,8 +14836,6 @@ throw new Error("NYI");
     Widgets.layout(composite,2,0,TableLayoutData.WE,0,0,2);
     {
       widgetSave = Widgets.newButton(composite,BARControl.tr("Save"));
-//TODO
-//      widgetSave.setEnabled(!storageFileNameEditor.getFileName().isEmpty());
       Widgets.layout(widgetSave,0,0,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
       button = Widgets.newButton(composite,BARControl.tr("Cancel"));
@@ -14861,20 +14855,6 @@ throw new Error("NYI");
     }
 
     // add listeners
-//TODO
-/*
-    storageFileNameEditor.addModifyListener(new ModifyListener()
-    {
-      @Override
-      public void modifyText(ModifyEvent modifyEvent)
-      {
-        Text   widget      = (Text)modifyEvent.widget;
-        String storagePath = widget.getText().trim();
-
-        widgetAdd.setEnabled(!storagePath.isEmpty());
-      }
-    });
-*/
     widgetSave.addSelectionListener(new SelectionListener()
     {
       @Override
@@ -14991,10 +14971,6 @@ throw new Error("NYI");
                                      ArchiveTypes archiveType          = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
                                      int          interval             = valueMap.getInt    ("interval",0                    );
                                      String       customText           = valueMap.getString ("customText"                    );
-//TODO: remove
-                                     int          minKeep              = 0;//valueMap.getInt    ("minKeep"                       );
-                                     int          maxKeep              = 0;//valueMap.getInt    ("maxKeep"                       );
-                                     int          maxAge               = 0;//valueMap.getInt    ("maxAge"                        );
                                      boolean      noStorage            = valueMap.getBoolean("noStorage"                     );
                                      boolean      enabled              = valueMap.getBoolean("enabled"                       );
                                      long         lastExecutedDateTime = valueMap.getLong   ("lastExecutedDateTime"          );
@@ -15027,9 +15003,6 @@ throw new Error("NYI");
                                                                         archiveType,
                                                                         interval,
                                                                         customText,
-                                                                        minKeep,
-                                                                        maxKeep,
-                                                                        maxAge,
                                                                         noStorage,
                                                                         enabled,
                                                                         lastExecutedDateTime,

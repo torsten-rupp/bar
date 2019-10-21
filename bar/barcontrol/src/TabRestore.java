@@ -2731,36 +2731,25 @@ Dprintf.dprintf("");
       }
       try
       {
-        // get storages info
-        ValueMap valueMap = new ValueMap();
-        storageCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGES_INFO entityId=%s jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
-                                                                                (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
-                                                                                (jobUUID != null) ? jobUUID : "*",
-                                                                                storageIndexStateSet.nameList("|"),
-                                                                                storageName
-                                                                               ),
-                                                            1  // debugLevel
-                                                           );
-        BARServer.asyncCommandWait(storageCountCommand);
-        storageCountCommand.getResult(valueMap);
-        storageCount = valueMap.getInt("storageCount");
-//TODO: remove
-        if (storageCount < 0)
-        {
-          if (Settings.debugLevel > 0)
-          {
-            System.err.println("Warning: storageCount %d"+storageCount);
-          }
-          storageCount = 0;
-        }
+        // get storage count
+        storageCount = BARServer.getInt(StringParser.format("INDEX_STORAGES_INFO entityId=%s jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
+                                                            (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
+                                                            (jobUUID != null) ? jobUUID : "*",
+                                                            storageIndexStateSet.nameList("|"),
+                                                            storageName
+                                                           ),
+                                        1,  // debugLevel
+                                        "storageCount"
+                                       );
       }
       catch (Exception exception)
       {
         // ignored
+        storageCount = 0;
       }
       finally
       {
-        // set count
+        // set count, clear update inidicator
         display.syncExec(new Runnable()
         {
           public void run()
@@ -3663,42 +3652,40 @@ Dprintf.dprintf("");
         try
         {
           // get entries info
-          ValueMap valueMap = new ValueMap();
-          totalEntryCountCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
-                                                                                     entryName,
-                                                                                     entryType.toString(),
-                                                                                     newestOnly
-                                                                                    ),
-                                                                 1 // debugLevel
-                                                                );
-          BARServer.asyncCommandWait(totalEntryCountCommand);
-          totalEntryCountCommand.getResult(valueMap);
-          totalEntryCount = valueMap.getLong("totalEntryCount");
-
-          // show warning if too many entries
-          if ((oldTotalEntryCount > 0) && (oldTotalEntryCount <= MAX_SHOWN_ENTRIES) && (totalEntryCount > MAX_SHOWN_ENTRIES))
-          {
-            display.syncExec(new Runnable()
-            {
-              public void run()
-              {
-                Dialogs.warning(shell,
-                                Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
-                                BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
-                                              updateEntryTableThread.getTotalEntryCount(),
-                                              MAX_SHOWN_ENTRIES
-                                             )
-                               );
-              }
-            });
-          }
+          totalEntryCount = BARServer.getLong(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
+                                                                  entryName,
+                                                                  entryType.toString(),
+                                                                  newestOnly
+                                                                 ),
+                                              1, // debugLevel
+                                              "totalEntryCount"
+                                             );
         }
         catch (Exception exception)
         {
           // ignored
+          totalEntryCount = 0;
         }
 
-        // update entries count
+        // show warning if too many entries
+        if ((oldTotalEntryCount > 0) && (oldTotalEntryCount <= MAX_SHOWN_ENTRIES) && (totalEntryCount > MAX_SHOWN_ENTRIES))
+        {
+          display.syncExec(new Runnable()
+          {
+            public void run()
+            {
+              Dialogs.warning(shell,
+                              Dialogs.booleanFieldUpdater(Settings.class,"showEntriesExceededInfo"),
+                              BARControl.tr("There are {0} entries. Only the first {1} are shown in the list.",
+                                            updateEntryTableThread.getTotalEntryCount(),
+                                            MAX_SHOWN_ENTRIES
+                                           )
+                             );
+            }
+          });
+        }
+
+        // set entries count
         if (oldTotalEntryCount != totalEntryCount)
         {
           display.syncExec(new Runnable()
@@ -3720,7 +3707,7 @@ Dprintf.dprintf("");
       }
       finally
       {
-        // set count
+        // clear update indicator
         display.syncExec(new Runnable()
         {
           public void run()
@@ -6994,22 +6981,20 @@ Dprintf.dprintf("");
       case 1:
         // table view
         {
-          final int     storageCount[] = new int[]{0};
-          final boolean doit[]         = new boolean[]{false};
+          final int     storageCount[] = {0};
+          final boolean doit[]         = {false};
 
           if (checked)
           {
             try
             {
-              BARServer.executeCommand(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S",
-                                                           updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                           updateStorageTreeTableThread.getStorageName()
-                                                          ),
-                                       1,  // debugLevel
-                                       valueMap
-                                      );
-
-              storageCount[0] = valueMap.getInt("storageCount");
+              storageCount[0] = BARServer.getInt(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S",
+                                                                     updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                                     updateStorageTreeTableThread.getStorageName()
+                                                                    ),
+                                                 1,  // debugLevel
+                                                 "storageCount"
+                                                );
               if (storageCount[0] > MAX_CONFIRM_ENTRIES)
               {
                 display.syncExec(new Runnable()
@@ -8256,153 +8241,160 @@ Dprintf.dprintf("");
       setStorageList(indexDataHashSet);
 
       // get total number entries
-      long totalEntryCount = 0;
+      long totalEntryCount;
       try
       {
-        ValueMap valueMap = new ValueMap();
-        BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
-                                 1,  // debugLevel
-                                 valueMap
-                                );
-        totalEntryCount = valueMap.getLong("totalEntryCount");
+        totalEntryCount = BARServer.getLong(StringParser.format("STORAGE_LIST_INFO"),
+                                            1,  // debugLevel
+                                            "totalEntryCount"
+                                           );
       }
-      catch (Exception exception)
+      catch (final Exception exception)
       {
-        // ignored
-      }
-
-      if (Dialogs.confirm(shell,
-                          BARControl.tr("Remove {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives} from index with {3} {3,choice,0#entries|1#entry|1<entries}?",
-                                        jobCount,
-                                        entityCount,
-                                        storageCount,
-                                        totalEntryCount
-                                       )
-                         )
-        )
-      {
-        final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
-        busyDialog.setMaximum(indexDataHashSet.size());
-
-        Background.run(new BackgroundRunnable(busyDialog,indexDataHashSet)
+        display.syncExec(new Runnable()
         {
-          public void run(final BusyDialog busyDialog, HashSet<IndexData> indexDataHashSet)
+          @Override
+          public void run()
           {
-//            HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
-            try
-            {
-              long n = 0;
-              for (IndexData indexData : indexDataHashSet)
-              {
-                // get index info
-                final String info = indexData.getInfo();
-
-                // update busy dialog
-                busyDialog.updateText(0,"%s",info);
-
-                // remove entry
-                try
-                {
-                  if      (indexData instanceof UUIDIndexData)
-                  {
-                    BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* uuidId=%lld",
-                                                                 indexData.id
-                                                                ),
-                                             0  // debugLevel
-                                            );
-                  }
-                  else if (indexData instanceof EntityIndexData)
-                  {
-                    BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%lld",
-                                                                 indexData.id
-                                                                ),
-                                              0  // debugLevel
-                                             );
-                  }
-                  else if (indexData instanceof StorageIndexData)
-                  {
-                    BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%lld",
-                                                                 indexData.id
-                                                                ),
-                                             0  // debugLevel
-                                            );
-                  }
-
-                  Widgets.removeTreeItem(widgetStorageTree,indexData);
-                  Widgets.removeTableItem(widgetStorageTable,indexData);
-                }
-                catch (final Exception exception)
-                {
-                  display.syncExec(new Runnable()
-                  {
-                    @Override
-                    public void run()
-                    {
-                      Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
-                    }
-                  });
-                }
-
-                // update progress bar
-                n++;
-                busyDialog.updateProgressBar(n);
-
-                // check for abort
-                if (busyDialog.isAborted()) break;
-              }
-
-              // close busy dialog
-              display.syncExec(new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  busyDialog.close();
-                }
-              });
-
-              updateStorageTreeTableThread.triggerUpdate();
-            }
-//TODO: pass error to caller?
-            catch (CommunicationError error)
-            {
-              final String errorMessage = error.getMessage();
-              display.syncExec(new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",errorMessage));
-                 }
-              });
-            }
-            catch (ConnectionError error)
-            {
-              final String errorMessage = error.getMessage();
-              display.syncExec(new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
-                 }
-              });
-            }
-            catch (Throwable throwable)
-            {
-              // internal error
-              BARServer.disconnect();
-              BARControl.printInternalError(throwable);
-              BARControl.showFatalError(throwable);
-              System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
-            }
-
-            // update entry list
-            updateEntryTableThread.triggerUpdate();
+            Dialogs.error(shell,BARControl.tr("Cannot get total entries from database!\n\n(error: {0})",exception.getMessage()));
           }
         });
+        return;
+      }
+
+      if (totalEntryCount > 0)
+      {
+        if (Dialogs.confirm(shell,
+                            BARControl.tr("Remove {0} {0,choice,0#jobs|1#job|1<jobs}/{1} {1,choice,0#entities|1#entity|1<entities}/{2} {2,choice,0#archives|1#archive|1<archives} from index with {3} {3,choice,0#entries|1#entry|1<entries}?",
+                                          jobCount,
+                                          entityCount,
+                                          storageCount,
+                                          totalEntryCount
+                                         )
+                           )
+          )
+        {
+          final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+          busyDialog.setMaximum(indexDataHashSet.size());
+
+          Background.run(new BackgroundRunnable(busyDialog,indexDataHashSet)
+          {
+            public void run(final BusyDialog busyDialog, HashSet<IndexData> indexDataHashSet)
+            {
+  //            HashSet<IndexData> indexDataHashSet = (HashSet<IndexData>)((Object[])userData)[0];
+              try
+              {
+                long n = 0;
+                for (IndexData indexData : indexDataHashSet)
+                {
+                  // get index info
+                  final String info = indexData.getInfo();
+
+                  // update busy dialog
+                  busyDialog.updateText(0,"%s",info);
+
+                  // remove entry
+                  try
+                  {
+                    if      (indexData instanceof UUIDIndexData)
+                    {
+                      BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* uuidId=%lld",
+                                                                   indexData.id
+                                                                  ),
+                                               0  // debugLevel
+                                              );
+                    }
+                    else if (indexData instanceof EntityIndexData)
+                    {
+                      BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* entityId=%lld",
+                                                                   indexData.id
+                                                                  ),
+                                                0  // debugLevel
+                                               );
+                    }
+                    else if (indexData instanceof StorageIndexData)
+                    {
+                      BARServer.executeCommand(StringParser.format("INDEX_REMOVE state=* storageId=%lld",
+                                                                   indexData.id
+                                                                  ),
+                                               0  // debugLevel
+                                              );
+                    }
+
+                    Widgets.removeTreeItem(widgetStorageTree,indexData);
+                    Widgets.removeTableItem(widgetStorageTable,indexData);
+                  }
+                  catch (final Exception exception)
+                  {
+                    display.syncExec(new Runnable()
+                    {
+                      @Override
+                      public void run()
+                      {
+                        Dialogs.error(shell,BARControl.tr("Cannot remove index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+                      }
+                    });
+                  }
+
+                  // update progress bar
+                  n++;
+                  busyDialog.updateProgressBar(n);
+
+                  // check for abort
+                  if (busyDialog.isAborted()) break;
+                }
+
+                // close busy dialog
+                display.syncExec(new Runnable()
+                {
+                  @Override
+                  public void run()
+                  {
+                    busyDialog.close();
+                  }
+                });
+
+                updateStorageTreeTableThread.triggerUpdate();
+              }
+  //TODO: pass error to caller?
+              catch (final CommunicationError error)
+              {
+                display.syncExec(new Runnable()
+                {
+                  @Override
+                  public void run()
+                  {
+                    busyDialog.close();
+                    Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",error.getMessage()));
+                   }
+                });
+              }
+              catch (final ConnectionError error)
+              {
+                display.syncExec(new Runnable()
+                {
+                  @Override
+                  public void run()
+                  {
+                    busyDialog.close();
+                    Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",error.getMessage()));
+                   }
+                });
+              }
+              catch (Throwable throwable)
+              {
+                // internal error
+                BARServer.disconnect();
+                BARControl.printInternalError(throwable);
+                BARControl.showFatalError(throwable);
+                System.exit(BARControl.EXITCODE_INTERNAL_ERROR);
+              }
+
+              // update entry list
+              updateEntryTableThread.triggerUpdate();
+            }
+          });
+        }
       }
     }
   }
@@ -8417,12 +8409,10 @@ Dprintf.dprintf("");
       long errorTotalEntryCount;
       try
       {
-        ValueMap valueMap = new ValueMap();
-        BARServer.executeCommand("INDEX_STORAGES_INFO entityId=* indexStateSet=ERROR indexModeSet=* name=*",
-                                 1,  // debugLevel
-                                 valueMap
-                                );
-        errorTotalEntryCount = valueMap.getLong("totalEntryCount");
+        errorTotalEntryCount = BARServer.getLong("INDEX_STORAGES_INFO entityId=* indexStateSet=ERROR indexModeSet=* name=*",
+                                                 1,  // debugLevel
+                                                 "totalEntryCount"
+                                                );
       }
       catch (final Exception exception)
       {
@@ -8519,29 +8509,27 @@ Dprintf.dprintf("");
                 updateStorageTreeTableThread.triggerUpdate();
               }
 //TODO: pass to caller?
-              catch (CommunicationError error)
+              catch (final CommunicationError error)
               {
-                final String errorMessage = error.getMessage();
                 display.syncExec(new Runnable()
                 {
                   @Override
                   public void run()
                   {
                     busyDialog.close();
-                    Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",errorMessage));
+                    Dialogs.error(shell,BARControl.tr("Communication error while removing database indizes\n\n(error: {0})",error.getMessage()));
                    }
                 });
               }
-              catch (ConnectionError error)
+              catch (final ConnectionError error)
               {
-                final String errorMessage = error.getMessage();
                 display.syncExec(new Runnable()
                 {
                   @Override
                   public void run()
                   {
                     busyDialog.close();
-                    Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
+                    Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",error.getMessage()));
                    }
                 });
               }
@@ -8782,29 +8770,27 @@ Dprintf.dprintf("");
               tabJobs.updateJobData();
             }
 //TODO: pass to caller?
-            catch (CommunicationError error)
+            catch (final CommunicationError error)
             {
-              final String errorMessage = error.getMessage();
               display.syncExec(new Runnable()
               {
                 @Override
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Communication error while deleting storage\n\n(error: {0})",errorMessage));
+                  Dialogs.error(shell,BARControl.tr("Communication error while deleting storage\n\n(error: {0})",error.getMessage()));
                  }
               });
             }
-            catch (ConnectionError error)
+            catch (final ConnectionError error)
             {
-              final String errorMessage = error.getMessage();
               display.syncExec(new Runnable()
               {
                 @Override
                 public void run()
                 {
                   busyDialog.close();
-                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",errorMessage));
+                  Dialogs.error(shell,BARControl.tr("Connection error while removing database indizes\n\n(error: {0})",error.getMessage()));
                  }
               });
             }
@@ -8946,17 +8932,14 @@ Dprintf.dprintf("");
     {
       try
       {
-        ValueMap valueMap = new ValueMap();
-        BARServer.executeCommand(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
-                                                     updateEntryTableThread.getEntryName(),
-                                                     updateEntryTableThread.getEntryType().toString(),
-                                                     updateEntryTableThread.getNewestOnly()
-                                                    ),
-                                 0,  // debugLevel
-                                 valueMap
-                                );
-
-        totalEntryCount[0] = valueMap.getInt("totalEntryCount");
+        totalEntryCount[0] = BARServer.getInt(StringParser.format("INDEX_ENTRIES_INFO name=%'S indexType=%s newestOnly=%y",
+                                                                  updateEntryTableThread.getEntryName(),
+                                                                  updateEntryTableThread.getEntryType().toString(),
+                                                                  updateEntryTableThread.getNewestOnly()
+                                                                 ),
+                                              0,  // debugLevel
+                                              "totalEntryCount"
+                                             );
         if (totalEntryCount[0] > MAX_CONFIRM_ENTRIES)
         {
           display.syncExec(new Runnable()
@@ -9841,29 +9824,27 @@ Dprintf.dprintf("");
             return;
           }
 //TODO: pass to caller?
-          catch (CommunicationError error)
+          catch (final CommunicationError error)
           {
-            final String errorMessage = error.getMessage();
             display.syncExec(new Runnable()
             {
               @Override
               public void run()
               {
                 busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Error while restoring:\n\n{0}",errorMessage));
+                Dialogs.error(shell,BARControl.tr("Error while restoring:\n\n{0}",error.getMessage()));
                }
             });
           }
-          catch (ConnectionError error)
+          catch (final ConnectionError error)
           {
-            final String errorMessage = error.getMessage();
             display.syncExec(new Runnable()
             {
               @Override
               public void run()
               {
                 busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Connection error while restoring\n\n(error: {0})",errorMessage));
+                Dialogs.error(shell,BARControl.tr("Connection error while restoring\n\n(error: {0})",error.getMessage()));
                }
             });
           }

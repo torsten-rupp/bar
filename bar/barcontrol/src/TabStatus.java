@@ -671,17 +671,16 @@ public class TabStatus
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     Widgets.setTableColumnWidth(widgetJobTable,Settings.jobListColumns.width);
     widgetJobTable.setColumnOrder(Settings.jobListColumnOrder.getMap(COLUMN_NAMES));
-    for (TableColumn _tableColumn : widgetJobTable.getColumns())
+    for (TableColumn tableColumn_ : widgetJobTable.getColumns())
     {
-      _tableColumn.setMoveable(true);
-      _tableColumn.addListener(SWT.Move,jobListColumnMoveListener);
-      _tableColumn.addListener(SWT.Resize,jobListColumnResizeListener);
+      tableColumn_.setMoveable(true);
+      tableColumn_.addListener(SWT.Move,jobListColumnMoveListener);
+      tableColumn_.addListener(SWT.Resize,jobListColumnResizeListener);
     }
 
     widgetJobTableHeaderMenu = Widgets.newPopupMenu(shell);
     {
       menuItem = Widgets.addMenuItemCheckbox(widgetJobTableHeaderMenu,BARControl.tr("Name"));
-//TODO: true: read column width
       menuItem.setSelection(true);
       menuItem.addSelectionListener(new SelectionListener()
       {
@@ -2212,8 +2211,6 @@ public class TabStatus
       try
       {
         // get schedule list
-//TODO
-Dprintf.dprintf("TODO: remove");
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      selectedJobData.uuid
                                                     ),
