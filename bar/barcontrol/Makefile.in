@@ -48,7 +48,7 @@ JAVA_FLAGS               = @JAVA_FLAGS@ -Xmx128m -enableassertions
 # -Djavax.net.debug=all
 
 JAVAC                    = @JAVAC@
-JAVAC_FLAGS              = @JAVAC_FLAGS@ -source 1.6
+JAVAC_FLAGS              = @JAVAC_FLAGS@ -source 1.6 -target 1.6
 # -Xlint
 
 JAR                      = @JAR@
@@ -170,6 +170,7 @@ SOURCES        = src/BARControl.java \
                  src/BusyDialog.java \
                  src/Dialogs.java \
                  src/Dprintf.java \
+                 src/ExitCodes.java \
                  src/OptionEnumeration.java \
                  src/Option.java \
                  src/Options.java \
@@ -208,7 +209,7 @@ INTERMEDIATE   = src/BARException.java \
                  barcontrol-windows_64.jar \
 
 TARGETS        = barcontrol \
-                 $(if $(LAUNCH4J),barcontrol@EXEEXT@,barcontrol@SHELLEXT@) \
+                 $(if $(LAUNCH4J),barcontrol@EXEEXT@,barcontrol.cmd) \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -859,7 +860,7 @@ ifneq ($(DIRECTORY),)
                    jars/windows/*.jar \
                    $(DIRECTORY)/barcontrol/jars/windows
 else
-	$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
+	@$(ECHO) "Please call 'make dist' from top-level directory to create a distribution."
 endif
 
 # end of file
