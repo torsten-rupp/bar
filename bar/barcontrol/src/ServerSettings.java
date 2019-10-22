@@ -1391,13 +1391,13 @@ public class ServerSettings
         row++;
       }
 
-      subComposite = Widgets.addTab(subTabFolder,BARControl.tr("Device"));
+      subComposite = Widgets.addTab(subTabFolder,BARControl.trc("Device (tab)","Device"));
       subComposite.setLayout(new TableLayout(0.0,new double[]{0.0,1.0},2));
       Widgets.layout(subComposite,0,0,TableLayoutData.NSWE,0,0,4);
       {
         row = 0;
 
-        label = Widgets.newLabel(subComposite,BARControl.tr("Device")+":");
+        label = Widgets.newLabel(subComposite,BARControl.trc("Device (content)","Device")+":");
         Widgets.layout(label,row,0,TableLayoutData.W);
         subSubComposite = BARWidgets.newFile(subComposite,
                                              BARControl.tr("Device name."),
