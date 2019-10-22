@@ -54,7 +54,7 @@ JAVAC_FLAGS              = @JAVAC_FLAGS@ -source 1.6 -target 1.6
 JAR                      = @JAR@
 
 XGETTEXT                 = @XGETTEXT@
-XGETTEXT_FLAGS           = -L java -k -ktr
+XGETTEXT_FLAGS           = -L java -k -ktr -kmarktr -ktrn:1,2 -ktrc:1c,2 -ktrnc:1c,2,3
 MSGMERGE                 = @MSGMERGE@
 MSGFMT                   = @MSGFMT@
 
