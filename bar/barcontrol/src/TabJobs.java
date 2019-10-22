@@ -14181,10 +14181,10 @@ throw new Error("NYI");
       Widgets.layout(composite,1,0,TableLayoutData.NSWE);
       {
         // column 1
-        addDragAndDrop(composite,"-","'-'",                                            0, 0);
-        addDragAndDrop(composite,"_","'_'",                                            1, 0);
-        addDragAndDrop(composite,BARServer.fileSeparator,BARServer.fileSeparator,      2, 0);
-        addDragAndDrop(composite,".bar","'.bar'",                                      3, 0);
+        addDragAndDrop(composite,"-","'-'",                                                                             0,0);
+        addDragAndDrop(composite,"_","'_'",                                                                             1,0);
+        addDragAndDrop(composite,BARServer.fileSeparator,BARServer.fileSeparator,                                       2,0);
+        addDragAndDrop(composite,".bar","'.bar'",                                                                       3,0);
         subComposite = Widgets.newComposite(composite,SWT.NONE);
         subComposite.setToolTipText(BARControl.tr("Use drag&drop to add name parts."));
         subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
@@ -14225,52 +14225,52 @@ throw new Error("NYI");
             }
           });
         }
-        addDragAndDrop(composite,"Text",subComposite,widgetText,                                   4, 0);
+        addDragAndDrop(composite,"Text",subComposite,widgetText,                                                        4,0);
 
-        addDragAndDrop(composite,"#","part number 1 digit",                                        6, 0);
-        addDragAndDrop(composite,"##","part number 2 digits",                                      7, 0);
-        addDragAndDrop(composite,"###","part number 3 digits",                                     8, 0);
-        addDragAndDrop(composite,"####","part number 4 digits",                                    9, 0);
+        addDragAndDrop(composite,"#",       BARControl.tr("part number 1 digit"),                                       6,0);
+        addDragAndDrop(composite,"##",      BARControl.tr("part number 2 digits"),                                      7,0);
+        addDragAndDrop(composite,"###",     BARControl.tr("part number 3 digits"),                                      8,0);
+        addDragAndDrop(composite,"####",    BARControl.tr("part number 4 digits"),                                      9,0);
 
-        addDragAndDrop(composite,"%type","archive type: full,incremental,differential,continuous",11,0);
-        addDragAndDrop(composite,"%T","archive type short: F, I, D, C",                           12,0);
-        addDragAndDrop(composite,"%uuid","universally unique identifier",                         13,0);
-        addDragAndDrop(composite,"%text","schedule custom text",                                  14,0);
+        addDragAndDrop(composite,"%type",   BARControl.tr("archive type: full\n,incremental\n,differential\n,continuous"),   11,0);
+        addDragAndDrop(composite,"%T",      BARControl.tr("archive type short: F, I, D, C"),                           12,0);
+        addDragAndDrop(composite,"%uuid",   BARControl.tr("universally unique identifier"),                            13,0);
+        addDragAndDrop(composite,"%text",   BARControl.tr("schedule custom text"),                                     14,0);
 
         // column 2
-        addDragAndDrop(composite,"%d","day 01..31",                                                0,1);
-        addDragAndDrop(composite,"%j","day of year 001..366",                                      1,1);
-        addDragAndDrop(composite,"%m","month 01..12",                                              2,1);
-        addDragAndDrop(composite,"%b","month name",                                                3,1);
-        addDragAndDrop(composite,"%B","full month name",                                           4,1);
-        addDragAndDrop(composite,"%H","hour 00..23",                                               5,1);
-        addDragAndDrop(composite,"%I","hour 00..12",                                               6,1);
-        addDragAndDrop(composite,"%M","minute 00..59",                                             7,1);
-        addDragAndDrop(composite,"%S","seconds 00..59",                                            8,1);
-        addDragAndDrop(composite,"%p","'AM' or 'PM'",                                              9,1);
-        addDragAndDrop(composite,"%P","'am' or 'pm'",                                             10,1);
-        addDragAndDrop(composite,"%a","week day name",                                            11,1);
-        addDragAndDrop(composite,"%A","full week day name",                                       12,1);
-        addDragAndDrop(composite,"%u","day of week 1..7",                                         13,1);
-        addDragAndDrop(composite,"%w","day of week 0..6",                                         14,1);
-        addDragAndDrop(composite,"%U","week number 00..53",                                       15,1);
-        addDragAndDrop(composite,"%U2","week number 1 or 2",                                      16,1);
-        addDragAndDrop(composite,"%U4","week number 1, 2, 3, 4",                                  17,1);
-        addDragAndDrop(composite,"%W","week number 00..53",                                       18,1);
-        addDragAndDrop(composite,"%W2","week number 1 or 2",                                      19,1);
-        addDragAndDrop(composite,"%W4","week number 1, 2, 3, 4",                                  20,1);
-        addDragAndDrop(composite,"%C","century two digits",                                       21,1);
-        addDragAndDrop(composite,"%y","year two digits",                                          22,1);
-        addDragAndDrop(composite,"%Y","year four digits",                                         23,1);
-        addDragAndDrop(composite,"%s","seconds since 1.1.1970 00:00",                             24,1);
-        addDragAndDrop(composite,"%Z","time-zone abbreviation",                                   25,1);
+        addDragAndDrop(composite,"%d",      BARControl.tr("day 01..31"),                                                0,1);
+        addDragAndDrop(composite,"%j",      BARControl.tr("day of year 001..366"),                                      1,1);
+        addDragAndDrop(composite,"%m",      BARControl.tr("month 01..12"),                                              2,1);
+        addDragAndDrop(composite,"%b",      BARControl.tr("month name"),                                                3,1);
+        addDragAndDrop(composite,"%B",      BARControl.tr("full month name"),                                           4,1);
+        addDragAndDrop(composite,"%H",      BARControl.tr("hour 00..23"),                                               5,1);
+        addDragAndDrop(composite,"%I",      BARControl.tr("hour 00..12"),                                               6,1);
+        addDragAndDrop(composite,"%M",      BARControl.tr("minute 00..59"),                                             7,1);
+        addDragAndDrop(composite,"%S",      BARControl.tr("seconds 00..59"),                                            8,1);
+        addDragAndDrop(composite,"%p",      BARControl.tr("'AM' or 'PM'"),                                              9,1);
+        addDragAndDrop(composite,"%P",      BARControl.tr("'am' or 'pm'"),                                             10,1);
+        addDragAndDrop(composite,"%a",      BARControl.tr("week day name"),                                            11,1);
+        addDragAndDrop(composite,"%A",      BARControl.tr("full week day name"),                                       12,1);
+        addDragAndDrop(composite,"%u",      BARControl.tr("day of week 1..7"),                                         13,1);
+        addDragAndDrop(composite,"%w",      BARControl.tr("day of week 0..6"),                                         14,1);
+        addDragAndDrop(composite,"%U",      BARControl.tr("week number 00..53"),                                       15,1);
+        addDragAndDrop(composite,"%U2",     BARControl.tr("week number 1 or 2"),                                       16,1);
+        addDragAndDrop(composite,"%U4",     BARControl.tr("week number 1, 2, 3, 4"),                                   17,1);
+        addDragAndDrop(composite,"%W",      BARControl.tr("week number 00..53"),                                       18,1);
+        addDragAndDrop(composite,"%W2",     BARControl.tr("week number 1 or 2"),                                       19,1);
+        addDragAndDrop(composite,"%W4",     BARControl.tr("week number 1, 2, 3, 4"),                                   20,1);
+        addDragAndDrop(composite,"%C",      BARControl.tr("century two digits"),                                       21,1);
+        addDragAndDrop(composite,"%y",      BARControl.tr("year two digits"),                                          22,1);
+        addDragAndDrop(composite,"%Y",      BARControl.tr("year four digits"),                                         23,1);
+        addDragAndDrop(composite,"%s",      BARControl.tr("seconds since 1.1.1970 00:00"),                             24,1);
+        addDragAndDrop(composite,"%Z",      BARControl.tr("time-zone abbreviation"),                                   25,1);
 
         // column 3
-        addDragAndDrop(composite,"%%","%",                                                         0,2);
-        addDragAndDrop(composite,"%#","#",                                                         1,2);
+        addDragAndDrop(composite,"%%",      "%",                                                                        0,2);
+        addDragAndDrop(composite,"%#",      "#",                                                                        1,2);
 
-        addDragAndDrop(composite,"%Y-%m-%d","Date YYYY-MM-DD",                                     3,2);
-        addDragAndDrop(composite,"%H:%M:%S","Time hh:mm:ss",                                       4,2);
+        addDragAndDrop(composite,"%Y-%m-%d",BARControl.tr("Date YYYY-MM-DD"),                                           3,2);
+        addDragAndDrop(composite,"%H:%M:%S",BARControl.tr("Time hh:mm:ss"),                                             4,2);
       }
 
       // set name
