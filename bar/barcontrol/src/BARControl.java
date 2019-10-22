@@ -1762,13 +1762,26 @@ public class BARControl
   }
 
   /** get internationalized text
-   * @param text text
-   * @param arguments text
+   * @param text text to translate
+   * @param arguments for text
    * @return internationalized text
    */
   static String tr(String text, Object... arguments)
   {
+    // see https://github.com/jgettext/gettext-commons/wiki/Tutorial
     return i18n.tr(text,arguments);
+  }
+
+  /** get internationalized text with context
+   * @param context context string
+   * @param text text to translate
+   * @param arguments text
+   * @return internationalized text
+   */
+  static String trc(String context, String text)
+  {
+    // see https://github.com/jgettext/gettext-commons/wiki/Tutorial
+    return i18n.trc(context,text);
   }
 
   /** stack trace to string list
@@ -4210,7 +4223,11 @@ if (false) {
     Thread.currentThread().setName("BARControl");
 
     // init localization
-    i18n = I18nFactory.getI18n(getClass(),"app.i18n.Messages",Locale.getDefault(),I18nFactory.FALLBACK);
+    i18n = I18nFactory.getI18n(getClass(),
+                               "app.i18n.Messages",
+                               Locale.getDefault(),
+                               I18nFactory.FALLBACK
+                              );
     Dialogs.init(i18n);
     BusyDialog.init(i18n);
 
