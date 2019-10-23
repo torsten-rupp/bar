@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 17:03+0200\n"
+"POT-Creation-Date: 2019-10-23 10:04+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Torsten Rupp <torsten.rupp@gmx.net>\n"
 "Language-Team: \n"
@@ -2429,18 +2429,6 @@ msgstr ""
 #: src/ServerSettings.java:1384
 msgid "BD image write command."
 msgstr ""
-
-#: src/ServerSettings.java:1394
-#, fuzzy
-msgctxt "Device (tab)"
-msgid "Device"
-msgstr "デバイス"
-
-#: src/ServerSettings.java:1400
-#, fuzzy
-msgctxt "Device (content)"
-msgid "Device"
-msgstr "デバイス"
 
 #: src/ServerSettings.java:1403 src/TabJobs.java:8950
 msgid "Device name."
@@ -6074,6 +6062,16 @@ msgstr "現存エントリの上書き"
 #, fuzzy
 msgid "differental"
 msgstr "差分"
+
+#, fuzzy
+#~ msgctxt "Device (tab)"
+#~ msgid "Device"
+#~ msgstr "デバイス"
+
+#, fuzzy
+#~ msgctxt "Device (content)"
+#~ msgid "Device"
+#~ msgstr "デバイス"
 
 #, fuzzy
 #~ msgid "Device (tab)"

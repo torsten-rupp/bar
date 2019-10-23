@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 17:03+0200\n"
+"POT-Creation-Date: 2019-10-23 10:04+0200\n"
 "PO-Revision-Date: 2019-10-22 16:50+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -2195,16 +2195,6 @@ msgstr "Befehl zum Schreiben einer BD."
 #: src/ServerSettings.java:1384
 msgid "BD image write command."
 msgstr "Befehl zum Schreiben eines BD-Abbilds."
-
-#: src/ServerSettings.java:1394
-msgctxt "Device (tab)"
-msgid "Device"
-msgstr "Geräte"
-
-#: src/ServerSettings.java:1400
-msgctxt "Device (content)"
-msgid "Device"
-msgstr "Gerätename"
 
 #: src/ServerSettings.java:1403 src/TabJobs.java:8950
 msgid "Device name."
@@ -5759,6 +5749,14 @@ msgstr "Durchschnittliche Ausführungszeit"
 #: src/TabStatus.java:3120
 msgid "differental"
 msgstr "differentiell"
+
+#~ msgctxt "Device (tab)"
+#~ msgid "Device"
+#~ msgstr "Geräte"
+
+#~ msgctxt "Device (content)"
+#~ msgid "Device"
+#~ msgstr "Gerätename"
 
 #~ msgid "Device (tab)"
 #~ msgstr "Gerät"

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-10-22 17:03+0200\n"
+"POT-Creation-Date: 2019-10-23 10:04+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -2135,16 +2135,6 @@ msgstr ""
 
 #: src/ServerSettings.java:1384
 msgid "BD image write command."
-msgstr ""
-
-#: src/ServerSettings.java:1394
-msgctxt "Device (tab)"
-msgid "Device"
-msgstr ""
-
-#: src/ServerSettings.java:1400
-msgctxt "Device (content)"
-msgid "Device"
 msgstr ""
 
 #: src/ServerSettings.java:1403 src/TabJobs.java:8950
