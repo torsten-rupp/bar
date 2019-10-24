@@ -2585,7 +2585,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
       }
       if (handle == -1)
       {
-        return ERRORX_(OPEN_DIRECTORY,errno,"%E",errno);
+        return ERRORX_(OPEN_DIRECTORY,errno,"%s: %E",s,errno);
       }
 
       // create directory handle
@@ -2595,7 +2595,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
       directoryListHandle->handle = open(s,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
       if (directoryListHandle->handle == -1)
       {
-        return ERRORX_(OPEN_DIRECTORY,errno,"%E",errno);
+        return ERRORX_(OPEN_DIRECTORY,errno,"%s: %E",s,errno);
       }
 
       // store atime
