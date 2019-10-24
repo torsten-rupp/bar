@@ -1824,6 +1824,7 @@ LOCAL Errors purgeFromIndex(IndexHandle *indexHandle,
 //Database_debugEnable(&indexHandle->databaseHandle,FALSE);
     if (error == ERROR_NONE)
     {
+fprintf(stderr,"%s, %d:   deleted %u \n",__FILE__,__LINE__,changedRowCount);
       if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
     }
 //fprintf(stderr,"%s, %d: tableName=%s indexUseCount=%d changedRowCount=%d doneFlag=%d\n",__FILE__,__LINE__,tableName,indexUseCount,changedRowCount,(doneFlag != NULL) ? *doneFlag : -1);
@@ -7276,218 +7277,231 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     return indexHandle->upgradeError;
   }
 
+fprintf(stderr,"%s, %d: %lld\n",__FILE__,__LINE__,storageIndexId);
   INDEX_DOX(error,
             indexHandle,
   {
+ulong deletedCounter;
     do
     {
       doneFlag = TRUE;
 
+fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
       error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
       if (error == ERROR_NONE)
       {
-        if (error == ERROR_NONE)
+        deletedCounter = 0;
+
+fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "fileEntries",
                                  "storageId=%lld",
                                  Index_getDatabaseId(storageIndexId)
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entriesNewest",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_FILE
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entries",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_FILE
                                 );
         }
+fprintf(stderr,"%s, %d: 5 file done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "imageEntries",
                                  "storageId=%lld",
                                  Index_getDatabaseId(storageIndexId)
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entriesNewest",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_IMAGE
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entries",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_IMAGE
                                 );
         }
+fprintf(stderr,"%s, %d: 6 image done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "directoryEntries",
                                  "storageId=%lld",
                                  Index_getDatabaseId(storageIndexId)
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entriesNewest",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_DIRECTORY
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entries",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_DIRECTORY
                                 );
         }
+fprintf(stderr,"%s, %d: 7 directory done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "linkEntries",
                                  "storageId=%lld",
                                  Index_getDatabaseId(storageIndexId)
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entriesNewest",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_LINK
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entries",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_LINK
                                 );
         }
+fprintf(stderr,"%s, %d: 8 link done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "hardlinkEntries",
                                  "storageId=%lld",
                                  Index_getDatabaseId(storageIndexId)
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entriesNewest",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_HARDLINK
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entries",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_HARDLINK
                                 );
         }
+fprintf(stderr,"%s, %d: 9 hardlink done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "specialEntries",
                                  "storageId=%lld",
                                  Index_getDatabaseId(storageIndexId)
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entriesNewest",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_SPECIAL
                                 );
         }
-        if (error == ERROR_NONE)
+        if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
                                  &doneFlag,
-                                 NULL,  // deletedCounter
+                                 &deletedCounter,
                                  "entries",
                                  "storageId=%lld AND type=%d",
                                  Index_getDatabaseId(storageIndexId),
                                  INDEX_TYPE_SPECIAL
                                 );
         }
+fprintf(stderr,"%s, %d: 10 special done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
         error = Index_endTransaction(indexHandle);
       }
     }
     while ((error == ERROR_NONE) && !doneFlag);
+fprintf(stderr,"%s, %d: 11\n",__FILE__,__LINE__);
 
     return error;
   });
