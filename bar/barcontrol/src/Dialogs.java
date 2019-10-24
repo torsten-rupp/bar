@@ -4097,6 +4097,9 @@ class Dialogs
     */
     class Updater
     {
+      private Cursor            CURSOR_WAIT;
+
+      private Shell             dialog;
       private FileComparator<T> fileComparator;
       private ListDirectory<T>  listDirectory;
       private SimpleDateFormat  simpleDateFormat;
@@ -4108,8 +4111,11 @@ class Dialogs
        * @param listDirectory list directory
        * @param fileComparator file comparator
        */
-      public Updater(FileComparator<T> fileComparator, ListDirectory<T> listDirectory, boolean showFiles)
+      public Updater(Shell dialog, FileComparator<T> fileComparator, ListDirectory<T> listDirectory, boolean showFiles)
       {
+        this.CURSOR_WAIT       = new Cursor(dialog.getDisplay(),SWT.CURSOR_WAIT);
+
+        this.dialog            = dialog;
         this.fileComparator    = fileComparator;
         this.listDirectory     = listDirectory;
         this.simpleDateFormat  = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -4140,56 +4146,66 @@ class Dialogs
       {
         if (!table.isDisposed())
         {
-          table.removeAll();
-
-          if (listDirectory.open(path))
           {
-            // update list
-            T file;
-            while ((file = listDirectory.getNext()) != null)
+            dialog.setCursor(CURSOR_WAIT);
+          }
+          try
+          {
+            table.removeAll();
+
+            if (listDirectory.open(path))
             {
-              if (   (showHidden || !listDirectory.isHidden(file))
-                  && (showFiles || listDirectory.isDirectory(file))
-                  && ((fileFilterPattern == null) || fileFilterPattern.matcher(file.getName()).matches())
-                 )
+              // update list
+              T file;
+              while ((file = listDirectory.getNext()) != null)
               {
-                // find insert index
-                int index = 0;
-                TableItem tableItems[] = table.getItems();
-                while (   (index < tableItems.length)
-                       && (fileComparator.compare(file,(T)tableItems[index].getData()) > 0)
-                      )
+                if (   (showHidden || !listDirectory.isHidden(file))
+                    && (showFiles || listDirectory.isDirectory(file))
+                    && ((fileFilterPattern == null) || fileFilterPattern.matcher(file.getName()).matches())
+                   )
                 {
+                  // find insert index
+                  int index = 0;
+                  TableItem tableItems[] = table.getItems();
+                  while (   (index < tableItems.length)
+                         && (fileComparator.compare(file,(T)tableItems[index].getData()) > 0)
+                        )
+                  {
+                    index++;
+                  }
+
+                  // insert item
+                  TableItem tableItem = new TableItem(table,SWT.NONE,index);
+                  tableItem.setData(file);
+                  tableItem.setText(0,file.getName());
+                  if (file.isDirectory()) tableItem.setText(1,tr("directory"));
+                  else                    tableItem.setText(1,tr("file"));
+                  tableItem.setText(2,simpleDateFormat.format(new Date(file.lastModified())));
+                  if (file.isDirectory()) tableItem.setText(3,"");
+                  else                    tableItem.setText(3,Long.toString(file.length()));
+                }
+              }
+              listDirectory.close();
+
+              // select name
+              if (name != null)
+              {
+                int index = 0;
+                for (TableItem tableItem : table.getItems())
+                {
+                  if (((File)tableItem.getData()).getName().equals(name))
+                  {
+                    table.select(index);
+                    break;
+                  }
                   index++;
                 }
-
-                // insert item
-                TableItem tableItem = new TableItem(table,SWT.NONE,index);
-                tableItem.setData(file);
-                tableItem.setText(0,file.getName());
-                if (file.isDirectory()) tableItem.setText(1,tr("directory"));
-                else                    tableItem.setText(1,tr("file"));
-                tableItem.setText(2,simpleDateFormat.format(new Date(file.lastModified())));
-                if (file.isDirectory()) tableItem.setText(3,"");
-                else                    tableItem.setText(3,Long.toString(file.length()));
               }
             }
-            listDirectory.close();
-
-            // select name
-            if (name != null)
-            {
-              int index = 0;
-              for (TableItem tableItem : table.getItems())
-              {
-                if (((File)tableItem.getData()).getName().equals(name))
-                {
-                  table.select(index);
-                  break;
-                }
-                index++;
-              }
-            }
+          }
+          finally
+          {
+            dialog.setCursor((Cursor)null);
           }
         }
       }
@@ -4362,10 +4378,6 @@ class Dialogs
     {
       final String[] result = new String[1];
 
-      final FileComparator fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);
-      final Updater        updater        = new Updater(fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
-      final ArrayList<T>   shortcutList   = new ArrayList<T>();
-
       // load images
       final Image IMAGE_FOLDER_UP;
       try
@@ -4381,6 +4393,10 @@ class Dialogs
 
       final Shell dialog = openModal(parentShell,title);
       dialog.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,0.0,0.0},1.0));
+
+      final FileComparator fileComparator = new FileComparator(FileComparator.SORTMODE_NAME);
+      final Updater        updater        = new Updater(dialog,fileComparator,listDirectory,(type != FileDialogTypes.DIRECTORY));
+      final ArrayList<T>   shortcutList   = new ArrayList<T>();
 
       final Text   widgetPath;
       final Button widgetFolderUp;
@@ -4803,14 +4819,7 @@ class Dialogs
           if (tableItems.length > 0)
           {
             T file = (T)tableItems[0].getData();
-            if (file.isDirectory())
-            {
-              updater.updateFileList(widgetFileList,
-                                     file,
-                                     (widgetName != null) ? widgetName.getText() : null
-                                    );
-            }
-            else
+            if (!file.isDirectory())
             {
               // set new name
               if (widgetName != null) widgetName.setText(file.getName());
