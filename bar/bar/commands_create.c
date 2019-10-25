@@ -3830,12 +3830,13 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                    indexHandle,
                                    INDEX_ID_ANY, // uuidId
                                    INDEX_ID_ANY, // entityId
-                                   NULL, // jobUUID,
+                                   NULL,  // jobUUID,
                                    NULL,  // scheduleUUID,
                                    NULL,  // storageIds
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // userName
                                    NULL,  // hostName
                                    archiveName,
                                    INDEX_STORAGE_SORT_MODE_NONE,
@@ -3851,21 +3852,22 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
     }
     while (Index_getNextStorage(&indexQueryHandle,
                                 &oldUUIDId,
-                                NULL, // job UUID
+                                NULL,  // job UUID
                                 &oldEntityId,
-                                NULL, // schedule UUID
-                                NULL, // archiveType
-                                &oldStorageId,
+                                NULL,  // schedule UUID
+                                NULL,  // userName
                                 NULL,  // hostName
+                                NULL,  // archiveType
+                                &oldStorageId,
                                 oldStorageName,
-                                NULL, // createdDateTime
-                                NULL, // size
-                                NULL, // indexState
-                                NULL, // indexMode
-                                NULL, // lastCheckedDateTime
-                                NULL, // errorMessage
-                                NULL, // totalEntryCount
-                                NULL // totalEntrySize
+                                NULL,  // createdDateTime
+                                NULL,  // size
+                                NULL,  // indexState
+                                NULL,  // indexMode
+                                NULL,  // lastCheckedDateTime
+                                NULL,  // errorMessage
+                                NULL,  // totalEntryCount
+                                NULL  // totalEntrySize
                                )
           )
     {
@@ -4014,6 +4016,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                      INDEX_MODE_SET(INDEX_MODE_AUTO),
+                                     NULL,  // userName
                                      NULL,  // hostName
                                      NULL,  // name
                                      INDEX_STORAGE_SORT_MODE_NONE,
@@ -4036,9 +4039,10 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                   NULL,  // jobUUID,
                                   &entityId,
                                   NULL,  // scheduleUUID,
+                                  NULL,  // userName
+                                  NULL,  // hostName
                                   NULL,  // archiveType,
                                   &storageId,
-                                  NULL,  // hostName
                                   storageName,
                                   &createdDateTime,
                                   &size,
@@ -4223,6 +4227,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                      INDEX_MODE_SET(INDEX_MODE_AUTO),
+                                     NULL,  // userName
                                      NULL,  // hostName
                                      NULL,  // name
                                      INDEX_STORAGE_SORT_MODE_NONE,
@@ -4245,9 +4250,10 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                   NULL,  // jobUUID,
                                   &entityId,
                                   NULL,  // scheduleUUID,
+                                  NULL,  // userName
+                                  NULL,  // hostName
                                   NULL,  // archiveType,
                                   &storageId,
-                                  NULL,  // hostName
                                   storageName,
                                   &createdDateTime,
                                   &size,
@@ -4826,6 +4832,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                            0,  // storageIdCount
                                            INDEX_STATE_SET_ALL,
                                            INDEX_MODE_SET_ALL,
+                                           NULL,  // userName
                                            NULL,  // hostName
                                            NULL,  // name,
                                            INDEX_STORAGE_SORT_MODE_NONE,
@@ -4845,9 +4852,10 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                         NULL,  // job UUID
                                         &existingEntityId,  // entityId,
                                         NULL,  // schedule UUID
+                                        NULL,  // userName
+                                        NULL,  // hostName
                                         NULL,  // archiveType
                                         &existingStorageId,
-                                        NULL,  // hostName
                                         existingStorageName,
                                         NULL,  // createdDateTime
                                         NULL,  // size

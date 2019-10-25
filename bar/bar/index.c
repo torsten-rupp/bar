@@ -89,7 +89,7 @@ LOCAL const struct
   IndexStorageSortModes sortMode;
 } INDEX_STORAGE_SORT_MODES[] =
 {
-  { "HOSTNAME",INDEX_STORAGE_SORT_MODE_HOSTNAME},
+//  { "HOSTNAME",INDEX_STORAGE_SORT_MODE_HOSTNAME},
   { "NAME",    INDEX_STORAGE_SORT_MODE_NAME    },
   { "SIZE",    INDEX_STORAGE_SORT_MODE_SIZE    },
   { "CREATED", INDEX_STORAGE_SORT_MODE_CREATED },
@@ -113,7 +113,8 @@ LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
 {
   [INDEX_STORAGE_SORT_MODE_NONE    ] = NULL,
 
-  [INDEX_STORAGE_SORT_MODE_HOSTNAME] = "storage.hostName",
+  [INDEX_STORAGE_SORT_MODE_USERNAME] = "entities.userName",
+  [INDEX_STORAGE_SORT_MODE_HOSTNAME] = "entities.hostName",
   [INDEX_STORAGE_SORT_MODE_NAME    ] = "storage.name",
   [INDEX_STORAGE_SORT_MODE_SIZE    ] = "storage.totalEntrySize",
   [INDEX_STORAGE_SORT_MODE_CREATED ] = "storage.created",
@@ -1033,6 +1034,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  0,  // storageIdCount,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // userName
                                  NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
@@ -1047,9 +1049,10 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                 NULL,  // jobUUID
                                 NULL,  // entityIndexId
                                 NULL,  // scheduleUUID
+                                NULL,  // userName
+                                NULL,  // hostName
                                 NULL,  // archiveType
                                 &storageIndexId,
-                                NULL,  // hostName
                                 storageName,
                                 NULL,  // createdDateTime
                                 NULL,  // size,
@@ -1879,6 +1882,7 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
                                  0,  // storageIdCount,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // userName
                                  NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
@@ -1893,9 +1897,10 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
                                 NULL,  // jobUUID
                                 NULL,  // entityIndexId
                                 NULL,  // scheduleUUID
+                                NULL,  // userName
+                                NULL,  // hostName
                                 NULL,  // archiveType
                                 &storageIndexId,
-                                NULL,  // hostName
                                 NULL,  // storageName,
                                 NULL,  // createdDateTime
                                 NULL,  // size,
@@ -2129,9 +2134,10 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                             NULL,  // jobUUID
                             NULL,  // entityIndexId
                             NULL,  // scheduleUUID
+                            NULL,  // userName
+                            NULL,  // hostName
                             NULL,  // archiveType
                             NULL,  // storageIndexId
-                            NULL,  // hostName
                             NULL,  // storageName
                             NULL,  // storageDateTime
                             &entryId,
@@ -5013,6 +5019,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                                     IFNULL(uuids.id,0), \
                                     history.jobUUID, \
                                     history.scheduleUUID, \
+                                    history.userName, \
                                     history.hostName, \
                                     history.type, \
                                     UNIXTIMESTAMP(history.created), \
@@ -5052,6 +5059,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           IndexId          *uuidIndexId,
                           String           jobUUID,
                           String           scheduleUUID,
+                          String           userName,
                           String           hostName,
                           ArchiveTypes     *archiveType,
                           uint64           *createdDateTime,
@@ -5078,11 +5086,12 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %lld %S %S %S %u %llu %S %llu %lu %llu %lu %llu %lu %llu",
+                           "%lld %lld %S %S %S %S %u %llu %S %llu %lu %llu %lu %llu %lu %llu",
                            &historyDatabaseId,
                            &uuidDatabaseId,
                            jobUUID,
                            scheduleUUID,
+                           userName,
                            hostName,
                            archiveType,
                            createdDateTime,
@@ -5108,6 +5117,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 Errors Index_newHistory(IndexHandle  *indexHandle,
                         ConstString  jobUUID,
                         ConstString  scheduleUUID,
+                        ConstString  userName,
                         ConstString  hostName,
                         ArchiveTypes archiveType,
                         uint64       createdDateTime,
@@ -5147,6 +5157,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                  ( \
                                   jobUUID, \
                                   scheduleUUID, \
+                                  userName, \
                                   hostName, \
                                   type, \
                                   created, \
@@ -5178,6 +5189,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                               ",
                               jobUUID,
                               scheduleUUID,
+                              userName,
                               hostName,
                               archiveType,
                               createdDateTime,
@@ -5208,9 +5220,10 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
-                                    "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
+                                    "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s userName=%'S hostName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
+                                    userName,
                                     hostName,
                                     Archive_archiveTypeToString(archiveType),
                                     createdDateTime,
@@ -6785,6 +6798,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               uint                  indexIdCount,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
+                              ConstString           userName,
                               ConstString           hostName,
                               ConstString           name,
                               IndexStorageSortModes sortMode,
@@ -6859,7 +6873,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
-  filterAppend(filterString,!String_isEmpty(hostName),"AND","storage.hostName LIKE %S",hostName);
+  filterAppend(filterString,!String_isEmpty(userName),"AND","entities.userName LIKE %S",userName);
+  filterAppend(filterString,!String_isEmpty(hostName),"AND","entities.hostName LIKE %S",hostName);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storage.id IN (SELECT storageId FROM FTS_storage WHERE FTS_storage MATCH '%S')",ftsName);
   filterAppend(filterString,TRUE,"AND","storage.state IN (%S)",getIndexStateSetString(string,indexStateSet));
   filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storage.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
@@ -6881,9 +6896,10 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                                     entities.jobUUID, \
                                     IFNULL(entities.id,0), \
                                     entities.scheduleUUID, \
+                                    entities.userName, \
+                                    entities.hostName, \
                                     entities.type, \
                                     storage.id, \
-                                    storage.hostName, \
                                     storage.name, \
                                     UNIXTIMESTAMP(storage.created), \
                                     storage.size, \
@@ -6938,9 +6954,10 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           String           jobUUID,
                           IndexId          *entityIndexId,
                           String           scheduleUUID,
+                          String           userName,
+                          String           hostName,
                           ArchiveTypes     *archiveType,
                           IndexId          *storageIndexId,
-                          String           hostName,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -6964,14 +6981,15 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %lld %S %d %lld %S %S %llu %llu %d %d %llu %S %lu %llu",
+                           "%lld %S %lld %S %S %S %d %lld %S %llu %llu %d %d %llu %S %lu %llu",
                            &uuidDatabaseId,
                            jobUUID,
                            &entityDatabaseId,
                            scheduleUUID,
+                           userName,
+                           hostName,
                            archiveType,
                            &storageDatabaseId,
-                           hostName,
                            storageName,
                            createdDateTime,
                            size,
@@ -6995,6 +7013,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     entityIndexId,
+                        ConstString userName,
                         ConstString hostName,
                         ConstString storageName,
                         uint64      createdDateTime,
@@ -7028,7 +7047,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                "INSERT INTO storage \
                                   ( \
                                    entityId, \
-                                   hostName, \
                                    name, \
                                    created, \
                                    size, \
@@ -7040,7 +7058,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                   ( \
                                    %d, \
                                    %'S, \
-                                   %'S, \
                                    DATETIME(%llu,'unixepoch'), \
                                    %llu, \
                                    %d, \
@@ -7049,7 +7066,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                   ); \
                                ",
                                Index_getDatabaseId(entityIndexId),
-                               hostName,
+//                               hostName,
                                storageName,
                                createdDateTime,
                                size,
@@ -7074,8 +7091,10 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     resultMap,
-                                    "INDEX_NEW_STORAGE entityId=%lld hostName=%'S storageName=%'S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
+                                    "INDEX_NEW_STORAGE entityId=%lld userName=%'S hostName=%'S storageName=%'S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
                                     entityIndexId,
+//TODO: remove hostName, userName -> entity
+                                    userName,
                                     hostName,
                                     storageName,
                                     createdDateTime,
@@ -7099,10 +7118,12 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
 Errors Index_updateStorage(IndexHandle *indexHandle,
                            IndexId     storageIndexId,
+                           ConstString userName,
                            ConstString hostName,
                            ConstString storageName,
                            uint64      createdDateTime,
-                           uint64      size
+                           uint64      size,
+                           ConstString comment
                           )
 {
   Errors error;
@@ -7125,9 +7146,11 @@ Errors Index_updateStorage(IndexHandle *indexHandle,
                                CALLBACK(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storage \
-                                  SET hostName=%'S \
+                                  SET userName=%'S, \
+                                      hostName=%'S \
                                   WHERE id=%lld; \
                                ",
+                               userName,
                                hostName,
                                Index_getDatabaseId(storageIndexId)
                               );
@@ -8489,9 +8512,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                         uuids.jobUUID, \
                                         entities.id, \
                                         entities.scheduleUUID, \
+                                        entities.userName, \
+                                        entities.hostName, \
                                         entities.type, \
                                         storage.id, \
-                                        storage.hostName, \
                                         storage.name, \
                                         UNIXTIMESTAMP(storage.created), \
                                         entriesNewest.entryId, \
@@ -8544,9 +8568,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                         uuids.jobUUID, \
                                         entities.id, \
                                         entities.scheduleUUID, \
+                                        entities.userName, \
+                                        entities.hostName, \
                                         entities.type, \
                                         storage.id, \
-                                        storage.hostName, \
                                         storage.name, \
                                         UNIXTIMESTAMP(storage.created), \
                                         entries.id, \
@@ -8615,9 +8640,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                         uuids.jobUUID, \
                                         entities.id, \
                                         entities.scheduleUUID, \
+                                        entities.userName, \
+                                        entities.hostName, \
                                         entities.type, \
                                         storage.id, \
-                                        storage.hostName, \
                                         storage.name, \
                                         UNIXTIMESTAMP(storage.created), \
                                         entriesNewest.entryId, \
@@ -8671,9 +8697,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                         uuids.jobUUID, \
                                         entities.id, \
                                         entities.scheduleUUID, \
+                                        entities.userName, \
+                                        entities.hostName, \
                                         entities.type, \
                                         storage.id, \
-                                        storage.hostName, \
                                         storage.name, \
                                         UNIXTIMESTAMP(storage.created), \
                                         entries.id, \
@@ -8743,9 +8770,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                         uuids.jobUUID, \
                                         entities.id, \
                                         entities.scheduleUUID, \
+                                        entities.userName, \
+                                        entities.hostName, \
                                         entities.type, \
                                         storage.id, \
-                                        storage.hostName, \
                                         storage.name, \
                                         UNIXTIMESTAMP(storage.created), \
                                         entriesNewest.entryId, \
@@ -8800,9 +8828,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                         uuids.jobUUID, \
                                         entities.id, \
                                         entities.scheduleUUID, \
+                                        entities.userName, \
+                                        entities.hostName, \
                                         entities.type, \
                                         storage.id, \
-                                        storage.hostName, \
                                         storage.name, \
                                         UNIXTIMESTAMP(storage.created), \
                                         entries.id, \
@@ -8881,9 +8910,10 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         String            jobUUID,
                         IndexId           *entityIndexId,
                         String            scheduleUUID,
+                        String            userName,
+                        String            hostName,
                         ArchiveTypes      *archiveType,
                         IndexId           *storageIndexId,
-                        String            hostName,
                         String            storageName,
                         uint64            *storageDateTime,
                         IndexId           *entryIndexId,
@@ -8914,14 +8944,15 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %llu %S %d %llu %S %S %llu %llu %d %S %llu %d %d %d %llu %llu %llu %llu %llu %d %llu %llu %llu %llu %S %llu",
+                           "%lld %S %llu %S %S %S %u %llu %S %llu %llu %d %S %llu %d %d %d %llu %llu %llu %llu %llu %d %llu %llu %llu %llu %S %llu",
                            &uuidDatabaseId,
                            jobUUID,
                            &entityDatabaseId,
                            scheduleUUID,
+                           userName,
+                           hostName,
                            archiveType,
                            &storageDatabaseId,
-                           hostName,
                            storageName,
                            storageDateTime,
                            &entryDatabaseId,

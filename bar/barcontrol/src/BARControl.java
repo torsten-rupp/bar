@@ -4606,7 +4606,8 @@ if (false) {
           }
           catch (Exception exception)
           {
-            printError("cannot add index for storage '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,exception.getMessage());
+exception.printStackTrace();
+            printError("cannot add '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,exception.getMessage());
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }

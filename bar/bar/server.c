@@ -1941,6 +1941,7 @@ NULL,//                                                        scheduleTitle,
             error = Index_newHistory(indexHandle,
                                      jobUUID,
                                      scheduleUUID,
+                                     NULL,  // userName
                                      hostName,
                                      archiveType,
                                      Misc_getCurrentDateTime(),
@@ -1972,6 +1973,7 @@ NULL,//                                                        scheduleTitle,
             error = Index_newHistory(indexHandle,
                                      jobUUID,
                                      scheduleUUID,
+                                     NULL,  // userName
                                      hostName,
                                      archiveType,
                                      Misc_getCurrentDateTime(),
@@ -2003,6 +2005,7 @@ NULL,//                                                        scheduleTitle,
             error = Index_newHistory(indexHandle,
                                      jobUUID,
                                      scheduleUUID,
+                                     NULL,  // userName
                                      hostName,
                                      archiveType,
                                      Misc_getCurrentDateTime(),
@@ -2968,6 +2971,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  0,  // indexIdCount
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // userName
                                  NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
@@ -2988,9 +2992,10 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  NULL,  // jobUUID
                                  NULL,  // entityIndexId
                                  NULL,  // scheduleUUID
+                                 NULL,  // userName
+                                 NULL,  // hostName
                                  NULL,  // archiveType
                                  &storageId,
-                                 NULL,  // hostName
                                  NULL,  // storageName
                                  NULL,  // createdDateTime
                                  NULL,  // size
@@ -3874,10 +3879,11 @@ LOCAL void indexThreadCode(void)
               setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
 
               // index update
-  //TODO
-  #ifndef WERROR
-  #warning todo init?
-  #endif
+//TODO
+#ifndef WERROR
+#warning todo init?
+#endif
+fprintf(stderr,"%s, %d: ffffffffffffffffffffffffffff %lld\n",__FILE__,__LINE__,storageId);
               startTimestamp = Misc_getTimestamp();
               error = Archive_updateIndex(indexHandle,
                                           storageId,
@@ -4198,6 +4204,7 @@ LOCAL void autoIndexThreadCode(void)
                                                // add to index
                                                error = Index_newStorage(indexHandle,
                                                                         INDEX_ID_NONE, // entityIndexId
+                                                                        NULL,  // userName
                                                                         NULL,  // hostName
                                                                         storageName,
                                                                         0LL,  // createdDateTime
@@ -4244,6 +4251,7 @@ LOCAL void autoIndexThreadCode(void)
                                        0,  // indexIdCount
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
+                                       NULL,  // userName
                                        NULL,  // hostName
                                        NULL,  // name
                                        INDEX_STORAGE_SORT_MODE_NONE,
@@ -4261,9 +4269,10 @@ LOCAL void autoIndexThreadCode(void)
                                          NULL,  // jobUUID
                                          NULL,  // entityIndexId
                                          NULL,  // scheduleUUID
+                                         NULL,  // userName
+                                         NULL,  // hostName
                                          NULL,  // archiveType
                                          &storageId,
-                                         NULL,  // hostName
                                          storageName,
                                          &createdDateTime,
                                          NULL,  // size
@@ -12589,6 +12598,7 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  Array_length(&clientInfo->indexIdArray),
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
+                                 NULL,  // userName
                                  NULL,  // hostName
                                  NULL,  // name
                                  INDEX_STORAGE_SORT_MODE_NONE,
@@ -12608,9 +12618,10 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  NULL,  // jobUUID
                                  NULL,  // entityIndexId
                                  NULL,  // scheduleUUID
+                                 NULL,  // userName
+                                 NULL,  // hostName
                                  NULL,  // archiveType
                                  &storageId,
-                                 NULL,  // hostName
                                  storageName,
                                  NULL,  // createdDateTime
                                  NULL,  // size
@@ -12928,9 +12939,10 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                                NULL,  // jobUUID
                                NULL,  // entityIndexId
                                NULL,  // scheduleUUID
+                               NULL,  // userName
+                               NULL,  // hostName
                                NULL,  // archiveType
                                NULL,  // storageId
-                               NULL,  // hostName
                                NULL,  // storageName
                                NULL,  // storageDateTime
                                &entryId,
@@ -13783,6 +13795,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                        Array_length(&clientInfo->indexIdArray),
                                        INDEX_STATE_SET_ALL,
                                        INDEX_MODE_SET_ALL,
+                                       NULL,  // userName
                                        NULL,  // hostName
                                        NULL,  // name
                                        INDEX_STORAGE_SORT_MODE_NONE,
@@ -13798,9 +13811,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                          NULL,  // jobUUID
                                          NULL,  // entityIndexId
                                          NULL,  // scheduleUUID
+                                         NULL,  // userName
+                                         NULL,  // hostName
                                          NULL,  // archiveType
                                          NULL,  // storageId
-                                         NULL,  // hostName
                                          storageName,
                                          NULL,  // createdDateTime
                                          NULL,  // size
@@ -13842,9 +13856,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                      NULL,  // jobUUID,
                                      NULL,  // entityIndexId
                                      NULL,  // scheduleUUID,
+                                     NULL,  // userName
+                                     NULL,  // hostName
                                      NULL,  // archiveType,
                                      NULL,  // storageId,
-                                     NULL,  // hostname
                                      storageName,  // storageName
                                      NULL,  // storageDateTime
                                      &entryId,
@@ -14582,6 +14597,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  0,  // indexIdCount
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
+                                 NULL,  // userName
                                  NULL,  // hostName
                                  name,
                                  sortMode,
@@ -14606,9 +14622,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  jobUUID,
                                  &entityId,
                                  scheduleUUID,
+                                 NULL,  // userName,
+                                 hostName,
                                  &archiveType,
                                  &storageId,
-                                 hostName,
                                  storageName,
                                  &dateTime,
                                  &size,
@@ -14972,9 +14989,10 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                jobUUID,
                                &entityId,
                                NULL,  // scheduleUUID,
+                               NULL,  // userName
+                               hostName,
                                &archiveType,
                                &storageId,
-                               hostName,
                                storageName,
                                &storageDateTime,
                                &entryId,
@@ -15135,6 +15153,7 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
                                  &uuidId,
                                  jobUUID,
                                  scheduleUUID,
+                                 NULL,  // userName
                                  hostName,
                                  &archiveType,
                                  &createdDateTime,
@@ -15388,6 +15407,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         {
           error = Index_newStorage(indexHandle,
                                    INDEX_ID_NONE, // entityIndexId
+                                   NULL,  // userName
                                    NULL,  // hostName
                                    printableStorageName,
                                    0LL,  // createdDateTime
@@ -15473,6 +15493,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                  {
                                    error = Index_newStorage(indexHandle,
                                                             INDEX_ID_NONE, // entityIndexId
+                                                            NULL,  // userName
                                                             NULL,  // hostName
                                                             storageName,
                                                             0LL,  // createdDateTime
@@ -15861,6 +15882,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // userName
                                    NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
@@ -15882,9 +15904,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // jobUUID
                                    NULL,  // entityIndexId
                                    NULL,  // scheduleUUID
+                                   NULL,  // userName
+                                   NULL,  // hostName
                                    NULL,  // archiveType
                                    &storageId,
-                                   NULL,  // hostName
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -15918,6 +15941,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // userName
                                    NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
@@ -15939,9 +15963,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // jobUUID
                                    NULL,  // entityIndexId
                                    NULL,  // scheduleUUID
+                                   NULL,  // userName
+                                   NULL,  // hostName
                                    NULL,  // archiveType
                                    &storageId,
-                                   NULL,  // hostName
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -15975,6 +16000,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // userName
                                    NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
@@ -15996,9 +16022,10 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // jobUUID
                                    NULL,  // entityIndexId
                                    NULL,  // scheduleUUID
+                                   NULL,  // userName
+                                   NULL,  // hostName
                                    NULL,  // archiveType
                                    &storageId,
-                                   NULL,  // hostName
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -16037,6 +16064,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // userName
                                    NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
@@ -16057,10 +16085,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // uuidIndexId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
+                                   NULL,  // userName
+                                   NULL,  // hostName
                                    NULL,  // entityIndexId
                                    NULL,  // archiveType
                                    &storageId,
-                                   NULL,  // hostName
                                    NULL,  // storageName
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -16094,6 +16123,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // userName
                                    NULL,  // hostName
                                    name,
                                    INDEX_STORAGE_SORT_MODE_NONE,
@@ -16114,10 +16144,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // uuidIndexId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
+                                   NULL,  // userName
+                                   NULL,  // hostName
                                    NULL,  // entityIndexId
                                    NULL,  // archiveType
                                    &storageId,
-                                   NULL,  // hostName
                                    storageName,
                                    NULL,  // createdDateTime
                                    NULL,  // size
@@ -16254,6 +16285,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    0,  // indexIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
+                                   NULL,  // userName
                                    NULL,  // hostName
                                    NULL,  // name
                                    INDEX_STORAGE_SORT_MODE_NONE,
@@ -16274,10 +16306,11 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                    NULL,  // uuidIndexId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
+                                   NULL,  // userName
+                                   NULL,  // hostName
                                    NULL,  // entityIndexId
                                    NULL,  // archiveType
                                    &storageId,
-                                   NULL,  // hostName
                                    storageName,
                                    NULL,  // createdDateTime
                                    NULL,  // size

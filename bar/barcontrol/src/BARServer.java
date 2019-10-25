@@ -922,13 +922,16 @@ class ReadThread extends Thread
         }
         catch (SocketTimeoutException exception)
         {
-          display.asyncExec(new Runnable()
+          if (display != null)
           {
-            public void run()
+            display.asyncExec(new Runnable()
             {
-              throw new ConnectionError(BARControl.tr("Timeout reading data from server ''{0}''",serverName));
-            }
-          });
+              public void run()
+              {
+                throw new ConnectionError(BARControl.tr("Timeout reading data from server ''{0}''",serverName));
+              }
+            });
+          }
         }
         catch (NumberFormatException exception)
         {
@@ -967,71 +970,75 @@ class ReadThread extends Thread
           }
         }
 
-        display.asyncExec(new Runnable()
+        if (display != null)
         {
-          public void run()
+          display.asyncExec(new Runnable()
           {
-            throw new ConnectionError(BARControl.tr("Lost connection to server ''{0}''",serverName));
-          }
-        });
+            public void run()
+            {
+              throw new ConnectionError(BARControl.tr("Lost connection to server ''{0}''",serverName));
+            }
+          });
+        }
       }
       catch (final SWTException exception)
       {
-        System.err.println("INTERNAL ERROR: "+exception.getCause());
-        BARControl.printStackTrace(exception);
-        System.err.println("Version "+BARControl.VERSION);
-        display.asyncExec(new Runnable()
+        if (display != null)
         {
-          public void run()
+          display.asyncExec(new Runnable()
           {
-            BARControl.showFatalError(exception);
-          }
-        });
+            public void run()
+            {
+              BARControl.showFatalError(exception);
+            }
+          });
+        }
+        BARControl.printInternalError(exception);
         System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (final AssertionError error)
       {
-        System.err.println("INTERNAL ERROR: "+error.getMessage());
-        BARControl.printStackTrace(error);
-        System.err.println("Version "+BARControl.VERSION);
-        display.asyncExec(new Runnable()
+        if (display != null)
         {
-          public void run()
+          display.asyncExec(new Runnable()
           {
-            BARControl.showFatalError(error);
-          }
-        });
+            public void run()
+            {
+              BARControl.showFatalError(error);
+            }
+          });
+        }
+        BARControl.printInternalError(error);
         System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (final InternalError error)
       {
-        System.err.println("INTERNAL ERROR: "+error.getMessage());
-        BARControl.printStackTrace(error);
-        System.err.println("Version "+BARControl.VERSION);
-        display.asyncExec(new Runnable()
+        if (display != null)
         {
-          public void run()
+          display.asyncExec(new Runnable()
           {
-            BARControl.showFatalError(error);
-          }
-        });
+            public void run()
+            {
+              BARControl.showFatalError(error);
+            }
+          });
+        }
+        BARControl.printInternalError(error);
         System.exit(ExitCodes.INTERNAL_ERROR);
       }
       catch (final Throwable throwable)
       {
-        if (Settings.debugLevel > 0)
+        if (display != null)
         {
-          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-          BARControl.printStackTrace(throwable);
-          System.err.println("Version "+BARControl.VERSION);
-        }
-        display.asyncExec(new Runnable()
-        {
-          public void run()
+          display.asyncExec(new Runnable()
           {
-            BARControl.showFatalError(throwable);
-          }
-        });
+            public void run()
+            {
+              BARControl.showFatalError(throwable);
+            }
+          });
+        }
+        BARControl.printInternalError(throwable);
         System.exit(ExitCodes.INTERNAL_ERROR);
       }
     }
@@ -2272,8 +2279,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     {
       if (Settings.debugLevel > 0)
       {
-        System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-        BARControl.printStackTrace(throwable);
+        BARControl.printInternalError(throwable);
         System.exit(ExitCodes.INTERNAL_ERROR);
       }
     }
@@ -2304,8 +2310,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         if (Settings.debugLevel > 0)
         {
-          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-          BARControl.printStackTrace(throwable);
+          BARControl.printInternalError(throwable);
           System.exit(ExitCodes.INTERNAL_ERROR);
         }
       }
@@ -4107,7 +4112,7 @@ throw new Error("NYI");
                                        {
                                          if (Settings.debugLevel > 0)
                                          {
-                                           System.err.println("ERROR: "+exception.getMessage());
+                                           BARControl.printInternalError(exception);
                                          }
                                        }
 

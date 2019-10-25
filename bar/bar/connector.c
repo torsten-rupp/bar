@@ -1271,6 +1271,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
     error = Index_newStorage(indexHandle,
                              entityId,
                              connectorInfo->io.network.name,
+                             NULL,  // userName
                              storageName,
                              createdDateTime,
                              size,
@@ -2675,6 +2676,7 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
     error = Index_newHistory(indexHandle,
                              jobUUID,
                              scheduleUUID,
+                             NULL,  // userName
                              hostName,
                              archiveType,
                              createdDateTime,

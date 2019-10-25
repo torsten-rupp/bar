@@ -3798,7 +3798,7 @@ Dprintf.dprintf("");
                                                                                 sortMode[0],
                                                                                 ordering[0]
                                                                                ),
-0,//                                                            2,  // debugLevel
+                                                            2,  // debugLevel
                                                             new Command.ResultHandler()
                                                             {
                                                               @Override
@@ -8042,9 +8042,9 @@ Dprintf.dprintf("");
           else
           {
             pathName = Dialogs.directory(shell,
-                                        BARControl.tr("Select local storage directory"),
-                                        widgetStoragePath.getText()
-                                       );
+                                         BARControl.tr("Select local storage directory"),
+                                         widgetStoragePath.getText()
+                                        );
           }
           if (pathName != null)
           {
@@ -8109,7 +8109,12 @@ Dprintf.dprintf("");
       }
     });
 
+    Widgets.setNextFocus(widgetStoragePath,
+                         widgetAdd
+                        );
+
     // run dialog
+    widgetStoragePath.forceFocus();
     String storagePath = (String)Dialogs.run(dialog,null);
 
     // add storage files
@@ -8141,12 +8146,6 @@ Dprintf.dprintf("");
                              n[0]++;
                              busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
                              busyDialog.updateList(name);
-
-                             // check if aborted
-//                             if (busyDialog.isAborted())
-//                             {
-//                               abort();
-//                             }
                            }
                          },
                          new BusyIndicator()
@@ -8158,7 +8157,7 @@ Dprintf.dprintf("");
                            }
                          }
                         );
-            busyDialog.close();
+            busyDialog.done();
             updateStorageTreeTableThread.triggerUpdate();
           }
           catch (final Exception exception)
@@ -8961,7 +8960,7 @@ Dprintf.dprintf("");
                                                        updateEntryTableThread.getEntryType().toString(),
                                                        updateEntryTableThread.getNewestOnly()
                                                       ),
-0,//                                   2,  // debugLevel
+                                   2,  // debugLevel
                                    new Command.ResultHandler()
                                    {
                                      @Override

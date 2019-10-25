@@ -199,6 +199,7 @@ typedef enum
 {
   INDEX_STORAGE_SORT_MODE_NONE,
 
+  INDEX_STORAGE_SORT_MODE_USERNAME,
   INDEX_STORAGE_SORT_MODE_HOSTNAME,
   INDEX_STORAGE_SORT_MODE_NAME,
   INDEX_STORAGE_SORT_MODE_SIZE,
@@ -962,6 +963,7 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 *          uuidIndexId       - UUID index id (can be NULL)
 *          jobUUID           - unique job UUID (can be NULL)
 *          scheduleUUID      - unique schedule UUID (can be NULL)
+*          userName          - user name (can be NULL)
 *          hostName          - host name (can be NULL)
 *          createdDateTime   - create date/time stamp [s] (can be NULL)
 *          errorMessage      - last storage error message (can be NULL)
@@ -984,6 +986,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
                           String           jobUUID,
                           String           scheduleUUID,
 //TODO: entityId?
+                          String           userName,
                           String           hostName,
                           ArchiveTypes     *archiveType,
                           uint64           *createdDateTime,
@@ -1003,7 +1006,8 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 * Input  : indexHandle  - index handle
 *          jobUUID           - unique job UUID
 *          scheduleUUID      - unique schedule UUID (can be NULL)
-*          hostName          - hostname (can be NULL)
+*          userName          - user name (can be NULL)
+*          hostName          - host name (can be NULL)
 *          archiveType       - archive type
 *          createdDateTime   - create date/time stamp [s]
 *          errorMessage      - last storage error message (can be NULL)
@@ -1022,6 +1026,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 Errors Index_newHistory(IndexHandle  *indexHandle,
                         ConstString  jobUUID,
                         ConstString  scheduleUUID,
+                        ConstString  userName,
                         ConstString  hostName,
 //TODO: entityId?
                         ArchiveTypes archiveType,
@@ -1452,6 +1457,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 *          indexIdCount     - index id count or 0
 *          indexStateSet    - index state set
 *          IndexModeSet     - index mode set
+*          userName         - user name (can be NULL)
 *          hostName         - host name (can be NULL)
 *          name             - name (can be NULL)
 *          sortMode         - sort mode; see IndexStorageSortModes
@@ -1474,6 +1480,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               uint                  indexIdCount,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
+                              ConstString           userName,
                               ConstString           hostName,
                               ConstString           name,
                               IndexStorageSortModes sortMode,
@@ -1492,7 +1499,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 *          scheduleUUID        - schedule UUID (can be NULL)
 *          archiveType         - archive type (can be NULL)
 *          storageIndexId      - index id of storage
-*          hostName            - host naem (can be NULL)
+*          userName            - user name (can be NULL)
+*          hostName            - host name (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
@@ -1512,9 +1520,10 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           String           jobUUID,
                           IndexId          *entityIndexId,
                           String           scheduleUUID,
+                          String           userName,
+                          String           hostName,
                           ArchiveTypes     *archiveType,
                           IndexId          *storageIndexId,
-                          String           hostName,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -1531,7 +1540,8 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 * Purpose: create new storage index
 * Input  : indexHandle     - index handle
 *          entityIndexId   - index id of entity
-*          hostName        - host naem (can be NULL)
+*          userName        - user name (can be NULL)
+*          hostName        - host name (can be NULL)
 *          storageName     - storage name (can be NULL)
 *          createdDateTime - create date/time
 *          size            - size [bytes]
@@ -1544,6 +1554,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 
 Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     entityIndexId,
+                        ConstString userName,
                         ConstString hostName,
                         ConstString storageName,
                         uint64      createdDateTime,
@@ -1558,12 +1569,12 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 * Purpose: update storage index
 * Input  : indexHandle     - index handle
 *          storageIndexId  - index id of storage
+*          userName        - user name (can be NULL)
 *          hostName        - host name (can be NULL)
 *          storageName     - storage name (can be NULL)
 *          createdDateTime - create date/time
 *          size            - size [bytes]
-*          indexState      - index state
-*          indexMode       - index mode
+*          comment         - comment
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1571,10 +1582,12 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
 Errors Index_updateStorage(IndexHandle *indexHandle,
                            IndexId     storageId,
+                           ConstString userName,
                            ConstString hostName,
                            ConstString storageName,
                            uint64      createdDateTime,
-                           uint64      size
+                           uint64      size,
+                           ConstString comment
                           );
 
 /***********************************************************************\
@@ -1757,9 +1770,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 *          jobUUID                  - job UUID (can be NULL)
 *          entityIndexId            - index id of entry
 *          scheduleUUID             - schedule UUID (can be NULL)
+*          userName                 - user name (can be NULL)
+*          hostName                 - host name (can be NULL)
 *          archiveType              - archive type (can be NULL)
 *          storageIndexId           - index id of storage (can be NULL)
-*          hostName                 - host name (can be NULL)
 *          storageName              - storage name (can be NULL)
 *          storageDateTime          - storage date/time stamp [s]
 *          entryIndexId             - index id of entry
@@ -1784,9 +1798,10 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         String            jobUUID,
                         IndexId           *entityIndexIdId,
                         String            scheduleUUID,
+                        String            userName,
+                        String            hostName,
                         ArchiveTypes      *archiveType,
                         IndexId           *storageIndexIdId,
-                        String            hostName,
                         String            storageName,
                         uint64            *storageDateTime,
                         IndexId           *entryIndexId,

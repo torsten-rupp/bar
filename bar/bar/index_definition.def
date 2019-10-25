@@ -59,6 +59,9 @@ CREATE TABLE IF NOT EXISTS entities(
   id                  INTEGER PRIMARY KEY,
   jobUUID             TEXT NOT NULL,
   scheduleUUID        TEXT NOT NULL DEFAULT '',
+  hostName            TEXT,
+//TODO: use
+  userName            TEST,
   created             INTEGER,
   type                INTEGER,
   parentJobUUID       INTEGER,
@@ -67,6 +70,8 @@ CREATE TABLE IF NOT EXISTS entities(
   comment             TEXT
 );
 CREATE INDEX ON entities (jobUUID,created,type);
+CREATE INDEX ON entities (hostName);
+CREATE INDEX ON entities (userName);
 
 // insert default entity
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_ID,'','',0,0,0,0);
@@ -82,7 +87,6 @@ CREATE TRIGGER AFTER INSERT ON entities
 CREATE TABLE IF NOT EXISTS storage(
   id                        INTEGER PRIMARY KEY,
   entityId                  INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-  hostName                  TEXT,
   name                      TEXT NOT NULL,
   created                   INTEGER,
   size                      INTEGER DEFAULT 0,
@@ -119,7 +123,7 @@ CREATE TABLE IF NOT EXISTS storage(
   totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
 );
 CREATE INDEX ON storage (entityId,name,created,state);
-CREATE INDEX ON storage (hostName);
+//CREATE INDEX ON storage (hostName);
 CREATE INDEX ON storage (name,totalEntryCount,created,state);
 CREATE INDEX ON storage (created,name,totalEntryCount,state);
 CREATE INDEX ON storage (state,name,totalEntryCount,created);
@@ -452,6 +456,7 @@ CREATE TABLE IF NOT EXISTS history(
   jobUUID           TEXT NOT NULL,
   scheduleUUID      TEXT,
   hostName          TEXT,
+  userName          TEXT,
   type              INTEGER,
   created           INTEGER,
   errorMessage      TEXT,

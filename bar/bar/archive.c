@@ -1694,7 +1694,19 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
                                     );
             break;
           case ARCHIVE_ENTRY_TYPE_META:
+            error = Index_updateStorage(archiveHandle->indexHandle,
+                                        archiveIndexNode->storageId,
+                                        archiveIndexNode->meta.userName,
+                                        archiveIndexNode->meta.hostName,
+                                        archiveIndexNode->meta.jobUUID,
+                                        archiveIndexNode->meta.scheduleUUID,
+                                        archiveIndexNode->meta.archiveType,
+                                        archiveIndexNode->meta.createdDateTime,
+                                        0LL,  // size
+                                        archiveIndexNode->meta.comment
+                                       );
 //TODO
+#warning todo
 #if 0
             error = Index_addMeta(archiveHandle->indexHandle,
                                   archiveIndexNode->meta.userName,
@@ -3079,7 +3091,8 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
           error = Index_newStorage(archiveHandle->indexHandle,
                                    archiveHandle->entityId,
                                    archiveHandle->hostName,
-                                   NULL, // storageName
+                                   NULL,  // userName
+                                   NULL,  // storageName
                                    Misc_getCurrentDateTime(),  // created
                                    0LL,  // size
                                    INDEX_STATE_CREATE,
@@ -14573,6 +14586,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   error = Index_newStorage(indexHandle,
                            INDEX_ID_NONE, // entityId
                            hostName,
+                           NULL,  // userName,
                            printableStorageName,
                            0LL,  // created
                            0LL,  // size
@@ -14635,6 +14649,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String             linkName;
   String             destinationName;
   StringList         fileNameList;
+  String             userName,hostName;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
@@ -14649,6 +14664,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
   // get printable name
   Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
+fprintf(stderr,"%s, %d: printableStorageName=%s\n",__FILE__,__LINE__,String_cString(printableStorageName));
 
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
   if (storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP)
@@ -14704,6 +14720,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     return error;
   }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // set state 'update'
   Index_setState(indexHandle,
                  storageId,
@@ -14718,12 +14735,14 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   // get current uuidId, entityId
 //TODO
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // clear index
   error = Index_clearStorage(indexHandle,
                              storageId
                             );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
     Archive_close(&archiveHandle);
@@ -14740,6 +14759,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     return error;
   }
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // read archive content
   timeLastChanged             = 0LL;
   abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
@@ -14750,6 +14770,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   linkName                    = String_new();
   destinationName             = String_new();
   StringList_init(&fileNameList);
+  userName                    = String_new();
+  hostName                    = String_new();
 //uint64 t0,t1; t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
          && (error == ERROR_NONE)
@@ -14770,6 +14792,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     }
 
     // read entry
+fprintf(stderr,"%s, %d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryType);
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
@@ -15049,11 +15072,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
         break;
       case ARCHIVE_ENTRY_TYPE_META:
         {
+fprintf(stderr,"%s, %d: ARCHIVE_ENTRY_TYPE_META --------------------------------------\n",__FILE__,__LINE__);
           // read meta entry
           error = Archive_readMetaEntry(&archiveEntryInfo,
                                         &archiveHandle,
-                                        NULL,  // userName
-                                        NULL,  // hostName
+                                        userName,
+                                        hostName,
                                         jobUUID,
                                         scheduleUUID,
                                         &archiveType,
@@ -15068,8 +15092,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           // add to index database
           indexAddMeta(&archiveHandle,
                        storageId,
-                       NULL,  // userName
-                       NULL,  // hostName
+                       userName,
+                       hostName,
                        jobUUID,
                        scheduleUUID,
                        archiveType,
@@ -15145,6 +15169,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
+  String_delete(hostName);
+  String_delete(userName);
   StringList_done(&fileNameList);
   String_delete(destinationName);
   String_delete(linkName);
