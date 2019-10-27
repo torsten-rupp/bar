@@ -2327,7 +2327,7 @@ bool isInExcludedList(const PatternList *excludePatternList,
                      );
 
 /***********************************************************************\
-* Name   : isNoBackup
+* Name   : hasNoBackup
 * Purpose: check if file .nobackup/.NOBACKUP exists in sub-directory
 * Input  : pathName - path name
 * Output : -
@@ -2336,7 +2336,7 @@ bool isInExcludedList(const PatternList *excludePatternList,
 * Notes  : -
 \***********************************************************************/
 
-bool isNoBackup(ConstString pathName);
+bool hasNoBackup(ConstString pathName);
 
 /***********************************************************************\
 * Name   : isNoDumpAttribute

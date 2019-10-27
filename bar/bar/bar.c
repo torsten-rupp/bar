@@ -9394,7 +9394,7 @@ bool isInExcludedList(const PatternList *excludePatternList,
   return PatternList_match(excludePatternList,name,PATTERN_MATCH_MODE_EXACT);
 }
 
-bool isNoBackup(ConstString pathName)
+bool hasNoBackup(ConstString pathName)
 {
   String fileName;
   bool   haveNoBackupFlag;
