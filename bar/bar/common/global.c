@@ -1216,6 +1216,7 @@ void debugResourceCheck(void)
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
+#ifdef HAVE_BFD_INIT
 LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
                                            const char *fileName,
                                            const char *symbolName,
@@ -1243,6 +1244,7 @@ LOCAL void debugDumpStackTraceOutputSymbol(const void *address,
   }
   stackTraceOutputInfo->count++;
 }
+#endif /* HAVE_BFD_INIT */
 
 void debugDumpStackTraceAddOutput(DebugDumpStackTraceOutputTypes    type,
                                   DebugDumpStackTraceOutputFunction function,
