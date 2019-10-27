@@ -1747,7 +1747,7 @@ LOCAL_INLINE void __end(const char *__fileName__, ulong __lineNb__, DatabaseHand
 * Name   : vformatSQLString
 * Purpose: format SQL string from command and append
 * Input  : sqlString   - SQL string variable
-*          command     - command string with %[l]d, %S, %s
+*          command     - command string with %[l][du], %S, %s
 *          arguments   - optional argument list
 * Output : -
 * Return : SQL string
