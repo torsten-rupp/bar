@@ -89,9 +89,7 @@
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
 #define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*60)  // [s]
-//TODO
-//#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*60)  // [s]
-#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (1*60)  // [s]
+#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*60)  // [s]
 
 // id none
 #define ID_NONE                                  0
@@ -3881,11 +3879,6 @@ LOCAL void indexThreadCode(void)
               setKey(&jobOptions.cryptPrivateKey,indexCryptPasswordNode->cryptPrivateKey.data,indexCryptPasswordNode->cryptPrivateKey.length);
 
               // index update
-//TODO
-#ifndef WERROR
-#warning todo init?
-#endif
-fprintf(stderr,"%s, %d: ffffffffffffffffffffffffffff %lld\n",__FILE__,__LINE__,storageId);
               startTimestamp = Misc_getTimestamp();
               error = Archive_updateIndex(indexHandle,
                                           storageId,
