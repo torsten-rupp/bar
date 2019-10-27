@@ -1830,7 +1830,6 @@ LOCAL Errors purgeFromIndex(IndexHandle *indexHandle,
 //Database_debugEnable(&indexHandle->databaseHandle,FALSE);
     if (error == ERROR_NONE)
     {
-fprintf(stderr,"%s, %d:   deleted %lu \n",__FILE__,__LINE__,changedRowCount);
       if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
     }
 //fprintf(stderr,"%s, %d: tableName=%s indexUseCount=%d changedRowCount=%d doneFlag=%d\n",__FILE__,__LINE__,tableName,indexUseCount,changedRowCount,(doneFlag != NULL) ? *doneFlag : -1);
@@ -7420,7 +7419,6 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     {
       doneFlag = TRUE;
 
-fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
       error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
       if (error == ERROR_NONE)
       {
@@ -7428,7 +7426,7 @@ fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
           deletedCounter = 0;
         #endif
 
-fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
         if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
@@ -7473,7 +7471,7 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
                                  INDEX_TYPE_FILE
                                 );
         }
-fprintf(stderr,"%s, %d: 5 file done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
+//fprintf(stderr,"%s, %d: 5 file done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
         if ((error == ERROR_NONE) && doneFlag)
         {
@@ -7519,7 +7517,7 @@ fprintf(stderr,"%s, %d: 5 file done=%d deletedCounter=%lu\n",__FILE__,__LINE__,d
                                  INDEX_TYPE_IMAGE
                                 );
         }
-fprintf(stderr,"%s, %d: 6 image done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
+//fprintf(stderr,"%s, %d: 6 image done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
         if ((error == ERROR_NONE) && doneFlag)
         {
@@ -7565,7 +7563,7 @@ fprintf(stderr,"%s, %d: 6 image done=%d deletedCounter=%lu\n",__FILE__,__LINE__,
                                  INDEX_TYPE_DIRECTORY
                                 );
         }
-fprintf(stderr,"%s, %d: 7 directory done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
+//fprintf(stderr,"%s, %d: 7 directory done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
         if ((error == ERROR_NONE) && doneFlag)
         {
@@ -7611,7 +7609,7 @@ fprintf(stderr,"%s, %d: 7 directory done=%d deletedCounter=%lu\n",__FILE__,__LIN
                                  INDEX_TYPE_LINK
                                 );
         }
-fprintf(stderr,"%s, %d: 8 link done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
+//fprintf(stderr,"%s, %d: 8 link done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
         if ((error == ERROR_NONE) && doneFlag)
         {
@@ -7657,7 +7655,7 @@ fprintf(stderr,"%s, %d: 8 link done=%d deletedCounter=%lu\n",__FILE__,__LINE__,d
                                  INDEX_TYPE_HARDLINK
                                 );
         }
-fprintf(stderr,"%s, %d: 9 hardlink done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
+//fprintf(stderr,"%s, %d: 9 hardlink done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
         if ((error == ERROR_NONE) && doneFlag)
         {
@@ -7703,13 +7701,12 @@ fprintf(stderr,"%s, %d: 9 hardlink done=%d deletedCounter=%lu\n",__FILE__,__LINE
                                  INDEX_TYPE_SPECIAL
                                 );
         }
-fprintf(stderr,"%s, %d: 10 special done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
+//fprintf(stderr,"%s, %d: 10 special done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
 
         error = Index_endTransaction(indexHandle);
       }
     }
     while ((error == ERROR_NONE) && !doneFlag);
-fprintf(stderr,"%s, %d: 11\n",__FILE__,__LINE__);
 
     return error;
   });
