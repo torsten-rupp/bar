@@ -1743,7 +1743,7 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
                           );
 
 /***********************************************************************\
-* Name   : Archive_remIndex
+* Name   : Archive_removeIndex
 * Purpose: remove storage index
 * Input  : indexHandle - index handle
 *          storageId   - index id of storage
@@ -1752,9 +1752,9 @@ Errors Archive_updateIndex(IndexHandle                  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_remIndex(IndexHandle *indexHandle,
-                        IndexId     storageId
-                       );
+Errors Archive_removeIndex(IndexHandle *indexHandle,
+                           IndexId     storageId
+                          );
 
 #if 0
 // NYI

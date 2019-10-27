@@ -1130,6 +1130,7 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
 * Notes  : Arguments:
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
+*            hostName=<name>
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
 *            createdDateTime=<n>
 *            locked=yes|no
@@ -1141,6 +1142,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  String       hostName;
   ArchiveTypes archiveType;
   uint64       createdDateTime;
   bool         locked;
@@ -1162,8 +1164,15 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
     return;
   }
+  hostName = String_new();
+  if (!StringMap_getString(argumentMap,"hostName",hostName,NULL))
+  {
+    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<name>");
+    return;
+  }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
   {
+    String_delete(hostName);
     ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
@@ -1173,9 +1182,18 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   if (indexHandle != NULL)
   {
     // create new entity
-    error = Index_newEntity(indexHandle,jobUUID,scheduleUUID,archiveType,createdDateTime,locked,&entityId);
+    error = Index_newEntity(indexHandle,
+                            jobUUID,
+                            scheduleUUID,
+                            hostName,
+                            archiveType,
+                            createdDateTime,
+                            locked,
+                            &entityId
+                           );
     if (error != ERROR_NONE)
     {
+      String_delete(hostName);
       ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
       return;
     }
@@ -1190,6 +1208,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   }
 
   // free resources
+  String_delete(hostName);
 }
 
 /***********************************************************************\
@@ -2676,8 +2695,8 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
     error = Index_newHistory(indexHandle,
                              jobUUID,
                              scheduleUUID,
-                             NULL,  // userName
                              hostName,
+                             NULL,  // userName
                              archiveType,
                              createdDateTime,
                              String_cString(errorMessage),

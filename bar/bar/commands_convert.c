@@ -1602,8 +1602,8 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               const JobOptions *newJobOptions
                              )
 {
-  String           userName;
   String           hostName;
+  String           userName;
   StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString     (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes     archiveType;
@@ -1616,13 +1616,13 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   UNUSED_VARIABLE(newJobOptions);
 
   // read source meta entry
-  userName = String_new();
   hostName = String_new();
+  userName = String_new();
   comment  = String_new();
   error = Archive_readMetaEntry(&sourceArchiveEntryInfo,
                                 sourceArchiveHandle,
-                                userName,
                                 hostName,
+                                userName,
                                 jobUUID,
                                 scheduleUUID,
                                 &archiveType,
@@ -1636,11 +1636,11 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                Error_getText(error)
               );
     String_delete(comment);
-    String_delete(hostName);
     String_delete(userName);
+    String_delete(hostName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(comment); String_delete(hostName); String_delete(userName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(comment); String_delete(userName); String_delete(hostName); return DEBUG_TESTCODE_ERROR(); }
 
   printInfo(1,"  Convert meta      ...");
 
@@ -1651,8 +1651,8 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
   // create new meta entry
   error = Archive_newMetaEntry(&destinationArchiveEntryInfo,
                                destinationArchiveHandle,
-                               userName,
                                hostName,
+                               userName,
                                jobUUID,
                                scheduleUUID,
                                archiveType,
@@ -1667,11 +1667,11 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
     String_delete(comment);
-    String_delete(hostName);
     String_delete(userName);
+    String_delete(hostName);
     return error;
   }
-  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(comment); String_delete(hostName); String_delete(userName); return DEBUG_TESTCODE_ERROR(); }
+  DEBUG_TESTCODE() { Archive_closeEntry(&destinationArchiveEntryInfo); (void)Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(comment); String_delete(userName); String_delete(hostName); return DEBUG_TESTCODE_ERROR(); }
 
   // close destination archive entry
   error = Archive_closeEntry(&destinationArchiveEntryInfo);
@@ -1683,8 +1683,8 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
               );
     (void)Archive_closeEntry(&sourceArchiveEntryInfo);
     String_delete(comment);
-    String_delete(hostName);
     String_delete(userName);
+    String_delete(hostName);
     return error;
   }
 
@@ -1705,8 +1705,8 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // free resources
   String_delete(comment);
-  String_delete(hostName);
   String_delete(userName);
+  String_delete(hostName);
 
   return ERROR_NONE;
 }
@@ -1922,7 +1922,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
   // Note: still not supported
   if (jobOptions->archivePartSize > 0LL)
   {
-    printWarning(_("Archive part size not supported for convert - ignored")); 
+    printWarning(_("Archive part size not supported for convert - ignored"));
   }
 //TODO
   jobOptions->archivePartSize = 0LL;

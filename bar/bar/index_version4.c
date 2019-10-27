@@ -528,6 +528,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        INDEX_ID_NONE,
                                                        jobUUID,
                                                        NULL,  // scheduleUUID
+                                                       NULL,  // hostName
                                                        ARCHIVE_TYPE_NONE,
                                                        0LL,  // createdDateTime
                                                        NULL,  // jobUUID
@@ -548,6 +549,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                {
                                  error = Index_newEntity(newIndexHandle,
                                                          Misc_getUUID(jobUUID),
+                                                         NULL,  // hostName
                                                          NULL,  // scheduleUUID
                                                          ARCHIVE_TYPE_FULL,
                                                          0LL,  // createdDateTime

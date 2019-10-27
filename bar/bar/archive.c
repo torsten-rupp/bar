@@ -263,8 +263,8 @@ typedef struct ArchiveIndexNode
     } special;
     struct
     {
-      String       userName;
       String       hostName;
+      String       userName;
       String       jobUUID;
       String       scheduleUUID;
       ArchiveTypes archiveType;
@@ -1531,8 +1531,8 @@ LOCAL void freeArchiveIndexNode(ArchiveIndexNode *archiveIndexNode, void *userDa
       String_delete(archiveIndexNode->meta.comment);
       String_delete(archiveIndexNode->meta.scheduleUUID);
       String_delete(archiveIndexNode->meta.jobUUID);
-      String_delete(archiveIndexNode->meta.hostName);
       String_delete(archiveIndexNode->meta.userName);
+      String_delete(archiveIndexNode->meta.hostName);
       break;
     default:
       #ifndef NDEBUG
@@ -1574,6 +1574,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
   ArchiveIndexList archiveIndexList;
   Errors           error;
   ArchiveIndexNode *archiveIndexNode;
+  IndexId          entityId;
 
   assert(archiveHandle != NULL);
 
@@ -1694,30 +1695,63 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
                                     );
             break;
           case ARCHIVE_ENTRY_TYPE_META:
-            error = Index_updateStorage(archiveHandle->indexHandle,
-                                        archiveIndexNode->storageId,
-                                        archiveIndexNode->meta.userName,
-                                        archiveIndexNode->meta.hostName,
-                                        archiveIndexNode->meta.jobUUID,
-                                        archiveIndexNode->meta.scheduleUUID,
-                                        archiveIndexNode->meta.archiveType,
-                                        archiveIndexNode->meta.createdDateTime,
-                                        0LL,  // size
-                                        archiveIndexNode->meta.comment
-                                       );
-//TODO
-#warning todo
-#if 0
-            error = Index_addMeta(archiveHandle->indexHandle,
-                                  archiveIndexNode->meta.userName,
-                                  archiveIndexNode->meta.hostName,
+            // check if entity exists, create new if needed
+            if (!Index_findEntity(archiveHandle->indexHandle,
+                                  INDEX_ID_NONE,  // findEntityIndexId
                                   archiveIndexNode->meta.jobUUID,
                                   archiveIndexNode->meta.scheduleUUID,
+                                  archiveIndexNode->meta.hostName,
                                   archiveIndexNode->meta.archiveType,
-                                  archiveIndexNode->meta.createdDateTime,
-                                  archiveIndexNode->meta.comment
-                                 );
-#endif
+                                  0LL,  // findCreatedDateTime
+                                  NULL,  // jobUUID,
+                                  NULL,  // scheduleUUID,
+                                  NULL,  // uuidIndexId,
+                                  &entityId,
+                                  NULL,  // archiveType,
+                                  NULL,  // createdDateTime,
+                                  NULL,  // lastErrorMessage,
+                                  NULL,  // totalEntryCount,
+                                  NULL  // totalEntrySize
+                                 )
+               )
+            {
+              error = Index_newEntity(archiveHandle->indexHandle,
+                                      archiveIndexNode->meta.jobUUID,
+                                      archiveIndexNode->meta.scheduleUUID,
+                                      archiveIndexNode->meta.hostName,
+                                      archiveIndexNode->meta.archiveType,
+                                      archiveIndexNode->meta.createdDateTime,
+                                      TRUE,  // locked
+                                      &entityId
+                                     );
+            }
+
+            // assign storage to entity
+            if (error == ERROR_NONE)
+            {
+              error = Index_assignTo(archiveHandle->indexHandle,
+                                     NULL,  // jobUUID,
+                                     NULL,  // entityIndexId,
+                                     archiveIndexNode->storageId,
+                                     NULL,  // toJobUUID,
+                                     entityId,
+                                     ARCHIVE_TYPE_NONE,  // toArchiveType,
+                                     INDEX_ID_NONE  // toStorageIndexId
+                                    );
+            }
+
+            // update storage
+            if (error == ERROR_NONE)
+            {
+              error = Index_updateStorage(archiveHandle->indexHandle,
+                                          archiveIndexNode->storageId,
+                                          archiveIndexNode->meta.userName,
+                                          NULL,  // storageName
+                                          archiveIndexNode->meta.createdDateTime,
+                                          0LL,  // size
+                                          archiveIndexNode->meta.comment
+                                         );
+            }
             break;
           default:
             #ifndef NDEBUG
@@ -2156,8 +2190,8 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
 * Purpose: add meta index node
 * Input  : archiveHandle   - archive handle
 *          storageId       - index id of index
-*          userName        - user name
 *          hostName        - host name
+*          userName        - user name
 *          jobUUID         - job UUID
 *          scheduleUUID    - schedule UUID
 *          archiveType     - archive type
@@ -2170,8 +2204,8 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
 
 LOCAL Errors indexAddMeta(ArchiveHandle *archiveHandle,
                           IndexId       storageId,
-                          ConstString   userName,
                           ConstString   hostName,
+                          ConstString   userName,
                           ConstString   jobUUID,
                           ConstString   scheduleUUID,
                           ArchiveTypes  archiveType,
@@ -2191,8 +2225,8 @@ LOCAL Errors indexAddMeta(ArchiveHandle *archiveHandle,
   }
   archiveIndexNode->storageId            = storageId;
   archiveIndexNode->type                 = ARCHIVE_ENTRY_TYPE_META;
-  archiveIndexNode->meta.userName        = String_duplicate(userName);
   archiveIndexNode->meta.hostName        = String_duplicate(hostName);
+  archiveIndexNode->meta.userName        = String_duplicate(userName);
   archiveIndexNode->meta.jobUUID         = String_duplicate(jobUUID);
   archiveIndexNode->meta.scheduleUUID    = String_duplicate(scheduleUUID);
   archiveIndexNode->meta.archiveType     = archiveType;
@@ -2781,8 +2815,8 @@ LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
     Chunk_done(&chunkMeta.info);
     return error;
   }
-  Misc_getCurrentUserName(chunkMetaEntry.userName);
   Network_getHostName(chunkMetaEntry.hostName);
+  Misc_getCurrentUserName(chunkMetaEntry.userName);
   String_set(chunkMetaEntry.jobUUID,archiveHandle->jobUUID);
   String_set(chunkMetaEntry.scheduleUUID,archiveHandle->scheduleUUID);
   chunkMetaEntry.archiveType     = archiveHandle->archiveType;
@@ -8499,8 +8533,8 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 #ifdef NDEBUG
   Errors Archive_newMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                               ArchiveHandle    *archiveHandle,
-                              ConstString      userName,
                               ConstString      hostName,
+                              ConstString      userName,
                               ConstString      jobUUID,
                               ConstString      scheduleUUID,
                               ArchiveTypes     archiveType,
@@ -8512,8 +8546,8 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
                                 ulong            __lineNb__,
                                 ArchiveEntryInfo *archiveEntryInfo,
                                 ArchiveHandle    *archiveHandle,
-                                ConstString      userName,
                                 ConstString      hostName,
+                                ConstString      userName,
                                 ConstString      jobUUID,
                                 ConstString      scheduleUUID,
                                 ArchiveTypes     archiveType,
@@ -8606,8 +8640,8 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
     AutoFree_cleanup(&autoFreeList);
     return error;
   }
-  String_set(archiveEntryInfo->meta.chunkMetaEntry.userName,userName);
   String_set(archiveEntryInfo->meta.chunkMetaEntry.hostName,hostName);
+  String_set(archiveEntryInfo->meta.chunkMetaEntry.userName,userName);
   String_set(archiveEntryInfo->meta.chunkMetaEntry.jobUUID,jobUUID);
   String_set(archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,scheduleUUID);
   archiveEntryInfo->meta.chunkMetaEntry.archiveType     = archiveType;
@@ -8934,8 +8968,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 #ifdef NDEBUG
   Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveHandle    *archiveHandle,
-                               String           userName,
                                String           hostName,
+                               String           userName,
                                String           jobUUID,
                                String           scheduleUUID,
                                ArchiveTypes     *archiveType,
@@ -8947,8 +8981,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
                                  ArchiveHandle    *archiveHandle,
-                                 String           userName,
                                  String           hostName,
+                                 String           userName,
                                  String           jobUUID,
                                  String           scheduleUUID,
                                  ArchiveTypes     *archiveType,
@@ -9189,8 +9223,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
             AUTOFREE_ADD(&autoFreeList2,&archiveEntryInfo->meta.chunkMetaEntry.info,{ Chunk_close(&archiveEntryInfo->meta.chunkMetaEntry.info); });
 
             // get meta data
-            if (userName        != NULL) String_set(userName,archiveEntryInfo->meta.chunkMetaEntry.userName);
             if (hostName        != NULL) String_set(hostName,archiveEntryInfo->meta.chunkMetaEntry.hostName);
+            if (userName        != NULL) String_set(userName,archiveEntryInfo->meta.chunkMetaEntry.userName);
             if (jobUUID         != NULL) String_set(jobUUID,archiveEntryInfo->meta.chunkMetaEntry.jobUUID);
             if (scheduleUUID    != NULL) String_set(scheduleUUID,archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID);
             if (archiveType     != NULL) (*archiveType) = archiveEntryInfo->meta.chunkMetaEntry.archiveType;
@@ -13220,8 +13254,8 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 {
                   error = indexAddMeta(archiveEntryInfo->archiveHandle,
                                        archiveEntryInfo->archiveHandle->storageId,
-                                       archiveEntryInfo->meta.chunkMetaEntry.userName,
                                        archiveEntryInfo->meta.chunkMetaEntry.hostName,
+                                       archiveEntryInfo->meta.chunkMetaEntry.userName,
                                        archiveEntryInfo->meta.chunkMetaEntry.jobUUID,
                                        archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,
                                        archiveEntryInfo->meta.chunkMetaEntry.archiveType,
@@ -14649,7 +14683,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String             linkName;
   String             destinationName;
   StringList         fileNameList;
-  String             userName,hostName;
+  String             hostName,userName;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
@@ -14664,7 +14698,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
   // get printable name
   Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
-fprintf(stderr,"%s, %d: printableStorageName=%s\n",__FILE__,__LINE__,String_cString(printableStorageName));
 
   // open archive (Note optimization: try sftp for scp protocol, because sftp support seek()-operation)
   if (storageInfo->storageSpecifier.type == STORAGE_TYPE_SCP)
@@ -14720,7 +14753,6 @@ fprintf(stderr,"%s, %d: printableStorageName=%s\n",__FILE__,__LINE__,String_cStr
     return error;
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // set state 'update'
   Index_setState(indexHandle,
                  storageId,
@@ -14735,14 +14767,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // get current uuidId, entityId
 //TODO
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // clear index
   error = Index_clearStorage(indexHandle,
                              storageId
                             );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
 
     Archive_close(&archiveHandle);
@@ -14759,7 +14789,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     return error;
   }
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // read archive content
   timeLastChanged             = 0LL;
   abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
@@ -14770,8 +14799,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   linkName                    = String_new();
   destinationName             = String_new();
   StringList_init(&fileNameList);
-  userName                    = String_new();
   hostName                    = String_new();
+  userName                    = String_new();
 //uint64 t0,t1; t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
          && (error == ERROR_NONE)
@@ -14792,7 +14821,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     }
 
     // read entry
-fprintf(stderr,"%s, %d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryType);
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
@@ -15072,12 +15100,11 @@ fprintf(stderr,"%s, %d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryTyp
         break;
       case ARCHIVE_ENTRY_TYPE_META:
         {
-fprintf(stderr,"%s, %d: ARCHIVE_ENTRY_TYPE_META --------------------------------------\n",__FILE__,__LINE__);
           // read meta entry
           error = Archive_readMetaEntry(&archiveEntryInfo,
                                         &archiveHandle,
-                                        userName,
                                         hostName,
+                                        userName,
                                         jobUUID,
                                         scheduleUUID,
                                         &archiveType,
@@ -15092,8 +15119,8 @@ fprintf(stderr,"%s, %d: ARCHIVE_ENTRY_TYPE_META --------------------------------
           // add to index database
           indexAddMeta(&archiveHandle,
                        storageId,
-                       userName,
                        hostName,
+                       userName,
                        jobUUID,
                        scheduleUUID,
                        archiveType,
@@ -15135,9 +15162,9 @@ fprintf(stderr,"%s, %d: ARCHIVE_ENTRY_TYPE_META --------------------------------
                               Archive_getSize(&archiveHandle)
                              );
 
-#if 1
     if ((isPauseFunction != NULL) && isPauseFunction(isPauseUserData))
     {
+//TODO
 #if 0
       // temporarly close storage
       error = Archive_storageInterrupt(&archiveHandle);
@@ -15154,6 +15181,7 @@ fprintf(stderr,"%s, %d: ARCHIVE_ENTRY_TYPE_META --------------------------------
       }
       while (isPauseFunction(isPauseUserData));
 
+//TODO
 #if 0
       // reopen temporary closed storage
       error = Archive_storageContinue(&archiveHandle);
@@ -15163,14 +15191,13 @@ fprintf(stderr,"%s, %d: ARCHIVE_ENTRY_TYPE_META --------------------------------
       }
 #endif /* 0 */
     }
-#endif
 
     // check if aborted, check if server allocation pending
     abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
-  String_delete(hostName);
   String_delete(userName);
+  String_delete(hostName);
   StringList_done(&fileNameList);
   String_delete(destinationName);
   String_delete(linkName);
@@ -15273,9 +15300,9 @@ fprintf(stderr,"%s, %d: ARCHIVE_ENTRY_TYPE_META --------------------------------
   #undef MAX_ARCHIVE_CONTENT_LIST_LENGTH
 }
 
-Errors Archive_remIndex(IndexHandle *indexHandle,
-                        IndexId     storageId
-                       )
+Errors Archive_removeIndex(IndexHandle *indexHandle,
+                           IndexId     storageId
+                          )
 {
   Errors error;
 

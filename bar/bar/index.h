@@ -712,11 +712,13 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 * Input  : indexHandle         - index handle
 *          findEntityIndexId   - index id of entity to find (can be
 *                                INDEX_ID_NONE)
-*          findJobUUID         - unique job UUID to find (cann be NULL)
+*          findJobUUID         - unique job UUID to find (can be NULL)
 *          findScheduleUUID    - unique schedule UUID to find (can be
 *                                NULL)
-*          findArchiveType     - archive type to find
-*          findCreatedDateTime - create date/time to find
+*          findHostName        - host name (can be NULL)
+*          findArchiveType     - archive type to find (can be
+*                                ARCHIVE_TYPE_NONE)
+*          findCreatedDateTime - create date/time to find (can be 0)
 * Output : jobUUID          - unique job UUID (can be NULL)
 *          scheduleUUID     - unique schedule UUID (can be NULL)
 *          uuidIndexId      - index id of UUID entry (can be NULL)
@@ -734,6 +736,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       IndexId      findEntityIndexId,
                       ConstString  findJobUUID,
                       ConstString  findScheduleUUID,
+                      ConstString  findHostName,
                       ArchiveTypes findArchiveType,
                       uint64       findCreatedDateTime,
                       String       jobUUID,
@@ -1315,10 +1318,11 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 
 /***********************************************************************\
 * Name   : Index_newEntity
-* Purpose: create new uuid index (if need) and new entity index
+* Purpose: create new entity index and new uuid index (if need)
 * Input  : indexHandle     - index handle
 *          jobUUID         - unique job UUID (can be NULL)
 *          scheduleUUID    - unique schedule UUID (can be NULL)
+*          hostName        - host name (can be NULL)
 *          archiveType     - archive type
 *          createdDateTime - created date/time stamp or 0
 *          locked          - TRUE for locked entity
@@ -1331,6 +1335,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 //TODO: uuidId?
                        ConstString  jobUUID,
                        ConstString  scheduleUUID,
+                       ConstString  hostName,
                        ArchiveTypes archiveType,
                        uint64       createdDateTime,
                        bool         locked,
@@ -1348,6 +1353,30 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 
 Errors Index_deleteEntity(IndexHandle *indexHandle,
                           IndexId     entityIndexId
+                         );
+
+/***********************************************************************\
+* Name   : Index_updateEntity
+* Purpose: update storage index
+* Input  : indexHandle     - index handle
+*          entityIndexId    - index id of entity
+*          jobUUID         - unique job UUID (can be NULL)
+*          scheduleUUID    - unique schedule UUID (can be NULL)
+*          hostName        - host name (can be NULL)
+*          archiveType     - archive type
+*          createdDateTime - create date/time
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_updateEntity(IndexHandle  *indexHandle,
+                          IndexId      entityIndexId,
+                          ConstString  jobUUID,
+                          ConstString  scheduleUUID,
+                          ConstString  hostName,
+                          ArchiveTypes archiveType,
+                          uint64       createdDateTime
                          );
 
 /***********************************************************************\
@@ -1497,13 +1526,14 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 *          jobUUID             - job UUID (can be NULL)
 *          entityIndexId       - index id of entity (can be NULL)
 *          scheduleUUID        - schedule UUID (can be NULL)
+*          hostName            - host name (can be NULL)
 *          archiveType         - archive type (can be NULL)
 *          storageIndexId      - index id of storage
-*          userName            - user name (can be NULL)
-*          hostName            - host name (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
+*          userName            - user name (can be NULL)
+*          comment             - comment (can be NULL)
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
 *          lastCheckedDateTime - last checked date/time stamp [s] (can be
@@ -1520,13 +1550,14 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           String           jobUUID,
                           IndexId          *entityIndexId,
                           String           scheduleUUID,
-                          String           userName,
                           String           hostName,
                           ArchiveTypes     *archiveType,
                           IndexId          *storageIndexId,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
+                          String           userName,
+                          String           comment,
                           IndexStates      *indexState,
                           IndexModes       *indexMode,
                           uint64           *lastCheckedDateTime,
@@ -1570,7 +1601,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 * Input  : indexHandle     - index handle
 *          storageIndexId  - index id of storage
 *          userName        - user name (can be NULL)
-*          hostName        - host name (can be NULL)
 *          storageName     - storage name (can be NULL)
 *          createdDateTime - create date/time
 *          size            - size [bytes]
@@ -1580,14 +1610,13 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_updateStorage(IndexHandle *indexHandle,
-                           IndexId     storageId,
-                           ConstString userName,
-                           ConstString hostName,
-                           ConstString storageName,
-                           uint64      createdDateTime,
-                           uint64      size,
-                           ConstString comment
+Errors Index_updateStorage(IndexHandle  *indexHandle,
+                           IndexId      storageIndexId,
+                           ConstString  userName,
+                           ConstString  storageName,
+                           uint64       createdDateTime,
+                           uint64       size,
+                           ConstString  comment
                           );
 
 /***********************************************************************\

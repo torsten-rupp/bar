@@ -3836,8 +3836,8 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                    0,  // storageIdCount
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
-                                   NULL,  // userName
                                    NULL,  // hostName
+                                   NULL,  // userName
                                    archiveName,
                                    INDEX_STORAGE_SORT_MODE_NONE,
                                    DATABASE_ORDERING_NONE,
@@ -3855,13 +3855,14 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                 NULL,  // job UUID
                                 &oldEntityId,
                                 NULL,  // schedule UUID
-                                NULL,  // userName
                                 NULL,  // hostName
                                 NULL,  // archiveType
                                 &oldStorageId,
                                 oldStorageName,
                                 NULL,  // createdDateTime
                                 NULL,  // size
+                                NULL,  // userName
+                                NULL,  // comment
                                 NULL,  // indexState
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
@@ -4016,8 +4017,8 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                      INDEX_MODE_SET(INDEX_MODE_AUTO),
-                                     NULL,  // userName
                                      NULL,  // hostName
+                                     NULL,  // userName
                                      NULL,  // name
                                      INDEX_STORAGE_SORT_MODE_NONE,
                                      DATABASE_ORDERING_NONE,
@@ -4039,13 +4040,14 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                   NULL,  // jobUUID,
                                   &entityId,
                                   NULL,  // scheduleUUID,
-                                  NULL,  // userName
                                   NULL,  // hostName
                                   NULL,  // archiveType,
                                   &storageId,
                                   storageName,
                                   &createdDateTime,
                                   &size,
+                                  NULL,  // userName
+                                  NULL,  // comment
                                   NULL,  // indexState,
                                   NULL,  // indexMode,
                                   NULL,  // lastCheckedDateTime,
@@ -4227,8 +4229,8 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
                                      INDEX_MODE_SET(INDEX_MODE_AUTO),
-                                     NULL,  // userName
                                      NULL,  // hostName
+                                     NULL,  // userName
                                      NULL,  // name
                                      INDEX_STORAGE_SORT_MODE_NONE,
                                      DATABASE_ORDERING_NONE,
@@ -4250,13 +4252,14 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                   NULL,  // jobUUID,
                                   &entityId,
                                   NULL,  // scheduleUUID,
-                                  NULL,  // userName
                                   NULL,  // hostName
                                   NULL,  // archiveType,
                                   &storageId,
                                   storageName,
                                   &createdDateTime,
                                   &size,
+                                  NULL,  // userName
+                                  NULL,  // comment
                                   NULL,  // indexState,
                                   NULL,  // indexMode,
                                   NULL,  // lastCheckedDateTime,
@@ -4832,8 +4835,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                            0,  // storageIdCount
                                            INDEX_STATE_SET_ALL,
                                            INDEX_MODE_SET_ALL,
-                                           NULL,  // userName
                                            NULL,  // hostName
+                                           NULL,  // userName
                                            NULL,  // name,
                                            INDEX_STORAGE_SORT_MODE_NONE,
                                            DATABASE_ORDERING_NONE,
@@ -4852,13 +4855,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                         NULL,  // job UUID
                                         &existingEntityId,  // entityId,
                                         NULL,  // schedule UUID
-                                        NULL,  // userName
                                         NULL,  // hostName
                                         NULL,  // archiveType
                                         &existingStorageId,
                                         existingStorageName,
                                         NULL,  // createdDateTime
                                         NULL,  // size
+                                        NULL,  // userName
+                                        NULL,  // comment
                                         NULL,  // indexState,
                                         NULL,  // indexMode,
                                         NULL,  // lastCheckedDateTime,
@@ -7108,8 +7112,6 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 Errors Command_create(ServerIO                     *masterIO,
                       ArchiveTypes                 archiveType,
                       ConstString                  jobUUID,
-//                      ConstString                  hostName,
-//                      uint                         hostPort,
                       ConstString                  scheduleUUID,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
@@ -7144,6 +7146,7 @@ Errors Command_create(ServerIO                     *masterIO,
   StorageSpecifier storageSpecifier;
 //  String           directoryName;
   IndexId          uuidId;
+  String           hostName;
   IndexId          entityId;
   Thread           collectorSumThread;                 // files collector sum thread
   Thread           collectorThread;                    // files collector thread
@@ -7384,9 +7387,11 @@ masterIO, // masterIO
     }
 
     // create new index entity
+    hostName = Network_getHostName(String_new());
     error = Index_newEntity(indexHandle,
                             jobUUID,
                             scheduleUUID,
+                            hostName,
                             archiveType,
                             0LL, // createdDateTime
                             TRUE,  // locked
@@ -7398,12 +7403,14 @@ masterIO, // masterIO
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
+      String_delete(hostName);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
     assert(entityId != INDEX_ID_NONE);
     DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
+    String_delete(hostName);
   }
 
   // create new archive

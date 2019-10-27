@@ -297,8 +297,8 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
 /***********************************************************************\
 * Name   : printMetaInfo
 * Purpose: print archive meta data
-* Input  : userName               - user name
-*          hostName               - host name
+* Input  : hostName               - host name
+*          userName               - user name
 *          jobUUID                - job UUID
 *          scheduleUUID           - schedule UUID
 *          archiveType            - archive type
@@ -311,8 +311,8 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printMetaInfo(ConstString          userName,
-                         ConstString          hostName,
+LOCAL void printMetaInfo(ConstString          hostName,
+                         ConstString          userName,
                          ConstString          jobUUID,
                          ConstString          scheduleUUID,
                          ArchiveTypes         archiveType,
@@ -325,8 +325,8 @@ LOCAL void printMetaInfo(ConstString          userName,
   StringTokenizer stringTokenizer;
   ConstString     s;
 
-  assert(userName != NULL);
   assert(hostName != NULL);
+  assert(userName != NULL);
   assert(jobUUID != NULL);
   assert(scheduleUUID != NULL);
   assert(comment != NULL);
@@ -336,8 +336,8 @@ LOCAL void printMetaInfo(ConstString          userName,
 
   // print info
   printConsole(stdout,"\n");
-  printConsole(stdout,"User name    : %s\n",String_cString(userName));
   printConsole(stdout,"Host name    : %s\n",String_cString(hostName));
+  printConsole(stdout,"User name    : %s\n",String_cString(userName));
   printConsole(stdout,"Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
   printConsole(stdout,"Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
   printConsole(stdout,"Type         : %s\n",Archive_archiveTypeToString(archiveType));
@@ -3086,8 +3086,8 @@ NULL, // masterSocketHandle
                   // output meta data
                   if (!printedMetaInfoFlag)
                   {
-                    printMetaInfo(name,
-                                  hostName,
+                    printMetaInfo(hostName,
+                                  name,
                                   jobUUID,
                                   scheduleUUID,
                                   archiveType,

@@ -87,6 +87,7 @@ LOCAL Errors upgradeFromVersion2(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                error = Index_newEntity(newIndexHandle,
                                                        Misc_getUUID(jobUUID),
                                                        NULL,  // scheduleUUID
+                                                       NULL,  // hostName
                                                        ARCHIVE_TYPE_FULL,
                                                        0LL,  // createdDateTime
                                                        TRUE,  // locked

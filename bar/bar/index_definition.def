@@ -60,18 +60,14 @@ CREATE TABLE IF NOT EXISTS entities(
   jobUUID             TEXT NOT NULL,
   scheduleUUID        TEXT NOT NULL DEFAULT '',
   hostName            TEXT,
-//TODO: use
-  userName            TEST,
   created             INTEGER,
   type                INTEGER,
   parentJobUUID       INTEGER,
   bidFlag             INTEGER,
-  lockedCount         INTEGER DEFAULT 0,
-  comment             TEXT
+  lockedCount         INTEGER DEFAULT 0
 );
 CREATE INDEX ON entities (jobUUID,created,type);
 CREATE INDEX ON entities (hostName);
-CREATE INDEX ON entities (userName);
 
 // insert default entity
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_ID,'','',0,0,0,0);
@@ -90,6 +86,9 @@ CREATE TABLE IF NOT EXISTS storage(
   name                      TEXT NOT NULL,
   created                   INTEGER,
   size                      INTEGER DEFAULT 0,
+//TODO: use
+  userName                  TEXT,
+  comment                   TEXT,
   state                     INTEGER DEFAULT $STATE_CREATE,
   mode                      INTEGER DEFAULT $MODE_MANUAL,
   lastChecked               INTEGER DEFAULT 0,
@@ -126,6 +125,7 @@ CREATE INDEX ON storage (entityId,name,created,state);
 //CREATE INDEX ON storage (hostName);
 CREATE INDEX ON storage (name,totalEntryCount,created,state);
 CREATE INDEX ON storage (created,name,totalEntryCount,state);
+CREATE INDEX ON storage (userName);
 CREATE INDEX ON storage (state,name,totalEntryCount,created);
 
 // full-text-search

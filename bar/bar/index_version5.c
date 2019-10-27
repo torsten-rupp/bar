@@ -539,6 +539,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                        INDEX_ID_NONE,
                                                        jobUUID,
                                                        NULL,  // scheduleUUID
+                                                       NULL,  // hostName
                                                        ARCHIVE_TYPE_NONE,
                                                        0LL,  // createdDateTime
                                                        NULL,  // jobUUID
@@ -560,6 +561,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                  error = Index_newEntity(newIndexHandle,
                                                          Misc_getUUID(jobUUID),
                                                          NULL,  // scheduleUUID
+                                                         NULL,  // hostName
                                                          ARCHIVE_TYPE_FULL,
                                                          0LL,  // createdDateTime,
                                                          TRUE,  // locked
