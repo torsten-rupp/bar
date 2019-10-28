@@ -476,9 +476,7 @@ public class TabStatus
         if (Settings.debugLevel > 0)
         {
           BARServer.disconnect();
-          System.err.println("INTERNAL ERROR: "+throwable.getMessage());
-          BARControl.printStackTrace(throwable);
-          System.exit(1);
+          BARControl.internalError(throwable);
         }
       }
     }
@@ -2820,9 +2818,7 @@ public class TabStatus
           catch (Exception exception)
           {
             BARServer.disconnect();
-            System.err.println("ERROR: "+exception.getMessage());
-            BARControl.printStackTrace(exception);
-            System.exit(ExitCodes.INTERNAL_ERROR);
+            BARControl.internalError(exception);
           }
         }
       });
