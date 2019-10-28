@@ -1937,6 +1937,16 @@ public class BARControl
     });
   }
 
+  /** print internal error and exit
+   * @param throwable throwable
+   */
+  public static void internalError(Throwable throwable)
+  {
+    printInternalError(throwable);
+    showFatalError(throwable);
+    System.exit(ExitCodes.INTERNAL_ERROR);
+  }
+
   /** set wait cursor
    * @param shell shell
    */
@@ -4606,7 +4616,6 @@ if (false) {
           }
           catch (Exception exception)
           {
-exception.printStackTrace();
             printError("cannot add '%s' to index (error: %s)",Settings.indexDatabaseAddStorageName,exception.getMessage());
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
