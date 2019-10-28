@@ -165,6 +165,7 @@ SOURCES        = src/BARControl.java \
                  src/BARServer.java \
                  src/Settings.java \
                  src/Background.java \
+                 src/ExitCodes.java \
                  \
                  src/ArrayListCache.java \
                  src/BusyDialog.java \
