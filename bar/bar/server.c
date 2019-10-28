@@ -3803,7 +3803,7 @@ LOCAL void indexThreadCode(void)
       {
         // get all job crypt passwords and crypt private keys (including no password and default crypt password)
         addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
-  //      addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
+//        addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           JOB_LIST_ITERATE(jobNode)
@@ -3849,7 +3849,7 @@ LOCAL void indexThreadCode(void)
           {
             String_set(printableStorageName,storageName);
           }
-  //fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(storageSpecifier.fileName));
+fprintf(stderr,"%s, %d: fileName=%s id=%lld\n",__FILE__,__LINE__,String_cString(storageSpecifier.archiveName),storageId);
 
           // init storage
           startTimestamp = 0LL;
@@ -3880,6 +3880,7 @@ LOCAL void indexThreadCode(void)
 
               // index update
               startTimestamp = Misc_getTimestamp();
+fprintf(stderr,"%s, %d: update index storageId=%lld\n",__FILE__,__LINE__,storageId);
               error = Archive_updateIndex(indexHandle,
                                           storageId,
                                           &storageInfo,
@@ -3891,6 +3892,11 @@ LOCAL void indexThreadCode(void)
                                           NULL  // logHandle
                                          );
               endTimestamp = Misc_getTimestamp();
+//TODO: remove
+if (error != ERROR_NONE)
+{
+fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
+}
 
               // stop if done, interrupted, or quit
               if (   (error == ERROR_NONE)
@@ -3941,11 +3947,9 @@ LOCAL void indexThreadCode(void)
             plogMessage(NULL,  // logHandle,
                         LOG_TYPE_INDEX,
                         "INDEX",
-                        "Cannot create index for '%s' (error: %s) %d %d",
+                        "Cannot create index for '%s' (error: %s)",
                         String_cString(printableStorageName),
-                        Error_getText(error),
-                        Error_getCode(error),
-                        ERROR_INTERRUPTED
+                        Error_getText(error)
                        );
           }
         }
@@ -14564,7 +14568,6 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
   StringMap_getEnum(argumentMap,"sortMode",&sortMode,(StringMapParseEnumFunction)Index_parseStorageSortMode,INDEX_STORAGE_SORT_MODE_NAME);
   StringMap_getEnum(argumentMap,"ordering",&ordering,(StringMapParseEnumFunction)Index_parseOrdering,DATABASE_ORDERING_NONE);
-
 
   // check if index database is available
   if (indexHandle == NULL)

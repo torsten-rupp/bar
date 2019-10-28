@@ -3196,9 +3196,8 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                          NULL,  // changedRowCount
                          "SELECT id \
                           FROM storage \
-                          WHERE state=%d \
-                         ",
-                         INDEX_CONST_STATE_DELETED
+                          WHERE deletedFlag=1 \
+                         "
                         );
 
   // free resources
@@ -3356,7 +3355,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  %-11s: %s\n",values[0],values[1]);
+                             printf("  %-16s: %s\n",values[0],values[1]);
 
                              return ERROR_NONE;
                            },NULL),
@@ -3381,7 +3380,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  OK         : %s\n",values[0]);
+                             printf("  OK              : %s\n",values[0]);
 
                              return ERROR_NONE;
                            },NULL),
@@ -3404,7 +3403,29 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Error      : %s\n",values[0]);
+                             printf("  Update requested: %s\n",values[0]);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT COUNT(id) FROM storage WHERE state=%d",INDEX_CONST_STATE_UPDATE_REQUESTED
+                          );
+  if (error != ERROR_NONE)
+  {
+    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    exit(1);
+  }
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             assert(count == 1);
+                             assert(values[0] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
+                             UNUSED_VARIABLE(userData);
+
+                             printf("  Error           : %s\n",values[0]);
 
                              return ERROR_NONE;
                            },NULL),
@@ -3426,13 +3447,12 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Deleted    : %s\n",values[0]);
+                             printf("  Deleted         : %s\n",values[0]);
 
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "SELECT COUNT(id) FROM storage WHERE state=%d",
-                           INDEX_CONST_STATE_DELETED
+                           "SELECT COUNT(id) FROM storage WHERE deletedFlag=1"
                           );
   if (error != ERROR_NONE)
   {
@@ -3453,7 +3473,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+                             printf("  Total           : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3476,7 +3496,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+                             printf("  Files           : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3499,7 +3519,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+                             printf("  Images          : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3521,7 +3541,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Directories: %lu\n",atol(values[0]));
+                             printf("  Directories     : %lu\n",atol(values[0]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3543,7 +3563,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Links      : %lu\n",atol(values[0]));
+                             printf("  Links           : %lu\n",atol(values[0]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3566,7 +3586,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+                             printf("  Hardlinks       : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3588,7 +3608,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Special    : %lu\n",atol(values[0]));
+                             printf("  Special         : %lu\n",atol(values[0]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3614,7 +3634,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Total      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+                             printf("  Total           : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3637,7 +3657,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Files      : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+                             printf("  Files           : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3660,7 +3680,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Images     : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+                             printf("  Images          : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3682,7 +3702,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Directories: %lu\n",atol(values[0]));
+                             printf("  Directories     : %lu\n",atol(values[0]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3704,7 +3724,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Links      : %lu\n",atol(values[0]));
+                             printf("  Links           : %lu\n",atol(values[0]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3727,7 +3747,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Hardlinks  : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
+                             printf("  Hardlinks       : %lu, %llubytes\n",atol(values[0]),atoll(values[1]));
 
                              return ERROR_NONE;
                            },NULL),
@@ -3749,7 +3769,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             printf("  Special    : %lu\n",atol(values[0]));
+                             printf("  Special         : %lu\n",atol(values[0]));
 
                              return ERROR_NONE;
                            },NULL),

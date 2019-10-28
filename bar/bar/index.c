@@ -1399,7 +1399,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
                             &databaseIds,
                             "storage",
                             "id",
-                            "WHERE state=%d \
+                            "WHERE state=%u \
                             ",
                             INDEX_STATE_OK
                            );
@@ -2294,8 +2294,12 @@ LOCAL void indexThreadCode(void)
         {
           error = Database_prepare(&databaseQueryHandle,
                                    &indexHandle.databaseHandle,
-                                   "SELECT id,name FROM storage WHERE state=%d LIMIT 0,1",
-                                   INDEX_STATE_DELETED
+                                   "SELECT id,name FROM storage \
+                                    WHERE     state!=%u \
+                                          AND deletedFlag=1 \
+                                    LIMIT 0,1 \
+                                   ",
+                                   INDEX_STATE_UPDATE
                                   );
           if (error == ERROR_NONE)
           {
@@ -4157,7 +4161,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                   LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                   LEFT JOIN storage ON storage.entityId=entities.id \
                                 WHERE     %S \
-                                      AND (storage.state ISNULL OR (storage.state!=%d)) \
+                                      AND (storage.state ISNULL OR (storage.deletedFlag=0)) \
                                 GROUP BY uuids.id \
                                ",
                                ARCHIVE_TYPE_NORMAL,
@@ -4170,8 +4174,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                ARCHIVE_TYPE_INCREMENTAL,
                                ARCHIVE_TYPE_DIFFERENTIAL,
                                ARCHIVE_TYPE_CONTINUOUS,
-                               filterString,
-                               INDEX_STATE_DELETED
+                               filterString
                               );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
       if (error != ERROR_NONE)
@@ -4326,12 +4329,11 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                                 LEFT JOIN storage ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               WHERE     %S \
-                                    AND (storage.state ISNULL OR (storage.state!=%d)) \
+                                    AND (storage.state ISNULL OR (storage.deletedFlag=0)) \
                               GROUP BY entities.id \
                               LIMIT 0,1 \
                              ",
-                             filterString,
-                             INDEX_STATE_DELETED
+                             filterString
                             );
     if (error != ERROR_NONE)
     {
@@ -4423,12 +4425,11 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
                               WHERE     storage.id=%lld \
-                                    AND storage.state!=%d \
+                                    AND storage.deletedFlag=0 \
                               GROUP BY storage.id \
                               LIMIT 0,1 \
                              ",
-                             Index_getDatabaseId(findStorageIndexId),
-                             INDEX_STATE_DELETED
+                             Index_getDatabaseId(findStorageIndexId)
                             );
     if (error != ERROR_NONE)
     {
@@ -4526,10 +4527,9 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                               FROM storage \
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE storage.state!=%d \
+                              WHERE storage.deletedFlag=0 \
                               GROUP BY storage.id \
-                             ",
-                             INDEX_STATE_DELETED
+                             "
                             );
     if (error != ERROR_NONE)
     {
@@ -4644,11 +4644,10 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                                 LEFT JOIN entities ON storage.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               WHERE     (storage.state IN (%S)) \
-                                    AND storage.state!=%d \
+                                    AND storage.deletedFlag=0 \
                               LIMIT 0,1 \
                              ",
-                             getIndexStateSetString(indexStateSetString,findIndexStateSet),
-                             INDEX_STATE_DELETED
+                             getIndexStateSetString(indexStateSetString,findIndexStateSet)
                             );
     if (error != ERROR_NONE)
     {
@@ -4953,7 +4952,7 @@ long Index_countState(IndexHandle *indexHandle,
                              &indexHandle->databaseHandle,
                              "SELECT COUNT(id) \
                               FROM storage \
-                              WHERE state=%d \
+                              WHERE state=%u \
                              ",
                              indexState
                             );
@@ -5358,10 +5357,9 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                                 LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                 LEFT JOIN storage ON storage.entityId=entities.id \
                               WHERE     %S \
-                                    AND storage.state!=%d \
+                                    AND storage.deletedFlag=0 \
                              ",
-                             filterString,
-                             INDEX_STATE_DELETED
+                             filterString
                             );
 //Database_debugPrintQueryInfo(&databaseQueryHandle);
     if (error != ERROR_NONE)
@@ -5464,7 +5462,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                              FROM uuids \
                                LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                LEFT JOIN storage ON storage.entityId=entities.id \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                              GROUP BY uuids.id \
                              LIMIT %llu,%llu \
                             ",
@@ -5822,7 +5821,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                              FROM entities \
                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                LEFT JOIN storage ON storage.entityId=entities.id \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                              GROUP BY entities.id \
                              %S \
                              LIMIT %llu,%llu \
@@ -7003,7 +7003,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                              FROM storage \
                                LEFT JOIN entities ON entities.id=storage.entityId \
                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                              GROUP BY storage.id \
                              %S \
                              LIMIT %llu,%llu \
@@ -7334,10 +7335,9 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                               CALLBACK(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
                               "UPDATE storage \
-                               SET state=%d \
+                               SET deletedFlag=1 \
                                WHERE id=%lld; \
                               ",
-                              INDEX_STATE_DELETED,
                               Index_getDatabaseId(storageIndexId)
                              );
     });
@@ -7359,6 +7359,37 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
   }
 
   return error;
+}
+
+bool Index_isDeletedStorage(IndexHandle *indexHandle,
+                            IndexId     storageIndexId
+                           )
+{
+  bool deletedFlag;
+
+  assert(indexHandle != NULL);
+  assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
+
+  if (indexHandle->masterIO == NULL)
+  {
+    INDEX_DOX(deletedFlag,
+              indexHandle,
+    {
+      return !Database_exists(&indexHandle->databaseHandle,
+                              "storage",
+                              "id",
+                              "WHERE id=%lld AND deletedFlag=0",
+                              Index_getDatabaseId(storageIndexId)
+                             );
+    });
+  }
+  else
+  {
+    // slave mode: always deleted
+    deletedFlag = TRUE;
+  }
+
+  return deletedFlag;
 }
 
 bool Index_isEmptyStorage(IndexHandle *indexHandle,
@@ -7385,9 +7416,8 @@ bool Index_isEmptyStorage(IndexHandle *indexHandle,
   }
   else
   {
-//TODO
-emptyFlag=TRUE;
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    // slave mode: always empty
+    emptyFlag = TRUE;
   }
 
   return emptyFlag;
@@ -7996,12 +8026,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
                                  newestOnly ? "storage.totalFileCountNewest" : "storage.totalFileCount",
                                  newestOnly ? "storage.totalFileSizeNewest" : "storage.totalFileSize",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8034,12 +8063,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
                                  newestOnly ? "storage.totalImageCountNewest" : "storage.totalImageCount",
                                  newestOnly ? "storage.totalImageSizeNewest" : "storage.totalImageSize",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8071,11 +8099,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
                                  newestOnly ? "storage.totalDirectoryCountNewest" : "storage.totalDirectoryCount",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8103,11 +8130,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
                                  newestOnly ? "directoryEntries.totalEntrySizeNewest" : "directoryEntries.totalEntrySize",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8137,11 +8163,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
                                  newestOnly ? "storage.totalLinkCountNewest" : "storage.totalLinkCount",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8171,12 +8196,11 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
                                  newestOnly ? "storage.totalHardlinkCountNewest" : "storage.totalHardlinkCount",
                                  newestOnly ? "storage.totalHardlinkSizeNewest" : "storage.totalHardlinkSize",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8208,11 +8232,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
                                  newestOnly ? "storage.totalSpecialCountNewest" : "storage.totalSpecialCount",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
         if (error != ERROR_NONE)
         {
@@ -8267,10 +8290,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     entriesNewest.id IS NOT NULL \
                                         AND %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
       }
       else
@@ -8284,10 +8306,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
       }
       if (error != ERROR_NONE)
@@ -8322,10 +8343,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
       }
       else
@@ -8339,10 +8359,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
       }
       if (error != ERROR_NONE)
@@ -8401,10 +8420,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     entriesNewest.id IS NOT NULL \
                                         AND %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
       }
       else
@@ -8419,10 +8437,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
       }
       if (error != ERROR_NONE)
@@ -8458,10 +8475,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
       }
       else
@@ -8476,10 +8492,9 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN entities ON entities.id=storage.entityId \
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
-                                        AND storage.state!=%d \
+                                        AND storage.deletedFlag=0 \
                                  ",
-                                 filterString,
-                                 INDEX_STATE_DELETED
+                                 filterString
                                 );
       }
       if (error != ERROR_NONE)
@@ -8618,10 +8633,9 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                 LEFT JOIN entities ON entities.id=storage.entityId \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                               WHERE     %S \
-                                    AND storage.state!=%d \
+                                    AND storage.deletedFlag=0 \
                              ",
-                             filterString,
-                             INDEX_STATE_DELETED
+                             filterString
                             );
     if (error != ERROR_NONE)
     {
@@ -8728,7 +8742,8 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN linkEntries ON linkEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entriesNewest.entryId \
-                                 WHERE %S \
+                                 WHERE     %S \
+                                       AND storage.deletedFlag=0 \
                                  %S \
                                  LIMIT %llu,%llu; \
                                 ",
@@ -9407,7 +9422,8 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                              FROM entries \
                                LEFT JOIN storage ON storage.id=entries.storageId \
                                LEFT JOIN fileEntries ON fileEntries.entryId=entries.id \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                             ",
                             filterString
                            );
@@ -9637,7 +9653,8 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                              FROM entries \
                                LEFT JOIN storage ON storage.id=images.storageId \
                                LEFT JOIN imageEntries ON imageEntries.entryId=entries.id \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                             ",
                             filterString
                            );
@@ -9862,7 +9879,8 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                              FROM entries \
                                LEFT JOIN storage ON storage.id=entries.storageId \
                                LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                             ",
                             filterString
                            );
@@ -10084,7 +10102,8 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                              FROM entries \
                                LEFT JOIN storage ON storage.id=links.storageId \
                                LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                             ",
                             filterString
                            );
@@ -10307,7 +10326,8 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                              FROM entries \
                                LEFT JOIN storage ON storage.id=hardlinks.storageId \
                                LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                             ",
                             filterString
                            );
@@ -10537,7 +10557,8 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              FROM entries \
                                LEFT JOIN storage ON storage.id=special.storageId \
                                LEFT JOIN specialEntries ON specialEntries.entryId=entries.id \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND storage.deletedFlag=0 \
                             ",
                             filterString
                            );
@@ -11003,8 +11024,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
-
-if (Index_getType(storageIndexId) != INDEX_TYPE_STORAGE) abort();
+fprintf(stderr,"%s, %d: storageIndexId=%lld id=%lld\n",__FILE__,__LINE__,storageIndexId,Index_getDatabaseId(storageIndexId));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)

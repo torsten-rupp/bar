@@ -1640,6 +1640,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
                                   );
             break;
           case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+fprintf(stderr,"%s, %d: add ARCHIVE_ENTRY_TYPE_DIRECTORY %lld %s\n",__FILE__,__LINE__,archiveIndexNode->storageId,String_cString( archiveIndexNode->directory.name));
             error = Index_addDirectory(archiveHandle->indexHandle,
                                        archiveIndexNode->storageId,
                                        archiveIndexNode->directory.name,
@@ -1976,6 +1977,7 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
   archiveIndexNode->directory.userId          = userId;
   archiveIndexNode->directory.groupId         = groupId;
   archiveIndexNode->directory.permission      = permission;
+fprintf(stderr,"%s, %d: indexAddDirectory %lld %s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
   error = addArchiveIndexNode(archiveHandle,archiveIndexNode);
   if (error != ERROR_NONE)
@@ -14673,7 +14675,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String             printableStorageName;
   Errors             error;
   uint64             timeLastChanged;
-  bool               abortedFlag,serverAllocationPendingFlag;
+  bool               deletedFlag,abortedFlag,serverAllocationPendingFlag;
   ArchiveHandle      archiveHandle;
   ArchiveEntryInfo   archiveEntryInfo;
   ArchiveEntryTypes  archiveEntryType;
@@ -14743,7 +14745,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     Index_setState(indexHandle,
                    storageId,
                    INDEX_STATE_ERROR,
-                   0LL,
+                   0LL,  // lastCheckedDateTime
                    "%s (error code: %d)",
                    Error_getText(error),
                    Error_getCode(error)
@@ -14757,12 +14759,13 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   Index_setState(indexHandle,
                  storageId,
                  INDEX_STATE_UPDATE,
-                 0LL,
-                 NULL
+                 0LL,  // lastCheckedDateTime
+                 NULL  // errorMessage
                 );
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
+fprintf(stderr,"%s, %d: create index %lld\n",__FILE__,__LINE__,storageId);
 
   // get current uuidId, entityId
 //TODO
@@ -14779,7 +14782,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     Index_setState(indexHandle,
                    storageId,
                    INDEX_STATE_ERROR,
-                   0LL,
+                   0LL,  // lastCheckedDateTime
                    "%s (error code: %d)",
                    Error_getText(error),
                    Error_getCode(error)
@@ -14791,6 +14794,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
   // read archive content
   timeLastChanged             = 0LL;
+  deletedFlag                 = FALSE;
   abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   fileName                    = String_new();
@@ -14804,6 +14808,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 //uint64 t0,t1; t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
          && (error == ERROR_NONE)
+         && !deletedFlag
          && !abortedFlag
          && !serverAllocationPendingFlag
         )
@@ -14821,6 +14826,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     }
 
     // read entry
+//fprintf(stderr,"%s, %d: archiveEntryType=%d\n",__FILE__,__LINE__,archiveEntryType);
     switch (archiveEntryType)
     {
       case ARCHIVE_ENTRY_TYPE_FILE:
@@ -15193,6 +15199,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     }
 
     // check if aborted, check if server allocation pending
+    deletedFlag                 = Index_isDeletedStorage(indexHandle,storageId);
     abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
@@ -15227,7 +15234,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                    storageId,
                    INDEX_STATE_UPDATE_REQUESTED,
                    0LL,  // lastCheckedTimestamp
-                   NULL  // error text
+                   NULL  // errorMessage
                   );
 
     error = ERROR_INTERRUPTED;
@@ -15262,7 +15269,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                      storageId,
                      INDEX_STATE_OK,
                      Misc_getCurrentDateTime(),
-                     NULL
+                     NULL  // errorMessage
                     );
     }
     else

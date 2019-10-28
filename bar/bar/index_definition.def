@@ -13,7 +13,6 @@ const STATE_CREATE           = 2
 const STATE_UPDATE_REQUESTED = 3
 const STATE_UPDATE           = 4
 const STATE_ERROR            = 5
-const STATE_DELETED          = 6
 
 // modes
 const MODE_MANUAL = 0
@@ -63,7 +62,7 @@ CREATE TABLE IF NOT EXISTS entities(
   created             INTEGER,
   type                INTEGER,
   parentJobUUID       INTEGER,
-  bidFlag             INTEGER,
+  bidFlag             INTEGER DEFAULT 0,
   lockedCount         INTEGER DEFAULT 0
 );
 CREATE INDEX ON entities (jobUUID,created,type);
@@ -93,6 +92,7 @@ CREATE TABLE IF NOT EXISTS storage(
   mode                      INTEGER DEFAULT $MODE_MANUAL,
   lastChecked               INTEGER DEFAULT 0,
   errorMessage              TEXT,
+  deletedFlag               INTEGER DEFAULT 0,
 
   // Note: updated via Index_updateStorageInfos()
   totalEntryCount           INTEGER DEFAULT 0,  // total number of entries

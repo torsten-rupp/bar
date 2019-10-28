@@ -75,7 +75,6 @@ typedef enum
   INDEX_STATE_UPDATE_REQUESTED = INDEX_CONST_STATE_UPDATE_REQUESTED,
   INDEX_STATE_UPDATE           = INDEX_CONST_STATE_UPDATE,
   INDEX_STATE_ERROR            = INDEX_CONST_STATE_ERROR,
-  INDEX_STATE_DELETED          = INDEX_CONST_STATE_DELETED,
 
   INDEX_STATE_UNKNOWN
 } IndexStates;
@@ -85,7 +84,6 @@ typedef uint64 IndexStateSet;
 #define INDEX_STATE_MAX INDEX_STATE_ERROR
 
 #define INDEX_STATE_SET_NONE 0
-// Note: all except INDEX_STATE_DELETED
 #define INDEX_STATE_SET_ALL  (  SET_VALUE(INDEX_STATE_NONE) \
                               | SET_VALUE(INDEX_STATE_OK) \
                               | SET_VALUE(INDEX_STATE_CREATE) \
@@ -1632,6 +1630,19 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
 Errors Index_deleteStorage(IndexHandle *indexHandle,
                            IndexId     storageIndexId
                           );
+
+/***********************************************************************\
+* Name   : Index_isDeletedStorage
+* Purpose: check if storage entry is deleted
+* Input  : indexQueryHandle - index query handle
+*          storageIndexId   - index id of storage
+* Return : TRUE iff deleted
+* Notes  : -
+\***********************************************************************/
+
+bool Index_isDeletedStorage(IndexHandle *indexHandle,
+                            IndexId     storageIndexId
+                           );
 
 /***********************************************************************\
 * Name   : Index_isEmptyStorage
