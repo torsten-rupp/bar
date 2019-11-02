@@ -645,6 +645,8 @@ TCLSH
 PERL
 PATCH
 MAKE
+WINDRES
+RANLIB
 AR
 CXX
 HEAPVIEW_DIR
@@ -826,6 +828,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_toolchain_prefix
 with_config_dir
 with_runtime_dir
 with_tls_dir
@@ -1520,6 +1523,8 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-toolchain-prefix=<prefix>
+                          toolchain prefix
   --with-config-dir=<path>
                           configuration directory (default: /etc/bar)
   --with-runtime-dir=<path>
@@ -2720,6 +2725,10 @@ ENABLE_EXTERN_COMPILE="yes"
 tmpFile=`mktemp configure-XXXXXX`
 
 
+# get absolute source directory path
+SOURCE_DIR=`realpath $srcdir`
+
+# get platform specific settings
 case "$host_os" in
   linux-*)
     PLATFORM=LINUX
@@ -2733,19 +2742,17 @@ case "$host_os" in
       CPU_CORES=1
     fi
     ;;
-  windows*)
+  windows*|mingw*)
     PLATFORM=WINDOWS
     FILE_SEPARATOR_CHAR="\\\\"
     JAVA_PATH_SEPARATOR=";"
     SHELLEXT=".cmd"
-    CPU_CORES=1
-    ;;
-  mingw*)
-    PLATFORM=WINDOWS
-    FILE_SEPARATOR_CHAR="\\\\"
-    JAVA_PATH_SEPARATOR=";"
-    SHELLEXT=".cmd"
-    CPU_CORES=1
+    nproc 1>/dev/null 2>&1
+    if test $? -eq 0; then
+      CPU_CORES=`nproc`
+    else
+      CPU_CORES=1
+    fi
     ;;
   sunos | solaris*)
     PLATFORM=SOLARIS
@@ -2767,6 +2774,14 @@ case "$host_os" in
 esac
 
 
+
+#TODO: remove
+
+# Check whether --with-toolchain-prefix was given.
+if test "${with_toolchain_prefix+set}" = set; then :
+  withval=$with_toolchain_prefix; TOOLCHAIN_PREFIX=$withval
+
+fi
 
 
 # Check whether --with-config-dir was given.
@@ -2975,7 +2990,7 @@ fi
 
 
 if test -z "$CC"; then
-  for ac_prog in gcc cc
+  for ac_prog in $host-gcc $host-cc gcc cc
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3025,7 +3040,7 @@ if test -z "$CC"; then
   as_fn_error $? "Cannot find C compiler in PATH. Please check your PATH environment variable." "$LINENO" 5
 fi
 if test -z "$CXX"; then
-  for ac_prog in g++ c++
+  for ac_prog in $host-g++ $host-c++ g++ c++
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3075,7 +3090,7 @@ if test -z "$CXX"; then
   as_fn_error $? "Cannot find C++ compiler in PATH. Please check your PATH environment variable." "$LINENO" 5
 fi
 if test -z "$LD"; then
-  for ac_prog in ld gcc
+  for ac_prog in $host-ld $$host-gcc ld gcc
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3122,7 +3137,7 @@ done
 
 fi
 if test -z "$AR"; then
-  for ac_prog in ar
+  for ac_prog in $$host-ar ar
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3169,7 +3184,7 @@ done
 
 fi
 if test -z "$STRIP"; then
-  for ac_prog in strip
+  for ac_prog in $$host-strip strip
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3216,7 +3231,7 @@ done
 
 fi
 if test -z "$OBJDUMP"; then
-  for ac_prog in objdump
+  for ac_prog in $host-objdump objdump
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -3309,6 +3324,100 @@ fi
 done
 
 fi
+if test -z "$RANLIB"; then
+  for ac_prog in $host-ranlib ranlib
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_RANLIB+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $RANLIB in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_RANLIB="$RANLIB" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_RANLIB="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+RANLIB=$ac_cv_path_RANLIB
+if test -n "$RANLIB"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $RANLIB" >&5
+$as_echo "$RANLIB" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$RANLIB" && break
+done
+
+fi
+if test -z "$WINDRES"; then
+  for ac_prog in $host-windres windres
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_WINDRES+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $WINDRES in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_WINDRES="$WINDRES" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_WINDRES="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+WINDRES=$ac_cv_path_WINDRES
+if test -n "$WINDRES"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $WINDRES" >&5
+$as_echo "$WINDRES" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$WINDRES" && break
+done
+
+fi
 
 for ac_prog in make
 do
@@ -3361,7 +3470,6 @@ fi
 if test -z "`$MAKE --version 2>/dev/null|grep GNU 2>/dev/null`"; then
   as_fn_error $? "$MAKE is not a GNU make. Please install a GNU make." "$LINENO" 5
 fi
-
 for ac_prog in patch
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
@@ -4131,6 +4239,8 @@ fi
 done
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: CC1=$CC" >&5
+$as_echo "$as_me: WARNING: CC1=$CC" >&2;}
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -5212,6 +5322,8 @@ $as_echo "none needed" >&6; } ;; #(
 $as_echo "$ac_cv_prog_cc_stdc" >&6; } ;;
 esac
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: CC2=$CC" >&5
+$as_echo "$as_me: WARNING: CC2=$CC" >&2;}
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if $CC support option -fno-pie" >&5
@@ -6150,7 +6262,11 @@ CC_INCLUDES="$CC_INCLUDES"
 case "$host_os" in
   linux-*)
     ;;
-  *)
+  windows*|mingw*)
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
     ;;
 esac
 
@@ -6202,7 +6318,11 @@ eval ac_res=\$ac_cv_c_option_`echo -rdynamic|tr -c -d a-zA-Z0-9_`
 $as_echo "$ac_res" >&6; }
     fi
     ;;
-  *)
+  windows*|mingw*)
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
     ;;
 esac
 
@@ -7956,7 +8076,7 @@ fi
 
 
 case $host_os in
-  linux*)
+  linux-*)
 
 
 
@@ -8197,7 +8317,7 @@ else
 fi
 
     ;;
-  mingw*)
+  windows*|mingw*)
 
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing pthread_create" >&5
@@ -8318,9 +8438,70 @@ $as_echo "$ac_cv_search_static_WSAStartup" >&6; }
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"
 fi
 
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing getaddrinfo" >&5
+$as_echo_n "checking for static library containing getaddrinfo... " >&6; }
+if ${ac_cv_search_static_getaddrinfo+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in ws2_32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo ws2tcpip.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "ws2tcpip.h"; then echo "extern void getaddrinfo();"; fi`
+                                         return (int)getaddrinfo;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_getaddrinfo=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_getaddrinfo+:} false; then :
+
+else
+  ac_cv_search_static_getaddrinfo=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_getaddrinfo" >&5
+$as_echo "$ac_cv_search_static_getaddrinfo" >&6; }
+  ac_result=$ac_cv_search_static_getaddrinfo
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES ws2_32"
+fi
+
     ;;
-  *)
-    as_fn_error $? "Unsupported operating system '$host_os'" "$LINENO" 5
+  sunos | solaris*)
+    ;;
+  darwin*)
     ;;
 esac
 
@@ -8393,7 +8574,7 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
     result=1
     if test $result -eq 1; then
       (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" ./configure \
-        --host=$host \
+        --build=$build \
         --disable-tcl \
         --enable-fts4\
       ) 1>$tmpFile 2>&1
@@ -8451,21 +8632,25 @@ if test -d icu -o -d "`readlink icu`"; then
     if test $result -eq 1; then
       # patch to disable xlocale: does not exists anymore? not required?
       #   diff -u icu.org/source/i18n/digitlst.cpp icu/source/i18n/digitlst.cpp > icu-xlocale.patch
-      (cd extern/icu; $PATCH --batch -N -p1 <$cwd/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
+      (cd extern/icu; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/icu-xlocale.patch) 1>/dev/null 2>/dev/null
       case $host_os in
-        mingw*)
+        linux-*)
+          ;;
+        windows*|mingw*)
           # patch to disable usage of lib-command when RANLIB is set
           ;;
-        *)
+        sunos | solaris*)
+          ;;
+        darwin*)
           ;;
       esac
     fi
 
     # build host
     if test $result -eq 1; then
-      install -d icu/build/$build_cpu
-      (cd icu/build/$host_cpu; CC= CXX= AR= RANLIB= CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
-        --host=$build \
+      install -d icu/build/$build
+      (cd icu/build/$build; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
+        --build=$build \
         --prefix=$cwd/extern \
         --disable-shared \
         --enable-static \
@@ -8484,7 +8669,7 @@ $as_echo "fail (configure)" >&6; }
       fi
     fi
     if test $result -eq 1; then
-      (cd icu/build/$host_cpu; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+      (cd icu/build/$build; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -8499,11 +8684,12 @@ $as_echo "fail (make)" >&6; }
 
     if test "$host" != "$build"; then
       # build target
-      install -d icu/build/$build_cpu
+      install -d icu/build/$host
       if test $result -eq 1; then
-        (cd icu/build/$build_cpu; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
+        (cd icu/build/$host; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
           --host=$host \
-          --with-cross-build=$cwd/icu/build/$build_cpu \
+          --build=$build \
+          --with-cross-build=$cwd/icu/build/$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
@@ -8522,7 +8708,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd icu/build/$build_cpu; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd icu/build/$host; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -8537,7 +8723,7 @@ $as_echo "fail (make)" >&6; }
     fi
 
     if test $result -eq 1; then
-      (cd icu/build/$build_cpu; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      (cd icu/build/$host; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
@@ -8549,12 +8735,21 @@ $as_echo "fail (install)" >&6; }
         result=0
       fi
       case $host_os in
-        mingw*)
-          (cd extern/lib; ln -s libicuuc.lib libicuuc.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s libicui18n.lib libicui18n.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s libicudata.lib libicudata.a) 1>/dev/null 2>/dev/null
+        linux-*)
           ;;
-        *)
+        windows*|mingw*)
+          # Note: bug in library names of older ICU versions?
+          #       https://unicode-org.atlassian.net/browse/ICU-13138
+          (cd extern/lib; ln -s libsicuuc.a libicuuc.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libsicuin.a libicui18n.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libsicudt.a libicudata.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libsicuio.a libicuio.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libsicutu.a libicutu.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
           ;;
       esac
     fi
@@ -9158,7 +9353,7 @@ if test -d zlib -o -d "`readlink zlib`"; then
 
     result=1
     if test $result -eq 1; then
-      (cd zlib; ./configure \
+      (cd zlib; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
         --prefix=$cwd/extern \
         --static \
       ) 1>$tmpFile 2>&1
@@ -9429,6 +9624,7 @@ if test $ENABLE_BZ2 = "yes"; then
       result=1
       if test $result -eq 1; then
         if test "$build" == "$host"; then
+          # compile build
           (cd bzip2; make clean; make -j$CPU_CORES libbz2.a) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
@@ -9441,7 +9637,8 @@ $as_echo "fail (make)" >&6; }
             result=0
           fi
         else
-          (cd bzip2; make clean; make -j$CPU_CORES CC=$CC AR=$AR RANLIB=$RANLIB libbz2.a) 1>$tmpFile 2>&1
+          # cross-compile host
+          (cd bzip2; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -9699,23 +9896,28 @@ if test $ENABLE_LZMA = "yes"; then
       result=1
       if test $result -eq 1; then
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/xz-5.0.4; then
-#              (cd extern/xz-5.0.4; $PATCH --batch -N -p1 <$cwd/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/xz-5.0.4; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xz-5.0.4-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
 #            fi
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
       if test $result -eq 1; then
         (cd xz; ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
@@ -9988,9 +10190,25 @@ if test $ENABLE_LZO = "yes"; then
 
       result=1
       if test $result -eq 1; then
+        case $host_os in
+          linux-*)
+            ;;
+          windows*|mingw*)
+            # patch to fix missing --tag=CC for in libtool call
+            #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
+              (cd extern/lzo-2.10; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>/dev/null 2>/dev/null
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+        esac
+      fi
+      if test $result -eq 1; then
         install -d lzo
         (cd lzo; ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -10261,7 +10479,7 @@ if test $ENABLE_LZ4 = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        (cd lz4; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd lz4; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" lib) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -10274,7 +10492,9 @@ $as_echo "fail (make)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd lz4; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        # Note: do not call 'install', it does build additional tools
+        # (cd lz4; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        (cd lz4; install -d $cwd/extern/lib; cp lib/liblz4.a $cwd/extern/lib) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -10518,7 +10738,7 @@ if test $ENABLE_ZSTD = "yes"; then
 
       result=1
       if test $result -eq 1; then
-        (cd zstd; make clean; make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd zstd; make clean; make -C lib -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -10775,7 +10995,7 @@ if test $ENABLE_XDELTA3 = "yes"; then
     #   diff -u xdelta3-3.0.11.org/xdelta3-decode.h   xdelta3-3.0.11/xdelta3-decode.h   >> xdelta3-3.0.11.patch
     #   diff -u xdelta3-3.0.11.org/xdelta3-hash.h     xdelta3-3.0.11/xdelta3-hash.h     >> xdelta3-3.0.11.patch
     #   diff -u xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h >> xdelta3-3.0.11.patch
-    (cd xdelta3; $PATCH --batch -N -p1 < ../../misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
+    (cd xdelta3; $PATCH --batch -N -p1 < $SOURCE_DIR-misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
 
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
     HAVE_XDELTA3=1
@@ -10799,6 +11019,7 @@ if test $ENABLE_GCRYPT = "yes"; then
       if test $result1 -eq 1; then
         (cd libgpg-error; ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
@@ -10854,29 +11075,34 @@ $as_echo "done" >&6; }
       if test $result2 -eq 1; then
         # patch to disable wrong deprecated warnings:
         #   diff -u libgcrypt-1.5.0.org/src/gcrypt.h libgcrypt-1.5.0/src/gcrypt.h > libgcrypt-warning.patch
-        (cd libgcrypt; $PATCH --batch -N -p1 < ../../misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
+        (cd libgcrypt; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-warning.patch) 1>/dev/null 2>/dev/null
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
             #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/libgcrypt-1.5.0; then
-#              (cd extern/libgcrypt-1.5.0; $PATCH --batch -N -p1 <$cwd/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/libgcrypt-1.5.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-1.5.0-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
 #            fi
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
       if test $result2 -eq 1; then
-        case $build_cpu in
+        case $host_cpu in
           *86*)
             (cd libgcrypt; LIBS="-L$cwd/extern/lib -lgpg-error" ./configure \
               --host=$host \
+              --build=$build \
               --prefix=$cwd/extern \
               --with-libgpg-error-prefix=$cwd/extern \
               --enable-maintainer-mode \
@@ -10910,9 +11136,8 @@ $as_echo "fail (configure)" >&6; }
           result2=0
         fi
       fi
-set +x
       if test $result2 -eq 1; then
-        (cd libgcrypt; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd libgcrypt; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -10937,10 +11162,14 @@ $as_echo "fail (install)" >&6; }
           result2=0
         fi
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             (cd extern/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
@@ -11385,7 +11614,7 @@ if test $ENABLE_SSH = "yes"; then
       if test $result -eq 1; then
         case "$host_os" in
           linux-*)
-            if test "$build_cpu" = "x86_64"; then
+            if test "$host_cpu" = "x86_64"; then
               (cd openssl; ./Configure \
                 --prefix=$cwd/extern \
                 no-shared \
@@ -11421,9 +11650,17 @@ $as_echo "fail (configure)" >&6; }
               fi
             fi
             ;;
-          mingw*)
+          windows*|mingw*)
+            # Note: always compilre for mingw; 64bit is still not suppored
+#            (cd openssl; CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./Configure \
+#              --prefix=$cwd/extern \
+#              no-shared \
+#              mingw \
+#            ) 1>$tmpFile 2>&1
             (cd openssl; ./Configure \
               --prefix=$cwd/extern \
+              --cross-compile-prefix=i686-w64-mingw32- \
+              enable-capieng \
               no-shared \
               mingw \
             ) 1>$tmpFile 2>&1
@@ -11438,14 +11675,15 @@ $as_echo "fail (configure)" >&6; }
               result=0
             fi
             ;;
-          *)
-            as_fn_error $? "Support for '$host_os' still not implemented" "$LINENO" 5
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
       if test $result -eq 1; then
         # Note: OpenSSL does not support "make -j..."
-        (cd openssl; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd openssl; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -11503,34 +11741,40 @@ $as_echo "#define HAVE_SSL 1" >>confdefs.h
         #   diff -u libssh2-1.1.org/include/libssh2.h libssh2-1.1/include/libssh2.h >  libssh2-1.1-keepalive.patch
         #   diff -u libssh2-1.1.org/src/channel.c     libssh2-1.1/src/channel.c     >> libssh2-1.1-keepalive.patch
 #TODO: does not work anymore
-#        (cd libssh2; $PATCH --batch -N -p1 < $cwd/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
+#        (cd libssh2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.1-keepalive.patch) 1>/dev/null 2>/dev/null
         # patch for memory leak for libssh2 1.8.2 (ignore errors):
         #   diff -u libssh2-1.8.2.org/src libssh2-1.8.2/src > libssh2-1.8.2-memory-leak.patch
-        (cd libssh2; $PATCH --batch -N -p1 < $cwd/misc/libssh2-1.8.2-memory-leak.patch) 1>/dev/null 2>/dev/null
+        (cd libssh2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.8.2-memory-leak.patch) 1>/dev/null 2>/dev/null
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
             #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/libssh2-1.4.2; then
-#              (cd extern/libssh2-1.4.2; $PATCH --batch -N -p1 <$cwd/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/libssh2-1.4.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.4.2-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
 #            fi
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
       if test $result -eq 1; then
-        (cd libssh2; LIBS="-ldl" ./configure \
+        (cd libssh2; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --with-libssl-prefix=$cwd/extern \
           --with-libgcrypt-prefix=$cwd/extern \
           --disable-shared --enable-static \
+          --disable-examples-build \
           --enable-debug \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -11545,7 +11789,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd libssh2; make clean; make -j$CPU_CORES -C src `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (set -x; cd libssh2; make clean; make -j$CPU_CORES -C src) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -11570,10 +11814,14 @@ $as_echo "fail (install)" >&6; }
           result=0
         fi
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             (cd extern/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
@@ -11985,6 +12233,8 @@ fi
     fi
   fi
 fi
+set +x
+#AC_ERROR(xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)
 
 # compile/use gnutls
 if test $ENABLE_TLS = "yes"; then
@@ -12005,28 +12255,50 @@ $as_echo "$as_me: WARNING: gcrypt is missing. Compiling or linking gnutls may fa
       if test $result1 -eq 1; then
         # Note: clean is obviously not enough, try distclean
         (cd gmp; make distclean) 1>/dev/null 2>&1
-        if test "$build_cpu" = "x86_64"; then
-          case $build_cpu in
-            *86*)
+        if test "$host_cpu" = "x86_64"; then
+          case "$host_os" in
+            linux-*)
+              case $host_cpu in
+                *86*)
+                  (cd gmp; CFLAGS= ./configure \
+                    --host=$host \
+                    --build=$build \
+                    --prefix=$cwd/extern \
+                    --disable-shared \
+                    --enable-static \
+                    --enable-pic \
+                    --enable-fat \
+                    ABI=64 \
+                  ) 1>$tmpFile 2>&1
+                  ;;
+                arm*)
+                  (cd gmp; CFLAGS= ./configure \
+                    --host=$host \
+                    --build=$build \
+                    --prefix=$cwd/extern \
+                    --disable-shared \
+                    --enable-static \
+                    --enable-pic \
+                    --enable-fat \
+                  ) 1>$tmpFile 2>&1
+                  ;;
+              esac
+              ;;
+            windows*|mingw*)
               (cd gmp; CFLAGS= ./configure \
                 --host=$host \
+                --build=$build \
                 --prefix=$cwd/extern \
                 --disable-shared \
                 --enable-static \
                 --enable-pic \
                 --enable-fat \
-                ABI=64 \
+                ABI=32 \
               ) 1>$tmpFile 2>&1
               ;;
-            arm*)
-              (cd gmp; CFLAGS= ./configure \
-                --host=$host \
-                --prefix=$cwd/extern \
-                --disable-shared \
-                --enable-static \
-                --enable-pic \
-                --enable-fat \
-              ) 1>$tmpFile 2>&1
+            sunos | solaris*)
+              ;;
+            darwin*)
               ;;
           esac
         else
@@ -12052,7 +12324,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result1 -eq 1; then
-        (cd gmp; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd gmp; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -12089,6 +12361,7 @@ $as_echo "done" >&6; }
       if test $result2 -eq 1; then
         (cd nettle; ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --with-include-path=$cwd/extern/include \
           --with-lib-path=$cwd/extern/lib \
@@ -12107,7 +12380,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result2 -eq 1; then
-        (cd nettle; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd nettle; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -12144,6 +12417,7 @@ $as_echo "done" >&6; }
       if test $result2 -eq 1; then
         (cd libidn2; ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
@@ -12161,7 +12435,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result2 -eq 1; then
-        (cd libidn2; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd libidn2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -12196,8 +12470,9 @@ $as_echo "done" >&6; }
 
       result3=1
       if test $result3 -eq 1; then
-        (cd gnutls; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig GMP_LIBS=-L$cwd/extern/lib ./configure \
+        (cd gnutls; LDFLAGS=-L$cwd/extern/lib PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --with-libnettle-prefix=$cwd/extern \
           --with-included-libtasn1 \
@@ -12221,7 +12496,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result3 -eq 1; then
-        (cd gnutls; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd gnutls; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -12701,7 +12976,9 @@ $as_echo "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fai
       result1=1
       if test $result1 -eq 1; then
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
@@ -12709,12 +12986,14 @@ $as_echo "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fai
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
@@ -12722,6 +13001,7 @@ $as_echo "$as_me: WARNING: libssh2 is missing. Compiling or linking curl may fai
         install -d c-ares
         (cd c-ares; CFLAGS= ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
@@ -12764,10 +13044,14 @@ $as_echo "fail (install)" >&6; }
           result1=0
         fi
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             (cd extern/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
@@ -12782,7 +13066,9 @@ $as_echo "done" >&6; }
       result2=1
       if test $result2 -eq 1; then
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
@@ -12790,40 +13076,74 @@ $as_echo "done" >&6; }
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
       if test $result2 -eq 1; then
-        (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig LIBS="-ldl" ./configure \
-          --host=$host \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-          --disable-ldap \
-          --disable-rtsp \
-          --without-librtmp \
-          --enable-ares=$cwd/extern \
-          --with-zlib=$cwd/extern \
-          --with-ssl=$cwd/extern \
-          --with-gnutls=$cwd/extern \
-          --with-libssh2=$cwd/extern \
-          `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+        if test "$host" == "$build"; then
+          # compile build
+          (cd curl; ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-shared \
+            --enable-static \
+            --disable-ldap \
+            --disable-rtsp \
+            --without-librtmp \
+            --enable-ares=$cwd/extern \
+            --with-zlib=$cwd/extern \
+            --with-ssl=$cwd/extern \
+            --with-gnutls=$cwd/extern \
+            --with-libssh2=$cwd/extern \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+          ) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
 $as_echo "fail (configure)" >&6; }
 
   echo --- error log -------------------------------------------------------------------------
   cat $tmpFile | while read s; do echo "  $s"; done
   echo ---------------------------------------------------------------------------------------
 
-          result2=0
+            result2=0
+          fi
+        else
+          # cross-compile host
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CFLAGS="-DCARES_STATICLIB" LIBS="-lcrypt32" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-shared \
+            --enable-static \
+            --disable-ldap \
+            --disable-rtsp \
+            --without-librtmp \
+            --enable-ares=$cwd/extern \
+            --with-zlib=$cwd/extern \
+            --with-ssl=$cwd/extern \
+            --with-gnutls=$cwd/extern \
+            --with-libssh2=$cwd/extern \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+          ) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
+$as_echo "fail (configure)" >&6; }
+
+  echo --- error log -------------------------------------------------------------------------
+  cat $tmpFile | while read s; do echo "  $s"; done
+  echo ---------------------------------------------------------------------------------------
+
+            result2=0
+          fi
         fi
       fi
       if test $result2 -eq 1; then
@@ -12852,10 +13172,14 @@ $as_echo "fail (install)" >&6; }
           result2=0
         fi
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
@@ -12870,7 +13194,9 @@ $as_echo "done" >&6; }
       result3=1
       if test $result3 -eq 1; then
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
             #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
@@ -12878,18 +13204,21 @@ $as_echo "done" >&6; }
             #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 <$cwd/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
       if test $result3 -eq 1; then
         (cd mxml; ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
@@ -12906,7 +13235,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result3 -eq 1; then
-        (cd mxml; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -12919,7 +13248,12 @@ $as_echo "fail (make)" >&6; }
         fi
       fi
       if test $result3 -eq 1; then
-        (cd mxml; make install) 1>$tmpFile 2>&1
+        # Note: there is no target to install the library and header files only; do it manually
+        (cd mxml; \
+         make install-libmxml.a; \
+         install mxml.h $cwd/extern/include; \
+         install mxml.pc $cwd/extern/lib/pkgconfig; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
 $as_echo "fail (install)" >&6; }
@@ -12931,10 +13265,14 @@ $as_echo "fail (install)" >&6; }
           result3=0
         fi
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
@@ -12949,11 +13287,17 @@ $as_echo "done" >&6; }
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
-      CC_DEFINES="$CC_DEFINES CURL_STATICLIB"
+      CC_DEFINES="$CC_DEFINES CARES_STATICLIB CURL_STATICLIB"
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
         LIBRARIES="$LIBRARIES curl cares mxml"
+        if test "$host" != "$build"; then
+          LIBRARIES="$LIBRARIES crypt32"
+        fi
       else
         STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares mxml"
+        if test "$host" != "$build"; then
+          STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"
+        fi
       fi
       HAVE_FTP=1
       HAVE_CARES=1
@@ -12967,6 +13311,49 @@ $as_echo "#define HAVE_CURL 1" >>confdefs.h
 
 
 $as_echo "#define HAVE_MXML 1" >>confdefs.h
+
+
+      # Note: update toolchain settings for defines
+
+  CFLAGS="$CC_FLAGS -v"
+  CXXFLAGS="$CXX_FLAGS -v"
+  for z in $CC_DEFINES ""; do
+    if test -n "$z"; then
+      CFLAGS="$CFLAGS -D$z"
+    fi
+  done
+  for z in $CC_INCLUDES ""; do
+    if test -n "$z"; then
+      CFLAGS="$CFLAGS -I$z"
+    fi
+  done
+  LDFLAGS="$LD_FLAGS"
+  for z in $LIBRARY_PATHS ""; do
+    if test -n "$z"; then
+      LDFLAGS="$LDFLAGS -L$z"
+    fi
+  done
+  LIBS=""
+  for z in $STATIC_LIBRARIES ""; do
+    if test -n "$z"; then
+      LIBS="$LIBS -l$z"
+    fi
+  done
+  for z in $LIBRARIES ""; do
+    if test -n "$z"; then
+      LIBS="$LIBS -l$z"
+    fi
+  done
+  for z in $STATIC_LIBRARIES ""; do
+    if test -n "$z"; then
+      LIBS="$LIBS -l$z"
+    fi
+  done
+  for z in $LIBRARIES ""; do
+    if test -n "$z"; then
+      LIBS="$LIBS -l$z"
+    fi
+  done
 
     fi
   else
@@ -13696,6 +14083,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       if test $result1 -eq 1; then
         (cd libiconv; CFLAGS="-fPIC" ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
@@ -13767,6 +14155,7 @@ $as_echo "done" >&6; }
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --host=$host \
+            --build=$build \
             --prefix=$cwd/extern \
             --with-libiconv-prefix=$cwd/extern \
             --disable-cxx \
@@ -14053,7 +14442,9 @@ if test $ENABLE_PCRE = "yes"; then
       result=1
       if test $result -eq 1; then
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             # patch to disable usage of lib-command when RANLIB is set
             #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
             #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
@@ -14061,18 +14452,21 @@ if test $ENABLE_PCRE = "yes"; then
             #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/pcre-8.32; then
-#              (cd extern/pcre-8.32; $PATCH --batch -N -p1 <$cwd/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
+#              (cd extern/pcre-8.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pcre-8.32-libtool.patch) 1>/dev/null 2>/dev/null
 #            else
 #              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
 #            fi
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
       if test $result -eq 1; then
         (cd pcre; ./configure \
           --host=$host \
+          --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
@@ -14090,7 +14484,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd pcre; make clean; make -j$CPU_CORES `if test -n "$LIBTOOL"; then echo LIBTOOL=$LIBTOOL; fi`) 1>$tmpFile 2>&1
+        (cd pcre; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -14115,11 +14509,15 @@ $as_echo "fail (install)" >&6; }
           result=0
         fi
         case $host_os in
-          mingw*)
+          linux-*)
+            ;;
+          windows*|mingw*)
             (cd extern/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
             (cd extern/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
             ;;
-          *)
+          sunos | solaris*)
+            ;;
+          darwin*)
             ;;
         esac
       fi
@@ -14344,6 +14742,8 @@ $as_echo "$as_me: WARNING: pcre not compiled: pcre package missing" >&2;}
 fi
 
 case "$host_os" in
+  linux-*)
+    ;;
   windows*|mingw*)
     if test $ENABLE_PTHREADS_W32 = "yes"; then
       if test -d pthreads-w32 -o -d "`readlink pthreads-w32`"; then
@@ -14357,9 +14757,9 @@ case "$host_os" in
           result=1
           if test $result -eq 1; then
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static-debug) 1>$tmpFile 2>&1
+              (cd pthreads-w32; make clean; make CROSS="$host-" GC-static-debug) 1>$tmpFile 2>&1
             else
-              (cd pthreads-w32; make clean; make CC="$CC" AS="$AS" AR="$AR" RANLIB="$RANLIB" RC="$RC" GC-static) 1>$tmpFile 2>&1
+              (cd pthreads-w32; make clean; make CROSS="$host-" GC-static) 1>$tmpFile 2>&1
             fi
             if test $? -ne 0; then
               { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
@@ -14399,7 +14799,9 @@ $as_echo "#define HAVE_PTHREADS_W32 1" >>confdefs.h
       fi
     fi
     ;;
-  *)
+  sunos | solaris*)
+    ;;
+  darwin*)
     ;;
 esac
 
@@ -14418,11 +14820,13 @@ if test $ENABLE_BREAKPAD = "yes"; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd breakpad; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --host=$host \
+            --build=$build \
             --prefix=$cwd/extern \
           ) 1>$tmpFile 2>&1
         else
           (cd breakpad; ./configure \
             --host=$host \
+            --build=$build \
             --prefix=$cwd/extern \
           ) 1>$tmpFile 2>&1
         fi
@@ -14464,7 +14868,6 @@ $as_echo "fail (install)" >&6; }
         fi
 
         # fix broken install of breakpad: does not install all header files?
-#set -x
         install -d $cwd/extern/include/breakpad
         install -d $cwd/extern/include/breakpad/google_breakpad/processor
         install breakpad/src/google_breakpad/processor/*.h $cwd/extern/include/breakpad/google_breakpad/processor
@@ -14477,7 +14880,6 @@ $as_echo "fail (install)" >&6; }
         install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/extern/lib
 # 1>$tmpFile 2>&1
 #find $cwd/extern/include/breakpad -type f -name '*.h'
-#set +x
       fi
       if test $result -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
@@ -14805,7 +15207,7 @@ if test $ENABLE_BFD = "yes"; then
       if test $result -eq 1; then
         # patch to fix memory leak
         #   diff -u binutils-2.32.org/bfd/dwarf2.c binutils-2.32/bfd/dwarf2.c > ../misc/binutils-2.32-dwarf2-leak.patch
-        (cd extern/binutils-2.32; $PATCH --batch -N -p1 <$cwd/misc/binutils-2.32-dwarf2-leak.patch) 1>/dev/null 2>/dev/null
+        (cd extern/binutils-2.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/binutils-2.32-dwarf2-leak.patch) 1>/dev/null 2>/dev/null
         # Note: - fix distlean
         #       - use cpu+os to avoid "unknown" in name which cause
         #         using of wrong tool names by binutils build!
@@ -14813,6 +15215,7 @@ if test $ENABLE_BFD = "yes"; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
             --host=$build_cpu-$build_os \
+            --build=$build \
             --prefix=$cwd/extern \
             --disable-host-shared \
             --disable-ld \
@@ -14821,6 +15224,7 @@ if test $ENABLE_BFD = "yes"; then
         else
           (cd binutils; ./configure \
             --host=$build_cpu-$build_os \
+            --build=$build \
             --prefix=$cwd/extern \
             --disable-host-shared \
             --disable-ld \
@@ -15153,7 +15557,7 @@ if test $ENABLE_EPM = "yes"; then
       if test $result -eq 1; then
        # patch to support creating RPM packages on different machines:
        #   diff -u epm-4.1.org/rpm.c epm-4.1/rpm.c > epm-4.1-rpm.patch
-       (cd epm-$EPM_VERSION; $PATCH --batch -N -p1 < ../../misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
+       (cd epm-$EPM_VERSION; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/epm-4.1-rpm.patch) 1>/dev/null 2>/dev/null
       fi
       if test $result -eq 1; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: done" >&5
@@ -16160,7 +16564,7 @@ fi
 
 fi
 case $host_os in
-  linux*)
+  linux-*)
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
@@ -16283,10 +16687,11 @@ fi
 
     fi
     ;;
-  mingw*)
+  windows*|mingw*)
     ;;
-  *)
-    as_fn_error $? "Unsupported operating system '$host_os'" "$LINENO" 5
+  sunos | solaris*)
+    ;;
+  darwin*)
     ;;
 esac
 
@@ -22268,9 +22673,9 @@ fi
 fi
 
 
-VERSION_MAJOR=`cat $srcdir/version|grep MAJOR|sed 's/.*=//g'`
-VERSION_MINOR=`cat $srcdir/version|grep MINOR|sed 's/.*=//g'`
-VERSION_REVISION=`$SVNVERSION . 2>/dev/null || cat $srcdir/version|grep RELEASE|sed 's/RELEASE=//g'`
+VERSION_MAJOR=`cat $SOURCE_DIR/version|grep MAJOR|sed 's/.*=//g'`
+VERSION_MINOR=`cat $SOURCE_DIR/version|grep MINOR|sed 's/.*=//g'`
+VERSION_REVISION=`$SVNVERSION . 2>/dev/null || cat $SOURCE_DIR/version|grep RELEASE|sed 's/RELEASE=//g'`
 
 COPYRIGHT_DATE="2007-`date +%Y`"
 
@@ -24137,4 +24542,3 @@ fi
 
 
 rm -f $tmpFile
-
