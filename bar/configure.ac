@@ -4033,118 +4033,118 @@ AC_DEFINE_UNQUOTED(TLS_DIR,    "$TLS_DIR",    [TLS directory])
 AC_TRY_LINK([#include <stdio.h>
              #include "sqlite3.h"
             ],
-            [printf("%d\n",SQLITE_VERSION_NUMBER);],
+            [printf("%d",SQLITE_VERSION_NUMBER);],
             VERSION_SQLITE_NUMBER=`./conftest$ac_exeext`,
             VERSION_SQLITE_NUMBER=
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "sqlite3.h"
             ],
-            [printf("%s\n",SQLITE_VERSION);],
+            [printf("%s",SQLITE_VERSION);],
             VERSION_SQLITE=`./conftest$ac_exeext`,
             VERSION_SQLITE=
            )
-if test $VERSION_SQLITE_NUMBER -lt 3024000; then
+if test $VERSION_SQLITE -lt 3024000; then
   AC_ERROR([Required SQLite 3.24 or newer - found $VERSION_SQLITE])
 fi
 AC_TRY_LINK([#include <stdio.h>
              #include "unicode/uvernum.h"
             ],
-            [printf("%s\n",U_ICU_VERSION);],
+            [printf("%s",U_ICU_VERSION);],
             VERSION_ICU=`./conftest$ac_exeext`,
             VERSION_ICU=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "zlib.h"
             ],
-            [printf("%s\n",zlibVersion());],
+            [printf("%s",zlibVersion());],
             VERSION_Z=`./conftest$ac_exeext`,
             VERSION_Z=
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "bzlib.h"
             ],
-            [printf("%s\n",BZ2_bzlibVersion());],
+            [printf("%s",BZ2_bzlibVersion());],
             VERSION_BZ2=`./conftest$ac_exeext`,
             VERSION_BZ2=
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "lzma.h"
             ],
-            [printf("%d.%d.%d\n",LZMA_VERSION_MAJOR,LZMA_VERSION_MINOR,LZMA_VERSION_PATCH);],
+            [printf("%d.%d.%d",LZMA_VERSION_MAJOR,LZMA_VERSION_MINOR,LZMA_VERSION_PATCH);],
             VERSION_LZMA=`./conftest$ac_exeext`,
             VERSION_LZMA=
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "lzo/lzoconf.h"
             ],
-            [printf("%s\n",LZO_VERSION_STRING);],
+            [printf("%s",LZO_VERSION_STRING);],
             VERSION_LZO=`./conftest$ac_exeext`,
             VERSION_LZO=
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "lz4.h"],
-             [printf("%d.%d.%d\n",LZ4_VERSION_MAJOR,LZ4_VERSION_MINOR,LZ4_VERSION_RELEASE);],
+             [printf("%d.%d.%d",LZ4_VERSION_MAJOR,LZ4_VERSION_MINOR,LZ4_VERSION_RELEASE);],
              VERSION_LZ4=`./conftest$ac_exeext`,
              VERSION_LZ4=
             )
 AC_TRY_LINK([#include <stdio.h>
              #include "zstd.h"],
-             [printf("%d.%d.%d\n",ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE);],
+             [printf("%d.%d.%d",ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE);],
              VERSION_ZSTD=`./conftest$ac_exeext`,
              VERSION_ZSTD=
             )
 AC_TRY_LINK([#include <stdio.h>
              #include "gcrypt.h"
             ],
-            [printf("%s\n",GCRYPT_VERSION);],
+            [printf("%s",GCRYPT_VERSION);],
             VERSION_GCRYPT=`./conftest$ac_exeext`,
             VERSION_GCRYPT=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "gmp.h"
             ],
-            [printf("%s\n",gmp_version);],
+            [printf("%s",gmp_version);],
             VERSION_GMP=`./conftest$ac_exeext`,
             VERSION_GMP=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "gnutls/gnutls.h"
             ],
-            [printf("%s\n",GNUTLS_VERSION);],
+            [printf("%s",GNUTLS_VERSION);],
             VERSION_GNUTLS=`./conftest$ac_exeext`,
             VERSION_GNUTLS=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "openssl/opensslv.h"
             ],
-            [printf("%s\n",OPENSSL_VERSION_TEXT);],
+            [printf("%s",OPENSSL_VERSION_TEXT);],
             VERSION_OPENSSL=`./conftest$ac_exeext`,
             VERSION_OPENSSL=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "libssh2.h"],
-            [printf("%d.%d.%d\n",LIBSSH2_VERSION_MAJOR,LIBSSH2_VERSION_MINOR,LIBSSH2_VERSION_PATCH);],
+            [printf("%d.%d.%d",LIBSSH2_VERSION_MAJOR,LIBSSH2_VERSION_MINOR,LIBSSH2_VERSION_PATCH);],
             VERSION_LIBSSH2=`./conftest$ac_exeext`,
             VERSION_LIBSSH2=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "curl/curl.h"],
-            [printf("%s\n",LIBCURL_VERSION);],
+            [printf("%s",LIBCURL_VERSION);],
             VERSION_CURL=`./conftest$ac_exeext`,
             VERSION_CURL=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "cdio/cdio.h"
             ],
-            [printf("%s\n",CDIO_VERSION);],
+            [printf("%s",CDIO_VERSION);],
             VERSION_CDIO=`./conftest$ac_exeext`,
             VERSION_CDIO=unknown
            )
 AC_TRY_LINK([#include <stdio.h>
              #include "pcre.h"
             ],
-            [printf("%s\n",pcre_version());],
+            [printf("%s",pcre_version());],
             VERSION_PCRE=`./conftest$ac_exeext`,
             VERSION_PCRE=unknown
            )

@@ -22715,7 +22715,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%d\n",SQLITE_VERSION_NUMBER);
+printf("%d",SQLITE_VERSION_NUMBER);
   ;
   return 0;
 }
@@ -22736,7 +22736,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",SQLITE_VERSION);
+printf("%s",SQLITE_VERSION);
   ;
   return 0;
 }
@@ -22749,7 +22749,7 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-if test $VERSION_SQLITE_NUMBER -lt 3024000; then
+if test $VERSION_SQLITE -lt 3024000; then
   as_fn_error $? "Required SQLite 3.24 or newer - found $VERSION_SQLITE" "$LINENO" 5
 fi
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -22760,7 +22760,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",U_ICU_VERSION);
+printf("%s",U_ICU_VERSION);
   ;
   return 0;
 }
@@ -22781,7 +22781,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",zlibVersion());
+printf("%s",zlibVersion());
   ;
   return 0;
 }
@@ -22802,7 +22802,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",BZ2_bzlibVersion());
+printf("%s",BZ2_bzlibVersion());
   ;
   return 0;
 }
@@ -22823,7 +22823,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%d.%d.%d\n",LZMA_VERSION_MAJOR,LZMA_VERSION_MINOR,LZMA_VERSION_PATCH);
+printf("%d.%d.%d",LZMA_VERSION_MAJOR,LZMA_VERSION_MINOR,LZMA_VERSION_PATCH);
   ;
   return 0;
 }
@@ -22844,7 +22844,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",LZO_VERSION_STRING);
+printf("%s",LZO_VERSION_STRING);
   ;
   return 0;
 }
@@ -22864,7 +22864,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%d.%d.%d\n",LZ4_VERSION_MAJOR,LZ4_VERSION_MINOR,LZ4_VERSION_RELEASE);
+printf("%d.%d.%d",LZ4_VERSION_MAJOR,LZ4_VERSION_MINOR,LZ4_VERSION_RELEASE);
   ;
   return 0;
 }
@@ -22884,7 +22884,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%d.%d.%d\n",ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE);
+printf("%d.%d.%d",ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE);
   ;
   return 0;
 }
@@ -22905,7 +22905,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",GCRYPT_VERSION);
+printf("%s",GCRYPT_VERSION);
   ;
   return 0;
 }
@@ -22926,7 +22926,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",gmp_version);
+printf("%s",gmp_version);
   ;
   return 0;
 }
@@ -22947,7 +22947,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",GNUTLS_VERSION);
+printf("%s",GNUTLS_VERSION);
   ;
   return 0;
 }
@@ -22968,7 +22968,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",OPENSSL_VERSION_TEXT);
+printf("%s",OPENSSL_VERSION_TEXT);
   ;
   return 0;
 }
@@ -22988,7 +22988,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%d.%d.%d\n",LIBSSH2_VERSION_MAJOR,LIBSSH2_VERSION_MINOR,LIBSSH2_VERSION_PATCH);
+printf("%d.%d.%d",LIBSSH2_VERSION_MAJOR,LIBSSH2_VERSION_MINOR,LIBSSH2_VERSION_PATCH);
   ;
   return 0;
 }
@@ -23008,7 +23008,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",LIBCURL_VERSION);
+printf("%s",LIBCURL_VERSION);
   ;
   return 0;
 }
@@ -23029,7 +23029,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",CDIO_VERSION);
+printf("%s",CDIO_VERSION);
   ;
   return 0;
 }
@@ -23050,7 +23050,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 int
 main ()
 {
-printf("%s\n",pcre_version());
+printf("%s",pcre_version());
   ;
   return 0;
 }
