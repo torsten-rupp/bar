@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <locale.h>
 #include <assert.h>
 
 #include "common/global.h"
@@ -99,7 +100,9 @@ extern GlobalOptionSet globalOptionSet;        // global option set
 extern String          uuid;                   // BAR instance UUID
 extern String          tmpDirectory;           // temporary directory
 extern Semaphore       consoleLock;            // lock console
-extern locale_t        POSIXLocale;            // POSIX locale
+#ifdef HAVE_NEWLOCALE
+  extern locale_t      POSIXLocale;            // POSIX locale
+#endif /* HAVE_NEWLOCALE */
 
 /****************************** Macros *********************************/
 

@@ -136,7 +136,9 @@ GlobalOptionSet          globalOptionSet;
 String                   uuid;
 String                   tmpDirectory;
 Semaphore                consoleLock;
-locale_t                 POSIXLocale;
+#ifdef HAVE_NEWLOCALE
+  locale_t               POSIXLocale;
+#endif /* HAVE_NEWLOCALE */
 
 // Note: initialized once only here
 LOCAL bool               daemonFlag       = FALSE;
@@ -1271,51 +1273,69 @@ LOCAL void reopenLog(void)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_SIGACTION
 LOCAL void signalHandler(int signalNumber, siginfo_t *siginfo, void *context)
+#else /* not HAVE_SIGACTION */
+LOCAL void signalHandler(int signalNumber)
+#endif /* HAVE_SIGACTION */
 {
-  struct sigaction signalAction;
+  #ifdef HAVE_SIGACTION
+    struct sigaction signalAction;
+  #endif /* HAVE_SIGACTION */
 
-  UNUSED_VARIABLE(siginfo);
-  UNUSED_VARIABLE(context);
+  #ifdef HAVE_SIGINFO_T
+    UNUSED_VARIABLE(siginfo);
+    UNUSED_VARIABLE(context);
+  #endif /* HAVE_SIGINFO_T */
 
-  if (signalNumber == SIGUSR1)
-  {
-    // reopen log file
-    reopenLog();
-  }
-  else
-  {
-    // deinstall signal handlers
+  // reopen log file
+  #ifdef HAVE_SIGUSR1
+    if (signalNumber == SIGUSR1)
+    {
+      reopenLog();
+      return;
+    }
+  #endif /* HAVE_SIGUSR1 */
+
+  // deinstall signal handlers
+  #ifdef HAVE_SIGACTION
     sigfillset(&signalAction.sa_mask);
     signalAction.sa_flags   = 0;
     signalAction.sa_handler = SIG_DFL;
-    sigaction(SIGQUIT,&signalAction,NULL);
     sigaction(SIGTERM,&signalAction,NULL);
-    sigaction(SIGBUS,&signalAction,NULL);
     sigaction(SIGILL,&signalAction,NULL);
     sigaction(SIGFPE,&signalAction,NULL);
     sigaction(SIGSEGV,&signalAction,NULL);
+    sigaction(SIGBUS,&signalAction,NULL);
+  #else /* not HAVE_SIGACTION */
+    signal(SIGTERM,SIG_DFL);
+    signal(SIGILL,SIG_DFL);
+    signal(SIGFPE,SIG_DFL);
+    signal(SIGSEGV,SIG_DFL);
+    #ifdef HAVE_SIGBUS
+      signal(SIGBUS,SIG_DFL);
+    #endif /* HAVE_SIGBUS */
+  #endif /* HAVE_SIGACTION */
 
-    // output error message
-    fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
-    #ifndef NDEBUG
-      debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1);
-    #endif /* NDEBUG */
+  // output error message
+  fprintf(stderr,"INTERNAL ERROR: signal %d\n",signalNumber);
+  #ifndef NDEBUG
+    debugDumpCurrentStackTrace(stderr,0,DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1);
+  #endif /* NDEBUG */
 
-    // delete pid file
-    deletePIDFile();
+  // delete pid file
+  deletePIDFile();
 
-    // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
-    if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
-    {
-      File_delete(tmpDirectory,TRUE);
-    }
-
-    // Note: do not free resources to avoid further errors
-
-    // exit with signal number
-    exit(128+signalNumber);
+  // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
+  if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
+  {
+    File_delete(tmpDirectory,TRUE);
   }
+
+  // Note: do not free resources to avoid further errors
+
+  // exit with signal number
+  exit(128+signalNumber);
 }
 
 /***********************************************************************\
@@ -4109,10 +4129,14 @@ LOCAL void doneGlobalOptions(void)
 
 LOCAL Errors initAll(void)
 {
-  struct sigaction signalAction;
+  #ifdef HAVE_SIGACTION
+    struct sigaction signalAction;
+  #endif /* HAVE_SIGACTION */
   AutoFreeList     autoFreeList;
   Errors           error;
-  const char       *localePath;
+  #if defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN)
+    const char       *localePath;
+  #endif /* defined(HAVE_SETLOCALE) && defined(HAVE_BINDTEXTDOMAIN) && defined(HAVE_TEXTDOMAIN) */
 
   // initialize fatal log handler, crash dump handler
   #ifndef NDEBUG
@@ -4126,15 +4150,26 @@ LOCAL Errors initAll(void)
   #endif /* HAVE_BREAKPAD */
 
   // install signal handlers
-  sigfillset(&signalAction.sa_mask);
-  signalAction.sa_flags     = SA_SIGINFO;
-  signalAction.sa_sigaction = signalHandler;
-  sigaction(SIGSEGV,&signalAction,NULL);
-  sigaction(SIGFPE,&signalAction,NULL);
-  sigaction(SIGILL,&signalAction,NULL);
-  sigaction(SIGBUS,&signalAction,NULL);
-  sigaction(SIGTERM,&signalAction,NULL);
-  sigaction(SIGUSR1,&signalAction,NULL);
+  #ifdef HAVE_SIGACTION
+    sigfillset(&signalAction.sa_mask);
+    signalAction.sa_flags     = SA_SIGINFO;
+    signalAction.sa_sigaction = signalHandler;
+    sigaction(SIGSEGV,&signalAction,NULL);
+    sigaction(SIGFPE,&signalAction,NULL);
+    sigaction(SIGILL,&signalAction,NULL);
+    sigaction(SIGTERM,&signalAction,NULL);
+    sigaction(SIGUSR1,&signalAction,NULL);
+    sigaction(SIGBUS,&signalAction,NULL);
+  #else /* not HAVE_SIGACTION */
+    signal(SIGSEGV,signalHandler);
+    signal(SIGTERM,signalHandler);
+    signal(SIGILL,signalHandler);
+    signal(SIGFPE,signalHandler);
+    signal(SIGSEGV,signalHandler);
+    #ifdef HAVE_SIGBUS
+      signal(SIGBUS,signalHandler);
+    #endif /* HAVE_SIGBUS */
+  #endif /* HAVE_SIGACTION */
 
   AutoFree_init(&autoFreeList);
 
@@ -4156,7 +4191,9 @@ LOCAL Errors initAll(void)
 
   tmpDirectory                           = String_new();
 
-  POSIXLocale                            = newlocale(LC_ALL,"POSIX",0);
+  #ifdef HAVE_NEWLOCALE
+    POSIXLocale                          = newlocale(LC_ALL,"POSIX",0);
+  #endif /* HAVE_NEWLOCALE */
 
   Semaphore_init(&mountedList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&mountedList);
@@ -4416,7 +4453,9 @@ LOCAL Errors initAll(void)
 
 LOCAL void doneAll(void)
 {
-  struct sigaction signalAction;
+  #ifdef HAVE_SIGACTION
+    struct sigaction signalAction;
+  #endif /* HAVE_SIGACTION */
 
   // deinitialize modules
   Server_doneAll();
@@ -4446,7 +4485,9 @@ LOCAL void doneAll(void)
   doneCertificate(&serverCA);
 
   // deinitialize variables
-  freelocale(POSIXLocale);
+  #ifdef HAVE_NEWLOCALE
+    freelocale(POSIXLocale);
+  #endif /* HAVE_NEWLOCALE */
   Semaphore_done(&logLock);
   if (defaultDevice.writeCommand != NULL) String_delete(defaultDevice.writeCommand);
   if (defaultDevice.writePostProcessCommand != NULL) String_delete(defaultDevice.writePostProcessCommand);
@@ -4491,16 +4532,25 @@ LOCAL void doneAll(void)
   doneSecure();
 
   // deinstall signal handlers
-  sigfillset(&signalAction.sa_mask);
-  signalAction.sa_flags   = 0;
-  signalAction.sa_handler = SIG_DFL;
-  sigaction(SIGUSR1,&signalAction,NULL);
-  sigaction(SIGQUIT,&signalAction,NULL);
-  sigaction(SIGTERM,&signalAction,NULL);
-  sigaction(SIGBUS,&signalAction,NULL);
-  sigaction(SIGILL,&signalAction,NULL);
-  sigaction(SIGFPE,&signalAction,NULL);
-  sigaction(SIGSEGV,&signalAction,NULL);
+  #ifdef HAVE_SIGACTION
+    sigfillset(&signalAction.sa_mask);
+    signalAction.sa_flags   = 0;
+    signalAction.sa_handler = SIG_DFL;
+    sigaction(SIGUSR1,&signalAction,NULL);
+    sigaction(SIGTERM,&signalAction,NULL);
+    sigaction(SIGILL,&signalAction,NULL);
+    sigaction(SIGFPE,&signalAction,NULL);
+    sigaction(SIGSEGV,&signalAction,NULL);
+    sigaction(SIGBUS,&signalAction,NULL);
+  #else /* not HAVE_SIGACTION */
+    signal(SIGTERM,SIG_DFL);
+    signal(SIGILL,SIG_DFL);
+    signal(SIGFPE,SIG_DFL);
+    signal(SIGSEGV,SIG_DFL);
+    #ifdef HAVE_SIGBUS
+      signal(SIGBUS,SIG_DFL);
+    #endif /* HAVE_SIGBUS */
+  #endif /* HAVE_SIGACTION */
 
   // deinitialize crash dump handler
   #if HAVE_BREAKPAD
