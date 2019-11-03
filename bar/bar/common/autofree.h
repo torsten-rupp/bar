@@ -14,10 +14,10 @@
 /****************************** Includes *******************************/
 #include <stdlib.h>
 #include <stdint.h>
+#include <pthread.h>
 #include <assert.h>
 
 #if   defined(PLATFORM_LINUX)
-  #include <pthread.h>
 #elif defined(PLATFORM_WINDOWS)
   #include <windows.h>
 #endif /* PLATFORM_... */
