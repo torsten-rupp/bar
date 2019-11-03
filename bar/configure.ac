@@ -1471,8 +1471,8 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
       (cd sqlite; \
        install -d $cwd/extern/sources; \
        install -d $cwd/extern/include; \
-       install sqlite3.c $cwd/extern/sources; \
-       install sqlite3.h $cwd/extern/include; \
+       install -m 644 sqlite3.c $cwd/extern/sources; \
+       install -m 644 sqlite3.h $cwd/extern/include; \
       ) 1>$tmpFile 2>&1
     fi
     if test $result -eq 1; then
@@ -1995,7 +1995,11 @@ if test $ENABLE_LZ4 = "yes"; then
       if test $result -eq 1; then
         # Note: do not call 'install', it does build additional tools
         # (cd lz4; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        (cd lz4; install -d $cwd/extern/lib; cp lib/liblz4.a $cwd/extern/lib) 1>$tmpFile 2>&1
+        (cd lz4; \
+         install -d $cwd/extern/lib; \
+         install -m 644 lib/lz4.h lib/lz4frame.h lib/lz4hc.h lib/xxhash.h $cwd/extern/include; \
+         install -m 644 lib/liblz4.a $cwd/extern/lib; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3065,8 +3069,8 @@ if test $ENABLE_CURL = "yes"; then
         # Note: there is no target to install the library and header files only; do it manually
         (cd mxml; \
          make install-libmxml.a; \
-         install mxml.h $cwd/extern/include; \
-         install mxml.pc $cwd/extern/lib/pkgconfig; \
+         install -m 644 mxml.h $cwd/extern/include; \
+         install -m 644 mxml.pc $cwd/extern/lib/pkgconfig; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
@@ -3452,8 +3456,8 @@ case "$host_os" in
             fi
           fi
           if test $result -eq 1; then
-            (cd pthreads-w32; cp pthread.h sched.h semaphore.h $cwd/extern/include) 1>/dev/null
-            (cd pthreads-w32; cp libpthreadGC2.a $cwd/extern/lib) 1>/dev/null
+            (cd pthreads-w32; install -m 644 pthread.h sched.h semaphore.h $cwd/extern/include) 1>/dev/null
+            (cd pthreads-w32; install -m 644 libpthreadGC2.a $cwd/extern/lib) 1>/dev/null
           fi
           if test $result -eq 1; then
             AC_MSG_RESULT([done])
@@ -3530,14 +3534,14 @@ if test $ENABLE_BREAKPAD = "yes"; then
         # fix broken install of breakpad: does not install all header files?
         install -d $cwd/extern/include/breakpad
         install -d $cwd/extern/include/breakpad/google_breakpad/processor
-        install breakpad/src/google_breakpad/processor/*.h $cwd/extern/include/breakpad/google_breakpad/processor
+        install -m 644 breakpad/src/google_breakpad/processor/*.h $cwd/extern/include/breakpad/google_breakpad/processor
         install -d $cwd/extern/include/breakpad/client/linux/handler
-        install breakpad/src/client/linux/handler/*.h $cwd/extern/include/breakpad/client/linux
+        install -m 644 breakpad/src/client/linux/handler/*.h $cwd/extern/include/breakpad/client/linux
         install -d $cwd/extern/include/breakpad/client/linux/minidump_writer
-        install breakpad/src/client/linux/minidump_writer/*.h $cwd/extern/include/breakpad/client/linux/minidump_writer
+        install -m 644 breakpad/src/client/linux/minidump_writer/*.h $cwd/extern/include/breakpad/client/linux/minidump_writer
         install -d $cwd/extern/include/breakpad/client/linux/dump_writer_common
-        install breakpad/src/client/linux/dump_writer_common/*.h $cwd/extern/include/breakpad/client/linux/dump_writer_common
-        install breakpad/src/third_party/libdisasm/libdisasm.a $cwd/extern/lib
+        install -m 644 breakpad/src/client/linux/dump_writer_common/*.h $cwd/extern/include/breakpad/client/linux/dump_writer_common
+        install -m 644 breakpad/src/third_party/libdisasm/libdisasm.a $cwd/extern/lib
 # 1>$tmpFile 2>&1
 #find $cwd/extern/include/breakpad -type f -name '*.h'
       fi
@@ -3644,9 +3648,9 @@ if test $ENABLE_BFD = "yes"; then
 
         # fix incomplete install: does not install all header files?
         install -d $cwd/extern/include
-        install binutils/include/libiberty.h binutils/include/demangle.h $cwd/extern/include
+        install -m 644 binutils/include/libiberty.h binutils/include/demangle.h $cwd/extern/include
         install -d $cwd/extern/lib
-        install binutils/libiberty/libiberty.a $cwd/extern/lib
+        install -m 644 binutils/libiberty/libiberty.a $cwd/extern/lib
       fi
       if test $result -eq 1; then
         AC_MSG_RESULT([done])
@@ -3853,6 +3857,9 @@ AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
 AC_CHECK_PTHREAD_DEFINES
 
 # check constants
+AC_CHECK_CONSTANT(SIGBUS,         AC_DEFINE(HAVE_SIGBUS,         1,[SIGBUS available]),         ,signal.h)
+AC_CHECK_CONSTANT(SIGQUIT,        AC_DEFINE(HAVE_SIGQUIT,        1,[SIGQUIT available]),        ,signal.h)
+AC_CHECK_CONSTANT(SIGUSR1,        AC_DEFINE(HAVE_SIGUSR1,        1,[SIGUSR1 available]),        ,signal.h)
 AC_CHECK_CONSTANT(S_IRUSR,        AC_DEFINE(HAVE_S_IRUSR,        1,[S_IRUSR available]),        ,sys/stat.h)
 AC_CHECK_CONSTANT(S_IWUSR,        AC_DEFINE(HAVE_S_IWUSR,        1,[S_IWUSR available]),        ,sys/stat.h)
 AC_CHECK_CONSTANT(S_IXUSR,        AC_DEFINE(HAVE_S_IXUSR,        1,[S_IXUSR available]),        ,sys/stat.h)
@@ -3888,9 +3895,10 @@ fi
 AC_CHECK_CONSTANT(IN_EXCL_UNLINK,AC_DEFINE(HAVE_IN_EXCL_UNLINK,1,[IN_EXCL_UNLINK available]),,sys/inotify.h)
 
 # check types
-AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STAT64,  1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
-AC_CHECK_TYPE(struct __stat64,AC_DEFINE(HAVE___STAT64,1,[defined if struct __stat64 is available]),,[#include <sys/stat.h>])
-AC_CHECK_TYPE(struct _stati64,AC_DEFINE(HAVE__STATI64,1,[defined if struct _stati64 is available]),,[#include <sys/stat.h>])
+AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STAT64,   1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
+AC_CHECK_TYPE(struct __stat64,AC_DEFINE(HAVE___STAT64, 1,[defined if struct __stat64 is available]),,[#include <sys/stat.h>])
+AC_CHECK_TYPE(struct _stati64,AC_DEFINE(HAVE__STATI64, 1,[defined if struct _stati64 is available]),,[#include <sys/stat.h>])
+AC_CHECK_TYPE(siginfo_t,      AC_DEFINE(HAVE_SIGINFO_T,1,[defined if siginfo_t is available]),      ,[#include <signal.h>]  )
 
 AC_CHECK_STRUCT_MEMBER(struct stat,st_atim.tv_nsec,AC_DEFINE(HAVE_STAT_ATIM_TV_NSEC,1,[defined if struct stat.st_atim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])
 AC_CHECK_STRUCT_MEMBER(struct stat,st_mtim.tv_nsec,AC_DEFINE(HAVE_STAT_MTIM_TV_NSEC,1,[defined if struct stat.st_mtim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])
@@ -3938,6 +3946,7 @@ AC_CHECK_FUNCTION(minor,        AC_DEFINE(HAVE_MINOR,        1,[minor() availabl
 AC_CHECK_FUNCTION(mknod,        AC_DEFINE(HAVE_MKNOD,        1,[mknod() available]))
 AC_CHECK_FUNCTION(posix_fadvise,AC_DEFINE(HAVE_POSIX_FADVISE,1,[posix_fadvise() available]))
 AC_CHECK_FUNCTION(readlink,     AC_DEFINE(HAVE_READLINK,     1,[readlink() available]))
+AC_CHECK_FUNCTION(sigaction,    AC_DEFINE(HAVE_SIGACTION,    1,[sigaction() available]))
 AC_CHECK_FUNCTION(stat64,       AC_DEFINE(HAVE_STAT64,       1,[stat64() available]))
 AC_CHECK_FUNCTION(stat,         AC_DEFINE(HAVE_STAT,         1,[stat() available]))
 AC_CHECK_FUNCTION(_stati64,     AC_DEFINE(HAVE__STATI64,     1,[_stati64() available]))

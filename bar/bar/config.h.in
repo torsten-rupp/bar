@@ -364,8 +364,23 @@
 /* setlocale() available */
 #undef HAVE_SETLOCALE
 
+/* sigaction() available */
+#undef HAVE_SIGACTION
+
+/* SIGBUS available */
+#undef HAVE_SIGBUS
+
+/* defined if siginfo_t is available */
+#undef HAVE_SIGINFO_T
+
 /* SIGPIPE available */
 #undef HAVE_SIGPIPE
+
+/* SIGQUIT available */
+#undef HAVE_SIGQUIT
+
+/* SIGUSR1 available */
+#undef HAVE_SIGUSR1
 
 /* SSH2 installed */
 #undef HAVE_SSH2
