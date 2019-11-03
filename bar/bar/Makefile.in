@@ -64,7 +64,7 @@ CC_DEFINES                = PLATFORM_$(PLATFORM) @CC_DEFINES@ _GNU_SOURCE _LONG_
 CC_DEFINES_RELEASE        = @CC_DEFINES_RELEASE@
 CC_DEFINES_DEBUG          = @CC_DEFINES_DEBUG@
 # -D_LONG_LONG
-CC_INCLUDES               = @CC_INCLUDES@ extern .
+CC_INCLUDES               = @CC_INCLUDES@ extern $(SOURCE_DIR)
 ifdef WERROR
   CC_FLAGS   += -Werror
   CC_DEFINES += WERROR
@@ -389,7 +389,7 @@ common/%.o: common/%.cpp
 	$(CXX) $(CXX_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_SVN="$(VERSION_SVN)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CXX_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $*.cc -o $*.o
 
 %.o:
-	$(error Unkown object file '$*.o': do not know how to compile it)
+	$(error Unkown object file '$*.o': do not know how to create it)
 
 #--------------------------------- objects -----------------------------------
 
@@ -709,7 +709,7 @@ help:
 .PHONY: depend
 depend: Makefile.depend
 
-Makefile.depend: Makefile Makefile.in
+Makefile.depend: $(SOURCE_DIR)/Makefile $(SOURCE_DIR)/Makefile.in
 	$(MAKE) NO_DEPEND=1 $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(ECHO) >Makefile.depend
 	for z in $(BAR_SOURCES) $(EXTERN_SOURCES) $(DESTROYER_SOURCES) $(BAR_MINIDUMP_SOURCES) $(BAR_SQLITE3_SOURCES); do \
