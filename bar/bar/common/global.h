@@ -1621,7 +1621,7 @@ static inline bool atomicCompareSwap64(uint *n, uint64 oldValue, uint64 newValue
 * Notes  : -
 \***********************************************************************/
 
-static inline ushort swapBytes16(ushort n)
+static inline uint16_t swapBytes16(uint16_t n)
 {
   return   ((n & 0xFF00) >> 8)
          | ((n & 0x00FF) << 8);
@@ -1636,7 +1636,7 @@ static inline ushort swapBytes16(ushort n)
 * Notes  : -
 \***********************************************************************/
 
-static inline ulong swapBytes32(ulong n)
+static inline uint32_t swapBytes32(uint32_t n)
 {
   return   ((n & 0xFF000000) >> 24)
          | ((n & 0x00FF0000) >>  8)
