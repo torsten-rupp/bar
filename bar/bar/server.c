@@ -6039,7 +6039,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
     if (RingBuffer_isFull(&clientInfo->abortedCommandIds))
     {
       // discard first entry
-      RingBuffer_discard(&clientInfo->abortedCommandIds,1,CALLBACK_NULL);
+      RingBuffer_discard(&clientInfo->abortedCommandIds,1,CALLBACK(NULL,NULL));
 
       // get new start command id
       RingBuffer_first(&clientInfo->abortedCommandIds,&clientInfo->abortedCommandIdStart);
@@ -13927,7 +13927,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           CALLBACK(restoreUpdateStatusInfo,&restoreCommandInfo),
                           CALLBACK(restoreHandleError,&restoreCommandInfo),
                           CALLBACK(getNamePassword,&restoreCommandInfo),
-                          CALLBACK_NULL,  // isPause callback
+                          CALLBACK(NULL,NULL),  // isPause callback
                           CALLBACK_INLINE(bool,(void *userData),
                           {
                             UNUSED_VARIABLE(userData);
@@ -15893,7 +15893,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   }
 
   // init variables
-  Array_init(&storageIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&storageIdArray,sizeof(IndexId),64,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
   storageName = String_new();
 
   // collect all storage ids (Note: do this to avoid infinite loop or database-busy-error when states are changed in another thread, too)
@@ -17314,7 +17314,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       // remove command info
       SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode,CALLBACK_NULL);
+        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode,CALLBACK(NULL,NULL));
       }
     }
     else
@@ -17510,8 +17510,8 @@ LOCAL void initClient(ClientInfo *clientInfo)
   PatternList_init(&clientInfo->excludePatternList);
   Job_initOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
-  Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
-  Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_NULL,CALLBACK_NULL);
+  Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
 
   DEBUG_ADD_RESOURCE_TRACE(clientInfo,ClientInfo);
 }
@@ -17582,8 +17582,8 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
 
-  RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_NULL);
-  List_done(&clientInfo->commandInfoList,CALLBACK_NULL);
+  RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK(NULL,NULL));
+  List_done(&clientInfo->commandInfoList,CALLBACK(NULL,NULL));
   Semaphore_done(&clientInfo->lock);
 }
 

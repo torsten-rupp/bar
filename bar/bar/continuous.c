@@ -489,7 +489,7 @@ LOCAL void freeNotifyInfo(NotifyInfo *notifyInfo, void *userData)
   UNUSED_VARIABLE(userData);
 
   String_delete(notifyInfo->name);
-  List_done(&notifyInfo->uuidList,CALLBACK_NULL);
+  List_done(&notifyInfo->uuidList,CALLBACK(NULL,NULL));
 }
 
 /***********************************************************************\
@@ -918,7 +918,7 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
             && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
            )
         {
-          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_NULL);
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK(NULL,NULL));
         }
         else
         {
@@ -989,7 +989,7 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
                )
            )
         {
-          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_NULL);
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK(NULL,NULL));
         }
         else
         {
@@ -1542,14 +1542,14 @@ Errors Continuous_initAll(void)
   // init variables
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
-                  CALLBACK_NULL,  // dictionaryCopyFunction
-                  CALLBACK_NULL,  // freeNotifyDictionary
-                  CALLBACK_NULL  // dictionaryCompareFunction
+                  CALLBACK(NULL,NULL),  // dictionaryCopyFunction
+                  CALLBACK(NULL,NULL),  // freeNotifyDictionary
+                  CALLBACK(NULL,NULL)  // dictionaryCompareFunction
                  );
   Dictionary_init(&notifyNames,
-                  CALLBACK_NULL,  // dictionaryCopyFunction
-                  CALLBACK_NULL,  // dictionaryFreeFunction
-                  CALLBACK_NULL  // dictionaryCompareFunction
+                  CALLBACK(NULL,NULL),  // dictionaryCopyFunction
+                  CALLBACK(NULL,NULL),  // dictionaryFreeFunction
+                  CALLBACK(NULL,NULL)  // dictionaryCompareFunction
                  );
 
   // check number of possible notifies

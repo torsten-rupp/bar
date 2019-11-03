@@ -159,6 +159,118 @@ LOCAL void debugResourceInit(void)
 }
 #endif /* not NDEBUG */
 
+/***********************************************************************\
+* Name   : vmatchString
+* Purpose: match string with arguments
+* Input  : string            - string to patch
+*          pattern           - regualar expression pattern
+*          matchedString     - matched string variable (can be NULL)
+*          matchedString     - size of matched string
+*          matchedSubStrings - matched sub-string variables (char*,ulong)
+* Output : nextIndex         - index of next not matched character
+*          matchedString     - matched string
+*          matchedSubStrings - matched sub-strings
+* Return : TRUE if string matched, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool vmatchString(const char   *string,
+                        const char   *pattern,
+                        char         *matchedString,
+                        ulong        matchedStringSize,
+                        va_list      matchedSubStrings
+                       )
+{
+  bool       matchFlag;
+  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+    regex_t    regex;
+    va_list    arguments;
+    char       *matchedSubString;
+    ulong      matchedSubStringSize;
+    regmatch_t *subMatches;
+    uint       subMatchCount;
+    uint       i;
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
+
+  assert(string != NULL);
+  assert(pattern != NULL);
+
+  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+    // compile pattern
+    if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)
+    {
+      return FALSE;
+    }
+
+    // count sub-patterns (=1 for total matched string + number of matched-sub-strings)
+    va_copy(arguments,matchedSubStrings);
+    subMatchCount = 1;
+    do
+    {
+      matchedSubString     = va_arg(arguments,void*);
+      matchedSubStringSize = va_arg(arguments,ulong);
+      if (matchedSubString != NULL) subMatchCount++;
+    }
+    while (matchedSubString != NULL);
+    va_end(arguments);
+
+    // allocate sub-patterns array
+    subMatches = (regmatch_t*)malloc(subMatchCount*sizeof(regmatch_t));
+    if (subMatches == NULL)
+    {
+      regfree(&regex);
+      return FALSE;
+    }
+
+    // match
+    matchFlag = (regexec(&regex,
+                         string,
+                         subMatchCount,
+                         subMatches,
+                         0  // eflags
+                        ) == 0
+                );
+
+    // get next index, sub-matches
+    if (matchFlag)
+    {
+      if (matchedString != NULL)
+      {
+        stringSetBuffer(matchedString,matchedStringSize,&string[subMatches[0].rm_so],subMatches[0].rm_eo-subMatches[0].rm_so);
+      }
+
+      va_copy(arguments,matchedSubStrings);
+      for (i = 1; i < subMatchCount; i++)
+      {
+        matchedSubString     = va_arg(arguments,char*);
+        matchedSubStringSize = va_arg(arguments,ulong*);
+        if (matchedSubString != NULL)
+        {
+          if (subMatches[i].rm_so != -1)
+          {
+            assert(subMatches[i].rm_eo >= subMatches[i].rm_so);
+            stringSetBuffer(matchedSubString,matchedSubStringSize,&string[subMatches[i].rm_so],subMatches[i].rm_eo-subMatches[i].rm_so);
+          }
+        }
+      }
+      va_end(arguments);
+    }
+
+    // free resources
+    free(subMatches);
+    regfree(&regex);
+  #else /* not HAVE_PCRE || HAVE_REGEX_H */
+    UNUSED_VARIABLE(pattern);
+    UNUSED_VARIABLE(nextIndex);
+    UNUSED_VARIABLE(matchedString);
+    UNUSED_VARIABLE(matchedSubStrings);
+
+    matchFlag = FALSE;
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
+
+  return matchFlag;
+}
+
 // ----------------------------------------------------------------------
 
 unsigned long gcd(unsigned long a, unsigned long b)
@@ -315,6 +427,28 @@ void __dprintf__(const char *__fileName__,
   fprintf(stdout,"\n");
 }
 #endif /* NDEBUG */
+
+bool stringMatch(const char *string, const char *pattern, char *matchedString, ulong matchedStringSize, ...)
+{
+  bool    matchFlag;
+  va_list arguments;
+  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+    regex_t regex;
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
+
+  assert(pattern != NULL);
+
+  matchFlag = FALSE;
+
+  if (string != NULL)
+  {
+    va_start(arguments,matchedString);
+    matchFlag = vmatchString(string,pattern,matchedString,matchedStringSize,arguments);
+    va_end(arguments);
+  }
+
+  return matchFlag;
+}
 
 #ifdef NDEBUG
 void __halt(int        exitcode,

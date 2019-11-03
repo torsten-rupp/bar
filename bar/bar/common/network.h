@@ -30,6 +30,11 @@
 #endif /* HAVE_GNU_TLS */
 #include <assert.h>
 
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+  #include <in6addr.h>
+#endif /* PLATFORM_... */
+
 #include "common/global.h"
 #include "errors.h"
 

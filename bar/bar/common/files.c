@@ -4921,7 +4921,7 @@ void File_debugCheck(void)
 {
   pthread_once(&debugFileInitFlag,debugFileInit);
 
-  File_debugPrintInfo(CALLBACK_NULL);
+  File_debugPrintInfo(CALLBACK(NULL,NULL));
   File_debugPrintStatistics();
 
   pthread_mutex_lock(&debugFileLock);

@@ -819,7 +819,7 @@ void Array_debugCheck(void)
 
   pthread_once(&debugArrayInitFlag,debugArrayInit);
 
-  Array_debugPrintInfo(CALLBACK_NULL);
+  Array_debugPrintInfo(CALLBACK(NULL,NULL));
   Array_debugPrintStatistics();
 
   pthread_mutex_lock(&debugArrayLock);

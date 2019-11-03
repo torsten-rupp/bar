@@ -1602,12 +1602,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   assert(createInfo->jobOptions != NULL);
 
   // initialize variables
-  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_NULL,CALLBACK_NULL,CALLBACK_NULL))
+  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL),CALLBACK(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   name = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK(freeHardlinkInfo,NULL),CALLBACK_NULL))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK(freeHardlinkInfo,NULL),CALLBACK(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -2458,12 +2458,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_NULL,CALLBACK_NULL,CALLBACK_NULL))
+  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL),CALLBACK(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   name = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK(freeHardlinkInfo,NULL),CALLBACK_NULL))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK(freeHardlinkInfo,NULL),CALLBACK(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -7293,7 +7293,7 @@ masterIO, // masterIO
      )
   {
     // init names dictionary
-    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_NULL,CALLBACK_NULL);
+    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
     AUTOFREE_ADD(&autoFreeList,&createInfo.namesDictionary,{ Dictionary_done(&createInfo.namesDictionary); });
 
     // get increment list file name

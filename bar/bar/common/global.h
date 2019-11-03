@@ -376,7 +376,6 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 // only for better reading
 #define CALLBACK(code,argument) code,argument
-#define CALLBACK_NULL NULL,NULL
 
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
@@ -3090,52 +3089,21 @@ static inline bool stringToDouble(const char *string, double *d)
 /***********************************************************************\
 * Name   : stringMatch
 * Purpose: match string
-* Input  : string  - string
-*          pattern - pattern
+* Input  : string            - string
+*          pattern           - pattern
+*          matchedString     - string matching regular expression (can
+*                              be NULL)
+*          matchedStringSize - size of string matching regular
+*                              expression
+*          ...               - optional matching strings of sub-patterns
+*                              (char*,ulong), last value have to be
+*                              NULL!
 * Output : -
 * Return : TRUE iff pattern match with string
 * Notes  :
 \***********************************************************************/
 
-static inline bool stringMatch(const char *string, const char *pattern)
-{
-  bool matchFlag;
-  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
-    regex_t regex;
-  #endif /* HAVE_PCRE || HAVE_REGEX_H */
-
-  assert(pattern != NULL);
-
-  matchFlag = FALSE;
-
-  if (string != NULL)
-  {
-    #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
-      // compile pattern
-      if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) == 0)
-      {
-        // match
-        matchFlag = (regexec(&regex,
-                             string,
-                             0,  // subMatchCount
-                             NULL,  // subMatches
-                             0  // eflags
-                            ) == 0
-                    );
-
-        // free resources
-        regfree(&regex);
-      }
-    #else /* not HAVE_PCRE || HAVE_REGEX_H */
-      UNUSED_VARIABLE(string);
-      UNUSED_VARIABLE(pattern);
-
-      matchFlag = FALSE;
-    #endif /* HAVE_PCRE || HAVE_REGEX_H */
-  }
-
-  return matchFlag;
-}
+bool stringMatch(const char *string, const char *pattern, char *matchedString, ulong matchedStringSize, ...);
 
 /*---------------------------------------------------------------------*/
 

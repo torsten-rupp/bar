@@ -51,6 +51,7 @@
 #elif defined(PLATFORM_WINDOWS)
   #include <windows.h>
   #include <winsock2.h>
+  #include <in6addr.h>
 #endif /* PLATFORM_... */
 
 #include "common/global.h"

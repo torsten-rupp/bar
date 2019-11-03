@@ -43,7 +43,7 @@
 
 /****************** Conditional compilation switches *******************/
 #define HALT_ON_INSUFFICIENT_MEMORY   // halt on insufficient memory
-#define _TRACE_STRING_ALLOCATIONS      // trace all allocated strings
+#define TRACE_STRING_ALLOCATIONS      // trace all allocated strings
 #define _FILL_MEMORY                   // fill memory
 
 #ifndef NDEBUG
@@ -2258,7 +2258,7 @@ LOCAL bool vmatchString(ConstString  string,
     String     matchedSubString;
     regmatch_t *subMatches;
     uint       subMatchCount;
-    uint       z;
+    uint       i;
   #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(string != NULL);
@@ -2317,16 +2317,16 @@ LOCAL bool vmatchString(ConstString  string,
         }
 
         va_copy(arguments,matchedSubStrings);
-        for (z = 1; z < subMatchCount; z++)
+        for (i = 1; i < subMatchCount; i++)
         {
           matchedSubString = (String)va_arg(arguments,void*);
           assert(matchedSubString != NULL);
           if (matchedSubString != STRING_NO_ASSIGN)
           {
-            if (subMatches[z].rm_so != -1)
+            if (subMatches[i].rm_so != -1)
             {
-              assert(subMatches[0].rm_eo >= subMatches[0].rm_so);
-              String_setBuffer(matchedSubString,&string->data[subMatches[z].rm_so],subMatches[z].rm_eo-subMatches[z].rm_so);
+              assert(subMatches[i].rm_eo >= subMatches[i].rm_so);
+              String_setBuffer(matchedSubString,&string->data[subMatches[i].rm_so],subMatches[i].rm_eo-subMatches[i].rm_so);
             }
           }
         }
@@ -5875,7 +5875,7 @@ void String_debugCheck()
 {
   pthread_once(&debugStringInitFlag,debugStringInit);
 
-  String_debugPrintInfo(CALLBACK_NULL,DUMP_INFO_TYPE_ALLOCATED);
+  String_debugPrintInfo(CALLBACK(NULL,NULL),DUMP_INFO_TYPE_ALLOCATED);
   String_debugPrintStatistics();
 
   #ifdef TRACE_STRING_ALLOCATIONS
