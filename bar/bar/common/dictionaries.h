@@ -130,8 +130,8 @@ typedef bool(*DictionaryIterateFunction)(const void *keyData,
 
 /****************************** Macros *********************************/
 
-#define DICTIONARY_BYTE_COPY CALLBACK((DictionaryCopyFunction)Dictionary_byteCopy,NULL)
-#define DICTIONARY_BYTE_FREE CALLBACK((DictionaryFreeFunction)Dictionary_byteFree,NULL)
+#define DICTIONARY_BYTE_COPY CALLBACK_((DictionaryCopyFunction)Dictionary_byteCopy,NULL)
+#define DICTIONARY_BYTE_FREE CALLBACK_((DictionaryFreeFunction)Dictionary_byteFree,NULL)
 
 #ifndef NDEBUG
   #define Dictionary_init(...) __Dictionary_init(__FILE__,__LINE__, ## __VA_ARGS__)

@@ -80,7 +80,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
@@ -93,7 +93,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              // post: transfer storage
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromEntityId;
                                IndexId toEntityId;
@@ -118,7 +118,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer storage
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             UNUSED_VARIABLE(fromColumnList);
                                                             UNUSED_VARIABLE(userData);
@@ -128,7 +128,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           // post: transfer files, images, directories, links, special entries
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             Errors  error;
                                                             IndexId fromStorageId;
@@ -153,7 +153,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -163,12 +163,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                                                    NULL,  // changedRowCount
                                                                                                                    "INSERT INTO directoryEntries \
                                                                                                                       ( \
@@ -188,7 +188,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -202,7 +202,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -212,12 +212,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                                                    NULL,  // changedRowCount
                                                                                                                    "INSERT INTO fileEntries \
                                                                                                                       ( \
@@ -243,7 +243,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -257,7 +257,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -267,12 +267,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                                                    NULL,  // changedRowCount
                                                                                                                    "INSERT INTO imageEntries \
                                                                                                                       ( \
@@ -304,7 +304,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -318,7 +318,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -328,12 +328,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                                                    NULL,  // changedRowCount
                                                                                                                    "INSERT INTO linkEntries \
                                                                                                                       ( \
@@ -353,7 +353,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -367,7 +367,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -377,12 +377,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                                                    NULL,  // changedRowCount
                                                                                                                    "INSERT INTO hardlinkEntries \
                                                                                                                       ( \
@@ -408,7 +408,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -422,7 +422,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                          "entries",
                                                                                          TRUE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -432,12 +432,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(userData);
 
                                                                                            return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                                                    NULL,  // changedRowCount
                                                                                                                    "INSERT INTO specialEntries \
                                                                                                                       ( \
@@ -463,7 +463,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                    Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                                                   );
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -471,7 +471,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                             return error;
                                                           },NULL),
-                                                          CALLBACK(getPauseCallback(),NULL),
+                                                          CALLBACK_(getPauseCallback(),NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -496,7 +496,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                return ERROR_NONE;
                              },NULL),
-                             CALLBACK(getPauseCallback(),NULL),
+                             CALLBACK_(getPauseCallback(),NULL),
                              NULL  // filter
                             );
   if (error != ERROR_NONE)
@@ -511,7 +511,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer storage and create entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
                                StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -573,7 +573,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                return error;
                              },NULL),
                              // post: copy files, images, directories, links, special entries
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromStorageId;
                                IndexId toStorageId;
@@ -599,7 +599,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
                                                               UNUSED_VARIABLE(userData);
@@ -609,12 +609,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
                                                               return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                      CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                       NULL,  // changedRowCount
                                                                                       "INSERT INTO directoryEntries \
                                                                                          ( \
@@ -634,7 +634,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -648,7 +648,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
                                                               UNUSED_VARIABLE(userData);
@@ -658,12 +658,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
                                                               return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                      CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                       NULL,  // changedRowCount
                                                                                       "INSERT INTO fileEntries \
                                                                                          ( \
@@ -689,7 +689,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -703,7 +703,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
                                                               UNUSED_VARIABLE(userData);
@@ -713,12 +713,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
                                                               return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                      CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                       NULL,  // changedRowCount
                                                                                       "INSERT INTO imageEntries \
                                                                                          ( \
@@ -750,7 +750,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -764,7 +764,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
                                                               UNUSED_VARIABLE(userData);
@@ -774,12 +774,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
                                                               return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                      CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                       NULL,  // changedRowCount
                                                                                       "INSERT INTO linkEntries \
                                                                                          ( \
@@ -799,7 +799,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -813,7 +813,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
                                                               UNUSED_VARIABLE(userData);
@@ -823,12 +823,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
                                                               return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                      CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                       NULL,  // changedRowCount
                                                                                       "INSERT INTO hardlinkEntries \
                                                                                          ( \
@@ -854,7 +854,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -868,7 +868,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                             "entries",
                                                             TRUE,  // transaction flag
                                                             &duration,
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(fromColumnList);
                                                               UNUSED_VARIABLE(userData);
@@ -878,12 +878,12 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                               return ERROR_NONE;
                                                             },NULL),
-                                                            CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                            CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                             {
                                                               UNUSED_VARIABLE(userData);
 
                                                               return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                      CALLBACK(NULL,NULL),  // databaseRowFunction
+                                                                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                                       NULL,  // changedRowCount
                                                                                       "INSERT INTO specialEntries \
                                                                                          ( \
@@ -909,7 +909,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                       Database_getTableColumnListUInt(fromColumnList,"minor",0)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // pause
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -931,7 +931,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                return error;
                              },NULL),
-                             CALLBACK(getPauseCallback(),NULL),
+                             CALLBACK_(getPauseCallback(),NULL),
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)

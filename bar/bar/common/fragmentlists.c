@@ -217,7 +217,7 @@ void FragmentList_doneNode(FragmentNode *fragmentNode)
 
   DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
 
-  List_done(&fragmentNode->rangeList,CALLBACK(NULL,NULL));
+  List_done(&fragmentNode->rangeList,CALLBACK_(NULL,NULL));
   if (fragmentNode->userData != NULL)
   {
     free(fragmentNode->userData);

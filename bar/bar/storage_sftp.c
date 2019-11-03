@@ -439,7 +439,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
                          storageInfo->storageSpecifier.loginName,
                          storageInfo->storageSpecifier.loginPassword,
                          jobOptions,
-                         CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
+                         CALLBACK_(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                         )
            )
         {
@@ -1880,7 +1880,7 @@ LOCAL Errors StorageSFTP_openDirectoryList(StorageDirectoryListHandle *storageDi
                              storageDirectoryListHandle->storageSpecifier.loginPassword,
                              jobOptions,
 //TODO
-                             CALLBACK(NULL,NULL) // CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
+                             CALLBACK_(NULL,NULL) // CALLBACK_(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                             )
          )
       {

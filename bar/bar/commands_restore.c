@@ -3135,12 +3135,12 @@ NULL, // masterIO
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
-                       CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
-                       CALLBACK(NULL,NULL), // requestVolume
+                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
+                       CALLBACK_(NULL,NULL), // requestVolume
 //TODO
-                       CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL),  // isAborted
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
                        restoreInfo->logHandle
                       );
   if (error != ERROR_NONE)
@@ -3171,7 +3171,7 @@ NULL, // masterIO
                        &storageInfo,
                        archiveName,
                        &restoreInfo->jobOptions->deltaSourceList,
-                       CALLBACK(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
+                       CALLBACK_(restoreInfo->getNamePasswordFunction,restoreInfo->getNamePasswordUserData),
                        restoreInfo->logHandle
                       );
   if (error != ERROR_NONE)
@@ -3428,11 +3428,11 @@ Errors Command_restore(const StringList                *storageNameList,
                   excludePatternList,
                   jobOptions,
                   storageFlags,
-                  CALLBACK(updateStatusInfoFunction,updateStatusInfoUserData),
-                  CALLBACK(handleErrorFunction,handleErrorUserData),
-                  CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
-                  CALLBACK(isPauseFunction,isPauseUserData),
-                  CALLBACK(isAbortedFunction,isAbortedUserData),
+                  CALLBACK_(updateStatusInfoFunction,updateStatusInfoUserData),
+                  CALLBACK_(handleErrorFunction,handleErrorUserData),
+                  CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                  CALLBACK_(isPauseFunction,isPauseUserData),
+                  CALLBACK_(isAbortedFunction,isAbortedUserData),
                   logHandle
                  );
 

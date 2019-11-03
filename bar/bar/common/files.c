@@ -4151,14 +4151,14 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     n = llistxattr(String_cString(fileName),NULL,0);
     if (n < 0)
     {
-      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
       return ERRORX_(IO,errno,"%E",errno);
     }
     namesLength = (uint)n;
     names = (char*)malloc(namesLength);
     if (names == NULL)
     {
-      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
       return ERROR_INSUFFICIENT_MEMORY;
     }
 
@@ -4166,7 +4166,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     if (llistxattr(String_cString(fileName),names,namesLength) < 0)
     {
       free(names);
-      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+      List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
       return ERRORX_(IO,errno,"%E",errno);
     }
 
@@ -4179,7 +4179,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       if (n < 0)
       {
         free(names);
-        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
         return ERRORX_(IO,errno,"%E",errno);
       }
       dataLength = (uint)n;
@@ -4187,7 +4187,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       if (data == NULL)
       {
         free(names);
-        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
         return ERROR_INSUFFICIENT_MEMORY;
       }
 
@@ -4197,7 +4197,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       {
         free(data);
         free(names);
-        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
         return ERRORX_(IO,errno,"%E",errno);
       }
 
@@ -4207,7 +4207,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       {
         free(data);
         free(names);
-        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK(freeExtendedAttributeNode,NULL));
+        List_done(fileExtendedAttributeList,(ListNodeFreeFunction)CALLBACK_(freeExtendedAttributeNode,NULL));
         return ERROR_INSUFFICIENT_MEMORY;
       }
       fileExtendedAttributeNode->name       = String_newCString(name);
@@ -4921,7 +4921,7 @@ void File_debugCheck(void)
 {
   pthread_once(&debugFileInitFlag,debugFileInit);
 
-  File_debugPrintInfo(CALLBACK(NULL,NULL));
+  File_debugPrintInfo(CALLBACK_(NULL,NULL));
   File_debugPrintStatistics();
 
   pthread_mutex_lock(&debugFileLock);

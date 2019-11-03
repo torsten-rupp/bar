@@ -80,9 +80,9 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                            "uuids",
                            FALSE,  // transaction flag
                            NULL,  // duration
-                           CALLBACK(NULL,NULL),  // pre-copy
-                           CALLBACK(NULL,NULL),  // post-copy
-                           CALLBACK(getPauseCallback(),NULL),
+                           CALLBACK_(NULL,NULL),  // pre-copy
+                           CALLBACK_(NULL,NULL),  // post-copy
+                           CALLBACK_(getPauseCallback(),NULL),
                            NULL  // filter
                           );
 
@@ -125,7 +125,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                UNUSED_VARIABLE(fromColumnList);
                                UNUSED_VARIABLE(toColumnList);
@@ -136,7 +136,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                return ERROR_NONE;
                              },NULL),
                              // post: transfer storage
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromEntityId;
                                IndexId toEntityId;
@@ -162,7 +162,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer storage
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             UNUSED_VARIABLE(fromColumnList);
                                                             UNUSED_VARIABLE(toColumnList);
@@ -173,7 +173,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           // post: transfer files, images, directories, links, special entries
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             IndexId fromStorageId;
                                                             IndexId toStorageId;
@@ -192,7 +192,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                       "entries",
                                                                                       TRUE,  // transaction flag
                                                                                       &duration,
-                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                      CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                       {
                                                                                         UNUSED_VARIABLE(fromColumnList);
                                                                                         UNUSED_VARIABLE(userData);
@@ -201,7 +201,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                         return ERROR_NONE;
                                                                                       },NULL),
-                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                      CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                       {
                                                                                         Errors  error;
                                                                                         IndexId fromEntryId;
@@ -224,7 +224,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "fileEntries",
                                                                                                                      FALSE,  // transaction flag
                                                                                                                      &duration,
-                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
                                                                                                                        UNUSED_VARIABLE(userData);
@@ -234,8 +234,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
-                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK_(NULL,NULL),  // pause
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -249,7 +249,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "imageEntries",
                                                                                                                      FALSE,  // transaction flag
                                                                                                                      &duration,
-                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
                                                                                                                        UNUSED_VARIABLE(userData);
@@ -259,8 +259,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
-                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK_(NULL,NULL),  // pause
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -274,7 +274,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "directoryEntries",
                                                                                                                      FALSE,  // transaction flag
                                                                                                                      &duration,
-                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
                                                                                                                        UNUSED_VARIABLE(userData);
@@ -284,8 +284,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
-                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK_(NULL,NULL),  // pause
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -299,7 +299,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "linkEntries",
                                                                                                                      FALSE,  // transaction flag
                                                                                                                      &duration,
-                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
                                                                                                                        UNUSED_VARIABLE(userData);
@@ -309,8 +309,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
-                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK_(NULL,NULL),  // pause
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -324,7 +324,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "hardlinkEntries",
                                                                                                                      FALSE,  // transaction flag
                                                                                                                      &duration,
-                                                                                                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                                                     CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
                                                                                                                        UNUSED_VARIABLE(fromColumnList);
                                                                                                                        UNUSED_VARIABLE(userData);
@@ -334,8 +334,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                                                        return ERROR_NONE;
                                                                                                                      },NULL),
-                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK_(NULL,NULL),  // pause
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -349,9 +349,9 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      "specialEntries",
                                                                                                                      FALSE,  // transaction flag
                                                                                                                      &duration,
-                                                                                                                     CALLBACK(NULL,NULL),  // pre-copy
-                                                                                                                     CALLBACK(NULL,NULL),  // post-copy
-                                                                                                                     CALLBACK(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(NULL,NULL),  // pre-copy
+                                                                                                                     CALLBACK_(NULL,NULL),  // post-copy
+                                                                                                                     CALLBACK_(NULL,NULL),  // pause
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -359,12 +359,12 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                         return error;
                                                                                       },NULL),
-                                                                                      CALLBACK(NULL,NULL),  // pause
+                                                                                      CALLBACK_(NULL,NULL),  // pause
                                                                                       "WHERE storageId=%lld",
                                                                                       fromStorageId
                                                                                      );
                                                           },NULL),
-                                                          CALLBACK(getPauseCallback(),NULL),
+                                                          CALLBACK_(getPauseCallback(),NULL),
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -386,7 +386,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                return ERROR_NONE;
                              },NULL),
-                             CALLBACK(getPauseCallback(),NULL),
+                             CALLBACK_(getPauseCallback(),NULL),
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
@@ -401,7 +401,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer storage and create entity
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                Errors       error;
                                StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -463,7 +463,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                return error;
                              },NULL),
                              // post: copy files, images, directories, links, special entries
-                             CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                             CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
                                IndexId fromStorageId;
                                IndexId toStorageId;
@@ -486,7 +486,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                           "entries",
                                                           TRUE,  // transaction flag
                                                           &duration,
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             UNUSED_VARIABLE(fromColumnList);
                                                             UNUSED_VARIABLE(userData);
@@ -495,7 +495,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                             return ERROR_NONE;
                                                           },NULL),
-                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                          CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             Errors  error;
                                                             IndexId fromEntryId;
@@ -519,7 +519,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "fileEntries",
                                                                                          FALSE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -529,8 +529,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // post-copy
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -544,7 +544,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "imageEntries",
                                                                                          FALSE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -554,8 +554,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // post-copy
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -569,7 +569,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "directoryEntries",
                                                                                          FALSE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -579,8 +579,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // post-copy
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -594,7 +594,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "linkEntries",
                                                                                          FALSE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -604,8 +604,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // post-copy
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -619,7 +619,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "hardlinkEntries",
                                                                                          FALSE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                                                                         CALLBACK__INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -629,8 +629,8 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                                                            return ERROR_NONE;
                                                                                          },NULL),
-                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // post-copy
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -644,9 +644,9 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          "specialEntries",
                                                                                          FALSE,  // transaction flag
                                                                                          &duration,
-                                                                                         CALLBACK(NULL,NULL),  // pre-copy
-                                                                                         CALLBACK(NULL,NULL),  // post-copy
-                                                                                         CALLBACK(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // pre-copy
+                                                                                         CALLBACK_(NULL,NULL),  // post-copy
+                                                                                         CALLBACK_(NULL,NULL),  // pause
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -654,7 +654,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                                             return error;
                                                           },NULL),
-                                                          CALLBACK(NULL,NULL),  // pause
+                                                          CALLBACK_(NULL,NULL),  // pause
                                                           "WHERE storageId=%lld",
                                                           fromStorageId
                                                          );
@@ -675,7 +675,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 
                                return error;
                              },NULL),
-                             CALLBACK(NULL,NULL),
+                             CALLBACK_(NULL,NULL),
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)

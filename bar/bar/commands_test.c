@@ -1313,11 +1313,11 @@ NULL, // masterSocketHandle
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
-                       CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(NULL,NULL),  // getPassword
-                       CALLBACK(NULL,NULL),  // requestVolume
-                       CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL),  // isAborted
+                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(NULL,NULL),  // getPassword
+                       CALLBACK_(NULL,NULL),  // requestVolume
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
                        NULL  // logHandle
                       );
   if (error != ERROR_NONE)
@@ -1347,7 +1347,7 @@ NULL, // masterSocketHandle
                        &storageInfo,
                        archiveName,
                        &jobOptions->deltaSourceList,
-                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -1628,7 +1628,7 @@ Errors Command_test(const StringList        *storageNameList,
                                    includeEntryList,
                                    excludePatternList,
                                    jobOptions,
-                                   CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                    &fragmentList,
                                    logHandle
                                   );
@@ -1675,7 +1675,7 @@ Errors Command_test(const StringList        *storageNameList,
                                        includeEntryList,
                                        excludePatternList,
                                        jobOptions,
-                                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                        &fragmentList,
                                        logHandle
                                       );

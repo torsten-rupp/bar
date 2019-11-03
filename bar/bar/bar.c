@@ -4009,7 +4009,7 @@ LOCAL void initGlobalOptions(void)
 
 LOCAL void doneGlobalOptions(void)
 {
-  List_done(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
+  List_done(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
   String_delete(globalOptions.bd.writeImageCommand);
   String_delete(globalOptions.bd.writeCommand);
   String_delete(globalOptions.bd.writePostProcessCommand);
@@ -4074,9 +4074,9 @@ LOCAL void doneGlobalOptions(void)
 
   String_delete(globalOptions.comment);
 
-  List_done(&globalOptions.deviceList,CALLBACK((ListNodeFreeFunction)freeDeviceNode,NULL));
+  List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
   Semaphore_done(&globalOptions.deviceList.lock);
-  List_done(&globalOptions.serverList,CALLBACK((ListNodeFreeFunction)freeServerNode,NULL));
+  List_done(&globalOptions.serverList,CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
   Semaphore_done(&globalOptions.serverList.lock);
 
   Crypt_doneKey(&globalOptions.signaturePrivateKey);
@@ -4096,7 +4096,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.unmountCommand);
   String_delete(globalOptions.mountDeviceCommand);
   String_delete(globalOptions.mountCommand);
-  List_done(&globalOptions.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  List_done(&globalOptions.mountList,CALLBACK_((ListNodeFreeFunction)freeMountNode,NULL));
 
   String_delete(globalOptions.excludeCommand);
   String_delete(globalOptions.excludeListFileName);
@@ -4108,7 +4108,7 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.storageNameCommand);
   String_delete(globalOptions.storageNameListFileName);
 
-  List_done(&globalOptions.maxBandWidthList,CALLBACK((ListNodeFreeFunction)freeBandWidthNode,NULL));
+  List_done(&globalOptions.maxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
   doneKey(&globalOptions.masterInfo.publicKey);
   doneHash(&globalOptions.masterInfo.uuidHash);
   String_delete(globalOptions.masterInfo.name);
@@ -4249,7 +4249,7 @@ LOCAL Errors initAll(void)
   AUTOFREE_ADD(&autoFreeList,&globalOptions,{ doneGlobalOptions(); });
   AUTOFREE_ADD(&autoFreeList,uuid,{ String_delete(uuid); });
   AUTOFREE_ADD(&autoFreeList,tmpDirectory,{ String_delete(tmpDirectory); });
-  AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&mountedList,{ List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&mountedList.lock,{ Semaphore_done(&mountedList.lock); });
   AUTOFREE_ADD(&autoFreeList,jobUUIDName,{ String_delete(jobUUIDName); });
   AUTOFREE_ADD(&autoFreeList,jobUUID,{ String_delete(jobUUID); });
@@ -4519,7 +4519,7 @@ LOCAL void doneAll(void)
 
   String_delete(jobUUIDName);
 
-  List_done(&mountedList,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
+  List_done(&mountedList,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
   Semaphore_done(&mountedList.lock);
 
   String_delete(tmpDirectory);
@@ -5583,8 +5583,8 @@ Errors executeTemplate(const char       *templateString,
     {
       // execute script
       error = Misc_executeScript(String_cString(script),
-                                 CALLBACK(executeIOOutput,NULL),
-                                 CALLBACK(executeIOOutput,NULL)
+                                 CALLBACK_(executeIOOutput,NULL),
+                                 CALLBACK_(executeIOOutput,NULL)
                                 );
       String_delete(script);
     }
@@ -5685,8 +5685,8 @@ void logPostProcess(LogHandle        *logHandle,
         StringList_init(&stderrList);
         error = Misc_executeCommand(logPostCommand,
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(NULL,NULL),
-                                    CALLBACK(executeIOlogPostProcess,&stderrList)
+                                    CALLBACK_(NULL,NULL),
+                                    CALLBACK_(executeIOlogPostProcess,&stderrList)
                                    );
         if (error != ERROR_NONE)
         {
@@ -7093,7 +7093,7 @@ Errors mountAll(const MountList *mountList)
           {
             (void)Device_umount(globalOptions.unmountCommand,mountNode->name);
 
-            List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
+            List_removeAndFree(&mountedList,mountedNode,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
           }
         }
 
@@ -7159,7 +7159,7 @@ void purgeMounts(void)
                         );
           }
         }
-        mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK((ListNodeFreeFunction)freeMountedNode,NULL));
+        mountedNode = List_removeAndFree(&mountedList,mountedNode,CALLBACK_((ListNodeFreeFunction)freeMountedNode,NULL));
       }
       else
       {
@@ -9201,13 +9201,13 @@ Errors addStorageNameListFromCommand(StringList *storageNameList, const char *te
 
   // execute script and collect output
   error = Misc_executeScript(String_cString(script),
-                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             CALLBACK__INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
                                StringList_append(storageNameList,line);
                              },NULL),
-                             CALLBACK(NULL,NULL)
+                             CALLBACK_(NULL,NULL)
                             );
   if (error != ERROR_NONE)
   {
@@ -9292,13 +9292,13 @@ Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, con
 
   // execute script and collect output
   error = Misc_executeScript(String_cString(script),
-                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             CALLBACK__INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
                                EntryList_append(entryList,entryType,line,PATTERN_TYPE_GLOB,NULL);
                              },NULL),
-                             CALLBACK(NULL,NULL)
+                             CALLBACK_(NULL,NULL)
                             );
   if (error != ERROR_NONE)
   {
@@ -9384,13 +9384,13 @@ Errors addExcludeListFromCommand(PatternList *patternList, const char *template)
 
   // execute script and collect output
   error = Misc_executeScript(String_cString(script),
-                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             CALLBACK__INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
                                PatternList_append(patternList,line,PATTERN_TYPE_GLOB,NULL);
                              },NULL),
-                             CALLBACK(NULL,NULL)
+                             CALLBACK_(NULL,NULL)
                             );
   if (error != ERROR_NONE)
   {
@@ -10269,12 +10269,12 @@ LOCAL Errors runJob(void)
                          NULL, // scheduleCustomText
                          Misc_getCurrentDateTime(),
                          storageFlags,
-                         CALLBACK(getCryptPasswordFromConsole,NULL),
-                         CALLBACK(NULL,NULL),  // createStatusInfoFunction
-                         CALLBACK(NULL,NULL),  // storageRequestVolumeFunction
-                         CALLBACK(NULL,NULL),  // isPauseCreate
-                         CALLBACK(NULL,NULL),  // isPauseStorage
-                         CALLBACK(NULL,NULL),  // isAborted
+                         CALLBACK_(getCryptPasswordFromConsole,NULL),
+                         CALLBACK_(NULL,NULL),  // createStatusInfoFunction
+                         CALLBACK_(NULL,NULL),  // storageRequestVolumeFunction
+                         CALLBACK_(NULL,NULL),  // isPauseCreate
+                         CALLBACK_(NULL,NULL),  // isPauseStorage
+                         CALLBACK_(NULL,NULL),  // isAborted
                          NULL  // logHandle
                         );
   if (error != ERROR_NONE)
@@ -10432,12 +10432,12 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  NULL, // scheduleCustomText
                                  Misc_getCurrentDateTime(),
                                  storageFlags,
-                                 CALLBACK(getCryptPasswordFromConsole,NULL),
-                                 CALLBACK(NULL,NULL),  // createStatusInfo
-                                 CALLBACK(NULL,NULL),  // storageRequestVolume
-                                 CALLBACK(NULL,NULL),  // isPauseCreate
-                                 CALLBACK(NULL,NULL),  // isPauseStorage
-                                 CALLBACK(NULL,NULL),  // isAborted
+                                 CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                 CALLBACK_(NULL,NULL),  // createStatusInfo
+                                 CALLBACK_(NULL,NULL),  // storageRequestVolume
+                                 CALLBACK_(NULL,NULL),  // isPauseCreate
+                                 CALLBACK_(NULL,NULL),  // isPauseStorage
+                                 CALLBACK_(NULL,NULL),  // isAborted
                                  NULL  // logHandle
                                 );
 
@@ -10508,7 +10508,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &excludePatternList,
                                  !globalOptions.metaInfoFlag,  // showContentFlag
                                  &jobOptions,
-                                 CALLBACK(getCryptPasswordFromConsole,NULL),
+                                 CALLBACK_(getCryptPasswordFromConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -10518,7 +10518,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &excludePatternList,
                                  TRUE,  // showContentFlag
                                  &jobOptions,
-                                 CALLBACK(getCryptPasswordFromConsole,NULL),
+                                 CALLBACK_(getCryptPasswordFromConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -10527,7 +10527,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  &includeEntryList,
                                  &excludePatternList,
                                  &jobOptions,
-                                 CALLBACK(getCryptPasswordFromConsole,NULL),
+                                 CALLBACK_(getCryptPasswordFromConsole,NULL),
                                  NULL  // logHandle
                                 );
             break;
@@ -10536,7 +10536,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &includeEntryList,
                                     &excludePatternList,
                                     &jobOptions,
-                                    CALLBACK(getCryptPasswordFromConsole,NULL),
+                                    CALLBACK_(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
                                    );
             break;
@@ -10546,11 +10546,11 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                     &excludePatternList,
                                     &jobOptions,
                                     storageFlags,
-                                    CALLBACK(NULL,NULL),  // restoreStatusInfo callback
-                                    CALLBACK(NULL,NULL),  // restoreError callback
-                                    CALLBACK(getCryptPasswordFromConsole,NULL),
-                                    CALLBACK(NULL,NULL),  // isPause callback
-                                    CALLBACK(NULL,NULL),  // isAborted callback
+                                    CALLBACK_(NULL,NULL),  // restoreStatusInfo callback
+                                    CALLBACK_(NULL,NULL),  // restoreError callback
+                                    CALLBACK_(getCryptPasswordFromConsole,NULL),
+                                    CALLBACK_(NULL,NULL),  // isPause callback
+                                    CALLBACK_(NULL,NULL),  // isAborted callback
                                     NULL  // logHandle
                                    );
             break;
@@ -10558,7 +10558,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             error = Command_convert(&storageNameList,
                                     jobUUID,
                                     &jobOptions,
-                                    CALLBACK(getCryptPasswordFromConsole,NULL),
+                                    CALLBACK_(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
                                    );
             break;

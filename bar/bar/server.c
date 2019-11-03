@@ -1535,8 +1535,8 @@ LOCAL void jobThreadCode(void)
       String_set(jobName,jobNode->name);
       String_set(storageName,jobNode->job.archiveName);
       String_set(jobUUID,jobNode->job.uuid);
-      EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK(NULL,NULL));
-      PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK(NULL,NULL));
+      EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
+      PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
       Job_duplicateOptions(&jobOptions,&jobNode->job.options);
       if (!String_isEmpty(jobNode->scheduleUUID))
       {
@@ -1785,13 +1785,13 @@ NULL,//                                                        scheduleTitle,
                                                             scheduleCustomText,
                                                             startDateTime,
                                                             storageFlags,
-                                                            CALLBACK(getCryptPasswordFromConfig,jobNode),
-                                                            CALLBACK(updateStatusInfo,jobNode),
-                                                            CALLBACK(storageRequestVolume,jobNode),
-                                                            CALLBACK(isPauseCreate,NULL),
-                                                            CALLBACK(isPauseStorage,NULL),
+                                                            CALLBACK_(getCryptPasswordFromConfig,jobNode),
+                                                            CALLBACK_(updateStatusInfo,jobNode),
+                                                            CALLBACK_(storageRequestVolume,jobNode),
+                                                            CALLBACK_(isPauseCreate,NULL),
+                                                            CALLBACK_(isPauseStorage,NULL),
 //TODO access jobNode?
-                                                            CALLBACK(isAborted,jobNode),
+                                                            CALLBACK_(isAborted,jobNode),
                                                             &logHandle
                                                            );
                 break;
@@ -1804,11 +1804,11 @@ NULL,//                                                        scheduleTitle,
                                                              &excludePatternList,
                                                              &jobOptions,
                                                              storageFlags,
-                                                             CALLBACK(restoreUpdateStatusInfo,jobNode),
-                                                             CALLBACK(NULL,NULL),  // restoreHandleError
-                                                             CALLBACK(getCryptPasswordFromConfig,jobNode),
-                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
-                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
+                                                             CALLBACK_(restoreUpdateStatusInfo,jobNode),
+                                                             CALLBACK_(NULL,NULL),  // restoreHandleError
+                                                             CALLBACK_(getCryptPasswordFromConfig,jobNode),
+                                                             CALLBACK__INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
+                                                             CALLBACK__INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
                                                              &logHandle
                                                             );
                 StringList_done(&storageNameList);
@@ -1910,9 +1910,9 @@ NULL,//                                                        scheduleTitle,
                                                           NULL,  // scheduleTitle,
                                                           NULL,  // scheduleCustomText,
                                                           storageFlags,
-                                                          CALLBACK(getCryptPasswordFromConfig,jobNode),
-                                                          CALLBACK(updateStatusInfo,jobNode),
-                                                          CALLBACK(storageRequestVolume,jobNode)
+                                                          CALLBACK_(getCryptPasswordFromConfig,jobNode),
+                                                          CALLBACK_(updateStatusInfo,jobNode),
+                                                          CALLBACK_(storageRequestVolume,jobNode)
                                                          );
 
             // done storage
@@ -2796,11 +2796,11 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      STORAGE_FLAGS_NONE,
-                                     CALLBACK(NULL,NULL),  // updateStatusInfo
-                                     CALLBACK(NULL,NULL),  // getNamePassword
-                                     CALLBACK(NULL,NULL),  // requestVolume
-                                     CALLBACK(NULL,NULL),  // isPause
-                                     CALLBACK(NULL,NULL),  // isAborted
+                                     CALLBACK_(NULL,NULL),  // updateStatusInfo
+                                     CALLBACK_(NULL,NULL),  // getNamePassword
+                                     CALLBACK_(NULL,NULL),  // requestVolume
+                                     CALLBACK_(NULL,NULL),  // isPause
+                                     CALLBACK_(NULL,NULL),  // isAborted
                                      NULL  // logHandle
                                     );
           if (resultError != ERROR_NONE)
@@ -2814,11 +2814,11 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                        &globalOptions.indexDatabaseMaxBandWidthList,
                                        SERVER_CONNECTION_PRIORITY_HIGH,
                                        STORAGE_FLAGS_NONE,
-                                       CALLBACK(NULL,NULL),  // updateStatusInfo
-                                       CALLBACK(NULL,NULL),  // getNamePassword
-                                       CALLBACK(NULL,NULL),  // requestVolume
-                                       CALLBACK(NULL,NULL),  // isPause
-                                       CALLBACK(NULL,NULL),  // isAborted
+                                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                                       CALLBACK_(NULL,NULL),  // getNamePassword
+                                       CALLBACK_(NULL,NULL),  // requestVolume
+                                       CALLBACK_(NULL,NULL),  // isPause
+                                       CALLBACK_(NULL,NULL),  // isAborted
                                        NULL  // logHandle
                                       );
           }
@@ -2833,11 +2833,11 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                                      &globalOptions.indexDatabaseMaxBandWidthList,
                                      SERVER_CONNECTION_PRIORITY_HIGH,
                                      STORAGE_FLAGS_NONE,
-                                     CALLBACK(NULL,NULL),  // updateStatusInfo
-                                     CALLBACK(NULL,NULL),  // getNamePassword
-                                     CALLBACK(NULL,NULL),  // requestVolume
-                                     CALLBACK(NULL,NULL),  // isPause
-                                     CALLBACK(NULL,NULL),  // isAborted
+                                     CALLBACK_(NULL,NULL),  // updateStatusInfo
+                                     CALLBACK_(NULL,NULL),  // getNamePassword
+                                     CALLBACK_(NULL,NULL),  // requestVolume
+                                     CALLBACK_(NULL,NULL),  // isPause
+                                     CALLBACK_(NULL,NULL),  // isAborted
                                      NULL  // logHandle
                                     );
         }
@@ -3259,7 +3259,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList *expirationEntityList
   assert(Job_isListLocked());
   assert(indexHandle != NULL);
 
-  List_clear(expirationEntityList,CALLBACK(NULL,NULL));
+  List_clear(expirationEntityList,CALLBACK_(NULL,NULL));
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
@@ -3565,7 +3565,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                 }
               }
 
-              List_done(&expirationEntityList,CALLBACK((ListNodeFreeFunction)freeExpirationNode,NULL));
+              List_done(&expirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
             }
           } // jobList
 
@@ -3862,11 +3862,11 @@ fprintf(stderr,"%s, %d: fileName=%s id=%lld\n",__FILE__,__LINE__,String_cString(
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_LOW,
                                STORAGE_FLAGS_NONE,
-                               CALLBACK(NULL,NULL),  // updateStatusInfo
-                               CALLBACK(NULL,NULL),  // getNamePassword
-                               CALLBACK(NULL,NULL),  // requestVolume
-                               CALLBACK(NULL,NULL),  // isPause
-                               CALLBACK(NULL,NULL),  // isAborted
+                               CALLBACK_(NULL,NULL),  // updateStatusInfo
+                               CALLBACK_(NULL,NULL),  // getNamePassword
+                               CALLBACK_(NULL,NULL),  // requestVolume
+                               CALLBACK_(NULL,NULL),  // isPause
+                               CALLBACK_(NULL,NULL),  // isAborted
                                NULL  // logHandle
                               );
           if (error == ERROR_NONE)
@@ -3887,8 +3887,8 @@ fprintf(stderr,"%s, %d: update index storageId=%lld\n",__FILE__,__LINE__,storage
                                           &totalTimeLastChanged,
                                           &totalEntryCount,
                                           &totalEntrySize,
-                                          CALLBACK(indexPauseCallback,NULL),
-                                          CALLBACK(indexAbortCallback,NULL),
+                                          CALLBACK_(indexPauseCallback,NULL),
+                                          CALLBACK_(indexAbortCallback,NULL),
                                           NULL  // logHandle
                                          );
               endTimestamp = Misc_getTimestamp();
@@ -3976,7 +3976,7 @@ fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
   }
 
   // free resources
-  List_done(&indexCryptPasswordList,CALLBACK((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
+  List_done(&indexCryptPasswordList,CALLBACK_((ListNodeFreeFunction)freeIndexCryptPasswordNode,NULL));
   String_delete(printableStorageName);
   String_delete(storageName);
   Storage_doneSpecifier(&storageSpecifier);
@@ -4129,7 +4129,7 @@ LOCAL void autoIndexThreadCode(void)
                           );
                 File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
                 (void)Storage_forAll(pattern,
-                                     CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                                     CALLBACK__INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                      {
                                        Errors error;
 
@@ -5978,7 +5978,7 @@ LOCAL void serverCommand_serverListRemove(ClientInfo *clientInfo, IndexHandle *i
     }
 
     // delete storage server
-    List_removeAndFree(&globalOptions.serverList,serverNode,CALLBACK((ListNodeFreeFunction)freeServerNode,NULL));
+    List_removeAndFree(&globalOptions.serverList,serverNode,CALLBACK_((ListNodeFreeFunction)freeServerNode,NULL));
 
     // update config file
     error = updateConfig();
@@ -6039,7 +6039,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
     if (RingBuffer_isFull(&clientInfo->abortedCommandIds))
     {
       // discard first entry
-      RingBuffer_discard(&clientInfo->abortedCommandIds,1,CALLBACK(NULL,NULL));
+      RingBuffer_discard(&clientInfo->abortedCommandIds,1,CALLBACK_(NULL,NULL));
 
       // get new start command id
       RingBuffer_first(&clientInfo->abortedCommandIds,&clientInfo->abortedCommandIdStart);
@@ -7254,13 +7254,13 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
 
   // execute script
   error = Misc_executeScript(String_cString(script),
-                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             CALLBACK__INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
                                ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
                              },NULL),
-                             CALLBACK_INLINE(void,(ConstString line, void *userData),
+                             CALLBACK__INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
@@ -9227,7 +9227,7 @@ LOCAL void serverCommand_mountListClear(ClientInfo *clientInfo, IndexHandle *ind
     }
 
     // clear mount list
-    List_clear(&jobNode->job.options.mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+    List_clear(&jobNode->job.options.mountList,CALLBACK_((ListNodeFreeFunction)freeMountNode,NULL));
 
     // notify about changed lists
     Job_mountChanged(jobNode);
@@ -10578,7 +10578,7 @@ LOCAL void serverCommand_scheduleListRemove(ClientInfo *clientInfo, IndexHandle 
     }
 
     // remove from list
-    List_removeAndFree(&jobNode->job.options.scheduleList,scheduleNode,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+    List_removeAndFree(&jobNode->job.options.scheduleList,scheduleNode,CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
 
     // notify about changed schedule
     Job_scheduleChanged(jobNode);
@@ -10693,7 +10693,7 @@ LOCAL void serverCommand_persistenceList(ClientInfo *clientInfo, IndexHandle *in
     }
 
     // free resources
-    List_done(&expirationEntityList,CALLBACK((ListNodeFreeFunction)freeExpirationNode,NULL));
+    List_done(&expirationEntityList,CALLBACK_((ListNodeFreeFunction)freeExpirationNode,NULL));
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -10742,7 +10742,7 @@ LOCAL void serverCommand_persistenceListClear(ClientInfo *clientInfo, IndexHandl
     }
 
     // clear persistence list
-    List_clear(&jobNode->job.options.persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+    List_clear(&jobNode->job.options.persistenceList,CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL));
     jobNode->job.options.persistenceList.lastModificationDateTime = Misc_getCurrentDateTime();
 
     // notify about changed lists
@@ -11100,7 +11100,7 @@ LOCAL void serverCommand_persistenceListRemove(ClientInfo *clientInfo, IndexHand
     // remove from list
     List_removeAndFree(&jobNode->job.options.persistenceList,
                        persistenceNode,
-                       CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL)
+                       CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL)
                       );
 
 //TODO: remove
@@ -12127,11 +12127,11 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
-                       CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(NULL,NULL),  // getNamePassword
-                       CALLBACK(NULL,NULL),  // requestVolume
-                       CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL),  // isAborted
+                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(NULL,NULL),  // getNamePassword
+                       CALLBACK_(NULL,NULL),  // requestVolume
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
                        NULL  // logHandle
                       );
   if (error != ERROR_NONE)
@@ -12147,7 +12147,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                        &storageInfo,
                        NULL,  // archive name
                        NULL,  // deltaSourceList
-                       CALLBACK(NULL,NULL),
+                       CALLBACK_(NULL,NULL),
                        NULL  // logHandle
                       );
   if (error != ERROR_NONE)
@@ -12798,7 +12798,7 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
       indexId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex == STRING_END)
       {
-        Array_removeAll(&clientInfo->indexIdArray,&indexId,CALLBACK(NULL,NULL));
+        Array_removeAll(&clientInfo->indexIdArray,&indexId,CALLBACK_(NULL,NULL));
       }
       else
       {
@@ -13139,7 +13139,7 @@ LOCAL void serverCommand_entryListRemove(ClientInfo *clientInfo, IndexHandle *in
       entryId = (IndexId)String_toInteger64(token,STRING_BEGIN,&nextIndex,NULL,0);
       if (nextIndex == STRING_END)
       {
-        Array_removeAll(&clientInfo->entryIdArray,&entryId,CALLBACK(NULL,NULL));
+        Array_removeAll(&clientInfo->entryIdArray,&entryId,CALLBACK_(NULL,NULL));
       }
       else
       {
@@ -13924,11 +13924,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           NULL,  // excludePatternList
                           &clientInfo->jobOptions,
                           STORAGE_FLAGS_NONE,
-                          CALLBACK(restoreUpdateStatusInfo,&restoreCommandInfo),
-                          CALLBACK(restoreHandleError,&restoreCommandInfo),
-                          CALLBACK(getNamePassword,&restoreCommandInfo),
-                          CALLBACK(NULL,NULL),  // isPause callback
-                          CALLBACK_INLINE(bool,(void *userData),
+                          CALLBACK_(restoreUpdateStatusInfo,&restoreCommandInfo),
+                          CALLBACK_(restoreHandleError,&restoreCommandInfo),
+                          CALLBACK_(getNamePassword,&restoreCommandInfo),
+                          CALLBACK_(NULL,NULL),  // isPause callback
+                          CALLBACK__INLINE(bool,(void *userData),
                           {
                             UNUSED_VARIABLE(userData);
                             return isCommandAborted(clientInfo,id);
@@ -15361,11 +15361,11 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                        &globalOptions.indexDatabaseMaxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_LOW,
                        STORAGE_FLAGS_NONE,
-                       CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(NULL,NULL),  // getNamePassword
-                       CALLBACK(NULL,NULL),  // requestVolume
-                       CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL),  // isAborted
+                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(NULL,NULL),  // getNamePassword
+                       CALLBACK_(NULL,NULL),  // requestVolume
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
                        NULL  // logHandle
                       ) == ERROR_NONE
          )
@@ -15444,7 +15444,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   if (error != ERROR_NONE)
   {
     error = Storage_forAll(pattern,
-                           CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                           CALLBACK__INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                            {
                              String printableStorageName;
 
@@ -15893,7 +15893,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   }
 
   // init variables
-  Array_init(&storageIdArray,sizeof(IndexId),64,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&storageIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   storageName = String_new();
 
   // collect all storage ids (Note: do this to avoid infinite loop or database-busy-error when states are changed in another thread, too)
@@ -16390,7 +16390,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         // remove index id
         SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
         {
-          Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK(NULL,NULL));
+          Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK_(NULL,NULL));
         }
       }
     }
@@ -16415,7 +16415,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     // remove index id
     SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      Array_removeAll(&clientInfo->indexIdArray,&uuidId,CALLBACK(NULL,NULL));
+      Array_removeAll(&clientInfo->indexIdArray,&uuidId,CALLBACK_(NULL,NULL));
     }
   }
 
@@ -16432,7 +16432,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     // remove index id
     SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      Array_removeAll(&clientInfo->indexIdArray,&entityId,CALLBACK(NULL,NULL));
+      Array_removeAll(&clientInfo->indexIdArray,&entityId,CALLBACK_(NULL,NULL));
     }
   }
 
@@ -16449,7 +16449,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     // remove index id
     SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK(NULL,NULL));
+      Array_removeAll(&clientInfo->indexIdArray,&storageId,CALLBACK_(NULL,NULL));
     }
   }
 
@@ -16766,7 +16766,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  Array_debugPrintInfo(CALLBACK_INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  Array_debugPrintInfo(CALLBACK__INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                        {
                                          UNUSED_VARIABLE(array);
                                          UNUSED_VARIABLE(fileName);
@@ -16780,7 +16780,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                        NULL
                                       )
                       );
-  String_debugPrintInfo(CALLBACK_INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  String_debugPrintInfo(CALLBACK__INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                         {
                                           UNUSED_VARIABLE(string);
                                           UNUSED_VARIABLE(fileName);
@@ -16795,7 +16795,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                        ),
                                        DUMP_INFO_TYPE_ALLOCATED|DUMP_INFO_TYPE_HISTOGRAM
                        );
-  File_debugPrintInfo(CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  File_debugPrintInfo(CALLBACK__INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                       {
                                         UNUSED_VARIABLE(fileHandle);
                                         UNUSED_VARIABLE(fileName);
@@ -16845,7 +16845,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
 
   // Note: no abort because debug functions may hold a lock while dumping information
   Array_debugDumpInfo(handle,
-                      CALLBACK_INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                      CALLBACK__INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                       {
                                         UNUSED_VARIABLE(array);
                                         UNUSED_VARIABLE(fileName);
@@ -16860,7 +16860,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                      )
                      );
   String_debugDumpInfo(handle,
-                       CALLBACK_INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                       CALLBACK__INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                        {
                                          UNUSED_VARIABLE(string);
                                          UNUSED_VARIABLE(fileName);
@@ -16876,7 +16876,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                       DUMP_INFO_TYPE_HISTOGRAM
                      );
   File_debugDumpInfo(handle,
-                     CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                     CALLBACK__INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                      {
                                        UNUSED_VARIABLE(fileHandle);
                                        UNUSED_VARIABLE(fileName);
@@ -16891,7 +16891,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                     )
                     );
   debugResourceDumpInfo(handle,
-                        CALLBACK_INLINE(bool,(const char *variableName, const void *resource, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                        CALLBACK__INLINE(bool,(const char *variableName, const void *resource, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                         {
                                           UNUSED_VARIABLE(variableName);
                                           UNUSED_VARIABLE(resource);
@@ -16923,10 +16923,10 @@ void serverDumpMemoryInfo(void)
     fprintf(stderr,"%s, %d: Cannot open file (error: %s)\n",__FILE__,__LINE__,strerror(errno));
     return;
   }
-  Array_debugDumpInfo(handle,CALLBACK(NULL,NULL));
-  String_debugDumpInfo(handle,CALLBACK(NULL,NULL),DUMP_INFO_TYPE_HISTOGRAM);
-  File_debugDumpInfo(handle,CALLBACK(NULL,NULL));
-  debugResourceDumpInfo(handle,CALLBACK(NULL,NULL),DUMP_INFO_TYPE_HISTOGRAM);
+  Array_debugDumpInfo(handle,CALLBACK_(NULL,NULL));
+  String_debugDumpInfo(handle,CALLBACK_(NULL,NULL),DUMP_INFO_TYPE_HISTOGRAM);
+  File_debugDumpInfo(handle,CALLBACK_(NULL,NULL));
+  debugResourceDumpInfo(handle,CALLBACK_(NULL,NULL),DUMP_INFO_TYPE_HISTOGRAM);
   fclose(handle);
 }
 
@@ -17314,7 +17314,7 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
       // remove command info
       SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode,CALLBACK(NULL,NULL));
+        List_removeAndFree(&clientInfo->commandInfoList,commandInfoNode,CALLBACK_(NULL,NULL));
       }
     }
     else
@@ -17417,7 +17417,7 @@ LOCAL void doneNetworkClient(ClientInfo *clientInfo)
   {
     Thread_done(&clientInfo->threads[i]);
   }
-  MsgQueue_done(&clientInfo->commandQueue,CALLBACK((MsgQueueMsgFreeFunction)freeCommand,NULL));
+  MsgQueue_done(&clientInfo->commandQueue,CALLBACK_((MsgQueueMsgFreeFunction)freeCommand,NULL));
 
   // disconnect
   ServerIO_disconnect(&clientInfo->io);
@@ -17510,8 +17510,8 @@ LOCAL void initClient(ClientInfo *clientInfo)
   PatternList_init(&clientInfo->excludePatternList);
   Job_initOptions(&clientInfo->jobOptions);
   List_init(&clientInfo->directoryInfoList);
-  Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
-  Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&clientInfo->indexIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&clientInfo->entryIdArray,sizeof(IndexId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   DEBUG_ADD_RESOURCE_TRACE(clientInfo,ClientInfo);
 }
@@ -17577,13 +17577,13 @@ LOCAL void doneClient(ClientInfo *clientInfo)
   // free resources
   Array_done(&clientInfo->entryIdArray);
   Array_done(&clientInfo->indexIdArray);
-  List_done(&clientInfo->directoryInfoList,CALLBACK((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
+  List_done(&clientInfo->directoryInfoList,CALLBACK_((ListNodeFreeFunction)freeDirectoryInfoNode,NULL));
   Job_doneOptions(&clientInfo->jobOptions);
   PatternList_done(&clientInfo->excludePatternList);
   EntryList_done(&clientInfo->includeEntryList);
 
-  RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK(NULL,NULL));
-  List_done(&clientInfo->commandInfoList,CALLBACK(NULL,NULL));
+  RingBuffer_done(&clientInfo->abortedCommandIds,CALLBACK_(NULL,NULL));
+  List_done(&clientInfo->commandInfoList,CALLBACK_(NULL,NULL));
   Semaphore_done(&clientInfo->lock);
 }
 
@@ -18052,9 +18052,9 @@ Errors Server_run(ServerModes       mode,
   indexHandle                    = NULL;
   quitFlag                       = FALSE;
   AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
-  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
   AUTOFREE_ADD(&autoFreeList,newMaster.name,{ String_delete(newMaster.name); });
@@ -18294,7 +18294,7 @@ Errors Server_run(ServerModes       mode,
   {
 //TODO: required?
     // init database pause callbacks
-    Index_setPauseCallback(CALLBACK(indexPauseCallback,NULL));
+    Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
     Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
@@ -18716,7 +18716,7 @@ Errors Server_run(ServerModes       mode,
         {
           authorizationFailNode = List_removeAndFree(&authorizationFailList,
                                                      authorizationFailNode,
-                                                     CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                                                     CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
                                                     );
         }
         else
@@ -18750,7 +18750,7 @@ Errors Server_run(ServerModes       mode,
         // remove oldest authorization failure from list
         List_removeAndFree(&authorizationFailList,
                            oldestAuthorizationFailNode,
-                           CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                           CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
                           );
       }
     }
@@ -18817,7 +18817,7 @@ abortPairingMaster();
     Semaphore_done(&indexThreadTrigger);
 
     // done database pause callbacks
-    Index_setPauseCallback(CALLBACK(NULL,NULL));
+    Index_setPauseCallback(CALLBACK_(NULL,NULL));
   }
   if (!Thread_join(&pairingThread))
   {
@@ -18853,8 +18853,8 @@ abortPairingMaster();
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
-  List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
-  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
+  List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
+  List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
   String_delete(hostName);
   AutoFree_done(&autoFreeList);
@@ -18900,9 +18900,9 @@ Errors Server_batch(int        inputDescriptor,
   pauseEndDateTime       = 0LL;
   indexHandle            = NULL;
   quitFlag               = FALSE;
-  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&clientList,{ List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
-  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
 
   // init index database
@@ -18931,7 +18931,7 @@ Errors Server_batch(int        inputDescriptor,
   {
 //TODO: required?
     // init database pause callbacks
-    Index_setPauseCallback(CALLBACK(indexPauseCallback,NULL));
+    Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
     Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
@@ -19061,7 +19061,7 @@ processCommand(&clientInfo,commandString);
     Semaphore_done(&indexThreadTrigger);
 
     // done database pause callbacks
-    Index_setPauseCallback(CALLBACK(NULL,NULL));
+    Index_setPauseCallback(CALLBACK_(NULL,NULL));
   }
 
   // done index
@@ -19071,8 +19071,8 @@ processCommand(&clientInfo,commandString);
   doneClient(&clientInfo);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   Semaphore_done(&serverStateLock);
-  List_done(&authorizationFailList,CALLBACK((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
-  List_done(&clientList,CALLBACK((ListNodeFreeFunction)freeClientNode,NULL));
+  List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
+  List_done(&clientList,CALLBACK_((ListNodeFreeFunction)freeClientNode,NULL));
   Semaphore_done(&clientList.lock);
   AutoFree_done(&autoFreeList);
 

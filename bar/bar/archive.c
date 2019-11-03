@@ -1068,7 +1068,7 @@ LOCAL Errors initCryptPassword(ArchiveHandle *archiveHandle, const Password *pas
         error = getCryptPassword(cryptPassword,
                                  archiveHandle,
                                  archiveHandle->storageInfo->jobOptions,
-                                 CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
+                                 CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
                                 );
         if (error != ERROR_NONE)
         {
@@ -1770,7 +1770,7 @@ fprintf(stderr,"%s, %d: add ARCHIVE_ENTRY_TYPE_DIRECTORY %lld %s\n",__FILE__,__L
   }
 
   // free resources
-  List_done(&archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL));
+  List_done(&archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL));
 
   return error;
 }
@@ -5704,7 +5704,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = INDEX_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
@@ -5974,7 +5974,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->indexHandle             = NULL;
   archiveHandle->storageId               = INDEX_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
@@ -6120,7 +6120,7 @@ UNUSED_VARIABLE(storageInfo);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->indexLock,{ Semaphore_done(&archiveHandle->indexLock); });
   archiveHandle->storageId               = INDEX_ID_NONE;
   List_init(&archiveHandle->archiveIndexList);
-  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL)); });
+  AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList,{ List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL)); });
   Semaphore_init(&archiveHandle->archiveIndexList.lock,SEMAPHORE_TYPE_BINARY);
   AUTOFREE_ADD(&autoFreeList,&archiveHandle->archiveIndexList.lock,{ Semaphore_done(&archiveHandle->archiveIndexList.lock); });
 
@@ -6241,7 +6241,7 @@ UNUSED_VARIABLE(storageInfo);
   if (archiveHandle->indexHandle != NULL)
   {
     // clear index busy handler, close index
-    Index_setBusyHandler(archiveHandle->indexHandle,CALLBACK(NULL,NULL));
+    Index_setBusyHandler(archiveHandle->indexHandle,CALLBACK_(NULL,NULL));
     if (archiveHandle->indexHandle != NULL)
     {
       Index_close(archiveHandle->indexHandle);
@@ -6250,7 +6250,7 @@ UNUSED_VARIABLE(storageInfo);
 
   // free resources
   Semaphore_done(&archiveHandle->archiveIndexList.lock);
-  List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK(freeArchiveIndexNode,NULL));
+  List_done(&archiveHandle->archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL));
   Semaphore_done(&archiveHandle->indexLock);
   switch (archiveHandle->mode)
   {
@@ -6497,7 +6497,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                                archiveHandle,
                                                archiveHandle->storageInfo->jobOptions,
                                                archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                               CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
+                                               CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
                                               );
             while (   !decryptedFlag
                    && (password != NULL)
@@ -8803,7 +8803,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
                                              archiveHandle,
                                              archiveHandle->storageInfo->jobOptions,
                                              archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
-                                             CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
+                                             CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData)
                                             );
           while (   !decryptedFlag
                  && (password != NULL)
@@ -9130,7 +9130,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       &archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
+                                      CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -9534,7 +9534,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       &archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
+                                      CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -10176,7 +10176,7 @@ NULL//                             password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       &archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
+                                      CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -10687,7 +10687,7 @@ NULL//                             password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       &archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
+                                      CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -11111,7 +11111,7 @@ NULL//                             password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       &archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
+                                      CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -11580,7 +11580,7 @@ NULL//                             password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       &archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
+                                      CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -12214,7 +12214,7 @@ NULL//                             password
                                       archiveHandle,
                                       archiveHandle->storageInfo->jobOptions->cryptPasswordMode,
                                       &archiveHandle->storageInfo->jobOptions->cryptPassword,
-                                      CALLBACK(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
+                                      CALLBACK_(archiveHandle->getNamePasswordFunction,archiveHandle->getNamePasswordUserData),
                                       archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                       &archiveHandle->archiveCryptInfo->cryptSalt,
                                       keyLength
@@ -14644,8 +14644,8 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
                               totalTimeLastChanged,
                               totalEntries,
                               totalSize,
-                              CALLBACK(NULL,NULL),
-                              CALLBACK(NULL,NULL),
+                              CALLBACK_(NULL,NULL),
+                              CALLBACK_(NULL,NULL),
                               logHandle
                              );
   if (error != ERROR_NONE)
@@ -14710,7 +14710,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                          storageInfo,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
-                         CALLBACK(NULL,NULL),  // getNamePasswordFunction
+                         CALLBACK_(NULL,NULL),  // getNamePasswordFunction
                          logHandle
                         );
 
@@ -14722,7 +14722,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                            storageInfo,
                            NULL,  // archive name
                            NULL,  // deltaSourceList
-                           CALLBACK(NULL,NULL),  // getNamePasswordFunction
+                           CALLBACK_(NULL,NULL),  // getNamePasswordFunction
                            logHandle
                           );
     }
@@ -14734,7 +14734,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                          storageInfo,
                          NULL,  // archive name
                          NULL,  // deltaSourceList
-                         CALLBACK(NULL,NULL),  // getNamePasswordFunction
+                         CALLBACK_(NULL,NULL),  // getNamePasswordFunction
                          logHandle
                         );
   }
@@ -15360,7 +15360,7 @@ archiveHandle->archiveInitFunction              = NULL;
 archiveHandle->archiveInitUserData              = NULL;
                          archiveStoreFunction          archiveStoreFunction,
                          void                            *archiveNewFileUserData,
-                         CALLBACK(NULL,NULL)
+                         CALLBACK_(NULL,NULL)
                          NULL, // indexHandle
                         );
   if (error != ERROR_NONE)

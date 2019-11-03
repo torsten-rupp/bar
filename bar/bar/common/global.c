@@ -1101,8 +1101,8 @@ void debugResourceDone(void)
 
   pthread_mutex_lock(&debugResourceLock);
   {
-    List_done(&debugResourceAllocList,CALLBACK(NULL,NULL));
-    List_done(&debugResourceFreeList,CALLBACK(NULL,NULL));
+    List_done(&debugResourceAllocList,CALLBACK_(NULL,NULL));
+    List_done(&debugResourceFreeList,CALLBACK_(NULL,NULL));
   }
   pthread_mutex_unlock(&debugResourceLock);
 }
@@ -1191,7 +1191,7 @@ void debugResourceDumpInfo(FILE                     *handle,
         resourceHistogramNode->count++;
       }
 
-      List_sort(&resourceHistogramList,(ListNodeCompareFunction)CALLBACK(compareResourceHistogramNodes,NULL));
+      List_sort(&resourceHistogramList,(ListNodeCompareFunction)CALLBACK_(compareResourceHistogramNodes,NULL));
     }
 
     // get count
@@ -1283,7 +1283,7 @@ void debugResourceDumpInfo(FILE                     *handle,
     // free resources
     if (IS_SET(resourceDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
     {
-      List_done(&resourceHistogramList,CALLBACK(NULL,NULL));
+      List_done(&resourceHistogramList,CALLBACK_(NULL,NULL));
     }
   }
   pthread_mutex_unlock(&debugResourceLock);
@@ -1312,7 +1312,7 @@ void debugResourcePrintStatistics(void)
 
 void debugResourcePrintHistogram(void)
 {
-  debugResourceDumpInfo(stderr,CALLBACK(NULL,NUL),DUMP_INFO_TYPE_HISTOGRAM);
+  debugResourceDumpInfo(stderr,CALLBACK_(NULL,NUL),DUMP_INFO_TYPE_HISTOGRAM);
 }
 
 void debugResourceCheck(void)

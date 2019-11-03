@@ -97,8 +97,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                         textMacros,SIZE_OF_ARRAY(textMacros),
-                        CALLBACK(executeIOOutput,NULL),
-                        CALLBACK(executeIOOutput,NULL)
+                        CALLBACK_(executeIOOutput,NULL),
+                        CALLBACK_(executeIOOutput,NULL)
                        );
     printInfo(1,"OK\n");
 
@@ -127,8 +127,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
         Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
+                            CALLBACK_(executeIOOutput,NULL),
+                            CALLBACK_(executeIOOutput,NULL)
                            );
         printInfo(1,"OK\n");
       }
@@ -145,8 +145,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
     printInfo(1,"Request new volume #%d...",storageInfo->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
+                            CALLBACK_(executeIOOutput,NULL),
+                            CALLBACK_(executeIOOutput,NULL)
                            ) == ERROR_NONE
        )
     {
@@ -204,8 +204,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         printInfo(1,"Load volume #%d...",storageInfo->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
+                            CALLBACK_(executeIOOutput,NULL),
+                            CALLBACK_(executeIOOutput,NULL)
                            );
         Misc_udelay(LOAD_VOLUME_DELAY_TIME);
         printInfo(1,"OK\n");
@@ -225,8 +225,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         printInfo(1,"Load volume #%d...",storageInfo->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
+                            CALLBACK_(executeIOOutput,NULL),
+                            CALLBACK_(executeIOOutput,NULL)
                            );
         printInfo(1,"OK\n");
 
@@ -617,8 +617,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePreProcessCommand ),
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros),
-                                  CALLBACK(executeIOOutput,NULL),
-                                  CALLBACK(executeIOOutput,NULL)
+                                  CALLBACK_(executeIOOutput,NULL),
+                                  CALLBACK_(executeIOOutput,NULL)
                                  );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
@@ -628,8 +628,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imageCommand),
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros),
-                                  CALLBACK(executeIOOutput,NULL),
-                                  CALLBACK(executeIOOutput,NULL)
+                                  CALLBACK_(executeIOOutput,NULL),
+                                  CALLBACK_(executeIOOutput,NULL)
                                  );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
@@ -639,8 +639,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePostProcessCommand),
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros),
-                                  CALLBACK(executeIOOutput,NULL),
-                                  CALLBACK(executeIOOutput,NULL)
+                                  CALLBACK_(executeIOOutput,NULL),
+                                  CALLBACK_(executeIOOutput,NULL)
                                  );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
@@ -665,8 +665,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       error = Misc_executeCommand(String_cString(storageInfo->device.write.writeCommand),
                                   textMacros,
                                   SIZE_OF_ARRAY(textMacros),
-                                  CALLBACK(executeIOOutput,NULL),
-                                  CALLBACK(executeIOOutput,NULL)
+                                  CALLBACK_(executeIOOutput,NULL),
+                                  CALLBACK_(executeIOOutput,NULL)
                                  );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
@@ -733,8 +733,8 @@ LOCAL Errors StorageDevice_unloadVolume(const StorageInfo *storageInfo)
   TEXT_MACRO_N_STRING(textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
   error = Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
                               textMacros,SIZE_OF_ARRAY(textMacros),
-                              CALLBACK(executeIOOutput,NULL),
-                              CALLBACK(executeIOOutput,NULL)
+                              CALLBACK_(executeIOOutput,NULL),
+                              CALLBACK_(executeIOOutput,NULL)
                              );
 
   return error;

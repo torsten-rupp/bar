@@ -525,9 +525,9 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
   DEBUG_REMOVE_RESOURCE_TRACE(databaseNode,DatabaseNode);
 
   Semaphore_done(&databaseNode->progressHandlerList.lock);
-  List_done(&databaseNode->progressHandlerList,CALLBACK(NULL,NULL));
+  List_done(&databaseNode->progressHandlerList,CALLBACK_(NULL,NULL));
   Semaphore_done(&databaseNode->busyHandlerList.lock);
-  List_done(&databaseNode->busyHandlerList,CALLBACK(NULL,NULL));
+  List_done(&databaseNode->busyHandlerList,CALLBACK_(NULL,NULL));
   pthread_cond_destroy(&databaseNode->readWriteTrigger);
   #ifdef DATABASE_LOCK_PER_INSTANCE
      pthread_mutex_destroy(&databaseNode->lock);
@@ -2746,7 +2746,7 @@ LOCAL Errors getTableColumnList(DatabaseColumnList *columnList,
       columnNode = LIST_NEW_NODE(DatabaseColumnNode);
       if (columnNode == NULL)
       {
-        List_done(columnList,CALLBACK((ListNodeFreeFunction)freeColumnNode,NULL));
+        List_done(columnList,CALLBACK_((ListNodeFreeFunction)freeColumnNode,NULL));
         return ERROR_INSUFFICIENT_MEMORY;
       }
 
@@ -2811,7 +2811,7 @@ LOCAL void freeTableColumnList(DatabaseColumnList *columnList)
 {
   assert(columnList != NULL);
 
-  List_done(columnList,CALLBACK((ListNodeFreeFunction)freeColumnNode,NULL));
+  List_done(columnList,CALLBACK_((ListNodeFreeFunction)freeColumnNode,NULL));
 }
 
 /***********************************************************************\
@@ -2914,7 +2914,7 @@ Errors Database_initAll(void)
   if (sqliteResult != SQLITE_OK)
   {
     Semaphore_done(&databaseList.lock);
-    List_done(&databaseList,CALLBACK((ListNodeFreeFunction)freeDatabaseNode,NULL));
+    List_done(&databaseList,CALLBACK_((ListNodeFreeFunction)freeDatabaseNode,NULL));
     pthread_mutex_destroy(&databaseLock);
     pthread_mutexattr_destroy(&databaseLockAttribute);
     return ERRORX_(DATABASE,sqliteResult,"enable multi-threading");
@@ -2927,7 +2927,7 @@ void Database_doneAll(void)
 {
   // done database list
   Semaphore_done(&databaseList.lock);
-  List_done(&databaseList,CALLBACK((ListNodeFreeFunction)freeDatabaseNode,NULL));
+  List_done(&databaseList,CALLBACK_((ListNodeFreeFunction)freeDatabaseNode,NULL));
 
   #ifndef DATABASE_LOCK_PER_INSTANCE
     // done global lock
@@ -3158,7 +3158,7 @@ void Database_doneAll(void)
   // enable recursive triggers
   sqliteResult = sqlite3_exec(databaseHandle->handle,
                               "PRAGMA recursive_triggers=ON",
-                              CALLBACK(NULL,NULL),
+                              CALLBACK_(NULL,NULL),
                               NULL
                              );
   assert(sqliteResult == SQLITE_OK);
@@ -3877,7 +3877,7 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
   if (error == ERROR_NONE)
   {
     error = Database_execute(databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "PRAGMA synchronous=%s;",
                              enabled ? "ON" : "OFF"
@@ -3886,7 +3886,7 @@ Errors Database_setEnabledSync(DatabaseHandle *databaseHandle,
   if (error == ERROR_NONE)
   {
     error = Database_execute(databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "PRAGMA journal_mode=%s;",
                              enabled ? "ON" : "WAL"
@@ -3906,7 +3906,7 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
 
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "PRAGMA foreign_keys=%s;",
                            enabled ? "ON" : "OFF"
@@ -4935,7 +4935,7 @@ Errors Database_addColumn(DatabaseHandle *databaseHandle,
 
   // execute SQL command
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "ALTER TABLE %s ADD COLUMN %s %s; \
                            ",
@@ -5006,7 +5006,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     {
       return sqliteExecute(databaseHandle,
                            String_cString(sqlString),
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            databaseHandle->timeout
                           );
@@ -5110,7 +5110,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
       {
         return sqliteExecute(databaseHandle,
                              String_cString(sqlString),
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              databaseHandle->timeout
                             );
@@ -5134,7 +5134,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
   // rename tables
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "ALTER TABLE %s RENAME TO __old__;",
                            tableName
@@ -5142,14 +5142,14 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   if (error != ERROR_NONE)
   {
     (void)Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "DROP TABLE __new__;"
                           );
     return error;
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "ALTER TABLE __new__ RENAME TO %s;",
                            tableName
@@ -5157,20 +5157,20 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   if (error != ERROR_NONE)
   {
     (void)Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "ALTER TABLE __old__ RENAME TO %s;",
                            tableName
                           );
     (void)Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "DROP TABLE __new__;"
                           );
     return error;
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "DROP TABLE __old__;"
                           );
@@ -5301,7 +5301,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
-                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
                           databaseHandle->timeout
                          );
@@ -5417,7 +5417,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
-                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
                           databaseHandle->timeout
                          );
@@ -5532,7 +5532,7 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     DATABASE_DEBUG_SQL(databaseHandle,sqlString);
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
-                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
                           databaseHandle->timeout
                          );
@@ -5653,7 +5653,7 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
   {
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
-                         CALLBACK(databaseRowFunction,databaseRowUserData),
+                         CALLBACK_(databaseRowFunction,databaseRowUserData),
                          changedRowCount,
                          databaseHandle->timeout
                         );
@@ -6663,7 +6663,7 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
   {
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
-                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
                           databaseHandle->timeout
                          );
@@ -6682,7 +6682,7 @@ Errors Database_vsetInteger64(DatabaseHandle *databaseHandle,
       DATABASE_DEBUG_SQLX(databaseHandle,"set int64",sqlString);
       error = sqliteExecute(databaseHandle,
                             String_cString(sqlString),
-                            CALLBACK(NULL,NULL),  // databaseRowFunction
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                             NULL,  // changedRowCount
                             databaseHandle->timeout
                            );
@@ -6896,7 +6896,7 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
   {
     error = sqliteExecute(databaseHandle,
                           String_cString(sqlString),
-                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
                           databaseHandle->timeout
                          );
@@ -6915,7 +6915,7 @@ Errors Database_vsetDouble(DatabaseHandle *databaseHandle,
       DATABASE_DEBUG_SQLX(databaseHandle,"set double",sqlString);
       error = sqliteExecute(databaseHandle,
                             String_cString(sqlString),
-                            CALLBACK(NULL,NULL),  // databaseRowFunction
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                             NULL,  // changedRowCount
                             databaseHandle->timeout
                            );
@@ -7130,7 +7130,7 @@ Errors Database_vsetString(DatabaseHandle *databaseHandle,
   {
     return sqliteExecute(databaseHandle,
                          String_cString(sqlString),
-                         CALLBACK(NULL,NULL),  // databaseRowFunction
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount
                          databaseHandle->timeout
                         );
@@ -7170,7 +7170,7 @@ void Database_debugEnable(DatabaseHandle *databaseHandle, bool enabled)
 //TODO
 sqlite3_exec(databaseHandle->handle,
                               "PRAGMA vdbe_trace=ON",
-                              CALLBACK(NULL,NULL),
+                              CALLBACK_(NULL,NULL),
                               NULL
                              );
   }
@@ -7181,7 +7181,7 @@ sqlite3_exec(databaseHandle->handle,
     databaseDebugCounter--;
 if (databaseDebugCounter == 0) sqlite3_exec(databaseHandle->handle,
                               "PRAGMA vdbe_trace=OFF",
-                              CALLBACK(NULL,NULL),
+                              CALLBACK_(NULL,NULL),
                               NULL
                              );
 
@@ -7595,7 +7595,7 @@ void Database_debugDump(DatabaseHandle *databaseHandle, const char *tableName)
   {
     sqliteResult = sqlite3_exec(databaseHandle->handle,
                                 String_cString(sqlString),
-                                CALLBACK(debugPrintRow,NULL),
+                                CALLBACK_(debugPrintRow,NULL),
                                 (char**)&errorMessage
                                );
 

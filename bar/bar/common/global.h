@@ -375,7 +375,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 #endif /* __GNUC__ */
 
 // only for better reading
-#define CALLBACK(code,argument) code,argument
+#define CALLBACK_(code,argument) code,argument
 
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
@@ -428,7 +428,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
   })
 
 /***********************************************************************\
-* Name   : CALLBACK_INLINE
+* Name   : CALLBACK__INLINE
 * Purpose: define an inline call-back function (anonymouse function)
 * Input  : functionReturnType - call-back function signature
 *          functionSignature  - call-back function signature
@@ -439,11 +439,11 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Notes  : example
 *          List_removeAndFree(list,
 *                             node,
-*                             CALLBACK_INLINE(void,(...),{ ... },NULL)
+*                             CALLBACK__INLINE(void,(...),{ ... },NULL)
 *                            );
 \***********************************************************************/
 
-#define CALLBACK_INLINE(functionReturnType,functionSignature,functionBody,functionUserData) \
+#define CALLBACK__INLINE(functionReturnType,functionSignature,functionBody,functionUserData) \
   ({ \
     auto functionReturnType __closure__ functionSignature; \
     functionReturnType __closure__ functionSignature functionBody \

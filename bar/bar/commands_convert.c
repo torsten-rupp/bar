@@ -1931,7 +1931,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
   initConvertInfo(&convertInfo,
                   jobUUID,
                   jobOptions,
-                  CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                  CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                   logHandle
                  );
   AUTOFREE_ADD(&autoFreeList,&convertInfo,{ (void)doneConvertInfo(&convertInfo); });
@@ -1947,11 +1947,11 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
-                       CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(NULL,NULL),  // getPassword
-                       CALLBACK(NULL,NULL),  // requestVolume
-                       CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL),  // isAborted
+                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(NULL,NULL),  // getPassword
+                       CALLBACK_(NULL,NULL),  // requestVolume
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
                        NULL  // logHandle
                       );
   if (error != ERROR_NONE)
@@ -1981,7 +1981,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                        &convertInfo.storageInfo,
                        archiveName,
                        NULL,  // deltaSourceList,
-                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -2081,11 +2081,11 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                          &globalOptions.cryptNewPassword,
                          FALSE,  // createMeta
                          STORAGE_FLAGS_NONE,
-                         CALLBACK(NULL,NULL),  // archiveInitFunction
-                         CALLBACK(NULL,NULL),  // archiveDoneFunction
-CALLBACK(NULL,NULL),//                         CALLBACK(archiveGetSize,&convertInfo),
-                         CALLBACK(archiveStore,&convertInfo),
-                         CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                         CALLBACK_(NULL,NULL),  // archiveInitFunction
+                         CALLBACK_(NULL,NULL),  // archiveDoneFunction
+CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&convertInfo),
+                         CALLBACK_(archiveStore,&convertInfo),
+                         CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                          logHandle
                         );
   if (error != ERROR_NONE)
@@ -2278,7 +2278,7 @@ Errors Command_convert(const StringList        *storageNameList,
                                NULL,
                                jobUUID,
                                jobOptions,
-                               CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                               CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                logHandle
                               );
         someStorageFound = TRUE;
@@ -2323,7 +2323,7 @@ Errors Command_convert(const StringList        *storageNameList,
                                    fileName,
                                    jobUUID,
                                    jobOptions,
-                                   CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                    logHandle
                                   );
             if (error != ERROR_NONE)

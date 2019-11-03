@@ -871,8 +871,8 @@ bool Compress_isValidAlgorithm(uint16 n)
   assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
-    RingBuffer_done(&compressInfo->compressRingBuffer,CALLBACK(NULL,NULL));
-    RingBuffer_done(&compressInfo->dataRingBuffer,CALLBACK(NULL,NULL));
+    RingBuffer_done(&compressInfo->compressRingBuffer,CALLBACK_(NULL,NULL));
+    RingBuffer_done(&compressInfo->dataRingBuffer,CALLBACK_(NULL,NULL));
     return error;
   }
 

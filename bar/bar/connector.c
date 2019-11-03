@@ -3136,11 +3136,11 @@ Errors Connector_initStorage(ConnectorInfo *connectorInfo,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        storageFlags,
 //TODO
-CALLBACK(NULL,NULL),//                       CALLBACK(updateStorageStatusInfo,connectorInfo),
-CALLBACK(NULL,NULL),//                       CALLBACK(getPasswordFunction,getPasswordUserData),
-CALLBACK(NULL,NULL),//                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData)
-                       CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL),  // isAborted
+CALLBACK_(NULL,NULL),//                       CALLBACK_(updateStorageStatusInfo,connectorInfo),
+CALLBACK_(NULL,NULL),//                       CALLBACK_(getPasswordFunction,getPasswordUserData),
+CALLBACK_(NULL,NULL),//                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData)
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
                        NULL  // logHandle
                       );
   if (error != ERROR_NONE)

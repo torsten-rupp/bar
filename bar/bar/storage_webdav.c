@@ -901,7 +901,7 @@ LOCAL Errors StorageWebDAV_init(StorageInfo                *storageInfo,
                             storageInfo->storageSpecifier.loginName,
                             &password,
                             jobOptions,
-                            CALLBACK(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
+                            CALLBACK_(storageInfo->getNamePasswordFunction,storageInfo->getNamePasswordUserData)
                            )
            )
         {
@@ -2600,7 +2600,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
                                 storageDirectoryListHandle->storageSpecifier.loginPassword,
                                 jobOptions,
 //TODO
-                                CALLBACK(NULL,NULL) //storageDirectoryListHandle->getNamePasswordFunction,
+                                CALLBACK_(NULL,NULL) //storageDirectoryListHandle->getNamePasswordFunction,
                                )
             )
       {

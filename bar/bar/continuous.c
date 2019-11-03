@@ -326,7 +326,7 @@ LOCAL void printNotifies(void)
 
   // create tables
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            CONTINUOUS_TABLE_DEFINITION
                           );
@@ -489,7 +489,7 @@ LOCAL void freeNotifyInfo(NotifyInfo *notifyInfo, void *userData)
   UNUSED_VARIABLE(userData);
 
   String_delete(notifyInfo->name);
-  List_done(&notifyInfo->uuidList,CALLBACK(NULL,NULL));
+  List_done(&notifyInfo->uuidList,CALLBACK_(NULL,NULL));
 }
 
 /***********************************************************************\
@@ -918,7 +918,7 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
             && stringEquals(uuidNode->scheduleUUID,scheduleUUID)
            )
         {
-          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK(NULL,NULL));
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_(NULL,NULL));
         }
         else
         {
@@ -989,7 +989,7 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
                )
            )
         {
-          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK(NULL,NULL));
+          uuidNode = List_removeAndFree(&notifyInfo->uuidList,uuidNode,CALLBACK_(NULL,NULL));
         }
         else
         {
@@ -1155,7 +1155,7 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
 //fprintf(stderr,"%s, %d: --- jobUUID=%s scheduleUUID=%s delta=%d\n",__FILE__,__LINE__,jobUUID,scheduleUUID,globalOptions.continuousMinTimeDelta);
 //Continuous_dumpEntries(databaseHandle,jobUUID,scheduleUUID);
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "DELETE FROM names \
                             WHERE     storedFlag=1 \
@@ -1169,7 +1169,7 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
 
   // add entry (if not already exists or
   error = Database_execute(databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "INSERT INTO names \
                               (\
@@ -1217,7 +1217,7 @@ LOCAL Errors removeEntry(DatabaseHandle *databaseHandle,
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   return Database_execute(databaseHandle,
-                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
                           "DELETE FROM names WHERE id=%lld;",
                           databaseId
@@ -1241,7 +1241,7 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
 //  assert(Database_isLocked(databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE));
 
   return Database_execute(databaseHandle,
-                          CALLBACK(NULL,NULL),  // databaseRowFunction
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                           NULL,  // changedRowCount
                           "UPDATE names SET dateTime=DATETIME('now'),storedFlag=1 WHERE id=%lld;",
                           databaseId
@@ -1542,14 +1542,14 @@ Errors Continuous_initAll(void)
   // init variables
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
-                  CALLBACK(NULL,NULL),  // dictionaryCopyFunction
-                  CALLBACK(NULL,NULL),  // freeNotifyDictionary
-                  CALLBACK(NULL,NULL)  // dictionaryCompareFunction
+                  CALLBACK_(NULL,NULL),  // dictionaryCopyFunction
+                  CALLBACK_(NULL,NULL),  // freeNotifyDictionary
+                  CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
                  );
   Dictionary_init(&notifyNames,
-                  CALLBACK(NULL,NULL),  // dictionaryCopyFunction
-                  CALLBACK(NULL,NULL),  // dictionaryFreeFunction
-                  CALLBACK(NULL,NULL)  // dictionaryCompareFunction
+                  CALLBACK_(NULL,NULL),  // dictionaryCopyFunction
+                  CALLBACK_(NULL,NULL),  // dictionaryFreeFunction
+                  CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
                  );
 
   // check number of possible notifies
@@ -1587,7 +1587,7 @@ void Continuous_doneAll(void)
   assert(inotifyHandle != -1);
 
   // done notify event message queue
-  MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
+  MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK_((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
   close(inotifyHandle);
 
   // done dictionaries

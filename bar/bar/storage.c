@@ -3717,11 +3717,11 @@ NULL, // masterIO
                        maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        STORAGE_FLAGS_NONE,
-                       CALLBACK(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
-                       CALLBACK(NULL,NULL),  // updateStatusInfo
-                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
-                       CALLBACK(NULL,NULL),  // isPause
-                       CALLBACK(NULL,NULL),  // isAborted
+                       CALLBACK_(storageUpdateStatusInfoFunction,storageUpdateStatusInfoUserData),
+                       CALLBACK_(NULL,NULL),  // updateStatusInfo
+                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
+                       CALLBACK_(NULL,NULL),  // isPause
+                       CALLBACK_(NULL,NULL),  // isAborted
                        NULL  // logHandle
                       );
   if (error != ERROR_NONE)

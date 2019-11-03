@@ -333,7 +333,7 @@ LOCAL void busyHandler(void *userData)
               indexHandle,
     {
       return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK(NULL,NULL),  // databaseRowFunction
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
                               INDEX_DEFINITION
                              );
@@ -370,7 +370,7 @@ LOCAL void busyHandler(void *userData)
   }
 
   // add busy handler
-  Database_addBusyHandler(&indexHandle->databaseHandle,CALLBACK(busyHandler,indexHandle));
+  Database_addBusyHandler(&indexHandle->databaseHandle,CALLBACK_(busyHandler,indexHandle));
 
   INDEX_DO(indexHandle,
   {
@@ -413,7 +413,7 @@ LOCAL void busyHandler(void *userData)
   assert(indexHandle != NULL);
 
   // remove busy handler
-  Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK(busyHandler,indexHandle));
+  Database_removeBusyHandler(&indexHandle->databaseHandle,CALLBACK_(busyHandler,indexHandle));
 
   INDEX_DO(indexHandle,
   {
@@ -561,7 +561,7 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
   assert(tableName != NULL);
 
   (void)Database_execute(&indexHandle->databaseHandle,
-                         CALLBACK(NULL,NULL),  // databaseRowFunction
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount
                          "UPDATE %s SET id=rowId WHERE id IS NULL;",
                          tableName
@@ -701,7 +701,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
             indexHandle,
   {
     (void)Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "DELETE FROM meta \
                             WHERE ROWID NOT IN (SELECT MIN(rowid) FROM meta GROUP BY name); \
@@ -727,7 +727,7 @@ LOCAL Errors cleanUpDuplicateMeta(IndexHandle *indexHandle)
             )
       {
         (void)Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "DELETE FROM meta \
                                 WHERE     name=%'S \
@@ -796,7 +796,7 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
             indexHandle,
   {
     (void)Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
                            "UPDATE entities SET lockedCount=0"
                           );
@@ -1200,7 +1200,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
             {
               // assign entity id
               (void)Database_execute(&newIndexHandle->databaseHandle,
-                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      "UPDATE storage \
                                       SET entityId=%lld \
@@ -1215,7 +1215,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
         }
 
         error = Database_execute(&newIndexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "INSERT INTO entities \
                                     ( \
@@ -1279,7 +1279,7 @@ LOCAL Errors cleanUpStorageNoEntity(IndexHandle *indexHandle)
               {
                 // assign entity id
                 (void)Database_execute(&newIndexHandle->databaseHandle,
-                                       CALLBACK(NULL,NULL),  // databaseRowFunction
+                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
                                        NULL,  // changedRowCount
                                        "UPDATE storage \
                                         SET entityId=%lld \
@@ -1348,7 +1348,7 @@ LOCAL Errors pruneStorage(IndexHandle *indexHandle,
   {
     // delete storage entry
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM storage \
                               WHERE     id=%lld \
@@ -1391,7 +1391,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
               "Started prune storages"
              );
 
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
   {
@@ -1485,7 +1485,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
 
     if (lockedCount == 0LL)
     {
-      Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+      Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
       INDEX_DOX(error,
                 indexHandle,
       {
@@ -1527,7 +1527,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
       if (!existsStorageFlag)
       {
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "DELETE FROM entities WHERE id=%lld;",
                                  Index_getDatabaseId(entityIndexId)
@@ -1568,7 +1568,7 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle)
              );
 
   // Note: keep default entity!
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
   {
@@ -1643,7 +1643,7 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
   assert(Index_getType(uuidId) == INDEX_TYPE_UUID);
 
   // prune entities of uuid
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
   {
@@ -1688,7 +1688,7 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
   if (!existsEntityFlag)
   {
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM uuids WHERE id=%lld;",
                              Index_getDatabaseId(uuidId)
@@ -1726,7 +1726,7 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle)
               "Started prune UUIDs"
              );
 
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
   {
@@ -1818,7 +1818,7 @@ LOCAL Errors purgeFromIndex(IndexHandle *indexHandle,
     changedRowCount = 0;
 //Database_debugEnable(&indexHandle->databaseHandle,TRUE);
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              &changedRowCount,
                              "DELETE FROM %s \
                               WHERE %S \
@@ -2466,7 +2466,7 @@ ulong x;
 fprintf(stderr,"%s, %d: storageId=%lld done=%d x=%llu\n",__FILE__,__LINE__,databaseId,doneFlag,x);
 #else
                   error = Database_execute(&indexHandle.databaseHandle,
-                                           CALLBACK(NULL,NULL),  // databaseRowFunction
+                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
                                            NULL,  // changedRowCount,
                                            "DELETE FROM storage \
                                             WHERE id=%lld \
@@ -2838,7 +2838,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   {
 //fprintf(stderr,"%s, %d: directoryName=%s %llu\n",__FILE__,__LINE__,String_cString(directoryName),size);
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE directoryEntries \
                               SET totalEntryCount=totalEntryCount+1, \
@@ -2858,7 +2858,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
     if (databaseId != DATABASE_ID_NONE)
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE directoryEntries \
                                 SET totalEntryCountNewest=totalEntryCountNewest+1, \
@@ -2912,7 +2912,7 @@ LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
             indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE entries \
                               SET storageId=%lld \
@@ -2927,7 +2927,7 @@ LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
     }
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE entriesNewest \
                               SET storageId=%lld \
@@ -2984,7 +2984,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
             indexHandle,
   {
     return Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE storage \
                               SET entityId=%lld \
@@ -3030,7 +3030,7 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
   assert(Index_getType(toStorageIndexId) == INDEX_TYPE_STORAGE);
 
   // assign storage entries to other storage
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
   {
@@ -3101,7 +3101,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
               indexHandle,
     {
       return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK(NULL,NULL),  // databaseRowFunction
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
                               "UPDATE storage \
                                SET entityId=%lld \
@@ -3131,7 +3131,7 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
               indexHandle,
     {
       return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK(NULL,NULL),  // databaseRowFunction
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
                               "UPDATE entities \
                                SET type=%d \
@@ -3181,7 +3181,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
               indexHandle,
     {
       return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK(NULL,NULL),  // databaseRowFunction
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
                               "UPDATE entities \
                                SET jobUUID=%'S \
@@ -3211,7 +3211,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
               indexHandle,
     {
       return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK(NULL,NULL),  // databaseRowFunction
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
                               "UPDATE entities \
                                SET type=%d \
@@ -3257,7 +3257,7 @@ LOCAL Errors assignJobToStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(toStorageIndexId) == INDEX_TYPE_STORAGE);
 
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
   {
@@ -3316,7 +3316,7 @@ LOCAL Errors assignJobToEntity(IndexHandle  *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(toEntityIndexId) == INDEX_TYPE_ENTITY);
 
-  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   INDEX_DOX(error,
             indexHandle,
   {
@@ -3376,7 +3376,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
             indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE entities \
                               SET jobUUID=%'S \
@@ -3393,7 +3393,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
     if (toArchiveType != ARCHIVE_TYPE_NONE)
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE entities \
                                 SET type=%d \
@@ -4790,7 +4790,7 @@ Errors Index_setState(IndexHandle *indexHandle,
       {
         case INDEX_TYPE_ENTITY:
           error = Database_execute(&indexHandle->databaseHandle,
-                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    "UPDATE storage \
                                     SET state       =%d, \
@@ -4808,7 +4808,7 @@ Errors Index_setState(IndexHandle *indexHandle,
           if (lastCheckedDateTime != 0LL)
           {
             error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      "UPDATE storage \
                                       SET lastChecked=DATETIME(%llu,'unixepoch') \
@@ -4826,7 +4826,7 @@ Errors Index_setState(IndexHandle *indexHandle,
           if (errorText != NULL)
           {
             error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      "UPDATE storage \
                                       SET errorMessage=%'S \
@@ -4843,7 +4843,7 @@ Errors Index_setState(IndexHandle *indexHandle,
           break;
         case INDEX_TYPE_STORAGE:
           error = Database_execute(&indexHandle->databaseHandle,
-                                   CALLBACK(NULL,NULL),  // databaseRowFunction
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
                                    "UPDATE storage \
                                     SET state       =%d, \
@@ -4861,7 +4861,7 @@ Errors Index_setState(IndexHandle *indexHandle,
           if (lastCheckedDateTime != 0LL)
           {
             error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      "UPDATE storage \
                                       SET lastChecked=DATETIME(%llu,'unixepoch') \
@@ -4879,7 +4879,7 @@ Errors Index_setState(IndexHandle *indexHandle,
           if (errorText != NULL)
           {
             error = Database_execute(&indexHandle->databaseHandle,
-                                     CALLBACK(NULL,NULL),  // databaseRowFunction
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
                                      NULL,  // changedRowCount
                                      "UPDATE storage \
                                       SET errorMessage=%'S \
@@ -5155,7 +5155,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
       Errors error;
 
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                               "INSERT INTO history \
                                  ( \
@@ -5283,7 +5283,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM history WHERE id=%lld;",
                              Index_getDatabaseId(historyIndexId)
@@ -5559,7 +5559,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
               indexHandle,
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO uuids \
                                   ( \
@@ -5666,7 +5666,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
 
     // delete UUID
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM uuids \
                               WHERE id=%lld; \
@@ -5937,7 +5937,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
               indexHandle,
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT OR IGNORE INTO uuids \
                                   ( \
@@ -5956,7 +5956,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
       }
 
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO entities \
                                   ( \
@@ -6085,7 +6085,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     {
       (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "DELETE FROM entities WHERE id=%lld;",
                                Index_getDatabaseId(entityIndexId)
@@ -6131,7 +6131,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
               indexHandle,
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE entities \
                                 SET jobUUID=%'S, \
@@ -6201,7 +6201,7 @@ Errors Index_lockEntity(IndexHandle *indexHandle,
             indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE entities SET lockedCount=lockedCount+1 WHERE id=%lld;",
                              Index_getDatabaseId(entityIndexId)
@@ -6236,7 +6236,7 @@ Errors Index_unlockEntity(IndexHandle *indexHandle,
             indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE entities SET lockedCount=lockedCount-1 WHERE id=%lld AND lockedCount>0;",
                              Index_getDatabaseId(entityIndexId)
@@ -6637,7 +6637,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       // update aggregate data
 //fprintf(stderr,"%s, %d: aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storage \
                                 SET totalEntryCount    =%llu, \
@@ -6823,7 +6823,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       // update newest aggregate data
 //fprintf(stderr,"%s, %d: newest aggregate %llu %llu\n",__FILE__,__LINE__,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storage \
                                 SET totalEntryCountNewest    =%llu, \
@@ -7136,7 +7136,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
               indexHandle,
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO storage \
                                   ( \
@@ -7237,7 +7237,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
     if (userName != NULL)
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storage \
                                   SET userName=%'S \
@@ -7255,7 +7255,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
     if (storageName != NULL)
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storage \
                                   SET name=%'S \
@@ -7271,7 +7271,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
     }
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "UPDATE storage \
                                 SET created=DATETIME(%llu,'unixepoch'), \
@@ -7290,7 +7290,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
     if (comment != NULL)
     {
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storage \
                                   SET comment=%'S \
@@ -7332,7 +7332,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
               indexHandle,
     {
       return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK(NULL,NULL),  // databaseRowFunction
+                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                               NULL,  // changedRowCount
                               "UPDATE storage \
                                SET deletedFlag=1 \
@@ -7864,7 +7864,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
       if (storageName != NULL)
       {
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "UPDATE storage \
                                   SET name=%'S \
@@ -7881,7 +7881,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 
       // update size
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storage \
                                 SET size=%llu \
@@ -9237,7 +9237,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
     {
       case INDEX_TYPE_FILE:
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "DELETE FROM fileEntries WHERE entryId=%lld;",
                                  Index_getDatabaseId(entryId)
@@ -9245,7 +9245,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
         break;
       case INDEX_TYPE_IMAGE:
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "DELETE FROM imageEntries WHERE entryId=%lld;",
                                  Index_getDatabaseId(entryId)
@@ -9253,7 +9253,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
         break;
       case INDEX_TYPE_DIRECTORY:
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "DELETE FROM directoryEntries WHERE entryId=%lld;",
                                  Index_getDatabaseId(entryId)
@@ -9261,7 +9261,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
         break;
       case INDEX_TYPE_LINK:
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "DELETE FROM linkEntries WHERE entryId=%lld;",
                                  Index_getDatabaseId(entryId)
@@ -9269,7 +9269,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
         break;
       case INDEX_TYPE_HARDLINK:
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
                                  Index_getDatabaseId(entryId)
@@ -9277,7 +9277,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
         break;
       case INDEX_TYPE_SPECIAL:
         error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK(NULL,NULL),  // databaseRowFunction
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
                                  "DELETE FROM specialEntries WHERE entryId=%lld;",
                                  Index_getDatabaseId(entryId)
@@ -9296,7 +9296,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
     }
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(entryId)
@@ -9307,7 +9307,7 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(entryId)
@@ -9525,7 +9525,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM fileEntries WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -9536,7 +9536,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -9547,7 +9547,7 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)
@@ -9750,7 +9750,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM imageEntries WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -9761,7 +9761,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -9772,7 +9772,7 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)
@@ -9973,7 +9973,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM directoryEntries WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -9984,7 +9984,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -9995,7 +9995,7 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10196,7 +10196,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM linkEntries WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10207,7 +10207,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10218,7 +10218,7 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10429,7 +10429,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10440,7 +10440,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10451,7 +10451,7 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10649,7 +10649,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM specialEntries WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10660,7 +10660,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entriesNewest WHERE entryId=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10671,7 +10671,7 @@ Errors Index_deleteSpecial(IndexHandle *indexHandle,
       return error;
     }
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM entries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)
@@ -10744,7 +10744,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO entries \
                                   ( \
@@ -10789,7 +10789,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 
       // add file entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO fileEntries \
                                   ( \
@@ -10898,7 +10898,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO entries \
                                   ( \
@@ -10943,7 +10943,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 
       // add image entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO imageEntries \
                                   ( \
@@ -11039,7 +11039,7 @@ fprintf(stderr,"%s, %d: storageIndexId=%lld id=%lld\n",__FILE__,__LINE__,storage
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO entries \
                                   ( \
@@ -11084,7 +11084,7 @@ fprintf(stderr,"%s, %d: storageIndexId=%lld id=%lld\n",__FILE__,__LINE__,storage
 
       // add directory entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO directoryEntries \
                                   ( \
@@ -11187,7 +11187,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO entries \
                                   ( \
@@ -11232,7 +11232,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 
       // add link entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO linkEntries \
                                   ( \
@@ -11327,7 +11327,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO entries \
                                   ( \
@@ -11372,7 +11372,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 
       // add hard link entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO hardlinkEntries \
                                   ( \
@@ -11485,7 +11485,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     {
       // add entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO entries \
                                   ( \
@@ -11530,7 +11530,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 
       // add special entry
       error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK(NULL,NULL),  // databaseRowFunction
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "INSERT INTO specialEntries \
                                   ( \
@@ -11943,7 +11943,7 @@ Errors Index_addSkippedEntry(IndexHandle *indexHandle,
             indexHandle,
   {
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "INSERT INTO skippedEntries \
                                 ( \
@@ -12000,7 +12000,7 @@ Errors Index_deleteSkippedEntry(IndexHandle *indexHandle,
     (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
 
     error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK(NULL,NULL),  // databaseRowFunction
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
                              "DELETE FROM skippedEntries WHERE id=%lld;",
                              Index_getDatabaseId(indexId)

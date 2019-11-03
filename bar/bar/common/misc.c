@@ -1580,9 +1580,9 @@ stringNode = stringNode->next;
     error = execute(String_cString(command),
                     arguments,
                     NULL,  // errorText
-                    CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
+                    CALLBACK_(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
                     0,  // stdoutStripCount
-                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData),
+                    CALLBACK_(stderrExecuteIOFunction,stderrExecuteIOUserData),
                     0  // stderrStripCount
                    );
 
@@ -1677,9 +1677,9 @@ Errors Misc_executeScript(const char        *script,
     error = execute(String_cString(command),
                     arguments,
                     script,
-                    CALLBACK(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
+                    CALLBACK_(stdoutExecuteIOFunction,stdoutExecuteIOUserData),
                     0,  // stdoutStripCount
-                    CALLBACK(stderrExecuteIOFunction,stderrExecuteIOUserData),
+                    CALLBACK_(stderrExecuteIOFunction,stderrExecuteIOUserData),
                     String_length(tmpFileName)+1+1
                    );
 

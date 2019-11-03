@@ -888,8 +888,8 @@ LOCAL Errors StorageOptical_loadVolume(const StorageInfo *storageInfo)
   TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->requestedVolumeNumber,      NULL);
   return Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.loadVolumeCommand),
                              textMacros,SIZE_OF_ARRAY(textMacros),
-                             CALLBACK(executeIOOutput,NULL),
-                             CALLBACK(executeIOOutput,NULL)
+                             CALLBACK_(executeIOOutput,NULL),
+                             CALLBACK_(executeIOOutput,NULL)
                             );
 }
 
@@ -904,8 +904,8 @@ LOCAL Errors StorageOptical_unloadVolume(const StorageInfo *storageInfo)
   TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->requestedVolumeNumber,      NULL);
   return Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.unloadVolumeCommand),
                              textMacros,SIZE_OF_ARRAY(textMacros),
-                             CALLBACK(executeIOOutput,NULL),
-                             CALLBACK(executeIOOutput,NULL)
+                             CALLBACK_(executeIOOutput,NULL),
+                             CALLBACK_(executeIOOutput,NULL)
                             );
 }
 
@@ -983,8 +983,8 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
     printInfo(1,"Request new medium #%d...",storageInfo->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.requestVolumeCommand),
                             textMacros,SIZE_OF_ARRAY(textMacros),
-                            CALLBACK(executeIOOutput,NULL),
-                            CALLBACK(executeIOOutput,NULL)
+                            CALLBACK_(executeIOOutput,NULL),
+                            CALLBACK_(executeIOOutput,NULL)
                            ) == ERROR_NONE
        )
     {
@@ -1209,8 +1209,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
       StringList_clear(&executeIOInfo.stderrList);
       error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.imageCommand),
                                   textMacros,SIZE_OF_ARRAY(textMacros),
-                                  CALLBACK(executeIOmkisofsStdout,&executeIOInfo),
-                                  CALLBACK(executeIOmkisofsStderr,&executeIOInfo)
+                                  CALLBACK_(executeIOmkisofsStdout,&executeIOInfo),
+                                  CALLBACK_(executeIOmkisofsStderr,&executeIOInfo)
                                  );
       if (error != ERROR_NONE)
       {
@@ -1243,8 +1243,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.eccCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOdvdisasterStdout,&executeIOInfo),
-                                    CALLBACK(executeIOdvdisasterStderr,&executeIOInfo)
+                                    CALLBACK_(executeIOdvdisasterStdout,&executeIOInfo),
+                                    CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo)
                                    );
         if (error != ERROR_NONE)
         {
@@ -1299,8 +1299,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOblankStdout,&executeIOInfo),
-                                    CALLBACK(executeIOblankStderr,&executeIOInfo)
+                                    CALLBACK_(executeIOblankStdout,&executeIOInfo),
+                                    CALLBACK_(executeIOblankStderr,&executeIOInfo)
                                    );
         if (error != ERROR_NONE)
         {
@@ -1337,8 +1337,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.writeImageCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOgrowisofsStdout,&executeIOInfo),
-                                    CALLBACK(executeIOgrowisofsStderr,&executeIOInfo)
+                                    CALLBACK_(executeIOgrowisofsStdout,&executeIOInfo),
+                                    CALLBACK_(executeIOgrowisofsStderr,&executeIOInfo)
                                    );
         if (error == ERROR_NONE)
         {
@@ -1406,8 +1406,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.blankCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOblankStdout,&executeIOInfo),
-                                    CALLBACK(executeIOblankStderr,&executeIOInfo)
+                                    CALLBACK_(executeIOblankStdout,&executeIOInfo),
+                                    CALLBACK_(executeIOblankStderr,&executeIOInfo)
                                    );
         if (error != ERROR_NONE)
         {
@@ -1444,8 +1444,8 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.writeCommand),
                                     textMacros,SIZE_OF_ARRAY(textMacros),
-                                    CALLBACK(executeIOgrowisofsStdout,&executeIOInfo),
-                                    CALLBACK(executeIOgrowisofsStderr,&executeIOInfo)
+                                    CALLBACK_(executeIOgrowisofsStdout,&executeIOInfo),
+                                    CALLBACK_(executeIOgrowisofsStderr,&executeIOInfo)
                                    );
         if (error == ERROR_NONE)
         {

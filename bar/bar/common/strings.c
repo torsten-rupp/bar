@@ -5746,7 +5746,7 @@ void String_debugDumpInfo(FILE                   *handle,
           stringHistogramNode->count++;
         }
 
-        List_sort(&stringHistogramList,(ListNodeCompareFunction)CALLBACK(compareStringHistogramNodes,NULL));
+        List_sort(&stringHistogramList,(ListNodeCompareFunction)CALLBACK_(compareStringHistogramNodes,NULL));
       }
 
       // get count
@@ -5831,7 +5831,7 @@ void String_debugDumpInfo(FILE                   *handle,
       // free resources
       if (IS_SET(stringDumpInfoTypes,DUMP_INFO_TYPE_HISTOGRAM))
       {
-        List_done(&stringHistogramList,CALLBACK(NULL,NULL));
+        List_done(&stringHistogramList,CALLBACK_(NULL,NULL));
       }
     }
     pthread_mutex_unlock(&debugStringLock);
@@ -5875,7 +5875,7 @@ void String_debugCheck()
 {
   pthread_once(&debugStringInitFlag,debugStringInit);
 
-  String_debugPrintInfo(CALLBACK(NULL,NULL),DUMP_INFO_TYPE_ALLOCATED);
+  String_debugPrintInfo(CALLBACK_(NULL,NULL),DUMP_INFO_TYPE_ALLOCATED);
   String_debugPrintStatistics();
 
   #ifdef TRACE_STRING_ALLOCATIONS

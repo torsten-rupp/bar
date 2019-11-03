@@ -470,8 +470,8 @@ Errors Device_mount(ConstString mountCommand,
 
   return Misc_executeCommand(command,
                              textMacros,SIZE_OF_ARRAY(textMacros),
-                             CALLBACK(NULL,NULL),
-                             CALLBACK(NULL,NULL)
+                             CALLBACK_(NULL,NULL),
+                             CALLBACK_(NULL,NULL)
                             );
 }
 
@@ -490,23 +490,23 @@ Errors Device_umount(ConstString umountCommand,
   {
     error = Misc_executeCommand(String_cString(umountCommand),
                                 textMacros,SIZE_OF_ARRAY(textMacros),
-                                CALLBACK(NULL,NULL),
-                                CALLBACK(NULL,NULL)
+                                CALLBACK_(NULL,NULL),
+                                CALLBACK_(NULL,NULL)
                                );
   }
   else
   {
     error = Misc_executeCommand("/bin/umount %directory",
                                 textMacros,SIZE_OF_ARRAY(textMacros),
-                                CALLBACK(NULL,NULL),
-                                CALLBACK(NULL,NULL)
+                                CALLBACK_(NULL,NULL),
+                                CALLBACK_(NULL,NULL)
                                );
     if (error != ERROR_NONE)
     {
       error = Misc_executeCommand("sudo /bin/umount %directory",
                                   textMacros,SIZE_OF_ARRAY(textMacros),
-                                  CALLBACK(NULL,NULL),
-                                  CALLBACK(NULL,NULL)
+                                  CALLBACK_(NULL,NULL),
+                                  CALLBACK_(NULL,NULL)
                                  );
     }
   }

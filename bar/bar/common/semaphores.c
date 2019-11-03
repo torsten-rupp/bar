@@ -1873,7 +1873,7 @@ bool __Semaphore_init(const char     *__fileName__,
 
     pthread_mutex_lock(&debugSemaphoreLock);
     {
-      if (List_contains(&debugSemaphoreList,semaphore,CALLBACK(NULL,NULL)))
+      if (List_contains(&debugSemaphoreList,semaphore,CALLBACK_(NULL,NULL)))
       {
         HALT_INTERNAL_ERROR_AT(__fileName__,__lineNb__,"Semaphore '%s' was already initialized at %s, line %lu!",
                                semaphore->name,

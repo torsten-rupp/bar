@@ -1182,11 +1182,11 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   String_clear(jobOptions->excludeListFileName);
   String_clear(jobOptions->excludeCommand);
 
-  List_clear(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  List_clear(&jobOptions->mountList,CALLBACK_((ListNodeFreeFunction)freeMountNode,NULL));
   PatternList_clear(&jobOptions->compressExcludePatternList);
   DeltaSourceList_clear(&jobOptions->deltaSourceList);
-  List_clear(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
-  List_clear(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_clear(&jobOptions->scheduleList,CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_clear(&jobOptions->persistenceList,CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL));
   jobOptions->persistenceList.lastModificationDateTime = 0LL;
 
   jobOptions->archiveType                = ARCHIVE_TYPE_NORMAL;
@@ -2488,9 +2488,9 @@ Errors Job_initAll(void)
 
 void Job_doneAll(void)
 {
-  List_done(&jobList,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+  List_done(&jobList,CALLBACK_((ListNodeFreeFunction)freeJobNode,NULL));
   Semaphore_done(&jobList.lock);
-  List_done(&slaveList,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
+  List_done(&slaveList,CALLBACK_((ListNodeFreeFunction)freeSlaveNode,NULL));
   Semaphore_done(&slaveList.lock);
 }
 
@@ -3509,7 +3509,7 @@ STRING_CHECK_VALID(jobNode->lastErrorMessage);
         else
         {
           // do not exists anymore => remove and delete job node
-          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK((ListNodeFreeFunction)freeJobNode,NULL));
+          jobNode = List_removeAndFree(&jobList,jobNode,CALLBACK_((ListNodeFreeFunction)freeJobNode,NULL));
 
           // notify about changes
           Job_listChanged();
@@ -3906,7 +3906,7 @@ void Job_initOptions(JobOptions *jobOptions)
                      &globalOptions.mountList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)duplicateMountNode,NULL)
                     );
   PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
                             &globalOptions.compressExcludePatternList,
@@ -4011,7 +4011,7 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
                      &fromJobOptions->mountList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK((ListNodeDuplicateFunction)duplicateMountNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)duplicateMountNode,NULL)
                     );
   PatternList_initDuplicate(&jobOptions->compressExcludePatternList,
                             &fromJobOptions->compressExcludePatternList,
@@ -4027,13 +4027,13 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
                      &fromJobOptions->scheduleList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)duplicateScheduleNode,NULL)
                     );
   List_initDuplicate(&jobOptions->persistenceList,
                      &fromJobOptions->persistenceList,
                      NULL,  // fromListFromNode
                      NULL,  // fromListToNode
-                     CALLBACK((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+                     CALLBACK_((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
                     );
   jobOptions->persistenceList.lastModificationDateTime  = 0LL;
 
@@ -4134,11 +4134,11 @@ void Job_doneOptions(JobOptions *jobOptions)
   String_delete(jobOptions->destination);
   String_delete(jobOptions->incrementalListFileName);
 
-  List_done(&jobOptions->persistenceList,CALLBACK((ListNodeFreeFunction)freePersistenceNode,NULL));
-  List_done(&jobOptions->scheduleList,CALLBACK((ListNodeFreeFunction)freeScheduleNode,NULL));
+  List_done(&jobOptions->persistenceList,CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL));
+  List_done(&jobOptions->scheduleList,CALLBACK_((ListNodeFreeFunction)freeScheduleNode,NULL));
   DeltaSourceList_done(&jobOptions->deltaSourceList);
   PatternList_done(&jobOptions->compressExcludePatternList);
-  List_done(&jobOptions->mountList,CALLBACK((ListNodeFreeFunction)freeMountNode,NULL));
+  List_done(&jobOptions->mountList,CALLBACK_((ListNodeFreeFunction)freeMountNode,NULL));
 
   String_delete(jobOptions->excludeCommand);
   String_delete(jobOptions->excludeListFileName);
@@ -4184,7 +4184,7 @@ SlaveNode *Job_removeSlave(SlaveNode *slaveNode)
     Connector_disconnect(&slaveNode->connectorInfo);
   }
 
-  return List_removeAndFree(&slaveList,slaveNode,CALLBACK((ListNodeFreeFunction)freeSlaveNode,NULL));
+  return List_removeAndFree(&slaveList,slaveNode,CALLBACK_((ListNodeFreeFunction)freeSlaveNode,NULL));
 }
 
 ConnectorInfo *Job_connectorLock(const JobNode *jobNode, long timeout)

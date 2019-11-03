@@ -1602,12 +1602,12 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
   assert(createInfo->jobOptions != NULL);
 
   // initialize variables
-  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL),CALLBACK(NULL,NULL)))
+  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   name = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK(freeHardlinkInfo,NULL),CALLBACK(NULL,NULL)))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(freeHardlinkInfo,NULL),CALLBACK_(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -2458,12 +2458,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
   // initialize variables
   AutoFree_init(&autoFreeList);
-  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL),CALLBACK(NULL,NULL)))
+  if (!Dictionary_init(&duplicateNamesDictionary,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   name = String_new();
-  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK(freeHardlinkInfo,NULL),CALLBACK(NULL,NULL)))
+  if (!Dictionary_init(&hardLinksDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(freeHardlinkInfo,NULL),CALLBACK_(NULL,NULL)))
   {
     HALT_INSUFFICIENT_MEMORY();
   }
@@ -3831,9 +3831,9 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
   // init variables
   oldStorageName = String_new();
   Storage_initSpecifier(&oldStorageSpecifier);
-  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
-  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
-  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
   if (indexHandle != NULL)
   {
@@ -4097,11 +4097,11 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                STORAGE_FLAGS_NONE,
-                               CALLBACK(NULL,NULL),  // updateStatusInfo
-                               CALLBACK(NULL,NULL),  // getPassword
-                               CALLBACK(NULL,NULL),  // requestVolume
-                               CALLBACK(NULL,NULL),  // isPause
-                               CALLBACK(NULL,NULL),  // isAborte
+                               CALLBACK_(NULL,NULL),  // updateStatusInfo
+                               CALLBACK_(NULL,NULL),  // getPassword
+                               CALLBACK_(NULL,NULL),  // requestVolume
+                               CALLBACK_(NULL,NULL),  // isPause
+                               CALLBACK_(NULL,NULL),  // isAborte
                                logHandle
                               );
           if (error == ERROR_NONE)
@@ -4314,11 +4314,11 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                &globalOptions.indexDatabaseMaxBandWidthList,
                                SERVER_CONNECTION_PRIORITY_HIGH,
                                STORAGE_FLAGS_NONE,
-                               CALLBACK(NULL,NULL),  // updateStatusInfo
-                               CALLBACK(NULL,NULL),  // getPassword
-                               CALLBACK(NULL,NULL),  // requestVolume
-                               CALLBACK(NULL,NULL),  // isPause
-                               CALLBACK(NULL,NULL),  // isAborted
+                               CALLBACK_(NULL,NULL),  // updateStatusInfo
+                               CALLBACK_(NULL,NULL),  // getPassword
+                               CALLBACK_(NULL,NULL),  // requestVolume
+                               CALLBACK_(NULL,NULL),  // isPause
+                               CALLBACK_(NULL,NULL),  // isAborted
                                logHandle
                               );
           if (error == ERROR_NONE)
@@ -5068,7 +5068,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         // delete all matching storage files which are unknown
         (void)Storage_forAll(pattern,
-                             CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                             CALLBACK__INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                              {
                                StorageSpecifier storageSpecifier;
                                Errors           error;
@@ -7222,8 +7222,8 @@ Errors Command_create(ServerIO                     *masterIO,
                  scheduleCustomText,
                  startDateTime,
                  storageFlags,
-                 CALLBACK(isPauseCreateFunction,isPauseCreateUserData),
-                 CALLBACK(statusInfoFunction,statusInfoUserData),
+                 CALLBACK_(isPauseCreateFunction,isPauseCreateUserData),
+                 CALLBACK_(statusInfoFunction,statusInfoUserData),
                  logHandle
                 );
   AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
@@ -7250,11 +7250,11 @@ masterIO, // masterIO
                        &globalOptions.maxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_HIGH,
                        storageFlags,
-                       CALLBACK(updateStorageStatusInfo,&createInfo),
-                       CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
-                       CALLBACK(storageRequestVolumeFunction,storageRequestVolumeUserData),
-                       CALLBACK(isPauseStorageFunction,isPauseStorageUserData),
-                       CALLBACK(isAbortedFunction,isAbortedUserData),
+                       CALLBACK_(updateStorageStatusInfo,&createInfo),
+                       CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                       CALLBACK_(storageRequestVolumeFunction,storageRequestVolumeUserData),
+                       CALLBACK_(isPauseStorageFunction,isPauseStorageUserData),
+                       CALLBACK_(isAbortedFunction,isAbortedUserData),
                        logHandle
                       );
   if (error != ERROR_NONE)
@@ -7293,7 +7293,7 @@ masterIO, // masterIO
      )
   {
     // init names dictionary
-    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK(NULL,NULL),CALLBACK(NULL,NULL));
+    Dictionary_init(&createInfo.namesDictionary,DICTIONARY_BYTE_COPY,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
     AUTOFREE_ADD(&autoFreeList,&createInfo.namesDictionary,{ Dictionary_done(&createInfo.namesDictionary); });
 
     // get increment list file name
@@ -7439,11 +7439,11 @@ masterIO, // masterIO
                          NULL,  // cryptPassword
                          TRUE,  // createMeta
                          storageFlags,
-                         CALLBACK(NULL,NULL),  // archiveInitFunction
-                         CALLBACK(NULL,NULL),  // archiveDoneFunction
-                         CALLBACK(archiveGetSize,&createInfo),
-                         CALLBACK(archiveStore,&createInfo),
-                         CALLBACK(getNamePasswordFunction,getNamePasswordUserData),
+                         CALLBACK_(NULL,NULL),  // archiveInitFunction
+                         CALLBACK_(NULL,NULL),  // archiveDoneFunction
+                         CALLBACK_(archiveGetSize,&createInfo),
+                         CALLBACK_(archiveStore,&createInfo),
+                         CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                          logHandle
                         );
   if (error != ERROR_NONE)
