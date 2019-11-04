@@ -379,6 +379,9 @@
 /* SIGQUIT available */
 #undef HAVE_SIGQUIT
 
+/* defined if sigset_t is available */
+#undef HAVE_SIGSET_T
+
 /* SIGUSR1 available */
 #undef HAVE_SIGUSR1
 
