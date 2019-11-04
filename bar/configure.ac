@@ -2115,12 +2115,8 @@ if test $ENABLE_XDELTA3 = "yes"; then
     cwd=`pwd`
 
     # patch to fix warnings:
-    #   diff -u xdelta3-3.0.11.org/xdelta3.c          xdelta3-3.0.11/xdelta3.c          >  xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3.h          xdelta3-3.0.11/xdelta3.h          >> xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3-decode.h   xdelta3-3.0.11/xdelta3-decode.h   >> xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3-hash.h     xdelta3-3.0.11/xdelta3-hash.h     >> xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h >> xdelta3-3.0.11.patch
-    (cd xdelta3; $PATCH --batch -N -p1 < $SOURCE_DIR-misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
+    #   diff -Naur xdelta3-3.0.11.org xdelta3-3.0.11 > xdelta3-3.0.11.patch
+    (cd xdelta3; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
 
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
     HAVE_XDELTA3=1
@@ -3441,6 +3437,11 @@ case "$host_os" in
 
           cwd=`pwd`
 
+          # patch to fix warnings:
+          #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
+          (set -x; cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch)
+          # 1>/dev/null 2>/dev/null
+
           AC_MSG_COMPILE([pthreads-w32])
           result=1
           if test $result -eq 1; then
@@ -3898,6 +3899,7 @@ AC_CHECK_CONSTANT(IN_EXCL_UNLINK,AC_DEFINE(HAVE_IN_EXCL_UNLINK,1,[IN_EXCL_UNLINK
 AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STAT64,   1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
 AC_CHECK_TYPE(struct __stat64,AC_DEFINE(HAVE___STAT64, 1,[defined if struct __stat64 is available]),,[#include <sys/stat.h>])
 AC_CHECK_TYPE(struct _stati64,AC_DEFINE(HAVE__STATI64, 1,[defined if struct _stati64 is available]),,[#include <sys/stat.h>])
+AC_CHECK_TYPE(sigset_t,       AC_DEFINE(HAVE_SIGSET_T, 1,[defined if sigset_t is available]),      ,[#include <signal.h>]  )
 AC_CHECK_TYPE(siginfo_t,      AC_DEFINE(HAVE_SIGINFO_T,1,[defined if siginfo_t is available]),      ,[#include <signal.h>]  )
 
 AC_CHECK_STRUCT_MEMBER(struct stat,st_atim.tv_nsec,AC_DEFINE(HAVE_STAT_ATIM_TV_NSEC,1,[defined if struct stat.st_atim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])

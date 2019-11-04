@@ -10994,12 +10994,8 @@ if test $ENABLE_XDELTA3 = "yes"; then
     cwd=`pwd`
 
     # patch to fix warnings:
-    #   diff -u xdelta3-3.0.11.org/xdelta3.c          xdelta3-3.0.11/xdelta3.c          >  xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3.h          xdelta3-3.0.11/xdelta3.h          >> xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3-decode.h   xdelta3-3.0.11/xdelta3-decode.h   >> xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3-hash.h     xdelta3-3.0.11/xdelta3-hash.h     >> xdelta3-3.0.11.patch
-    #   diff -u xdelta3-3.0.11.org/xdelta3-internal.h xdelta3-3.0.11/xdelta3-internal.h >> xdelta3-3.0.11.patch
-    (cd xdelta3; $PATCH --batch -N -p1 < $SOURCE_DIR-misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
+    #   diff -Naur xdelta3-3.0.11.org xdelta3-3.0.11 > xdelta3-3.0.11.patch
+    (cd xdelta3; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xdelta3-3.0.11.patch) 1>/dev/null 2>/dev/null
 
     CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
     HAVE_XDELTA3=1
@@ -14755,6 +14751,11 @@ case "$host_os" in
 
           cwd=`pwd`
 
+          # patch to fix warnings:
+          #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
+          (set -x; cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch)
+          # 1>/dev/null 2>/dev/null
+
 
   $as_echo_n "compile pthreads-w32... " >&6
 
@@ -17915,6 +17916,14 @@ ac_fn_c_check_type "$LINENO" "struct _stati64" "ac_cv_type_struct__stati64" "#in
 if test "x$ac_cv_type_struct__stati64" = xyes; then :
 
 $as_echo "#define HAVE__STATI64 1" >>confdefs.h
+
+fi
+
+ac_fn_c_check_type "$LINENO" "sigset_t" "ac_cv_type_sigset_t" "#include <signal.h>
+"
+if test "x$ac_cv_type_sigset_t" = xyes; then :
+
+$as_echo "#define HAVE_SIGSET_T 1" >>confdefs.h
 
 fi
 
