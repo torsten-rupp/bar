@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
-#include <poll.h>
 #include <pthread.h>
 #include <locale.h>
 #include <time.h>

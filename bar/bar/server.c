@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
-#include <poll.h>
 #include <pthread.h>
 #include <locale.h>
 #include <time.h>
@@ -52,7 +51,6 @@
 
 #include "commands_create.h"
 #include "commands_restore.h"
-
 
 #include "server.h"
 
@@ -18003,14 +18001,13 @@ Errors Server_run(ServerModes       mode,
   Errors                error;
   bool                  serverFlag,serverTLSFlag;
   ServerSocketHandle    serverSocketHandle,serverTLSSocketHandle;
-  sigset_t              signalMask;
-  struct pollfd         *pollfds;
-  uint                  maxPollfdCount;
-  uint                  pollfdCount;
+  SignalMask            signalMask;
+  WaitHandle            waitHandle;
+  int                   handle;
+  uint                  events;
   uint                  pollServerSocketIndex,pollServerTLSSocketIndex;
   uint64                nowTimestamp,waitTimeout,nextTimestamp;  // [us]
   bool                  clientDelayFlag;
-  struct timespec       pollTimeout;
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
   uint                  clientWaitRestTime;
   ClientNode            *clientNode;
@@ -18297,10 +18294,13 @@ Errors Server_run(ServerModes       mode,
     Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
     Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+#warning REMOVE
+#if 0
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize index thread!");
     }
+#endif
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
@@ -18337,17 +18337,15 @@ Errors Server_run(ServerModes       mode,
     }
   }
 
-  // Note: ignore SIGALRM in ppoll()
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask,SIGALRM);
+  // Note: ignore SIGALRM in Misc_wait()
+  #ifdef HAVE_SIGALRM
+    // Note: ignore SIGALRM in poll()/pselect()
+    MISC_SIGNAL_MASK_CLEAR(signalMask);
+    MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
+  #endif /* HAVE_SIGALRM */
 
   // process client requests
-  maxPollfdCount = 64;  // initial max. number of parallel connections
-  pollfds = (struct pollfd*)malloc(maxPollfdCount * sizeof(struct pollfd));
-  if (pollfds == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
+  Misc_initWait(&waitHandle,64);
   pollServerSocketIndex    = 0;
   pollServerTLSSocketIndex = 0;
   name                     = String_new();
@@ -18355,41 +18353,21 @@ Errors Server_run(ServerModes       mode,
   while (!quitFlag)
   {
     // get active sockets to wait for
-    pollfdCount = 0;
+    Misc_waitReset(&waitHandle);
     waitTimeout = 0LL;
     SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ,WAIT_FOREVER)
     {
       // get standard port connection requests
       if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
-        if (pollfdCount >= maxPollfdCount)
-        {
-          maxPollfdCount += 64;
-          pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
-          if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
-        }
-        pollfds[pollfdCount].fd      = Network_getServerSocket(&serverSocketHandle);
-        pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
-        pollfds[pollfdCount].revents = 0;
-        pollServerSocketIndex = pollfdCount;
-        pollfdCount++;
+        Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverSocketHandle));
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverSocketHandle));
       }
 
       // get TLS port connection requests
       if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
-        if (pollfdCount >= maxPollfdCount)
-        {
-          maxPollfdCount += 64;
-          pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
-          if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
-        }
-        pollfds[pollfdCount].fd      = Network_getServerSocket(&serverTLSSocketHandle);
-        pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
-        pollfds[pollfdCount].revents = 0;
-        pollServerTLSSocketIndex = pollfdCount;
-        pollfdCount++;
+        Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverTLSSocketHandle));
 //TODO:
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverTLSSocketHandle));
       }
@@ -18420,54 +18398,129 @@ Errors Server_run(ServerModes       mode,
         {
 //TODO: remove
 //fprintf(stderr,"%s, %d: add client wait %d\n",__FILE__,__LINE__,clientNode->clientInfo.io.network.port);
-          if (pollfdCount >= maxPollfdCount)
-          {
-            maxPollfdCount += 64;
-            pollfds = (struct pollfd*)realloc(pollfds,maxPollfdCount);
-            if (pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
-          }
-          pollfds[pollfdCount].fd      = Network_getSocket(&clientNode->clientInfo.io.network.socketHandle);
-          pollfds[pollfdCount].events  = POLLIN|POLLERR|POLLNVAL;
-          pollfds[pollfdCount].revents = 0;
-          pollfdCount++;
+          Misc_waitAdd(&waitHandle,Network_getSocket(&clientNode->clientInfo.io.network.socketHandle));
         }
       }
     }
 
     // wait for connect, disconnect, command, or result
-    pollTimeout.tv_sec  = (long)(waitTimeout /US_PER_SECOND);
-    pollTimeout.tv_nsec = (long)((waitTimeout%US_PER_SECOND)*1000LL);
-    (void)ppoll(pollfds,pollfdCount,&pollTimeout,&signalMask);
+    (void)Misc_wait(&waitHandle,&signalMask,waitTimeout);
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
-    // connect new clients via plain/standard port
-    if (   serverFlag
-        && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
-        && (pollfds[pollServerSocketIndex].revents == POLLIN)
-       )
+    MISC_HANDLES_ITERATE(&waitHandle,handle,events)
     {
-      error = newNetworkClient(&clientNode,&serverSocketHandle);
-      if (error == ERROR_NONE)
+      // connect new clients via plain/standard port
+      if      (   serverFlag
+               && (handle == Network_getServerSocket(&serverSocketHandle))
+               && (events == HANDLE_EVENT_INPUT)
+               && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
+              )
       {
-        SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        error = newNetworkClient(&clientNode,&serverSocketHandle);
+        if (error == ERROR_NONE)
         {
-          // append to list of connected clients
-          List_append(&clientList,clientNode);
-
-          // find authorization fail node, get client wait rest time
-          clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
-                                                                   authorizationFailNode,
-                                                                   String_equals(authorizationFailNode->clientName,
-                                                                                 clientNode->clientInfo.io.network.name
-                                                                                )
-                                                                  );
-
-          clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-          if (serverMode == SERVER_MODE_MASTER)
+          SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
+            // append to list of connected clients
+            List_append(&clientList,clientNode);
+
+            // find authorization fail node, get client wait rest time
+            clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
+                                                                     authorizationFailNode,
+                                                                     String_equals(authorizationFailNode->clientName,
+                                                                                   clientNode->clientInfo.io.network.name
+                                                                                  )
+                                                                    );
+
+            clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
+            if (serverMode == SERVER_MODE_MASTER)
+            {
+              if (clientWaitRestTime > 0)
+              {
+                printInfo(1,
+                          "Connected client %s (delayed %us)\n",
+                          getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
+                          clientWaitRestTime
+                         );
+              }
+              else
+              {
+                printInfo(1,
+                          "Connected client %s\n",
+                          getClientInfo(&clientNode->clientInfo,s,sizeof(s))
+                         );
+              }
+            }
+          }
+        }
+        else
+        {
+          printError("Cannot establish client connection (error: %s)!",
+                     Error_getText(error)
+                    );
+        }
+      }
+
+      // connect new clients via TLS port
+      else if (   serverTLSFlag
+               && (handle == Network_getServerSocket(&serverTLSSocketHandle))
+               && (events == HANDLE_EVENT_INPUT)
+               && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
+              )
+      {
+        error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
+        if (error == ERROR_NONE)
+        {
+          // start SSL
+          #ifdef HAVE_GNU_TLS
+            error = Network_startSSL(&clientNode->clientInfo.io.network.socketHandle,
+                                     serverCA->data,
+                                     serverCA->length,
+                                     serverCert->data,
+                                     serverCert->length,
+                                     serverKey->data,
+                                     serverKey->length
+                                    );
+            if (error != ERROR_NONE)
+            {
+              printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
+                         String_cString(clientNode->clientInfo.io.network.name),
+                         clientNode->clientInfo.io.network.port,
+                         Error_getText(error)
+                        );
+              deleteClient(clientNode);
+              AutoFree_cleanup(&autoFreeList);
+              return FALSE;
+            }
+          #else /* HAVE_GNU_TLS */
+            printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!",
+                       String_cString(clientNode->clientInfo.io.network.name),
+                       clientNode->clientInfo.io.network.port,
+                       Error_getText(error)
+                      );
+            deleteClient(&clientNode);
+            AutoFree_cleanup(&autoFreeList);
+            return FALSE;
+          #endif /* HAVE_GNU_TLS */
+
+          SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            // append to list of connected clients
+            List_append(&clientList,clientNode);
+
+            // find authorization fail node
+            clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
+                                                                     authorizationFailNode,
+                                                                     String_equals(authorizationFailNode->clientName,
+                                                                                   clientNode->clientInfo.io.network.name
+                                                                                  )
+                                                                    );
+
+            clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
             if (clientWaitRestTime > 0)
             {
               printInfo(1,
-                        "Connected client %s (delayed %us)\n",
+                        "Connected client %s (TLS/SSL, delayed %us)\n",
                         getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
                         clientWaitRestTime
                        );
@@ -18475,135 +18528,84 @@ Errors Server_run(ServerModes       mode,
             else
             {
               printInfo(1,
-                        "Connected client %s\n",
+                        "Connected client %s (TLS/SSL)\n",
                         getClientInfo(&clientNode->clientInfo,s,sizeof(s))
                        );
             }
           }
         }
-      }
-      else
-      {
-        printError("Cannot establish client connection (error: %s)!",
-                   Error_getText(error)
-                  );
-      }
-    }
-
-    // connect new clients via TLS port
-    if (   serverTLSFlag
-        && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
-        && (pollfds[pollServerTLSSocketIndex].revents == POLLIN)
-       )
-    {
-      error = newNetworkClient(&clientNode,&serverTLSSocketHandle);
-      if (error == ERROR_NONE)
-      {
-        // start SSL
-        #ifdef HAVE_GNU_TLS
-          error = Network_startSSL(&clientNode->clientInfo.io.network.socketHandle,
-                                   serverCA->data,
-                                   serverCA->length,
-                                   serverCert->data,
-                                   serverCert->length,
-                                   serverKey->data,
-                                   serverKey->length
-                                  );
-          if (error != ERROR_NONE)
-          {
-            printError("Cannot initialize TLS/SSL session for client '%s:%d' (error: %s)!",
-                       String_cString(clientNode->clientInfo.io.network.name),
-                       clientNode->clientInfo.io.network.port,
-                       Error_getText(error)
-                      );
-            deleteClient(clientNode);
-            AutoFree_cleanup(&autoFreeList);
-            return FALSE;
-          }
-        #else /* HAVE_GNU_TLS */
-          printError("TLS/SSL server is not supported for client '%s:%d' (error: %s)!",
-                     String_cString(clientNode->clientInfo.io.network.name),
-                     clientNode->clientInfo.io.network.port,
+        else
+        {
+          printError("Cannot establish client TLS connection (error: %s)!",
                      Error_getText(error)
                     );
-          deleteClient(&clientNode);
-          AutoFree_cleanup(&autoFreeList);
-          return FALSE;
-        #endif /* HAVE_GNU_TLS */
-
-        SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-        {
-          // append to list of connected clients
-          List_append(&clientList,clientNode);
-
-          // find authorization fail node
-          clientNode->clientInfo.authorizationFailNode = LIST_FIND(&authorizationFailList,
-                                                                   authorizationFailNode,
-                                                                   String_equals(authorizationFailNode->clientName,
-                                                                                 clientNode->clientInfo.io.network.name
-                                                                                )
-                                                                  );
-
-          clientWaitRestTime = getAuthorizationWaitRestTime(clientNode->clientInfo.authorizationFailNode);
-          if (clientWaitRestTime > 0)
-          {
-            printInfo(1,
-                      "Connected client %s (TLS/SSL, delayed %us)\n",
-                      getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
-                      clientWaitRestTime
-                     );
-          }
-          else
-          {
-            printInfo(1,
-                      "Connected client %s (TLS/SSL)\n",
-                      getClientInfo(&clientNode->clientInfo,s,sizeof(s))
-                     );
-          }
         }
       }
       else
       {
-        printError("Cannot establish client TLS connection (error: %s)!",
-                   Error_getText(error)
-                  );
-      }
-    }
-
-    // process client commands/disconnects/results
-    SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-    {
-      for (pollfdIndex = 0; pollfdIndex < pollfdCount; pollfdIndex++)
-      {
-        if (pollfds[pollfdIndex].revents != 0)
+        // process client commands/disconnects/results
+        SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          // find client node
-          clientNode = LIST_FIND(&clientList,
-                                 clientNode,
-                                 pollfds[pollfdIndex].fd == Network_getSocket(&clientNode->clientInfo.io.network.socketHandle)
-                                );
-          if (clientNode != NULL)
+          if (events != 0)
           {
-            if ((pollfds[pollfdIndex].revents & POLLIN) != 0)
+            // find client node
+            clientNode = LIST_FIND(&clientList,
+                                   clientNode,
+                                   handle == Network_getSocket(&clientNode->clientInfo.io.network.socketHandle)
+                                  );
+            if (clientNode != NULL)
             {
-              if (ServerIO_receiveData(&clientNode->clientInfo.io))
+              if ((events & HANDLE_EVENT_INPUT) != 0)
               {
-                // process all commands
-                while (ServerIO_getCommand(&clientNode->clientInfo.io,
-                                           &id,
-                                           name,
-                                           argumentMap
-                                          )
-                   )
+                if (ServerIO_receiveData(&clientNode->clientInfo.io))
                 {
-                  processCommand(&clientNode->clientInfo,id,name,argumentMap);
+                  // process all commands
+                  while (ServerIO_getCommand(&clientNode->clientInfo.io,
+                                             &id,
+                                             name,
+                                             argumentMap
+                                            )
+                     )
+                  {
+                    processCommand(&clientNode->clientInfo,id,name,argumentMap);
+                  }
+                }
+                else
+                {
+                  // disconnect -> remove from client list
+                  disconnectClientNode = clientNode;
+                  List_remove(&clientList,disconnectClientNode);
+
+                  // update authorization fail info
+                  switch (disconnectClientNode->clientInfo.authorizationState)
+                  {
+                    case AUTHORIZATION_STATE_WAITING:
+                      break;
+                    case AUTHORIZATION_STATE_CLIENT:
+                    case AUTHORIZATION_STATE_MASTER:
+                      // reset authorization failure
+                      resetAuthorizationFail(disconnectClientNode);
+                      break;
+                    case AUTHORIZATION_STATE_FAIL:
+                      // increment authorization failure
+                      incrementAuthorizationFail(disconnectClientNode);
+                      break;
+                  }
+
+                  if (serverMode == SERVER_MODE_MASTER)
+                  {
+                    printInfo(1,"Disconnected client %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
+                  }
+
+                  // done client and free resources
+                  deleteClient(disconnectClientNode);
                 }
               }
-              else
+              else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID)) != 0)
               {
-                // disconnect -> remove from client list
+                // error/disconnect -> remove from client list
                 disconnectClientNode = clientNode;
-                List_remove(&clientList,disconnectClientNode);
+                clientNode = List_remove(&clientList,disconnectClientNode);
 
                 // update authorization fail info
                 switch (disconnectClientNode->clientInfo.authorizationState)
@@ -18629,28 +18631,27 @@ Errors Server_run(ServerModes       mode,
                 // done client and free resources
                 deleteClient(disconnectClientNode);
               }
+              #ifndef NDEBUG
+                else
+                {
+                  HALT_INTERNAL_ERROR("unknown poll events 0x%x",events);
+                }
+              #endif /* NDEBUG */
             }
-            else if ((pollfds[pollfdIndex].revents & (POLLERR|POLLNVAL)) != 0)
+          }
+
+          // disconnect clients because of authorization failure
+          clientNode = clientList.head;
+          while (clientNode != NULL)
+          {
+            if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
             {
-              // error/disconnect -> remove from client list
+              // remove from connected list
               disconnectClientNode = clientNode;
               clientNode = List_remove(&clientList,disconnectClientNode);
 
-              // update authorization fail info
-              switch (disconnectClientNode->clientInfo.authorizationState)
-              {
-                case AUTHORIZATION_STATE_WAITING:
-                  break;
-                case AUTHORIZATION_STATE_CLIENT:
-                case AUTHORIZATION_STATE_MASTER:
-                  // reset authorization failure
-                  resetAuthorizationFail(disconnectClientNode);
-                  break;
-                case AUTHORIZATION_STATE_FAIL:
-                  // increment authorization failure
-                  incrementAuthorizationFail(disconnectClientNode);
-                  break;
-              }
+              // increment authorization failure
+              incrementAuthorizationFail(disconnectClientNode);
 
               if (serverMode == SERVER_MODE_MASTER)
               {
@@ -18660,98 +18661,69 @@ Errors Server_run(ServerModes       mode,
               // done client and free resources
               deleteClient(disconnectClientNode);
             }
-            #ifndef NDEBUG
-              else
+            else
+            {
+              // next client
+              clientNode = clientNode->next;
+            }
+          }
+
+          // clean-up authorization failure list
+          nowTimestamp          = Misc_getTimestamp();
+          authorizationFailNode = authorizationFailList.head;
+          while (authorizationFailNode != NULL)
+          {
+            // find client
+            clientNode = LIST_FIND(&clientList,
+                                   clientNode,
+                                   clientNode->clientInfo.authorizationFailNode == authorizationFailNode
+                                  );
+
+            // check if authorization fail timed out for not active clients
+            if (   (clientNode == NULL)
+                && (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*US_PER_MS))
+               )
+            {
+              authorizationFailNode = List_removeAndFree(&authorizationFailList,
+                                                         authorizationFailNode,
+                                                         CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
+                                                        );
+            }
+            else
+            {
+              authorizationFailNode = authorizationFailNode->next;
+            }
+          }
+
+          assert(MAX_AUTHORIZATION_FAIL_HISTORY);
+          while (List_count(&authorizationFailList) > MAX_AUTHORIZATION_FAIL_HISTORY)
+          {
+            // find oldest authorization failure
+            oldestAuthorizationFailNode = authorizationFailList.head;
+            LIST_ITERATE(&authorizationFailList,authorizationFailNode)
+            {
+              // find client
+              clientNode = LIST_FIND(&clientList,
+                                     clientNode,
+                                     clientNode->clientInfo.authorizationFailNode == authorizationFailNode
+                                    );
+
+              // get oldest not active client
+              if (   (clientNode == NULL)
+                  && (authorizationFailNode->lastTimestamp < oldestAuthorizationFailNode->lastTimestamp)
+                 )
               {
-                HALT_INTERNAL_ERROR("unknown poll events 0x%x",pollfds[0].revents);
+                oldestAuthorizationFailNode = authorizationFailNode;
               }
-            #endif /* NDEBUG */
-          }
-        }
-      }
+            }
 
-      // disconnect clients because of authorization failure
-      clientNode = clientList.head;
-      while (clientNode != NULL)
-      {
-        if (clientNode->clientInfo.authorizationState == AUTHORIZATION_STATE_FAIL)
-        {
-          // remove from connected list
-          disconnectClientNode = clientNode;
-          clientNode = List_remove(&clientList,disconnectClientNode);
-
-          // increment authorization failure
-          incrementAuthorizationFail(disconnectClientNode);
-
-          if (serverMode == SERVER_MODE_MASTER)
-          {
-            printInfo(1,"Disconnected client %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
-          }
-
-          // done client and free resources
-          deleteClient(disconnectClientNode);
-        }
-        else
-        {
-          // next client
-          clientNode = clientNode->next;
-        }
-      }
-
-      // clean-up authorization failure list
-      nowTimestamp          = Misc_getTimestamp();
-      authorizationFailNode = authorizationFailList.head;
-      while (authorizationFailNode != NULL)
-      {
-        // find client
-        clientNode = LIST_FIND(&clientList,
-                               clientNode,
-                               clientNode->clientInfo.authorizationFailNode == authorizationFailNode
+            // remove oldest authorization failure from list
+            List_removeAndFree(&authorizationFailList,
+                               oldestAuthorizationFailNode,
+                               CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
                               );
-
-        // check if authorization fail timed out for not active clients
-        if (   (clientNode == NULL)
-            && (nowTimestamp > (authorizationFailNode->lastTimestamp+(uint64)MAX_AUTHORIZATION_HISTORY_KEEP_TIME*US_PER_MS))
-           )
-        {
-          authorizationFailNode = List_removeAndFree(&authorizationFailList,
-                                                     authorizationFailNode,
-                                                     CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                                                    );
-        }
-        else
-        {
-          authorizationFailNode = authorizationFailNode->next;
-        }
-      }
-
-      assert(MAX_AUTHORIZATION_FAIL_HISTORY);
-      while (List_count(&authorizationFailList) > MAX_AUTHORIZATION_FAIL_HISTORY)
-      {
-        // find oldest authorization failure
-        oldestAuthorizationFailNode = authorizationFailList.head;
-        LIST_ITERATE(&authorizationFailList,authorizationFailNode)
-        {
-          // find client
-          clientNode = LIST_FIND(&clientList,
-                                 clientNode,
-                                 clientNode->clientInfo.authorizationFailNode == authorizationFailNode
-                                );
-
-          // get oldest not active client
-          if (   (clientNode == NULL)
-              && (authorizationFailNode->lastTimestamp < oldestAuthorizationFailNode->lastTimestamp)
-             )
-          {
-            oldestAuthorizationFailNode = authorizationFailNode;
           }
         }
-
-        // remove oldest authorization failure from list
-        List_removeAndFree(&authorizationFailList,
-                           oldestAuthorizationFailNode,
-                           CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)
-                          );
       }
     }
 
@@ -18781,7 +18753,7 @@ abortPairingMaster();
   }
   StringMap_delete(argumentMap);
   String_delete(name);
-  free(pollfds);
+  Misc_doneWait(&waitHandle);
 
   // delete all clients
   while (!List_isEmpty(&clientList))

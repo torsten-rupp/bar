@@ -16,6 +16,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef HAVE_POLL_H
+  #include <poll.h>
+#endif /* HAVE_POLL_H */
 #ifdef HAVE_NETINET_IN_H
   #include <netinet/in.h>
 #endif /* HAVE_NETINET_IN_H */
@@ -130,6 +133,7 @@ typedef struct
   #endif /* HAVE_GNU_TLS */
 } ServerSocketHandle;
 
+// network execution i/o types
 typedef enum
 {
   NETWORK_EXECUTE_IO_TYPE_STDOUT,

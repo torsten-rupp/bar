@@ -15,7 +15,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <poll.h>
 #include <locale.h>
 //#include <time.h>
 //#include <signal.h>
@@ -1577,8 +1576,10 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
                             )
 {
   String   s;
-  locale_t locale;
   Errors   error;
+  #ifdef HAVE_NEWLOCALE
+    locale_t oldLocale;
+  #endif /* HAVE_NEWLOCALE */
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1592,12 +1593,16 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
   (*id) = atomicIncrement(&serverIO->commandId,1);
 
   // format command
-  locale = uselocale(POSIXLocale);
+  #ifdef HAVE_NEWLOCALE
+    oldLocale = uselocale(POSIXLocale);
+  #endif /* HAVE_NEWLOCALE */
   {
     String_format(s,"%u ",*id);
     String_appendVFormat(s,format,arguments);
   }
-  uselocale(locale);
+  #ifdef HAVE_NEWLOCALE
+    uselocale(oldLocale);
+  #endif /* HAVE_NEWLOCALE */
 
   // send command
   error = sendData(serverIO,s);
@@ -1717,8 +1722,10 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
                           )
 {
   String   s;
-  locale_t locale;
   va_list  arguments;
+  #ifdef HAVE_NEWLOCALE
+    locale_t oldLocale;
+  #endif /* HAVE_NEWLOCALE */
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1728,14 +1735,18 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   s = String_new();
 
   // format result
-  locale = uselocale(POSIXLocale);
+  #ifdef HAVE_NEWLOCALE
+    oldLocale = uselocale(POSIXLocale);
+  #endif /* HAVE_NEWLOCALE */
   {
     String_format(s,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
     va_start(arguments,format);
     String_appendVFormat(s,format,arguments);
     va_end(arguments);
   }
-  uselocale(locale);
+  #ifdef HAVE_NEWLOCALE
+    uselocale(oldLocale);
+  #endif /* HAVE_NEWLOCALE */
 
   // send result
   error = sendData(serverIO,s);
@@ -1856,9 +1867,11 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
 {
   uint          id;
   String        s;
-  locale_t      locale;
   va_list       arguments;
   Errors        error;
+  #ifdef HAVE_NEWLOCALE
+    locale_t oldLocale;
+  #endif /* HAVE_NEWLOCALE */
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1871,14 +1884,18 @@ Errors ServerIO_clientAction(ServerIO   *serverIO,
   id = atomicIncrement(&serverIO->commandId,1);
 
   // format action command
-  locale = uselocale(POSIXLocale);
+  #ifdef HAVE_NEWLOCALE
+    oldLocale = uselocale(POSIXLocale);
+  #endif /* HAVE_NEWLOCALE */
   {
     String_format(s,"%u %s ",id,actionCommand);
     va_start(arguments,format);
     String_appendVFormat(s,format,arguments);
     va_end(arguments);
   }
-  uselocale(locale);
+  #ifdef HAVE_NEWLOCALE
+    uselocale(oldLocale);
+  #endif /* HAVE_NEWLOCALE */
 
   // send action command
   error = sendData(serverIO,s);

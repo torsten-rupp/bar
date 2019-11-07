@@ -81,17 +81,21 @@ typedef struct
 #endif
 
 /**************************** Variables ********************************/
-LOCAL stack_t                 oldSignalHandlerStackInfo;
-LOCAL const SignalHandlerInfo *signalHandlerInfo;
-LOCAL uint                    signalHandlerInfoCount;
-LOCAL SignalHandlerFunction   signalHandlerFunction;
-LOCAL void                    *signalHandlerUserData;
-LOCAL void                    *stackTrace[MAX_STACKTRACE_SIZE+SKIP_STACK_FRAME_COUNT];
+#if   defined(PLATFORM_LINUX)
+  LOCAL stack_t                 oldSignalHandlerStackInfo;
+  LOCAL const SignalHandlerInfo *signalHandlerInfo;
+  LOCAL uint                    signalHandlerInfoCount;
+  LOCAL SignalHandlerFunction   signalHandlerFunction;
+  LOCAL void                    *signalHandlerUserData;
+  LOCAL void                    *stackTrace[MAX_STACKTRACE_SIZE+SKIP_STACK_FRAME_COUNT];
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
 
 /****************************** Macros *********************************/
 
 /**************************** Functions ********************************/
 
+#if   defined(PLATFORM_LINUX)
 #ifdef HAVE_BFD_INIT
 /***********************************************************************\
 * Name   : readSymbolTable
@@ -636,6 +640,8 @@ LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
                            );
    }
 }
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
 
 // ---------------------------------------------------------------------
 
@@ -645,53 +651,65 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
                      void                    *signalHandlerUserData_
                     )
 {
-   static uint8_t signalHandlerStack[64*1024];
+  #if   defined(PLATFORM_LINUX)
+    static uint8_t signalHandlerStack[64*1024];
 
-   stack_t          stackInfo;
-   struct sigaction signalActionInfo;
+    stack_t          stackInfo;
+    struct sigaction signalActionInfo;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
-   assert(signalHandlerInfo_ != NULL);
+  assert(signalHandlerInfo_ != NULL);
 
-   // initialise signal handler stack
-   stackInfo.ss_sp    = (void*)signalHandlerStack;
-   stackInfo.ss_size  = sizeof(signalHandlerStack)/sizeof(signalHandlerStack[0]);
-   stackInfo.ss_flags = 0;
-   if (sigaltstack(&stackInfo, &oldSignalHandlerStackInfo) == -1)
-   {
-     fprintf(stderr,"ERROR: cannot initialize signal handler stack (error: %s)\n", strerror(errno));
-     exit(128);
-   }
+  #if   defined(PLATFORM_LINUX)
+    // initialise signal handler stack
+    stackInfo.ss_sp    = (void*)signalHandlerStack;
+    stackInfo.ss_size  = sizeof(signalHandlerStack)/sizeof(signalHandlerStack[0]);
+    stackInfo.ss_flags = 0;
+    if (sigaltstack(&stackInfo, &oldSignalHandlerStackInfo) == -1)
+    {
+      fprintf(stderr,"ERROR: cannot initialize signal handler stack (error: %s)\n", strerror(errno));
+      exit(128);
+    }
 
-   // add signal handlers
-   signalHandlerInfo      = signalHandlerInfo_;
-   signalHandlerInfoCount = signalHandlerInfoCount_;
-   signalHandlerFunction  = signalHandlerFunction_;
-   signalHandlerUserData  = signalHandlerUserData_;
-   for (uint i = 0; i < signalHandlerInfoCount; i++)
-   {
-      signalActionInfo.sa_handler   = NULL;
-      signalActionInfo.sa_sigaction = sigActionHandler;
-      sigfillset(&signalActionInfo.sa_mask);
-      signalActionInfo.sa_flags     = SA_SIGINFO|SA_RESTART|SA_ONSTACK;
-      signalActionInfo.sa_restorer  = NULL;
-      sigaction(signalHandlerInfo[i].signalNumber, &signalActionInfo, NULL);
-   }
+    // add signal handlers
+    signalHandlerInfo      = signalHandlerInfo_;
+    signalHandlerInfoCount = signalHandlerInfoCount_;
+    signalHandlerFunction  = signalHandlerFunction_;
+    signalHandlerUserData  = signalHandlerUserData_;
+    for (uint i = 0; i < signalHandlerInfoCount; i++)
+    {
+       signalActionInfo.sa_handler   = NULL;
+       signalActionInfo.sa_sigaction = sigActionHandler;
+       sigfillset(&signalActionInfo.sa_mask);
+       signalActionInfo.sa_flags     = SA_SIGINFO|SA_RESTART|SA_ONSTACK;
+       signalActionInfo.sa_restorer  = NULL;
+       sigaction(signalHandlerInfo[i].signalNumber, &signalActionInfo, NULL);
+    }
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 }
 
 void Stacktrace_done(void)
 {
-   struct sigaction signalActionInfo;
+  #if   defined(PLATFORM_LINUX)
+    struct sigaction signalActionInfo;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
-   for (uint i = 0; i < signalHandlerInfoCount; i++)
-   {
-      signalActionInfo.sa_handler   = SIG_DFL;
-      signalActionInfo.sa_sigaction = NULL;
-      sigfillset(&signalActionInfo.sa_mask);
-      signalActionInfo.sa_flags     = 0;
-      signalActionInfo.sa_restorer  = NULL;
-      sigaction(signalHandlerInfo[i].signalNumber, &signalActionInfo, NULL);
-   }
-   sigaltstack(&oldSignalHandlerStackInfo, NULL);
+  #if   defined(PLATFORM_LINUX)
+    for (uint i = 0; i < signalHandlerInfoCount; i++)
+    {
+       signalActionInfo.sa_handler   = SIG_DFL;
+       signalActionInfo.sa_sigaction = NULL;
+       sigfillset(&signalActionInfo.sa_mask);
+       signalActionInfo.sa_flags     = 0;
+       signalActionInfo.sa_restorer  = NULL;
+       sigaction(signalHandlerInfo[i].signalNumber, &signalActionInfo, NULL);
+    }
+    sigaltstack(&oldSignalHandlerStackInfo, NULL);
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 }
 
 void Stacktrace_getSymbolInfo(const char         *executableFileName,
@@ -702,108 +720,122 @@ void Stacktrace_getSymbolInfo(const char         *executableFileName,
                               bool               printErrorMessagesFlag
                              )
 {
-#if defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
-  uint          i;
-  FileMatchInfo fileMatchInfo;
-  char          errorMessage[128];
-  bool          symbolFound;
+  #if   defined(PLATFORM_LINUX)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+      uint          i;
+      FileMatchInfo fileMatchInfo;
+      char          errorMessage[128];
+      bool          symbolFound;
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   assert(executableFileName != NULL);
   assert(addresses != NULL);
   assert(symbolFunction != NULL);
 
-  for (i = 0; i < addressCount; i++)
-  {
-    fileMatchInfo.found   = FALSE;
-    fileMatchInfo.address = addresses[i];
-    dl_iterate_phdr(findMatchingFile,&fileMatchInfo);
-    if (fileMatchInfo.found)
-    {
-      symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
-                                          (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
-                                          symbolFunction,
-                                          symbolUserData,
-                                          errorMessage,
-                                          sizeof(errorMessage)
-                                         );
-      if (!symbolFound)
+  #if   defined(PLATFORM_LINUX)
+    #if defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+      for (i = 0; i < addressCount; i++)
       {
-        symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
-                                            (bfd_vma)addresses[i],
-                                            symbolFunction,
-                                            symbolUserData,
-                                            errorMessage,
-                                            sizeof(errorMessage)
-                                           );
-      }
-//fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,fileMatchInfo.fileName,symbolFound);
-    }
-    else
-    {
-      symbolFound = getSymbolInfoFromFile(executableFileName,
-                                          (bfd_vma)addresses[i],
-                                          symbolFunction,
-                                          symbolUserData,
-                                          errorMessage,
-                                          sizeof(errorMessage)
-                                         );
-//fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,executableFileName,symbolFound);
-    }
-
-    if (!symbolFound)
-    {
-      // use dladdr() as fallback
-      Dl_info    info;
-      char       buffer[256];
-      const char *symbolName;
-      const char *fileName;
-
-      if (dladdr(addresses[i],&info))
-      {
-        if ((info.dli_sname != NULL) && ((*info.dli_sname) != '\0'))
+        fileMatchInfo.found   = FALSE;
+        fileMatchInfo.address = addresses[i];
+        dl_iterate_phdr(findMatchingFile,&fileMatchInfo);
+        if (fileMatchInfo.found)
         {
-          if (!demangleSymbolName(info.dli_sname,buffer,sizeof(buffer)))
+          symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
+                                              (bfd_vma)((uintptr_t)addresses[i]-(uintptr_t)fileMatchInfo.base),
+                                              symbolFunction,
+                                              symbolUserData,
+                                              errorMessage,
+                                              sizeof(errorMessage)
+                                             );
+          if (!symbolFound)
           {
-            symbolName = buffer;
+            symbolFound = getSymbolInfoFromFile(fileMatchInfo.fileName,
+                                                (bfd_vma)addresses[i],
+                                                symbolFunction,
+                                                symbolUserData,
+                                                errorMessage,
+                                                sizeof(errorMessage)
+                                               );
           }
-          else
-          {
-            symbolName = info.dli_sname;
-          }
+    //fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,fileMatchInfo.fileName,symbolFound);
         }
         else
         {
-          symbolName = NULL;
+          symbolFound = getSymbolInfoFromFile(executableFileName,
+                                              (bfd_vma)addresses[i],
+                                              symbolFunction,
+                                              symbolUserData,
+                                              errorMessage,
+                                              sizeof(errorMessage)
+                                             );
+    //fprintf(stderr,"%s, %d: load from %s: %d\n",__FILE__,__LINE__,executableFileName,symbolFound);
         }
-        fileName = info.dli_fname;
 
-        symbolFound = TRUE;
-//fprintf(stderr,"%s, %d: load via dladdr from %s\n",__FILE__,__LINE__,executableFileName);
+        if (!symbolFound)
+        {
+          // use dladdr() as fallback
+          Dl_info    info;
+          char       buffer[256];
+          const char *symbolName;
+          const char *fileName;
+
+          if (dladdr(addresses[i],&info))
+          {
+            if ((info.dli_sname != NULL) && ((*info.dli_sname) != '\0'))
+            {
+              if (!demangleSymbolName(info.dli_sname,buffer,sizeof(buffer)))
+              {
+                symbolName = buffer;
+              }
+              else
+              {
+                symbolName = info.dli_sname;
+              }
+            }
+            else
+            {
+              symbolName = NULL;
+            }
+            fileName = info.dli_fname;
+
+            symbolFound = TRUE;
+    //fprintf(stderr,"%s, %d: load via dladdr from %s\n",__FILE__,__LINE__,executableFileName);
+          }
+          else
+          {
+            symbolName = NULL;
+            fileName   = NULL;
+    //fprintf(stderr,"%s, %d: not found %s\n",__FILE__,__LINE__,executableFileName);
+          }
+
+          // handle line
+          symbolFunction(addresses[i],fileName,symbolName,0,symbolUserData);
+        }
+
+        if (!symbolFound && printErrorMessagesFlag)
+        {
+          fprintf(stderr,"ERROR: %s\n",errorMessage);
+        }
       }
-      else
-      {
-        symbolName = NULL;
-        fileName   = NULL;
-//fprintf(stderr,"%s, %d: not found %s\n",__FILE__,__LINE__,executableFileName);
-      }
-
-      // handle line
-      symbolFunction(addresses[i],fileName,symbolName,0,symbolUserData);
-    }
-
-    if (!symbolFound && printErrorMessagesFlag)
-    {
-      fprintf(stderr,"ERROR: %s\n",errorMessage);
-    }
-  }
-#else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
-  UNUSED_VARIABLE(executableFileName);
-  UNUSED_VARIABLE(addresses);
-  UNUSED_VARIABLE(addressCount);
-  UNUSED_VARIABLE(symbolFunction);
-  UNUSED_VARIABLE(symbolUserData);
-  UNUSED_VARIABLE(printErrorMessagesFlag);
-#endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+    #else // not defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+      UNUSED_VARIABLE(executableFileName);
+      UNUSED_VARIABLE(addresses);
+      UNUSED_VARIABLE(addressCount);
+      UNUSED_VARIABLE(symbolFunction);
+      UNUSED_VARIABLE(symbolUserData);
+      UNUSED_VARIABLE(printErrorMessagesFlag);
+    #endif // defined(HAVE_BFD_INIT) && defined(HAVE_LINK)
+  #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(executableFileName);
+    UNUSED_VARIABLE(addresses);
+    UNUSED_VARIABLE(addressCount);
+    UNUSED_VARIABLE(symbolFunction);
+    UNUSED_VARIABLE(symbolUserData);
+    UNUSED_VARIABLE(printErrorMessagesFlag);
+  #endif /* PLATFORM_... */
 }
 
 /* end of file */

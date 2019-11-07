@@ -18,6 +18,13 @@
 #include <stdio.h>
 #include <assert.h>
 
+// file/socket handle events
+#if   defined(PLATFORM_LINUX)
+  #include <poll.h>
+#elif defined(PLATFORM_WINDOWS)
+  #include <winsock2.h>
+#endif /* PLATFORM_... */
+
 #include "common/global.h"
 #include "common/strings.h"
 
@@ -65,6 +72,26 @@ typedef enum
 #define TEXT_MACRO_PATTERN_DOUBLE    "[+-]{0,1}(\\d+|\\d+\.\\d*|\\d*\.\\d+)"
 #define TEXT_MACRO_PATTERN_CSTRING   "\\S+"
 #define TEXT_MACRO_PATTERN_STRING    "\\S+"
+
+// file/socket handle events
+#if   defined(PLATFORM_LINUX)
+  #define HANDLE_EVENT_INPUT   POLLIN
+  #define HANDLE_EVENT_OUTPUT  POLLOUT
+  #define HANDLE_EVENT_ERROR   POLLERR
+  #define HANDLE_EVENT_INVALID POLLNVAL
+#elif defined(PLATFORM_WINDOWS)
+  #ifdef HAVE_WSAPOLL
+    #define HANDLE_EVENT_INPUT   POLLIN
+    #define HANDLE_EVENT_OUTPUT  POLLOUT
+    #define HANDLE_EVENT_ERROR   POLLERR
+    #define HANDLE_EVENT_INVALID POLLNVAL
+  #else /* not HAVE_WSAPOLL */
+    #define HANDLE_EVENT_INPUT   (1 << 0)
+    #define HANDLE_EVENT_OUTPUT  (1 << 1)
+    #define HANDLE_EVENT_ERROR   (1 << 2)
+    #define HANDLE_EVENT_INVALID (1 << 3)
+  #endif /* HAVE_WSAPOLL */
+#endif /* PLATFORM_... */
 
 /***************************** Datatypes *******************************/
 
@@ -121,6 +148,32 @@ typedef enum
   EXPAND_MACRO_MODE_STRING,
   EXPAND_MACRO_MODE_PATTERN
 } ExpandMacroModes;
+
+// signal mask
+#ifdef HAVE_SIGSET_T
+  typedef sigset_t SignalMask;
+#else /* not HAVE_SIGSET_T */
+  typedef uint SignalMask;
+#endif /* HAVE_SIGSET_T */
+
+// file/socket wait handle
+typedef struct
+{
+  #if   defined(PLATFORM_LINUX)
+    struct pollfd *pollfds;
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      WSAPOLLFD   *pollfds;
+    #else /* not HAVE_WSAPOLL */
+      int         handles[FD_SETSIZE];
+      fd_set      readfds;
+      fd_set      writefds;
+      fd_set      exceptionfds;
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+  uint          handleCount;
+  uint          maxHandleCount;
+} WaitHandle;
 
 /***********************************************************************\
 * Name   : ExecuteIOFunction
@@ -252,6 +305,55 @@ typedef struct
     macro.value.string = (String)_value; \
     macro.pattern      = _pattern; \
   } while (0)
+
+/***********************************************************************\
+* Name   : MISC_SIGNAL_MASK_CLEAR
+* Purpose: clear signal mask
+* Input  : signalMask - signal mask
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define MISC_SIGNAL_MASK_CLEAR(signalMaks) sigemptyset(&signalMask);
+
+/***********************************************************************\
+* Name   : MISC_SIGNAL_MASK_SET
+* Purpose: add signal mask
+* Input  : signalMask - signal mask
+*          signal     - signal to add
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define MISC_SIGNAL_MASK_SET(signalMaks,signal) sigaddset(&signalMask,signal);
+
+/***********************************************************************\
+* Name   : MISC_HANDLES_ITERATE
+* Purpose: iterated over handles and execute block
+* Input  : waitHandle - wait handle
+*          handle     - iteration handle
+*          events     - events
+* Output : handle - handle
+*          events - events
+* Return : -
+* Notes  : variable will contain all active handles
+*          usage:
+*            int  handle;
+*            uint events;
+*            MISC_HANDLES_ITERATE(&waitHandle,handle,event)
+*            {
+*              ...
+*            }
+\***********************************************************************/
+
+#define MISC_HANDLES_ITERATE(waitHandle,handle,events) \
+  for (uint __i ## COUNTER = Misc_handleIterate(waitHandle,0,&handle,&events); \
+       __i ## COUNTER < Misc_handlesIterateCount(waitHandle); \
+       __i ## COUNTER = Misc_handleIterate(waitHandle,__i ## COUNTER +1,&handle,&events) \
+      ) \
+  if (events != 0)
 
 /***************************** Forwards ********************************/
 
@@ -631,6 +733,131 @@ String Misc_expandMacros(String           string,
                         );
 
 /*---------------------------------------------------------------------*/
+
+/***********************************************************************\
+* Name   : Misc_initWait
+* Purpose: init handle wait
+* Input  : waitHandle     - wait handle
+*          maxHandleCount - inital max. handle count
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_initWait(WaitHandle *waitHandle, uint maxHandleCount);
+
+/***********************************************************************\
+* Name   : Misc_doneWait
+* Purpose: done handle wait
+* Input  : waitHandle - wait handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_doneWait(WaitHandle *waitHandle);
+
+/***********************************************************************\
+* Name   : Misc_waitReset
+* Purpose: reset handles
+* Input  : waitHandle - wait handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_waitReset(WaitHandle *waitHandle);
+
+/***********************************************************************\
+* Name   : Misc_waitAdd
+* Purpose: add handle
+* Input  : waitHandle - wait handle
+*          handle     - handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Misc_waitAdd(WaitHandle *waitHandle, int handle);
+
+/***********************************************************************\
+* Name   : Misc_wait
+* Purpose: wait for handles
+* Input  : waitHandle - wait handle
+*          signalMask - signal mask (can be NULL)
+*          timeout    - timeout [ms[
+* Output : -
+* Return : number of active handles or -1 on error
+* Notes  : -
+\***********************************************************************/
+
+int Misc_wait(WaitHandle *waitHandle,
+              SignalMask *signalMask,
+              long       timeout
+             );
+
+/***********************************************************************\
+* Name   : Misc_findCommandInPath
+* Purpose: find command in PATH
+* Input  : waitHandle - wait handle
+* Output : -
+* Return : handles iterator count
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE uint Misc_handlesIterateCount(const WaitHandle *waitHandle)
+{
+  assert(waitHandle != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    return waitHandle->handleCount;
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      return waitHandle->handleCount;
+    #else /* not HAVE_WSAPOLL */
+      return waitHandle->handleCount*3;
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+}
+
+/***********************************************************************\
+* Name   : Misc_handleIterate
+* Purpose: handles iterator
+* Input  : waitHandle - wait handle
+*          i          - iterator counter
+*          handle     - handle variable
+*          events     - events variable
+* Output : handle - handle
+*          events - events
+* Return : iterator counter
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE uint Misc_handleIterate(const WaitHandle *waitHandle, uint i, int *handle, uint *events)
+{
+  assert(waitHandle != NULL);
+  assert(handle != NULL);
+  assert(events != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    (*handle) = waitHandle->pollfds[i].fd;
+    (*events) =  waitHandle->pollfds[i].revents;
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      (*handle) = waitHandle->pollfds[i].fd;
+      (*events) =  waitHandle->pollfds[i].revents;
+    #else /* not HAVE_WSAPOLL */
+      switch (i%3)
+      {
+        case 0: (*handle) = waitHandle->handles[i/3]; (*events) = FD_ISSET(waitHandle->handles[i/3],&waitHandle->readfds     ) ? HANDLE_EVENT_INPUT  : 0; break;
+        case 1: (*handle) = waitHandle->handles[i/3]; (*events) = FD_ISSET(waitHandle->handles[i/3],&waitHandle->writefds    ) ? HANDLE_EVENT_OUTPUT : 0; break;
+        case 2: (*handle) = waitHandle->handles[i/3]; (*events) = FD_ISSET(waitHandle->handles[i/3],&waitHandle->exceptionfds) ? HANDLE_EVENT_ERROR  : 0; break;
+      }
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+
+  return i;
+}
 
 /***********************************************************************\
 * Name   : Misc_findCommandInPath

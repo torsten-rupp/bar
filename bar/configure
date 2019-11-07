@@ -14753,8 +14753,7 @@ case "$host_os" in
 
           # patch to fix warnings:
           #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
-          (set -x; cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch)
-          # 1>/dev/null 2>/dev/null
+          (cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch) 1>/dev/null 2>/dev/null
 
 
   $as_echo_n "compile pthreads-w32... " >&6
@@ -16128,6 +16127,7 @@ for ac_header in \
                  link.h \
                  linux/fs.h \
                  linux/tcp.h \
+                 mntent.h \
                  netdb.h \
                  netinet/in.h \
                  pwd.h \
@@ -16143,6 +16143,8 @@ for ac_header in \
                  sys/socket.h \
                  sys/statfs.h \
                  sys/statvfs.h \
+                 sys/sysmacros.h \
+                 sys/utsname.h \
                  sys/vfs.h \
                  sys/wait.h \
                  sys/xattr.h \
@@ -16853,6 +16855,43 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_SIGQUIT" >&5
 $as_echo "$ac_cv_const_SIGQUIT" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant SIGALRM is available" >&5
+$as_echo_n "checking if constant SIGALRM is available... " >&6; }
+if ${ac_cv_const_SIGALRM+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo signal.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = (int)SIGALRM;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_SIGALRM=yes;
+$as_echo "#define HAVE_SIGALRM 1" >>confdefs.h
+
+else
+  ac_cv_const_SIGALRM=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_SIGALRM" >&5
+$as_echo "$ac_cv_const_SIGALRM" >&6; }
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant SIGUSR1 is available" >&5
@@ -17632,6 +17671,43 @@ fi
 $as_echo "$ac_cv_const_BLKGETSIZE" >&6; }
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant O_LARGEFILE is available" >&5
+$as_echo_n "checking if constant O_LARGEFILE is available... " >&6; }
+if ${ac_cv_const_O_LARGEFILE+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/types.h sys/stat.h fcntl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = (int)O_LARGEFILE;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_O_LARGEFILE=yes;
+$as_echo "#define HAVE_O_LARGEFILE 1" >>confdefs.h
+
+else
+  ac_cv_const_O_LARGEFILE=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_O_LARGEFILE" >&5
+$as_echo "$ac_cv_const_O_LARGEFILE" >&6; }
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant O_DIRECTORY is available" >&5
 $as_echo_n "checking if constant O_DIRECTORY is available... " >&6; }
 if ${ac_cv_const_O_DIRECTORY+:} false; then :
@@ -17704,6 +17780,117 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_O_NOATIME" >&5
 $as_echo "$ac_cv_const_O_NOATIME" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant O_NOCTTY is available" >&5
+$as_echo_n "checking if constant O_NOCTTY is available... " >&6; }
+if ${ac_cv_const_O_NOCTTY+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/types.h sys/stat.h fcntl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = (int)O_NOCTTY;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_O_NOCTTY=yes;
+$as_echo "#define HAVE_O_NOCTTY 1" >>confdefs.h
+
+else
+  ac_cv_const_O_NOCTTY=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_O_NOCTTY" >&5
+$as_echo "$ac_cv_const_O_NOCTTY" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant O_NONBLOCK is available" >&5
+$as_echo_n "checking if constant O_NONBLOCK is available... " >&6; }
+if ${ac_cv_const_O_NONBLOCK+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/types.h sys/stat.h fcntl.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = (int)O_NONBLOCK;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_O_NONBLOCK=yes;
+$as_echo "#define HAVE_O_NONBLOCK 1" >>confdefs.h
+
+else
+  ac_cv_const_O_NONBLOCK=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_O_NONBLOCK" >&5
+$as_echo "$ac_cv_const_O_NONBLOCK" >&6; }
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if constant MSG_NOSIGNAL is available" >&5
+$as_echo_n "checking if constant MSG_NOSIGNAL is available... " >&6; }
+if ${ac_cv_const_MSG_NOSIGNAL+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo sys/types.h sys/socket.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+int i = (int)MSG_NOSIGNAL;
+                                          return 0;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_const_MSG_NOSIGNAL=yes;
+$as_echo "#define HAVE_MSG_NOSIGNAL 1" >>confdefs.h
+
+else
+  ac_cv_const_MSG_NOSIGNAL=no;
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_const_MSG_NOSIGNAL" >&5
+$as_echo "$ac_cv_const_MSG_NOSIGNAL" >&6; }
 
 
 
@@ -17899,7 +18086,7 @@ ac_fn_c_check_type "$LINENO" "struct stat64" "ac_cv_type_struct_stat64" "#includ
 "
 if test "x$ac_cv_type_struct_stat64" = xyes; then :
 
-$as_echo "#define HAVE_STAT64 1" >>confdefs.h
+$as_echo "#define HAVE_STRUCT_STAT64 1" >>confdefs.h
 
 fi
 
@@ -17907,7 +18094,7 @@ ac_fn_c_check_type "$LINENO" "struct __stat64" "ac_cv_type_struct___stat64" "#in
 "
 if test "x$ac_cv_type_struct___stat64" = xyes; then :
 
-$as_echo "#define HAVE___STAT64 1" >>confdefs.h
+$as_echo "#define HAVE_STRUCT___STAT64 1" >>confdefs.h
 
 fi
 
@@ -17915,9 +18102,10 @@ ac_fn_c_check_type "$LINENO" "struct _stati64" "ac_cv_type_struct__stati64" "#in
 "
 if test "x$ac_cv_type_struct__stati64" = xyes; then :
 
-$as_echo "#define HAVE__STATI64 1" >>confdefs.h
+$as_echo "#define HAVE_STRUCT__STATI64 1" >>confdefs.h
 
 fi
+
 
 ac_fn_c_check_type "$LINENO" "sigset_t" "ac_cv_type_sigset_t" "#include <signal.h>
 "
@@ -18147,6 +18335,56 @@ $as_echo "$ac_cv_func_pthread_setname_np" >&6; }
   if test "$ac_cv_func_pthread_setname_np" != no; then :
 
 $as_echo "#define HAVE_PTHREAD_SETNAME_NP 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_setschedprio" >&5
+$as_echo_n "checking for pthread_setschedprio... " >&6; }
+if ${ac_cv_func_pthread_setschedprio+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_pthread_setschedprio="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void pthread_setschedprio();"; fi`
+                                         #ifdef pthread_setschedprio
+                                         #else
+                                           return (int)pthread_setschedprio;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_pthread_setschedprio=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_pthread_setschedprio" >&5
+$as_echo "$ac_cv_func_pthread_setschedprio" >&6; }
+  if test "$ac_cv_func_pthread_setschedprio" != no; then :
+
+$as_echo "#define HAVE_PTHREAD_SETSCHEDPRIO 1" >>confdefs.h
 
 elif :; then :
 
@@ -21155,6 +21393,106 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for timemg" >&5
+$as_echo_n "checking for timemg... " >&6; }
+if ${ac_cv_func_timemg+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_timemg="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void timemg();"; fi`
+                                         #ifdef timemg
+                                         #else
+                                           return (int)timemg;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_timemg=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_timemg" >&5
+$as_echo "$ac_cv_func_timemg" >&6; }
+  if test "$ac_cv_func_timemg" != no; then :
+
+$as_echo "#define HAVE_TIMEGM 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for strptime" >&5
+$as_echo_n "checking for strptime... " >&6; }
+if ${ac_cv_func_strptime+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_strptime="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void strptime();"; fi`
+                                         #ifdef strptime
+                                         #else
+                                           return (int)strptime;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_strptime=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_strptime" >&5
+$as_echo "$ac_cv_func_strptime" >&6; }
+  if test "$ac_cv_func_strptime" != no; then :
+
+$as_echo "#define HAVE_STRPTIME 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pipe" >&5
 $as_echo_n "checking for pipe... " >&6; }
@@ -22853,6 +23191,67 @@ elif :; then :
 fi
 
 fi
+
+case $host_os in
+  linux-*)
+    ;;
+  windows*|mingw*)
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for WSAPoll" >&5
+$as_echo_n "checking for WSAPoll... " >&6; }
+if ${ac_cv_func_WSAPoll+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_WSAPoll="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void WSAPoll();"; fi`
+                                         #ifdef WSAPoll
+                                         #else
+                                           return (int)WSAPoll;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_WSAPoll=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_WSAPoll" >&5
+$as_echo "$ac_cv_func_WSAPoll" >&6; }
+  if test "$ac_cv_func_WSAPoll" != no; then :
+
+$as_echo "#define HAVE_WSAPOLL 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
+    ;;
+esac
 
 
 VERSION_MAJOR=`cat $SOURCE_DIR/version|grep MAJOR|sed 's/.*=//g'`
@@ -24724,3 +25123,4 @@ fi
 
 
 rm -f $tmpFile
+

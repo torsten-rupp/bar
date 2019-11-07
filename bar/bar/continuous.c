@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
-#include <poll.h>
 #ifdef HAVE_SYS_INOTIFY_H
   #include <sys/inotify.h>
 #endif
@@ -131,11 +130,15 @@ LOCAL DatabaseHandle    continuousDatabaseHandle;
 LOCAL Semaphore         notifyLock;                  // lock
 LOCAL Dictionary        notifyHandles;
 LOCAL Dictionary        notifyNames;
-LOCAL int               inotifyHandle;
 LOCAL MsgQueue          initDoneNotifyMsgQueue;
 LOCAL Thread            continuousInitThread;
 LOCAL Thread            continuousThread;
 LOCAL bool              quitFlag;
+
+#if   defined(PLATFORM_LINUX)
+  LOCAL int             inotifyHandle;
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
 
 /****************************** Macros *********************************/
 
@@ -572,16 +575,19 @@ LOCAL NotifyInfo *addNotify(ConstString name)
   if (notifyInfo == NULL)
   {
     // create notify
-    watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
-    if (watchHandle == -1)
-    {
-      plogMessage(NULL,  // logHandle
-                  LOG_TYPE_CONTINUOUS,
-                  LOG_PREFIX,"Add notify watch for '%s' fail (error: %s)",
-                  String_cString(name),strerror(errno)
-                 );
-      return NULL;
-    }
+    #if   defined(PLATFORM_LINUX)
+      watchHandle = inotify_add_watch(inotifyHandle,String_cString(name),NOTIFY_FLAGS|NOTIFY_EVENTS);
+      if (watchHandle == -1)
+      {
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_CONTINUOUS,
+                    LOG_PREFIX,"Add notify watch for '%s' fail (error: %s)",
+                    String_cString(name),strerror(errno)
+                   );
+        return NULL;
+      }
+    #elif defined(PLATFORM_WINDOWS)
+    #endif /* PLATFORM_... */
 
     // init notify
     notifyInfo = (NotifyInfo*)malloc(sizeof(NotifyInfo));
@@ -627,7 +633,10 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
   DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
 
   // remove notify
-  (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+  #if   defined(PLATFORM_LINUX)
+    (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   // delete notify
   Dictionary_remove(&notifyNames,
@@ -1259,6 +1268,7 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
 
 LOCAL void continuousThreadCode(void)
 {
+#if   defined(PLATFORM_LINUX)
   #define MAX_ENTRIES 128
   #define BUFFER_SIZE (MAX_ENTRIES*(sizeof(struct inotify_event)+NAME_MAX+1))
 
@@ -1266,9 +1276,10 @@ LOCAL void continuousThreadCode(void)
   String                     absoluteName;
   Errors                     error;
   DatabaseHandle             databaseHandle;
-  sigset_t                   signalMask;
-  struct pollfd              pollfds[1];
-  struct timespec            selectTimeout;
+  SignalMask                 signalMask;
+  WaitHandle                 waitHandle;
+  int                        handle;
+  uint                       events;
   ssize_t                    n;
   const struct inotify_event *inotifyEvent;
   NotifyInfo                 *notifyInfo;
@@ -1295,9 +1306,13 @@ LOCAL void continuousThreadCode(void)
   }
 
   // Note: ignore SIGALRM in ppoll()
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask,SIGALRM);
+  #ifdef HAVE_SIGALRM
+    // Note: ignore SIGALRM in poll()/pselect()
+    MISC_SIGNAL_MASK_CLEAR(signalMask);
+    MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
+  #endif /* HAVE_SIGALRM */
 
+  Misc_initWait(&waitHandle,1);
   while (!quitFlag)
   {
     // read inotify events
@@ -1305,16 +1320,14 @@ LOCAL void continuousThreadCode(void)
     do
     {
       // wait for event or timeout
-      pollfds[0].fd     = inotifyHandle;
-      pollfds[0].events = POLLIN;
-      selectTimeout.tv_sec  = 10L;
-      selectTimeout.tv_nsec = 0L;
-      n = ppoll(pollfds,1,&selectTimeout,&signalMask);
+      Misc_waitReset(&waitHandle);
+      Misc_waitAdd(&waitHandle,inotifyHandle);
+      n = Misc_wait(&waitHandle,&signalMask,10L);
 
-      if (n > 0)
+      MISC_HANDLES_ITERATE(&waitHandle,handle,events)
       {
         // read events
-        if ((pollfds[0].revents & POLLIN) != 0)
+        if ((events & HANDLE_EVENT_INPUT) != 0)
         {
           n = read(inotifyHandle,buffer,BUFFER_SIZE);
         }
@@ -1524,6 +1537,7 @@ fprintf(stderr,"\n");
     }
     assert(quitFlag || (n == 0));
   }
+  Misc_doneWait(&waitHandle);
 
   // close continous database
   Continuous_close(&databaseHandle);
@@ -1531,6 +1545,9 @@ fprintf(stderr,"\n");
   // free resources
   String_delete(absoluteName);
   free(buffer);
+#elif defined(PLATFORM_WINDOWS)
+//TODO: NYI
+#endif /* PLATFORM_... */
 }
 
 /*---------------------------------------------------------------------*/
@@ -1559,14 +1576,17 @@ Errors Continuous_initAll(void)
   if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("Low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
 
   // init inotify
-  inotifyHandle = inotify_init();
-  if (inotifyHandle == -1)
-  {
-    Dictionary_done(&notifyNames);
-    Dictionary_done(&notifyHandles);
-    Semaphore_done(&notifyLock);
-    return ERROR_INIT_FILE_NOTIFY;
-  }
+  #if   defined(PLATFORM_LINUX)
+    inotifyHandle = inotify_init();
+    if (inotifyHandle == -1)
+    {
+      Dictionary_done(&notifyNames);
+      Dictionary_done(&notifyHandles);
+      Semaphore_done(&notifyLock);
+      return ERROR_INIT_FILE_NOTIFY;
+    }
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   // init command queue
   if (!MsgQueue_init(&initDoneNotifyMsgQueue,0))
@@ -1584,11 +1604,17 @@ void Continuous_doneAll(void)
   ulong              length;
   NotifyInfo         *notifyInfo;
 
-  assert(inotifyHandle != -1);
+  #if   defined(PLATFORM_LINUX)
+    assert(inotifyHandle != -1);
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   // done notify event message queue
   MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK_((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
-  close(inotifyHandle);
+  #if   defined(PLATFORM_LINUX)
+    close(inotifyHandle);
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   // done dictionaries
   Dictionary_initIterator(&dictionaryIterator,&notifyNames);
@@ -1608,7 +1634,10 @@ void Continuous_doneAll(void)
     DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
 
     // delete notify
-    (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+    #if   defined(PLATFORM_LINUX)
+      (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+    #elif defined(PLATFORM_WINDOWS)
+    #endif /* PLATFORM_... */
 
     // free resources
     freeNotifyInfo(notifyInfo,NULL);

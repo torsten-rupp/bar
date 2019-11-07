@@ -27,7 +27,7 @@
 
 /***************************** Constants *******************************/
 //TODO: correct usage?
-#define THREAD_ID_NONE     -1
+//#define THREAD_ID_NONE     -1
 
 #define THREAD_NUMBER_NONE 0
 
@@ -71,6 +71,7 @@ typedef struct
 } ThreadLocalStorage;
 
 /***************************** Variables *******************************/
+extern const ThreadId THREAD_ID_NONE;
 
 /****************************** Macros *********************************/
 

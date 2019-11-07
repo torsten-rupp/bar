@@ -24,6 +24,11 @@
 #include <errno.h>
 #include <assert.h>
 
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+  #include <sysinfoapi.h>
+#endif /* PLATFORM_... */
+
 #include "common/global.h"
 #include "common/lists.h"
 
@@ -50,6 +55,12 @@ typedef struct
 } ThreadStartInfo;
 
 /***************************** Variables *******************************/
+#if   defined(PLATFORM_LINUX)
+  const ThreadId THREAD_ID_NONE = -1;
+#elif defined(PLATFORM_WINDOWS)
+  const ThreadId THREAD_ID_NONE = {NULL,0};
+#endif /* PLATFORM_... */
+
 #ifndef NDEBUG
   typedef struct
   {
@@ -65,9 +76,11 @@ typedef struct
   } StackTraceThreadInfo;
 
 
-  LOCAL struct sigaction     debugThreadSignalSegVPrevHandler;
-  LOCAL struct sigaction     debugThreadSignalAbortPrevHandler;
-  LOCAL struct sigaction     debugThreadSignalQuitPrevHandler;
+  #ifdef HAVE_SIGACTION
+    LOCAL struct sigaction   debugThreadSignalSegVPrevHandler;
+    LOCAL struct sigaction   debugThreadSignalAbortPrevHandler;
+    LOCAL struct sigaction   debugThreadSignalQuitPrevHandler;
+  #endif /* HAVE_SIGACTION */
 
   LOCAL pthread_once_t       debugThreadInitFlag                = PTHREAD_ONCE_INIT;
 
@@ -360,6 +373,7 @@ LOCAL void debugThreadDumpStackTrace(ThreadId                       threadId,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_SIGQUIT
 LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
                                          uint                           skipFrameCount,
                                          const char                     *reason
@@ -504,6 +518,7 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
   }
   pthread_mutex_unlock(&debugThreadStackTraceLock);
 }
+#endif /* HAVE_SIGQUIT */
 
 /***********************************************************************\
 * Name   : debugThreadSignalSegVHandler
@@ -516,22 +531,30 @@ LOCAL void debugThreadDumpAllStackTraces(DebugDumpStackTraceOutputTypes type,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_SIGACTION
 LOCAL void debugThreadSignalSegVHandler(int signalNumber, siginfo_t *siginfo, void *context)
+#else /* not HAVE_SIGACTION */
+LOCAL void debugThreadSignalSegVHandler(int signalNumber)
+#endif /* HAVE_SIGACTION */
 {
   if (signalNumber == SIGSEGV)
   {
-    pthread_mutex_lock(&debugThreadSignalLock);
-    {
-      debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1," *** CRASHED ***");
-    }
-    pthread_mutex_unlock(&debugThreadSignalLock);
+    #ifdef HAVE_BACKTRACE
+      pthread_mutex_lock(&debugThreadSignalLock);
+      {
+        debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_FATAL,1," *** CRASHED ***");
+      }
+      pthread_mutex_unlock(&debugThreadSignalLock);
+    #endif /* HAVE_BACKTRACE */
   }
 
-  // call previous handler
-  if (debugThreadSignalSegVPrevHandler.sa_sigaction != NULL)
-  {
-    debugThreadSignalSegVPrevHandler.sa_sigaction(signalNumber,siginfo,context);
-  }
+  #ifdef HAVE_SIGACTION
+    // call previous handler
+    if (debugThreadSignalSegVPrevHandler.sa_sigaction != NULL)
+    {
+      debugThreadSignalSegVPrevHandler.sa_sigaction(signalNumber,siginfo,context);
+    }
+  #endif /* HAVE_SIGACTION */
 }
 
 /***********************************************************************\
@@ -545,7 +568,11 @@ LOCAL void debugThreadSignalSegVHandler(int signalNumber, siginfo_t *siginfo, vo
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_SIGACTION
 LOCAL void debugThreadSignalAbortHandler(int signalNumber, siginfo_t *siginfo, void *context)
+#else /* not HAVE_SIGACTION */
+LOCAL void debugThreadSignalAbortHandler(int signalNumber)
+#endif /* HAVE_SIGACTION */
 {
   if (signalNumber == SIGABRT)
   {
@@ -561,11 +588,13 @@ LOCAL void debugThreadSignalAbortHandler(int signalNumber, siginfo_t *siginfo, v
     pthread_mutex_unlock(&debugThreadSignalLock);
   }
 
-  // call previous handler
-  if (debugThreadSignalAbortPrevHandler.sa_sigaction != NULL)
-  {
-    debugThreadSignalAbortPrevHandler.sa_sigaction(signalNumber,siginfo,context);
-  }
+  #ifdef HAVE_SIGACTION
+    // call previous handler
+    if (debugThreadSignalAbortPrevHandler.sa_sigaction != NULL)
+    {
+      debugThreadSignalAbortPrevHandler.sa_sigaction(signalNumber,siginfo,context);
+    }
+  #endif /* HAVE_SIGACTION */
 }
 
 /***********************************************************************\
@@ -579,7 +608,12 @@ LOCAL void debugThreadSignalAbortHandler(int signalNumber, siginfo_t *siginfo, v
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_SIGQUIT
+#ifdef HAVE_SIGACTION
 LOCAL void debugThreadSignalQuitHandler(int signalNumber, siginfo_t *siginfo, void *context)
+#else /* not HAVE_SIGACTION */
+LOCAL void debugThreadSignalQuitHandler(int signalNumber)
+#endif /* HAVE_SIGACTION */
 {
   UNUSED_VARIABLE(siginfo);
   UNUSED_VARIABLE(context);
@@ -590,12 +624,15 @@ LOCAL void debugThreadSignalQuitHandler(int signalNumber, siginfo_t *siginfo, vo
     debugThreadDumpAllStackTraces(DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,1,NULL);
   }
 
-  // call previous handler
-  if (debugThreadSignalQuitPrevHandler.sa_sigaction != NULL)
-  {
-    debugThreadSignalQuitPrevHandler.sa_sigaction(signalNumber,siginfo,context);
-  }
+  #ifdef HAVE_SIGACTION
+    // call previous handler
+    if (debugThreadSignalQuitPrevHandler.sa_sigaction != NULL)
+    {
+      debugThreadSignalQuitPrevHandler.sa_sigaction(signalNumber,siginfo,context);
+    }
+  #endif /* HAVE_SIGACTION */
 }
+#endif /* HAVE_SIGQUIT */
 
 /***********************************************************************\
 * Name   : debugThreadInit
@@ -608,26 +645,38 @@ LOCAL void debugThreadSignalQuitHandler(int signalNumber, siginfo_t *siginfo, vo
 
 LOCAL void debugThreadInit(void)
 {
-  struct sigaction sa;
+  #ifdef HAVE_SIGACTION
+    struct sigaction sa;
+  #endif /* HAVE_SIGACTION */
 
   // add main thread
   debugThreadStackTraceAddThread(pthread_self());
 
   // install signal handlers for printing stack traces
-  sigfillset(&sa.sa_mask);
-  sa.sa_flags     = SA_SIGINFO;
-  sa.sa_sigaction = debugThreadSignalSegVHandler;
-  sigaction(SIGSEGV,&sa,&debugThreadSignalSegVPrevHandler);
+  #ifdef HAVE_SIGACTION
+    sigfillset(&sa.sa_mask);
+    sa.sa_flags     = SA_SIGINFO;
+    sa.sa_sigaction = debugThreadSignalSegVHandler;
+    sigaction(SIGSEGV,&sa,&debugThreadSignalSegVPrevHandler);
 
-  sigfillset(&sa.sa_mask);
-  sa.sa_flags     = SA_SIGINFO;
-  sa.sa_sigaction = debugThreadSignalAbortHandler;
-  sigaction(SIGABRT,&sa,&debugThreadSignalAbortPrevHandler);
+    sigfillset(&sa.sa_mask);
+    sa.sa_flags     = SA_SIGINFO;
+    sa.sa_sigaction = debugThreadSignalAbortHandler;
+    sigaction(SIGABRT,&sa,&debugThreadSignalAbortPrevHandler);
 
-  sigfillset(&sa.sa_mask);
-  sa.sa_flags     = SA_SIGINFO;
-  sa.sa_sigaction = debugThreadSignalQuitHandler;
-  sigaction(SIGQUIT,&sa,&debugThreadSignalQuitPrevHandler);
+    #ifdef HAVE_SIGQUIT
+      sigfillset(&sa.sa_mask);
+      sa.sa_flags     = SA_SIGINFO;
+      sa.sa_sigaction = debugThreadSignalQuitHandler;
+      sigaction(SIGQUIT,&sa,&debugThreadSignalQuitPrevHandler);
+    #endif /* HAVE_SIGQUIT */
+  #else /* not HAVE_SIGACTION */
+    signal(SIGSEGV,debugThreadSignalSegVHandler);
+    signal(SIGABRT,debugThreadSignalAbortHandler);
+    #ifdef HAVE_SIGQUIT
+      signal(SIGQUIT,debugThreadSignalQuitHandler);
+    #endif /* HAVE_SIGQUIT */
+  #endif /* HAVE_SIGACTION */
 }
 #endif /* NDEBUG */
 
@@ -669,10 +718,12 @@ LOCAL void *threadStartCode(void *userData)
   pthread_cleanup_push(threadTerminated,startInfo->thread);
   {
     // try to set thread name
-    if (startInfo->name != NULL)
-    {
-      (void)pthread_setname_np(pthread_self(),startInfo->name);
-    }
+    #ifdef HAVE_PTHREAD_SETNAME_NP
+      if (startInfo->name != NULL)
+      {
+        (void)pthread_setname_np(pthread_self(),startInfo->name);
+      }
+    #endif /* HAVE_PTHREAD_SETNAME_NP */
 
     #ifndef NDEBUG
       debugThreadStackTraceSetThreadName(pthread_self(),startInfo->name);
@@ -862,7 +913,12 @@ void Thread_setPriority(Thread *thread, int priority)
   assert(thread != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(thread);
 
-  pthread_setschedprio(thread->handle,priority);
+  #ifdef HAVE_PTHREAD_SETSCHEDPRIO
+    pthread_setschedprio(thread->handle,priority);
+  #else
+    UNUSED_VARIABLE(thread);
+    UNUSED_VARIABLE(priority);
+  #endif /* HAVE_PTHREAD_SETSCHEDPRIO */
 }
 
 bool Thread_join(Thread *thread)

@@ -17,9 +17,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <poll.h>
 #include <time.h>
-#include <sys/select.h>
 #ifdef HAVE_CURL
   #include <curl/curl.h>
 #endif /* HAVE_CURL */
@@ -76,7 +74,12 @@ const StorageFlags STORAGE_FLAGS_NO_STORAGE = { .noStorage=TRUE, .dryRun=FALSE }
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
+#if   defined(PLATFORM_LINUX)
 LOCAL sighandler_t oldSignalAlarmHandler;
+#elif defined(PLATFORM_WINDOWS)
+//TODO
+#endif /* PLATFORM_... */
+
 #ifdef HAVE_SSH2
   LOCAL Password defaultSSHPassword;
 #endif /* HAVE_SSH2 */
@@ -178,16 +181,17 @@ LOCAL size_t curlNopDataCallback(void   *buffer,
 
 LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
 {
-  sigset_t        signalMask;
-  fd_set          fdSetRead,fdSetWrite,fdSetException;
+//  SignalMask      signalMask;
+//  fd_set          fdSetRead,fdSetWrite,fdSetException;
   CURLMcode       curlmCode;
-  int             maxFD;
+//  int             maxFD;
   long            curlTimeout;
-  struct timespec ts;
+//  struct timespec ts;
   Errors          error;
 
   assert(curlMultiHandle != NULL);
 
+#if 0
   // get file descriptors from the transfers
   FD_ZERO(&fdSetRead);
   FD_ZERO(&fdSetWrite);
@@ -212,9 +216,11 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
     ts.tv_nsec = (READ_TIMEOUT%1000L)*1000000L;
   }
 
-  // Note: ignore SIGALRM in pselect()
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask,SIGALRM);
+  #ifdef HAVE_SIGALRM
+    // Note: ignore SIGALRM in poll()/pselect()
+    MISC_SIGNAL_MASK_CLEAR(signalMask);
+    MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
+  #endif /* HAVE_SIGALRM */
 
 //TODO: replace by ppoll()
   // wait
@@ -233,6 +239,32 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
       error = ERROR_NONE;
       break;
   }
+#else
+  // get a suitable timeout
+  curl_multi_timeout(curlMultiHandle,&curlTimeout);
+
+  // wait
+  curlmCode = curl_multi_poll(curlMultiHandle,
+                              NULL,0,  // extra fds
+                              (curlTimeout > (long)READ_TIMEOUT) ? curlTimeout : READ_TIMEOUT,
+                              NULL  // numFds
+                             );
+  switch (curlmCode)
+  {
+    case CURLM_OK:
+      // OK
+      error = ERROR_NONE;
+      break;
+    case CURLE_OPERATION_TIMEDOUT:
+      // timeout
+      error = ERROR_NETWORK_TIMEOUT;
+      break;
+    default:
+      // error
+      error = ERROR_NETWORK_RECEIVE;
+      break;
+  }
+#endif
 
   return error;
 }
@@ -564,9 +596,9 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
 LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 {
   LIBSSH2_SESSION *session;
-  sigset_t        signalMask;
-  struct timespec pollTimeout;
-  struct pollfd   pollfds[1];
+  SignalMask      signalMask;
+  WaitHandle      waitHandle;
+  uint            n;
 
   assert(socketHandle != NULL);
 
@@ -574,12 +606,20 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
   session = Network_getSSHSession(socketHandle);
   assert(session != NULL);
 
-  // Note: ignore SIGALRM in pselect()
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask,SIGALRM);
+  #ifdef HAVE_SIGALRM
+    // Note: ignore SIGALRM in poll()/pselect()
+    MISC_SIGNAL_MASK_CLEAR(signalMask);
+    MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
+  #endif /* HAVE_SIGALRM */
 
   // wait for max. 60s
 #if 1
+  Misc_initWait(&waitHandle,1);
+  Misc_waitAdd(&waitHandle,socketHandle->handle);
+  n = Misc_wait(&waitHandle,&signalMask,60*MS_PER_SECOND);
+  Misc_doneWait(&waitHandle);
+  return n > 0;
+#elif 1
   pollTimeout.tv_sec  = 60L;
   pollTimeout.tv_nsec = 0L;
   pollfds[0].fd     = socketHandle->handle;
@@ -714,7 +754,9 @@ Errors Storage_initAll(void)
 
   error = ERROR_NONE;
 
-  oldSignalAlarmHandler = signal(SIGALRM,signalHandler);
+  #ifdef HAVE_SIGALRM
+    oldSignalAlarmHandler = signal(SIGALRM,signalHandler);
+  #endif /* HAVE_SIGALRM */
   #if defined(HAVE_SSH2)
     Password_init(&defaultSSHPassword);
   #endif /* HAVE_SSH2 */
@@ -781,10 +823,12 @@ void Storage_doneAll(void)
   #if defined(HAVE_SSH2)
     Password_done(&defaultSSHPassword);
   #endif /* HAVE_SSH2 */
-  if (oldSignalAlarmHandler != SIG_ERR)
-  {
-    (void)signal(SIGALRM,oldSignalAlarmHandler);
-  }
+  #ifdef HAVE_SIGALRM
+    if (oldSignalAlarmHandler != SIG_ERR)
+    {
+      (void)signal(SIGALRM,oldSignalAlarmHandler);
+    }
+  #endif /* HAVE_SIGALRM */
 }
 
 #ifdef NDEBUG

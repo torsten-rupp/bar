@@ -310,6 +310,12 @@
 /* mktemp() available */
 #undef HAVE_MKTEMP
 
+/* Define to 1 if you have the <mntent.h> header file. */
+#undef HAVE_MNTENT_H
+
+/* MSG_NOSIGNAL available */
+#undef HAVE_MSG_NOSIGNAL
+
 /* mxml installed */
 #undef HAVE_MXML
 
@@ -328,8 +334,17 @@
 /* O_DIRECTORY available */
 #undef HAVE_O_DIRECTORY
 
+/* O_LARGEFILE available */
+#undef HAVE_O_LARGEFILE
+
 /* O_NOATIME available */
 #undef HAVE_O_NOATIME
+
+/* O_NOCTTY available */
+#undef HAVE_O_NOCTTY
+
+/* O_NONBLOCK available */
+#undef HAVE_O_NONBLOCK
 
 /* pcre installed */
 #undef HAVE_PCRE
@@ -352,6 +367,9 @@
 /* pthread_setname_np() available */
 #undef HAVE_PTHREAD_SETNAME_NP
 
+/* pthread_setschedprio() available */
+#undef HAVE_PTHREAD_SETSCHEDPRIO
+
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
 
@@ -366,6 +384,9 @@
 
 /* sigaction() available */
 #undef HAVE_SIGACTION
+
+/* SIGALRM available */
+#undef HAVE_SIGALRM
 
 /* SIGBUS available */
 #undef HAVE_SIGBUS
@@ -448,6 +469,18 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
+/* strptime() available */
+#undef HAVE_STRPTIME
+
+/* defined if struct stat64 is available */
+#undef HAVE_STRUCT_STAT64
+
+/* defined if struct _stati64 is available */
+#undef HAVE_STRUCT__STATI64
+
+/* defined if struct __stat64 is available */
+#undef HAVE_STRUCT___STAT64
+
 /* symlink() available */
 #undef HAVE_SYMLINK
 
@@ -481,8 +514,14 @@
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
+/* Define to 1 if you have the <sys/sysmacros.h> header file. */
+#undef HAVE_SYS_SYSMACROS_H
+
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <sys/utsname.h> header file. */
+#undef HAVE_SYS_UTSNAME_H
 
 /* Define to 1 if you have the <sys/vfs.h> header file. */
 #undef HAVE_SYS_VFS_H
@@ -538,6 +577,9 @@
 /* textdomain() available */
 #undef HAVE_TEXTDOMAIN
 
+/* timegm() available */
+#undef HAVE_TIMEGM
+
 /* defined if uint is available */
 #undef HAVE_UINT
 
@@ -583,6 +625,9 @@
 /* waitpid() available */
 #undef HAVE_WAITPID
 
+/* WSAPoll() available */
+#undef HAVE_WSAPOLL
+
 /* xdelta3 installed */
 #undef HAVE_XDELTA3
 
@@ -606,9 +651,6 @@
 
 /* _stati64() available */
 #undef HAVE__STATI64
-
-/* defined if struct __stat64 is available */
-#undef HAVE___STAT64
 
 /* defined if __thread is available */
 #undef HAVE___THREAD

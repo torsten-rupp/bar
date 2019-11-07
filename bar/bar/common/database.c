@@ -320,8 +320,14 @@ LOCAL DatabaseList databaseList;
       UNUSED_VARIABLE(__result); \
     } \
     while (0)
-  #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
-    ((databaseHandle)->databaseNode->lock.__data.__lock > 0)
+  #if   defined(PLATFORM_LINUX)
+    #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
+      ((databaseHandle)->databaseNode->lock.__data.__lock > 0)
+  #elif defined(PLATFORM_WINDOWS)
+//TODO: NYI
+    #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
+      TRUE
+  #endif /* PLATFORM_... */
 #else /* not DATABASE_LOCK_PER_INSTANCE */
   #define DATABASE_HANDLE_DO(databaseHandle,block) \
     do \
@@ -379,8 +385,14 @@ LOCAL DatabaseList databaseList;
       UNUSED_VARIABLE(__result); \
     } \
     while (0)
-  #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
-    (databaseLock.__data.__lock > 0)
+  #if   defined(PLATFORM_LINUX)
+    #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
+      (databaseLock.__data.__lock > 0)
+  #elif defined(PLATFORM_WINDOWS)
+//TODO: NYI
+    #define DATABASE_HANDLE_IS_LOCKED(databaseHandle) \
+      TRUE
+  #endif /* PLATFORM_... */
 #endif /* DATABASE_LOCK_PER_INSTANCE */
 
 /***********************************************************************\
@@ -506,6 +518,30 @@ LOCAL DatabaseList databaseList;
   extern "C" {
 #endif
 
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
+/***********************************************************************\
+* Name   : getTime
+* Purpose: get POSIX compatible time
+* Input  : -
+* Output : timespec - time
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void getTime(struct timespec *timespec)
+{
+  __int64 windowsTime;
+
+  assert(timespec != NULL);
+
+  GetSystemTimeAsFileTime((FILETIME*)&windowsTime);
+  windowsTime -= 116444736000000000LL;  // Jan 1 1601 -> Jan 1 1970
+  timespec->tv_sec  = (windowsTime/10000000LL);
+  timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
+}
+#endif /* PLATFORM_... */
+
 /***********************************************************************\
 * Name   : freeDatabaseNode
 * Purpose: free database node
@@ -575,6 +611,7 @@ LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], ch
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_SIGQUIT
 LOCAL void debugDatabaseSignalHandler(int signalNumber)
 {
   if ((signalNumber == SIGQUIT) && Thread_isCurrentThread(debugDatabaseThreadId))
@@ -587,6 +624,7 @@ LOCAL void debugDatabaseSignalHandler(int signalNumber)
     debugSignalQuitPrevHandler(signalNumber);
   }
 }
+#endif /* HAVE_SIGQUIT */
 
 /***********************************************************************\
 * Name   : debugDatabaseInit
@@ -614,8 +652,10 @@ LOCAL void debugDatabaseInit(void)
     HALT_INTERNAL_ERROR("Cannot initialize database debug lock!");
   }
 
-  // install signal handler for Ctrl-\ (SIGQUIT) for printing debug information
-  debugSignalQuitPrevHandler = signal(SIGQUIT,debugDatabaseSignalHandler);
+  #ifdef HAVE_SIGQUIT
+    // install signal handler for Ctrl-\ (SIGQUIT) for printing debug information
+    debugSignalQuitPrevHandler = signal(SIGQUIT,debugDatabaseSignalHandler);
+  #endif /* HAVE_SIGQUIT */
 }
 
 /***********************************************************************\
@@ -1276,7 +1316,11 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
-      clock_gettime(CLOCK_REALTIME,&timespec);
+      #if   defined(PLATFORM_LINUX)
+        clock_gettime(CLOCK_REALTIME,&timespec);
+      #elif defined(PLATFORM_WINDOWS)
+        getTime(&timespec);
+      #endif /* PLATFORM_... */
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
@@ -1298,7 +1342,11 @@ LOCAL_INLINE bool __waitTriggerRead(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
-      clock_gettime(CLOCK_REALTIME,&timespec);
+      #if   defined(PLATFORM_LINUX)
+        clock_gettime(CLOCK_REALTIME,&timespec);
+      #elif defined(PLATFORM_WINDOWS)
+        getTime(&timespec);
+      #endif /* PLATFORM_... */
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
@@ -1378,7 +1426,11 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
-      clock_gettime(CLOCK_REALTIME,&timespec);
+      #if   defined(PLATFORM_LINUX)
+        clock_gettime(CLOCK_REALTIME,&timespec);
+      #elif defined(PLATFORM_WINDOWS)
+        getTime(&timespec);
+      #endif /* PLATFORM_... */
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
@@ -1400,7 +1452,11 @@ LOCAL_INLINE bool __waitTriggerReadWrite(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
-      clock_gettime(CLOCK_REALTIME,&timespec);
+      #if   defined(PLATFORM_LINUX)
+        clock_gettime(CLOCK_REALTIME,&timespec);
+      #elif defined(PLATFORM_WINDOWS)
+        getTime(&timespec);
+      #endif /* PLATFORM_... */
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
@@ -1478,7 +1534,11 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
   #ifdef DATABASE_LOCK_PER_INSTANCE
     if (timeout != WAIT_FOREVER)
     {
-      clock_gettime(CLOCK_REALTIME,&timespec);
+      #if   defined(PLATFORM_LINUX)
+        clock_gettime(CLOCK_REALTIME,&timespec);
+      #elif defined(PLATFORM_WINDOWS)
+        getTime(&timespec);
+      #endif /* PLATFORM_... */
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
@@ -1497,7 +1557,11 @@ LOCAL_INLINE bool __waitTriggerTransaction(const char     *__fileName__,
   #else /* not DATABASE_LOCK_PER_INSTANCE */
     if (timeout != WAIT_FOREVER)
     {
-      clock_gettime(CLOCK_REALTIME,&timespec);
+      #if   defined(PLATFORM_LINUX)
+        clock_gettime(CLOCK_REALTIME,&timespec);
+      #elif defined(PLATFORM_WINDOWS)
+        getTime(&timespec);
+      #endif /* PLATFORM_... */
       timespec.tv_nsec = timespec.tv_nsec+((timeout)%1000L)*1000000L;
       timespec.tv_sec  = timespec.tv_sec+((timespec.tv_nsec/1000000L)+(timeout))/1000L;
       timespec.tv_nsec %= 1000000L;
@@ -2020,21 +2084,47 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
     timestamp = strtol(text,&s,10);
     if (!stringIsEmpty(s))
     {
-      #ifdef HAVE_GETDATE_R
+      #if   defined(HAVE_GETDATE_R)
         tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
-      #else /* not HAVE_GETDATE_R */
-        tm = getdate(text);
-      #endif /* HAVE_GETDATE_R */
+      #elif defined(HAVE_GETDATE)
+        tm = getdate(text);      
+      #else
+#ifndef WERROR
+#warning implement strptime
+#endif
+//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
+        tm = NULL;
+      #endif /* HAVE_GETDATE... */
       if (tm != NULL)
       {
-        timestamp = (uint64)timegm(tm);
+        #ifdef HAVE_TIMEGM
+          timestamp = (uint64)timegm(tm);
+        #else
+#ifndef WERROR
+#warning implement timegm
+#endif
+        #endif
       }
       else
       {
-        s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
+        #ifdef HAVE_STRPTIME      
+          s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
+        #else
+#ifndef WERROR
+#warning implement strptime
+#endif
+//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
+          s = NULL;
+        #endif
         if ((s != NULL) && stringIsEmpty(s))
         {
-          timestamp = (uint64)timegm(&tmBuffer);
+          #ifdef HAVE_TIMEGM
+            timestamp = (uint64)timegm(&tmBuffer);
+          #else
+#ifndef WERROR
+#warning implement timegm
+#endif
+          #endif
         }
         else
         {

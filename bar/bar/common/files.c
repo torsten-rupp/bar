@@ -18,7 +18,9 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/sysmacros.h>
+#ifdef HAVE_SYS_SYSMACROS
+  #include <sys/sysmacros.h>
+#endif
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
@@ -141,24 +143,24 @@ LOCAL const struct
   #define FTELL(handle) ftell(handle)
 #endif
 
-#ifdef HAVE_STAT64
+#if defined(HAVE_STAT64) && defined(HAVE_LSTAT64) && defined(HAVE_STRUCT_STAT64)
   #define STAT(fileName,fileState)  stat64(fileName,fileState)
   #define LSTAT(fileName,fileState) lstat64(fileName,fileState)
   typedef struct stat64 FileStat;
-#elif HAVE___STAT64
-  #define STAT(fileName,fileState)  stat64(fileName,fileState)
-  #define LSTAT(fileName,fileState) lstat64(fileName,fileState)
+#elif defined(HAVE___STAT64) && defined(HAVE___LSTAT64) && defined(HAVE_STRUCT___STAT64)
+  #define STAT(fileName,fileState)  __stat64(fileName,fileState)
+  #define LSTAT(fileName,fileState) __lstat64(fileName,fileState)
   typedef struct __stat64 FileStat;
-#elif HAVE__STATI64
-  #define STAT(fileName,fileState)  _stati64(fileName,fileState)
-  #define LSTAT(fileName,fileState) _stati64(fileName,fileState)
-  typedef struct _stati64 FileStat;
-#elif HAVE_STAT
+#elif defined(HAVE_STAT) && defined(HAVE_LSTAT) && defined(HAVE_STRUCT_STAT)
   #define STAT(fileName,fileState)  stat(fileName,fileState)
   #define LSTAT(fileName,fileState) lstat(fileName,fileState)
   typedef struct stat FileStat;
+#elif defined(HAVE__STATI64) && defined(HAVE_STRUCT__STATI64)
+  #define STAT(fileName,fileState)  _stati64(fileName,fileState)
+  #define LSTAT(fileName,fileState) _stati64(fileName,fileState)
+  typedef struct _stati64 FileStat;
 #else
-  #error No struct stat64 nor struct __stat64
+  #error No struct stat, lstat, or struct stat64
 #endif
 
 #ifndef NDEBUG
@@ -640,14 +642,21 @@ LOCAL void doneFileHandle(const char  *__fileName__,
 #ifndef HAVE_O_NOATIME
 LOCAL bool setAccessTime(int fileDescriptor, const struct timespec *ts)
 {
-  struct timespec times[2];
+  #if   defined(PLATFORM_LINUX)
+    struct timespec times[2];
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
-  times[0].tv_sec  = ts->tv_sec;
-  times[0].tv_nsec = ts->tv_nsec;
-  times[1].tv_sec  = 0;
-  times[1].tv_nsec = UTIME_OMIT;
+  #if   defined(PLATFORM_LINUX)
+    times[0].tv_sec  = ts->tv_sec;
+    times[0].tv_nsec = ts->tv_nsec;
+    times[1].tv_sec  = 0;
+    times[1].tv_nsec = UTIME_OMIT;
 
-  return futimens(fileDescriptor,times) == 0;
+    return futimens(fileDescriptor,times) == 0;
+  #elif defined(PLATFORM_WINDOWS)
+    return TRUE;
+  #endif /* PLATFORM_... */
 }
 #endif /* not HAVE_O_NOATIME */
 
@@ -940,7 +949,7 @@ String File_getRootNameCString(String rootName, const char *fileName)
                && (fileName[1] == ':')
               )
       {
-        String_setChar(rootName,toupper(fileName[0]);
+        String_setChar(rootName,toupper(fileName[0]));
         String_appendChar(rootName,':');
       }
       else if (   (n >= 2)
@@ -1045,7 +1054,7 @@ bool File_isAbsoluteFileNameCString(const char *fileName)
   #if   defined(PLATFORM_LINUX)
     return ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR));
   #elif defined(PLATFORM_WINDOWS)
-    return    ((n >= 2) && ((toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z') && (fileName[1] == ':'))
+    return    ((n >= 2) && ((toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z') && (fileName[1] == ':')))
            || ((n >= 2) && (strncmp(fileName,"\\\\",2) == 0));
   #endif /* PLATFORM_... */
 }
@@ -1637,7 +1646,13 @@ Errors __File_openCString(const char *__fileName__,
       File_deleteFileName(directoryName);
 
       // create file
-      fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE,0666);
+      #ifdef HAVE_O_LARGEFILE
+        #define FLAGS O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE
+      #else
+        #define FLAGS O_RDWR|O_CREAT|O_TRUNC
+      #endif
+      fileDescriptor = open(fileName,FLAGS,0666);
+      #undef FLAGS
       if (fileDescriptor == -1)
       {
         return ERRORX_(CREATE_FILE,errno,"%E",errno);
@@ -1671,7 +1686,13 @@ Errors __File_openCString(const char *__fileName__,
         if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
         {
           // first try with O_NOATIME, then without O_NOATIME
-          fileDescriptor = open(fileName,O_RDONLY|O_LARGEFILE|O_NOATIME,0);
+          #ifdef HAVE_O_LARGEFILE
+            #define FLAGS O_RDONLY|O_LARGEFILE|O_NOATIME
+          #else
+            #define FLAGS O_RDONLY|O_NOATIME
+          #endif
+          fileDescriptor = open(fileName,FLAGS,0);
+          #undef FLAGS
           if (fileDescriptor == -1)
           {
             fileDescriptor = open(fileName,O_RDONLY|O_LARGEFILE,0);
@@ -1686,30 +1707,39 @@ Errors __File_openCString(const char *__fileName__,
           return ERRORX_(OPEN_FILE,errno,"%E",errno);
         }
       #else /* not HAVE_O_NOATIME */
-        fileDescriptor = open(fileName,O_RDONLY|O_LARGEFILE,0);
+        #ifdef HAVE_O_LARGEFILE
+          #define FLAGS O_RDONLY|O_LARGEFILE
+        #else
+          #define FLAGS O_RDONLY
+        #endif
+        fileDescriptor = open(fileName,FLAGS,0);
+        #undef FLAGS
         if (fileDescriptor == -1)
         {
           return ERRORX_(OPEN_FILE,errno,"%E",errno);
         }
 
-        // store atime
-        if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
-        {
-          if (fstat(fileDescriptor,&stat) == 0)
+        #if   defined(PLATFORM_LINUX)
+          // store atime
+          if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
           {
-            fileHandle->atime.tv_sec  = stat.st_atime;
-            #ifdef HAVE_STAT_ATIM_TV_NSEC
-              fileHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
-            #else
-              fileHandle->atime.tv_nsec = 0;
-            #endif
+            if (fstat(fileDescriptor,&stat) == 0)
+            {
+              fileHandle->atime.tv_sec  = stat.st_atime;
+              #ifdef HAVE_STAT_ATIM_TV_NSEC
+                fileHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
+              #else
+                fileHandle->atime.tv_nsec = 0;
+              #endif
+            }
+            else
+            {
+              fileHandle->atime.tv_sec  = 0;
+              fileHandle->atime.tv_nsec = UTIME_OMIT;
+            }
           }
-          else
-          {
-            fileHandle->atime.tv_sec  = 0;
-            fileHandle->atime.tv_nsec = UTIME_OMIT;
-          }
-        }
+        #elif defined(PLATFORM_WINDOWS)
+        #endif /* PLATFORM_... */
       #endif /* HAVE_O_NOATIME */
 
       // init handle
@@ -1759,7 +1789,13 @@ Errors __File_openCString(const char *__fileName__,
       File_deleteFileName(directoryName);
 
       // open file for writing
-      fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_LARGEFILE,0666);
+      #ifdef HAVE_O_LARGEFILE
+        #define FLAGS O_RDWR|O_CREAT|O_LARGEFILE
+      #else
+        #define FLAGS O_RDWR|O_CREAT
+      #endif
+      fileDescriptor = open(fileName,FLAGS,0666);
+      #undef FLAGS
       if (fileDescriptor == -1)
       {
         return ERRORX_(OPEN_FILE,errno,"%E",errno);
@@ -1806,7 +1842,13 @@ Errors __File_openCString(const char *__fileName__,
       File_deleteFileName(directoryName);
 
       // open file for append
-      fileDescriptor = open(fileName,O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE,0666);
+      #ifdef HAVE_O_LARGEFILE
+        #define FLAGS O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE
+      #else
+        #define FLAGS O_RDWR|O_CREAT|O_APPEND
+      #endif
+      fileDescriptor = open(fileName,FLAGS,0666);
+      #undef FLAGS
       if (fileDescriptor == -1)
       {
         return ERRORX_(IO,errno,"%E",errno);
@@ -2439,7 +2481,13 @@ Errors File_touch(ConstString fileName)
 
   assert(fileName != NULL);
 
-  handle = open(String_cString(fileName),O_WRONLY|O_CREAT|O_NOCTTY|O_NONBLOCK,0666);
+  #if defined(HAVE_O_NOCTTY) && defined(HAVE_O_NONBLOCK)
+    #define FLAGS O_WRONLY|O_CREAT|O_NOCTTY|O_NONBLOCK
+  #else
+    #define FLAGS O_WRONLY|O_CREAT
+  #endif
+  handle = open(String_cString(fileName),FLAGS,0666);
+  #undef FLAGS
   if (handle == -1)
   {
     return ERROR_(CREATE_FILE,errno);

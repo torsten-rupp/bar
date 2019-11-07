@@ -3439,8 +3439,7 @@ case "$host_os" in
 
           # patch to fix warnings:
           #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
-          (set -x; cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch)
-          # 1>/dev/null 2>/dev/null
+          (cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch) 1>/dev/null 2>/dev/null
 
           AC_MSG_COMPILE([pthreads-w32])
           result=1
@@ -3772,6 +3771,7 @@ AC_CHECK_HEADERS(\
                  link.h \
                  linux/fs.h \
                  linux/tcp.h \
+                 mntent.h \
                  netdb.h \
                  netinet/in.h \
                  pwd.h \
@@ -3787,6 +3787,8 @@ AC_CHECK_HEADERS(\
                  sys/socket.h \
                  sys/statfs.h \
                  sys/statvfs.h \
+                 sys/sysmacros.h \
+                 sys/utsname.h \
                  sys/vfs.h \
                  sys/wait.h \
                  sys/xattr.h \
@@ -3860,6 +3862,7 @@ AC_CHECK_PTHREAD_DEFINES
 # check constants
 AC_CHECK_CONSTANT(SIGBUS,         AC_DEFINE(HAVE_SIGBUS,         1,[SIGBUS available]),         ,signal.h)
 AC_CHECK_CONSTANT(SIGQUIT,        AC_DEFINE(HAVE_SIGQUIT,        1,[SIGQUIT available]),        ,signal.h)
+AC_CHECK_CONSTANT(SIGALRM,        AC_DEFINE(HAVE_SIGALRM,        1,[SIGALRM available]),        ,signal.h)
 AC_CHECK_CONSTANT(SIGUSR1,        AC_DEFINE(HAVE_SIGUSR1,        1,[SIGUSR1 available]),        ,signal.h)
 AC_CHECK_CONSTANT(S_IRUSR,        AC_DEFINE(HAVE_S_IRUSR,        1,[S_IRUSR available]),        ,sys/stat.h)
 AC_CHECK_CONSTANT(S_IWUSR,        AC_DEFINE(HAVE_S_IWUSR,        1,[S_IWUSR available]),        ,sys/stat.h)
@@ -3881,8 +3884,12 @@ AC_CHECK_CONSTANT(FS_APPEND_FL,   AC_DEFINE(HAVE_FS_APPEND_FL,   1,[FS_APPEND_FL
 AC_CHECK_CONSTANT(FS_NODUMP_FL,   AC_DEFINE(HAVE_FS_NODUMP_FL,   1,[FS_NODUMP_FL available]),   ,linux/fs.h)
 AC_CHECK_CONSTANT(BLKSSZGET,      AC_DEFINE(HAVE_BLKSSZGET,      1,[BLKSSZGET available]),      ,sys/mount.h)
 AC_CHECK_CONSTANT(BLKGETSIZE,     AC_DEFINE(HAVE_BLKGETSIZE,     1,[BLKGETSIZE available]),     ,sys/mount.h)
+AC_CHECK_CONSTANT(O_LARGEFILE,    AC_DEFINE(HAVE_O_LARGEFILE,    1,[O_LARGEFILE available]),    ,sys/types.h sys/stat.h fcntl.h)
 AC_CHECK_CONSTANT(O_DIRECTORY,    AC_DEFINE(HAVE_O_DIRECTORY,    1,[O_DIRECTORY available]),    ,sys/types.h sys/stat.h fcntl.h)
 AC_CHECK_CONSTANT(O_NOATIME,      AC_DEFINE(HAVE_O_NOATIME,      1,[O_NOATIME available]),      ,sys/types.h sys/stat.h fcntl.h)
+AC_CHECK_CONSTANT(O_NOCTTY,       AC_DEFINE(HAVE_O_NOCTTY,       1,[O_NOCTTY available]),       ,sys/types.h sys/stat.h fcntl.h)
+AC_CHECK_CONSTANT(O_NONBLOCK,     AC_DEFINE(HAVE_O_NONBLOCK,     1,[O_NONBLOCK available]),     ,sys/types.h sys/stat.h fcntl.h)
+AC_CHECK_CONSTANT(MSG_NOSIGNAL,   AC_DEFINE(HAVE_MSG_NOSIGNAL,   1,[MSG_NOSIGNAL available]),   ,sys/types.h sys/socket.h)
 
 AC_CHECK_CONSTANT(SIGPIPE,AC_DEFINE(HAVE_SIGPIPE,1,[SIGPIPE available]),,signal.h)
 
@@ -3896,11 +3903,12 @@ fi
 AC_CHECK_CONSTANT(IN_EXCL_UNLINK,AC_DEFINE(HAVE_IN_EXCL_UNLINK,1,[IN_EXCL_UNLINK available]),,sys/inotify.h)
 
 # check types
-AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STAT64,   1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
-AC_CHECK_TYPE(struct __stat64,AC_DEFINE(HAVE___STAT64, 1,[defined if struct __stat64 is available]),,[#include <sys/stat.h>])
-AC_CHECK_TYPE(struct _stati64,AC_DEFINE(HAVE__STATI64, 1,[defined if struct _stati64 is available]),,[#include <sys/stat.h>])
-AC_CHECK_TYPE(sigset_t,       AC_DEFINE(HAVE_SIGSET_T, 1,[defined if sigset_t is available]),      ,[#include <signal.h>]  )
-AC_CHECK_TYPE(siginfo_t,      AC_DEFINE(HAVE_SIGINFO_T,1,[defined if siginfo_t is available]),      ,[#include <signal.h>]  )
+AC_CHECK_TYPE(struct stat64,  AC_DEFINE(HAVE_STRUCT_STAT64,   1,[defined if struct stat64 is available]),  ,[#include <sys/stat.h>])
+AC_CHECK_TYPE(struct __stat64,AC_DEFINE(HAVE_STRUCT___STAT64, 1,[defined if struct __stat64 is available]),,[#include <sys/stat.h>])
+AC_CHECK_TYPE(struct _stati64,AC_DEFINE(HAVE_STRUCT__STATI64, 1,[defined if struct _stati64 is available]),,[#include <sys/stat.h>])
+
+AC_CHECK_TYPE(sigset_t, AC_DEFINE(HAVE_SIGSET_T, 1,[defined if sigset_t is available]), ,[#include <signal.h>]  )
+AC_CHECK_TYPE(siginfo_t,AC_DEFINE(HAVE_SIGINFO_T,1,[defined if siginfo_t is available]),,[#include <signal.h>]  )
 
 AC_CHECK_STRUCT_MEMBER(struct stat,st_atim.tv_nsec,AC_DEFINE(HAVE_STAT_ATIM_TV_NSEC,1,[defined if struct stat.st_atim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])
 AC_CHECK_STRUCT_MEMBER(struct stat,st_mtim.tv_nsec,AC_DEFINE(HAVE_STAT_MTIM_TV_NSEC,1,[defined if struct stat.st_mtim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])
@@ -3909,6 +3917,7 @@ AC_CHECK_STRUCT_MEMBER(struct stat,st_ctim.tv_nsec,AC_DEFINE(HAVE_STAT_CTIM_TV_N
 # check functions
 AC_CHECK_FUNCTION(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
 AC_CHECK_FUNCTION(pthread_setname_np,  AC_DEFINE(HAVE_PTHREAD_SETNAME_NP,  1,[pthread_setname_np() available]  ))
+AC_CHECK_FUNCTION(pthread_setschedprio,AC_DEFINE(HAVE_PTHREAD_SETSCHEDPRIO,1,[pthread_setschedprio() available]))
 
 AC_CHECK_FUNCTION(gethostbyaddr,  AC_DEFINE(HAVE_GETHOSTBYADDR,  1,[gethostbyaddr() available])  ,,winsock2.h)
 AC_CHECK_FUNCTION(gethostbyaddr_r,AC_DEFINE(HAVE_GETHOSTBYADDR_R,1,[gethostbyaddr_r() available]),,winsock2.h)
@@ -3975,6 +3984,8 @@ AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() availa
 AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
 AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])
 AC_CHECK_FUNCTION(nanosleep,  AC_DEFINE(HAVE_NANOSLEEP,  1,[nanosleep() available]))
+AC_CHECK_FUNCTION(timemg,     AC_DEFINE(HAVE_TIMEGM,     1,[timegm() available]))
+AC_CHECK_FUNCTION(strptime,   AC_DEFINE(HAVE_STRPTIME,   1,[strptime() available]))
 
 AC_CHECK_FUNCTION(pipe,   AC_DEFINE(HAVE_PIPE,   1,[pipe() available]))
 AC_CHECK_FUNCTION(fork,   AC_DEFINE(HAVE_FORK,   1,[fork() available]))
@@ -4024,6 +4035,18 @@ if test "$HAVE_CURL"; then
   AC_CHECK_FUNCTION(gnutls_global_init,,AC_ERROR([gnutls_global_init() required for curl]))
   AC_CHECK_FUNCTION(SSL_new,,AC_ERROR([SSL_new() required for curl]))
 fi
+
+case $host_os in
+  linux-*)
+    ;;
+  windows*|mingw*)
+    AC_CHECK_FUNCTION(WSAPoll,AC_DEFINE(HAVE_WSAPOLL,1,[WSAPoll() available]))
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
+    ;;
+esac
 
 dnl -------------------------------- misc ------------------------------
 

@@ -16,8 +16,12 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
-#include <sys/sysmacros.h>
+#ifdef HAVE_SYS_WAIT
+  #include <sys/wait.h>
+#endif
+#ifdef HAVE_SYS_SYSMACROS
+  #include <sys/sysmacros.h>
+#endif
 #include <unistd.h>
 #include <dirent.h>
 #include <utime.h>
@@ -28,7 +32,9 @@
 #ifdef HAVE_SYS_MOUNT_H
   #include <sys/mount.h>
 #endif
-#include <mntent.h>
+#ifdef HAVE_MNTENT_H
+  #include <mntent.h>
+#endif
 #include <errno.h>
 #include <assert.h>
 
@@ -519,10 +525,10 @@ bool Device_isMounted(ConstString mountPointName)
   bool          mounted;
   String        absoluteName;
   FILE          *mtab;
-  struct mntent mountEntry;
   char          buffer[4096];
   #if   defined(PLATFORM_LINUX)
-    char *s;
+    struct mntent mountEntry;
+    char          *s;
   #elif defined(PLATFORM_WINDOWS)
     char *s;
   #endif /* PLATFORM_... */
@@ -532,33 +538,37 @@ bool Device_isMounted(ConstString mountPointName)
   mounted = FALSE;
 
   // get absolute name
+  absoluteName = String_new();
   #if   defined(PLATFORM_LINUX)
     s = realpath(String_cString(mountPointName),NULL);
-    absoluteName = String_newCString(s);
+    String_setCString(absoluteName,s);
     free(s);
+
+    mtab = setmntent("/etc/mtab","r");
+    if (mtab != NULL)
+    {
+      while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
+      {
+        if (   String_equalsCString(mountPointName,mountEntry.mnt_fsname)
+            || String_equalsCString(mountPointName,mountEntry.mnt_dir)
+            || String_equalsCString(absoluteName,mountEntry.mnt_fsname)
+            || String_equalsCString(absoluteName,mountEntry.mnt_dir)
+           )
+        {
+          mounted = TRUE;
+          break;
+        }
+      }
+      endmntent(mtab);
+    }
   #elif defined(PLATFORM_WINDOWS)
     s = _fullpath(NULL,String_cString(mountPointName),0);
-    absoluteName = String_newCString(s);
+    String_setCString(absoluteName,s);
     free(s);
+// TODO: NYI
+    mounted = TRUE;
   #endif /* PLATFORM_... */
 
-  mtab = setmntent("/etc/mtab","r");
-  if (mtab != NULL)
-  {
-    while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
-    {
-      if (   String_equalsCString(mountPointName,mountEntry.mnt_fsname)
-          || String_equalsCString(mountPointName,mountEntry.mnt_dir)
-          || String_equalsCString(absoluteName,mountEntry.mnt_fsname)
-          || String_equalsCString(absoluteName,mountEntry.mnt_dir)
-         )
-      {
-        mounted = TRUE;
-        break;
-      }
-    }
-    endmntent(mtab);
-  }
   String_delete(absoluteName);
 
   return mounted;
@@ -721,9 +731,12 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
   #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
     long     l;
   #endif
-  FILE          *mtab;
-  struct mntent mountEntry;
   char          buffer[4096];
+  #if   defined(PLATFORM_LINUX)
+    struct mntent mountEntry;
+    FILE          *mtab;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   assert(deviceInfo != NULL);
   assert(deviceName != NULL);
@@ -778,19 +791,24 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
   }
 
   // check if mounted
-  mtab = setmntent("/etc/mtab","r");
-  if (mtab != NULL)
-  {
-    while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
+  #if   defined(PLATFORM_LINUX)
+    mtab = setmntent("/etc/mtab","r");
+    if (mtab != NULL)
     {
-      if (stringEquals(deviceName,mountEntry.mnt_fsname))
+      while (getmntent_r(mtab,&mountEntry,buffer,sizeof(buffer)) != NULL)
       {
-        deviceInfo->mounted = TRUE;
-        break;
+        if (stringEquals(deviceName,mountEntry.mnt_fsname))
+        {
+          deviceInfo->mounted = TRUE;
+          break;
+        }
       }
+      endmntent(mtab);
     }
-    endmntent(mtab);
-  }
+  #elif defined(PLATFORM_WINDOWS)
+// TODO: NYI
+    deviceInfo->mounted = TRUE;
+  #endif /* PLATFORM_... */
 
   return ERROR_NONE;
 }

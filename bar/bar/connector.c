@@ -15,7 +15,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <poll.h>
 #include <pthread.h>
 #include <locale.h>
 #include <time.h>
@@ -2812,10 +2811,11 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
 
   String                   name;
   StringMap                argumentMap;
-  sigset_t                 signalMask;
   IndexHandle              *indexHandle;
-  struct pollfd            pollfds[1];
-  struct timespec          pollTimeout;
+  SignalMask               signalMask;
+  WaitHandle               waitHandle;
+  int                      handle;
+  uint                     events;
   int                      n;
   uint                     id;
   ConnectorCommandFunction connectorCommandFunction;
@@ -2827,76 +2827,82 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   name        = String_new();
   argumentMap = StringMap_new();
 
-  // Note: ignore SIGALRM in ppoll()
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask,SIGALRM);
+  // Note: ignore SIGALRM in Misc_wait()
+  #ifdef HAVE_SIGALRM
+    // Note: ignore SIGALRM in poll()/pselect()
+    MISC_SIGNAL_MASK_CLEAR(signalMask);
+    MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
+  #endif /* HAVE_SIGALRM */
 
   // init index
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // process client requests
+  Misc_initWait(&waitHandle,8);
   while (   Connector_isConnected(connectorInfo)
          && !Thread_isQuit(&connectorInfo->thread)
         )
   {
     // wait for disconnect, command, or result
-    pollfds[0].fd     = Network_getSocket(&connectorInfo->io.network.socketHandle);
-    pollfds[0].events = POLLIN|POLLERR|POLLNVAL;
-    pollTimeout.tv_sec  = (long)(TIMEOUT /MS_PER_SECOND);
-    pollTimeout.tv_nsec = (long)((TIMEOUT%MS_PER_SECOND)*1000LL);
-    n = ppoll(pollfds,1,&pollTimeout,&signalMask);
+    Misc_waitReset(&waitHandle);
+    Misc_waitAdd(&waitHandle,Network_getSocket(&connectorInfo->io.network.socketHandle));
+    n = Misc_wait(&waitHandle,&signalMask,TIMEOUT);
     if (n > 0)
     {
-      if      ((pollfds[0].revents & POLLIN) != 0)
+      MISC_HANDLES_ITERATE(&waitHandle,handle,events)
       {
-        // process commands
-        if (ServerIO_receiveData(&connectorInfo->io))
+        if      ((events & HANDLE_EVENT_INPUT) != 0)
         {
-          while (ServerIO_getCommand(&connectorInfo->io,
-                                     &id,
-                                     name,
-                                     argumentMap
-                                    )
-                )
+          // process commands
+          if (ServerIO_receiveData(&connectorInfo->io))
           {
-            // find command
-            #ifdef CONNECTOR_DEBUG
-//TODO: enable
-              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
-              #ifndef NDEBUG
-                StringMap_debugPrint(2,argumentMap);
-              #endif
-            #endif
-            if (!findConnectorCommand(name,&connectorCommandFunction))
+            while (ServerIO_getCommand(&connectorInfo->io,
+                                       &id,
+                                       name,
+                                       argumentMap
+                                      )
+                  )
             {
-              ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
-              continue;
-            }
-            assert(connectorCommandFunction != NULL);
+              // find command
+              #ifdef CONNECTOR_DEBUG
+  //TODO: enable
+                fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
+                #ifndef NDEBUG
+                  StringMap_debugPrint(2,argumentMap);
+                #endif
+              #endif
+              if (!findConnectorCommand(name,&connectorCommandFunction))
+              {
+                ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
+                continue;
+              }
+              assert(connectorCommandFunction != NULL);
 
-            // process command
-            connectorCommandFunction(connectorInfo,indexHandle,id,argumentMap);
+              // process command
+              connectorCommandFunction(connectorInfo,indexHandle,id,argumentMap);
+            }
+          }
+          else
+          {
+            // disconnect -> stop
+            setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
           }
         }
-        else
+        else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID)) != 0)
         {
-          // disconnect -> stop
+          // error/disconnect -> stop
           setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
         }
+        #ifndef NDEBUG
+          else
+          {
+            HALT_INTERNAL_ERROR("unknown event in 0x%x",events);
+          }
+        #endif /* NDEBUG */
       }
-      else if ((pollfds[0].revents & (POLLERR|POLLNVAL)) != 0)
-      {
-        // error/disconnect -> stop
-        setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
-      }
-      #ifndef NDEBUG
-        else
-        {
-          HALT_INTERNAL_ERROR("unknown poll events 0x%x",pollfds[0].revents);
-        }
-      #endif /* NDEBUG */
     }
   }
+  Misc_doneWait(&waitHandle);
 
   // done index
   Index_close(indexHandle);

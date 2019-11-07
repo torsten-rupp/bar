@@ -658,13 +658,15 @@ INLINE void Job_listUnlock(void)
     if ((dt > 2*US_PER_S) && (Semaphore_lockCount(&jobList.lock) == 1))
     {
       fprintf(stderr,"Warning: long job list lock: %llums\n",dt/US_PER_MS);
-      debugDumpStackTrace(stderr,
-                          0,
-                          DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
-                          jobList.lockStackTrace,
-                          jobList.lockStackTraceSize,
-                          0
-                         );
+      #ifdef HAVE_BACKTRACE
+        debugDumpStackTrace(stderr,
+                            0,
+                            DEBUG_DUMP_STACKTRACE_OUTPUT_TYPE_NONE,
+                            jobList.lockStackTrace,
+                            jobList.lockStackTraceSize,
+                            0
+                           );
+      #endif /* HAVE_BACKTRACE */
     }
   #endif /* NDEBUG */
 

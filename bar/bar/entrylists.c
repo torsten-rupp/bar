@@ -127,7 +127,7 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
 
     error = Pattern_init(&newEntryNode->pattern,
                          string,
-                         entryNode->pattern.type|,
+                         entryNode->pattern.type,
                          PATTERN_FLAG_IGNORE_CASE
                         );
 

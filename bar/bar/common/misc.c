@@ -910,22 +910,29 @@ uint64 Misc_parseDateTime(const char *string)
      DATE_TIME_FORMAT_DEFAULT
   };
 
-  #ifdef HAVE_GETDATE_R
-    struct tm tmBuffer;
-  #endif /* HAVE_GETDATE_R */
+  struct tm  tmBuffer;
   struct tm  *tm;
   uint       z;
   const char *s;
   uint64     dateTime;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   assert(string != NULL);
 
-  #ifdef HAVE_GETDATE_R
+  #if   defined(HAVE_GETDATE_R)
     memClear(&tmBuffer,sizeof(struct tm));
     tm = (getdate_r(string,&tmBuffer) == 0) ? &tmBuffer : NULL;
-  #else /* not HAVE_GETDATE_R */
+  #elif defined(HAVE_GETDATE)
     tm = getdate(string);
-  #endif /* HAVE_GETDATE_R */
+   #else
+#ifndef WERROR
+#warning implement strptime
+#endif
+//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
+    tm = NULL;
+  #endif /* HAVE_GETDATE... */
 
   if (tm == NULL)
   {
@@ -933,7 +940,15 @@ uint64 Misc_parseDateTime(const char *string)
     z = 0;
     while ((z < SIZE_OF_ARRAY(DATE_TIME_FORMATS)) && (tm == NULL))
     {
-      s = (const char*)strptime(string,DATE_TIME_FORMATS[z],&tmBuffer);
+      #ifdef HAVE_STRPTIME      
+        s = (const char*)strptime(string,DATE_TIME_FORMATS[z],&tmBuffer);
+      #else
+#ifndef WERROR
+#warning implement strptime
+#endif
+//TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
+        s = NULL;
+      #endif
       if ((s != NULL) && ((*s) == '\0'))
       {
         tm = &tmBuffer;
@@ -1459,6 +1474,117 @@ String Misc_expandMacros(String           string,
 
 /*---------------------------------------------------------------------*/
 
+void Misc_initWait(WaitHandle *waitHandle, uint maxHandleCount)
+{
+  assert(waitHandle != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    waitHandle->pollfds = (struct pollfd*)malloc(maxHandleCount*sizeof(struct pollfd));
+    if (waitHandle->pollfds == NULL)
+    {
+      HALT_INSUFFICIENT_MEMORY();
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      waitHandle->pollfds = (struct pollfd*)malloc(maxHandleCount*sizeof(WSAPOLLFD));
+      if (waitHandle->pollfds == NULL)
+      {
+        HALT_INSUFFICIENT_MEMORY();
+      }
+    #else /* not HAVE_WSAPOLL */
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+  waitHandle->handleCount    = 0;
+  waitHandle->maxHandleCount = maxHandleCount;
+}
+
+void Misc_doneWait(WaitHandle *waitHandle)
+{
+  assert(waitHandle != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    assert(waitHandle->pollfds != NULL);
+
+    free(waitHandle->pollfds);
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      assert(waitHandle->pollfds != NULL);
+
+      free(waitHandle->pollfds);
+    #else /* not HAVE_WSAPOLL */
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+}
+
+void Misc_waitReset(WaitHandle *waitHandle)
+{
+  assert(waitHandle != NULL);
+
+  waitHandle->handleCount = 0;
+}
+
+void Misc_waitAdd(WaitHandle *waitHandle, int handle)
+{
+  assert(waitHandle != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    assert(waitHandle->pollfds != NULL);
+
+    if (waitHandle->handleCount >= waitHandle->maxHandleCount)
+    {
+      waitHandle->maxHandleCount += 64;
+      waitHandle->pollfds = (struct pollfd*)realloc(waitHandle->pollfds,waitHandle->maxHandleCount);
+      if (waitHandle->pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
+    }
+    waitHandle->pollfds[waitHandle->handleCount].fd      = handle;
+    waitHandle->pollfds[waitHandle->handleCount].events  = POLLIN|POLLERR|POLLNVAL;
+    waitHandle->pollfds[waitHandle->handleCount].revents = 0;
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      assert(waitHandle->pollfds != NULL);
+      if (waitHandle->handleCount >= waitHandle->maxHandleCount)
+      {
+        waitHandle->maxHandleCount += 64;
+        waitHandle->pollfds = (struct pollfd*)realloc(waitHandle->pollfds,waitHandle->maxHandleCount);
+        if (waitHandle->pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
+      }
+      waitHandle->pollfds[waitHandle->handleCount].fd      = handle;
+      waitHandle->pollfds[waitHandle->handleCount].events  = POLLIN|POLLERR|POLLNVAL;
+      waitHandle->pollfds[waitHandle->handleCount].revents = 0;
+    #else /* not HAVE_WSAPOLL */
+      if (waitHandle->handleCount >= FD_SETSIZE) HALT_INSUFFICIENT_MEMORY();
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+  waitHandle->handleCount++;
+}
+
+int Misc_wait(WaitHandle *waitHandle,
+              SignalMask *signalMask,
+              long       timeout
+             )
+{
+  #if  defined(PLATFORM_LINUX)
+    struct timespec pollTimeout;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */  
+
+  assert(waitHandle != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    assert(waitHandle->pollfds != NULL);
+
+    pollTimeout.tv_sec  = (long)(timeout /US_PER_SECOND);
+    pollTimeout.tv_nsec = (long)((timeout%US_PER_SECOND)*1000LL);
+    return ppoll(waitHandle->pollfds,waitHandle->handleCount,&pollTimeout,signalMask);
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      return WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout);
+    #else /* not HAVE_WSAPOLL */
+      return select(waitHandle->handleCount,&waitHandle->readfds,&waitHandle->writefds,&waitHandle->exceptionfds,timeout);
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+}
+
 bool Misc_findCommandInPath(String     command,
                             const char *name
                            )
@@ -1777,16 +1903,23 @@ bool Misc_getYesNo(const char *message)
 
 void Misc_getConsoleSize(uint *rows, uint *columns)
 {
-  struct winsize size;
+  #if   defined(PLATFORM_LINUX)
+    struct winsize size;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   if (rows    != NULL) (*rows   ) = 25;
   if (columns != NULL) (*columns) = 80;
 
-  if (ioctl(STDOUT_FILENO,TIOCGWINSZ,&size) == 0)
-  {
-    if (rows    != NULL) (*rows   ) = size.ws_row;
-    if (columns != NULL) (*columns) = size.ws_col;
-  }
+  #if   defined(PLATFORM_LINUX)
+    if (ioctl(STDOUT_FILENO,TIOCGWINSZ,&size) == 0)
+    {
+      if (rows    != NULL) (*rows   ) = size.ws_row;
+      if (columns != NULL) (*columns) = size.ws_col;
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    // TODO: NYI
+  #endif /* PLATFORM_... */
 }
 
 /*---------------------------------------------------------------------*/

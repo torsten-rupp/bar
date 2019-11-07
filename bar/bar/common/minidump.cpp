@@ -14,7 +14,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/utsname.h>
+#ifdef HAVE_SYS_UTSNAME_H
+  #include <sys/utsname.h>
+#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

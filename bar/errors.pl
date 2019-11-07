@@ -419,7 +419,7 @@ typedef intptr_t* Errors;
 \***********************************************************************/
 
 #ifndef NDEBUG
-int _Error_dataToIndex(const char *fileName, ulong lineNb, const char *format, ...);
+int _Error_dataToIndex(const char *fileName, unsigned long lineNb, const char *format, ...);
 #else
 int _Error_dataToIndex(const char *format, ...);
 #endif

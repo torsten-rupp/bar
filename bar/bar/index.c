@@ -7219,8 +7219,7 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
                            ConstString  comment
                           )
 {
-  Errors  error;
-  IndexId entityId;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
@@ -11024,7 +11023,6 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(Index_getType(storageIndexId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
-fprintf(stderr,"%s, %d: storageIndexId=%lld id=%lld\n",__FILE__,__LINE__,storageIndexId,Index_getDatabaseId(storageIndexId));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)

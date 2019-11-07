@@ -47,7 +47,10 @@
 #include <assert.h>
 
 #if   defined(PLATFORM_LINUX)
+  #include <pthread.h>
 #elif defined(PLATFORM_WINDOWS)
+  #include <windows.h>
+  #include <pthread.h>
   #include <intrin.h>
 #endif /* PLATFORM_... */
 
@@ -1539,26 +1542,22 @@ unsigned long lcm(unsigned long a, unsigned long b);
 * Notes  : -
 \***********************************************************************/
 
-#ifdef PLATFORM_LINUX
 static inline uint64 getCycleCounter(void)
 {
-  #if defined(__x86_64__) || defined(__i386)
-    unsigned int l,h;
+  #ifdef PLATFORM_LINUX
+    #if defined(__x86_64__) || defined(__i386)
+      unsigned int l,h;
 
-    asm __volatile__ ("rdtsc" : "=a" (l), "=d" (h));
+      asm __volatile__ ("rdtsc" : "=a" (l), "=d" (h));
 
-    return ((uint64)h << 32) | ((uint64)l << 0);
-  #else
-    return 0LL;
-  #endif
+      return ((uint64)h << 32) | ((uint64)l << 0);
+    #else
+      return 0LL;
+    #endif
+  #elif PLATFORM_WINDOWS
+    return __rdtsc();
+  #endif /* PLATFORM_... */
 }
-#elif PLATFORM_WINDOWS
-#include <intrin.h>
-static inline uint64 rdtsc(void)
-{
-  return __rdtsc();
-}
-#endif /* PLATFORM_... */
 
 /***********************************************************************\
 * Name   : atomicIncrement

@@ -22,6 +22,7 @@
   #include <pthread.h>
 #elif defined(PLATFORM_WINDOWS)
   #include <windows.h>
+  #include <pthread.h>
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
