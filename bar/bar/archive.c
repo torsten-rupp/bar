@@ -1731,7 +1731,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
             {
               error = Index_assignTo(archiveHandle->indexHandle,
                                      NULL,  // jobUUID,
-                                     NULL,  // entityIndexId,
+                                     INDEX_ID_NONE,  // entityIndexId,
                                      archiveIndexNode->storageId,
                                      NULL,  // toJobUUID,
                                      entityId,
@@ -1976,7 +1976,6 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
   archiveIndexNode->directory.userId          = userId;
   archiveIndexNode->directory.groupId         = groupId;
   archiveIndexNode->directory.permission      = permission;
-fprintf(stderr,"%s, %d: indexAddDirectory %lld %s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
   error = addArchiveIndexNode(archiveHandle,archiveIndexNode);
   if (error != ERROR_NONE)
@@ -14764,7 +14763,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
   // index archive contents
   printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
-fprintf(stderr,"%s, %d: create index %lld\n",__FILE__,__LINE__,storageId);
 
   // get current uuidId, entityId
 //TODO
