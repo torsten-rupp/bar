@@ -1640,7 +1640,6 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
                                   );
             break;
           case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-fprintf(stderr,"%s, %d: add ARCHIVE_ENTRY_TYPE_DIRECTORY %lld %s\n",__FILE__,__LINE__,archiveIndexNode->storageId,String_cString( archiveIndexNode->directory.name));
             error = Index_addDirectory(archiveHandle->indexHandle,
                                        archiveIndexNode->storageId,
                                        archiveIndexNode->directory.name,
