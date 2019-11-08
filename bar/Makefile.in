@@ -152,20 +152,20 @@ TARGETS              = bar/bar@EXEEXT@ \
 DOC                  = $(if $(TXT2MAN),doc/bar.7) \
                        $(if $(UNOCONV),doc/bar.pdf) \
 
-DOC_IMAGES           = doc/images/archivename-editor.png \
-                       doc/images/entries.png \
-                       doc/images/images.png \
-                       doc/images/filters+mounts.png \
-                       doc/images/restore-dialog.png \
-                       doc/images/restore.png \
-                       doc/images/schedule.png \
-                       doc/images/scripts.png \
-                       doc/images/server-commands.png \
-                       doc/images/server-general.png \
-                       doc/images/server-servers.png \
-                       doc/images/server-verbosity+log.png \
-                       doc/images/status.png \
-                       doc/images/storage.png \
+DOC_IMAGES           = $(SOURCE_DIR)/doc/images/archivename-editor.png \
+                       $(SOURCE_DIR)/doc/images/entries.png \
+                       $(SOURCE_DIR)/doc/images/images.png \
+                       $(SOURCE_DIR)/doc/images/filters+mounts.png \
+                       $(SOURCE_DIR)/doc/images/restore-dialog.png \
+                       $(SOURCE_DIR)/doc/images/restore.png \
+                       $(SOURCE_DIR)/doc/images/schedule.png \
+                       $(SOURCE_DIR)/doc/images/scripts.png \
+                       $(SOURCE_DIR)/doc/images/server-commands.png \
+                       $(SOURCE_DIR)/doc/images/server-general.png \
+                       $(SOURCE_DIR)/doc/images/server-servers.png \
+                       $(SOURCE_DIR)/doc/images/server-verbosity+log.png \
+                       $(SOURCE_DIR)/doc/images/status.png \
+                       $(SOURCE_DIR)/doc/images/storage.png \
 
 DOC_IMAGES_SMALL     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
 DOC_IMAGES_LARGE     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)

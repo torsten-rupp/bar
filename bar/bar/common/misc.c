@@ -1490,7 +1490,12 @@ uint Misc_waitHandle(int        handle,
       fd_set          readfds;
       fd_set          writefds;
       fd_set          exceptionfds;
-      struct timespec *selectTimeout
+      #ifdef HAVE_PSELECT
+        struct timespec selectTimeout;
+      #else /* not HAVE_PSELECT */
+        struct timeval selectTimeout;
+      #endif /* HAVE_PSELECT */
+      int             n;
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
 
@@ -1510,17 +1515,27 @@ uint Misc_waitHandle(int        handle,
       pollfds[0].revents = 0;
       events = (WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout) > 0) ? pollfds[0].revents : 0;
     #else /* not HAVE_WSAPOLL */
-      FD_SET(handle,&waitHandle->readfds);
-      FD_SET(handle,&waitHandle->writefds);
-      FD_SET(handle,&waitHandle->exceptionfds);
-      selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
-      selectTimeout.tv_usec = (long)(timeout%MS_PER_SECOND)*US_PER_MS;
-      if (pselect(handle+1,&readfds,&writefds,&exceptionfds,selectTimeout,signalMask) > 0)
+      FD_ZERO(&readfds);
+      FD_ZERO(&writefds);
+      FD_ZERO(&exceptionfds);
+      FD_SET(handle,&readfds);
+      FD_SET(handle,&writefds);
+      FD_SET(handle,&exceptionfds);
+      #ifdef HAVE_PSELECT
+        selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
+        selectTimeout.tv_nsec = (long)(timeout%MS_PER_SECOND)*NS_PER_MS;
+        n = pselect(handle+1,&readfds,&writefds,&exceptionfds,&selectTimeout,signalMask);
+      #else /* not HAVE_PSELECT */
+        selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
+        selectTimeout.tv_usec = (long)(timeout%MS_PER_SECOND)*US_PER_MS;
+        n = select(handle+1,&readfds,&writefds,&exceptionfds,&selectTimeout);
+      #endif /* HAVE_PSELECT */
+      if (n > 0)
       {
         events = 0;
-        if (FD_ISSET(handle,&readfds     ) events |= HANDLE_EVENT_INPUT;
-        if (FD_ISSET(handle,&writefds    ) events |= HANDLE_EVENT_OUTPUT;
-        if (FD_ISSET(handle,&exceptionfds) events |= HANDLE_EVENT_ERROR;
+        if (FD_ISSET(handle,&readfds     )) events |= HANDLE_EVENT_INPUT;
+        if (FD_ISSET(handle,&writefds    )) events |= HANDLE_EVENT_OUTPUT;
+        if (FD_ISSET(handle,&exceptionfds)) events |= HANDLE_EVENT_ERROR;
       }
       else
       {
@@ -1600,7 +1615,7 @@ void Misc_waitAdd(WaitHandle *waitHandle, int handle, uint events)
     if (waitHandle->handleCount >= waitHandle->maxHandleCount)
     {
       waitHandle->maxHandleCount += 64;
-      waitHandle->pollfds = (struct pollfd*)realloc(waitHandle->pollfds,waitHandle->maxHandleCount);
+      waitHandle->pollfds = (struct pollfd*)realloc(waitHandle->pollfds,waitHandle->maxHandleCount*sizeof(struct pollfd));
       if (waitHandle->pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
     }
     waitHandle->pollfds[waitHandle->handleCount].fd      = handle;
@@ -1613,7 +1628,7 @@ void Misc_waitAdd(WaitHandle *waitHandle, int handle, uint events)
       if (waitHandle->handleCount >= waitHandle->maxHandleCount)
       {
         waitHandle->maxHandleCount += 64;
-        waitHandle->pollfds = (struct pollfd*)realloc(waitHandle->pollfds,waitHandle->maxHandleCount);
+        waitHandle->pollfds = (struct pollfd*)realloc(waitHandle->pollfds,waitHandle->maxHandleCount*sizeof(struct WSAPOLLFD));
         if (waitHandle->pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
       }
       waitHandle->pollfds[waitHandle->handleCount].fd      = handle;
@@ -1625,6 +1640,7 @@ void Misc_waitAdd(WaitHandle *waitHandle, int handle, uint events)
       if ((events & HANDLE_EVENT_INPUT ) != 0) FD_SET(handle,&waitHandle->readfds);
       if ((events & HANDLE_EVENT_OUTPUT) != 0) FD_SET(handle,&waitHandle->writefds);
       if ((events & HANDLE_EVENT_ERROR ) != 0) FD_SET(handle,&waitHandle->exceptionfds);
+      waitHandle->handleCount = MAX(handle,waitHandle->handleCount);
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
   waitHandle->handleCount++;
@@ -1640,7 +1656,11 @@ int Misc_waitHandles(WaitHandle *waitHandle,
   #elif defined(PLATFORM_WINDOWS)
     #ifdef HAVE_WSAPOLL
     #else /* not HAVE_WSAPOLL */
-      struct timespec *selectTimeout
+      #ifdef HAVE_PSELECT
+        struct timespec selectTimeout;
+      #else /* not HAVE_PSELECT */
+        struct timeval selectTimeout;
+      #endif /* HAVE_PSELECT */
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
 
@@ -1656,9 +1676,15 @@ int Misc_waitHandles(WaitHandle *waitHandle,
     #ifdef HAVE_WSAPOLL
       return WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout);
     #else /* not HAVE_WSAPOLL */
-      selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
-      selectTimeout.tv_usec = (long)(timeout%MS_PER_SECOND)*US_PER_MS;
-      return pselect(waitHandle->handleCount,&waitHandle->readfds,&waitHandle->writefds,&waitHandle->exceptionfds,selectTimeout);
+      #ifdef HAVE_PSELECT
+        selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
+        selectTimeout.tv_nsec = (long)(timeout%MS_PER_SECOND)*NS_PER_MS;
+        return pselect(waitHandle->handleCount+1,&waitHandle->readfds,&waitHandle->writefds,&waitHandle->exceptionfds,&selectTimeout,signalMask);
+      #else /* not HAVE_PSELECT */
+        selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
+        selectTimeout.tv_usec = (long)(timeout%MS_PER_SECOND)*US_PER_MS;
+        return select(waitHandle->handleCount+1,&waitHandle->readfds,&waitHandle->writefds,&waitHandle->exceptionfds,&selectTimeout);
+      #endif /* HAVE_PSELECT */
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
 }

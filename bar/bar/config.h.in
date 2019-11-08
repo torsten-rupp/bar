@@ -358,6 +358,9 @@
 /* posix_fadvise() available */
 #undef HAVE_POSIX_FADVISE
 
+/* pselect() available */
+#undef HAVE_PSELECT
+
 /* pthreads-w32 installed (local) */
 #undef HAVE_PTHREADS_W32
 
@@ -378,6 +381,9 @@
 
 /* Define to 1 if you have the <regex.h> header file. */
 #undef HAVE_REGEX_H
+
+/* select() available */
+#undef HAVE_SELECT
 
 /* setlocale() available */
 #undef HAVE_SETLOCALE

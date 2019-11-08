@@ -3972,6 +3972,8 @@ AC_CHECK_FUNCTION(mktemp,       AC_DEFINE(HAVE_MKTEMP,       1,[mktemp() availab
 AC_CHECK_FUNCTION(llistxattr,   AC_DEFINE(HAVE_LLISTXATTR,   1,[llistxattr() available]) ,,sys/xattr.h)
 AC_CHECK_FUNCTION(lgetxattr,    AC_DEFINE(HAVE_LGETXATTR,    1,[lgetxattr() available]) ,,sys/xattr.h)
 AC_CHECK_FUNCTION(lsetxattr,    AC_DEFINE(HAVE_LSETXATTR,    1,[lsetxattr() available]) ,,sys/xattr.h)
+AC_CHECK_FUNCTION(select,       AC_DEFINE(HAVE_SELECT,       1,[select() available]) ,,sys/select.h winsock2.h)
+AC_CHECK_FUNCTION(pselect,      AC_DEFINE(HAVE_PSELECT,      1,[pselect() available]) ,,sys/select.h winsock2.h)
 AC_CHECK_MKDIR_ARGUMENTS
 
 AC_CHECK_FUNCTION(u_init,       AC_DEFINE(HAVE_U_INIT,1,[u_init() available])  ,,icu.h)

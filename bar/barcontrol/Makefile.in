@@ -16,7 +16,7 @@ ENABLE_GUI         = @ENABLE_GUI@
 
 #------------------------------------ paths ----------------------------------
 
-SOURCE_DIR         = @srcdir@
+SOURCE_DIR         = $(abspath @srcdir@)
 
 SWT_DIR            = @SWT_DIR@
 LAUNCH4J_DIR       = @LAUNCH4J_DIR@
@@ -149,6 +149,7 @@ vpath %.java $(SOURCE_DIR)
 classes/%.class: $(SOURCE_DIR)/src/%.java src/BARException.java
 	$(INSTALL) -d classes
 ifneq ($(JAVAC),)
+	echo classes/$*.class
 	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java
 else
 	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
@@ -228,7 +229,7 @@ clean: \
 distclean: \
   clean
 	$(RMF) Makefile
-	$(RMF) src/Config.java
+	$(RMF) $(SOURCE_DIR)/src/Config.java
 	$(RMF) barcontrol
 	$(RMF) barcontrol@EXEEXT@ barcontrol@SHELLEXT@
 
@@ -276,15 +277,6 @@ src/BARException.java: $(SOURCE_DIR)/../errors.def $(SOURCE_DIR)/../errors.pl Ma
 	$(INSTALL) -d $(@D)
 	$(PERL) $(SOURCE_DIR)/../errors.pl < $^ -j $@ --java-class-name BARException --tr BARControl.tr
 
-# compile Java source
-classes/%.class: $(SOURCE_DIR)/src/%.java src/BARException.java
-	$(INSTALL) -d classes
-ifneq ($(JAVAC),)
-	$(JAVAC) $(JAVAC_FLAGS) -d classes -classpath $(CLASSPATH) $(SOURCE_DIR)/src/*.java
-else
-	@$(ECHO) "ERROR: no 'javac' command - cannot compile Java sources"
-endif
-
 .PHONY: compile
 compile: $(OBJECTS)
 
@@ -293,36 +285,36 @@ compile: $(OBJECTS)
 # i18n
 .PHONY: i18n po
 i18n po: \
-  po/german.po \
-  po/japanese.po
+  $(SOURCE_DIR)/po/german.po \
+  $(SOURCE_DIR)/po/japanese.po
 
-po/barcontrol.pot: $(SOURCE_DIR)/src/*.java
+$(SOURCE_DIR)/po/barcontrol.pot: $(SOURCE_DIR)/src/*.java
 	$(INSTALL) -d $(@D)
 	$(XGETTEXT) $(XGETTEXT_FLAGS) -o $@ src/*.java
 
-po/german.po: po/barcontrol.pot
+$(SOURCE_DIR)/po/german.po: $(SOURCE_DIR)/po/barcontrol.pot
 	$(INSTALL) -d $(@D)
 	$(MSGMERGE) -U $@ po/barcontrol.pot
 	$(TOUCH) $@
 
-po/japanese.po: po/barcontrol.pot
+$(SOURCE_DIR)/po/japanese.po: $(SOURCE_DIR)/po/barcontrol.pot
 	$(INSTALL) -d $(@D)
 	$(MSGMERGE) -U $@ po/barcontrol.pot
 	$(TOUCH) $@
 
-classes/app/i18n/Messages_de.class: po/german.po
-	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l de po/german.po
+classes/app/i18n/Messages_de.class: $(SOURCE_DIR)/po/german.po
+	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l de $(SOURCE_DIR)/po/german.po
 
-classes/app/i18n/Messages_jp.class: po/japanese.po
-	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l jp po/japanese.po
+classes/app/i18n/Messages_jp.class: $(SOURCE_DIR)/po/japanese.po
+	$(MSGFMT) --java2 -d classes -r app.i18n.Messages -l jp $(SOURCE_DIR)/po/japanese.po
 
 .PHONE: poeditde
 poeditde:
-	GTK_IM_MODULE= poedit po/german.po
+	GTK_IM_MODULE= poedit $(SOURCE_DIR)/po/german.po
 
 .PHONE: poeditjp
 poeditjp:
-	poedit po/japanese.po
+	poedit $(SOURCE_DIR)/po/japanese.po
 
 # ----------------------------------------------------------------------------
 
@@ -379,13 +371,14 @@ clean_jars:
 # create jars
 barcontrol.jar: \
   $(SOURCE_DIR)/jar.txt \
-  $(OBJECTS) $(SOURCE_DIR)/images/*.png
+  $(OBJECTS) \
+  $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
-	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	($(CD) tmp/$@; $(JAR) cmf $(SOURCE_DIR)/jar.txt ../../$@ *)
 	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
@@ -401,14 +394,14 @@ barcontrol-linux.jar: \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
-	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(UNZIP) $(SWT_JAR_LINUX) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
-	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	($(CD) tmp/$@; $(JAR) cmf $(SOURCE_DIR)/jar.txt ../../$@ *)
 	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
@@ -424,14 +417,14 @@ barcontrol-linux_64.jar: \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
-	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_LINUX_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(UNZIP) $(SWT_JAR_LINUX_64) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
-	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	($(CD) tmp/$@; $(JAR) cmf $(SOURCE_DIR)/jar.txt ../../$@ *)
 	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
@@ -447,14 +440,14 @@ barcontrol-solaris.jar: \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
-	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_SOLARIS) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(UNZIP) $(SWT_JAR_SOLARIS) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
-	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	($(CD) tmp/$@; $(JAR) cmf $(SOURCE_DIR)/jar.txt ../../$@ *)
 	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
@@ -470,14 +463,14 @@ barcontrol-macosx.jar: \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
-	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_MACOSX) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(UNZIP) $(SWT_JAR_MACOSX) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
-	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	($(CD) tmp/$@; $(JAR) cmf $(SOURCE_DIR)/jar.txt ../../$@ *)
 	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
@@ -493,14 +486,14 @@ barcontrol-macosx_64.jar: \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
-	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_MACOSX_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(UNZIP) $(SWT_JAR_MACOSX_64) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
-	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	($(CD) tmp/$@; $(JAR) cmf $(SOURCE_DIR)/jar.txt ../../$@ *)
 	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
@@ -516,14 +509,14 @@ barcontrol-windows.jar: \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
-	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_WINDOWS) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(UNZIP) $(SWT_JAR_WINDOWS) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
-	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	($(CD) tmp/$@; $(JAR) cmf $(SOURCE_DIR)/jar.txt ../../$@ *)
 	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"
@@ -539,14 +532,14 @@ barcontrol-windows_64.jar: \
   $(SOURCE_DIR)/images/*.png
 ifneq ($(JAR),)
 	$(INSTALL) -d tmp/$@
-	($(CD) tmp/$@; $(UNZIP) ../../$(SWT_JAR_WINDOWS_64) 1>/dev/null; $(RMRF) META-INF)
-	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
-	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) ../../$i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(UNZIP) $(SWT_JAR_WINDOWS_64) 1>/dev/null; $(RMRF) META-INF)
+	($(CD) tmp/$@; $(foreach i,$(JLINE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(GETTEXT_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
+	($(CD) tmp/$@; $(foreach i,$(BOUNCY_CASTLE_JARS),$(UNZIP) $i 1>/dev/null; $(RMRF) META-INF;))
 	($(CD) classes; $(FIND) . -type f -name '*.class')|$(TAR) cf - -C classes -T -|($(CD) tmp/$@; $(TAR) xf -)
 	$(INSTALL) -d tmp/$@/images
 	$(CP) $(SOURCE_DIR)/images/*.png tmp/$@/images
-	($(CD) tmp/$@; $(JAR) cmf ../../$(SOURCE_DIR)/jar.txt ../../$@ *)
+	($(CD) tmp/$@; $(JAR) cmf $(SOURCE_DIR)/jar.txt ../../$@ *)
 	$(RMRF) tmp/$@
 else
 	@$(ECHO) "ERROR: no 'jar' command - cannot create $@"

@@ -20945,6 +20945,106 @@ fi
 
 
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for select" >&5
+$as_echo_n "checking for select... " >&6; }
+if ${ac_cv_func_select+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_select="no"
+      echo > conftest.log
+
+      for ac_headers in sys/select.h winsock2.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void select();"; fi`
+                                         #ifdef select
+                                         #else
+                                           return (int)select;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_select=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_select" >&5
+$as_echo "$ac_cv_func_select" >&6; }
+  if test "$ac_cv_func_select" != no; then :
+
+$as_echo "#define HAVE_SELECT 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for pselect" >&5
+$as_echo_n "checking for pselect... " >&6; }
+if ${ac_cv_func_pselect+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_pselect="no"
+      echo > conftest.log
+
+      for ac_headers in sys/select.h winsock2.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void pselect();"; fi`
+                                         #ifdef pselect
+                                         #else
+                                           return (int)pselect;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_pselect=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_pselect" >&5
+$as_echo "$ac_cv_func_pselect" >&6; }
+  if test "$ac_cv_func_pselect" != no; then :
+
+$as_echo "#define HAVE_PSELECT 1" >>confdefs.h
+
+elif :; then :
+
+fi
+
+
+
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking number of arguments of mkdir()" >&5
 $as_echo_n "checking number of arguments of mkdir()... " >&6; }
 if ${ac_cv_mkdir_arguments_count+:} false; then :
