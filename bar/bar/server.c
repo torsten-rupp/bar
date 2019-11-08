@@ -3847,7 +3847,6 @@ LOCAL void indexThreadCode(void)
           {
             String_set(printableStorageName,storageName);
           }
-fprintf(stderr,"%s, %d: fileName=%s id=%lld\n",__FILE__,__LINE__,String_cString(storageSpecifier.archiveName),storageId);
 
           // init storage
           startTimestamp = 0LL;
@@ -3878,7 +3877,6 @@ fprintf(stderr,"%s, %d: fileName=%s id=%lld\n",__FILE__,__LINE__,String_cString(
 
               // index update
               startTimestamp = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: update index storageId=%lld\n",__FILE__,__LINE__,storageId);
               error = Archive_updateIndex(indexHandle,
                                           storageId,
                                           &storageInfo,
@@ -3890,11 +3888,6 @@ fprintf(stderr,"%s, %d: update index storageId=%lld\n",__FILE__,__LINE__,storage
                                           NULL  // logHandle
                                          );
               endTimestamp = Misc_getTimestamp();
-//TODO: remove
-if (error != ERROR_NONE)
-{
-fprintf(stderr,"%s, %d: storageId=%lld\n",__FILE__,__LINE__,storageId);
-}
 
               // stop if done, interrupted, or quit
               if (   (error == ERROR_NONE)
@@ -17823,22 +17816,22 @@ LOCAL void incrementAuthorizationFail(ClientNode *clientNode)
 }
 
 /***********************************************************************\
-* Name   : getAuthorizationFailTimeout
-* Purpose: get authorazation fail timestamp
+* Name   : getAuthorizationFailTimestamp
+* Purpose: get authorization fail timestamp
 * Input  : authorizationFailNode - authorization fail node
 * Output : -
-* Return : authorization fail timestamp
+* Return : authorization fail timestamp [us]
 * Notes  : -
 \***********************************************************************/
 
-LOCAL uint64 getAuthorizationFailTimeout(const AuthorizationFailNode *authorizationFailNode)
+LOCAL uint64 getAuthorizationFailTimestamp(const AuthorizationFailNode *authorizationFailNode)
 {
   assert(authorizationFailNode != NULL);
 
   return   authorizationFailNode->lastTimestamp
           +(uint64)MIN(SQUARE(authorizationFailNode->count)*AUTHORIZATION_PENALITY_TIME,
-                       MAX_AUTHORIZATION_PENALITY_TIME
-                      )*US_PER_MS;
+                        MAX_AUTHORIZATION_PENALITY_TIME
+                       )*US_PER_MS;
 }
 
 /***********************************************************************\
@@ -17853,14 +17846,16 @@ LOCAL uint64 getAuthorizationFailTimeout(const AuthorizationFailNode *authorizat
 LOCAL uint getAuthorizationWaitRestTime(const AuthorizationFailNode *authorizationFailNode)
 {
   uint   restTime;
-  uint64 authorizationFailTimeout;
+  uint64 authorizationFailTimestamp;
   uint64 nowTimestamp;
 
   if (authorizationFailNode != NULL)
   {
-    authorizationFailTimeout = getAuthorizationFailTimeout(authorizationFailNode);
-    nowTimestamp             = Misc_getTimestamp();
-    restTime = (nowTimestamp < authorizationFailTimeout) ? (uint)((authorizationFailTimeout-nowTimestamp)/US_PER_SECOND) : 0;
+    authorizationFailTimestamp = getAuthorizationFailTimestamp(authorizationFailNode);
+    nowTimestamp               = Misc_getTimestamp();
+    restTime = (nowTimestamp < authorizationFailTimestamp)
+                 ? (uint)((authorizationFailTimestamp-nowTimestamp)/US_PER_SECOND)
+                 : 0;
   }
   else
   {
@@ -18005,13 +18000,11 @@ Errors Server_run(ServerModes       mode,
   WaitHandle            waitHandle;
   int                   handle;
   uint                  events;
-  uint                  pollServerSocketIndex,pollServerTLSSocketIndex;
-  uint64                nowTimestamp,waitTimeout,nextTimestamp;  // [us]
+  uint64                nowTimestamp,waitTimeout,nextTimestamp;  // [ms]
   bool                  clientDelayFlag;
   AuthorizationFailNode *authorizationFailNode,*oldestAuthorizationFailNode;
   uint                  clientWaitRestTime;
   ClientNode            *clientNode;
-  uint                  pollfdIndex;
   char                  s[256];
   String                name;
   uint                  id;
@@ -18294,13 +18287,10 @@ Errors Server_run(ServerModes       mode,
     Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
     Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-#warning REMOVE
-#if 0
     if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
     {
       HALT_FATAL_ERROR("Cannot initialize index thread!");
     }
-#endif
     if (globalOptions.indexDatabaseAutoUpdateFlag)
     {
       if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
@@ -18346,8 +18336,6 @@ Errors Server_run(ServerModes       mode,
 
   // process client requests
   Misc_initWait(&waitHandle,64);
-  pollServerSocketIndex    = 0;
-  pollServerTLSSocketIndex = 0;
   name                     = String_new();
   argumentMap              = StringMap_new();
   while (!quitFlag)
@@ -18360,21 +18348,21 @@ Errors Server_run(ServerModes       mode,
       // get standard port connection requests
       if (serverFlag    && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
-        Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverSocketHandle));
+        Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverSocketHandle),HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID);
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverSocketHandle));
       }
 
       // get TLS port connection requests
       if (serverTLSFlag && ((maxConnections == 0) || (List_count(&clientList) < maxConnections)))
       {
-        Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverTLSSocketHandle));
+        Misc_waitAdd(&waitHandle,Network_getServerSocket(&serverTLSSocketHandle),HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID);
 //TODO:
 //ServerIO_addWait(&clientNode->clientInfo.io,Network_getServerSocket(&serverTLSSocketHandle));
       }
 
       // get client connections, calculate min. wait timeout
       nowTimestamp = Misc_getTimestamp();
-      waitTimeout  = 60LL*US_PER_MINUTE; // wait for network connection max. 60min [us]
+      waitTimeout  = 60LL*MS_PER_MINUTE; // wait for network connection max. 60min [ms]
       LIST_ITERATE(&clientList,clientNode)
       {
         clientDelayFlag = FALSE;
@@ -18382,13 +18370,13 @@ Errors Server_run(ServerModes       mode,
         // check if client should be served now, calculate min. wait timeout
         if (clientNode->clientInfo.authorizationFailNode != NULL)
         {
-          nextTimestamp = getAuthorizationFailTimeout(clientNode->clientInfo.authorizationFailNode);
+          nextTimestamp = getAuthorizationFailTimestamp(clientNode->clientInfo.authorizationFailNode);
           if (nowTimestamp <= nextTimestamp)
           {
             clientDelayFlag = TRUE;
             if ((nextTimestamp-nowTimestamp) < waitTimeout)
             {
-              waitTimeout = nextTimestamp-nowTimestamp;
+              waitTimeout = (nextTimestamp-nowTimestamp)/US_PER_MS;
             }
           }
         }
@@ -18398,13 +18386,13 @@ Errors Server_run(ServerModes       mode,
         {
 //TODO: remove
 //fprintf(stderr,"%s, %d: add client wait %d\n",__FILE__,__LINE__,clientNode->clientInfo.io.network.port);
-          Misc_waitAdd(&waitHandle,Network_getSocket(&clientNode->clientInfo.io.network.socketHandle));
+          Misc_waitAdd(&waitHandle,Network_getSocket(&clientNode->clientInfo.io.network.socketHandle),HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID);
         }
       }
     }
 
     // wait for connect, disconnect, command, or result
-    (void)Misc_wait(&waitHandle,&signalMask,waitTimeout);
+    (void)Misc_waitHandles(&waitHandle,&signalMask,waitTimeout);
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
     MISC_HANDLES_ITERATE(&waitHandle,handle,events)

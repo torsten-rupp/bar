@@ -1328,8 +1328,6 @@ Errors Network_receive(SocketHandle *socketHandle,
                       )
 {
   SignalMask signalMask;
-  WaitHandle waitHandle;
-  int        handle;
   uint       events;
   long       n;
 
@@ -1337,7 +1335,6 @@ Errors Network_receive(SocketHandle *socketHandle,
   assert(bytesReceived != NULL);
 
   n = -1L;
-  Misc_initWait(&waitHandle,1);
   switch (socketHandle->type)
   {
     case SOCKET_TYPE_PLAIN:
@@ -1356,29 +1353,18 @@ Errors Network_receive(SocketHandle *socketHandle,
         #endif /* HAVE_SIGALRM */
 
         // wait for data
-        Misc_waitAdd(&waitHandle,socketHandle->handle);
-        if (Misc_wait(&waitHandle,&signalMask,timeout) >= 0)
+        events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
+        if ((events & HANDLE_EVENT_INPUT) != 0)
         {
-          MISC_HANDLES_ITERATE(&waitHandle,handle,events)
-          {
-            if ((events & HANDLE_EVENT_INPUT) != 0)
-            {
-              // receive
-              n = recv(socketHandle->handle,buffer,maxLength,0);
+          // receive
+          n = recv(socketHandle->handle,buffer,maxLength,0);
 
-              // check if disconected
-              socketHandle->isConnected = (n > 0);
-            }
-            else
-            {
-              // disconnecte
-              socketHandle->isConnected = FALSE;
-            }
-          }
+          // check if disconected
+          socketHandle->isConnected = (n > 0);
         }
         else
         {
-          // disconnecte
+          // disconnected
           socketHandle->isConnected = FALSE;
         }
       }
@@ -1400,25 +1386,14 @@ Errors Network_receive(SocketHandle *socketHandle,
           #endif /* HAVE_SIGALRM */
 
           // wait for data
-          Misc_waitAdd(&waitHandle,socketHandle->handle);
-          if (Misc_wait(&waitHandle,&signalMask,timeout) >= 0)
+          events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_INPUT,timeout);
+          if ((events & HANDLE_EVENT_INPUT) != 0)
           {
-            MISC_HANDLES_ITERATE(&waitHandle,handle,events)
-            {
-              if ((events & HANDLE_EVENT_INPUT) != 0)
-              {
-                // receive
-                n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
+            // receive
+            n = gnutls_record_recv(socketHandle->gnuTLS.session,buffer,maxLength);
 
-               // check if disconected
-               socketHandle->isConnected = (n > 0);
-              }
-              else
-              {
-                // disconnected
-                socketHandle->isConnected = FALSE;
-              }
-            }
+           // check if disconected
+           socketHandle->isConnected = (n > 0);
           }
           else
           {
@@ -1442,7 +1417,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break; /* not reached */
     #endif /* NDEBUG */
   }
-  Misc_doneWait(&waitHandle);
   (*bytesReceived) = (n >= 0) ? n : 0;
 
   return (n >= 0) ? ERROR_NONE : ERROR_NETWORK_RECEIVE;
@@ -1455,8 +1429,6 @@ Errors Network_send(SocketHandle *socketHandle,
 {
   ulong      sentBytes;
   SignalMask signalMask;
-  WaitHandle waitHandle;
-  int        handle;
   uint       events;
   long       n;
 
@@ -1465,7 +1437,6 @@ Errors Network_send(SocketHandle *socketHandle,
   sentBytes = 0L;
   if (length > 0)
   {
-    Misc_initWait(&waitHandle,1);
     switch (socketHandle->type)
     {
       case SOCKET_TYPE_PLAIN:
@@ -1479,25 +1450,19 @@ Errors Network_send(SocketHandle *socketHandle,
           #endif /* HAVE_SIGALRM */
 
           // wait until space in buffer is available
-          Misc_waitAdd(&waitHandle,socketHandle->handle);
-          if (Misc_wait(&waitHandle,&signalMask,SEND_TIMEOUT) >= 0)
+          events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_OUTPUT,SEND_TIMEOUT);
+          if ((events & HANDLE_EVENT_OUTPUT) != 0)
           {
-            MISC_HANDLES_ITERATE(&waitHandle,handle,events)
-            {
-              if ((events & HANDLE_EVENT_OUTPUT) != 0)
-              {
-                // send data
-                #ifdef HAVE_MSG_NOSIGNAL
-                  #define FLAGS MSG_NOSIGNAL
-                #else
-                  #define FLAGS 0
-                #endif
-                n = send(socketHandle->handle,((byte*)buffer)+sentBytes,length-sentBytes,FLAGS);
-                #undef FLAGS
-                if      (n > 0) sentBytes += (ulong)n;
-                else if ((n == -1) && (errno != EAGAIN)) break;
-              }
-            }
+            // send data
+            #ifdef HAVE_MSG_NOSIGNAL
+              #define FLAGS MSG_NOSIGNAL
+            #else
+              #define FLAGS 0
+            #endif
+            n = send(socketHandle->handle,((byte*)buffer)+sentBytes,length-sentBytes,FLAGS);
+            #undef FLAGS
+            if      (n > 0) sentBytes += (ulong)n;
+            else if ((n == -1) && (errno != EAGAIN)) break;
           }
           else
           {
@@ -1518,19 +1483,13 @@ Errors Network_send(SocketHandle *socketHandle,
             #endif /* HAVE_SIGALRM */
 
             // wait until space in buffer is available
-            Misc_waitAdd(&waitHandle,socketHandle->handle);
-            if (Misc_wait(&waitHandle,&signalMask,SEND_TIMEOUT) >= 0)
+            events = Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_OUTPUT,SEND_TIMEOUT);
+            if ((events & HANDLE_EVENT_OUTPUT) != 0)
             {
-              MISC_HANDLES_ITERATE(&waitHandle,handle,events)
-              {
-                if ((events & HANDLE_EVENT_OUTPUT) != 0)
-                {
-                  // send data
-                  n = gnutls_record_send(socketHandle->gnuTLS.session,((byte*)buffer)+sentBytes,length-sentBytes);
-                  if      (n > 0) sentBytes += n;
-                  else if ((n < 0) && (errno != GNUTLS_E_AGAIN)) break;
-                }
-              }
+              // send data
+              n = gnutls_record_send(socketHandle->gnuTLS.session,((byte*)buffer)+sentBytes,length-sentBytes);
+              if      (n > 0) sentBytes += n;
+              else if ((n < 0) && (errno != GNUTLS_E_AGAIN)) break;
             }
             else
             {
@@ -1555,7 +1514,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
           break; /* not reached */
       #endif /* NDEBUG */
     }
-    Misc_doneWait(&waitHandle);
 //  if (sentBytes != length) fprintf(stderr,"%s,%d: send error %d: %s\n",__FILE__,__LINE__,errno,strerror(errno));
   }
 

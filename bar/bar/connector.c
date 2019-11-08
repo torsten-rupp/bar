@@ -2813,8 +2813,6 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   StringMap                argumentMap;
   IndexHandle              *indexHandle;
   SignalMask               signalMask;
-  WaitHandle               waitHandle;
-  int                      handle;
   uint                     events;
   int                      n;
   uint                     id;
@@ -2838,71 +2836,68 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   indexHandle = Index_open(NULL,INDEX_TIMEOUT);
 
   // process client requests
-  Misc_initWait(&waitHandle,8);
   while (   Connector_isConnected(connectorInfo)
          && !Thread_isQuit(&connectorInfo->thread)
         )
   {
     // wait for disconnect, command, or result
-    Misc_waitReset(&waitHandle);
-    Misc_waitAdd(&waitHandle,Network_getSocket(&connectorInfo->io.network.socketHandle));
-    n = Misc_wait(&waitHandle,&signalMask,TIMEOUT);
-    if (n > 0)
+    events = Misc_waitHandle(Network_getSocket(&connectorInfo->io.network.socketHandle),
+                             &signalMask,
+                             HANDLE_EVENT_INPUT|HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID,
+                             TIMEOUT
+                            );
+    if (events != 0)
     {
-      MISC_HANDLES_ITERATE(&waitHandle,handle,events)
+      if      ((events & HANDLE_EVENT_INPUT) != 0)
       {
-        if      ((events & HANDLE_EVENT_INPUT) != 0)
+        // process commands
+        if (ServerIO_receiveData(&connectorInfo->io))
         {
-          // process commands
-          if (ServerIO_receiveData(&connectorInfo->io))
+          while (ServerIO_getCommand(&connectorInfo->io,
+                                     &id,
+                                     name,
+                                     argumentMap
+                                    )
+                )
           {
-            while (ServerIO_getCommand(&connectorInfo->io,
-                                       &id,
-                                       name,
-                                       argumentMap
-                                      )
-                  )
-            {
-              // find command
-              #ifdef CONNECTOR_DEBUG
-  //TODO: enable
-                fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
-                #ifndef NDEBUG
-                  StringMap_debugPrint(2,argumentMap);
-                #endif
+            // find command
+            #ifdef CONNECTOR_DEBUG
+//TODO: enable
+              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
+              #ifndef NDEBUG
+                StringMap_debugPrint(2,argumentMap);
               #endif
-              if (!findConnectorCommand(name,&connectorCommandFunction))
-              {
-                ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
-                continue;
-              }
-              assert(connectorCommandFunction != NULL);
-
-              // process command
-              connectorCommandFunction(connectorInfo,indexHandle,id,argumentMap);
+            #endif
+            if (!findConnectorCommand(name,&connectorCommandFunction))
+            {
+              ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
+              continue;
             }
-          }
-          else
-          {
-            // disconnect -> stop
-            setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
+            assert(connectorCommandFunction != NULL);
+
+            // process command
+            connectorCommandFunction(connectorInfo,indexHandle,id,argumentMap);
           }
         }
-        else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID)) != 0)
+        else
         {
-          // error/disconnect -> stop
+          // disconnect -> stop
           setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
         }
-        #ifndef NDEBUG
-          else
-          {
-            HALT_INTERNAL_ERROR("unknown event in 0x%x",events);
-          }
-        #endif /* NDEBUG */
       }
+      else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID)) != 0)
+      {
+        // error/disconnect -> stop
+        setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
+      }
+      #ifndef NDEBUG
+        else
+        {
+          HALT_INTERNAL_ERROR("unknown event in 0x%x",events);
+        }
+      #endif /* NDEBUG */
     }
   }
-  Misc_doneWait(&waitHandle);
 
   // done index
   Index_close(indexHandle);

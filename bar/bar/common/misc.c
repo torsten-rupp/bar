@@ -940,7 +940,7 @@ uint64 Misc_parseDateTime(const char *string)
     z = 0;
     while ((z < SIZE_OF_ARRAY(DATE_TIME_FORMATS)) && (tm == NULL))
     {
-      #ifdef HAVE_STRPTIME      
+      #ifdef HAVE_STRPTIME
         s = (const char*)strptime(string,DATE_TIME_FORMATS[z],&tmBuffer);
       #else
 #ifndef WERROR
@@ -1474,6 +1474,64 @@ String Misc_expandMacros(String           string,
 
 /*---------------------------------------------------------------------*/
 
+uint Misc_waitHandle(int        handle,
+                     SignalMask *signalMask,
+                     uint       events,
+                     long       timeout
+                    )
+{
+  #if  defined(PLATFORM_LINUX)
+    struct pollfd   pollfds[1];
+    struct timespec pollTimeout;
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      WSAPOLLFD pollfds[1];
+    #else /* not HAVE_WSAPOLL */
+      fd_set          readfds;
+      fd_set          writefds;
+      fd_set          exceptionfds;
+      struct timespec *selectTimeout
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+
+  assert(handle >= 0);
+
+  #if   defined(PLATFORM_LINUX)
+    pollfds[0].fd       = handle;
+    pollfds[0].events   = events;
+    pollfds[0].revents  = 0;
+    pollTimeout.tv_sec  = (long)(timeout /MS_PER_SECOND);
+    pollTimeout.tv_nsec = (long)((timeout%MS_PER_SECOND)*NS_PER_MS);
+    events = (ppoll(pollfds,1,&pollTimeout,signalMask) > 0) ? pollfds[0].revents : 0;
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+      pollfds[0].fd      = handle;
+      pollfds[0].events  = events;
+      pollfds[0].revents = 0;
+      events = (WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout) > 0) ? pollfds[0].revents : 0;
+    #else /* not HAVE_WSAPOLL */
+      FD_SET(handle,&waitHandle->readfds);
+      FD_SET(handle,&waitHandle->writefds);
+      FD_SET(handle,&waitHandle->exceptionfds);
+      selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
+      selectTimeout.tv_usec = (long)(timeout%MS_PER_SECOND)*US_PER_MS;
+      if (pselect(handle+1,&readfds,&writefds,&exceptionfds,selectTimeout,signalMask) > 0)
+      {
+        events = 0;
+        if (FD_ISSET(handle,&readfds     ) events |= HANDLE_EVENT_INPUT;
+        if (FD_ISSET(handle,&writefds    ) events |= HANDLE_EVENT_OUTPUT;
+        if (FD_ISSET(handle,&exceptionfds) events |= HANDLE_EVENT_ERROR;
+      }
+      else
+      {
+        events = 0;
+      }
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
+
+  return events;
+}
+
 void Misc_initWait(WaitHandle *waitHandle, uint maxHandleCount)
 {
   assert(waitHandle != NULL);
@@ -1521,9 +1579,18 @@ void Misc_waitReset(WaitHandle *waitHandle)
   assert(waitHandle != NULL);
 
   waitHandle->handleCount = 0;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    #ifdef HAVE_WSAPOLL
+    #else /* not HAVE_WSAPOLL */
+      FD_ZERO(&waitHandle->readfds);
+      FD_ZERO(&waitHandle->writefds);
+      FD_ZERO(&waitHandle->exceptionfds);
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
 }
 
-void Misc_waitAdd(WaitHandle *waitHandle, int handle)
+void Misc_waitAdd(WaitHandle *waitHandle, int handle, uint events)
 {
   assert(waitHandle != NULL);
 
@@ -1537,11 +1604,12 @@ void Misc_waitAdd(WaitHandle *waitHandle, int handle)
       if (waitHandle->pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
     }
     waitHandle->pollfds[waitHandle->handleCount].fd      = handle;
-    waitHandle->pollfds[waitHandle->handleCount].events  = POLLIN|POLLERR|POLLNVAL;
+    waitHandle->pollfds[waitHandle->handleCount].events  = events;
     waitHandle->pollfds[waitHandle->handleCount].revents = 0;
   #elif defined(PLATFORM_WINDOWS)
     #ifdef HAVE_WSAPOLL
       assert(waitHandle->pollfds != NULL);
+
       if (waitHandle->handleCount >= waitHandle->maxHandleCount)
       {
         waitHandle->maxHandleCount += 64;
@@ -1549,38 +1617,48 @@ void Misc_waitAdd(WaitHandle *waitHandle, int handle)
         if (waitHandle->pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
       }
       waitHandle->pollfds[waitHandle->handleCount].fd      = handle;
-      waitHandle->pollfds[waitHandle->handleCount].events  = POLLIN|POLLERR|POLLNVAL;
+      waitHandle->pollfds[waitHandle->handleCount].events  = events;
       waitHandle->pollfds[waitHandle->handleCount].revents = 0;
     #else /* not HAVE_WSAPOLL */
-      if (waitHandle->handleCount >= FD_SETSIZE) HALT_INSUFFICIENT_MEMORY();
+      assert(handle < FD_SETSIZE);
+
+      if ((events & HANDLE_EVENT_INPUT ) != 0) FD_SET(handle,&waitHandle->readfds);
+      if ((events & HANDLE_EVENT_OUTPUT) != 0) FD_SET(handle,&waitHandle->writefds);
+      if ((events & HANDLE_EVENT_ERROR ) != 0) FD_SET(handle,&waitHandle->exceptionfds);
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
   waitHandle->handleCount++;
 }
 
-int Misc_wait(WaitHandle *waitHandle,
-              SignalMask *signalMask,
-              long       timeout
-             )
+int Misc_waitHandles(WaitHandle *waitHandle,
+                     SignalMask *signalMask,
+                     long       timeout
+                    )
 {
   #if  defined(PLATFORM_LINUX)
     struct timespec pollTimeout;
   #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */  
+    #ifdef HAVE_WSAPOLL
+    #else /* not HAVE_WSAPOLL */
+      struct timespec *selectTimeout
+    #endif /* HAVE_WSAPOLL */
+  #endif /* PLATFORM_... */
 
   assert(waitHandle != NULL);
 
   #if   defined(PLATFORM_LINUX)
     assert(waitHandle->pollfds != NULL);
 
-    pollTimeout.tv_sec  = (long)(timeout /US_PER_SECOND);
-    pollTimeout.tv_nsec = (long)((timeout%US_PER_SECOND)*1000LL);
+    pollTimeout.tv_sec  = (long)(timeout /MS_PER_SECOND);
+    pollTimeout.tv_nsec = (long)((timeout%MS_PER_SECOND)*NS_PER_MS);
     return ppoll(waitHandle->pollfds,waitHandle->handleCount,&pollTimeout,signalMask);
   #elif defined(PLATFORM_WINDOWS)
     #ifdef HAVE_WSAPOLL
       return WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout);
     #else /* not HAVE_WSAPOLL */
-      return select(waitHandle->handleCount,&waitHandle->readfds,&waitHandle->writefds,&waitHandle->exceptionfds,timeout);
+      selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
+      selectTimeout.tv_usec = (long)(timeout%MS_PER_SECOND)*US_PER_MS;
+      return pselect(waitHandle->handleCount,&waitHandle->readfds,&waitHandle->writefds,&waitHandle->exceptionfds,selectTimeout);
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
 }

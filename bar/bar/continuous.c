@@ -1277,8 +1277,6 @@ LOCAL void continuousThreadCode(void)
   Errors                     error;
   DatabaseHandle             databaseHandle;
   SignalMask                 signalMask;
-  WaitHandle                 waitHandle;
-  int                        handle;
   uint                       events;
   ssize_t                    n;
   const struct inotify_event *inotifyEvent;
@@ -1312,7 +1310,6 @@ LOCAL void continuousThreadCode(void)
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
   #endif /* HAVE_SIGALRM */
 
-  Misc_initWait(&waitHandle,1);
   while (!quitFlag)
   {
     // read inotify events
@@ -1320,17 +1317,9 @@ LOCAL void continuousThreadCode(void)
     do
     {
       // wait for event or timeout
-      Misc_waitReset(&waitHandle);
-      Misc_waitAdd(&waitHandle,inotifyHandle);
-      n = Misc_wait(&waitHandle,&signalMask,10L);
-
-      MISC_HANDLES_ITERATE(&waitHandle,handle,events)
+      if ((Misc_waitHandle(inotifyHandle,&signalMask,HANDLE_EVENT_INPUT,250L) & HANDLE_EVENT_INPUT) != 0)
       {
-        // read events
-        if ((events & HANDLE_EVENT_INPUT) != 0)
-        {
-          n = read(inotifyHandle,buffer,BUFFER_SIZE);
-        }
+        n = read(inotifyHandle,buffer,BUFFER_SIZE);
       }
     }
     while ((n == -1) && ((errno == EAGAIN) || (errno == EINTR)) && !quitFlag);
@@ -1537,7 +1526,6 @@ fprintf(stderr,"\n");
     }
     assert(quitFlag || (n == 0));
   }
-  Misc_doneWait(&waitHandle);
 
   // close continous database
   Continuous_close(&databaseHandle);

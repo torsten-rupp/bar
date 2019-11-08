@@ -597,7 +597,6 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 {
   LIBSSH2_SESSION *session;
   SignalMask      signalMask;
-  WaitHandle      waitHandle;
   uint            n;
 
   assert(socketHandle != NULL);
@@ -614,11 +613,7 @@ LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 
   // wait for max. 60s
 #if 1
-  Misc_initWait(&waitHandle,1);
-  Misc_waitAdd(&waitHandle,socketHandle->handle);
-  n = Misc_wait(&waitHandle,&signalMask,60*MS_PER_SECOND);
-  Misc_doneWait(&waitHandle);
-  return n > 0;
+  return (Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_ALL,60*MS_PER_SECOND) != 0);
 #elif 1
   pollTimeout.tv_sec  = 60L;
   pollTimeout.tv_nsec = 0L;

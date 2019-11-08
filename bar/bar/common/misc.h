@@ -92,6 +92,12 @@ typedef enum
     #define HANDLE_EVENT_INVALID (1 << 3)
   #endif /* HAVE_WSAPOLL */
 #endif /* PLATFORM_... */
+#define HANDLE_EVENT_ALL (  HANDLE_EVENT_INPUT \
+                          | HANDLE_EVENT_OUTPUT \
+                          | HANDLE_EVENT_ERROR \
+                          | HANDLE_EVENT_INPUT \
+                          | HANDLE_EVENT_INVALID \
+                         )
 
 /***************************** Datatypes *******************************/
 
@@ -735,6 +741,24 @@ String Misc_expandMacros(String           string,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Misc_waitHandle
+* Purpose: wait for handle
+* Input  : handle     - handle
+*          signalMask - signal mask (can be NULL)
+*          events     - events to wait for
+*          timeout    - timeout [ms[
+* Output : -
+* Return : events; see HANDLE_EVENT_...
+* Notes  : -
+\***********************************************************************/
+
+uint Misc_waitHandle(int        handle,
+                     SignalMask *signalMask,
+                     uint       events,
+                     long       timeout
+                    );
+
+/***********************************************************************\
 * Name   : Misc_initWait
 * Purpose: init handle wait
 * Input  : waitHandle     - wait handle
@@ -773,15 +797,16 @@ void Misc_waitReset(WaitHandle *waitHandle);
 * Purpose: add handle
 * Input  : waitHandle - wait handle
 *          handle     - handle
+*          events     - events to wait for
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Misc_waitAdd(WaitHandle *waitHandle, int handle);
+void Misc_waitAdd(WaitHandle *waitHandle, int handle, uint events);
 
 /***********************************************************************\
-* Name   : Misc_wait
+* Name   : Misc_waitHandles
 * Purpose: wait for handles
 * Input  : waitHandle - wait handle
 *          signalMask - signal mask (can be NULL)
@@ -791,14 +816,14 @@ void Misc_waitAdd(WaitHandle *waitHandle, int handle);
 * Notes  : -
 \***********************************************************************/
 
-int Misc_wait(WaitHandle *waitHandle,
-              SignalMask *signalMask,
-              long       timeout
-             );
+int Misc_waitHandles(WaitHandle *waitHandle,
+                     SignalMask *signalMask,
+                     long       timeout
+                    );
 
 /***********************************************************************\
-* Name   : Misc_findCommandInPath
-* Purpose: find command in PATH
+* Name   : Misc_handlesIterateCount
+* Purpose: get handles iterator couont
 * Input  : waitHandle - wait handle
 * Output : -
 * Return : handles iterator count
