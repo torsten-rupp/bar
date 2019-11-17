@@ -10660,6 +10660,26 @@ exit(1);
     return ERROR_INVALID_ARGUMENT;
   }
 
+  // output version, help
+  if (versionFlag)
+  {
+    #ifndef NDEBUG
+      printf("BAR version %s (debug)\n",VERSION_STRING);
+    #else /* NDEBUG */
+      printf("BAR version %s\n",VERSION_STRING);
+    #endif /* not NDEBUG */
+
+    return ERROR_NONE;
+  }
+  if (helpFlag || xhelpFlag || helpInternalFlag)
+  {
+    if      (helpInternalFlag) printUsage(argv[0],2);
+    else if (xhelpFlag       ) printUsage(argv[0],1);
+    else                       printUsage(argv[0],0);
+
+    return ERROR_NONE;
+  }
+
   if (!globalOptions.noDefaultConfigFlag)
   {
     fileName = String_new();
@@ -10763,26 +10783,6 @@ exit(1);
      )
   {
     return ERROR_INVALID_ARGUMENT;
-  }
-
-  // output version, help
-  if (versionFlag)
-  {
-    #ifndef NDEBUG
-      printf("BAR version %s (debug)\n",VERSION_STRING);
-    #else /* NDEBUG */
-      printf("BAR version %s\n",VERSION_STRING);
-    #endif /* not NDEBUG */
-
-    return ERROR_NONE;
-  }
-  if (helpFlag || xhelpFlag || helpInternalFlag)
-  {
-    if      (helpInternalFlag) printUsage(argv[0],2);
-    else if (xhelpFlag       ) printUsage(argv[0],1);
-    else                       printUsage(argv[0],0);
-
-    return ERROR_NONE;
   }
 
   // check parameters
