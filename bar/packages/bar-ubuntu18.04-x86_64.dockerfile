@@ -31,6 +31,7 @@ RUN apt-get -y install \
   patch \
   pkg-config \
   subversion \
+  sudo \
   tar \
   tcl \
   unzip \
@@ -45,6 +46,8 @@ RUN apt-get -y install \
   openjdk-8-jdk \
   openjdk-8-jre \
   make \
+  unoconv \
+  txt2man \
   ;
 
 # mount /media/home

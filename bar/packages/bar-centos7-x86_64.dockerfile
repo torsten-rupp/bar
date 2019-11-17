@@ -21,6 +21,7 @@ RUN yum -y install \
   psmisc \
   rpm-build \
   subversion \
+  sudo \
   tar \
   tcl \
   unzip \

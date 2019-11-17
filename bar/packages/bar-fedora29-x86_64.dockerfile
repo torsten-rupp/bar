@@ -20,6 +20,7 @@ RUN yum -y install \
   psmisc \
   rpm-build \
   subversion \
+  sudo \
   tar \
   tcl \
   unzip \
@@ -33,6 +34,8 @@ RUN yum -y install \
   jre \
   make \
   rpm-build \
+  unoconv \
+  txt2man \
   ;
 
 # fix systemd
