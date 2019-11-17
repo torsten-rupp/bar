@@ -289,6 +289,9 @@ typedef struct
   Codepoint  codepoint;
 } StringIterator;
 
+// execute once handle
+typedef pthread_once_t ExecuteOnceHandle;
+
 #ifndef NDEBUG
 
 /***********************************************************************\
@@ -383,12 +386,29 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
 
-// debugging
-#if defined(__x86_64__) || defined(__i386)
-  #define __B() do { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm(" int3"); } while (0)
-#else
-  #define __B() do { } while (0)
-#endif
+/***********************************************************************\
+* Name   : EXECUTE_ONCE
+* Purpose: execute block once
+* Input  : functionReturnType - call-back function return type
+*          functionSignature  - call-back function signature
+*          functionBody       - call-back function body
+* Output : -
+* Return : -
+* Notes  : example
+*          List_removeAndFree(list,
+*                             node,
+*                             LAMBDA(void,(...),{ ... })
+*                            );
+\***********************************************************************/
+
+#define EXECUTE_ONCE(functionBody) \
+  ({ \
+    static ExecuteOnceHandle __executeOnceHandle ## COUNTER = PTHREAD_ONCE_INIT; \
+    \
+    auto void __closure__ (void); \
+    void __closure__ (void) functionBody \
+    pthread_once(&__executeOnceHandle ## COUNTER,__closure__); \
+  })
 
 /***********************************************************************\
 * Name   : LAMBDA
@@ -1206,6 +1226,21 @@ typedef byte* BitSet;
     } \
     while (0)
 #endif /* not NDEBUG */
+
+/***********************************************************************\
+* Name   : __B
+* Purpose: braakpoint
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : for debugging only!
+\***********************************************************************/
+
+#if defined(__x86_64__) || defined(__i386)
+  #define __B() do { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm(" int3"); } while (0)
+#else
+  #define __B() do { } while (0)
+#endif
 
 /***********************************************************************\
 * Name   : DEBUG_MEMORY_FENCE, DEBUG_MEMORY_FENCE_INIT,
