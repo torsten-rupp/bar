@@ -17,39 +17,47 @@ AC_DEFUN([AC_MSG_COMPILE],
 [
   _AS_ECHO_N([compile $1... ])
 ])
-
+;
 dnl --- output log file
 AC_DEFUN([AC_MSG_OUTPUT_LOG],
 [
-  echo --- error log -------------------------------------------------------------------------
-  cat $1 | while read s; do echo "  $s"; done
-  echo ---------------------------------------------------------------------------------------
+  AS_ECHO(["--- error log -------------------------------------------------------------------------"])
+  cat $1 | while read s; do AS_ECHO(["  $s"]); done
+  AS_ECHO(["---------------------------------------------------------------------------------------"])
 ])
 
-dnl --- set toolchain variables CFLAGS, CXXFLAGS, LDFALGS, LIBS
+dnl --- set toolchain variables CFLAGS, CXXFLAGS, LDFLAGS, LIBS
 dnl usage: AC_SET_TOOLCHAIN_SETTINGS(<CC_FLAGS>,<CXX_FLAGS>,<CC_DEFINES>,<CC_INCLUDES>,<LD_FLAGS>,<LIBRARY_PATHS>,<STATIC_LIBRARIES>,<LIBRARIES>)
 AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
 [
-  CFLAGS="$1 -v"
-  CXXFLAGS="$2 -v"
-  for z in $3 ""; do
+  CPPFLAGS="$1"
+  CFLAGS="$2 -v"
+  CXXFLAGS="$3 -v"
+  for z in $4 ""; do
     if test -n "$z"; then
+      CPPFLAGS="$CPPFLAGS -D$z"
       CFLAGS="$CFLAGS -D$z"
     fi
   done
-  for z in $4 ""; do
+  for z in $5 ""; do
     if test -n "$z"; then
+      CPPFLAGS="$CPPFLAGS -I$z"
       CFLAGS="$CFLAGS -I$z"
     fi
   done
-  LDFLAGS="$5"
-  for z in $6 ""; do
+  LDFLAGS="$6"
+  for z in $7 ""; do
     if test -n "$z"; then
       LDFLAGS="$LDFLAGS -L$z"
     fi
   done
   LIBS=""
-  for z in $7 ""; do
+  for z in $8 ""; do
+    if test -n "$z"; then
+      LIBS="$LIBS -l$z"
+    fi
+  done
+  for z in $9 ""; do
     if test -n "$z"; then
       LIBS="$LIBS -l$z"
     fi
@@ -59,12 +67,7 @@ AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
       LIBS="$LIBS -l$z"
     fi
   done
-  for z in $7 ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
-    fi
-  done
-  for z in $8 ""; do
+  for z in $9 ""; do
     if test -n "$z"; then
       LIBS="$LIBS -l$z"
     fi
@@ -271,9 +274,9 @@ AC_DEFUN([AC_SEARCH_LIBRARIES],
                                          return (int)$1;
                                         ]
                                        )
-                          ],
-                          [AS_VAR_SET([ac_search_libraries],[$ac_result]); break]
-                         )
+                       ],
+                       [AS_VAR_SET([ac_search_libraries],[$ac_result]); break]
+                      )
       done
       AS_VAR_SET_IF([ac_search_libraries],,[AS_VAR_SET([ac_search_libraries],[no])])
 
@@ -315,9 +318,9 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
                                          return (int)$1;
                                         ]
                                        )
-                          ],
-                          [AS_VAR_SET([ac_search_static_libraries],[$ac_result]); break]
-                         )
+                       ],
+                       [AS_VAR_SET([ac_search_static_libraries],[$ac_result]); break]
+                      )
       done
       AS_VAR_SET_IF([ac_search_static_libraries],,[AS_VAR_SET([ac_search_static_libraries],[no])])
 
@@ -330,7 +333,6 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
   AS_IF([test "$ac_result" != no],[test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" $3],[$4])
   AS_VAR_POPDEF([ac_search_static_libraries])dnl
 ])
-
 
 dnl --- check if C compiler long long data type available
 dnl usage: AC_C_LONG_LONG(<if found>,<if not found>)
@@ -584,7 +586,7 @@ dnl --- check sudo command
 dnl usage: AC_PROG_SUDO_COMMAND(<text>,<command>,<if found>,<if not found>)
 AC_DEFUN([AC_PROG_SUDO_COMMAND],
 [
-  if test -z "$UNOCONV"; then
+  if test -n "$SUDO"; then
     AC_MSG_CHECKING([for execution of '$SUDO $1'])
     AS_VAR_PUSHDEF([ac_cv_prog_sudo_command],[ac_cv_prog_sudo_command_`echo $1|tr -c -d a-zA-Z0-9_`])dnl
     AC_CACHE_VAL(
@@ -613,6 +615,34 @@ AC_DEFUN([AC_PROG_SUDO_COMMAND],
   fi
   AS_IF([test "$ac_result" != no],[$3],:,[$4])
   AS_VAR_POPDEF([ac_cv_prog_sudo_command])dnl
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- get constant (define)
+dnl usage: AC_CONSTANT_VALUE(<text>,<variable>,<includes>,<source>,[<trim characters>])
+AC_DEFUN([AC_CONSTANT_VALUE],
+[
+  AC_REQUIRE([AC_PROG_CPP])
+  AS_VAR_PUSHDEF([ac_cv_constant_value],[ac_cv_constant_value_$2])dnl
+  AC_CACHE_CHECK(
+    [$1],
+    ac_cv_constant_value,
+    [
+      AC_LANG_CONFTEST([AC_LANG_PROGRAM([[$3]],[[__CONFTEST__ $4]])])
+      if AC_TRY_COMMAND($CPP $CPPFLAGS -P -E conftest.c -o conftest); then
+        ac_cv_constant_value=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+      else
+        ac_cv_constant_value=
+      fi
+      if test -n "AS_ESCAPE([[$5]])"; then
+        ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$5]])"`
+      fi
+      AS_VAR_SET($2,$ac_cv_constant_value)
+
+      rm -f conftest.c conftest
+    ]
+  )dnl
+  AS_VAR_POPDEF([ac_cv_constant_value])dnl
   AC_PROVIDE([$0])dnl
 ])
 
@@ -796,6 +826,7 @@ AC_SUBST(HEAPVIEW_DIR)                      dnl heapview directory
 
 dnl ----------------------- initialize variables -----------------------
 
+CPP_FLAGS="$CPPFLAGS"
 CC_FLAGS="$CFLAGS"
 CC_WARN_FLAGS=""
 CXX_FLAGS="$CFLAGS"
@@ -840,8 +871,8 @@ tmpFile=`mktemp configure-XXXXXX`
 
 dnl ---------------------------- check system --------------------------
 
-# get absolute source directory path
-SOURCE_DIR=`realpath $srcdir`
+# get absolute source directory path (Note: do not use realpath; may be not available on some platforms)
+SOURCE_DIR=`(cd $srcdir; pwd)`
 
 # get platform specific settings
 dnl AC_CANONICAL_SYSTEM
@@ -1074,6 +1105,13 @@ fi
 
 dnl ------------------------------ programs ----------------------------
 
+if test -z "$BUILD_CC"; then
+  AC_PATH_PROGS(BUILD_CC,$build-gcc $build-cc gcc cc)
+fi
+if test -z "$BUILD_LD"; then
+  AC_PATH_PROGS(BUILD_LD,$build-ld $build-ld ld gcc)
+fi
+
 if test -z "$CC"; then
   AC_PATH_PROGS(CC,$host-gcc $host-cc gcc cc)
 fi
@@ -1087,13 +1125,13 @@ if test -z "$CXX"; then
   AC_MSG_ERROR([Cannot find C++ compiler in PATH. Please check your PATH environment variable.])
 fi
 if test -z "$LD"; then
-  AC_PATH_PROGS(LD,$host-ld $$host-gcc ld gcc)
+  AC_PATH_PROGS(LD,$host-ld $host-gcc ld gcc)
 fi
 if test -z "$AR"; then
-  AC_PATH_PROGS(AR,$$host-ar ar)
+  AC_PATH_PROGS(AR,$host-ar ar)
 fi
 if test -z "$STRIP"; then
-  AC_PATH_PROGS(STRIP,$$host-strip strip)
+  AC_PATH_PROGS(STRIP,$host-strip strip)
 fi
 if test -z "$OBJDUMP"; then
   AC_PATH_PROGS(OBJDUMP,$host-objdump objdump)
@@ -1216,72 +1254,6 @@ fi
 
 AC_PATH_PROGS(MD5SUM,md5sum)
 
-AC_WARN(CC1=$CC)
-AC_PROG_CC_STDC
-AC_WARN(CC2=$CC)
-AC_CC_OPTION(-fno-pie,                     CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_GPROF CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG)
-AC_CC_OPTION(-Wall,                        CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wpointer-arith,              CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wunused-label,               CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wunused-parameter,           CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wunused-variable,            CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wmissing-prototypes,         CC_WARN_FLAGS)
-AC_CC_OPTION(-Wmissing-declarations,       CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wstrict-aliasing,            CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wextra,                      CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wfloat-equal,                CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wdeclaration-after-statement,CC_WARN_FLAGS)
-AC_CC_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
-AC_CC_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
-AC_CC_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
-AC_CC_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
-
-AC_CXX_OPTION(-no-pie,LD_FLAGS_DEBUG LD_FLAGS_GCOV LD_FLAGS_VALGRIND)
-
-CC_FLAGS_OPTIMIZE="$CC_FLAGS_OPTIMIZE"
-CC_DEFINES="$CC_DEFINES"
-
-CC_FLAGS_OPTIMIZE_RELEASE="$CC_FLAGS_OPTIMIZE_RELEASE -O2"
-dnl Check: bug in gcc with -fschedule-insns2? If -O2 is used and -fno-schedule-insns2 is
-dnl        not given, the program either crashes or parsing a string with %y seems to fail.
-AC_CC_OPTION(-fno-schedule-insns2,CC_FLAGS_OPTIMIZE_RELEASE)
-CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
-
-CC_FLAGS_OPTIMIZE_DEBUG="$CC_FLAGS_OPTIMIZE_DEBUG -O0"
-CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
-
-CC_INCLUDES="$CC_INCLUDES"
-case "$host_os" in
-  linux-*)
-    ;;
-  windows*|mingw*)
-    ;;
-  sunos | solaris*)
-    ;;
-  darwin*)
-    ;;
-esac
-
-LD_FLAGS=""
-if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
-  LD_FLAGS="-static-libgcc"
-fi
-LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
-case "$host_os" in
-  linux-*)
-    if test "$ENABLE_DEBUG" = "yes"; then
-      # required for printing stacktraces
-      AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
-    fi
-    ;;
-  windows*|mingw*)
-    ;;
-  sunos | solaris*)
-    ;;
-  darwin*)
-    ;;
-esac
-
 if test "$ENABLE_GUI" = "yes"; then
   AC_PATH_PROGS(JAVA,java)
   AC_PROVIDE(AC_PROG_JAVA)
@@ -1379,6 +1351,76 @@ AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
 AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
 
+# compiler/link flags/paths
+
+# Note: do not use AC_PROG_CC_STDC, because it adds the option to the CC command
+AC_CC_OPTION(-std=gnu99,                   CC_FLAGS)
+
+# Note: disable address randomization for debug/analysis builds
+AC_CC_OPTION(-fno-pie,                     CC_FLAGS_DEBUG CC_FLAGS_GCOV CC_FLAGS_GPROF CC_FLAGS_VALGRIND CXX_FLAGS_DEBUG)
+
+AC_CC_OPTION(-Wall,                        CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wpointer-arith,              CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-label,               CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-parameter,           CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wunused-variable,            CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wmissing-prototypes,         CC_WARN_FLAGS)
+AC_CC_OPTION(-Wmissing-declarations,       CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wstrict-aliasing,            CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wextra,                      CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wfloat-equal,                CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wdeclaration-after-statement,CC_WARN_FLAGS)
+AC_CC_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
+AC_CC_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
+AC_CC_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
+AC_CC_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
+
+AC_CXX_OPTION(-no-pie,LD_FLAGS_DEBUG LD_FLAGS_GCOV LD_FLAGS_VALGRIND)
+
+CC_FLAGS_OPTIMIZE="$CC_FLAGS_OPTIMIZE"
+CC_DEFINES="$CC_DEFINES"
+
+CC_FLAGS_OPTIMIZE_RELEASE="$CC_FLAGS_OPTIMIZE_RELEASE -O2"
+dnl Check: bug in gcc with -fschedule-insns2? If -O2 is used and -fno-schedule-insns2 is
+dnl        not given, the program either crashes or parsing a string with %y seems to fail.
+AC_CC_OPTION(-fno-schedule-insns2,CC_FLAGS_OPTIMIZE_RELEASE)
+CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
+
+CC_FLAGS_OPTIMIZE_DEBUG="$CC_FLAGS_OPTIMIZE_DEBUG -O0"
+CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
+
+CC_INCLUDES="$CC_INCLUDES"
+case "$host_os" in
+  linux-*)
+    ;;
+  windows*|mingw*)
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
+    ;;
+esac
+
+LD_FLAGS=""
+if test ! $ENABLE_LINK_DYNAMIC = "yes"; then
+  LD_FLAGS="-static-libgcc"
+fi
+LIBRARY_PATHS="$LIBRARY_PATHS /usr/local/lib"
+case "$host_os" in
+  linux-*)
+    if test "$ENABLE_DEBUG" = "yes"; then
+      # required for printing stacktraces
+      AC_CC_OPTION(-rdynamic,CC_FLAGS CXX_FLAGS LD_FLAGS)
+    fi
+    ;;
+  windows*|mingw*)
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
+    ;;
+esac
+
 # sudo tests
 AC_PROG_SUDO_COMMAND([chattr \* data/\*],                           [chattr \* data/\*]                           ,,HAVE_SUDO_COMMAND_CHATTR=0      )
 AC_PROG_SUDO_COMMAND([chattr \* configure-\*],                      [chattr \* configure-\*]                      ,,HAVE_SUDO_COMMAND_CHATTR=0      )
@@ -1429,7 +1471,8 @@ CC_INCLUDES="$CC_INCLUDES $cwd/extern/include"
 LIBRARY_PATHS="$cwd/extern/lib $LIBRARY_PATHS"
 
 # set variables for compile extern
-AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
+AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
+                          $CC_FLAGS,
                           $CXX_FLAGS,
                           $CC_DEFINES,
                           $CC_INCLUDES,
@@ -1448,7 +1491,7 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
     AC_MSG_CREATE([sqlite3.c])
     result=1
     if test $result -eq 1; then
-      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" ./configure \
+      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
         --build=$build \
         --disable-tcl \
         --enable-fts4\
@@ -1512,7 +1555,7 @@ if test -d icu -o -d "`readlink icu`"; then
     # build host
     if test $result -eq 1; then
       install -d icu/build/$build
-      (cd icu/build/$build; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
+      (cd icu/build/$build; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
         --build=$build \
         --prefix=$cwd/extern \
         --disable-shared \
@@ -1539,7 +1582,7 @@ if test -d icu -o -d "`readlink icu`"; then
       # build target
       install -d icu/build/$host
       if test $result -eq 1; then
-        (cd icu/build/$host; CFLAGS="-fPIC" CXXFLAGS="-fPIC" ../../source/configure \
+        (cd icu/build/$host; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
           --host=$host \
           --build=$build \
           --with-cross-build=$cwd/icu/build/$build \
@@ -1733,7 +1776,7 @@ if test $ENABLE_BZ2 = "yes"; then
           fi
         else
           # cross-compile host
-          (cd bzip2; make clean; make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
+          (cd bzip2; make clean; CFLAGS="" LDFLAGS="" make -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             AC_MSG_RESULT([fail (make)])
             AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1742,7 +1785,13 @@ if test $ENABLE_BZ2 = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd bzip2; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+        # Note: do not call 'install', it does build additional tools
+        (cd bzip2; \
+         install -d $cwd/extern/include; \
+         install -m 644 bzlib.h $cwd/extern/include; \
+         install -d $cwd/extern/lib; \
+         install -m 644 libbz2.a $cwd/extern/lib; \
+        ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -1996,8 +2045,9 @@ if test $ENABLE_LZ4 = "yes"; then
         # Note: do not call 'install', it does build additional tools
         # (cd lz4; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
         (cd lz4; \
-         install -d $cwd/extern/lib; \
+         install -d $cwd/extern/include; \
          install -m 644 lib/lz4.h lib/lz4frame.h lib/lz4hc.h lib/xxhash.h $cwd/extern/include; \
+         install -d $cwd/extern/lib; \
          install -m 644 lib/liblz4.a $cwd/extern/lib; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
@@ -2055,11 +2105,20 @@ if test $ENABLE_ZSTD = "yes"; then
       AC_MSG_COMPILE([zstd])
       result=1
       if test $result -eq 1; then
-        (cd zstd; make clean; make -C lib -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
+        if test "$build" == "$host"; then
+          (cd zstd; make clean; CFLAGS="" LDFLAGS="" make -C lib -j$CPU_CORES) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (make)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result=0
+          fi
+        else
+          (cd zstd; make clean; CFLAGS="" LDFLAGS="" make -C lib -j$CPU_CORES CC="$CC" AS="$AS" LD="$LD" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (make)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result=0
+          fi
         fi
       fi
       if test $result -eq 1; then
@@ -2365,7 +2424,7 @@ if test $ENABLE_SSH = "yes"; then
 #              no-shared \
 #              mingw \
 #            ) 1>$tmpFile 2>&1
-            (cd openssl; ./Configure \
+            (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
               --prefix=$cwd/extern \
               --cross-compile-prefix=i686-w64-mingw32- \
               enable-capieng \
@@ -2473,7 +2532,7 @@ if test $ENABLE_SSH = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (set -x; cd libssh2; make clean; make -j$CPU_CORES -C src) 1>$tmpFile 2>&1
+        (cd libssh2; make clean; make -j$CPU_CORES -C src) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -2546,8 +2605,6 @@ if test $ENABLE_SSH = "yes"; then
     fi
   fi
 fi
-set +x
-#AC_ERROR(xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)
 
 # compile/use gnutls
 if test $ENABLE_TLS = "yes"; then
@@ -2960,7 +3017,7 @@ if test $ENABLE_CURL = "yes"; then
           fi
         else
           # cross-compile host
-          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CFLAGS="-DCARES_STATICLIB" LIBS="-lcrypt32" ./configure \
+          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32" ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
@@ -3116,7 +3173,8 @@ if test $ENABLE_CURL = "yes"; then
       AC_DEFINE(HAVE_MXML,1,[mxml installed (local)])
 
       # Note: update toolchain settings for defines
-      AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
+      AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
+                                $CC_FLAGS,
                                 $CXX_FLAGS,
                                 $CC_DEFINES,
                                 $CC_INCLUDES,
@@ -3190,7 +3248,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       AC_MSG_COMPILE([libiconv])
       result1=1
       if test $result1 -eq 1; then
-        (cd libiconv; CFLAGS="-fPIC" ./configure \
+        (cd libiconv; CFLAGS="-fPIC" LDFLAGS="" ./configure \
           --host=$host \
           --build=$build \
           --prefix=$cwd/extern \
@@ -3233,7 +3291,7 @@ if test $ENABLE_ISO9660 = "yes"; then
       result2=1
       if test $result2 -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
-          (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
+          (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
@@ -3497,13 +3555,13 @@ if test $ENABLE_BREAKPAD = "yes"; then
       result=1
       if test $result -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
-          (cd breakpad; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
+          (cd breakpad; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
           ) 1>$tmpFile 2>&1
         else
-          (cd breakpad; ./configure \
+          (cd breakpad; CFLAGS="" CXXFLAGS="" LDFLAGS="" ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
@@ -3606,7 +3664,7 @@ if test $ENABLE_BFD = "yes"; then
         #         using of wrong tool names by binutils build!
         (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
         if test "$ENABLE_DEBUG" = "yes"; then
-          (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" ./configure \
+          (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
             --host=$build_cpu-$build_os \
             --build=$build \
             --prefix=$cwd/extern \
@@ -3615,7 +3673,7 @@ if test $ENABLE_BFD = "yes"; then
             --with-system-zlib \
           ) 1>$tmpFile 2>&1
         else
-          (cd binutils; ./configure \
+          (cd binutils; CFLAGS="" CXXFLAGS="" LDFLAGS="" ./configure \
             --host=$build_cpu-$build_os \
             --build=$build \
             --prefix=$cwd/extern \
@@ -3724,7 +3782,7 @@ fi
 
 # check mandatory extern software for full version
 AC_ARG_ENABLE(
-  package-check,
+  extern-check,
   AC_HELP_STRING([--enable-extern-check],[enable check extern software]),
   [
    AS_IF(test $HAVE_ICU    ,,AC_MSG_ERROR([icu missing]))
@@ -3751,7 +3809,8 @@ AC_ARG_ENABLE(
 dnl -------------- headers/functions/definitions/libraries -------------
 
 # set variables for tests
-AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
+AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
+                          $CC_FLAGS,
                           $CXX_FLAGS,
                           $CC_DEFINES,
                           $CC_INCLUDES,
@@ -3847,7 +3906,8 @@ dnl AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC
 dnl AC_MSG_ERROR([stop])
 
 # set variables for tests
-AC_SET_TOOLCHAIN_SETTINGS($CC_FLAGS,
+AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
+                          $CC_FLAGS,
                           $CXX_FLAGS,
                           $CC_DEFINES,
                           $CC_INCLUDES,
@@ -4065,38 +4125,27 @@ AC_DEFINE_UNQUOTED(CONFIG_DIR, "$CONFIG_DIR", [configuration directory])
 AC_DEFINE_UNQUOTED(RUNTIME_DIR,"$RUNTIME_DIR",[runtime directory])
 AC_DEFINE_UNQUOTED(TLS_DIR,    "$TLS_DIR",    [TLS directory])
 
-# get and check version numbers
-AC_TRY_LINK([#include <stdio.h>
-             #include "sqlite3.h"
-            ],
-            [printf("%d",SQLITE_VERSION_NUMBER);],
-            VERSION_SQLITE_NUMBER=`./conftest$ac_exeext`,
-            VERSION_SQLITE_NUMBER=
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "sqlite3.h"
-            ],
-            [printf("%s",SQLITE_VERSION);],
-            VERSION_SQLITE=`./conftest$ac_exeext`,
-            VERSION_SQLITE=
-           )
+# get and check version numbers (Note: keep closing ) at the end!)
+AC_CONSTANT_VALUE([SQLite version],
+                  VERSION_SQLITE,
+                  [#include "sqlite3.h"
+                  ],
+                  [SQLITE_VERSION_NUMBER])
 if test $VERSION_SQLITE -lt 3024000; then
   AC_ERROR([Required SQLite 3.24 or newer - found $VERSION_SQLITE])
 fi
-AC_TRY_LINK([#include <stdio.h>
-             #include "unicode/uvernum.h"
-            ],
-            [printf("%s",U_ICU_VERSION);],
-            VERSION_ICU=`./conftest$ac_exeext`,
-            VERSION_ICU=unknown
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "zlib.h"
-            ],
-            [printf("%s",zlibVersion());],
-            VERSION_Z=`./conftest$ac_exeext`,
-            VERSION_Z=
-           )
+AC_CONSTANT_VALUE([ICU version],
+                  VERSION_ICU,
+                  [#include "unicode/uvernum.h"
+                  ],
+                  [U_ICU_VERSION],
+                  [ "])
+AC_CONSTANT_VALUE([zlib version],
+                  VERSION_Z,
+                  [#include "zlib.h"
+                  ],
+                  [ZLIB_VERSION],
+                  [ "])
 AC_TRY_LINK([#include <stdio.h>
              #include "bzlib.h"
             ],
@@ -4104,79 +4153,71 @@ AC_TRY_LINK([#include <stdio.h>
             VERSION_BZ2=`./conftest$ac_exeext`,
             VERSION_BZ2=
            )
-AC_TRY_LINK([#include <stdio.h>
-             #include "lzma.h"
-            ],
-            [printf("%d.%d.%d",LZMA_VERSION_MAJOR,LZMA_VERSION_MINOR,LZMA_VERSION_PATCH);],
-            VERSION_LZMA=`./conftest$ac_exeext`,
-            VERSION_LZMA=
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "lzo/lzoconf.h"
-            ],
-            [printf("%s",LZO_VERSION_STRING);],
-            VERSION_LZO=`./conftest$ac_exeext`,
-            VERSION_LZO=
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "lz4.h"],
-             [printf("%d.%d.%d",LZ4_VERSION_MAJOR,LZ4_VERSION_MINOR,LZ4_VERSION_RELEASE);],
-             VERSION_LZ4=`./conftest$ac_exeext`,
-             VERSION_LZ4=
-            )
-AC_TRY_LINK([#include <stdio.h>
-             #include "zstd.h"],
-             [printf("%d.%d.%d",ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE);],
-             VERSION_ZSTD=`./conftest$ac_exeext`,
-             VERSION_ZSTD=
-            )
-AC_TRY_LINK([#include <stdio.h>
-             #include "gcrypt.h"
-            ],
-            [printf("%s",GCRYPT_VERSION);],
-            VERSION_GCRYPT=`./conftest$ac_exeext`,
-            VERSION_GCRYPT=unknown
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "gmp.h"
-            ],
-            [printf("%s",gmp_version);],
-            VERSION_GMP=`./conftest$ac_exeext`,
-            VERSION_GMP=unknown
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "gnutls/gnutls.h"
-            ],
-            [printf("%s",GNUTLS_VERSION);],
-            VERSION_GNUTLS=`./conftest$ac_exeext`,
-            VERSION_GNUTLS=unknown
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "openssl/opensslv.h"
-            ],
-            [printf("%s",OPENSSL_VERSION_TEXT);],
-            VERSION_OPENSSL=`./conftest$ac_exeext`,
-            VERSION_OPENSSL=unknown
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "libssh2.h"],
-            [printf("%d.%d.%d",LIBSSH2_VERSION_MAJOR,LIBSSH2_VERSION_MINOR,LIBSSH2_VERSION_PATCH);],
-            VERSION_LIBSSH2=`./conftest$ac_exeext`,
-            VERSION_LIBSSH2=unknown
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "curl/curl.h"],
-            [printf("%s",LIBCURL_VERSION);],
-            VERSION_CURL=`./conftest$ac_exeext`,
-            VERSION_CURL=unknown
-           )
-AC_TRY_LINK([#include <stdio.h>
-             #include "cdio/cdio.h"
-            ],
-            [printf("%s",CDIO_VERSION);],
-            VERSION_CDIO=`./conftest$ac_exeext`,
-            VERSION_CDIO=unknown
-           )
+AC_CONSTANT_VALUE([lzma version],
+                  VERSION_LZMA,
+                  [#include "lzma.h"
+                  ],
+                  [LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH],
+                  [ "])
+AC_CONSTANT_VALUE([lzo version],
+                  VERSION_LZO,
+                  [#include "lzo/lzoconf.h"
+                  ],
+                  [LZO_VERSION_STRING],
+                  [ "])
+AC_CONSTANT_VALUE([lz4 version],
+                  VERSION_LZ4,
+                  [#include "lz4.h"
+                  ],
+                  [LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE],
+                  [ "])
+AC_CONSTANT_VALUE([zstd version],
+                  VERSION_ZSTD,
+                  [#include "zstd.h"
+                  ],
+                  [ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE],
+                  [ "])
+AC_CONSTANT_VALUE([gcrypt version],
+                  VERSION_GCRYPT,
+                  [#include "gcrypt.h"
+                  ],
+                  [GCRYPT_VERSION],
+                  [ "])
+AC_CONSTANT_VALUE([GMP version],
+                  VERSION_GMP,
+                  [#include "gmp.h"
+                  ],
+                  [__GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL],
+                  [ "])
+AC_CONSTANT_VALUE([GNU TLS version],
+                  VERSION_GNUTLS,
+                  [#include "gnutls/gnutls.h"
+                  ],
+                  [GNUTLS_VERSION],
+                  [ "])
+AC_CONSTANT_VALUE([openssl version],
+                  VERSION_OPENSSL,
+                  [#include "openssl/opensslv.h"],
+                  [OPENSSL_VERSION_TEXT],
+                  ["])
+AC_CONSTANT_VALUE([SQLite version],
+                  VERSION_LIBSSH2,
+                  [#include "libssh2.h"
+                  ],
+                  [LIBSSH2_VERSION],
+                  [ "])
+AC_CONSTANT_VALUE([curl version],
+                  VERSION_CURL,
+                  [#include "curl/curl.h"
+                   ],
+                  [LIBCURL_VERSION],
+                  [ "])
+AC_CONSTANT_VALUE([cdio version],
+                  VERSION_CDIO,
+                  [#include "cdio/cdio.h"
+                  ],
+                  [CDIO_VERSION);],
+                  [ "])
 AC_TRY_LINK([#include <stdio.h>
              #include "pcre.h"
             ],
