@@ -1277,7 +1277,6 @@ LOCAL void continuousThreadCode(void)
   Errors                     error;
   DatabaseHandle             databaseHandle;
   SignalMask                 signalMask;
-  uint                       events;
   ssize_t                    n;
   const struct inotify_event *inotifyEvent;
   NotifyInfo                 *notifyInfo;
@@ -1542,8 +1541,6 @@ fprintf(stderr,"\n");
 
 Errors Continuous_initAll(void)
 {
-  ulong n;
-
   // init variables
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
@@ -1556,12 +1553,6 @@ Errors Continuous_initAll(void)
                   CALLBACK_(NULL,NULL),  // dictionaryFreeFunction
                   CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
                  );
-
-  // check number of possible notifies
-  n = getMaxNotifyWatches();
-  if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("Low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
-  n = getMaxNotifyInstances();
-  if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("Low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
 
   // init inotify
   #if   defined(PLATFORM_LINUX)
@@ -1729,11 +1720,21 @@ Errors Continuous_initNotify(ConstString     name,
                              const EntryList *entryList
                             )
 {
+  ulong         n;
   InitNotifyMsg initNotifyMsg;
 
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
   assert(entryList != NULL);
+
+  // check number of possible notifies
+  EXECUTE_ONCE(
+  {
+    n = getMaxNotifyWatches();
+    if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("Low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
+    n = getMaxNotifyInstances();
+    if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("Low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
+  });
 
   initNotifyMsg.type = INIT;
   initNotifyMsg.name = String_duplicate(name);
