@@ -13,7 +13,7 @@
 # --------------------------------- constants --------------------------------
 
 CURL="curl"
-CURL_OPTIONS="-L --retry 5 --max-time 30 --silent"
+CURL_OPTIONS="-L --retry 5 --connect-timeout 60 --max-time 300"
 ECHO="echo"
 ECHO_NO_NEW_LINE="echo -n"
 LN="ln"
@@ -23,7 +23,7 @@ RMRF="rm -rf"
 SVN="svn"
 TAR="tar"
 WGET="wget"
-WGET_OPTIONS="--timeout=30 --tries=5"
+WGET_OPTIONS="--tries=5 --timeout=300"
 UNZIP="unzip"
 XZ="xz"
 
@@ -125,6 +125,10 @@ while test $# != 0; do
       ;;
     -c | --clean)
       cleanFlag=1
+      shift
+      ;;
+    --verbose)
+      verboseFlag=1
       shift
       ;;
     --no-verbose)
@@ -366,6 +370,7 @@ if test $helpFlag -eq 1; then
   $ECHO ""
   $ECHO "Options: -d|--destination=<path>"
   $ECHO "         -n|--no-decompress"
+  $ECHO "         --verbose"
   $ECHO "         --no-verbose"
   $ECHO "         -c|--clean"
   $ECHO "         --help"
@@ -442,8 +447,9 @@ fi
 # create directory
 install -d "$destination/extern"
 
-set -e
+#trap 'abort' 1
 #trap 'abort' 0
+#set -e
 
 # run
 cwd=`pwd`
