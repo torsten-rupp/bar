@@ -1,4 +1,10 @@
 #! /bin/sh
+#
+#	/etc/rc.d/init.d/barserver
+#
+#	BAR server start script
+#	Copyright 2007-2019 Torsten Rupp
+#
 
 ### BEGIN INIT INFO
 # Provides:          barserver
@@ -8,10 +14,10 @@
 # Should-Stop:       $time ypbind sendmail
 # Default-Start:     3 5
 # Default-Stop:      0 1 2 6
-# Short-Description: BAR server daemon 
+# Short-Description: BAR server daemon
 # Description:       Start BAR server for backup/restore
 ### END INIT INFO
- 
+
 # source LSB init functions
 #. /lib/lsb/init-functions
 

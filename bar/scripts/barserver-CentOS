@@ -3,7 +3,7 @@
 #	/etc/rc.d/init.d/barserver
 #
 #	BAR server start script
-#	Copyright 2007-2016 Torsten Rupp
+#	Copyright 2007-2019 Torsten Rupp
 #
 
 ### BEGIN INIT INFO
@@ -13,7 +13,7 @@
 # Should-Start:      $time ypbind sendmail
 # Should-Stop:       $time ypbind sendmail
 # Default-Start:     3 5
-# Default-Stop:      0 1 2 6
+# Default-Stop:      0 1 2 4 6
 # Short-Description: BAR server daemon
 # Description:       Backup ARchiver server for backup/restore
 ### END INIT INFO
