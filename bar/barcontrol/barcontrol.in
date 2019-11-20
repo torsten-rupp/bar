@@ -31,7 +31,7 @@ esac
 JAVA="java"
 type $JAVA 1>/dev/null 2>/dev/null
 if test $? -ne 0; then
-  echo >&2 "ERROR: cannot not run $JAVA command"
+  echo >&2 "ERROR: $JAVA command not found. Try to install package JRE."
   exit 1
 fi
 $JAVA -version 1>/dev/null 2>/dev/null
