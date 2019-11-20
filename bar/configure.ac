@@ -1137,7 +1137,7 @@ if test -z "$OBJDUMP"; then
   AC_PATH_PROGS(OBJDUMP,$host-objdump objdump)
 fi
 if test -z "$OBJCOPY"; then
-  AC_PATH_PROGS(OBJCOPY,objcopy)
+  AC_PATH_PROGS(OBJCOPY,$host-objcopy objcopy)
 fi
 if test -z "$RANLIB"; then
   AC_PATH_PROGS(RANLIB,$host-ranlib ranlib)
@@ -3663,23 +3663,23 @@ if test $ENABLE_BFD = "yes"; then
         #       - use cpu+os to avoid "unknown" in name which cause
         #         using of wrong tool names by binutils build!
         (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
+#            --host=$build_cpu-$build_os
+
         if test "$ENABLE_DEBUG" = "yes"; then
-          (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
-            --host=$build_cpu-$build_os \
+          (cd binutils; CC="" CFLAGS="-g -O0" CXXFLAGS="-g -O0" LD="" LDFLAGS="" ./configure \
+            --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
             --disable-host-shared \
             --disable-ld \
-            --with-system-zlib \
           ) 1>$tmpFile 2>&1
         else
-          (cd binutils; CFLAGS="" CXXFLAGS="" LDFLAGS="" ./configure \
-            --host=$build_cpu-$build_os \
+          (cd binutils; CC="" CFLAGS="" CXXFLAGS="" LD="" LDFLAGS="" ./configure \
+            --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
             --disable-host-shared \
             --disable-ld \
-            --with-system-zlib \
           ) 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then
@@ -3689,7 +3689,7 @@ if test $ENABLE_BFD = "yes"; then
         fi
       fi
       if test $result -eq 1; then
-        (cd binutils; make clean; make AR=$(AR) -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd binutils; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
@@ -4146,6 +4146,7 @@ AC_CONSTANT_VALUE([zlib version],
                   ],
                   [ZLIB_VERSION],
                   [ "])
+# Note: bz2 does not have a define for version
 AC_TRY_LINK([#include <stdio.h>
              #include "bzlib.h"
             ],
@@ -4218,6 +4219,7 @@ AC_CONSTANT_VALUE([cdio version],
                   ],
                   [CDIO_VERSION);],
                   [ "])
+# Note: PCRE does not have a define for version
 AC_TRY_LINK([#include <stdio.h>
              #include "pcre.h"
             ],

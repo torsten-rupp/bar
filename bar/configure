@@ -3376,7 +3376,7 @@ done
 
 fi
 if test -z "$OBJCOPY"; then
-  for ac_prog in objcopy
+  for ac_prog in $host-objcopy objcopy
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -6428,7 +6428,7 @@ EOF
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
         ac_supported=yes
-        for s in CC_FLAGS CXX_FLAGS; do
+        for s in CC_FLAGS; do
           eval "if test -n \"\$$s\"; then $s=\"\$$s \"; fi"
           eval "$s=\"\$$s-std=gnu99\""
         done
@@ -15086,24 +15086,26 @@ if test $ENABLE_BFD = "yes"; then
         #       - use cpu+os to avoid "unknown" in name which cause
         #         using of wrong tool names by binutils build!
         (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
+#            --host=$build_cpu-$build_os
+
         if test "$ENABLE_DEBUG" = "yes"; then
-          (cd binutils; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
-            --host=$build_cpu-$build_os \
+          (set -x; cd binutils; CC="" CFLAGS="-g -O0" CXXFLAGS="-g -O0" LD="" LDFLAGS="" ./configure \
+            --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
             --disable-host-shared \
             --disable-ld \
-            --with-system-zlib \
-          ) 1>$tmpFile 2>&1
+          )
+          # 1>$tmpFile 2>&1
         else
-          (cd binutils; CFLAGS="" CXXFLAGS="" LDFLAGS="" ./configure \
-            --host=$build_cpu-$build_os \
+          (set -x; cd binutils; CC="" CFLAGS="" CXXFLAGS="" LD="" LDFLAGS="" ./configure \
+            --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
             --disable-host-shared \
             --disable-ld \
-            --with-system-zlib \
-          ) 1>$tmpFile 2>&1
+          )
+          # 1>$tmpFile 2>&1
         fi
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (configure)" >&5
@@ -15117,7 +15119,7 @@ $as_echo "fail (configure)" >&6; }
         fi
       fi
       if test $result -eq 1; then
-        (cd binutils; make clean; make AR=$(AR) -j$CPU_CORES) 1>$tmpFile 2>&1
+        (cd binutils; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { $as_echo "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
 $as_echo "fail (make)" >&6; }
@@ -23390,6 +23392,7 @@ _ACEOF
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_Z" >&5
 $as_echo "$ac_cv_constant_value_VERSION_Z" >&6; }
+# Note: bz2 does not have a define for version
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
@@ -23861,6 +23864,7 @@ _ACEOF
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_CDIO" >&5
 $as_echo "$ac_cv_constant_value_VERSION_CDIO" >&6; }
+# Note: PCRE does not have a define for version
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
