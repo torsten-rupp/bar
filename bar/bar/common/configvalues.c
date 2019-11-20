@@ -56,6 +56,37 @@ extern "C" {
 #endif
 
 /***********************************************************************\
+* Name   : reportMessage
+* Purpose: report message
+* Input  : reportFunction - report function (can be NULL)
+*          reportUserData - report user data
+*          format         - format string (like printf)
+*          ...            - optional arguments
+* Output : -
+* Return : unit or NULL if not found
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void reportMessage(ConfigReportFunction reportFunction,
+                         void                 *reportUserData,
+                         const char           *format,
+                         ...
+                        )
+{
+  va_list arguments;
+  char    buffer[256];
+
+  if (reportFunction != NULL)
+  {
+    va_start(arguments,format);
+    stringVFormat(buffer,sizeof(buffer),format,arguments);
+    va_end(arguments);
+
+    reportFunction(buffer,reportUserData);
+  }
+}
+
+/***********************************************************************\
 * Name   : findUnit
 * Purpose: find unit by name
 * Input  : units    - units array
@@ -314,14 +345,13 @@ LOCAL const ConfigValueSet *findSetByValue(const ConfigValueSet *sets, uint valu
 #endif /* 0 */
 
 /***********************************************************************\
-* Name   : getIntegerOption
+* Name   : getIntegerValue
 * Purpose: get integer value
-* Input  : value         - value variable
-*          string        - string
-*          units         - units array or NULL
-*          outputHandle  - error/warning output handle or NULL
-*          errorPrefix   - error prefix or NULL
-*          warningPrefix - warning prefix or NULL
+* Input  : value                 - value variable
+*          string                - string
+*          units                 - units array or NULL
+*          errorReportFunction   - error report function (can be NULL)
+*          errorReportUserData   - error report user data
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -330,20 +360,18 @@ LOCAL const ConfigValueSet *findSetByValue(const ConfigValueSet *sets, uint valu
 LOCAL bool getIntegerValue(int                   *value,
                            const char            *string,
                            const ConfigValueUnit *units,
-                           FILE                  *outputHandle,
-                           const char            *errorPrefix,
-                           const char            *warningPrefix
+                           ConfigReportFunction  errorReportFunction,
+                           void                  *errorReportUserData
                           )
 {
   uint                  i,j;
   char                  number[128],unitName[32];
   const ConfigValueUnit *unit;
+  char                  buffer[256];
   ulong                 factor;
 
   assert(value != NULL);
   assert(string != NULL);
-
-  UNUSED_VARIABLE(warningPrefix);
 
   // split number, unit
   i = strlen(string);
@@ -367,30 +395,28 @@ LOCAL bool getIntegerValue(int                   *value,
       unit = findUnit(units,unitName);
       if (unit == NULL)
       {
-        if (outputHandle != NULL)
+        stringClear(buffer);
+        ITERATE_UNITS(unit,units)
         {
-          fprintf(outputHandle,
-                  "%sInvalid unit in integer value '%s'! Valid units:",
-                  (errorPrefix != NULL) ? errorPrefix : "",
-                  string
-                 );
-          ITERATE_UNITS(unit,units)
-          {
-            fprintf(outputHandle," %s",unit->name);
-          }
-          fprintf(outputHandle,".\n");
+          stringFormatAppend(buffer,sizeof(buffer)," %s",unit->name);
         }
+        reportMessage(errorReportFunction,
+                      errorReportUserData,
+                      "Invalid unit in integer value '%s'! Valid units: %s",
+                      string,
+                      buffer
+                     );
         return FALSE;
       }
       factor = unit->factor;
     }
     else
     {
-      if (outputHandle != NULL) fprintf(outputHandle,
-                                        "%sUnexpected unit in value '%s'!\n",
-                                        (errorPrefix != NULL) ? errorPrefix : "",
-                                        string
-                                       );
+      reportMessage(errorReportFunction,
+                    errorReportUserData,
+                    "Unexpected unit in value '%s'",
+                    string
+                   );
       return FALSE;
     }
   }
@@ -408,12 +434,11 @@ LOCAL bool getIntegerValue(int                   *value,
 /***********************************************************************\
 * Name   : getInteger64Value
 * Purpose: get integer64 value
-* Input  : value         - value variable
-*          string        - string
-*          units         - units array or NULL
-*          outputHandle  - error/warning output handle or NULL
-*          errorPrefix   - error prefix or NULL
-*          warningPrefix - warning prefix or NULL
+* Input  : value                 - value variable
+*          string                - string
+*          units                 - units array or NULL
+*          errorReportFunction   - error report function (can be NULL)
+*          errorReportUserData   - error report user data
 * Output : value - value
 * Return : TRUE if got integer, false otherwise
 * Notes  : -
@@ -422,20 +447,18 @@ LOCAL bool getIntegerValue(int                   *value,
 LOCAL bool getInteger64Value(int64                 *value,
                              const char            *string,
                              const ConfigValueUnit *units,
-                             FILE                  *outputHandle,
-                             const char            *errorPrefix,
-                             const char            *warningPrefix
+                             ConfigReportFunction  errorReportFunction,
+                             void                  *errorReportUserData
                             )
 {
   uint                  i,j;
   char                  number[128],unitName[32];
   const ConfigValueUnit *unit;
+  char                  buffer[256];
   ulong                 factor;
 
   assert(value != NULL);
   assert(string != NULL);
-
-  UNUSED_VARIABLE(warningPrefix);
 
   // split number, unit
   i = strlen(string);
@@ -459,30 +482,28 @@ LOCAL bool getInteger64Value(int64                 *value,
       unit = findUnit(units,unitName);
       if (unit == NULL)
       {
-        if (outputHandle != NULL)
+        stringClear(buffer);
+        ITERATE_UNITS(unit,units)
         {
-          fprintf(outputHandle,
-                  "%sInvalid unit in integer value '%s'! Valid units:",
-                  (errorPrefix != NULL) ? errorPrefix : "",
-                  string
-                 );
-          ITERATE_UNITS(unit,units)
-          {
-            fprintf(outputHandle," %s",unit->name);
-          }
-          fprintf(outputHandle,".\n");
+          stringFormatAppend(buffer,sizeof(buffer)," %s",unit->name);
         }
+        reportMessage(errorReportFunction,
+                      errorReportUserData,
+                      "Invalid unit in integer value '%s'! Valid units: %s",
+                      string,
+                      buffer
+                     );
         return FALSE;
       }
       factor = unit->factor;
     }
     else
     {
-      if (outputHandle != NULL) fprintf(outputHandle,
-                                        "%sUnexpected unit in value '%s'!\n",
-                                        (errorPrefix != NULL) ? errorPrefix:"",
-                                        string
-                                       );
+      reportMessage(errorReportFunction,
+                    errorReportUserData,
+                    "Unexpected unit in value '%s'",
+                    string
+                   );
       return FALSE;
     }
   }
@@ -500,26 +521,28 @@ LOCAL bool getInteger64Value(int64                 *value,
 /***********************************************************************\
 * Name   : processValue
 * Purpose: process single config value
-* Input  : configValue   - config value
-*          sectionName   - section name or NULL
-*          name          - option name
-*          value         - option value or NULL
-*          outputHandle  - error/warning output handle or NULL
-*          errorPrefix   - error prefix or NULL
-*          warningPrefix - warning prefix or NULL
+* Input  : configValue           - config value
+*          sectionName           - section name or NULL
+*          name                  - option name
+*          value                 - option value or NULL
+*          errorReportFunction   - error report function (can be NULL)
+*          errorReportUserData   - error report user data
+*          warningReportFunction - warning report function (can be NULL)
+*          warningReportUserData - warning report user data
 * Output : variable - variable to store value
 * Return : TRUE if option processed without error, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool processValue(const ConfigValue *configValue,
-                        const char        *sectionName,
-                        const char        *name,
-                        const char        *value,
-                        FILE              *outputHandle,
-                        const char        *errorPrefix,
-                        const char        *warningPrefix,
-                        void              *variable
+LOCAL bool processValue(const ConfigValue    *configValue,
+                        const char           *sectionName,
+                        const char           *name,
+                        const char           *value,
+                        ConfigReportFunction errorReportFunction,
+                        void                 *errorReportUserData,
+                        ConfigReportFunction warningReportFunction,
+                        void                 *warningReportUserData,
+                        void                 *variable
                        )
 {
   union
@@ -538,6 +561,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
     void       *special;
     const char *newName;
   }    configVariable;
+  char buffer[256];
   char errorMessage[256];
 
   assert(configValue != NULL);
@@ -555,9 +579,8 @@ LOCAL bool processValue(const ConfigValue *configValue,
         if (!getIntegerValue(&data,
                              value,
                              configValue->integerValue.units,
-                             outputHandle,
-                             errorPrefix,
-                             warningPrefix
+                             errorReportFunction,
+                             errorReportUserData
                             )
            )
         {
@@ -569,14 +592,14 @@ LOCAL bool processValue(const ConfigValue *configValue,
             || (data > configValue->integerValue.max)
            )
         {
-          if (outputHandle != NULL) fprintf(outputHandle,
-                                            "%sValue '%s' out range %d..%d for config value '%s'!\n",
-                                            (errorPrefix != NULL) ? errorPrefix:"",
-                                            value,
-                                            configValue->integerValue.min,
-                                            configValue->integerValue.max,
-                                            name
-                                           );
+          reportMessage(errorReportFunction,
+                        errorReportUserData,
+                        "Value '%s' out range %d..%d for config value '%s'",
+                        value,
+                        configValue->integerValue.min,
+                        configValue->integerValue.max,
+                        name
+                       );
           return FALSE;
         }
 
@@ -613,9 +636,8 @@ LOCAL bool processValue(const ConfigValue *configValue,
         if (!getInteger64Value(&data,
                                value,
                                configValue->integer64Value.units,
-                               outputHandle,
-                               errorPrefix,
-                               warningPrefix
+                               errorReportFunction,
+                               errorReportUserData
                               )
            )
         {
@@ -627,14 +649,14 @@ LOCAL bool processValue(const ConfigValue *configValue,
             || (data > configValue->integer64Value.max)
            )
         {
-          if (outputHandle != NULL) fprintf(outputHandle,
-                                            "%sValue '%s' out range %"PRIi64"..%"PRIi64" for config value '%s'!\n",
-                                            (errorPrefix != NULL) ? errorPrefix:"",
-                                            value,
-                                            configValue->integer64Value.min,
-                                            configValue->integer64Value.max,
-                                            name
-                                           );
+          reportMessage(errorReportFunction,
+                        errorReportUserData,
+                        "Value '%s' out range %"PRIi64"..%"PRIi64" for config value '%s'",
+                        value,
+                        configValue->integer64Value.min,
+                        configValue->integer64Value.max,
+                        name
+                       );
           return FALSE;
         }
 
@@ -693,30 +715,28 @@ LOCAL bool processValue(const ConfigValue *configValue,
             unit = findUnit(configValue->doubleValue.units,unitName);
             if (unit == NULL)
             {
-              if (outputHandle != NULL)
+              stringClear(buffer);
+              ITERATE_UNITS(unit,configValue->doubleValue.units)
               {
-                fprintf(outputHandle,
-                        "%sInvalid unit in float value '%s'! Valid units:",
-                        (errorPrefix != NULL) ? errorPrefix:"",
-                        value
-                       );
-                ITERATE_UNITS(unit,configValue->doubleValue.units)
-                {
-                  fprintf(outputHandle," %s",unit->name);
-                }
-                fprintf(outputHandle,".\n");
+                stringFormatAppend(buffer,sizeof(buffer)," %s",unit->name);
               }
+              reportMessage(errorReportFunction,
+                            errorReportUserData,
+                            "Invalid unit in float value '%s'! Valid units: %s",
+                            value,
+                            buffer
+                           );
               return FALSE;
             }
             factor = unit->factor;
           }
           else
           {
-            if (outputHandle != NULL) fprintf(outputHandle,
-                                              "%sUnexpected unit in value '%s'!\n",
-                                              (errorPrefix != NULL) ? errorPrefix:"",
-                                              value
-                                             );
+            reportMessage(errorReportFunction,
+                          errorReportUserData,
+                          "Unexpected unit in value '%s'",
+                          value
+                         );
             return FALSE;
           }
         }
@@ -731,14 +751,14 @@ LOCAL bool processValue(const ConfigValue *configValue,
             || (data > configValue->doubleValue.max)
            )
         {
-          if (outputHandle != NULL) fprintf(outputHandle,
-                                            "%sValue '%s' out range %lf..%lf for float config value '%s'!\n",
-                                            (errorPrefix != NULL) ? errorPrefix:"",
-                                            value,
-                                            configValue->doubleValue.min,
-                                            configValue->doubleValue.max,
-                                            name
-                                           );
+          reportMessage(errorReportFunction,
+                        errorReportUserData,
+                        "Value '%s' out range %lf..%lf for float config value '%s'",
+                        value,
+                        configValue->doubleValue.min,
+                        configValue->doubleValue.max,
+                        name
+                       );
           return FALSE;
         }
 
@@ -791,12 +811,12 @@ LOCAL bool processValue(const ConfigValue *configValue,
         }
         else
         {
-          if (outputHandle != NULL) fprintf(outputHandle,
-                                            "%sInvalid value '%s' for boolean config value '%s'!\n",
-                                            (errorPrefix != NULL) ? errorPrefix:"",
-                                            value,
-                                            name
-                                           );
+          reportMessage(errorReportFunction,
+                        errorReportUserData,
+                        "Invalid value '%s' for boolean config value '%s'",
+                        value,
+                        name
+                       );
           return FALSE;
         }
 
@@ -859,12 +879,12 @@ LOCAL bool processValue(const ConfigValue *configValue,
         select = findSelect(configValue->selectValue.selects,value);
         if (select == NULL)
         {
-          if (outputHandle != NULL) fprintf(outputHandle,
-                                            "%sUnknown value '%s' for config value '%s'!\n",
-                                            (errorPrefix != NULL) ? errorPrefix:"",
-                                            value,
-                                            name
-                                           );
+          reportMessage(errorReportFunction,
+                        errorReportUserData,
+                        "Unknown value '%s' for config value '%s'",
+                        value,
+                        name
+                       );
           return FALSE;
         }
 
@@ -928,12 +948,12 @@ LOCAL bool processValue(const ConfigValue *configValue,
             configValueSet = findSet(configValue->setValue.sets,setName);
             if (configValueSet == NULL)
             {
-              if (outputHandle != NULL) fprintf(outputHandle,
-                                                "%sUnknown value '%s' for config value '%s'!\n",
-                                                (errorPrefix != NULL) ? errorPrefix:"",
-                                                setName,
-                                                name
-                                               );
+              reportMessage(errorReportFunction,
+                            errorReportUserData,
+                            "Unknown value '%s' for config value '%s'",
+                            setName,
+                            name
+                           );
               return FALSE;
             }
 
@@ -1088,7 +1108,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
       {
         if (variable != NULL)
         {
-          errorMessage[0] = '\0';
+          stringClear(errorMessage);
           if (!configValue->specialValue.parse(configValue->specialValue.userData,
                                                (byte*)variable+configValue->offset,
                                                configValue->name,
@@ -1098,28 +1118,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
                                               )
              )
           {
-            if (outputHandle != NULL)
+            if (!stringIsEmpty(errorMessage))
             {
-              errorMessage[sizeof(errorMessage)-1] = '\0';
-              if (strlen(errorMessage) > 0)
-              {
-                fprintf(outputHandle,
-                        "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
-                        (errorPrefix != NULL) ? errorPrefix:"",
-                        value,
-                        configValue->name,
-                        errorMessage
-                       );
-              }
-              else
-              {
-                fprintf(outputHandle,
-                        "%sInvalid value '%s' for config value '%s'!\n",
-                        (errorPrefix != NULL) ? errorPrefix:"",
-                        value,
-                        configValue->name
-                       );
-              }
+              reportMessage(errorReportFunction,
+                            errorReportUserData,
+                            "%s for config value '%s'",
+                            errorMessage,
+                            configValue->name
+                           );
+            }
+            else
+            {
+              reportMessage(errorReportFunction,
+                            errorReportUserData,
+                            "Invalid value '%s' for config value '%s'",
+                            value,
+                            configValue->name
+                           );
             }
             return FALSE;
           }
@@ -1130,7 +1145,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
 
           if ((*configValue->variable.reference) != NULL)
           {
-            errorMessage[0] = '\0';
+            stringClear(errorMessage);
             if (!configValue->specialValue.parse(configValue->specialValue.userData,
                                                  (byte*)(*configValue->variable.reference)+configValue->offset,
                                                  configValue->name,
@@ -1140,28 +1155,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
                                                 )
                )
             {
-              if (outputHandle != NULL)
+              if (!stringIsEmpty(errorMessage))
               {
-                errorMessage[sizeof(errorMessage)-1] = '\0';
-                if (strlen(errorMessage) > 0)
-                {
-                  fprintf(outputHandle,
-                          "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
-                          (errorPrefix != NULL) ? errorPrefix:"",
-                          value,
-                          configValue->name,
-                          errorMessage
-                         );
-                }
-                else
-                {
-                  fprintf(outputHandle,
-                          "%sInvalid value '%s' for config value '%s'!\n",
-                          (errorPrefix != NULL) ? errorPrefix:"",
-                          value,
-                          configValue->name
-                         );
-                }
+                reportMessage(errorReportFunction,
+                              errorReportUserData,
+                              "%s for config value '%s'",
+                              errorMessage,
+                              configValue->name
+                             );
+              }
+              else
+              {
+                reportMessage(errorReportFunction,
+                              errorReportUserData,
+                              "Invalid value '%s' for config value '%s'",
+                              value,
+                              configValue->name
+                             );
               }
               return FALSE;
             }
@@ -1172,7 +1182,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
       {
         assert(configValue->variable.special != NULL);
 
-        errorMessage[0] = '\0';
+        stringClear(errorMessage);
         if (!configValue->specialValue.parse(configValue->specialValue.userData,
                                              configValue->variable.special,
                                              configValue->name,
@@ -1182,28 +1192,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
                                             )
            )
         {
-          if (outputHandle != NULL)
+          if (!stringIsEmpty(errorMessage))
           {
-            errorMessage[sizeof(errorMessage)-1] = '\0';
-            if (strlen(errorMessage) > 0)
-            {
-              fprintf(outputHandle,
-                      "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
-                      (errorPrefix != NULL) ? errorPrefix:"",
-                      value,
-                      configValue->name,
-                      errorMessage
-                     );
-            }
-            else
-            {
-              fprintf(outputHandle,
-                      "%sInvalid value '%s' for config value '%s'!\n",
-                      (errorPrefix != NULL) ? errorPrefix:"",
-                      value,
-                      configValue->name
-                     );
-            }
+            reportMessage(errorReportFunction,
+                          errorReportUserData,
+                          "%s for config value '%s'",
+                          errorMessage,
+                          configValue->name
+                         );
+          }
+          else
+          {
+            reportMessage(errorReportFunction,
+                          errorReportUserData,
+                          "Invalid value '%s' for config value '%s'",
+                          value,
+                          configValue->name
+                         );
           }
           return FALSE;
         }
@@ -1218,7 +1223,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
       {
         if (variable != NULL)
         {
-          errorMessage[0] = '\0';
+          stringClear(errorMessage);
           if (!configValue->deprecatedValue.parse(configValue->deprecatedValue.userData,
                                                   (byte*)variable+configValue->offset,
                                                   configValue->name,
@@ -1228,28 +1233,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
                                                  )
              )
           {
-            if (outputHandle != NULL)
+            if (strlen(errorMessage) > 0)
             {
-              errorMessage[sizeof(errorMessage)-1] = '\0';
-              if (strlen(errorMessage) > 0)
-              {
-                fprintf(outputHandle,
-                        "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
-                        (errorPrefix != NULL) ? errorPrefix:"",
-                        value,
-                        configValue->name,
-                        errorMessage
-                       );
-              }
-              else
-              {
-                fprintf(outputHandle,
-                        "%sInvalid value '%s' for config value '%s'!\n",
-                        (errorPrefix != NULL) ? errorPrefix:"",
-                        value,
-                        configValue->name
-                       );
-              }
+              reportMessage(errorReportFunction,
+                            errorReportUserData,
+                            "%s for config value '%s'",
+                            errorMessage,
+                            configValue->name
+                           );
+            }
+            else
+            {
+              reportMessage(errorReportFunction,
+                            errorReportUserData,
+                            "Invalid value '%s' for config value '%s'",
+                            value,
+                            configValue->name
+                           );
             }
             return FALSE;
           }
@@ -1258,7 +1258,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
         {
           if (configValue->variable.pointer != NULL)
           {
-            errorMessage[0] = '\0';
+            stringClear(errorMessage);
             if (!configValue->deprecatedValue.parse(configValue->deprecatedValue.userData,
                                                     (byte*)(configValue->variable.pointer)+configValue->offset,
                                                     configValue->name,
@@ -1268,28 +1268,23 @@ LOCAL bool processValue(const ConfigValue *configValue,
                                                    )
                )
             {
-              if (outputHandle != NULL)
+              if (!stringIsEmpty(errorMessage))
               {
-                errorMessage[sizeof(errorMessage)-1] = '\0';
-                if (strlen(errorMessage) > 0)
-                {
-                  fprintf(outputHandle,
-                          "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
-                          (errorPrefix != NULL) ? errorPrefix:"",
-                          value,
-                          configValue->name,
-                          errorMessage
-                         );
-                }
-                else
-                {
-                  fprintf(outputHandle,
-                          "%sInvalid value '%s' for config value '%s'!\n",
-                          (errorPrefix != NULL) ? errorPrefix:"",
-                          value,
-                          configValue->name
-                         );
-                }
+                reportMessage(errorReportFunction,
+                              errorReportUserData,
+                              "%s for config value '%s'!",
+                              errorMessage,
+                              configValue->name
+                             );
+              }
+              else
+              {
+                reportMessage(errorReportFunction,
+                              errorReportUserData,
+                              "Invalid value '%s' for config value '%s'",
+                              value,
+                              configValue->name
+                             );
               }
               return FALSE;
             }
@@ -1300,7 +1295,7 @@ LOCAL bool processValue(const ConfigValue *configValue,
       {
         assert(configValue->variable.special != NULL);
 
-        errorMessage[0] = '\0';
+        stringClear(errorMessage);
         if (!configValue->deprecatedValue.parse(configValue->deprecatedValue.userData,
                                                 configValue->variable.deprecated,
                                                 configValue->name,
@@ -1310,60 +1305,75 @@ LOCAL bool processValue(const ConfigValue *configValue,
                                                )
            )
         {
-          if (outputHandle != NULL)
+          if (!stringIsEmpty(errorMessage))
           {
-            errorMessage[sizeof(errorMessage)-1] = '\0';
-            if (strlen(errorMessage) > 0)
-            {
-              fprintf(outputHandle,
-                      "%sInvalid value '%s' for config value '%s' (error: %s)!\n",
-                      (errorPrefix != NULL) ? errorPrefix:"",
-                      value,
-                      configValue->name,
-                      errorMessage
-                     );
-            }
-            else
-            {
-              fprintf(outputHandle,
-                      "%sInvalid value '%s' for config value '%s'!\n",
-                      (errorPrefix != NULL) ? errorPrefix:"",
-                      value,
-                      configValue->name
-                     );
-            }
+            reportMessage(errorReportFunction,
+                          errorReportUserData,
+                          "%s for config value '%s'",
+                          errorMessage,
+                          configValue->name
+                         );
+          }
+          else
+          {
+            reportMessage(errorReportFunction,
+                          errorReportUserData,
+                          "Invalid value '%s' for config value '%s'",
+                          value,
+                          configValue->name
+                         );
           }
           return FALSE;
         }
       }
-      if ((outputHandle != NULL) && configValue->deprecatedValue.warningFlag)
+      if (configValue->deprecatedValue.warningFlag)
       {
         if (sectionName != NULL)
         {
-          fprintf(outputHandle,
-                  "%sConfiguration value '%s' in section '%s' is deprecated - skipped",
-                  (warningPrefix != NULL) ? warningPrefix:"",
-                  configValue->name,
-                  sectionName
-                 );
+          if (configValue->deprecatedValue.newName != NULL)
+          {
+            reportMessage(warningReportFunction,
+                          warningReportUserData,
+                          "Configuration value '%s' in section '%s' is deprecated - skipped. Use '%s' instead",
+                          configValue->deprecatedValue.newName,
+                          configValue->name,
+                          sectionName,
+                          configValue->deprecatedValue.newName
+                         );
+          }
+          else
+          {
+            reportMessage(warningReportFunction,
+                          warningReportUserData,
+                          "Configuration value '%s' in section '%s' is deprecated - skipped",
+                          configValue->deprecatedValue.newName,
+                          configValue->name,
+                          sectionName
+                         );
+          }
         }
         else
         {
-          fprintf(outputHandle,
-                  "%sConfiguration value '%s' is deprecated - skipped",
-                  (warningPrefix != NULL) ? warningPrefix:"",
-                  configValue->name
-
-                 );
+          if (configValue->deprecatedValue.newName != NULL)
+          {
+            reportMessage(warningReportFunction,
+                          warningReportUserData,
+                          "Configuration value '%s' is deprecated - skipped. Use '%s' instead",
+                          configValue->deprecatedValue.newName,
+                          configValue->name,
+                          configValue->deprecatedValue.newName
+                         );
+          }
+          else
+          {
+            reportMessage(warningReportFunction,
+                          warningReportUserData,
+                          "Configuration value '%s' is deprecated - skipped",
+                          configValue->deprecatedValue.newName,
+                          configValue->name
+                         );
+          }
         }
-        if (configValue->deprecatedValue.newName != NULL)
-        {
-          fprintf(outputHandle,
-                  ". Use '%s' instead",
-                  configValue->deprecatedValue.newName
-                 );
-        }
-        fprintf(outputHandle,".\n");
       }
       break;
     case CONFIG_VALUE_TYPE_BEGIN_SECTION:
@@ -1725,14 +1735,15 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
   return (configValues[index].type != CONFIG_VALUE_TYPE_END) ? index : -1;
 }
 
-bool ConfigValue_parse(const char        *name,
-                       const char        *value,
-                       const ConfigValue configValues[],
-                       const char        *sectionName,
-                       FILE              *outputHandle,
-                       const char        *errorPrefix,
-                       const char        *warningPrefix,
-                       void              *variable
+bool ConfigValue_parse(const char           *name,
+                       const char           *value,
+                       const ConfigValue    configValues[],
+                       const char           *sectionName,
+                       ConfigReportFunction errorReportFunction,
+                       void                 *errorReportUserData,
+                       ConfigReportFunction warningReportFunction,
+                       void                 *warningReportUserData,
+                       void                 *variable
                       )
 {
   int i;
@@ -1745,7 +1756,16 @@ bool ConfigValue_parse(const char        *name,
   if (i < 0) return FALSE;
 
   // process value
-  if (!processValue(&configValues[i],sectionName,name,value,outputHandle,errorPrefix,warningPrefix,variable))
+  if (!processValue(&configValues[i],
+                    sectionName,
+                    name,
+                    value,
+                    errorReportFunction,
+                    errorReportUserData,
+                    warningReportFunction,
+                    warningReportUserData,
+                    variable
+                   ))
   {
     return FALSE;
   }
@@ -1758,7 +1778,7 @@ bool ConfigValue_getIntegerValue(int                   *value,
                                  const ConfigValueUnit *units
                                 )
 {
-  return getIntegerValue(value,string,units,NULL,NULL,NULL);
+  return getIntegerValue(value,string,units,NULL,NULL);
 }
 
 bool ConfigValue_getInteger64Value(int64                 *value,
@@ -1766,7 +1786,7 @@ bool ConfigValue_getInteger64Value(int64                 *value,
                                    const ConfigValueUnit *units
                                   )
 {
-  return getInteger64Value(value,string,units,NULL,NULL,NULL);
+  return getInteger64Value(value,string,units,NULL,NULL);
 }
 
 void ConfigValue_formatInit(ConfigValueFormat      *configValueFormat,

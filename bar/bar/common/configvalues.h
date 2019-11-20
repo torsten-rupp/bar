@@ -29,8 +29,20 @@
 /***************************** Datatypes ******************************/
 
 /***********************************************************************\
+* Name   : ConfigReportFunction
+* Purpose: report function
+* Input  : errorMessage - message
+*          userData     - user data
+* Output : -
+* Return : TRUE if parsed, otherwise FALSE
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*ConfigReportFunction)(const char *errorMessage, void *userData);
+
+/***********************************************************************\
 * Name   : ConfigParseFunction
-* Purpose: initialize jobs
+* Purpose: config parse function
 * Input  : userData         - user data
 *          variable         - config variable
 *          name             - config name
@@ -46,7 +58,7 @@ typedef bool(*ConfigParseFunction)(void *userData, void *variable, const char *n
 
 /***********************************************************************\
 * Name   : ConfigFormatInitFunction
-* Purpose: initialize format
+* Purpose: initialize config format
 * Input  : formatData - format data variable
 *          userData   - user data
 *          variable   - config variable
@@ -59,7 +71,7 @@ typedef void(*ConfigFormatInitFunction)(void **formatData, void *userData, void 
 
 /***********************************************************************\
 * Name   : ConfigFormatDoneFunction
-* Purpose: done format
+* Purpose: done config format
 * Input  : formatData - format data variable
 *          userData   - user data
 * Output : -
@@ -71,7 +83,7 @@ typedef void(*ConfigFormatDoneFunction)(void **formatData, void *userData);
 
 /***********************************************************************\
 * Name   : ConfigFormatFunction
-* Purpose: format line
+* Purpose: format config line
 * Input  : formatData - format data
 *          userData   - user data
 * Output : line - line
@@ -1198,26 +1210,28 @@ int ConfigValue_nextValueIndex(const ConfigValue configValues[],
 /***********************************************************************
 * Name   : ConfigValue_parse
 * Purpose: parse config value
-* Input  : name          - config value name
-*          value         - config value
-*          configValues  - array with config value specification
-*          sectionName   - section name or NULL
-*          outputHandle  - error/warning output handle or NULL
-*          errorPrefix   - error prefix or NULL
-*          warningPrefix - warning prefix or NULL
-* Output : variable - variable
+* Input  : name                  - config value name
+*          value                 - config value
+*          configValues          - array with config value specification
+*          sectionName           - section name or NULL
+*          errorReportFunction   - error report function (can be NULL)
+*          errorReportUserData   - error report user data
+*          warningReportFunction - warning report function (can be NULL)
+*          warningReportUserData - warning report user data
+* Output : variable - variable (can be NULL)
 * Return : TRUE if config value parsed, FALSE on error
 * Notes  :
 ***********************************************************************/
 
-bool ConfigValue_parse(const char        *name,
-                       const char        *value,
-                       const ConfigValue configValues[],
-                       const char        *sectionName,
-                       FILE              *outputHandle,
-                       const char        *errorPrefix,
-                       const char        *warningPrefix,
-                       void              *variable
+bool ConfigValue_parse(const char           *name,
+                       const char           *value,
+                       const ConfigValue    configValues[],
+                       const char           *sectionName,
+                       ConfigReportFunction errorReportFunction,
+                       void                 *errorReportUserData,
+                       ConfigReportFunction warningReportFunction,
+                       void                 *warningReportUserData,
+                       void                 *variable
                       );
 
 /***********************************************************************\
