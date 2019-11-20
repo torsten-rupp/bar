@@ -524,7 +524,7 @@ SUFFIXEX = $(subst $() $(),|,-debug -gcov -gprof -valgrind)
 # helper function for test files
 functionCleanTestFiles = \
   $(RMRF) $(TEST_FILES_CLEAN); \
-  $(CHMOD) o+w intermediate
+  $(CHMOD) o+w intermediate || true
 functionDoneTestFiles = \
   $(CHMOD) o-w intermediate
 
