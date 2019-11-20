@@ -19,17 +19,14 @@
 ### END INIT INFO
 
 NAME=bar
-DAEMON=/usr/bin/$NAME
-PIDFILE=/var/run/$NAME.pid
-CONFIGFILE=/etc/bar/bar.cfg
-DAEMON_ARGS="-c $CONFIGFILE --daemon --pid-file=$PIDFILE --verbose=0 --quiet"
-PIDFILE=/var/run/$NAME.pid
-SCRIPTNAME=/etc/init.d/barserver
+BAR_BIN=/usr/bin/$NAME
+BAR_CONFIG_FILENAME=/etc/bar/bar.cfg
+BAR_PID_FILENAME=/var/run/$NAME.pid
+BAR_ARGS="--config $BAR_CONFIG_FILENAME --daemon --pid-file=$BAR_PID_FILENAME --verbose=0 --quiet"
+BAR_SCRIPT_FILENAME=/etc/init.d/barserver
+DESCRIPTION="barserver"
 
-# source LSB init functions
-#. /lib/lsb/init-functions
-
-# sourced shell functions
+# shell functions
 if test -f /etc/rc.status; then
   . /etc/rc.status
 fi
@@ -38,25 +35,25 @@ if test -f /etc/init.d/functions; then
 fi
 
 # check for binaries
-if test ! -x $DAEMON; then
-  echo "$DAEMON not installed"
+if test ! -x $BAR_BIN; then
+  echo "$BAR_BIN not installed"
   exit 5
 fi
 
-# check for config file
-if test ! -r $CONFIGFILE; then
-  echo "$CONFIGFILE cannot be read"
+# check for configuration file
+if test ! -r $BAR_CONFIG_FILENAME; then
+  echo "$BAR_CONFIG_FILENAME cannot be read"
   exit 6
 fi
 
 case "$1" in
     start)
 	echo -n "Starting BAR server "
-	daemon $DAEMON $DAEMON_ARGS
+	daemon $BAR_BIN $BAR_ARGS
 	;;
     stop)
 	echo -n "Shutting down BAR server "
-	killproc -p $PIDFILE -TERM $DAEMON
+	killproc -p $BAR_PID_FILENAME -TERM $BAR_BIN
 	;;
     reload)
         failure
@@ -67,9 +64,9 @@ case "$1" in
 	;;
     status)
 	echo -n "Checking for service BAR server: "
-	if test ! -f $PIDFILE; then
+	if test ! -f $BAR_PID_FILENAME; then
           echo "stopped"
-        elif test ! -d /proc/`cat $PIDFILE`; then
+        elif test ! -d /proc/`cat $BAR_PID_FILENAME`; then
           echo "stopped"
         else
           echo "running"

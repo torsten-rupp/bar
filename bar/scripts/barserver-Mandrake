@@ -18,6 +18,14 @@
 # Description:       Start BAR server for backup/restore
 ### END INIT INFO
 
+NAME=bar
+BAR_BIN=/usr/bin/$NAME
+BAR_CONFIG_FILENAME=/etc/bar/bar.cfg
+BAR_PID_FILENAME=/var/run/$NAME.pid
+BAR_ARGS="--config $BAR_CONFIG_FILENAME --daemon --pid-file=$BAR_PID_FILENAME --verbose=0 --quiet"
+BAR_SCRIPT_FILENAME=/etc/init.d/barserver
+DESCRIPTION="barserver"
+
 # source LSB init functions
 #. /lib/lsb/init-functions
 
@@ -25,16 +33,14 @@
 . /etc/rc.status
 
 # check for binaries
-BAR_BIN=/usr/bin/bar
 if test ! -x $BAR_BIN; then
   echo "$BAR_BIN not installed"
   exit 5
 fi
 
-# check for existence of needed config file
-BAR_CONFIG=/etc/bar/bar.cfg
-if test ! -r $BAR_CONFIG; then
-  echo "$BAR_CONFIG cannot be read"
+# check for configuration file
+if test ! -r $BAR_CONFIG_FILENAME; then
+  echo "$BAR_CONFIG_FILENAME cannot be read"
   exit 6
 fi
 
