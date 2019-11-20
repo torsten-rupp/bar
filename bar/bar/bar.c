@@ -875,6 +875,12 @@ const ConfigValueSelect CONFIG_VALUE_RESTORE_ENTRY_MODES[] = CONFIG_VALUE_SELECT
   {"overwrite", RESTORE_ENTRY_MODE_OVERWRITE },
 );
 
+const ConfigValueSelect CONFIG_VALUE_SERVER_MODES[] = CONFIG_VALUE_SELECT_ARRAY
+(
+  {"master", SERVER_MODE_MASTER},
+  {"slave",  SERVER_MODE_SLAVE },
+);
+
 ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
   // general settings
@@ -1160,6 +1166,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   ),
 
   // server settings
+  CONFIG_VALUE_SELECT            ("server-mode",                      &serverMode,-1,                                                CONFIG_VALUE_SERVER_MODES),
   CONFIG_VALUE_INTEGER           ("server-port",                      &serverPort,-1,                                                0,65535,NULL),
   CONFIG_VALUE_INTEGER           ("server-tls-port",                  &serverTLSPort,-1,                                             0,65535,NULL),
   CONFIG_VALUE_SPECIAL           ("server-ca-file",                   &serverCA,-1,                                                  configValueParseCertificate,NULL,NULL,NULL,NULL),
@@ -1465,7 +1472,6 @@ LOCAL void outputConsole(FILE *file, ConstString string)
     // no thread local vairable -> output string
     bytesWritten = fwrite(String_cString(string),1,String_length(string),file);
   }
-
   UNUSED_VARIABLE(bytesWritten);
 }
 
@@ -1652,388 +1658,448 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   }
 
   // parse file
-  if (printInfoFlag) { printf("Reading configuration file '%s'...",String_cString(fileName)); fflush(stdout); }
   failFlag   = FALSE;
   line       = String_new();
   lineNb     = 0;
   name       = String_new();
   value      = String_new();
-  while (   !failFlag
-         && File_getLine(&fileHandle,line,&lineNb,"#")
-        )
+  SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    // parse line
-    if      (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
+    if (printInfoFlag) { printConsole(stdout,"Reading configuration file '%s'...",String_cString(fileName)); }
+    while (   !failFlag
+           && File_getLine(&fileHandle,line,&lineNb,"#")
+          )
     {
-      ServerNode *serverNode;
-
-      // find/allocate server node
-      serverNode = NULL;
-      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      // parse line
+      if      (String_parse(line,STRING_BEGIN,"[file-server %S]",NULL,name))
       {
-        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
-        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-      }
-      if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FILE);
+        ServerNode *serverNode;
 
-      // parse section
-      while (   !failFlag
-             && File_getLine(&fileHandle,line,&lineNb,"#")
-             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        // find/allocate server node
+        serverNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 CONFIG_VALUES,
-                                 "file-server",
-                                 stderr,"ERROR: ","Warning: ",
-                                 &serverNode->server
-                                )
-             )
+          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                              serverNode,
+                                                 (serverNode->server.type == SERVER_TYPE_FILE)
+                                              && String_equals(serverNode->server.name,name)
+                                             );
+          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+        }
+        if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FILE);
+        assert(serverNode != NULL);
+        assert(serverNode->server.type == SERVER_TYPE_FILE);
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
-                       String_cString(name),
-                       "ftp-server",
+            ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              CONFIG_VALUES,
+                              "file-server",
+                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,"file-server",String_cString(fileName),lineNb);
+                                failFlag = TRUE;                               
+                              },NULL),
+                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"file-server",String_cString(fileName),lineNb);
+                              },NULL),
+                              &serverNode->server
+                             );
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
-                       lineNb
+                       lineNb,
+                       String_cString(line)
                       );
             failFlag = TRUE;
             break;
           }
         }
-        else
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'"),
-                     String_cString(fileName),
-                     lineNb,
-                     String_cString(line)
-                    );
-          failFlag = TRUE;
-          break;
+          List_append(&globalOptions.serverList,serverNode);
         }
       }
-      File_ungetLine(&fileHandle,line,&lineNb);
-
-      // add to server list
-      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
       {
-        List_append(&globalOptions.serverList,serverNode);
-      }
-    }
-    else if (String_parse(line,STRING_BEGIN,"[ftp-server %S]",NULL,name))
-    {
-      ServerNode *serverNode;
+        ServerNode *serverNode;
 
-      // find/allocate server node
-      serverNode = NULL;
-      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
-        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-      }
-      if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FTP);
-
-      // parse section
-      while (   !failFlag
-             && File_getLine(&fileHandle,line,&lineNb,"#")
-             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        // find/allocate server node
+        serverNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 CONFIG_VALUES,
-                                 "ftp-server",
-                                 stderr,"ERROR: ","Warning: ",
-                                 &serverNode->server
-                                )
-             )
+          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                              serverNode,
+                                                 (serverNode->server.type == SERVER_TYPE_FTP)
+//TODO: port number 
+                                              && String_equals(serverNode->server.name,name)
+                                             );
+          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+        }
+        if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_FTP);
+        assert(serverNode != NULL);
+        assert(serverNode->server.type == SERVER_TYPE_FTP);
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
-                       String_cString(name),
-                       "ftp-server",
+            ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              CONFIG_VALUES,
+                              "ftp-server",
+                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,"ftp-server",String_cString(fileName),lineNb);
+                                failFlag = TRUE;
+                              },NULL),
+                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ftp-server",String_cString(fileName),lineNb);
+                              },NULL),
+                              &serverNode->server
+                             );
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
-                       lineNb
+                       lineNb,
+                       String_cString(line)
                       );
             failFlag = TRUE;
             break;
           }
         }
-        else
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'"),
-                     String_cString(fileName),
-                     lineNb,
-                     String_cString(line)
-                    );
-          failFlag = TRUE;
-          break;
+          List_append(&globalOptions.serverList,serverNode);
         }
       }
-      File_ungetLine(&fileHandle,line,&lineNb);
-
-      // add to server list
-      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
       {
-        List_append(&globalOptions.serverList,serverNode);
-      }
-    }
-    else if (String_parse(line,STRING_BEGIN,"[ssh-server %S]",NULL,name))
-    {
-      ServerNode *serverNode;
+        ServerNode *serverNode;
 
-      // find/allocate server node
-      serverNode = NULL;
-      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
-        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-      }
-      if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_SSH);
-
-      // parse section
-      while (   !failFlag
-             && File_getLine(&fileHandle,line,&lineNb,"#")
-             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        // find/allocate server node
+        serverNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 CONFIG_VALUES,
-                                 "ssh-server",
-                                 stderr,"ERROR: ","Warning: ",
-                                 &serverNode->server
-                                )
-             )
+          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                              serverNode,
+                                                 (serverNode->server.type == SERVER_TYPE_SSH)
+//TODO: port number 
+                                              && String_equals(serverNode->server.name,name)
+                                             );
+          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+        }
+        if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_SSH);
+        assert(serverNode != NULL);
+        assert(serverNode->server.type == SERVER_TYPE_SSH);
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
-                       String_cString(name),
-                       "ssh-server",
+            ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              CONFIG_VALUES,
+                              "ssh-server",
+                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,"ssh-server",String_cString(fileName),lineNb);
+                                failFlag = TRUE;
+                              },NULL),
+                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ssh-server",String_cString(fileName),lineNb);
+                              },NULL),
+                              &serverNode->server
+                             );
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
-                       lineNb
+                       lineNb,
+                       String_cString(line)
                       );
             failFlag = TRUE;
             break;
           }
         }
-        else
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'"),
-                     String_cString(fileName),
-                     lineNb,
-                     String_cString(line)
-                    );
-          failFlag = TRUE;
-          break;
+          List_append(&globalOptions.serverList,serverNode);
         }
       }
-      File_ungetLine(&fileHandle,line,&lineNb);
-
-      // add to server list
-      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
       {
-        List_append(&globalOptions.serverList,serverNode);
-      }
-    }
-    else if (String_parse(line,STRING_BEGIN,"[webdav-server %S]",NULL,name))
-    {
-      ServerNode *serverNode;
+        ServerNode *serverNode;
 
-      // find/allocate server node
-      serverNode = NULL;
-      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,serverNode,String_equals(serverNode->server.name,name));
-        if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
-      }
-      if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_WEBDAV);
-
-      // parse section
-      while (   !failFlag
-             && File_getLine(&fileHandle,line,&lineNb,"#")
-             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        // find/allocate server node
+        serverNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 CONFIG_VALUES,
-                                 "webdav-server",
-                                 stderr,"ERROR: ","Warning: ",
-                                 &serverNode->server
-                                )
-             )
+          serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
+                                              serverNode,
+                                                 (serverNode->server.type == SERVER_TYPE_WEBDAV)
+//TODO: port number 
+                                              && String_equals(serverNode->server.name,name)
+                                             );
+          if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
+        }
+        if (serverNode == NULL) serverNode = newServerNode(name,SERVER_TYPE_WEBDAV);
+        assert(serverNode != NULL);
+        assert(serverNode->server.type == SERVER_TYPE_WEBDAV);
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
-                       String_cString(name),
-                       "webdav-server",
+            ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              CONFIG_VALUES,
+                              "webdav-server",
+                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,"webdav-server",String_cString(fileName),lineNb);
+                                failFlag = TRUE;
+                              },NULL),
+                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"webdav-server",String_cString(fileName),lineNb);
+                              },NULL),
+                              &serverNode->server
+                             );
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
-                       lineNb
+                       lineNb,
+                       String_cString(line)
                       );
             failFlag = TRUE;
             break;
           }
         }
-        else
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to server list
+        SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'"),
-                     String_cString(fileName),
-                     lineNb,
-                     String_cString(line)
-                    );
-          failFlag = TRUE;
-          break;
+          List_append(&globalOptions.serverList,serverNode);
         }
       }
-      File_ungetLine(&fileHandle,line,&lineNb);
-
-      // add to server list
-      SEMAPHORE_LOCKED_DO(&globalOptions.serverList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
       {
-        List_append(&globalOptions.serverList,serverNode);
-      }
-    }
-    else if (String_parse(line,STRING_BEGIN,"[device %S]",NULL,name))
-    {
-      DeviceNode *deviceNode;
+        DeviceNode *deviceNode;
 
-      // find/allocate device node
-      deviceNode = NULL;
-      SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-      {
-        deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->device.name,name));
-        if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
-      }
-      if (deviceNode == NULL) deviceNode = newDeviceNode(name);
-
-      // parse section
-      while (   File_getLine(&fileHandle,line,&lineNb,"#")
-             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        // find/allocate device node
+        deviceNode = NULL;
+        SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 CONFIG_VALUES,
-                                 "device",
-                                 stderr,"ERROR: ","Warning: ",
-                                 &deviceNode->device
-                                )
-             )
+          deviceNode = (DeviceNode*)LIST_FIND(&globalOptions.deviceList,deviceNode,String_equals(deviceNode->device.name,name));
+          if (deviceNode != NULL) List_remove(&globalOptions.deviceList,deviceNode);
+        }
+        if (deviceNode == NULL) deviceNode = newDeviceNode(name);
+
+        // parse section
+        while (   File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
-                       String_cString(name),
-                       "device",
+            ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              CONFIG_VALUES,
+                              "device",
+                              LAMBDA(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,"device-server",String_cString(fileName),lineNb);
+                                failFlag = TRUE;
+                              }),NULL,
+                              LAMBDA(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+   
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
+                              }),NULL,
+                              &deviceNode->device
+                             );
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
-                       lineNb
+                       lineNb,
+                       String_cString(line)
                       );
             failFlag = TRUE;
             break;
           }
         }
-        else
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to device list
+        SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
-          if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'"),
-                     String_cString(fileName),
-                     lineNb,
-                     String_cString(line)
-                    );
-          failFlag = TRUE;
-          break;
+          List_append(&globalOptions.deviceList,deviceNode);
         }
       }
-      File_ungetLine(&fileHandle,line,&lineNb);
-
-      // add to device list
-      SEMAPHORE_LOCKED_DO(&globalOptions.deviceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+      else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
       {
-        List_append(&globalOptions.deviceList,deviceNode);
-      }
-    }
-    else if (String_parse(line,STRING_BEGIN,"[master]",NULL))
-    {
-      // parse section
-      while (   !failFlag
-             && File_getLine(&fileHandle,line,&lineNb,"#")
-             && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
-            )
-      {
-        if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
         {
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 CONFIG_VALUES,
-                                 "master",
-                                 stderr,"ERROR: ","Warning: ",
-                                 &globalOptions.masterInfo
-                                )
-             )
+          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            if (printInfoFlag) printf("FAIL!\n");
-            printError(_("Unknown or invalid config value '%s' in section '%s' in %s, line %ld"),
-                       String_cString(name),
-                       "master",
+            ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              CONFIG_VALUES,
+                              "master",
+                              LAMBDA(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printError("%s in section '%s' in %s, line %ld",errorMessage,"master",String_cString(fileName),lineNb);
+                                failFlag = TRUE;
+                              }),NULL,
+                              LAMBDA(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
+                              }),NULL,
+                              &globalOptions.masterInfo
+                             );
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
-                       lineNb
+                       lineNb,
+                       String_cString(line)
                       );
             failFlag = TRUE;
             break;
           }
         }
-        else
-        {
-          if (printInfoFlag) printf("FAIL!\n");
-          printError(_("Syntax error in '%s', line %ld: '%s'"),
-                     String_cString(fileName),
-                     lineNb,
-                     String_cString(line)
-                    );
-          failFlag = TRUE;
-          break;
-        }
+        File_ungetLine(&fileHandle,line,&lineNb);
       }
-      File_ungetLine(&fileHandle,line,&lineNb);
-    }
-    else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
-    {
-      // nothing to do
-    }
-    else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
-    {
-      // nothing to do
-    }
-    else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
-    {
-      if (!ConfigValue_parse(String_cString(name),
-                             String_cString(value),
-                             CONFIG_VALUES,
-                             NULL, // section name
-                             stderr,"ERROR: ","Warning: ",
-                             NULL  // variable
-                            )
-         )
+      else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
       {
-        if (printInfoFlag) printf("FAIL!\n");
-        printError(_("Unknown or invalid config entry '%s' with value '%s' in %s, line %ld"),
-                   String_cString(name),
-                   String_cString(value),
+        // nothing to do
+      }
+      else if (String_parse(line,STRING_BEGIN,"[end]",NULL))
+      {
+        // nothing to do
+      }
+      else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+      {
+        ConfigValue_parse(String_cString(name),
+                          String_cString(value),
+                          CONFIG_VALUES,
+                          NULL, // section name
+                          LAMBDA(void,(const char *errorMessage, void *userData),
+                          {
+                            UNUSED_VARIABLE(userData);
+
+                            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                            printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                            failFlag = TRUE;
+                          }),NULL,
+                          LAMBDA(void,(const char *warningMessage, void *userData),
+                          {
+                            UNUSED_VARIABLE(userData);
+
+                            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                            printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
+                          }),NULL,
+                          NULL  // variable
+                         );
+        if (failFlag) break;
+      }
+      else
+      {
+        if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+        printError(_("Unknown config entry '%s' in %s, line %ld"),
+                   String_cString(line),
                    String_cString(fileName),
                    lineNb
                   );
@@ -2041,21 +2107,10 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         break;
       }
     }
-    else
+    if (!failFlag)
     {
-      if (printInfoFlag) printf("FAIL!\n");
-      printError(_("Unknown config entry '%s' in %s, line %ld"),
-                 String_cString(line),
-                 String_cString(fileName),
-                 lineNb
-                );
-      failFlag = TRUE;
-      break;
+      if (printInfoFlag) { printConsole(stdout,"OK\n"); }
     }
-  }
-  if (!failFlag)
-  {
-    if (printInfoFlag) printf("OK\n");
   }
 
   // free resources
@@ -4212,6 +4267,7 @@ LOCAL Errors initAll(void)
   initServer(&defaultSSHServer,NULL,SERVER_TYPE_SSH);
   initServer(&defaultWebDAVServer,NULL,SERVER_TYPE_WEBDAV);
   initDevice(&defaultDevice);
+  serverMode                             = SERVER_MODE_MASTER;
   serverPort                             = DEFAULT_SERVER_PORT;
   serverTLSPort                          = DEFAULT_TLS_SERVER_PORT;
   initCertificate(&serverCA);
@@ -4390,12 +4446,7 @@ LOCAL Errors initAll(void)
   DEBUG_TESTCODE() { Index_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Index_initAll,{ Index_doneAll(); });
 
-  error = Continuous_initAll();
-  if (error != ERROR_NONE)
-  {
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
+  (void)Continuous_initAll();
   DEBUG_TESTCODE() { Continuous_doneAll(); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   AUTOFREE_ADD(&autoFreeList,Continuous_initAll,{ Continuous_doneAll(); });
 
@@ -4614,6 +4665,11 @@ LOCAL bool validateOptions(void)
     if (!File_exists(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' does not exists!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
     if (!File_isDirectory(globalOptions.tmpDirectory)) { printError(_("'%s' is not a directory!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
     if (!File_isWritable(globalOptions.tmpDirectory)) { printError(_("Temporary directory '%s' is not writable!"),String_cString(globalOptions.tmpDirectory)); return FALSE; }
+  }
+
+  if (!Continuous_isAvailable())
+  {
+    printWarning("Continuous support is not available");
   }
 
   return TRUE;
@@ -5057,10 +5113,9 @@ void printWarning(const char *text, ...)
     saveConsole(stderr,&saveLine);
     bytesWritten = fwrite(String_cString(line),1,String_length(line),stderr);
     restoreConsole(stderr,&saveLine);
+    UNUSED_VARIABLE(bytesWritten);
   }
   String_delete(line);
-
-  UNUSED_VARIABLE(bytesWritten);
 }
 
 void printError(const char *text, ...)
@@ -5090,10 +5145,9 @@ void printError(const char *text, ...)
     saveConsole(stderr,&saveLine);
     bytesWritten = fwrite(String_cString(line),1,String_length(line),stderr);
     restoreConsole(stderr,&saveLine);
+    UNUSED_VARIABLE(bytesWritten);
   }
   String_delete(line);
-
-  UNUSED_VARIABLE(bytesWritten);
 }
 
 void executeIOOutput(ConstString line,
@@ -6197,9 +6251,8 @@ ServerNode *newServerNode(ConstString name, ServerTypes serverType)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  initServer(&serverNode->server,name,serverType);
   serverNode->id                                  = Misc_getId();
-//  serverNode->name = String_duplicate(name);
+  initServer(&serverNode->server,name,serverType);
   serverNode->connection.lowPriorityRequestCount  = 0;
   serverNode->connection.highPriorityRequestCount = 0;
   serverNode->connection.count                    = 0;
@@ -9545,21 +9598,27 @@ LOCAL bool readFromJob(ConstString fileName)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-      if (!ConfigValue_parse(String_cString(name),
-                             String_cString(value),
-                             JOB_CONFIG_VALUES,
-                             NULL, // sectionName,
-                             stderr,"ERROR: ","Warning: ",
-                             NULL  // variable
-                            )
-         )
-      {
-        printError(_("Unknown or invalid config value '%s' in %s, line %ld - skipped"),
-                   String_cString(name),
-                   String_cString(fileName),
-                   lineNb
-                  );
-      }
+      ConfigValue_parse(String_cString(name),
+                        String_cString(value),
+                        JOB_CONFIG_VALUES,
+                        NULL, // sectionName,
+                        LAMBDA(void,(const char *errorMessage, void *userData),
+                        {
+                          UNUSED_VARIABLE(userData);
+
+                          if (printInfoFlag) printf("FAIL!\n");
+                          printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                          failFlag = TURE;
+                        }),NULL,
+                        LAMBDA(void,(const char *warningMessage, void *userData),
+                        {
+                          UNUSED_VARIABLE(userData);
+
+                          if (printInfoFlag) printf("FAIL!\n");
+                          printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
+                        }),NULL,
+                        NULL  // variable
+                       );
     }
     else
     {
@@ -10109,16 +10168,19 @@ LOCAL Errors runDaemon(void)
     return error;
   }
 
-  // init continuous
-  error = Continuous_init(continuousDatabaseFileName);
-  if (error != ERROR_NONE)
+  if (Continuous_isAvailable())
   {
-    printError(_("Cannot initialise continuous (error: %s)!"),
-               Error_getText(error)
-              );
-    deletePIDFile();
-    closeLog();
-    return error;
+      // init continuous
+      error = Continuous_init(continuousDatabaseFileName);
+      if (error != ERROR_NONE)
+      {
+        printError(_("Cannot initialise continuous (error: %s)!"),
+                   Error_getText(error)
+                  );
+        deletePIDFile();
+        closeLog();
+        return error;
+      }
   }
 
   // daemon mode -> run server with network
@@ -10137,14 +10199,14 @@ LOCAL Errors runDaemon(void)
                     );
   if (error != ERROR_NONE)
   {
-    Continuous_done();
+    if (Continuous_isAvailable()) Continuous_done();
     deletePIDFile();
     closeLog();
     return error;
   }
 
   // done continouous
-  Continuous_done();
+  if (Continuous_isAvailable()) Continuous_done();
 
   // delete pid file
   deletePIDFile();

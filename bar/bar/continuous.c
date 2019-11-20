@@ -124,6 +124,7 @@ typedef struct
 } InitNotifyMsg;
 
 /***************************** Variables *******************************/
+LOCAL bool              initFlag = FALSE;
 LOCAL const char        *continuousDatabaseFileName;
 LOCAL DatabaseOpenModes continuousDatabaseOpenMode;
 LOCAL DatabaseHandle    continuousDatabaseHandle;
@@ -1573,6 +1574,8 @@ Errors Continuous_initAll(void)
     HALT_FATAL_ERROR("Cannot initialize init notify message queue!");
   }
 
+  initFlag = TRUE;
+
   return ERROR_NONE;
 }
 
@@ -1583,50 +1586,59 @@ void Continuous_doneAll(void)
   ulong              length;
   NotifyInfo         *notifyInfo;
 
-  #if   defined(PLATFORM_LINUX)
-    assert(inotifyHandle != -1);
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
-  // done notify event message queue
-  MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK_((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
-  #if   defined(PLATFORM_LINUX)
-    close(inotifyHandle);
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
-  // done dictionaries
-  Dictionary_initIterator(&dictionaryIterator,&notifyNames);
-  while (Dictionary_getNext(&dictionaryIterator,
-                            NULL,  // keyData,
-                            NULL,  // keyLength,
-                            &data,
-                            &length
-                           )
-        )
+  if (initFlag)
   {
-    assert(data != NULL);
-    assert(length == sizeof(NotifyInfo*));
+    // done notify event message queue
+    MsgQueue_done(&initDoneNotifyMsgQueue,CALLBACK_((MsgQueueMsgFreeFunction)freeInitNotifyMsg,NULL));
 
-    notifyInfo = (NotifyInfo*)data;
-
-    DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
-
-    // delete notify
     #if   defined(PLATFORM_LINUX)
-      (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+      assert(inotifyHandle != -1);
     #elif defined(PLATFORM_WINDOWS)
     #endif /* PLATFORM_... */
 
-    // free resources
-    freeNotifyInfo(notifyInfo,NULL);
-    free(notifyInfo);
-  }
-  Dictionary_doneIterator(&dictionaryIterator);
-  Dictionary_done(&notifyNames);
-  Dictionary_done(&notifyHandles);
+    #if   defined(PLATFORM_LINUX)
+      // close inotify
+      close(inotifyHandle);
+    #elif defined(PLATFORM_WINDOWS)
+    #endif /* PLATFORM_... */
 
-  Semaphore_done(&notifyLock);
+    // done dictionaries
+    Dictionary_initIterator(&dictionaryIterator,&notifyNames);
+    while (Dictionary_getNext(&dictionaryIterator,
+                              NULL,  // keyData,
+                              NULL,  // keyLength,
+                              &data,
+                              &length
+                             )
+          )
+    {
+      assert(data != NULL);
+      assert(length == sizeof(NotifyInfo*));
+
+      notifyInfo = (NotifyInfo*)data;
+
+      DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
+
+      #if   defined(PLATFORM_LINUX)
+        (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
+      #elif defined(PLATFORM_WINDOWS)
+      #endif /* PLATFORM_... */
+
+      // free resources
+      freeNotifyInfo(notifyInfo,NULL);
+      free(notifyInfo);
+    }
+    Dictionary_doneIterator(&dictionaryIterator);
+    Dictionary_done(&notifyNames);
+    Dictionary_done(&notifyHandles);
+
+    Semaphore_done(&notifyLock);
+  }
+}
+
+bool Continuous_isAvailable()
+{
+  return initFlag;
 }
 
 Errors Continuous_init(const char *databaseFileName)
@@ -1634,63 +1646,70 @@ Errors Continuous_init(const char *databaseFileName)
   Errors error;
   int64  continuousVersion;
 
-  // init variables
-  quitFlag = FALSE;
+  if (initFlag)
+  {
+    // init variables
+    quitFlag = FALSE;
 
-  // get continiuous database name, mode
-  if (!stringIsEmpty(databaseFileName))
-  {
-    continuousDatabaseFileName = databaseFileName;
-    continuousDatabaseOpenMode = DATABASE_OPENMODE_SHARED;
-  }
-  else
-  {
-    continuousDatabaseFileName = "continuous.db";
-    continuousDatabaseOpenMode = DATABASE_OPENMODE_SHARED|DATABASE_OPENMODE_MEMORY;
-  }
-
-  // check if continuous database exists in expected version, create database
-  error = getContinuousVersion(&continuousVersion);
-  if (error == ERROR_NONE)
-  {
-    if (continuousVersion < CONTINOUS_VERSION)
+    // get continiuous database name, mode
+    if (!stringIsEmpty(databaseFileName))
     {
-      // discard existing continuous database, create new database
-      if (!stringIsEmpty(databaseFileName)) (void)File_deleteCString(databaseFileName,FALSE);
+      continuousDatabaseFileName = databaseFileName;
+      continuousDatabaseOpenMode = DATABASE_OPENMODE_SHARED;
+    }
+    else
+    {
+      continuousDatabaseFileName = "continuous.db";
+      continuousDatabaseOpenMode = DATABASE_OPENMODE_SHARED|DATABASE_OPENMODE_MEMORY;
+    }
+
+    // check if continuous database exists in expected version, create database
+    error = getContinuousVersion(&continuousVersion);
+    if (error == ERROR_NONE)
+    {
+      if (continuousVersion < CONTINOUS_VERSION)
+      {
+        // discard existing continuous database, create new database
+        if (!stringIsEmpty(databaseFileName)) (void)File_deleteCString(databaseFileName,FALSE);
+        error = createContinuous(&continuousDatabaseHandle);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+      else
+      {
+        // open continuous database
+        error = openContinuous(&continuousDatabaseHandle);
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+    }
+    else
+    {
+      // create new database
       error = createContinuous(&continuousDatabaseHandle);
       if (error != ERROR_NONE)
       {
         return error;
       }
     }
-    else
+
+    // start threads
+    if (!Thread_init(&continuousInitThread,"BAR continuous init",globalOptions.niceLevel,continuousInitThreadCode,NULL))
     {
-      // open continuous database
-      error = openContinuous(&continuousDatabaseHandle);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+      HALT_FATAL_ERROR("Cannot initialize continuous init thread!");
+    }
+    if (!Thread_init(&continuousThread,"BAR continuous",globalOptions.niceLevel,continuousThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize continuous thread!");
     }
   }
   else
   {
-    // create new database
-    error = createContinuous(&continuousDatabaseHandle);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-
-  // start threads
-  if (!Thread_init(&continuousInitThread,"BAR continuous init",globalOptions.niceLevel,continuousInitThreadCode,NULL))
-  {
-    HALT_FATAL_ERROR("Cannot initialize continuous init thread!");
-  }
-  if (!Thread_init(&continuousThread,"BAR continuous",globalOptions.niceLevel,continuousThreadCode,NULL))
-  {
-    HALT_FATAL_ERROR("Cannot initialize continuous thread!");
+    return ERROR_INIT_FILE_NOTIFY;
   }
 
   return ERROR_NONE;
@@ -1698,20 +1717,23 @@ Errors Continuous_init(const char *databaseFileName)
 
 void Continuous_done(void)
 {
-  quitFlag = TRUE;
-  MsgQueue_setEndOfMsg(&initDoneNotifyMsgQueue);
-  if (!Thread_join(&continuousThread))
+  if (initFlag)
   {
-    HALT_INTERNAL_ERROR("Cannot stop continuous thread!");
-  }
-  Thread_done(&continuousThread);
-  if (!Thread_join(&continuousInitThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop continuous init thread!");
-  }
-  Thread_done(&continuousInitThread);
+    quitFlag = TRUE;
+    MsgQueue_setEndOfMsg(&initDoneNotifyMsgQueue);
+    if (!Thread_join(&continuousThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop continuous thread!");
+    }
+    Thread_done(&continuousThread);
+    if (!Thread_join(&continuousInitThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop continuous init thread!");
+    }
+    Thread_done(&continuousInitThread);
 
-  (void)closeContinuous(&continuousDatabaseHandle);
+    (void)closeContinuous(&continuousDatabaseHandle);
+  }
 }
 
 Errors Continuous_initNotify(ConstString     name,
@@ -1727,22 +1749,25 @@ Errors Continuous_initNotify(ConstString     name,
   assert(!String_isEmpty(scheduleUUID));
   assert(entryList != NULL);
 
-  // check number of possible notifies
-  EXECUTE_ONCE(
+  if (initFlag)
   {
-    n = getMaxNotifyWatches();
-    if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("Low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
-    n = getMaxNotifyInstances();
-    if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("Low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
-  });
+    // check number of possible notifies
+    EXECUTE_ONCE(
+    {
+      n = getMaxNotifyWatches();
+      if (n < MIN_NOTIFY_WATCHES_WARNING) printWarning("Low number of notify watches %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_WATCHES_FILENAME);
+      n = getMaxNotifyInstances();
+      if (n < MIN_NOTIFY_INSTANCES_WARNING) printWarning("Low number of notify instances %lu. Please check settings in '%s'!",n,PROC_MAX_NOTIFY_INSTANCES_FILENAME);
+    });
 
-  initNotifyMsg.type = INIT;
-  initNotifyMsg.name = String_duplicate(name);
-  stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
-  stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
-  EntryList_initDuplicate(&initNotifyMsg.entryList,entryList,NULL,NULL);
+    initNotifyMsg.type = INIT;
+    initNotifyMsg.name = String_duplicate(name);
+    stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
+    stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
+    EntryList_initDuplicate(&initNotifyMsg.entryList,entryList,NULL,NULL);
 
-  (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+    (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+  }
 
   return ERROR_NONE;
 }
@@ -1757,20 +1782,23 @@ Errors Continuous_doneNotify(ConstString name,
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
+  if (initFlag)
+  {
 //fprintf(stderr,"%s, %d: Continuous_doneNotify jobUUID=%s scheduleUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID),String_cString(scheduleUUID));
-  initNotifyMsg.type = DONE;
-  initNotifyMsg.name = String_duplicate(name);
-  stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
-  if (scheduleUUID != NULL)
-  {
-    stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
-  }
-  else
-  {
-    stringClear(initNotifyMsg.scheduleUUID);
-  }
+    initNotifyMsg.type = DONE;
+    initNotifyMsg.name = String_duplicate(name);
+    stringSet(initNotifyMsg.jobUUID,sizeof(initNotifyMsg.jobUUID),String_cString(jobUUID));
+    if (scheduleUUID != NULL)
+    {
+      stringSet(initNotifyMsg.scheduleUUID,sizeof(initNotifyMsg.scheduleUUID),String_cString(scheduleUUID));
+    }
+    else
+    {
+      stringClear(initNotifyMsg.scheduleUUID);
+    }
 
-  (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+    (void)MsgQueue_put(&initDoneNotifyMsgQueue,&initNotifyMsg,sizeof(initNotifyMsg));
+  }
 
   return ERROR_NONE;
 }
@@ -1781,17 +1809,21 @@ Errors Continuous_open(DatabaseHandle *databaseHandle)
 
   assert(databaseHandle != NULL);
 
-  error = openContinuous(databaseHandle);
-  if (error != ERROR_NONE)
+  if (initFlag)
   {
-    return error;
+    error = openContinuous(databaseHandle);
+  }
+  else
+  {
+    error = ERROR_INIT_FILE_NOTIFY;
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 void Continuous_close(DatabaseHandle *databaseHandle)
 {
+  assert(initFlag);
   assert(databaseHandle != NULL);
 
   (void)closeContinuous(databaseHandle);
@@ -1803,6 +1835,8 @@ Errors Continuous_addEntry(DatabaseHandle *databaseHandle,
                            ConstString    name
                           )
 {
+  assert(initFlag);
+  assert(databaseHandle != NULL);
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
   assert(!String_isEmpty(name));
@@ -1814,6 +1848,9 @@ Errors Continuous_removeEntry(DatabaseHandle *databaseHandle,
                               DatabaseId     databaseId
                              )
 {
+  assert(initFlag);
+  assert(databaseHandle != NULL);
+
   return removeEntry(databaseHandle,databaseId);
 }
 
@@ -1828,6 +1865,8 @@ bool Continuous_getEntry(DatabaseHandle *databaseHandle,
   bool                result;
   DatabaseId          databaseId_;
 
+  assert(initFlag);
+  assert(databaseHandle != NULL);
   assert(jobUUID != NULL);
   assert(name != NULL);
 
@@ -1890,6 +1929,8 @@ bool Continuous_isEntryAvailable(DatabaseHandle *databaseHandle,
                                  ConstString    scheduleUUID
                                 )
 {
+  assert(initFlag);
+  assert(databaseHandle != NULL);
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
@@ -1915,7 +1956,9 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
 {
   Errors error;
 
+  assert(initFlag);
   assert(databaseQueryHandle != NULL);
+  assert(databaseHandle != NULL);
   assert(!String_isEmpty(jobUUID));
   assert(!String_isEmpty(scheduleUUID));
 
@@ -1943,9 +1986,9 @@ Errors Continuous_initList(DatabaseQueryHandle *databaseQueryHandle,
 
 void Continuous_doneList(DatabaseQueryHandle *databaseQueryHandle)
 {
+  assert(initFlag);
   assert(databaseQueryHandle != NULL);
 
-  // done list
   Database_finalize(databaseQueryHandle);
 }
 
@@ -1954,6 +1997,7 @@ bool Continuous_getNext(DatabaseQueryHandle *databaseQueryHandle,
                         String              name
                        )
 {
+  assert(initFlag);
   assert(databaseQueryHandle != NULL);
 
   return Database_getNextRow(databaseQueryHandle,
@@ -1969,38 +2013,38 @@ void Continuous_dumpEntries(DatabaseHandle *databaseHandle,
                             const char     *scheduleUUID
                            )
 {
-    DatabaseQueryHandle databaseQueryHandle;
-    uint64              dateTime;
-    DatabaseId          databaseId;
-    String              name;
-    uint                storedFlag;
+  DatabaseQueryHandle databaseQueryHandle;
+  uint64              dateTime;
+  DatabaseId          databaseId;
+  String              name;
+  uint                storedFlag;
 
-    name = String_new();
+  name = String_new();
 
-    Database_prepare(&databaseQueryHandle,
-                           databaseHandle,
-                           "SELECT id,UNIXTIMESTAMP(dateTime),name,storedFlag \
-                            FROM names \
-                            WHERE     jobUUID=%'s \
-                                  AND scheduleUUID=%'s \
-                           ",
-                           jobUUID,
-                           scheduleUUID
-                          );
-    while (Database_getNextRow(&databaseQueryHandle,
-                             "%lld %lld %S %d",
-                             &databaseId,
-                             &dateTime,
-                             name,
-                             &storedFlag
-                            )
-          )
-    {
-       fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
-    }
-    Database_finalize(&databaseQueryHandle);
+  Database_prepare(&databaseQueryHandle,
+                         databaseHandle,
+                         "SELECT id,UNIXTIMESTAMP(dateTime),name,storedFlag \
+                          FROM names \
+                          WHERE     jobUUID=%'s \
+                                AND scheduleUUID=%'s \
+                         ",
+                         jobUUID,
+                         scheduleUUID
+                        );
+  while (Database_getNextRow(&databaseQueryHandle,
+                           "%lld %lld %S %d",
+                           &databaseId,
+                           &dateTime,
+                           name,
+                           &storedFlag
+                          )
+        )
+  {
+     fprintf(stderr,"%s, %d: %ld: %lu %s %d\n",__FILE__,__LINE__,databaseId,dateTime,String_cString(name),storedFlag);
+  }
+  Database_finalize(&databaseQueryHandle);
 
-    String_delete(name);
+  String_delete(name);
 }
 
 void Continuous_debugPrintStatistics(void)
