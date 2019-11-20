@@ -474,6 +474,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find extern -type d -name "zlib-*"` zlib)
     fi
@@ -497,6 +500,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/bzip2-$BZIP2_VERSION bzip2)
     fi
@@ -521,6 +527,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find extern -type d -name "xz-*"` xz)
     fi
@@ -544,6 +553,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/lzo-$LZO_VERSION lzo)
     fi
@@ -572,6 +584,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find extern -type d -name "lz4-*"` lz4)
     fi
@@ -600,6 +615,9 @@ if test $cleanFlag -eq 0; then
        $UNZIP -o -q $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find extern -type d -name "zstd-*"` zstd)
     fi
@@ -623,6 +641,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find extern -maxdepth 1 -type d -name "xdelta3-*"` xdelta3)
     fi
@@ -658,6 +679,9 @@ if test $cleanFlag -eq 0; then
        $TAR xjf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/libgpg-error-$LIBGPG_ERROR_VERSION libgpg-error)
       (cd $destination; $LN -sfT extern/libgcrypt-$LIBGCRYPT_VERSION libgcrypt)
@@ -682,6 +706,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/c-ares-$C_ARES_VERSION c-ares)
     fi
@@ -703,6 +730,9 @@ if test $cleanFlag -eq 0; then
        $TAR xjf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/curl-$CURL_VERSION curl)
     fi
@@ -726,6 +756,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/mxml-$MXML_VERSION mxml)
     fi
@@ -749,6 +782,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/openssl-$OPENSSL_VERSION openssl)
     fi
@@ -772,6 +808,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/libssh2-$LIBSSH2_VERSION libssh2)
     fi
@@ -795,6 +834,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/nettle-$NETTLE_VERSION nettle)
     fi
@@ -816,6 +858,9 @@ if test $cleanFlag -eq 0; then
        $TAR xJf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find extern -type d -name "gmp-*"` gmp)
     fi
@@ -837,6 +882,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT `find extern -type d -name "libidn2-*"` libidn2)
     fi
@@ -858,6 +906,9 @@ if test $cleanFlag -eq 0; then
        $XZ -d -c $fileName | $TAR xf -
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/gnutls-$GNU_TLS_VERSION gnutls)
     fi
@@ -881,6 +932,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/libiconv-$LIBICONV_VERSION libiconv)
     fi
@@ -902,6 +956,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/libcdio-$LIBCDIO_VERSION libcdio)
     fi
@@ -925,6 +982,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/mtx-$MTX_VERSION mtx)
     fi
@@ -948,6 +1008,9 @@ if test $cleanFlag -eq 0; then
        $TAR xjf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/pcre-$PCRE_VERSION pcre)
     fi
@@ -971,6 +1034,9 @@ if test $cleanFlag -eq 0; then
        $UNZIP -o -q $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/sqlite-src-$SQLITE_VERSION sqlite)
     fi
@@ -994,6 +1060,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/icu icu)
     fi
@@ -1017,6 +1086,9 @@ if test $cleanFlag -eq 0; then
        $TAR xjf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/binutils-$BINUTILS_VERSION binutils)
     fi
@@ -1040,6 +1112,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/pthreads-w32-2-9-1-release pthreads-w32)
     fi
@@ -1058,6 +1133,9 @@ if test $cleanFlag -eq 0; then
        $ECHO "done"
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/breakpad breakpad)
     fi
@@ -1081,6 +1159,9 @@ if test $cleanFlag -eq 0; then
        $TAR xjf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/epm-$EPM_VERSION epm)
     fi
@@ -1104,6 +1185,9 @@ if test $cleanFlag -eq 0; then
        $TAR xzf $fileName
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/launch4j launch4j)
     fi
@@ -1139,6 +1223,9 @@ if test $cleanFlag -eq 0; then
        $UNZIP -o -q $fileName 'openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre/*'
      fi
     )
+    if test $? -ne 0; then
+      exit $?
+    fi
     if test $noDecompressFlag -eq 0; then
       (cd $destination; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-i586-image/jre jre_windows)
       (cd $destination; $LN -sfT extern/openjdk-1.6.0-unofficial-b30-windows-amd64-image/jre jre_windows_64)
