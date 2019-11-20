@@ -3195,22 +3195,24 @@ bool Job_read(JobNode *jobNode)
       {
         if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
         {
-          if (!ConfigValue_parse(String_cString(name),
-                                 String_cString(value),
-                                 JOB_CONFIG_VALUES,
-                                 "schedule",
-                                 stderr,"ERROR: ","Warning: ",
-                                 scheduleNode
-                                )
-             )
-          {
-            printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped",
-                       String_cString(name),
-                       "schedule",
-                       String_cString(jobNode->fileName),
-                       lineNb
-                      );
-          }
+          ConfigValue_parse(String_cString(name),
+                            String_cString(value),
+                            JOB_CONFIG_VALUES,
+                            "schedule",
+                            LAMBDA(void,(const char *errorMessage, void *userData),
+                            {
+                              UNUSED_VARIABLE(userData);
+
+                              printError("%s in %s, line %ld: '%s' - skipped",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                            }),NULL,
+                            LAMBDA(void,(const char *warningMessage, void *userData),
+                            {
+                              UNUSED_VARIABLE(userData);
+
+                              printWarning("%s in %s, line %ld: '%s' - skipped",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                            }),NULL,
+                            scheduleNode
+                           );
         }
         else
         {
@@ -3219,6 +3221,7 @@ bool Job_read(JobNode *jobNode)
                      lineNb,
                      String_cString(line)
                     );
+          failFlag = TRUE;
         }
       }
       File_ungetLine(&fileHandle,line,&lineNb);
@@ -3283,22 +3286,24 @@ bool Job_read(JobNode *jobNode)
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            if (!ConfigValue_parse(String_cString(name),
-                                   String_cString(value),
-                                   JOB_CONFIG_VALUES,
-                                   "persistence",
-                                   stderr,"ERROR: ","Warning: ",
-                                   persistenceNode
-                                  )
-               )
-            {
-              printError("Unknown or invalid config value '%s' in section '%s' in %s, line %ld - skipped",
-                         String_cString(name),
-                         "persistence",
-                         String_cString(jobNode->fileName),
-                         lineNb
-                        );
-            }
+            ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              JOB_CONFIG_VALUES,
+                              "persistence",
+                              LAMBDA(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                printError("%s in %s, line %ld: '%s' - skipped",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                              }),NULL,
+                              LAMBDA(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
+
+                                printWarning("%s in %s, line %ld: '%s' - skipped",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                              }),NULL,
+                              persistenceNode
+                             );
           }
           else
           {
@@ -3307,6 +3312,7 @@ bool Job_read(JobNode *jobNode)
                        lineNb,
                        String_cString(line)
                       );
+            failFlag = TRUE;
           }
         }
         File_ungetLine(&fileHandle,line,&lineNb);
@@ -3347,6 +3353,8 @@ bool Job_read(JobNode *jobNode)
           // ignored
         }
         File_ungetLine(&fileHandle,line,&lineNb);
+
+        failFlag = TRUE;
       }
     }
     else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
@@ -3359,21 +3367,24 @@ bool Job_read(JobNode *jobNode)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-      if (!ConfigValue_parse(String_cString(name),
-                             String_cString(value),
-                             JOB_CONFIG_VALUES,
-                             NULL, // sectionName
-                             stderr,"ERROR: ","Warning: ",
-                             jobNode
-                            )
-         )
-      {
-        printError("Unknown or invalid config value '%s' in %s, line %ld - skipped",
-                   String_cString(name),
-                   String_cString(jobNode->fileName),
-                   lineNb
-                  );
-      }
+      ConfigValue_parse(String_cString(name),
+                        String_cString(value),
+                        JOB_CONFIG_VALUES,
+                        NULL, // sectionName
+                        LAMBDA(void,(const char *errorMessage, void *userData),
+                        {
+                          UNUSED_VARIABLE(userData);
+
+                          printError("%s in %s, line %ld: '%s' - skipped",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                        }),NULL,
+                        LAMBDA(void,(const char *warningMessage, void *userData),
+                        {
+                          UNUSED_VARIABLE(userData);
+
+                          printWarning("%s in %s, line %ld: '%s' - skipped",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                        }),NULL,
+                        jobNode
+                       );
     }
     else
     {
@@ -3382,6 +3393,7 @@ bool Job_read(JobNode *jobNode)
                  lineNb,
                  String_cString(line)
                 );
+      failFlag = TRUE;
     }
   }
   String_delete(value);
@@ -3410,7 +3422,7 @@ bool Job_read(JobNode *jobNode)
   // reset job modified
   jobNode->modifiedFlag = FALSE;
 
-  return TRUE;
+  return failFlag;
 }
 
 Errors Job_rereadAll(ConstString jobsDirectory)

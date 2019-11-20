@@ -2101,7 +2101,10 @@ NULL,//                                                        scheduleTitle,
     }
 
     // close index
-    Index_close(indexHandle);
+    if (Index_isAvailable())
+    {
+      Index_close(indexHandle);
+    }
 
     // done log
     doneLog(&logHandle);
@@ -2490,13 +2493,16 @@ LOCAL void schedulerThreadCode(void)
   ScheduleNode   *scheduleNode;
 
   // open continuous database
-  Errors  error = Continuous_open(&continuousDatabaseHandle);
-  if (error != ERROR_NONE)
+  if (Continuous_isAvailable())
   {
-    printError("Cannot initialise continuous database (error: %s)!",
-               Error_getText(error)
-              );
-    return;
+      Errors  error = Continuous_open(&continuousDatabaseHandle);
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot initialise continuous database (error: %s)!",
+                   Error_getText(error)
+                  );
+        return;
+      }
   }
 
   // open index
@@ -2615,6 +2621,7 @@ LOCAL void schedulerThreadCode(void)
                   && ((scheduleNode->time.hour     == TIME_ANY       ) || (scheduleNode->time.hour   == (int)hour  ))
                   && ((scheduleNode->time.minute   == TIME_ANY       ) || (scheduleNode->time.minute == (int)minute))
                   && (currentDateTime >= (scheduleNode->lastExecutedDateTime + (uint64)scheduleNode->interval*60LL))
+                  && Continuous_isAvailable()
                   && Continuous_isEntryAvailable(&continuousDatabaseHandle,jobNode->job.uuid,scheduleNode->uuid)
                  )
               {
@@ -2667,10 +2674,13 @@ LOCAL void schedulerThreadCode(void)
   }
 
   // done index
-  Index_close(indexHandle);
+  if (Index_isAvailable())
+  {
+    Index_close(indexHandle);
+  }
 
   // close continuous database
-  Continuous_close(&continuousDatabaseHandle);
+  if (Continuous_isAvailable()) Continuous_close(&continuousDatabaseHandle);
 }
 
 /*---------------------------------------------------------------------*/
@@ -3631,7 +3641,10 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
     }
 
     // done index
-    Index_close(indexHandle);
+    if (Index_isAvailable())
+    {
+      Index_close(indexHandle);
+    }
   }
   else
   {
@@ -3955,7 +3968,10 @@ LOCAL void indexThreadCode(void)
     }
 
     // done index
-    Index_close(indexHandle);
+    if (Index_isAvailable())
+    {
+      Index_close(indexHandle);
+    }
   }
   else
   {
@@ -4316,7 +4332,10 @@ LOCAL void autoIndexThreadCode(void)
     }
 
     // done index
-    Index_close(indexHandle);
+    if (Index_isAvailable())
+    {
+      Index_close(indexHandle);
+    }
   }
   else
   {
@@ -4938,7 +4957,7 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
                       id,
                       TRUE,
                       ERROR_NONE,
-                      "major=%d minor=%d mode=%s",
+                      "major=%u minor=%u mode=%s",
                       SERVER_PROTOCOL_VERSION_MAJOR,
                       SERVER_PROTOCOL_VERSION_MINOR,
                       s
@@ -5205,9 +5224,8 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
                          String_cString(value),
                          CONFIG_VALUES,
                          NULL, // sectionName
-                         NULL, // outputHandle
-                         NULL, // errorPrefix
-                         NULL, // warningPrefix
+                         CALLBACK_(NULL,NULL),  // errorFunction
+                         CALLBACK_(NULL,NULL),  // warningFunction
                          &globalOptions
                         )
      )
@@ -7433,9 +7451,8 @@ LOCAL void serverCommand_jobOptionSet(ClientInfo *clientInfo, IndexHandle *index
                           String_cString(value),
                           JOB_CONFIG_VALUES,
                           NULL, // sectionName
-                          NULL, // outputHandle
-                          NULL, // errorPrefix
-                          NULL, // warningPrefix
+                          CALLBACK_(NULL,NULL),  // errorFunction
+                          CALLBACK_(NULL,NULL),  // warningFunction
                           jobNode
                          )
        )
@@ -11307,9 +11324,8 @@ LOCAL void serverCommand_scheduleOptionSet(ClientInfo *clientInfo, IndexHandle *
                           String_cString(value),
                           JOB_CONFIG_VALUES,
                           "schedule",
-                          NULL, // outputHandle
-                          NULL, // errorPrefix
-                          NULL, // warningPrefix
+                          CALLBACK_(NULL,NULL),  // errorFunction
+                          CALLBACK_(NULL,NULL),  // warningFunction
                           scheduleNode
                          )
        )
@@ -17320,7 +17336,10 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
   }
 
   // done index
-  Index_close(indexHandle);
+  if (Index_isAvailable())
+  {
+    Index_close(indexHandle);
+  }
 
   // free resources
   String_delete(result);
@@ -18052,16 +18071,19 @@ Errors Server_run(ServerModes       mode,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started BAR server %d.%d%s",
+             "Started BAR %u.%u server%s on '%s' with %u threads",
              VERSION_MAJOR,
              VERSION_MINOR,
-             (serverMode == SERVER_MODE_SLAVE) ? " slave" : ""
+             (serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
+             String_cString(hostName),
+             (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
             );
-  printInfo(1,"Started BAR server %d.%d%s on '%s'\n",
+  printInfo(1,"Started BAR %u.%u server%s on '%s' with %u threads\n",
             VERSION_MAJOR,
             VERSION_MINOR,
             (serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
-            String_cString(hostName)
+            String_cString(hostName),
+            (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
            );
 
   // create jobs directory if necessary
@@ -18106,24 +18128,31 @@ Errors Server_run(ServerModes       mode,
   }
 
   // open index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
-  if (indexHandle != NULL)
+  if (Index_isAvailable())
   {
-    if (globalOptions.serverDebugIndexOperationsFlag)
+    indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+    if (indexHandle != NULL)
     {
-      // wait for index opertions
-      while (!Index_isInitialized())
+      if (globalOptions.serverDebugIndexOperationsFlag)
       {
-        Misc_udelay(1*US_PER_SECOND);
-      }
+        // wait for index opertions
+        while (!Index_isInitialized())
+        {
+          Misc_udelay(1*US_PER_SECOND);
+        }
 
-      // terminate
-      Index_close(indexHandle);
-      AutoFree_cleanup(&autoFreeList);
-      return ERROR_NONE;
+        // terminate
+        Index_close(indexHandle);
+        AutoFree_cleanup(&autoFreeList);
+        return ERROR_NONE;
+      }
     }
+    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
   }
-  AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+  else
+  {
+    indexHandle = NULL;
+  }
 
   // init server sockets
   serverFlag    = FALSE;
@@ -18805,7 +18834,10 @@ abortPairingMaster();
   if (serverTLSFlag) Network_doneServer(&serverTLSSocketHandle);
 
   // done index
-  Index_close(indexHandle);
+  if (Index_isAvailable())
+  {
+    Index_close(indexHandle);
+  }
 
   // free resources
   Crypt_doneHash(&newMaster.uuidHash);
@@ -18884,7 +18916,15 @@ Errors Server_batch(int        inputDescriptor,
   }
 
   // open index
-  indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+  if (Index_isAvailable())
+  {
+    indexHandle = Index_open(NULL,INDEX_TIMEOUT);
+    AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
+  }
+  else
+  {
+    indexHandle = NULL;
+  }
 
   // start threads
   if (Index_isAvailable())
@@ -18935,7 +18975,7 @@ Errors Server_batch(int        inputDescriptor,
 //TODO: via server io
 #if 0
   File_printLine(&clientInfo.io.file.outputHandle,
-                 "BAR VERSION %d %d\n",
+                 "BAR VERSION %u %u\n",
                  SERVER_PROTOCOL_VERSION_MAJOR,
                  SERVER_PROTOCOL_VERSION_MINOR
                 );
@@ -19025,7 +19065,10 @@ processCommand(&clientInfo,commandString);
   }
 
   // done index
-  Index_close(indexHandle);
+  if (Index_isAvailable())
+  {
+    Index_close(indexHandle);
+  }
 
   // free resources
   doneClient(&clientInfo);
