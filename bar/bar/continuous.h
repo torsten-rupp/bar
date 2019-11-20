@@ -70,6 +70,17 @@ Errors Continuous_initAll(void);
 void Continuous_doneAll(void);
 
 /***********************************************************************\
+* Name   : Continuous_isAvailable
+* Purpose: check if continuous is available
+* Input  : -
+* Output : -
+* Return : TRUE iff continuous is available
+* Notes  : -
+\***********************************************************************/
+
+bool Continuous_isAvailable();
+
+/***********************************************************************\
 * Name   : Continuous_init
 * Purpose: init continuous
 * Input  : databaseFileName - database file name or NULL for in-memory
