@@ -1,13 +1,15 @@
 #!/bin/bash
 
-#set -x
+set -x
 
 BASE_PATH=/media/home
 
 # parse arugments
-distribution=""
-suffix=""
+packageName=""
+distributionFileName=""
+version=""
 userGroup=""
+rpmFileName=""
 testsFlag=0
 debugFlag=0
 helpFlag=0
@@ -37,16 +39,24 @@ while test $# != 0; do
     *)
       case $n in
         0)
-          distribution="$1"
+          packageName="$1"
           n=1
           ;;
         1)
-          suffix="$1"
+          distributionFileName="$1"
           n=2
           ;;
         2)
-          userGroup="$1"
+          version="$1"
           n=3
+          ;;
+        3)
+          userGroup="$1"
+          n=4
+          ;;
+        4)
+          rpmFileName="$1"
+          n=5
           ;;
       esac
       shift
@@ -56,22 +66,30 @@ done
 while test $# != 0; do
   case $n in
     0)
-      distribution="$1"
+      packageName="$1"
       n=1
       ;;
     1)
-      suffix="$1"
+      distributionFileName="$1"
       n=2
       ;;
     2)
-      userGroup="$1"
+      version="$1"
       n=3
+      ;;
+    3)
+      userGroup="$1"
+      n=4
+      ;;
+    4)
+      rpmFileName="$1"
+      n=5
       ;;
   esac
   shift
 done
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <distribution> <suffix> <user:group>"
+  echo "Usage: $0 [options] <distribution name> <version> <user:group> <package name>"
   echo ""
   echo "Options:  -t|--test  execute tests"
   echo "          -h|--help  print help"
@@ -79,41 +97,50 @@ if test $helpFlag -eq 1; then
 fi
 
 # check arguments
-if test -z "$distribution"; then
-  echo >&2 ERROR: no distribution name given!
+if test -z "$packageName"; then
+  echo >&2 ERROR: no package name given!
   exit 1
 fi
-if test -z "$suffix"; then
-  echo >&2 ERROR: no suffix given!
+if test -z "$distributionFileName"; then
+  echo >&2 ERROR: no distribution filename given!
+  exit 1
+fi
+if test -z "$version"; then
+  echo >&2 ERROR: no version given!
   exit 1
 fi
 if test -z "$userGroup"; then
   echo >&2 ERROR: no user:group id given!
   exit 1
 fi
+if test -z "$rpmFileName"; then
+  echo >&2 ERROR: no RPM filename given!
+  exit 1
+fi
 
 # set error handler: execute bash shell
-trap /bin/bash ERR
-set -e
+#trap /bin/bash ERR
+#set -e
 
 # build rpm
-cd /tmp
-tar xjf $BASE_PATH/$distribution
-cd bar-*
 rpmbuild \
   -bb \
   --define "_sourcedir $BASE_PATH" \
+  --define "packageName $packageName" \
+  --define "distributionFileName $distributionFileName" \
+  --define "version $version" \
+  --define "rpmFileName $rpmFileName" \
   --define "testsFlag $testsFlag" \
-  $BASE_PATH/packages/bar.spec
+  $BASE_PATH/packages/backup-archiver.spec
 
 # get result
-cp -f /root/rpmbuild/RPMS/*/bar-[0-9]*.rpm $BASE_PATH/bar-$suffix.rpm
-chown $userGroup $BASE_PATH/bar-$suffix.rpm
+cp -f /root/rpmbuild/RPMS/*/backup-archiver-[0-9]*.rpm $BASE_PATH/$rpmFileName
+chown $userGroup $BASE_PATH/$rpmFileName
 
-md5sum $BASE_PATH/bar-$suffix.rpm
+md5sum $BASE_PATH/$rpmFileName
 
 # debug
 if test $debugFlag -eq 1; then
   /bin/bash
 fi
-#/bin/bash
+/bin/bash
