@@ -2202,6 +2202,7 @@ public class TabJobs
   private WidgetVariable  blank                   = new WidgetVariable<Boolean>("blank",false);
   private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>("wait-first-volume",false);
   private WidgetVariable  skipUnreadable          = new WidgetVariable<Boolean>("skip-unreadable",false);
+  private WidgetVariable  noStopOnAttributeError  = new WidgetVariable<Boolean>("no-stop-on-attribute-error",false);
   private WidgetVariable  rawImages               = new WidgetVariable<Boolean>("raw-images",false);
   private WidgetVariable  overwriteFiles          = new WidgetVariable<Boolean>("overwrite-files",false);
   private WidgetVariable  preCommand              = new WidgetVariable<String> ("pre-command","");
@@ -4314,9 +4315,37 @@ public class TabJobs
             });
             Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
 
+            button = Widgets.newCheckbox(subComposite,BARControl.tr("no stop on attribute error"));
+            button.setToolTipText(BARControl.tr("If enabled then do not stop if there is an attribute error."));
+            Widgets.layout(button,1,0,TableLayoutData.W);
+            button.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+
+                try
+                {
+                  noStopOnAttributeError.set(checkedFlag);
+                  BARServer.setJobOption(selectedJobData.uuid,noStopOnAttributeError);
+                }
+                catch (Exception exception)
+                {
+                  // ignored
+                }
+              }
+            });
+            Widgets.addModifyListener(new WidgetModifyListener(button,noStopOnAttributeError));
+
             button = Widgets.newCheckbox(subComposite,BARControl.tr("raw images"),Settings.hasExpertRole());
             button.setToolTipText(BARControl.tr("If enabled then store all data of a device into an image.\nIf disabled try to detect file system and only store used blocks to image."));
-            Widgets.layout(button,1,0,TableLayoutData.W);
+            Widgets.layout(button,2,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -10587,6 +10616,7 @@ TODO: implement delete entity
         BARServer.getJobOption(jobData.uuid,blank);
         BARServer.getJobOption(jobData.uuid,waitFirstVolume);
         BARServer.getJobOption(jobData.uuid,skipUnreadable);
+        BARServer.getJobOption(jobData.uuid,noStopOnAttributeError);
         BARServer.getJobOption(jobData.uuid,rawImages);
         BARServer.getJobOption(jobData.uuid,overwriteFiles);
         BARServer.getJobOption(jobData.uuid,preCommand);
