@@ -382,6 +382,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 // only for better reading
 #define CALLBACK_(code,argument) code,argument
+#define CALLBACK_LAMBDA_(functionReturnType,functionSignature,functionBody,argument) LAMBDA(functionReturnType,functionSignature,functionBody),argument
 
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
@@ -395,10 +396,9 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Output : -
 * Return : -
 * Notes  : example
-*          List_removeAndFree(list,
-*                             node,
-*                             LAMBDA(void,(...),{ ... })
-*                            );
+*          EXECUTE_ONCE({
+*                       ...
+*                      });
 \***********************************************************************/
 
 #define EXECUTE_ONCE(functionBody) \
@@ -421,7 +421,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Notes  : example
 *          List_removeAndFree(list,
 *                             node,
-*                             LAMBDA(void,(...),{ ... })
+*                             LAMBDA(void,(...),{ ... }),NULL
 *                            );
 \***********************************************************************/
 
@@ -2237,17 +2237,29 @@ static inline char* stringSetBuffer(char *destination, ulong n, const char *buff
 
 
 /***********************************************************************\
-* Name   : stringFormat
+* Name   : stringVFormat, stringFormat
 * Purpose: format string
-* Input  : string - string
-*          n      - size of string (including terminating NUL)
-*          format - format string
-*          ...    - optional arguments
+* Input  : string    - string
+*          n         - size of string (including terminating NUL)
+*          format    - format string
+*          ...       - optional arguments
+*          arguments - arguments
 * Output : -
 * Return : destination string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
+
+static inline char* stringVFormat(char *string, ulong n, const char *format, va_list arguments)
+{
+  assert(string != NULL);
+  assert(n > 0);
+  assert(format != NULL);
+
+  vsnprintf(string,n,format,arguments);
+
+  return string;
+}
 static inline char* stringFormat(char *string, ulong n, const char *format, ...)
 {
   va_list arguments;
@@ -2257,29 +2269,29 @@ static inline char* stringFormat(char *string, ulong n, const char *format, ...)
   assert(format != NULL);
 
   va_start(arguments,format);
-  vsnprintf(string,n,format,arguments);
+  string = stringVFormat(string,n,format,arguments);
   va_end(arguments);
 
   return string;
 }
 
 /***********************************************************************\
-* Name   : stringFormatAppend
+* Name   : stringVFormatAppend, stringFormatAppend
 * Purpose: format string and append
-* Input  : string - string
-*          n      - size of destination string (including terminating
-*                   NUL)
-*          format - format string
-*          ...    - optional arguments
+* Input  : string    - string
+*          n         - size of destination string (including terminating
+*                      NUL)
+*          format    - format string
+*          ...       - optional arguments
+*          arguments - arguments
 * Output : -
 * Return : destination string
 * Notes  : string is always NULL or NUL-terminated
 \***********************************************************************/
 
-static inline char* stringFormatAppend(char *string, ulong n, const char *format, ...)
+static inline char* stringVFormatAppend(char *string, ulong n, const char *format, va_list arguments)
 {
-  ulong   length;
-  va_list arguments;
+  ulong length;
 
   assert(string != NULL);
   assert(n > 0);
@@ -2288,10 +2300,23 @@ static inline char* stringFormatAppend(char *string, ulong n, const char *format
   length = strlen(string);
   if (length < n)
   {
-    va_start(arguments,format);
     vsnprintf(string+length,n-length,format,arguments);
-    va_end(arguments);
   }
+
+  return string;
+}
+
+static inline char* stringFormatAppend(char *string, ulong n, const char *format, ...)
+{
+  va_list arguments;
+
+  assert(string != NULL);
+  assert(n > 0);
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  stringVFormatAppend(string,n,format,arguments);
+  va_end(arguments);
 
   return string;
 }
