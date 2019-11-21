@@ -41,7 +41,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define _CONNECTOR_DEBUG
+#define CONNECTOR_DEBUG
 
 /***************************** Constants *******************************/
 #define SLEEP_TIME_STATUS_UPDATE    2000  // [ms]
@@ -221,7 +221,7 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 }
 
 /***********************************************************************\
-* Name   : Connector_setJobOptionInteger
+* Name   : setJobOptionInteger
 * Purpose: set job int value
 * Input  : connectorInfo - connector info
 *          jobUUID       - job UUID
@@ -232,7 +232,7 @@ LOCAL void connectorDisconnect(ConnectorInfo *connectorInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Connector_setJobOptionInteger(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, int value)
+LOCAL Errors setJobOptionInteger(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, int value)
 {
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -250,7 +250,7 @@ LOCAL Errors Connector_setJobOptionInteger(ConnectorInfo *connectorInfo, ConstSt
 }
 
 /***********************************************************************\
-* Name   : Connector_setJobOptionInteger64
+* Name   : setJobOptionInteger64
 * Purpose: set job int64 value
 * Input  : connectorInfo - connector info
 *          jobUUID       - job UUID
@@ -261,7 +261,7 @@ LOCAL Errors Connector_setJobOptionInteger(ConnectorInfo *connectorInfo, ConstSt
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Connector_setJobOptionInteger64(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, int64 value)
+LOCAL Errors setJobOptionInteger64(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, int64 value)
 {
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -279,7 +279,7 @@ LOCAL Errors Connector_setJobOptionInteger64(ConnectorInfo *connectorInfo, Const
 }
 
 /***********************************************************************\
-* Name   : Connector_setJobOptionBoolean
+* Name   : setJobOptionBoolean
 * Purpose: set job boolean value
 * Input  : connectorInfo - connector info
 *          jobUUID       - job UUID
@@ -290,7 +290,7 @@ LOCAL Errors Connector_setJobOptionInteger64(ConnectorInfo *connectorInfo, Const
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Connector_setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, bool value)
+LOCAL Errors setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, bool value)
 {
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -308,7 +308,7 @@ LOCAL Errors Connector_setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstSt
 }
 
 /***********************************************************************\
-* Name   : Connector_setJobOptionString
+* Name   : setJobOptionString
 * Purpose: set job string value
 * Input  : connectorInfo - connector info
 *          jobUUID       - job UUID
@@ -319,7 +319,7 @@ LOCAL Errors Connector_setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstSt
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Connector_setJobOptionString(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, ConstString value)
+LOCAL Errors setJobOptionString(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, ConstString value)
 {
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -337,7 +337,7 @@ LOCAL Errors Connector_setJobOptionString(ConnectorInfo *connectorInfo, ConstStr
 }
 
 /***********************************************************************\
-* Name   : Connector_setJobOptionCString
+* Name   : setJobOptionCString
 * Purpose: set job c-string value
 * Input  : connectorInfo - connector info
 *          jobUUID       - job UUID
@@ -348,7 +348,7 @@ LOCAL Errors Connector_setJobOptionString(ConnectorInfo *connectorInfo, ConstStr
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Connector_setJobOptionCString(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, const char *value)
+LOCAL Errors setJobOptionCString(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, const char *value)
 {
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -366,7 +366,7 @@ LOCAL Errors Connector_setJobOptionCString(ConnectorInfo *connectorInfo, ConstSt
 }
 
 /***********************************************************************\
-* Name   : Connector_setJobOptionPassword
+* Name   : setJobOptionPassword
 * Purpose: set job password option
 * Input  : connectorInfo - connector info
 *          jobUUID       - job UUID
@@ -377,7 +377,7 @@ LOCAL Errors Connector_setJobOptionCString(ConnectorInfo *connectorInfo, ConstSt
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Connector_setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, const Password *password)
+LOCAL Errors setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobUUID, const char *name, const Password *password)
 {
   Errors error;
 
@@ -438,61 +438,61 @@ LOCAL Errors transmitJob(ConnectorInfo     *connectorInfo,
   #define SET_OPTION_STRING(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionString(connectorInfo, \
-                                                                    jobUUID, \
-                                                                    name, \
-                                                                    value \
-                                                                   ); \
+      if (error == ERROR_NONE) error = setJobOptionString(connectorInfo, \
+                                                          jobUUID, \
+                                                          name, \
+                                                          value \
+                                                         ); \
     } \
     while (0)
   #define SET_OPTION_CSTRING(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionCString(connectorInfo, \
-                                                                     jobUUID, \
-                                                                     name, \
-                                                                     value \
-                                                                    ); \
+      if (error == ERROR_NONE) error = setJobOptionCString(connectorInfo, \
+                                                           jobUUID, \
+                                                           name, \
+                                                           value \
+                                                          ); \
     } \
     while (0)
   #define SET_OPTION_PASSWORD(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionPassword(connectorInfo, \
-                                                                     jobUUID, \
-                                                                     name, \
-                                                                     value \
-                                                                    ); \
+      if (error == ERROR_NONE) error = setJobOptionPassword(connectorInfo, \
+                                                            jobUUID, \
+                                                            name, \
+                                                            value \
+                                                           ); \
     } \
     while (0)
   #define SET_OPTION_INTEGER(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionInteger(connectorInfo, \
-                                                                     jobUUID, \
-                                                                     name, \
-                                                                     value \
-                                                                    ); \
+      if (error == ERROR_NONE) error = setJobOptionInteger(connectorInfo, \
+                                                           jobUUID, \
+                                                           name, \
+                                                           value \
+                                                          ); \
     } \
     while (0)
   #define SET_OPTION_INTEGER64(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionInteger64(connectorInfo, \
-                                                                      jobUUID, \
-                                                                      name, \
-                                                                      value \
-                                                                     ); \
+      if (error == ERROR_NONE) error = setJobOptionInteger64(connectorInfo, \
+                                                             jobUUID, \
+                                                             name, \
+                                                             value \
+                                                            ); \
     } \
     while (0)
   #define SET_OPTION_BOOLEAN(name,value) \
     do \
     { \
-      if (error == ERROR_NONE) error = Connector_setJobOptionBoolean(connectorInfo, \
-                                                                     jobUUID, \
-                                                                     name, \
-                                                                     value \
-                                                                    ); \
+      if (error == ERROR_NONE) error = setJobOptionBoolean(connectorInfo, \
+                                                           jobUUID, \
+                                                           name, \
+                                                           value \
+                                                          ); \
     } \
     while (0)
 
@@ -534,60 +534,62 @@ UNUSED_VARIABLE(scheduleCustomText);
 
   // set options
   error = ERROR_NONE;
-  SET_OPTION_STRING   ("archive-name",           storageName);
-  SET_OPTION_CSTRING  ("archive-type",           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,jobOptions->archiveType,NULL));
+  SET_OPTION_STRING   ("archive-name",              storageName);
+  SET_OPTION_CSTRING  ("archive-type",              ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,jobOptions->archiveType,NULL));
 
-  SET_OPTION_STRING   ("incremental-list-file",  jobOptions->incrementalListFileName);
+  SET_OPTION_STRING   ("incremental-list-file",     jobOptions->incrementalListFileName);
 
-  SET_OPTION_INTEGER64("archive-part-size",      jobOptions->archivePartSize);
+  SET_OPTION_INTEGER64("archive-part-size",         jobOptions->archivePartSize);
 
-//  SET_OPTION_INTEGER  ("directory-strip",        jobOptions->directoryStripCount);
-//  SET_OPTION_STRING   ("destination",            jobOptions->destination);
-//  SET_OPTION_STRING   ("owner",                  jobOptions->owner);
+//  SET_OPTION_INTEGER  ("directory-strip",           jobOptions->directoryStripCount);
+//  SET_OPTION_STRING   ("destination",               jobOptions->destination);
+//  SET_OPTION_STRING   ("owner",                     jobOptions->owner);
 
-  SET_OPTION_CSTRING  ("pattern-type",           ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,jobOptions->patternType,NULL));
+  SET_OPTION_CSTRING  ("pattern-type",              ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,jobOptions->patternType,NULL));
 
-  SET_OPTION_STRING   ("compress-algorithm",     String_format(s,
-                                                               "%s+%s",
-                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.delta,NULL),
-                                                               Compress_algorithmToString(jobOptions->compressAlgorithms.byte, NULL)
-                                                              )
+  SET_OPTION_STRING   ("compress-algorithm",        String_format(s,
+                                                                  "%s+%s",
+                                                                  Compress_algorithmToString(jobOptions->compressAlgorithms.delta,NULL),
+                                                                  Compress_algorithmToString(jobOptions->compressAlgorithms.byte, NULL)
+                                                                 )
                       );
-  SET_OPTION_CSTRING  ("crypt-algorithm",        Crypt_algorithmToString(jobOptions->cryptAlgorithms[0],NULL));
-  SET_OPTION_CSTRING  ("crypt-type",             ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,
-                                                                            Crypt_isEncrypted(jobOptions->cryptAlgorithms[0]) ? jobOptions->cryptType : CRYPT_TYPE_NONE,
-                                                                            NULL
-                                                                           )
+  SET_OPTION_CSTRING  ("crypt-algorithm",           Crypt_algorithmToString(jobOptions->cryptAlgorithms[0],NULL));
+  SET_OPTION_CSTRING  ("crypt-type",                ConfigValue_selectToString(CONFIG_VALUE_CRYPT_TYPES,
+                                                                               Crypt_isEncrypted(jobOptions->cryptAlgorithms[0]) ? jobOptions->cryptType : CRYPT_TYPE_NONE,
+                                                                               NULL
+                                                                              )
                       );
-  SET_OPTION_CSTRING  ("crypt-password-mode",    ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
-  SET_OPTION_PASSWORD ("crypt-password",         &jobOptions->cryptPassword              );
-  SET_OPTION_STRING   ("crypt-public-key",       Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length));
+  SET_OPTION_CSTRING  ("crypt-password-mode",       ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobOptions->cryptPasswordMode,NULL));
+  SET_OPTION_PASSWORD ("crypt-password",            &jobOptions->cryptPassword              );
+  SET_OPTION_STRING   ("crypt-public-key",          Misc_base64Encode(s,jobOptions->cryptPublicKey.data,jobOptions->cryptPublicKey.length));
 
-  SET_OPTION_STRING   ("pre-command",            jobOptions->slavePreProcessScript       );
-  SET_OPTION_STRING   ("post-command",           jobOptions->slavePostProcessScript      );
+  SET_OPTION_STRING   ("pre-command",               jobOptions->slavePreProcessScript       );
+  SET_OPTION_STRING   ("post-command",              jobOptions->slavePostProcessScript      );
 
-  SET_OPTION_STRING   ("ftp-login-name",         jobOptions->ftpServer.loginName         );
-  SET_OPTION_PASSWORD ("ftp-password",           &jobOptions->ftpServer.password         );
+  SET_OPTION_STRING   ("ftp-login-name",            jobOptions->ftpServer.loginName         );
+  SET_OPTION_PASSWORD ("ftp-password",              &jobOptions->ftpServer.password         );
 
-  SET_OPTION_INTEGER  ("ssh-port",               jobOptions->sshServer.port              );
-  SET_OPTION_STRING   ("ssh-login-name",         jobOptions->sshServer.loginName         );
-  SET_OPTION_PASSWORD ("ssh-password",           &jobOptions->sshServer.password         );
-  SET_OPTION_STRING   ("ssh-public-key",         Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
-  SET_OPTION_STRING   ("ssh-private-key",        Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
+  SET_OPTION_INTEGER  ("ssh-port",                  jobOptions->sshServer.port              );
+  SET_OPTION_STRING   ("ssh-login-name",            jobOptions->sshServer.loginName         );
+  SET_OPTION_PASSWORD ("ssh-password",              &jobOptions->sshServer.password         );
+  SET_OPTION_STRING   ("ssh-public-key",            Misc_base64Encode(s,jobOptions->sshServer.publicKey.data,jobOptions->sshServer.publicKey.length));
+  SET_OPTION_STRING   ("ssh-private-key",           Misc_base64Encode(s,jobOptions->sshServer.privateKey.data,jobOptions->sshServer.privateKey.length));
 
-  SET_OPTION_INTEGER64("max-storage-size",       jobOptions->maxStorageSize);
+  SET_OPTION_INTEGER64("max-storage-size",          jobOptions->maxStorageSize);
 
-  SET_OPTION_INTEGER64("volume-size",            jobOptions->volumeSize                  );
-  SET_OPTION_BOOLEAN  ("ecc",                    jobOptions->errorCorrectionCodesFlag);
-  SET_OPTION_BOOLEAN  ("blank",                  jobOptions->blankFlag);
+  SET_OPTION_INTEGER64("volume-size",               jobOptions->volumeSize                  );
+  SET_OPTION_BOOLEAN  ("ecc",                       jobOptions->errorCorrectionCodesFlag);
+  SET_OPTION_BOOLEAN  ("blank",                     jobOptions->blankFlag);
 
-  SET_OPTION_BOOLEAN  ("skip-unreadable",        jobOptions->skipUnreadableFlag);
-  SET_OPTION_BOOLEAN  ("raw-images",             jobOptions->rawImagesFlag);
-  SET_OPTION_CSTRING  ("archive-file-mode",      ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL));
-  SET_OPTION_CSTRING  ("restore-entry-mode",     ConfigValue_selectToString(CONFIG_VALUE_RESTORE_ENTRY_MODES,jobOptions->restoreEntryMode,NULL));
-  SET_OPTION_BOOLEAN  ("wait-first-volume",      jobOptions->waitFirstVolumeFlag         );
+  SET_OPTION_BOOLEAN  ("skip-unreadable",           jobOptions->skipUnreadableFlag);
+  SET_OPTION_BOOLEAN  ("no-stop-on-error",          jobOptions->noStopOnErrorFlag);
+  SET_OPTION_BOOLEAN  ("no-stop-on-attribute-error",jobOptions->noStopOnAttributeErrorFlag);
+  SET_OPTION_BOOLEAN  ("raw-images",                jobOptions->rawImagesFlag);
+  SET_OPTION_CSTRING  ("archive-file-mode",         ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_FILE_MODES,jobOptions->archiveFileMode,NULL));
+  SET_OPTION_CSTRING  ("restore-entry-mode",        ConfigValue_selectToString(CONFIG_VALUE_RESTORE_ENTRY_MODES,jobOptions->restoreEntryMode,NULL));
+  SET_OPTION_BOOLEAN  ("wait-first-volume",         jobOptions->waitFirstVolumeFlag         );
 
-  SET_OPTION_STRING   ("comment",                jobOptions->comment                     );
+  SET_OPTION_STRING   ("comment",                   jobOptions->comment                     );
 
   // set lists
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
@@ -724,6 +726,43 @@ UNUSED_VARIABLE(scheduleCustomText);
   #undef SET_OPTION_STRING
 }
 
+/***********************************************************************\
+* Name   : sendResult
+* Purpose: send command result
+* Input  : connectorInfo - connector info
+*          id            - command id
+*          completedFlag - TRUE iff completed
+*          error         - error code
+*          format        - command format string
+*          ...           - optional arguments for command format string
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void sendResult(ConnectorInfo  *connectorInfo,
+                uint           id,
+                bool           completedFlag,
+                Errors         error,
+                const char     *format,
+                ...
+               )
+{
+  va_list arguments;
+
+  va_start(arguments,format);
+  ServerIO_vsendResult(&connectorInfo->io,id,completedFlag,error,format,arguments);
+  va_end(arguments);
+
+  #ifdef CONNECTOR_DEBUG
+    fprintf(stderr,"DEBUG connector sent result: %u %u %u ",id,completedFlag ? 1 : 0, Error_getCode(error));
+    va_start(arguments,format);
+    vfprintf(stderr,format,arguments);
+    va_end(arguments);
+    fprintf(stderr,"\n");
+  #endif
+}
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
@@ -757,13 +796,13 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
   archiveName = String_new();
   if (!StringMap_getString(argumentMap,"archiveName",archiveName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveName=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveName=<name>");
     String_delete(archiveName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"archiveSize",&archiveSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveSize=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveSize=<n>");
     String_delete(archiveName);
     return;
   }
@@ -777,14 +816,14 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
                         );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+    sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
     String_delete(archiveName);
     return;
   }
   connectorInfo->storageOpenFlag = TRUE;
 
   // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
   String_delete(archiveName);
@@ -823,18 +862,18 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   // get offset, length, data
   if (!StringMap_getUInt64(argumentMap,"offset",&offset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"offset=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"offset=<n>");
     return;
   }
   if (!StringMap_getUInt(argumentMap,"length",&length,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"length=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"length=<n>");
     return;
   }
   data = String_new();
   if (!StringMap_getString(argumentMap,"data",data,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"data=<data>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"data=<data>");
     String_delete(data);
     return;
   }
@@ -842,7 +881,7 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   // check if storage is open
   if (!connectorInfo->storageOpenFlag)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_INVALID_STORAGE,"storage not open");
+    sendResult(connectorInfo,id,TRUE,ERROR_INVALID_STORAGE,"storage not open");
     String_delete(data);
     return;
   }
@@ -851,13 +890,13 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   buffer = malloc(length);
   if (buffer == NULL)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
+    sendResult(connectorInfo,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"insufficient memory");
     String_delete(data);
     return;
   }
   if (!Misc_base64Decode(buffer,length,NULL,data,STRING_BEGIN))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"decode base64 data fail");
+    sendResult(connectorInfo,id,TRUE,ERROR_INSUFFICIENT_MEMORY,"decode base64 data fail");
     String_delete(data);
     return;
   }
@@ -866,7 +905,7 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   error = Storage_seek(&connectorInfo->storageHandle,offset);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+    sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
     free(buffer);
     String_delete(data);
     return;
@@ -874,14 +913,14 @@ LOCAL void connectorCommand_storageWrite(ConnectorInfo *connectorInfo, IndexHand
   error = Storage_write(&connectorInfo->storageHandle,buffer,length);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+    sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
     free(buffer);
     String_delete(data);
     return;
   }
 
   // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
 
   // free resources
   free(buffer);
@@ -925,7 +964,7 @@ UNUSED_VARIABLE(argumentMap);
 //TODO: index
 
   // send result
-  ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+  sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
 }
 
 /***********************************************************************\
@@ -979,12 +1018,12 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   // get jobUUID, scheduleUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
     return;
   }
 
@@ -1017,7 +1056,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
                       )
        )
     {
-      ServerIO_sendResult(&connectorInfo->io,
+      sendResult(connectorInfo,
                           id,
                           TRUE,
                           ERROR_NONE,
@@ -1044,7 +1083,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
     }
     else
     {
-      ServerIO_sendResult(&connectorInfo->io,
+      sendResult(connectorInfo,
                           id,
                           TRUE,
                           ERROR_NONE,
@@ -1056,7 +1095,7 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1091,7 +1130,7 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
   // get jobUUID
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
 
@@ -1101,17 +1140,17 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
     error = Index_newUUID(indexHandle,jobUUID,&uuidId);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"uuidId=%lld",uuidId);
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"uuidId=%lld",uuidId);
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1155,24 +1194,24 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   // get jobUUID, scheduleUUID, archiveType, createdDateTime, locked
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
     return;
   }
   hostName = String_new();
   if (!StringMap_getString(argumentMap,"hostName",hostName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<name>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
   {
     String_delete(hostName);
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
@@ -1193,17 +1232,17 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
     if (error != ERROR_NONE)
     {
       String_delete(hostName);
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"entityId=%lld",entityId);
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"entityId=%lld",entityId);
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1248,37 +1287,37 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
   // get entityId, storageName, createdDateTime, size, indexMode, indexState
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
     return;
   }
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"createdDateTime=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"createdDateTime=<n>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexMode",&indexMode,(StringMapParseEnumFunction)Index_parseMode,INDEX_MODE_MANUAL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexMode=MANUAL|AUTO");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexMode=MANUAL|AUTO");
     String_delete(storageName);
     return;
   }
@@ -1299,18 +1338,18 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
                             );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(storageName);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"storageId=%lld",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"storageId=%lld",storageId);
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1363,72 +1402,72 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"a not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"a not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentOffset=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentOffset=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentSize=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentSize=<n>");
     String_delete(name);
     return;
   }
@@ -1451,18 +1490,18 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
                          );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(name);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1512,48 +1551,48 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   // get storageId, name, fileSystemType, size, blockSize, blockOffset, blockCount
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"b not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"b not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"fileSystemType",&fileSystemType,(StringMapParseEnumFunction)FileSystem_parseFileSystemType,FILE_SYSTEM_TYPE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fileSystemType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"fileSystemType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getULong(argumentMap,"blockSize",&blockSize,0L))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockSize=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockSize=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"blockOffset",&blockOffset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockOffset=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockOffset=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"blockCount",&blockCount,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockCount=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"blockCount=<n>");
     String_delete(name);
     return;
   }
@@ -1572,18 +1611,18 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
                           );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(name);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1633,54 +1672,54 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   // get storageId, name, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"c not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"c not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
     String_delete(name);
     return;
   }
@@ -1700,18 +1739,18 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
                               );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(name);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1761,67 +1800,67 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   // get storageId, name, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"d not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"d not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   destinationName = String_new();
   if (!StringMap_getString(argumentMap,"destinationName",destinationName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"destinationName=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"destinationName=<name>");
     String_delete(destinationName);
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
     String_delete(destinationName);
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
     String_delete(destinationName);
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
     String_delete(destinationName);
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
     String_delete(destinationName);
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
     String_delete(destinationName);
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
     String_delete(destinationName);
     String_delete(name);
     return;
@@ -1843,19 +1882,19 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
                          );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(destinationName);
       String_delete(name);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -1909,72 +1948,72 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"e not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"e not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"size",&size,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"size=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentOffset",&fragmentOffset,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentOffset=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentOffset=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"fragmentSize",&fragmentSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentSize=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragmentSize=<n>");
     String_delete(name);
     return;
   }
@@ -1997,18 +2036,18 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
                              );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(name);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2060,72 +2099,72 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   // get storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"f not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"f not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"specialType",&specialType,(StringMapParseEnumFunction)File_parseFileSpecialType,FILE_SPECIAL_TYPE_OTHER))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"specialType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"specialType=CHARACTER_DEVICE|BLOCK_DEVICE|FIFO|SOCKET|OTHER");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastAccess",&timeLastAccess,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastAccess=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeModified",&timeModified,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeModified=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"timeLastChanged",&timeLastChanged,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"timeLastChanged=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"userId",&userId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"userId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"groupId",&groupId,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"groupId=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"permission",&permission,0))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"permission=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"major",&major,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"major=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"major=<n>");
     String_delete(name);
     return;
   }
   if (!StringMap_getUInt(argumentMap,"minor",&minor,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minor=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"minor=<n>");
     String_delete(name);
     return;
   }
@@ -2148,18 +2187,18 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
                             );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(name);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2192,7 +2231,7 @@ LOCAL void connectorCommand_indexPruneUUID(ConnectorInfo *connectorInfo, IndexHa
   // get uuidId
   if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
     return;
   }
 
@@ -2202,17 +2241,17 @@ LOCAL void connectorCommand_indexPruneUUID(ConnectorInfo *connectorInfo, IndexHa
     error = Index_pruneUUID(indexHandle,uuidId);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2244,7 +2283,7 @@ LOCAL void connectorCommand_indexPruneEntity(ConnectorInfo *connectorInfo, Index
   // get entityId
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
     return;
   }
 
@@ -2254,17 +2293,17 @@ LOCAL void connectorCommand_indexPruneEntity(ConnectorInfo *connectorInfo, Index
     error = Index_pruneEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2302,23 +2341,23 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
   // get indexId, indexState, lastCheckedDateTime, errorMessage
   if (!StringMap_getInt64(argumentMap,"indexId",&indexId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexId=<n>");
     return;
   }
   if (!StringMap_getEnum(argumentMap,"indexState",&indexState,(StringMapParseEnumFunction)Index_parseState,INDEX_STATE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=NONE|OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR");
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"lastCheckedDateTime",&lastCheckedDateTime,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"lastCheckedDateTime=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"lastCheckedDateTime=<n>");
     return;
   }
   errorMessage = String_new();
   if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorMessage=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorMessage=<name>");
     String_delete(errorMessage);
     return;
   }
@@ -2335,18 +2374,18 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
                           );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(errorMessage);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2383,24 +2422,24 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   // get storageId, storageName, storageSize
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"g not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"g not a storage index id %llx",storageId);
     return;
   }
   storageName = String_new();
   if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
     String_delete(storageName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"storageSize",&storageSize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageSize=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageSize=<n>");
     String_delete(storageName);
     return;
   }
@@ -2415,18 +2454,18 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
                                );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(storageName);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2459,12 +2498,12 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
   // get storageId
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"h not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"h not a storage index id %llx",storageId);
     return;
   }
 
@@ -2476,17 +2515,17 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
                                     );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2518,12 +2557,12 @@ LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, Ind
   // get storageId
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
     return;
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"i not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"i not a storage index id %llx",storageId);
     return;
   }
 
@@ -2535,17 +2574,17 @@ LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, Ind
                                );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"");
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2603,86 +2642,86 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
   // get jobUUID, scheduleUUID, hostName, archiveType, createdDateTime, errorMessage, duration, totalEntryCount, totalEntrySize, skippedEntryCount, skippedEntrySize, errorEntryCount, errorEntrySize
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
     return;
   }
   if (!StringMap_getString(argumentMap,"scheduleUUID",scheduleUUID,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"scheduleUUID=<text>");
     return;
   }
   hostName = String_new();
   if (!StringMap_getString(argumentMap,"hostName",hostName,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<text>");
     String_delete(hostName);
     return;
   }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"createdDateTime=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"createdDateTime=<n>");
     String_delete(hostName);
     return;
   }
   errorMessage = String_new();
   if (!StringMap_getString(argumentMap,"errorMessage",errorMessage,NULL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<text>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<text>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"duration",&duration,0L))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"duration=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"duration=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"totalEntryCount",&totalEntryCount,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"totalEntryCount=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"totalEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"totalEntrySize",&totalEntrySize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"totalEntrySize=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"totalEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"skippedEntryCount",&skippedEntryCount,0L))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"skippedEntryCount=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"skippedEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"skippedEntrySize",&skippedEntrySize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"skippedEntrySize=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"skippedEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getULong(argumentMap,"errorEntryCount",&errorEntryCount,0L))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorEntryCount=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorEntryCount=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
   }
   if (!StringMap_getUInt64(argumentMap,"errorEntrySize",&errorEntrySize,0LL))
   {
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorEntrySize=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"errorEntrySize=<n>");
     String_delete(errorMessage);
     String_delete(hostName);
     return;
@@ -2710,19 +2749,19 @@ LOCAL void connectorCommand_indexNewHistory(ConnectorInfo *connectorInfo, IndexH
                             );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&connectorInfo->io,id,TRUE,error,"%s",Error_getData(error));
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       String_delete(errorMessage);
       String_delete(hostName);
       return;
     }
 
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_NONE,"historyId=%lld",historyId);
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"historyId=%lld",historyId);
   }
   else
   {
     // send result
-    ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
 
   // free resources
@@ -2863,14 +2902,14 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
             // find command
             #ifdef CONNECTOR_DEBUG
 //TODO: enable
-              fprintf(stderr,"DEBUG: received command '%s'\n",String_cString(name));
+              fprintf(stderr,"DEBUG connector received command: %u %s\n",id,String_cString(name));
               #ifndef NDEBUG
                 StringMap_debugPrint(2,argumentMap);
               #endif
             #endif
             if (!findConnectorCommand(name,&connectorCommandFunction))
             {
-              ServerIO_sendResult(&connectorInfo->io,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
+              sendResult(connectorInfo,id,TRUE,ERROR_UNKNOWN_COMMAND,"%S",name);
               continue;
             }
             assert(connectorCommandFunction != NULL);
@@ -2908,7 +2947,7 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
 }
 
 /***********************************************************************\
-* Name   : Connector_vexecuteCommand
+* Name   : vexecuteCommand
 * Purpose: execute command on connector host
 * Input  : connectorInfo - connector info
 *          timeout       - timeout [ms] or WAIT_FOREVER
@@ -2920,13 +2959,13 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors Connector_vexecuteCommand(ConnectorInfo *connectorInfo,
-                                       uint          debugLevel,
-                                       long          timeout,
-                                       StringMap     resultMap,
-                                       const char    *format,
-                                       va_list       arguments
-                                      )
+LOCAL Errors vexecuteCommand(ConnectorInfo *connectorInfo,
+                             uint          debugLevel,
+                             long          timeout,
+                             StringMap     resultMap,
+                             const char    *format,
+                             va_list       arguments
+                            )
 {
   Errors error;
 
@@ -3195,7 +3234,7 @@ Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   va_start(arguments,format);
-  error = Connector_vexecuteCommand(connectorInfo,debugLevel,timeout,resultMap,format,arguments);
+  error = vexecuteCommand(connectorInfo,debugLevel,timeout,resultMap,format,arguments);
   va_end(arguments);
 
   return error;
