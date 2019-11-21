@@ -1116,7 +1116,7 @@ LOCAL void continuousInitThreadCode(void)
 
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_CONTINUOUS,
-                    LOG_PREFIX,"Done initialize watches for '%s':– %lu (max. %lu)",
+                    LOG_PREFIX,"Done initialize watches for '%s': %lu (max. %lu)",
                     String_cString(initNotifyMsg.name),
                     Dictionary_count(&notifyHandles),
                     maxWatches
