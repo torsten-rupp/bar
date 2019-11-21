@@ -1486,27 +1486,29 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
       resultNode->completedFlag = completedFlag;
       resultNode->data          = String_duplicate(data);
       resultNode->resultMap     = StringMap_new();
-      if (StringMap_parse(resultNode->resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+      if (errorCode == ERROR_CODE_NONE)
       {
-        // store result
-        SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        if (!StringMap_parse(resultNode->resultMap,data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
         {
-          List_append(&serverIO->resultList,resultNode);
-//fprintf(stderr,"%s, %d: appended result: %d %d %d %s\n",__FILE__,__LINE__,resultNode->id,resultNode->error,resultNode->completedFlag,String_cString(resultNode->data));
+          // parse error -> discard
+          #ifndef NDEBUG
+            if (globalOptions.serverDebugLevel >= 1)
+            {
+              fprintf(stderr,"DEBUG: parse result fail: %s\n",String_cString(data));
+            }
+          #endif /* not DEBUG */
+          StringMap_delete(resultNode->resultMap);
+          String_delete(resultNode->data);
+          LIST_DELETE_NODE(resultNode);
+          continue;
         }
       }
-      else
+
+      // store result
+      SEMAPHORE_LOCKED_DO(&serverIO->resultList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        // parse error -> discard
-        #ifndef NDEBUG
-          if (globalOptions.serverDebugLevel >= 1)
-          {
-            fprintf(stderr,"DEBUG: parse result fail: %s\n",String_cString(data));
-          }
-        #endif /* not DEBUG */
-        StringMap_delete(resultNode->resultMap);
-        String_delete(resultNode->data);
-        LIST_DELETE_NODE(resultNode);
+        List_append(&serverIO->resultList,resultNode);
+//fprintf(stderr,"%s, %d: appended result: %d %d %d %s\n",__FILE__,__LINE__,resultNode->id,resultNode->error,resultNode->completedFlag,String_cString(resultNode->data));
       }
     }
     else if (String_parse(serverIO->line,STRING_BEGIN,"%u %S % S",NULL,id,name,data))
