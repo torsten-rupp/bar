@@ -552,11 +552,11 @@ bool ServerIO_getCommand(ServerIO  *serverIO,
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : ServerIO_vsendCommand
+* Name   : ServerIO_vsendCommand, ServerIO_sendCommand
 * Purpose: send command
-* Input  : serverIO  - server i/o
-*          format    - command format string
-*          arguments - arguments for command format string
+* Input  : serverIO - server i/o
+*          format   - command format string
+*          ...      - optional arguments for command format string
 * Output : id - command id
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -568,18 +568,6 @@ Errors ServerIO_vsendCommand(ServerIO   *serverIO,
                              const char *format,
                              va_list    arguments
                             );
-
-/***********************************************************************\
-* Name   : ServerIO_sendCommand
-* Purpose: send command
-* Input  : serverIO - server i/o
-*          format   - command format string
-*          ...      - optional arguments for command format string
-* Output : id - command id
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
 Errors ServerIO_sendCommand(ServerIO   *serverIO,
                             uint       debugLevel,
                             uint       *id,
@@ -590,12 +578,12 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : ServerIO_vexecuteCommand
+* Name   : ServerIO_vexecuteCommand, ServerIO_executeCommand
 * Purpose: execute server command
-* Input  : serverIO  - server i/o
-*          timeout   - timeout [ms] or WAIT_FOREVER
-*          format    - format string
-*          arguments - optional arguments
+* Input  : serverIO      - server i/o
+*          timeout       - timeout [ms] or WAIT_FOREVER
+*          format        - format string
+*          .../arguments - optional arguments
 * Output : resultMap - result map (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -608,19 +596,6 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
                                 const char *format,
                                 va_list    arguments
                                );
-
-/***********************************************************************\
-* Name   : ServerIO_executeCommand
-* Purpose: execute server command
-* Input  : serverIO - server i/o
-*          timeout  - timeout [ms] or WAIT_FOREVER
-*          format   - format string
-*          ...      - optional arguments
-* Output : resultMap - result map (can be NULL)
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
 Errors ServerIO_executeCommand(ServerIO   *serverIO,
                                uint       debugLevel,
                                long       timeout,
@@ -632,19 +607,26 @@ Errors ServerIO_executeCommand(ServerIO   *serverIO,
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
-* Name   : ServerIO_sendResult
+* Name   : ServerIO_vsendResult, ServerIO_sendResult
 * Purpose: send client result
 * Input  : serverIO      - server i/o
 *          id            - command id
 *          completedFlag - TRUE iff completed
 *          error         - error code
 *          format        - command format string
-*          ...           - optional arguments for command format string
+*          .../arguments - optional arguments for command format string
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
+Errors ServerIO_vsendResult(ServerIO   *serverIO,
+                            uint       id,
+                            bool       completedFlag,
+                            Errors     error,
+                            const char *format,
+                            va_list    arguments
+                          );
 Errors ServerIO_sendResult(ServerIO   *serverIO,
                            uint       id,
                            bool       completedFlag,

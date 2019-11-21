@@ -189,7 +189,7 @@ LOCAL void initIO(ServerIO *serverIO, ServerIOTypes type)
   serverIO->lineFlag          = FALSE;
 
   serverIO->isConnected       = FALSE;
-  serverIO->commandId         = 0;
+  serverIO->commandId         = 1;
   Semaphore_init(&serverIO->resultList.lock,SEMAPHORE_TYPE_BINARY);
   List_init(&serverIO->resultList);
 
@@ -1713,16 +1713,15 @@ Errors ServerIO_executeCommand(ServerIO   *serverIO,
   return error;
 }
 
-Errors ServerIO_sendResult(ServerIO   *serverIO,
-                           uint       id,
-                           bool       completedFlag,
-                           Errors     error,
-                           const char *format,
-                           ...
-                          )
+Errors ServerIO_vsendResult(ServerIO   *serverIO,
+                            uint       id,
+                            bool       completedFlag,
+                            Errors     error,
+                            const char *format,
+                            va_list    arguments
+                           )
 {
   String   s;
-  va_list  arguments;
   #ifdef HAVE_NEWLOCALE
     locale_t oldLocale;
   #endif /* HAVE_NEWLOCALE */
@@ -1740,9 +1739,7 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   #endif /* HAVE_NEWLOCALE */
   {
     String_format(s,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
-    va_start(arguments,format);
     String_appendVFormat(s,format,arguments);
-    va_end(arguments);
   }
   #ifdef HAVE_NEWLOCALE
     uselocale(oldLocale);
@@ -1766,6 +1763,27 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   String_delete(s);
 
   return ERROR_NONE;
+}
+
+Errors ServerIO_sendResult(ServerIO   *serverIO,
+                           uint       id,
+                           bool       completedFlag,
+                           Errors     error,
+                           const char *format,
+                           ...
+                          )
+{
+  va_list arguments;
+
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  error = ServerIO_vsendResult(serverIO,id,completedFlag,error,format,arguments);
+  va_end(arguments);
+
+  return error;
 }
 
 Errors ServerIO_waitResults(ServerIO   *serverIO,
@@ -1824,7 +1842,11 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
           );
   }
   Misc_doneTimeout(&timeoutInfo);
-  if (resultNode == NULL)
+  if      (!serverIO->isConnected)
+  {
+    return ERROR_DISCONNECTED;
+  }
+  else if (resultNode == NULL)
   {
     return ERROR_NETWORK_TIMEOUT;
   }
