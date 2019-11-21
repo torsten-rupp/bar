@@ -61,6 +61,8 @@ ERROR CONNECT_FAIL
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DISCONNECTED                     TR("disconnected")
+
 ERROR TOO_MANY_CONNECTIONS             TR("too many concurrent connections")
 ERROR NO_LOGIN_NAME                    TR("no login name given")
 ERROR NO_LOGIN_PASSWORD                TR("no password given")
@@ -878,7 +880,7 @@ ERROR DATABASE_INVALID_INDEX
 ERROR DATABASE_TIMEOUT                 TR("timeout accessing index")
 
 // --- master/slave -----------------------------------------------------
-ERROR MASTER_DISCONNECED               TR("master disconnected")
+ERROR MASTER_DISCONNECTED              TR("master disconnected")
 ERROR SLAVE_DISCONNECTED               TR("slave disconnected")
 ERROR NOT_PAIRED                       TR("slave is not paired")
 
