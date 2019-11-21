@@ -2526,12 +2526,18 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         if (error != ERROR_NONE)
         {
           printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-          logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
+          logMessage(createInfo->logHandle,
+                     LOG_TYPE_ENTRY_ACCESS_DENIED,
+                     "Access denied '%s' (error: %s)",
+                     String_cString(name),
+                     Error_getText(error)
+                    );
 
           STATUS_INFO_UPDATE(createInfo,name,NULL)
           {
             createInfo->statusInfo.error.count++;
           }
+
           continue;
         }
 
@@ -2969,13 +2975,19 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"Cannot read directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
+                      logMessage(createInfo->logHandle,
+                                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                 "Access denied '%s' (error: %s)",
+                                 String_cString(name),
+                                 Error_getText(error)
+                                );
 
                       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
                         createInfo->statusInfo.error.count++;
                         createInfo->statusInfo.error.size += (uint64)fileInfo.size;
                       }
+
                       continue;
                     }
 
@@ -2984,12 +2996,18 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     if (error != ERROR_NONE)
                     {
                       printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(fileName),Error_getText(error));
-                      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
+                      logMessage(createInfo->logHandle,
+                                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                 "Access denied '%s' (error: %s)",
+                                 String_cString(fileName),
+                                 Error_getText(error)
+                                );
 
                       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                       {
                         createInfo->statusInfo.error.count++;
                       }
+
                       continue;
                     }
 
@@ -3247,7 +3265,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 else
                 {
                   printInfo(2,"Cannot open directory '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                  logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
+                  logMessage(createInfo->logHandle,
+                             LOG_TYPE_ENTRY_ACCESS_DENIED,
+                             "Access denied '%s' (error: %s)",
+                             String_cString(name),
+                             Error_getText(error)
+                            );
 
                   STATUS_INFO_UPDATE(createInfo,name,NULL)
                   {
@@ -3450,12 +3473,18 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             if (error != ERROR_NONE)
                             {
                               printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-                              logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(name),Error_getText(error));
+                              logMessage(createInfo->logHandle,
+                                         LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                         "Access denied '%s' (error: %s)",
+                                         String_cString(name),
+                                         Error_getText(error)
+                                        );
 
                               STATUS_INFO_UPDATE(createInfo,name,NULL)
                               {
                                 createInfo->statusInfo.error.count++;
                               }
+
                               continue;
                             }
                             UNUSED_VARIABLE(deviceInfo);
@@ -5269,11 +5298,18 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       return ERROR_NONE;
     }
     else
@@ -5295,20 +5331,34 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 //TODO
     if      (createInfo->jobOptions->noStopOnAttributeErrorFlag)
     {
-      printWarning("Cannot not get extended attributes for '%s' - continue (error: %s)!",
-                   String_cString(fileName),
-                   Error_getText(error)
-                  );
+      printInfo(2,"Cannot not get extended attributes for '%s' - continue (error: %s)!",
+                String_cString(fileName),
+                Error_getText(error)
+               );
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_INCOMPLETE,
+                 "Cannot get extended attributes for '%s' - continue (error: %s)",
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
     }
     else if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return ERROR_NONE;
     }
     else
@@ -5318,7 +5368,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return error;
     }
   }
@@ -5330,13 +5382,21 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Open file failed '%s' (error: %s)",
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.error.count++;
         createInfo->statusInfo.error.size += (uint64)fileInfo.size;
       }
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return ERROR_NONE;
     }
     else
@@ -5346,7 +5406,9 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return error;
     }
   }
@@ -5495,16 +5557,24 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       if (createInfo->jobOptions->skipUnreadableFlag)
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(fileName),Error_getText(error));
+        logMessage(createInfo->logHandle,
+                   LOG_TYPE_ENTRY_ACCESS_DENIED,
+                   "Open file failed '%s' (error: %s)",
+                   String_cString(fileName),
+                   Error_getText(error)
+                  );
+
         STATUS_INFO_UPDATE(createInfo,fileName,NULL)
         {
           createInfo->statusInfo.error.count++;
           createInfo->statusInfo.error.size += fragmentSize;
         }
+
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
+
         return ERROR_NONE;
       }
       else
@@ -5513,10 +5583,12 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         printError("Cannot store file entry (error: %s)!",
                    Error_getText(error)
                   );
+
         (void)Archive_closeEntry(&archiveEntryInfo);
         (void)File_close(&fileHandle);
         fragmentDone(createInfo,fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
+
         return error;
       }
     }
@@ -5689,11 +5761,18 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(deviceName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(deviceName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       return ERROR_NONE;
     }
     else
@@ -5703,6 +5782,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                  String_cString(deviceName),
                  Error_getText(error)
                 );
+
       return error;
     }
   }
@@ -5736,12 +5816,19 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open device failed '%s'",String_cString(deviceName));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Open device failed '%s' (error: %s)",
+                 String_cString(deviceName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
       {
         createInfo->statusInfo.error.count++;
         createInfo->statusInfo.error.size += (uint64)deviceInfo.size;
       }
+
       return ERROR_NONE;
     }
     else
@@ -5751,6 +5838,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
                  String_cString(deviceName),
                  Error_getText(error)
                 );
+
       return error;
     }
   }
@@ -6076,11 +6164,18 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(directoryName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       return ERROR_NONE;
     }
     else
@@ -6090,6 +6185,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
                  String_cString(directoryName),
                  Error_getText(error)
                 );
+
       return error;
     }
   }
@@ -6102,20 +6198,34 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
 //TODO
     if      (createInfo->jobOptions->noStopOnAttributeErrorFlag)
     {
-      printWarning("Cannot not get extended attributes for '%s' - continue (error: %s)!",
-                   String_cString(directoryName),
-                   Error_getText(error)
-                  );
+      printInfo(2,"Cannot not get extended attributes for '%s' - continue (error: %s)!",
+                String_cString(directoryName),
+                Error_getText(error)
+               );
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_INCOMPLETE,
+                 "Cannot get extended attributes for '%s' - continue (error: %s)",
+                 String_cString(directoryName),
+                 Error_getText(error)
+                );
     }
     else if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)\n",String_cString(directoryName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(directoryName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return ERROR_NONE;
     }
     else
@@ -6146,8 +6256,15 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
                  String_cString(directoryName),
                  Error_getText(error)
                 );
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'\n",String_cString(directoryName));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Open failed '%s' (error: %s)",
+                 String_cString(directoryName),
+                 Error_getText(error)
+                );
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return error;
     }
 
@@ -6233,11 +6350,18 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Alccess denied '%s' (error: %s)",String_cString(linkName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Alccess denied '%s' (error: %s)",
+                 String_cString(linkName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,linkName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       return ERROR_NONE;
     }
     else
@@ -6259,20 +6383,34 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 //TODO
     if      (createInfo->jobOptions->noStopOnAttributeErrorFlag)
     {
-      printWarning("Cannot not get extended attributes for '%s' - continue (error: %s)!",
-                   String_cString(linkName),
-                   Error_getText(error)
-                  );
+      printInfo(2,"Cannot not get extended attributes for '%s' - continue (error: %s)!",
+                String_cString(linkName),
+                Error_getText(error)
+               );
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_INCOMPLETE,
+                 "Cannot get extended attributes for '%s' - continue (error: %s)",
+                 String_cString(linkName),
+                 Error_getText(error)
+                );
     }
     else if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(linkName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(linkName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,linkName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return ERROR_NONE;
     }
     else
@@ -6282,7 +6420,9 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
                  String_cString(linkName),
                  Error_getText(error)
                 );
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return error;
     }
   }
@@ -6297,14 +6437,22 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       if (createInfo->jobOptions->skipUnreadableFlag)
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-        logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open failed '%s'",String_cString(linkName));
+        logMessage(createInfo->logHandle,
+                   LOG_TYPE_ENTRY_ACCESS_DENIED,
+                   "Open failed '%s' (error: %s)",
+                   String_cString(linkName),
+                   Error_getText(error)
+                  );
+
         STATUS_INFO_UPDATE(createInfo,linkName,NULL)
         {
           createInfo->statusInfo.error.count++;
           createInfo->statusInfo.error.size += (uint64)fileInfo.size;
         }
+
         String_delete(fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
+
         return ERROR_NONE;
       }
       else
@@ -6314,8 +6462,10 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
                    String_cString(linkName),
                    Error_getText(error)
                   );
+
         String_delete(fileName);
         File_doneExtendedAttributes(&fileExtendedAttributeList);
+
         return error;
       }
     }
@@ -6458,11 +6608,18 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(StringList_first(fileNameList,NULL)),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
         createInfo->statusInfo.error.count += StringList_count(fileNameList);
       }
+
       return ERROR_NONE;
     }
     else
@@ -6472,6 +6629,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
+
       return error;
     }
   }
@@ -6488,16 +6646,30 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                    String_cString(StringList_first(fileNameList,NULL)),
                    Error_getText(error)
                   );
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_INCOMPLETE,
+                 "Cannot get extended attributes for '%s' - continue (error: %s)",
+                 String_cString(StringList_first(fileNameList,NULL)),
+                 Error_getText(error)
+                );
     }
     else if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(StringList_first(fileNameList,NULL)),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return ERROR_NONE;
     }
     else
@@ -6507,7 +6679,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return error;
     }
   }
@@ -6519,13 +6693,21 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Open file failed '%s' (error: %s)",String_cString(StringList_first(fileNameList,NULL)),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Open file failed '%s' (error: %s)",
+                 String_cString(StringList_first(fileNameList,NULL)),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
         createInfo->statusInfo.error.count += StringList_count(fileNameList);
         createInfo->statusInfo.error.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
       }
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return ERROR_NONE;
     }
     else
@@ -6535,7 +6717,9 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                  String_cString(StringList_first(fileNameList,NULL)),
                  Error_getText(error)
                 );
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return error;
     }
   }
@@ -6838,11 +7022,18 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       return ERROR_NONE;
     }
     else
@@ -6852,6 +7043,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
+
       return error;
     }
   }
@@ -6863,20 +7055,34 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   {
     if      (createInfo->jobOptions->noStopOnAttributeErrorFlag)
     {
-      printWarning("Cannot not get extended attributes for '%s' - continue (error: %s)!",
-                   String_cString(fileName),
-                   Error_getText(error)
-                  );
+      printInfo(2,"Cannot not get extended attributes for '%s' - continue (error: %s)!",
+                String_cString(fileName),
+                Error_getText(error)
+               );
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_INCOMPLETE,
+                 "Cannot get extended attributes for '%s' - continue (error: %s)",
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
     }
     else if (createInfo->jobOptions->skipUnreadableFlag)
     {
       printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,LOG_TYPE_ENTRY_ACCESS_DENIED,"Access denied '%s' (error: %s)",String_cString(fileName),Error_getText(error));
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_ENTRY_ACCESS_DENIED,
+                 "Access denied '%s' (error: %s)",
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
+
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.error.count++;
       }
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return ERROR_NONE;
     }
     else
@@ -6886,7 +7092,9 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
                  String_cString(fileName),
                  Error_getText(error)
                 );
+
       File_doneExtendedAttributes(&fileExtendedAttributeList);
+
       return error;
     }
   }
