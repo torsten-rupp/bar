@@ -830,7 +830,9 @@ int Misc_waitHandles(WaitHandle *waitHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE uint Misc_handlesIterateCount(const WaitHandle *waitHandle)
+INLINE uint Misc_handlesIterateCount(const WaitHandle *waitHandle);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE uint Misc_handlesIterateCount(const WaitHandle *waitHandle)
 {
   assert(waitHandle != NULL);
 
@@ -844,6 +846,7 @@ LOCAL_INLINE uint Misc_handlesIterateCount(const WaitHandle *waitHandle)
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
 }
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Misc_handleIterate
@@ -858,7 +861,9 @@ LOCAL_INLINE uint Misc_handlesIterateCount(const WaitHandle *waitHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE uint Misc_handleIterate(const WaitHandle *waitHandle, uint i, int *handle, uint *events)
+INLINE uint Misc_handleIterate(const WaitHandle *waitHandle, uint i, int *handle, uint *events);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE uint Misc_handleIterate(const WaitHandle *waitHandle, uint i, int *handle, uint *events)
 {
   assert(waitHandle != NULL);
   assert(handle != NULL);
@@ -883,6 +888,7 @@ LOCAL_INLINE uint Misc_handleIterate(const WaitHandle *waitHandle, uint i, int *
 
   return i;
 }
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : Misc_findCommandInPath
