@@ -4601,15 +4601,10 @@ public class TabJobs
           {
             Rectangle bounds = widgetArchivePartSize.getBounds();
 
-Dprintf.dprintf("");
             if (bounds.contains(mouseEvent.x,mouseEvent.y))
             {
-Dprintf.dprintf("");
               archivePartSizeFlag.set(true);
-widgetArchivePartSize.setListVisible(true);
-//              widgetArchivePartSizeLimited.setSelection(true);
-//                selectRestoreToEvent.trigger();
-//              Widgets.setFocus(widgetArchivePartSize);
+              widgetArchivePartSize.setListVisible(true);
             }
           }
           @Override
@@ -9340,7 +9335,7 @@ widgetArchivePartSize.setListVisible(true);
             Widgets.layout(composite,3,0,TableLayoutData.NSWE);
             {
               styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-              styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
+              styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%file - archive file name\n%directory - archive directory\n%error - error code\n%message - message\n\nAdditional time macros are available."));
               Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
               styledText.addModifyListener(new ModifyListener()
               {
@@ -9554,7 +9549,7 @@ widgetArchivePartSize.setListVisible(true);
             Widgets.layout(composite,3,0,TableLayoutData.NSWE);
             {
               styledText = Widgets.newStyledText(composite,SWT.LEFT|SWT.BORDER|SWT.V_SCROLL|SWT.H_SCROLL|SWT.MULTI);
-              styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job on slave.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%file - archive file name\n%directory - archive directory\n\nAdditional time macros are available."));
+              styledText.setToolTipText(BARControl.tr("Command or script to execute after termination of job on slave.\n\nMacros:\n\n%name - job name\n%archive - archive name\n%type - archive type\n%file - archive file name\n%directory - archive directory\n%error - error code\n%message - message\n\nAdditional time macros are available."));
               Widgets.setEnabled(styledText,false);
               Widgets.layout(styledText,0,0,TableLayoutData.NSWE);
               styledText.addModifyListener(new ModifyListener()
