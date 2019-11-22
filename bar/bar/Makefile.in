@@ -513,9 +513,9 @@ BAR_MINIDUMP_SOURCES     = bar-minidump.cpp \
 
 BAR_MINIDUMP_HEADERS     = \
 
-BAR_MINIDUMP_OBJECTS     = $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.c,  %.o,$z)) \
-                           $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cpp,%.o,$z)) \
-                           $(foreach z,$(BAR_MINIDUMP_SOURCES),$(patsubst %.cc, %.o,$z)) \
+BAR_MINIDUMP_OBJECTS     = $(foreach z,$(filter %.c,  $(BAR_MINIDUMP_SOURCES)),$(patsubst %.c,  %.o,$z)) \
+                           $(foreach z,$(filter %.cpp,$(BAR_MINIDUMP_SOURCES)),$(patsubst %.cpp,%.o,$z)) \
+                           $(foreach z,$(filter %.cc, $(BAR_MINIDUMP_SOURCES)),$(patsubst %.cc, %.o,$z)) \
                            stackwalk_common.o \
 
 BAR_SQLITE3_SOURCES      = bar-sqlite3.c \
