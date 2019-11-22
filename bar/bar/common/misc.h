@@ -270,11 +270,19 @@ typedef struct
 *                           );
 \***********************************************************************/
 
-#define TEXT_MACROS_INIT(variable) \
-  for (TextMacro *__textMacro = (TextMacro*)&(variable).data[0], *__textMacroEnd = (TextMacro*)&(variable).data[variable.maxCount]; \
-       __textMacro <= &(variable).data[0]; \
-       (variable).count = __textMacro-&(variable).data[0] \
-      )
+#ifndef NDEBUG
+  #define TEXT_MACROS_INIT(variable) \
+    for (TextMacro *__textMacro = (TextMacro*)&(variable).data[0], *__textMacroEnd = (TextMacro*)&(variable).data[variable.maxCount]; \
+         __textMacro <= &(variable).data[0]; \
+         (variable).count = __textMacro-&(variable).data[0] \
+        )
+#else /* NDEBUG */
+  #define TEXT_MACROS_INIT(variable) \
+    for (TextMacro *__textMacro = (TextMacro*)&(variable).data[0]; \
+         __textMacro <= &(variable).data[0]; \
+         (variable).count = __textMacro-&(variable).data[0] \
+        )
+#endif /* not NDEBUG */
 
 /***********************************************************************\
 * Name   : TEXT_MACRO_*
