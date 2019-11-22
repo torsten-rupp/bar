@@ -3367,7 +3367,12 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
     {
       // close archive file
       intermediateFileName = String_new();
-      error = closeArchiveFile(archiveHandle,&storageId,intermediateFileName,&partNumber,&archiveSize);
+      error = closeArchiveFile(archiveHandle,
+                               &storageId,
+                               intermediateFileName,
+                               &partNumber,
+                               &archiveSize
+                              );
       if (error != ERROR_NONE)
       {
         String_delete(intermediateFileName);
@@ -3375,7 +3380,12 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
       }
 
       // store archive file
-      error = storeArchiveFile(archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
+      error = storeArchiveFile(archiveHandle,
+                               storageId,
+                               intermediateFileName,
+                               partNumber,
+                               archiveSize
+                              );
       if (error != ERROR_NONE)
       {
         String_delete(intermediateFileName);
@@ -3909,7 +3919,12 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // close archive
         intermediateFileName = String_new();
-        error = closeArchiveFile(archiveEntryInfo->archiveHandle,&storageId,intermediateFileName,&partNumber,&archiveSize);
+        error = closeArchiveFile(archiveEntryInfo->archiveHandle,
+                                 &storageId,
+                                 intermediateFileName,
+                                 &partNumber,
+                                 &archiveSize
+                                );
         if (error != ERROR_NONE)
         {
           String_delete(intermediateFileName);
@@ -4499,7 +4514,12 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // close archive
         intermediateFileName = String_new();
-        error = closeArchiveFile(archiveEntryInfo->archiveHandle,&storageId,intermediateFileName,&partNumber,&archiveSize);
+        error = closeArchiveFile(archiveEntryInfo->archiveHandle,
+                                 &storageId,
+                                 intermediateFileName,
+                                 &partNumber,
+                                 &archiveSize
+                                );
         if (error != ERROR_NONE)
         {
           String_delete(intermediateFileName);
@@ -5136,7 +5156,12 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // close archive
         intermediateFileName = String_new();
-        error = closeArchiveFile(archiveEntryInfo->archiveHandle,&storageId,intermediateFileName,&partNumber,&archiveSize);
+        error = closeArchiveFile(archiveEntryInfo->archiveHandle,
+                                 &storageId,
+                                 intermediateFileName,
+                                 &partNumber,
+                                 &archiveSize
+                                );
         if (error != ERROR_NONE)
         {
           String_delete(intermediateFileName);
@@ -6201,7 +6226,12 @@ UNUSED_VARIABLE(storageInfo);
     switch (archiveHandle->mode)
     {
       case ARCHIVE_MODE_CREATE:
-        error = closeArchiveFile(archiveHandle,&storageId,intermediateFileName,&partNumber,&archiveSize);
+        error = closeArchiveFile(archiveHandle,
+                                 &storageId,
+                                 intermediateFileName,
+                                 &partNumber,
+                                 &archiveSize
+                                );
         break;
       case ARCHIVE_MODE_READ:
         Storage_close(&archiveHandle->read.storageHandle);
@@ -6222,7 +6252,12 @@ UNUSED_VARIABLE(storageInfo);
       && !String_isEmpty(intermediateFileName)
      )
   {
-    error = storeArchiveFile(archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
+    error = storeArchiveFile(archiveHandle,
+                             storageId,
+                             intermediateFileName,
+                             partNumber,
+                             archiveSize
+                            );
     if (error != ERROR_NONE)
     {
       if (result == ERROR_NONE) result = error;

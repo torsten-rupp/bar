@@ -1462,7 +1462,7 @@ LOCAL void jobThreadCode(void)
   IndexHandle      *indexHandle;
   uint64           executeStartDateTime,executeEndDateTime;
   StringList       storageNameList;
-  TextMacro        textMacros[8];
+  TextMacros       (textMacros,9);
   StaticString     (s,64);
   uint             n;
   Errors           error;
@@ -1707,16 +1707,19 @@ LOCAL void jobThreadCode(void)
         // pre-process command
         if (!String_isEmpty(jobNode->job.options.preProcessScript))
         {
-          TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,NULL);
-          TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType),NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType),NULL);
-          TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-          TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,NULL);
+          TEXT_MACROS_INIT(textMacros)
+          {
+            TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
+            TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
+            TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
+            TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
+            TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+            TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+          }
           error = executeTemplate(String_cString(jobNode->job.options.preProcessScript),
                                   executeStartDateTime,
-                                  textMacros,
-                                  6
+                                  textMacros.data,
+                                  textMacros.count
                                  );
           if (error == ERROR_NONE)
           {
@@ -1840,19 +1843,24 @@ NULL,//                                                        scheduleTitle,
         // post-process command
         if (!String_isEmpty(jobNode->job.options.postProcessScript))
         {
-          TEXT_MACRO_N_STRING (textMacros[0],"%name",     jobName,                                                      NULL);
-          TEXT_MACRO_N_STRING (textMacros[1],"%archive",  storageName,                                                  NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[2],"%type",     Archive_archiveTypeToString(archiveType),                     NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[3],"%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
-          TEXT_MACRO_N_STRING (textMacros[4],"%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-          TEXT_MACRO_N_STRING (textMacros[5],"%file",     storageSpecifier.archiveName,                                 NULL);
-          TEXT_MACRO_N_CSTRING(textMacros[6],"%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
-          TEXT_MACRO_N_STRING (textMacros[7],"%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
+          TEXT_MACROS_INIT(textMacros)
+          {
+            TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
+            TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
+            TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
+            TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
+            TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+            TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+            TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
+            TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                    NULL);
+            TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
+          }
           error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
                                   executeStartDateTime,
-                                  textMacros,
-                                  8
+                                  textMacros.data,
+                                  textMacros.count
                                  );
+//exit(1);
           if (error == ERROR_NONE)
           {
             logMessage(&logHandle,
@@ -2286,7 +2294,6 @@ LOCAL void pairingThreadCode(void)
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
             assert(slaveNode->name != NULL);
-            assert(slaveNode->port != 0);
 
             if (!Connector_isDisconnected(&slaveNode->connectorInfo))
               {

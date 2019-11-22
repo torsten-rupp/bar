@@ -148,6 +148,14 @@ typedef struct
   const char *pattern;
 } TextMacro;
 
+// internal text macros type
+typedef struct
+{
+  uint            count;
+  const uint      maxCount;
+  const TextMacro *data;
+} __TextMacros;
+
 // expand types
 typedef enum
 {
@@ -217,6 +225,57 @@ typedef struct
 
 /****************************** Macros *********************************/
 
+// define text macros variable
+#define __TEXT_MACROS_IDENTIFIER1(name,suffix) __TEXT_MACROS_IDENTIFIER2(name,suffix)
+#define __TEXT_MACROS_IDENTIFIER2(name,suffix) __##name##suffix
+#ifndef NDEBUG
+  #define TextMacros(name,count) \
+    TextMacro __TEXT_MACROS_IDENTIFIER1(name,_data)[count]; \
+    __TextMacros name = \
+    { \
+      0, \
+      count, \
+      __TEXT_MACROS_IDENTIFIER1(name,_data) \
+    }
+#else /* NDEBUG */
+  #define TextMacros(name,count) \
+    TextMacro __TEXT_MACROS_IDENTIFIER1(name,_data)[count]; \
+    __TextMacros name = \
+    { \
+      0, \
+      count, \
+      __TEXT_MACROS_IDENTIFIER1(name,_data) \
+    }
+#endif /* not NDEBUG */
+
+/***********************************************************************\
+* Name   : TEXT_MACROS_INIT
+* Purpose: init text macros
+* Input  : variable - variable
+* Output : -
+* Return : -
+* Notes  : usage:
+*          TextMacros (textMacros, 3);
+*
+*          TEXT_MACROS_INIT(textMacros)
+*          {
+*            TEXT_MACRO_INTEGER(name,value,pattern);
+*            TEXT_MACRO_CSTRING(name,value,pattern);
+*            TEXT_MACRO_STRING (name,value,pattern);
+*          }
+*          Misc_expandMacros(...,
+*                            textMacros.data,
+*                            textMacros.count,
+*                            ...
+*                           );
+\***********************************************************************/
+
+#define TEXT_MACROS_INIT(variable) \
+  for (TextMacro *__textMacro = (TextMacro*)&(variable).data[0], *__textMacroEnd = (TextMacro*)&(variable).data[variable.maxCount]; \
+       __textMacro <= &(variable).data[0]; \
+       (variable).count = __textMacro-&(variable).data[0] \
+      )
+
 /***********************************************************************\
 * Name   : TEXT_MACRO_*
 * Purpose: init text macro
@@ -265,51 +324,108 @@ typedef struct
   }
 
 /***********************************************************************\
-* Name   : TEXT_MACRO_*
+* Name   : TEXT_MACRO_N_*
 * Purpose: init text macro
-* Input  : macro    - macro variable
-*          _name    - macro name (including %)
-*          _value   - value
-*          _pattern - regular expression pattern
+* Input  : textMacro - text macro variable
+*          _name     - macro name (including %)
+*          _value    - value
+*          _pattern  - regular expression pattern
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-#define TEXT_MACRO_N_INTEGER(macro,_name,_value,_pattern) \
+#define TEXT_MACRO_N_INTEGER(textMacro,_name,_value,_pattern) \
   do { \
-    macro.type    = TEXT_MACRO_TYPE_INTEGER; \
-    macro.name    = _name; \
-    macro.value.i = _value; \
-    macro.pattern = _pattern; \
+    textMacro.type    = TEXT_MACRO_TYPE_INTEGER; \
+    textMacro.name    = _name; \
+    textMacro.value.i = _value; \
+    textMacro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_INTEGER64(macro,_name,_value,_pattern) \
+#define TEXT_MACRO_N_INTEGER64(textMacro,_name,_value,_pattern) \
   do { \
-    macro.type    = TEXT_MACRO_TYPE_INTEGER64; \
-    macro.name    = _name; \
-    macro.value.l = _value; \
-    macro.pattern = _pattern; \
+    textMacro.type    = TEXT_MACRO_TYPE_INTEGER64; \
+    textMacro.name    = _name; \
+    textMacro.value.l = _value; \
+    textMacro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_DOUBLE(macro,_name,_value,_pattern) \
+#define TEXT_MACRO_N_DOUBLE(textMacro,_name,_value,_pattern) \
   do { \
-    macro.type    = TEXT_MACRO_TYPE_DOUBLE; \
-    macro.name    = _name; \
-    macro.value.d = _value; \
-    macro.pattern = _pattern; \
+    textMacro.type    = TEXT_MACRO_TYPE_DOUBLE; \
+    textMacro.name    = _name; \
+    textMacro.value.d = _value; \
+    textMacro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_CSTRING(macro,_name,_value,_pattern) \
+#define TEXT_MACRO_N_CSTRING(textMacro,_name,_value,_pattern) \
   do { \
-    macro.type    = TEXT_MACRO_TYPE_CSTRING; \
-    macro.name    = _name; \
-    macro.value.s = _value; \
-    macro.pattern = _pattern; \
+    textMacro.type    = TEXT_MACRO_TYPE_CSTRING; \
+    textMacro.name    = _name; \
+    textMacro.value.s = _value; \
+    textMacro.pattern = _pattern; \
   } while (0)
-#define TEXT_MACRO_N_STRING(macro,_name,_value,_pattern) \
+#define TEXT_MACRO_N_STRING(textMacro,_name,_value,_pattern) \
   do { \
-    macro.type         = TEXT_MACRO_TYPE_STRING; \
-    macro.name         = _name; \
-    macro.value.string = (String)_value; \
-    macro.pattern      = _pattern; \
+    textMacro.type         = TEXT_MACRO_TYPE_STRING; \
+    textMacro.name         = _name; \
+    textMacro.value.string = (String)_value; \
+    textMacro.pattern      = _pattern; \
+  } while (0)
+
+/***********************************************************************\
+* Name   : TEXT_MACRO_X_*
+* Purpose: init text macro
+* Input  : name    - macro name (including %)
+*          value   - value
+*          pattern - regular expression pattern
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+#define TEXT_MACRO_X_INTEGER(_name,_value,_pattern) \
+  do { \
+    assert(__textMacro < __textMacroEnd); \
+    __textMacro->type    = TEXT_MACRO_TYPE_INTEGER; \
+    __textMacro->name    = _name; \
+    __textMacro->value.i = _value; \
+    __textMacro->pattern = _pattern; \
+    __textMacro++; \
+  } while (0)
+#define TEXT_MACRO_X_INTEGER64(_name,_value,_pattern) \
+  do { \
+    assert(__textMacro < __textMacroEnd); \
+    __textMacro->type    = TEXT_MACRO_TYPE_INTEGER64; \
+    __textMacro->name    = _name; \
+    __textMacro->value.l = _value; \
+    __textMacro->pattern = _pattern; \
+    __textMacro++; \
+  } while (0)
+#define TEXT_MACRO_X_DOUBLE(_name,_value,_pattern) \
+  do { \
+    assert(__textMacro < __textMacroEnd); \
+    __textMacro->type    = TEXT_MACRO_TYPE_DOUBLE; \
+    __textMacro->name    = _name; \
+    __textMacro->value.d = _value; \
+    __textMacro->pattern = _pattern; \
+    __textMacro++; \
+  } while (0)
+#define TEXT_MACRO_X_CSTRING(_name,_value,_pattern) \
+  do { \
+    assert(__textMacro < __textMacroEnd); \
+    __textMacro->type    = TEXT_MACRO_TYPE_CSTRING; \
+    __textMacro->name    = _name; \
+    __textMacro->value.s = _value; \
+    __textMacro->pattern = _pattern; \
+    __textMacro++; \
+  } while (0)
+#define TEXT_MACRO_X_STRING(_name,_value,_pattern) \
+  do { \
+    assert(__textMacro < __textMacroEnd); \
+    __textMacro->type         = TEXT_MACRO_TYPE_STRING; \
+    __textMacro->name         = _name; \
+    __textMacro->value.string = (String)_value; \
+    __textMacro->pattern      = _pattern; \
+    __textMacro++; \
   } while (0)
 
 /***********************************************************************\

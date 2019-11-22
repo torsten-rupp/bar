@@ -1269,11 +1269,10 @@ LOCAL Errors formatArchiveFileName(String           fileName,
                                    int              partNumber
                                   )
 {
-  TextMacro textMacros[5];
-
   StaticString   (uuid,MISC_UUID_STRING_LENGTH);
   bool           partNumberFlag;
   TemplateHandle templateHandle;
+  TextMacros     (textMacros,5);
   ulong          i,j;
   char           buffer[256];
   ulong          divisor;
@@ -1295,14 +1294,17 @@ LOCAL Errors formatArchiveFileName(String           fileName,
               );
 
   // expand template
-  TEXT_MACRO_N_CSTRING(textMacros[0],"%type", Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_CSTRING);
-  TEXT_MACRO_N_CSTRING(textMacros[1],"%T",    Archive_archiveTypeToShortString(archiveType),".");
-  TEXT_MACRO_N_STRING (textMacros[2],"%uuid", uuid,TEXT_MACRO_PATTERN_CSTRING);
-  TEXT_MACRO_N_CSTRING(textMacros[3],"%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "",TEXT_MACRO_PATTERN_CSTRING);
-  TEXT_MACRO_N_CSTRING(textMacros[4],"%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "",TEXT_MACRO_PATTERN_CSTRING);
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_CSTRING("%type", Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("%T",    Archive_archiveTypeToShortString(archiveType),".");
+    TEXT_MACRO_X_STRING ("%uuid", uuid,TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("%title",(scheduleTitle != NULL) ? String_cString(scheduleTitle) : "",TEXT_MACRO_PATTERN_CSTRING);
+    TEXT_MACRO_X_CSTRING("%text", (scheduleCustomText != NULL) ? String_cString(scheduleCustomText) : "",TEXT_MACRO_PATTERN_CSTRING);
+  }
   templateMacros(&templateHandle,
-                 textMacros,
-                 SIZE_OF_ARRAY(textMacros)
+                 textMacros.data,
+                 textMacros.count
                 );
 
   // done template
@@ -3818,6 +3820,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                                );
   if (error != ERROR_NONE)
   {
+    (void)File_delete(intermediateFileName,FALSE);
     String_delete(archiveName);
     return error;
   }
@@ -3836,6 +3839,8 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
   if (!MsgQueue_put(&createInfo->storageMsgQueue,&storageMsg,sizeof(storageMsg)))
   {
     freeStorageMsg(&storageMsg,NULL);
+    (void)File_delete(intermediateFileName,FALSE);
+    return ERROR_ABORTED;
   }
 
   // update status info

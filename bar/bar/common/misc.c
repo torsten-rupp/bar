@@ -1234,12 +1234,16 @@ String Misc_expandMacros(String           string,
     } \
     while (0)
 
-  String expanded;
-  bool   macroFlag;
-  ulong  i;
-  uint   j;
-  char   name[128];
-  char   format[128];
+  String          expanded;
+  bool            macroFlag;
+  ulong           i;
+  uint            j;
+  char            name[128];
+  char            format[128];
+  CStringIterator cStringIterator;
+  Codepoint       codepoint;
+  StringIterator  stringIterator;
+  char            ch;
 
   assert(string != NULL);
   assert(templateString != NULL);
@@ -1401,10 +1405,44 @@ String Misc_expandMacros(String           string,
                   String_appendFormat(expanded,format,macros[j].value.d);
                   break;
                 case TEXT_MACRO_TYPE_CSTRING:
-                  String_appendFormat(expanded,format,macros[j].value.s);
+                  if (expandMacroCharacter)
+                  {
+                    String_appendFormat(expanded,format,macros[j].value.s);
+                  }
+                  else
+                  {
+                    CSTRING_CHAR_ITERATE(macros[j].value.s,cStringIterator,codepoint)
+                    {
+                      if (codepoint != '%')
+                      {
+                        String_appendChar(expanded,codepoint);
+                      }
+                      else
+                      {
+                        String_appendCString(expanded,"%%");
+                      }
+                    }
+                  }
                   break;
                 case TEXT_MACRO_TYPE_STRING:
-                  String_appendFormat(expanded,format,macros[j].value.string);
+                  if (expandMacroCharacter)
+                  {
+                    String_appendFormat(expanded,format,macros[j].value.string);
+                  }
+                  else
+                  {
+                    STRING_CHAR_ITERATE(macros[j].value.string,stringIterator,ch)
+                    {
+                      if (ch != '%')
+                      {
+                        String_appendChar(expanded,ch);
+                      }
+                      else
+                      {
+                        String_appendCString(expanded,"%%");
+                      }
+                    }
+                  }
                   break;
                 #ifndef NDEBUG
                   default:

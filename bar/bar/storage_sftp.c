@@ -537,7 +537,7 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
 {
   Errors error;
   #ifdef HAVE_SSH2
-    TextMacro textMacros[2];
+    TextMacros (textMacros,2);
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -549,8 +549,11 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
     if (!initialFlag)
     {
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_STRING ("%file",  archiveName,              NULL);
+        TEXT_MACRO_X_INTEGER("%number",storageInfo->volumeNumber,NULL);
+      }
 
       // write pre-processing
       if (!String_isEmpty(globalOptions.sftp.writePreProcessCommand))
@@ -558,8 +561,8 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
         printInfo(1,"Write pre-processing...");
         error = executeTemplate(String_cString(globalOptions.sftp.writePreProcessCommand),
                                 timestamp,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
+                                textMacros.data,
+                                textMacros.count
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
@@ -584,7 +587,7 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
 {
   Errors error;
   #ifdef HAVE_SSH2
-    TextMacro textMacros[2];
+    TextMacros (textMacros,2);
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
@@ -596,8 +599,11 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
     if (!finalFlag)
     {
       // init macros
-      TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,                NULL);
-      TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_STRING ("%file",  archiveName,                NULL);
+        TEXT_MACRO_X_INTEGER("%number",storageInfo->volumeNumber,NULL);
+      }
 
       // write post-process
       if (!String_isEmpty(globalOptions.sftp.writePostProcessCommand))
@@ -605,8 +611,8 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
         printInfo(1,"Write post-processing...");
         error = executeTemplate(String_cString(globalOptions.sftp.writePostProcessCommand),
                                 timestamp,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
+                                textMacros.data,
+                                textMacros.count
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }

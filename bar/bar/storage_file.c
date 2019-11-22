@@ -186,8 +186,8 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
                                     bool              initialFlag
                                    )
 {
-  TextMacro textMacros[2];
-  Errors    error;
+  TextMacros (textMacros,2);
+  Errors     error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
@@ -197,16 +197,19 @@ LOCAL Errors StorageFile_preProcess(const StorageInfo *storageInfo,
   if (!initialFlag)
   {
     // init macros
-    TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
-    TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+    TEXT_MACROS_INIT(textMacros)
+    {
+      TEXT_MACRO_X_STRING ("%file",  archiveName,              NULL);
+      TEXT_MACRO_X_INTEGER("%number",storageInfo->volumeNumber,NULL);
+    }
 
     if (!String_isEmpty(globalOptions.file.writePreProcessCommand))
     {
       printInfo(1,"Write pre-processing...");
       error = executeTemplate(String_cString(globalOptions.file.writePreProcessCommand),
                               time,
-                              textMacros,
-                              SIZE_OF_ARRAY(textMacros)
+                              textMacros.data,
+                              textMacros.count
                              );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }
@@ -221,8 +224,8 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
                                      bool              finalFlag
                                     )
 {
-  TextMacro textMacros[2];
-  Errors    error;
+  TextMacros (textMacros,2);
+  Errors     error;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
@@ -232,16 +235,19 @@ LOCAL Errors StorageFile_postProcess(const StorageInfo *storageInfo,
   if (!finalFlag)
   {
     // init macros
-    TEXT_MACRO_N_STRING (textMacros[0],"%file",  archiveName,              NULL);
-    TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->volumeNumber,NULL);
+    TEXT_MACROS_INIT(textMacros)
+    {
+      TEXT_MACRO_X_STRING ("%file",  archiveName,              NULL);
+      TEXT_MACRO_X_INTEGER("%number",storageInfo->volumeNumber,NULL);
+    }
 
     if (!String_isEmpty(globalOptions.file.writePostProcessCommand))
     {
       printInfo(1,"Write post-processing...");
       error = executeTemplate(String_cString(globalOptions.file.writePostProcessCommand),
                               time,
-                              textMacros,
-                              SIZE_OF_ARRAY(textMacros)
+                              textMacros.data,
+                              textMacros.count
                              );
       printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
     }

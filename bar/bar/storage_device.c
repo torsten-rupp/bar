@@ -81,12 +81,15 @@
 
 LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
 {
-  TextMacro                   textMacros[2];
+  TextMacros                  (textMacros,2);
   bool                        volumeRequestedFlag;
   StorageRequestVolumeResults storageRequestVolumeResult;
 
-  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
-  TEXT_MACRO_N_INTEGER(textMacros[1],"%number",storageInfo->requestedVolumeNumber,      NULL);
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
+    TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
+  }
 
   if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
       || (storageInfo->volumeState == STORAGE_VOLUME_STATE_LOADED)
@@ -96,7 +99,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
     printInfo(1,"Unload volume #%d...",storageInfo->volumeNumber);
     Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
     Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
-                        textMacros,SIZE_OF_ARRAY(textMacros),
+                        textMacros.data,
+                        textMacros.count,
                         CALLBACK_(executeIOOutput,NULL),
                         CALLBACK_(executeIOOutput,NULL)
                        );
@@ -126,7 +130,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         printInfo(1,"Unload volume...");
         Misc_udelay(UNLOAD_VOLUME_DELAY_TIME);
         Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
-                            textMacros,SIZE_OF_ARRAY(textMacros),
+                            textMacros.data,
+                            textMacros.count,
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            );
@@ -144,7 +149,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
     // request new volume via external command
     printInfo(1,"Request new volume #%d...",storageInfo->requestedVolumeNumber);
     if (Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
-                            textMacros,SIZE_OF_ARRAY(textMacros),
+                            textMacros.data,
+                            textMacros.count,
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            ) == ERROR_NONE
@@ -203,7 +209,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         // load volume; sleep a short time to give hardware time for reading volume information
         printInfo(1,"Load volume #%d...",storageInfo->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
-                            textMacros,SIZE_OF_ARRAY(textMacros),
+                            textMacros.data,
+                            textMacros.count,
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            );
@@ -224,7 +231,8 @@ LOCAL Errors requestNewDeviceVolume(StorageInfo *storageInfo, bool waitFlag)
         // load volume
         printInfo(1,"Load volume #%d...",storageInfo->requestedVolumeNumber);
         Misc_executeCommand(String_cString(storageInfo->device.write.loadVolumeCommand),
-                            textMacros,SIZE_OF_ARRAY(textMacros),
+                            textMacros.data,
+                            textMacros.count,
                             CALLBACK_(executeIOOutput,NULL),
                             CALLBACK_(executeIOOutput,NULL)
                            );
@@ -510,8 +518,8 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
                                       bool        initialFlag
                                      )
 {
-  Errors    error;
-  TextMacro textMacros[3];
+  Errors     error;
+  TextMacros (textMacros,3);
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_DEVICE);
@@ -537,9 +545,12 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   }
 
   // init macros
-  TEXT_MACRO_N_STRING (textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
-  TEXT_MACRO_N_STRING (textMacros[1],"%file",  archiveName,                             NULL);
-  TEXT_MACRO_N_INTEGER(textMacros[2],"%number",storageInfo->requestedVolumeNumber,      NULL);
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_STRING ("%device",storageInfo->storageSpecifier.deviceName,NULL);
+    TEXT_MACRO_X_STRING ("%file",  archiveName,                             NULL);
+    TEXT_MACRO_X_INTEGER("%number",storageInfo->requestedVolumeNumber,      NULL);
+  }
 
   // write pre-processing
   if (!String_isEmpty(globalOptions.device->writePreProcessCommand))
@@ -547,8 +558,8 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
     printInfo(1,"Write pre-processing...");
     error = executeTemplate(String_cString(storageInfo->device.write.writePreProcessCommand),
                             timestamp,
-                            textMacros,
-                            SIZE_OF_ARRAY(textMacros)
+                            textMacros.data,
+                            textMacros.count
                            );
     printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
   }
@@ -562,10 +573,10 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                                        bool        finalFlag
                                       )
 {
-  Errors    error;
-  String    imageFileName;
-  TextMacro textMacros[5];
-  String    fileName;
+  Errors     error;
+  String     imageFileName;
+  TextMacros (textMacros,5);
+  String     fileName;
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_DEVICE);
@@ -604,19 +615,22 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     }
 
     // init macros
-    TEXT_MACRO_N_STRING (textMacros[0],"%device",   storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_N_STRING (textMacros[1],"%directory",storageInfo->device.write.directory,     NULL);
-    TEXT_MACRO_N_STRING (textMacros[2],"%image",    imageFileName,                           NULL);
-    TEXT_MACRO_N_STRING (textMacros[3],"%file",     archiveName,                             NULL);
-    TEXT_MACRO_N_INTEGER(textMacros[4],"%number",   storageInfo->volumeNumber,               NULL);
+    TEXT_MACROS_INIT(textMacros)
+    {
+      TEXT_MACRO_X_STRING ("%device",   storageInfo->storageSpecifier.deviceName,NULL);
+      TEXT_MACRO_X_STRING ("%directory",storageInfo->device.write.directory,     NULL);
+      TEXT_MACRO_X_STRING ("%image",    imageFileName,                           NULL);
+      TEXT_MACRO_X_STRING ("%file",     archiveName,                             NULL);
+      TEXT_MACRO_X_INTEGER("%number",   storageInfo->volumeNumber,               NULL);
+    }
 
     // create image
     if (error == ERROR_NONE)
     {
       printInfo(1,"Make image pre-processing of volume #%d...",storageInfo->volumeNumber);
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePreProcessCommand ),
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros),
+                                  textMacros.data,
+                                  textMacros.count,
                                   CALLBACK_(executeIOOutput,NULL),
                                   CALLBACK_(executeIOOutput,NULL)
                                  );
@@ -626,8 +640,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     {
       printInfo(1,"Make image volume #%d...",storageInfo->volumeNumber);
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imageCommand),
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros),
+                                  textMacros.data,
+                                  textMacros.count,
                                   CALLBACK_(executeIOOutput,NULL),
                                   CALLBACK_(executeIOOutput,NULL)
                                  );
@@ -637,8 +651,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     {
       printInfo(1,"Make image post-processing of volume #%d...",storageInfo->volumeNumber);
       error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePostProcessCommand),
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros),
+                                  textMacros.data,
+                                  textMacros.count,
                                   CALLBACK_(executeIOOutput,NULL),
                                   CALLBACK_(executeIOOutput,NULL)
                                  );
@@ -653,8 +667,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         printInfo(1,"Write device pre-processing of volume #%d...",storageInfo->volumeNumber);
         error = executeTemplate(String_cString(storageInfo->device.write.writePreProcessCommand),
                                 timestamp,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
+                                textMacros.data,
+                                textMacros.count
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
@@ -663,8 +677,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     {
       printInfo(1,"Write device volume #%d...",storageInfo->volumeNumber);
       error = Misc_executeCommand(String_cString(storageInfo->device.write.writeCommand),
-                                  textMacros,
-                                  SIZE_OF_ARRAY(textMacros),
+                                  textMacros.data,
+                                  textMacros.count,
                                   CALLBACK_(executeIOOutput,NULL),
                                   CALLBACK_(executeIOOutput,NULL)
                                  );
@@ -711,8 +725,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         printInfo(1,"Write device post-processing of volume #%d...",storageInfo->volumeNumber);
         error = executeTemplate(String_cString(storageInfo->device.write.writePostProcessCommand),
                                 timestamp,
-                                textMacros,
-                                SIZE_OF_ARRAY(textMacros)
+                                textMacros.data,
+                                textMacros.count
                                );
         printInfo(1,(error == ERROR_NONE) ? "OK\n" : "FAIL\n");
       }
@@ -724,15 +738,19 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
 
 LOCAL Errors StorageDevice_unloadVolume(const StorageInfo *storageInfo)
 {
-  Errors    error;
-  TextMacro textMacros[1];
+  Errors     error;
+  TextMacros (textMacros,1);
 
   assert(storageInfo != NULL);
   assert(storageInfo->type == STORAGE_TYPE_DEVICE);
 
-  TEXT_MACRO_N_STRING(textMacros[0],"%device",storageInfo->storageSpecifier.deviceName,NULL);
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_STRING("%device",storageInfo->storageSpecifier.deviceName,NULL);
+  }
   error = Misc_executeCommand(String_cString(storageInfo->device.write.unloadVolumeCommand),
-                              textMacros,SIZE_OF_ARRAY(textMacros),
+                              textMacros.data,
+                              textMacros.count,
                               CALLBACK_(executeIOOutput,NULL),
                               CALLBACK_(executeIOOutput,NULL)
                              );

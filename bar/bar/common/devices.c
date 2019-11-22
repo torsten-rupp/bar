@@ -454,12 +454,15 @@ Errors Device_mount(ConstString mountCommand,
                    )
 {
   const char *command;
-  TextMacro  textMacros[2];
+  TextMacros (textMacros,2);
 
   assert(mountPointName != NULL);
 
-  TEXT_MACRO_N_STRING (textMacros[0],"%device",   deviceName,    NULL);
-  TEXT_MACRO_N_STRING (textMacros[1],"%directory",mountPointName,NULL);
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_STRING ("%device",   deviceName,    NULL);
+    TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
+  }
 
   if      (mountCommand != NULL)
   {
@@ -475,7 +478,8 @@ Errors Device_mount(ConstString mountCommand,
   }
 
   return Misc_executeCommand(command,
-                             textMacros,SIZE_OF_ARRAY(textMacros),
+                             textMacros.data,
+                             textMacros.count,
                              CALLBACK_(NULL,NULL),
                              CALLBACK_(NULL,NULL)
                             );
@@ -485,17 +489,21 @@ Errors Device_umount(ConstString umountCommand,
                      ConstString mountPointName
                     )
 {
-  TextMacro textMacros[1];
-  Errors    error;
+  TextMacros (textMacros,1);
+  Errors     error;
 
   assert(mountPointName != NULL);
 
-  TEXT_MACRO_N_STRING (textMacros[0],"%directory",mountPointName,NULL);
+  TEXT_MACROS_INIT(textMacros)
+  {
+    TEXT_MACRO_X_STRING ("%directory",mountPointName,NULL);
+  }
 
   if (!String_isEmpty(umountCommand))
   {
     error = Misc_executeCommand(String_cString(umountCommand),
-                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                textMacros.data,
+                                textMacros.count,
                                 CALLBACK_(NULL,NULL),
                                 CALLBACK_(NULL,NULL)
                                );
@@ -503,14 +511,16 @@ Errors Device_umount(ConstString umountCommand,
   else
   {
     error = Misc_executeCommand("/bin/umount %directory",
-                                textMacros,SIZE_OF_ARRAY(textMacros),
+                                textMacros.data,
+                                textMacros.count,
                                 CALLBACK_(NULL,NULL),
                                 CALLBACK_(NULL,NULL)
                                );
     if (error != ERROR_NONE)
     {
       error = Misc_executeCommand("sudo /bin/umount %directory",
-                                  textMacros,SIZE_OF_ARRAY(textMacros),
+                                  textMacros.data,
+                                  textMacros.count,
                                   CALLBACK_(NULL,NULL),
                                   CALLBACK_(NULL,NULL)
                                  );

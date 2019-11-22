@@ -1707,7 +1707,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                 UNUSED_VARIABLE(userData);
 
                                 printError("%s in section '%s' in %s, line %ld",errorMessage,"file-server",String_cString(fileName),lineNb);
-                                failFlag = TRUE;                               
+                                failFlag = TRUE;
                               },NULL),
                               CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
                               {
@@ -1750,7 +1750,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
                                               serverNode,
                                                  (serverNode->server.type == SERVER_TYPE_FTP)
-//TODO: port number 
+//TODO: port number
                                               && String_equals(serverNode->server.name,name)
                                              );
           if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1821,7 +1821,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
                                               serverNode,
                                                  (serverNode->server.type == SERVER_TYPE_SSH)
-//TODO: port number 
+//TODO: port number
                                               && String_equals(serverNode->server.name,name)
                                              );
           if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1892,7 +1892,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           serverNode = (ServerNode*)LIST_FIND(&globalOptions.serverList,
                                               serverNode,
                                                  (serverNode->server.type == SERVER_TYPE_WEBDAV)
-//TODO: port number 
+//TODO: port number
                                               && String_equals(serverNode->server.name,name)
                                              );
           if (serverNode != NULL) List_remove(&globalOptions.serverList,serverNode);
@@ -1987,7 +1987,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                               LAMBDA(void,(const char *warningMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
-   
+
                                 if (printInfoFlag) printConsole(stdout,"FAIL!\n");
                                 printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
                               }),NULL,
@@ -5692,7 +5692,7 @@ void logPostProcess(LogHandle        *logHandle,
                    )
 {
   String     command;
-  TextMacro  textMacros[7];
+  TextMacros (textMacros,7);
   StringList stderrList;
   Errors     error;
   StringNode *stringNode;
@@ -5720,17 +5720,22 @@ void logPostProcess(LogHandle        *logHandle,
         assert(logHandle->logFileName != NULL);
 
         // log post command for job log file
-        TEXT_MACRO_N_STRING (textMacros[0],"%file",   logHandle->logFileName,                            TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_STRING (textMacros[1],"%name",   jobName,                                           TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_CSTRING(textMacros[2],"%type",   Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_CSTRING(textMacros[3],"%T",      Archive_archiveTypeToShortString(archiveType), ".");
-        TEXT_MACRO_N_STRING (textMacros[4],"%text",   scheduleCustomText,                                TEXT_MACRO_PATTERN_STRING);
-        TEXT_MACRO_N_CSTRING(textMacros[5],"%state",  Job_getStateText(jobState,storageFlags),           NULL);
-        TEXT_MACRO_N_STRING (textMacros[6],"%message",String_cString(message),NULL);
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_STRING ("%file",   logHandle->logFileName,                            TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_STRING ("%name",   jobName,                                           TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("%type",   Archive_archiveTypeToString(archiveType),TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("%T",      Archive_archiveTypeToShortString(archiveType), ".");
+          TEXT_MACRO_X_STRING ("%text",   scheduleCustomText,                                TEXT_MACRO_PATTERN_STRING);
+          TEXT_MACRO_X_CSTRING("%state",  Job_getStateText(jobState,storageFlags),           NULL);
+          TEXT_MACRO_X_STRING ("%message",String_cString(message),NULL);
+        }
+//TODO: macro expanded 2x!
         Misc_expandMacros(command,
                           logPostCommand,
                           EXPAND_MACRO_MODE_STRING,
-                          textMacros,SIZE_OF_ARRAY(textMacros),
+                          textMacros.data,
+                          textMacros.count,
                           TRUE
                          );
         printInfo(2,"Log post process '%s'...\n",String_cString(command));
@@ -5738,7 +5743,8 @@ void logPostProcess(LogHandle        *logHandle,
 
         StringList_init(&stderrList);
         error = Misc_executeCommand(logPostCommand,
-                                    textMacros,SIZE_OF_ARRAY(textMacros),
+                                    textMacros.data,
+                                    textMacros.count,
                                     CALLBACK_(NULL,NULL),
                                     CALLBACK_(executeIOlogPostProcess,&stderrList)
                                    );
