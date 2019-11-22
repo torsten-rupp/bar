@@ -18,7 +18,7 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifdef HAVE_SYS_SYSMACROS
+#ifdef HAVE_SYS_SYSMACROS_H
   #include <sys/sysmacros.h>
 #endif
 #include <unistd.h>

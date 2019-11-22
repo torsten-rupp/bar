@@ -19,7 +19,7 @@
 #ifdef HAVE_SYS_WAIT
   #include <sys/wait.h>
 #endif
-#ifdef HAVE_SYS_SYSMACROS
+#ifdef HAVE_SYS_SYSMACROS_H
   #include <sys/sysmacros.h>
 #endif
 #include <unistd.h>
