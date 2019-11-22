@@ -3626,7 +3626,6 @@ if (false) {
 
     Widgets.setNextFocus(widgetServerName,
                          widgetServerPort,
-                         widgetForceSSL,
                          widgetPassword,
                          widgetLoginButton
                         );
