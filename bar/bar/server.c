@@ -890,7 +890,7 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 * Name   : stopPairingMaster
 * Purpose: stop pairing master (if started)
 * Input  : name     - master name
-*          uuidHash - UUID hash
+*          uuidHash - master UUID hash
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -906,9 +906,8 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
   // set/clear paired master
   if (!String_isEmpty(name))
   {
-    // pair new master
-    String_set(globalOptions.masterInfo.name,newMaster.name);
-    if (!setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash))
+    String_set(globalOptions.masterInfo.name,name);
+    if (!setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
     {
       return ERROR_INSUFFICIENT_MEMORY;
     }
@@ -918,6 +917,17 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
               String_cString(globalOptions.masterInfo.name)
              );
   }
+  else
+  {
+    String_clear(globalOptions.masterInfo.name);
+    clearHash(&globalOptions.masterInfo.uuidHash);
+    logMessage(NULL,  // logHandle,
+               LOG_TYPE_ALWAYS,
+               "Cleared paired master"
+              );
+  }
+
+  // stop pairing
   newMaster.pairingMode = PAIRING_MODE_NONE;
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
@@ -926,14 +936,11 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
                : "Stopped pairing master"
             );
 
-  if (!String_isEmpty(name))
+  // update config file
+  error = updateConfig();
+  if (error != ERROR_NONE)
   {
-    // update config file
-    error = updateConfig();
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    return error;
   }
 
   return ERROR_NONE;
@@ -2278,6 +2285,9 @@ LOCAL void pairingThreadCode(void)
           // try connect new slaves, authorize
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
+            assert(slaveNode->name != NULL);
+            assert(slaveNode->port != 0);
+
             if (!Connector_isDisconnected(&slaveNode->connectorInfo))
               {
               if (!Connector_isConnected(&slaveNode->connectorInfo))
@@ -18356,10 +18366,9 @@ Errors Server_run(ServerModes       mode,
     }
   }
 
-  // Note: ignore SIGALRM in Misc_wait()
+  // Note: ignore SIGALRM in Misc_waitHandles()
+  MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
-    // Note: ignore SIGALRM in poll()/pselect()
-    MISC_SIGNAL_MASK_CLEAR(signalMask);
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
   #endif /* HAVE_SIGALRM */
 

@@ -1303,10 +1303,9 @@ LOCAL void continuousThreadCode(void)
     return;
   }
 
-  // Note: ignore SIGALRM in ppoll()
+  // Note: ignore SIGALRM in poll()/pselect()
+  MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
-    // Note: ignore SIGALRM in poll()/pselect()
-    MISC_SIGNAL_MASK_CLEAR(signalMask);
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
   #endif /* HAVE_SIGALRM */
 
@@ -1636,7 +1635,7 @@ void Continuous_doneAll(void)
   }
 }
 
-bool Continuous_isAvailable()
+bool Continuous_isAvailable(void)
 {
   return initFlag;
 }

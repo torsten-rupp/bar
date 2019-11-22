@@ -78,7 +78,7 @@ void Continuous_doneAll(void);
 * Notes  : -
 \***********************************************************************/
 
-bool Continuous_isAvailable();
+bool Continuous_isAvailable(void);
 
 /***********************************************************************\
 * Name   : Continuous_init

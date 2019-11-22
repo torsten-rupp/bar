@@ -41,7 +41,7 @@
 
 /****************** Conditional compilation switches *******************/
 
-#define CONNECTOR_DEBUG
+#define _CONNECTOR_DEBUG
 
 /***************************** Constants *******************************/
 #define SLEEP_TIME_STATUS_UPDATE    2000  // [ms]
@@ -740,13 +740,13 @@ UNUSED_VARIABLE(scheduleCustomText);
 * Notes  : -
 \***********************************************************************/
 
-void sendResult(ConnectorInfo  *connectorInfo,
-                uint           id,
-                bool           completedFlag,
-                Errors         error,
-                const char     *format,
-                ...
-               )
+LOCAL void sendResult(ConnectorInfo  *connectorInfo,
+                      uint           id,
+                      bool           completedFlag,
+                      Errors         error,
+                      const char     *format,
+                      ...
+                     )
 {
   va_list arguments;
 
@@ -2853,7 +2853,6 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   IndexHandle              *indexHandle;
   SignalMask               signalMask;
   uint                     events;
-  int                      n;
   uint                     id;
   ConnectorCommandFunction connectorCommandFunction;
 
@@ -2864,10 +2863,9 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
   name        = String_new();
   argumentMap = StringMap_new();
 
-  // Note: ignore SIGALRM in Misc_wait()
+  // Note: ignore SIGALRM in Misc_waitHandle()
+  MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
-    // Note: ignore SIGALRM in poll()/pselect()
-    MISC_SIGNAL_MASK_CLEAR(signalMask);
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
   #endif /* HAVE_SIGALRM */
 

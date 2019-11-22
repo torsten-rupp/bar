@@ -181,65 +181,13 @@ LOCAL size_t curlNopDataCallback(void   *buffer,
 
 LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
 {
-//  SignalMask      signalMask;
-//  fd_set          fdSetRead,fdSetWrite,fdSetException;
-  CURLMcode       curlmCode;
-//  int             maxFD;
-  long            curlTimeout;
-//  struct timespec ts;
-  Errors          error;
+  CURLMcode curlmCode;
+  long      curlTimeout;
+  Errors    error;
+  int       fdCount;
 
   assert(curlMultiHandle != NULL);
 
-#if 0
-  // get file descriptors from the transfers
-  FD_ZERO(&fdSetRead);
-  FD_ZERO(&fdSetWrite);
-  FD_ZERO(&fdSetException);
-  curlmCode = curl_multi_fdset(curlMultiHandle,&fdSetRead,&fdSetWrite,&fdSetException,&maxFD);
-  if (curlmCode != CURLM_OK)
-  {
-    return ERRORX_(IO,0,"%s",curl_multi_strerror(curlmCode));
-  }
-
-  // get a suitable timeout
-  curl_multi_timeout(curlMultiHandle,&curlTimeout);
-
-  if (curlTimeout > (long)READ_TIMEOUT)
-  {
-    ts.tv_sec  = curlTimeout/1000L;
-    ts.tv_nsec = (curlTimeout%1000L)*1000000L;
-  }
-  else
-  {
-    ts.tv_sec  = READ_TIMEOUT/1000L;
-    ts.tv_nsec = (READ_TIMEOUT%1000L)*1000000L;
-  }
-
-  #ifdef HAVE_SIGALRM
-    // Note: ignore SIGALRM in poll()/pselect()
-    MISC_SIGNAL_MASK_CLEAR(signalMask);
-    MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
-  #endif /* HAVE_SIGALRM */
-
-//TODO: replace by ppoll()
-  // wait
-  switch (pselect(maxFD+1,&fdSetRead,&fdSetWrite,&fdSetException,&ts,&signalMask))
-  {
-    case -1:
-      // error
-      error = ERROR_NETWORK_RECEIVE;
-      break;
-    case 0:
-      // timeout
-      error = ERROR_NETWORK_TIMEOUT;
-      break;
-    default:
-      // OK
-      error = ERROR_NONE;
-      break;
-  }
-#else
   // get a suitable timeout
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
 
@@ -247,24 +195,19 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
   curlmCode = curl_multi_poll(curlMultiHandle,
                               NULL,0,  // extra fds
                               (curlTimeout > (long)READ_TIMEOUT) ? curlTimeout : READ_TIMEOUT,
-                              NULL  // numFds
+                              &fdCount
                              );
   switch (curlmCode)
   {
-    case CURLM_OK:
-      // OK
-      error = ERROR_NONE;
-      break;
-    case CURLE_OPERATION_TIMEDOUT:
-      // timeout
-      error = ERROR_NETWORK_TIMEOUT;
+    case CURLM_OK:      
+      // OK/timeout
+      error = (fdCount > 0) ? ERROR_NONE : ERROR_NETWORK_TIMEOUT;
       break;
     default:
       // error
       error = ERROR_NETWORK_RECEIVE;
       break;
   }
-#endif
 
   return error;
 }
@@ -595,47 +538,21 @@ LOCAL Errors checkSSHLogin(ConstString hostName,
 
 LOCAL bool waitSSHSessionSocket(SocketHandle *socketHandle)
 {
-  LIBSSH2_SESSION *session;
-  SignalMask      signalMask;
-  uint            n;
+  SignalMask signalMask;
 
   assert(socketHandle != NULL);
 
-  // get session
-  session = Network_getSSHSession(socketHandle);
-  assert(session != NULL);
-
+  // Note: ignore SIGALRM in Misc_waitHandle()
+  MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
-    // Note: ignore SIGALRM in poll()/pselect()
-    MISC_SIGNAL_MASK_CLEAR(signalMask);
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
   #endif /* HAVE_SIGALRM */
 
-  // wait for max. 60s
-#if 1
-  return (Misc_waitHandle(socketHandle->handle,&signalMask,HANDLE_EVENT_ALL,60*MS_PER_SECOND) != 0);
-#elif 1
-  pollTimeout.tv_sec  = 60L;
-  pollTimeout.tv_nsec = 0L;
-  pollfds[0].fd     = socketHandle->handle;
-  pollfds[0].events = POLLERR|POLLNVAL;
-  if ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_INBOUND ) != 0) pollfds[0].events |= POLLIN;
-  if ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_OUTBOUND) != 0) pollfds[0].events |= POLLOUT;
-  return (   (ppoll(pollfds,1,&pollTimeout,&signalMask) > 0)
-          && ((pollfds[0].revents & (POLLERR|POLLNVAL)) == 0)
-         );
-#else
-  FD_ZERO(&fdSet);
-  FD_SET(socketHandle->handle,&fdSet);
-  return (pselect(socketHandle->handle+1,
-                 ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_INBOUND ) != 0) ? &fdSet : NULL,
-                 ((libssh2_session_block_directions(session) & LIBSSH2_SESSION_BLOCK_OUTBOUND) != 0) ? &fdSet : NULL,
-                 NULL,
-                 &ts,
-                 &signalMask
-                ) > 0
-         );
-#endif
+  return (Misc_waitHandle(socketHandle->handle,
+                          &signalMask,
+                          HANDLE_EVENT_ALL,
+                          60*MS_PER_SECOND
+                         ) != 0);
 }
 #endif /* HAVE_SSH2 */
 
