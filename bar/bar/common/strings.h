@@ -71,6 +71,8 @@ struct __String
   #endif /* not NDEBUG */
 };
 
+typedef ulong StringIterator;
+
 // internal tokenizer data
 typedef struct
 {
@@ -216,11 +218,11 @@ typedef bool(*StringDumpInfoFunction)(ConstString string,
 * Return : -
 * Notes  : variable will contain all characters in string
 *          usage:
-*            ulong iteratorVariable;
-*            char  variable;
+*            StringIterator iteratorVariable;
+*            char           variable;
 *            STRING_CHAR_ITERATE(string,iteratorVariable,variable)
 *            {
-*              ... = variable->...
+*              ... = variable
 *            }
 \***********************************************************************/
 
