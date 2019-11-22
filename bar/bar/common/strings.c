@@ -2421,9 +2421,9 @@ String __String_new(const char *__fileName__, ulong __lineNb__)
         debugAddString(&debugStringAllocList,debugStringNode);
         #ifdef MAX_STRINGS_CHECK
           debugStringCount = List_count(&debugStringAllocList);
-          if (debugStringCount > debugMaxStringNextWarningCount)
+          if (debugStringCount >= debugMaxStringNextWarningCount)
           {
-            fprintf(stderr,"DEBUG WARNING: %lu strings allocated!\n",debugStringCount);
+            fprintf(stderr,"DEBUG Warning: %lu strings allocated!\n",debugStringCount);
             debugMaxStringNextWarningCount += WARN_MAX_STRINGS_DELTA;
 //String_debugDumpInfo(stderr);
 //          sleep(1);
