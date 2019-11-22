@@ -243,7 +243,7 @@ LOCAL bool vmatchString(const char   *string,
       for (i = 1; i < subMatchCount; i++)
       {
         matchedSubString     = va_arg(arguments,char*);
-        matchedSubStringSize = va_arg(arguments,ulong*);
+        matchedSubStringSize = va_arg(arguments,ulong);
         if (matchedSubString != NULL)
         {
           if (subMatches[i].rm_so != -1)
@@ -432,9 +432,6 @@ bool stringMatch(const char *string, const char *pattern, char *matchedString, u
 {
   bool    matchFlag;
   va_list arguments;
-  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
-    regex_t regex;
-  #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   assert(pattern != NULL);
 
@@ -442,7 +439,7 @@ bool stringMatch(const char *string, const char *pattern, char *matchedString, u
 
   if (string != NULL)
   {
-    va_start(arguments,matchedString);
+    va_start(arguments,matchedStringSize);
     matchFlag = vmatchString(string,pattern,matchedString,matchedStringSize,arguments);
     va_end(arguments);
   }
