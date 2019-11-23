@@ -1649,16 +1649,19 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
   return error;
 }
 
-Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
-                                uint       debugLevel,
-                                long       timeout,
-                                StringMap  resultMap,
-                                const char *format,
-                                va_list    arguments
+Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
+                                uint                          debugLevel,
+                                long                          timeout,
+                                ServerIOCommandResultFunction commandResultFunction,
+                                void                          *commandResultUserData,
+                                const char                    *format,
+                                va_list                       arguments
                                )
 {
-  uint   id;
-  Errors error;
+  uint      id;
+  Errors    error;
+  bool      completedFlag;
+  StringMap resultMap;
 
   assert(serverIO != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(serverIO);
@@ -1678,25 +1681,32 @@ Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
     return error;
   }
 
-  // wait for result
-  error = ServerIO_waitResult(serverIO,
-                              timeout,
-                              id,
-                              NULL, // &completedFlag,
-                              resultMap
-                             );
-  if (error != ERROR_NONE)
+  // wait for results
+  resultMap = StringMap_new();
+  do
   {
-    return error;
+    error = ServerIO_waitResult(serverIO,
+                                timeout,
+                                id,
+                                &completedFlag,
+                                resultMap
+                               );
+    if (commandResultFunction != NULL)
+    {
+      commandResultFunction(error,resultMap,commandResultUserData);
+    }
   }
+  while ((error == ERROR_NONE) && !completedFlag);
+  StringMap_delete(resultMap);
 
-  return ERROR_NONE;
+  return error;
 }
 
-Errors ServerIO_executeCommand(ServerIO   *serverIO,
-                               uint       debugLevel,
-                               long       timeout,
-                               StringMap  resultMap,
+Errors ServerIO_executeCommand(ServerIO                      *serverIO,
+                               uint                          debugLevel,
+                               long                          timeout,
+                               ServerIOCommandResultFunction commandResultFunction,
+                               void                          *commandResultUserData,
                                const char *format,
                                ...
                               )
@@ -1709,7 +1719,14 @@ Errors ServerIO_executeCommand(ServerIO   *serverIO,
   assert(format != NULL);
 
   va_start(arguments,format);
-  error = ServerIO_vexecuteCommand(serverIO,debugLevel,timeout,resultMap,format,arguments);
+  error = ServerIO_vexecuteCommand(serverIO,
+                                   debugLevel,
+                                   timeout,
+                                   commandResultFunction,
+                                   commandResultUserData,
+                                   format,
+                                   arguments
+                                  );
   va_end(arguments);
 
   return error;
@@ -1786,6 +1803,67 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
   va_end(arguments);
 
   return error;
+}
+
+Errors ServerIO_passResult(ServerIO        *serverIO,
+                           uint            id,
+                           bool            completedFlag,
+                           Errors          error,
+                           const StringMap resultMap
+                          )
+{
+  String            s,t;
+  #ifdef HAVE_NEWLOCALE
+    locale_t        oldLocale;
+  #endif /* HAVE_NEWLOCALE */
+  StringMapIterator iteratorVariable;
+  const char        *name;
+  StringMapTypes    type;
+  StringMapValue    value;
+
+  assert(serverIO != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(serverIO);
+  assert(resultMap != NULL);
+
+  // init variables
+  s = String_new();
+  t = String_new();
+
+  // format result
+  #ifdef HAVE_NEWLOCALE
+    oldLocale = uselocale(POSIXLocale);
+  #endif /* HAVE_NEWLOCALE */
+  {
+    String_format(s,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
+    STRINGMAP_ITERATE(resultMap,iteratorVariable,name,type,value)
+    {
+      String_appendFormat(s," %s=%'S",name,value.text);
+    }
+  }
+  #ifdef HAVE_NEWLOCALE
+    uselocale(oldLocale);
+  #endif /* HAVE_NEWLOCALE */
+
+  // send result
+  error = sendData(serverIO,s);
+  if (error != ERROR_NONE)
+  {
+    String_delete(t);
+    String_delete(s);
+    return error;
+  }
+  #ifndef NDEBUG
+    if (globalOptions.serverDebugLevel >= 1)
+    {
+      fprintf(stderr,"DEBUG: send result '%s'\n",String_cString(s));
+    }
+  #endif /* not DEBUG */
+
+  // free resources
+  String_delete(t);
+  String_delete(s);
+
+  return ERROR_NONE;
 }
 
 Errors ServerIO_waitResults(ServerIO   *serverIO,

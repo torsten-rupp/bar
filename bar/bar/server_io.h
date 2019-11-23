@@ -18,13 +18,13 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "common/files.h"
 #include "common/global.h"
 #include "common/lists.h"
-#include "common/semaphores.h"
-#include "common/strings.h"
-#include "common/stringmaps.h"
-#include "common/files.h"
 #include "common/network.h"
+#include "common/semaphores.h"
+#include "common/stringmaps.h"
+#include "common/strings.h"
 
 #include "crypt.h"
 #include "bar_global.h"
@@ -155,6 +155,18 @@ typedef struct
   // results list
   ServerIOResultList   resultList;
 } ServerIO;
+
+/***********************************************************************\
+* Name   : ServerIOCommandResultFunction
+* Purpose: command result function
+* Input  : errorCode - error code
+*          resultMap - resultMap
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*ServerIOCommandResultFunction)(Errors error, const StringMap resultMap, void *userData);
 
 /***************************** Variables *******************************/
 
@@ -580,26 +592,30 @@ Errors ServerIO_sendCommand(ServerIO   *serverIO,
 /***********************************************************************\
 * Name   : ServerIO_vexecuteCommand, ServerIO_executeCommand
 * Purpose: execute server command
-* Input  : serverIO      - server i/o
-*          timeout       - timeout [ms] or WAIT_FOREVER
-*          format        - format string
-*          .../arguments - optional arguments
-* Output : resultMap - result map (can be NULL)
+* Input  : serverIO              - server i/o
+*          timeout               - timeout [ms] or WAIT_FOREVER
+*          commandResultFunction - command result function (can be NULL)
+*          commandResultUserData - user data for command result function
+*          format                - format string
+*          .../arguments         - optional arguments
+* Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors ServerIO_vexecuteCommand(ServerIO   *serverIO,
-                                uint       debugLevel,
-                                long       timeout,
-                                StringMap  resultMap,
-                                const char *format,
-                                va_list    arguments
+Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
+                                uint                          debugLevel,
+                                long                          timeout,
+                                ServerIOCommandResultFunction commandResultFunction,
+                                void                          *commandResultUserData,
+                                const char                    *format,
+                                va_list                       arguments
                                );
-Errors ServerIO_executeCommand(ServerIO   *serverIO,
-                               uint       debugLevel,
-                               long       timeout,
-                               StringMap  resultMap,
+Errors ServerIO_executeCommand(ServerIO                      *serverIO,
+                               uint                          debugLevel,
+                               long                          timeout,
+                               ServerIOCommandResultFunction commandResultFunction,
+                               void                          *commandResultUserData,
                                const char *format,
                                ...
                               );
@@ -633,6 +649,26 @@ Errors ServerIO_sendResult(ServerIO   *serverIO,
                            Errors     error,
                            const char *format,
                            ...
+                          );
+
+/***********************************************************************\
+* Name   : ServerIO_passResult
+* Purpose: pass client result
+* Input  : serverIO      - server i/o
+*          id            - command id
+*          completedFlag - TRUE iff completed
+*          error         - error code
+*          resultMap     - results to pass
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors ServerIO_passResult(ServerIO        *serverIO,
+                           uint            id,
+                           bool            completedFlag,
+                           Errors          error,
+                           const StringMap resultMap
                           );
 
 /***********************************************************************\
