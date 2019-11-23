@@ -10211,6 +10211,13 @@ LOCAL Errors runDaemon(void)
     return error;
   }
 
+  // update config
+  if (configModified)
+  {
+    (void)updateConfig();
+    configModified = FALSE;
+  }
+
   // done continouous
   if (Continuous_isAvailable()) Continuous_done();
 
@@ -10887,13 +10894,6 @@ exit(1);
   else
   {
     error = runInteractive(argc,argv);
-  }
-
-  // update config
-  if (configModified)
-  {
-    (void)updateConfig();
-    configModified = FALSE;
   }
 
   // delete temporary directory
