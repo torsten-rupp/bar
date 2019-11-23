@@ -45,7 +45,7 @@
 /***************************** Constants *******************************/
 #define MASTER_DEBUG_LEVEL      1
 #define MASTER_DEBUG_LEVEL_DATA 2
-#define MASTER_COMMAND_TIMEOUT  (30LL*MS_PER_SECOND)
+#define MASTER_COMMAND_TIMEOUT  (60LL*MS_PER_SECOND)
 
 /***************************** Datatypes *******************************/
 
@@ -358,7 +358,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
                                   MASTER_DEBUG_LEVEL,
                                   MASTER_COMMAND_TIMEOUT,
-                                  NULL,  // resultMap
+                                  CALLBACK_(NULL,NULL),  // commandResultFunction
                                   "STORAGE_CREATE archiveName=%'S archiveSize=%llu",
                                   fileName,
                                   fileSize
@@ -406,7 +406,7 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
   error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
                                   MASTER_DEBUG_LEVEL,
                                   MASTER_COMMAND_TIMEOUT,
-                                  NULL,  // resultMap
+                                  CALLBACK_(NULL,NULL),  // commandResultFunction
                                   "STORAGE_CLOSE"
                                  );
   if (error != ERROR_NONE)
