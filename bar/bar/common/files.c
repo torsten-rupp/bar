@@ -2510,42 +2510,37 @@ Errors File_openRootList(RootListHandle *rootListHandle)
 
   assert(rootListHandle != NULL);
 
+  StringList_init(&rootListHandle->fileSystemNames);
+  rootListHandle->mounts    = NULL;
   rootListHandle->parseFlag = FALSE;
 
   // get file system names
   handle = fopen(FILESYSMTES_FILENAME,"r");
-  if (handle == NULL)
+  if (handle != NULL)
   {
-    return ERRORX_(OPEN_FILE,errno,"%E",errno);
-  }
-  StringList_init(&rootListHandle->fileSystemNames);
-  while (fgets(line,sizeof(line),handle) != NULL)
-  {
-    s = line;
-    if (isspace(*s))
+    while (fgets(line,sizeof(line),handle) != NULL)
     {
-      while (isspace(*s))
+      s = line;
+      if (isspace(*s))
       {
-        s++;
+        while (isspace(*s))
+        {
+          s++;
+        }
+        t = s;
+        while (!isspace(*t))
+        {
+          t++;
+        }
+        (*t) = NUL;
+        StringList_appendCString(&rootListHandle->fileSystemNames,s);
       }
-      t = s;
-      while (!isspace(*t))
-      {
-        t++;
-      }
-      (*t) = NUL;
-      StringList_appendCString(&rootListHandle->fileSystemNames,s);
     }
+    (void)fclose(handle);
   }
-  (void)fclose(handle);
 
   // open mount list
   rootListHandle->mounts = fopen(MOUNTS_FILENAME,"r");
-  if (rootListHandle->mounts == NULL)
-  {
-    StringList_done(&rootListHandle->fileSystemNames);
-    return ERRORX_(OPEN_FILE,errno,"%E",errno);
-  }
 
   return ERROR_NONE;
 }
@@ -2554,7 +2549,7 @@ void File_closeRootList(RootListHandle *rootListHandle)
 {
   assert(rootListHandle != NULL);
 
-  fclose(rootListHandle->mounts);
+  if (rootListHandle->mounts != NULL) fclose(rootListHandle->mounts);
   StringList_done(&rootListHandle->fileSystemNames);
 }
 
@@ -2562,14 +2557,21 @@ bool File_endOfRootList(RootListHandle *rootListHandle)
 {
   assert(rootListHandle != NULL);
 
-  while (   !rootListHandle->parseFlag
-         && (fgets(rootListHandle->line,sizeof(rootListHandle->line),rootListHandle->mounts) != NULL)
-        )
+  if (rootListHandle->mounts != NULL)
   {
-    parseRootEntry(rootListHandle);
-  }
+    while (   !rootListHandle->parseFlag
+           && (fgets(rootListHandle->line,sizeof(rootListHandle->line),rootListHandle->mounts) != NULL)
+          )
+    {
+      parseRootEntry(rootListHandle);
+    }
 
-  return !rootListHandle->parseFlag;
+    return !rootListHandle->parseFlag;
+  }
+  else
+  {
+    return rootListHandle->parseFlag;
+  }
 }
 
 Errors File_readRootList(RootListHandle *rootListHandle,
@@ -2578,20 +2580,33 @@ Errors File_readRootList(RootListHandle *rootListHandle,
 {
   assert(rootListHandle != NULL);
 
-  while (   !rootListHandle->parseFlag
-         && (fgets(rootListHandle->line,sizeof(rootListHandle->line),rootListHandle->mounts) != NULL)
-        )
+  if (rootListHandle->mounts != NULL)
   {
-    parseRootEntry(rootListHandle);
+    while (   !rootListHandle->parseFlag
+           && (fgets(rootListHandle->line,sizeof(rootListHandle->line),rootListHandle->mounts) != NULL)
+          )
+    {
+      parseRootEntry(rootListHandle);
+    }
+    if (!rootListHandle->parseFlag)
+    {
+      return ERROR_END_OF_FILE;
+    }
+
+    String_setCString(name,rootListHandle->name);
+
+    rootListHandle->parseFlag = FALSE;
   }
-  if (!rootListHandle->parseFlag)
+  else
   {
-    return ERROR_END_OF_FILE;
+    #if   defined(PLATFORM_LINUX)
+      String_setCString(name,"/");
+    #elif defined(PLATFORM_WINDOWS)
+      String_setCString(name,"C:/");
+    #endif /* PLATFORM_... */
+
+    rootListHandle->parseFlag = TRUE;
   }
-
-  String_setCString(name,rootListHandle->name);
-
-  rootListHandle->parseFlag = FALSE;
 
   return ERROR_NONE;
 }
