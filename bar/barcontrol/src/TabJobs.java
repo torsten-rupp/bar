@@ -11990,7 +11990,6 @@ throw new Error("NYI");
                                       ? BARServer.remoteListDirectory
                                       : BARControl.listDirectory
                                    );
-
             if (pathName != null)
             {
               widgetPattern.setText(pathName.trim());
