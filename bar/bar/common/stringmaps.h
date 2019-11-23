@@ -97,6 +97,8 @@ struct __StringMap
   StringMapEntry *entries;
 };
 
+typedef uint StringMapIterator;
+
 // format/convert value
 typedef String(*StringMapFormatFunction)(void *value, void *userData);
 typedef bool(*StringMapParseFunction)(ConstString string, void *data, void *userData);
@@ -144,12 +146,12 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            uint           iteratorVariable;
-*            const char     *name;
-*            StringMapTypes type;
-*            StringMapValue value;
+*            StringMapIterator iteratorVariable;
+*            const char        *name;
+*            StringMapTypes    type;
+*            StringMapValue    value;
 *
-*            STRINGLIST_ITERATE(stringMap,iteratorVariable,name,type,value)
+*            STRINGMAP_ITERATE(stringMap,iteratorVariable,name,type,value)
 *            {
 *              ... = name
 *              ... = type
@@ -176,10 +178,10 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
 * Return : -
 * Notes  : variable will contain all strings in list
 *          usage:
-*            uint           iteratorVariable;
-*            const char     *name;
-*            StringMapTypes type;
-*            StringMapValue value;
+*            StringMapIterator iteratorVariable;
+*            const char        *name;
+*            StringMapTypes    type;
+*            StringMapValue    value;
 *
 *            STRINGMAP_ITERATEX(stringMap,iteratorVariable,name,type,value,TRUE)
 *            {
@@ -589,7 +591,7 @@ bool StringMap_parseEnumNumber(const char *name, uint *value);
 
 #ifndef NDEBUG
 /***********************************************************************\
-* Name   : StringMap_debugDump, StringMap_debugPrintInfo
+* Name   : StringMap_debugDump, StringMap_debugPrint
 * Purpose: string map debug function: print content
 * Input  : handle    - output channel
 *          indent    - indent
