@@ -34,7 +34,8 @@
 #define STRING_QUOTES       "\"'"
 
 // string escape character
-#define STRING_ESCAPE_CHARACTER '\\'
+#define STRING_ESCAPE_CHARACTER  '\\'
+#define STRING_ESCAPE_CHARACTERS "\\"
 
 // default character mapping with escape
 #define STRING_ESCAPE_CHARACTER_MAP_LENGTH 9
@@ -1052,14 +1053,16 @@ String String_unescape(String     string,
 * Purpose: quote/unquote string
 * Input  : string     - string
 *          quoteChar  - quote character to add
+*          forceFlag  - force quote
 *          quoteChars - quote characters to remove
 * Output : -
 * Return : quoted/unquoted string
 * Notes  : add quote character and escape enclosed quote characters if
-*          needed
+*             forceQuoteChars == NULL
+*          or string contain some characters from forceQuoteChars
 \***********************************************************************/
 
-String String_quote(String string, char quoteChar);
+String String_quote(String string, char quoteChar, const char *forceQuoteChars);
 String String_unquote(String string, const char *quoteChars);
 
 /***********************************************************************\
