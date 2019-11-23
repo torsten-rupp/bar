@@ -11987,7 +11987,7 @@ throw new Error("NYI");
                                                 },
                                     "*",
                                     ((selectionEvent.stateMask & SWT.CTRL) == 0)
-                                      ? BARServer.remoteListDirectory
+                                      ? BARServer.remoteListDirectory(selectedJobData.uuid)
                                       : BARControl.listDirectory
                                    );
             if (pathName != null)

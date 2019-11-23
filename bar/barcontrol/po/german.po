@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-11-23 14:13+0100\n"
+"POT-Creation-Date: 2019-11-23 14:44+0100\n"
 "PO-Revision-Date: 2019-10-22 16:50+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -1468,37 +1468,37 @@ msgstr "Ein-/Ausgabe fehlgeschlagen: {0}"
 msgid "Password encryption fail"
 msgstr "Verschlüsselung von Schlüssel fehlgeschlagen"
 
-#: src/BARServer.java:4513 src/BARServer.java:4611
+#: src/BARServer.java:4765 src/BARServer.java:4863
 msgid "No result from server"
 msgstr "Keine Rückmeldung vom Server"
 
-#: src/BARServer.java:4519
+#: src/BARServer.java:4771
 msgid "Invalid response from server: expected SESSION"
 msgstr "Ungültige Rückmeldung von anderem Rechner: SESSION"
 
-#: src/BARServer.java:4523
+#: src/BARServer.java:4775
 msgid "Invalid response from server: expected parameters"
 msgstr "Ungültige Rückmeldung von anderem Rechner: Parameter erwartet"
 
-#: src/BARServer.java:4528
+#: src/BARServer.java:4780
 msgid "No session id"
 msgstr "Keine Sitzungs-Identifikation"
 
-#: src/BARServer.java:4573
+#: src/BARServer.java:4825
 msgid "Init password cipher fail"
 msgstr "Fehler bei Passwortinitialisierung"
 
-#: src/BARServer.java:4619
+#: src/BARServer.java:4871
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr "Ungültige Rückmeldung von anderem Rechner: unvollständig ''{0}''"
 
-#: src/BARServer.java:4627
+#: src/BARServer.java:4879
 msgid "Invalid response from server: no command id"
 msgstr ""
 "Ungültige Rückmeldung von anderem Rechner: keine Befehls-Identifikation"
 
-#: src/BARServer.java:4639
+#: src/BARServer.java:4891
 msgid "Invalid response from server: parameters"
 msgstr "Ungültige Rückmeldung von anderem Rechner: Parameter"
 
