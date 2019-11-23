@@ -1361,7 +1361,10 @@ class Dialogs
         }
         catch (Throwable throwable)
         {
-          // ignored
+          // close dialog
+          Event event = new Event();
+          event.widget = dialog;
+          dialog.notifyListeners(SWT.Close,event);
         }
 
         // update all
