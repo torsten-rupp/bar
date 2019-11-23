@@ -382,7 +382,8 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 
 // only for better reading
 #define CALLBACK_(code,argument) code,argument
-#define CALLBACK_LAMBDA_(functionReturnType,functionSignature,functionBody,argument) LAMBDA(functionReturnType,functionSignature,functionBody),argument
+#define CALLBACK_LAMBDA_(functionReturnType,functionSignature,functionBody,argument) \
+  LAMBDA(functionReturnType,functionSignature,functionBody),argument
 
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
