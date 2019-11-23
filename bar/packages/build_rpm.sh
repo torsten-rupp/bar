@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 
 BASE_PATH=/media/home
 
