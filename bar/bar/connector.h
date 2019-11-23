@@ -19,6 +19,8 @@
 #include <assert.h>
 
 #include "common/global.h"
+#include "common/semaphores.h"
+#include "common/stringmaps.h"
 #include "common/strings.h"
 
 #include "entrylists.h"
@@ -60,6 +62,9 @@ bool            forceSSL;                // force SSL connection to connector ho
   StorageHandle   storageHandle;
   bool            storageOpenFlag;         // TRUE iff storage created and open
 } ConnectorInfo;
+
+// command result function callback
+typedef ServerIOCommandResultFunction ConnectorCommandResultFunction;
 
 /****************************** Macros *********************************/
 
@@ -258,21 +263,23 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo);
 /***********************************************************************\
 * Name   : Connector_executeCommand
 * Purpose: execute command on connector host
-* Input  : connectorInfo - connector info
-*          timeout       - timeout [ms] or WAIT_FOREVER
-*          resultMap     - result map variable (can be NULL)
-*          format        - command
-*          ...           - optional command arguments
+* Input  : connectorInfo         - connector info
+*          timeout               - timeout [ms] or WAIT_FOREVER
+*          commandResultFunction - command result function (can be NULL)
+*          commandResultUserData - user data for command result function
+*          format                - command
+*          ...                   - optional command arguments
 * Output : resultMap - result map
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
-                                uint          debugLevel,
-                                long          timeout,
-                                StringMap     resultMap,
-                                const char    *format,
+Errors Connector_executeCommand(ConnectorInfo                  *connectorInfo,
+                                uint                           debugLevel,
+                                long                           timeout,
+                                ConnectorCommandResultFunction commandResultFunction,
+                                void                           *commandResultUserData,
+                                const char                     *format,
                                 ...
                                );
 

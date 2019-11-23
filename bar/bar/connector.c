@@ -21,14 +21,16 @@
 #include <signal.h>
 #include <assert.h>
 
-#include "common/global.h"
 #include "common/autofree.h"
+#include "common/global.h"
 #include "common/lists.h"
-#include "common/strings.h"
-#include "common/semaphores.h"
+#include "common/misc.h"
 #include "common/network.h"
 #include "common/patternlists.h"
-#include "common/misc.h"
+#include "common/semaphores.h"
+#include "common/semaphores.h"
+#include "common/stringmaps.h"
+#include "common/strings.h"
 
 #include "entrylists.h"
 #include "archive.h"
@@ -161,7 +163,7 @@ LOCAL Errors connectorConnect(ConnectorInfo *connectorInfo,
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
+                                   CALLBACK_(NULL,NULL),
                                    "START_SSL"
                                   );
   if (error != ERROR_NONE)
@@ -241,7 +243,7 @@ LOCAL Errors setJobOptionInteger(ConnectorInfo *connectorInfo, ConstString jobUU
   return Connector_executeCommand(connectorInfo,
                                   CONNECTOR_DEBUG_LEVEL,
                                   CONNECTOR_COMMAND_TIMEOUT,
-                                  NULL,
+                                  CALLBACK_(NULL,NULL),
                                   "JOB_OPTION_SET jobUUID=%S name=%s value=%d",
                                   jobUUID,
                                   name,
@@ -270,7 +272,7 @@ LOCAL Errors setJobOptionInteger64(ConnectorInfo *connectorInfo, ConstString job
   return Connector_executeCommand(connectorInfo,
                                   CONNECTOR_DEBUG_LEVEL,
                                   CONNECTOR_COMMAND_TIMEOUT,
-                                  NULL,
+                                  CALLBACK_(NULL,NULL),
                                   "JOB_OPTION_SET jobUUID=%S name=%s value=%lld",
                                   jobUUID,
                                   name,
@@ -299,7 +301,7 @@ LOCAL Errors setJobOptionBoolean(ConnectorInfo *connectorInfo, ConstString jobUU
   return Connector_executeCommand(connectorInfo,
                                   CONNECTOR_DEBUG_LEVEL,
                                   CONNECTOR_COMMAND_TIMEOUT,
-                                  NULL,
+                                  CALLBACK_(NULL,NULL),
                                   "JOB_OPTION_SET jobUUID=%S name=%s value=%y",
                                   jobUUID,
                                   name,
@@ -328,7 +330,7 @@ LOCAL Errors setJobOptionString(ConnectorInfo *connectorInfo, ConstString jobUUI
   return Connector_executeCommand(connectorInfo,
                                   CONNECTOR_DEBUG_LEVEL,
                                   CONNECTOR_COMMAND_TIMEOUT,
-                                  NULL,
+                                  CALLBACK_(NULL,NULL),
                                   "JOB_OPTION_SET jobUUID=%S name=%s value=%'S",
                                   jobUUID,
                                   name,
@@ -357,7 +359,7 @@ LOCAL Errors setJobOptionCString(ConnectorInfo *connectorInfo, ConstString jobUU
   return Connector_executeCommand(connectorInfo,
                                   CONNECTOR_DEBUG_LEVEL,
                                   CONNECTOR_COMMAND_TIMEOUT,
-                                  NULL,
+                                  CALLBACK_(NULL,NULL),
                                   "JOB_OPTION_SET jobUUID=%S name=%s value=%'s",
                                   jobUUID,
                                   name,
@@ -392,7 +394,7 @@ LOCAL Errors setJobOptionPassword(ConnectorInfo *connectorInfo, ConstString jobU
     error = Connector_executeCommand(connectorInfo,
                                      CONNECTOR_DEBUG_LEVEL,
                                      CONNECTOR_COMMAND_TIMEOUT,
-                                     NULL,
+                                     CALLBACK_(NULL,NULL),
                                      "JOB_OPTION_SET jobUUID=%S name=%s value=%'s",
                                      jobUUID,
                                      name,
@@ -520,7 +522,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
+                                   CALLBACK_(NULL,NULL),
                                    "JOB_NEW name=%'S jobUUID=%S scheduleUUID=%S master=%'S",
                                    name,
                                    jobUUID,
@@ -595,7 +597,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                             CONNECTOR_DEBUG_LEVEL,
                                                             CONNECTOR_COMMAND_TIMEOUT,
-                                                            NULL,
+                                                            CALLBACK_(NULL,NULL),
                                                             "INCLUDE_LIST_CLEAR jobUUID=%S",
                                                             jobUUID
                                                            );
@@ -611,7 +613,7 @@ UNUSED_VARIABLE(scheduleCustomText);
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
-                                                              NULL,
+                                                              CALLBACK_(NULL,NULL),
                                                               "INCLUDE_LIST_ADD jobUUID=%S entryType=%s patternType=%s pattern=%'S",
                                                               jobUUID,
                                                               entryTypeText,
@@ -623,7 +625,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                             CONNECTOR_DEBUG_LEVEL,
                                                             CONNECTOR_COMMAND_TIMEOUT,
-                                                            NULL,
+                                                            CALLBACK_(NULL,NULL),
                                                             "EXCLUDE_LIST_CLEAR jobUUID=%S",
                                                             jobUUID
                                                            );
@@ -632,7 +634,7 @@ UNUSED_VARIABLE(scheduleCustomText);
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
-                                                              NULL,
+                                                              CALLBACK_(NULL,NULL),
                                                               "EXCLUDE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                               jobUUID,
                                                               ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
@@ -643,7 +645,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                             CONNECTOR_DEBUG_LEVEL,
                                                             CONNECTOR_COMMAND_TIMEOUT,
-                                                            NULL,
+                                                            CALLBACK_(NULL,NULL),
                                                             "MOUNT_LIST_CLEAR jobUUID=%S",
                                                             jobUUID
                                                            );
@@ -652,7 +654,7 @@ UNUSED_VARIABLE(scheduleCustomText);
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
-                                                              NULL,
+                                                              CALLBACK_(NULL,NULL),
                                                               "MOUNT_LIST_ADD jobUUID=%S name=%'S",
                                                               jobUUID,
                                                               mountNode->name
@@ -662,7 +664,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                             CONNECTOR_DEBUG_LEVEL,
                                                             CONNECTOR_COMMAND_TIMEOUT,
-                                                            NULL,
+                                                            CALLBACK_(NULL,NULL),
                                                             "EXCLUDE_COMPRESS_LIST_CLEAR jobUUID=%S",
                                                             jobUUID
                                                            );
@@ -671,7 +673,7 @@ UNUSED_VARIABLE(scheduleCustomText);
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
-                                                              NULL,
+                                                              CALLBACK_(NULL,NULL),
                                                               "EXCLUDE_COMPRESS_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                               jobUUID,
                                                               ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,patternNode->pattern.type,NULL),
@@ -682,7 +684,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                             CONNECTOR_DEBUG_LEVEL,
                                                             CONNECTOR_COMMAND_TIMEOUT,
-                                                            NULL,
+                                                            CALLBACK_(NULL,NULL),
                                                             "SOURCE_LIST_CLEAR jobUUID=%S",
                                                             jobUUID
                                                            );
@@ -691,7 +693,7 @@ UNUSED_VARIABLE(scheduleCustomText);
     if (error == ERROR_NONE) error = Connector_executeCommand(connectorInfo,
                                                               CONNECTOR_DEBUG_LEVEL,
                                                               CONNECTOR_COMMAND_TIMEOUT,
-                                                              NULL,
+                                                              CALLBACK_(NULL,NULL),
                                                               "SOURCE_LIST_ADD jobUUID=%S patternType=%s pattern=%'S",
                                                               jobUUID,
                                                               ConfigValue_selectToString(CONFIG_VALUE_PATTERN_TYPES,deltaSourceNode->patternType,NULL),
@@ -705,7 +707,7 @@ UNUSED_VARIABLE(scheduleCustomText);
     (void)Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
+                                   CALLBACK_(NULL,NULL),
                                    "JOB_DELETE jobUUID=%S",
                                    jobUUID
                                   );
@@ -2947,35 +2949,36 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
 /***********************************************************************\
 * Name   : vexecuteCommand
 * Purpose: execute command on connector host
-* Input  : connectorInfo - connector info
-*          timeout       - timeout [ms] or WAIT_FOREVER
-*          resultMap     - result map variable (can be NULL)
-*          format        - command
-*          arguments     - arguments
+* Input  : connectorInfo         - connector info
+*          timeout               - timeout [ms] or WAIT_FOREVER
+*          commandResultFunction - command result function (can be NULL)
+*          commandResultUserData - user data for command result function
+*          format                - command
+*          arguments             - arguments
 * Output : resultMap - result map
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors vexecuteCommand(ConnectorInfo *connectorInfo,
-                             uint          debugLevel,
-                             long          timeout,
-                             StringMap     resultMap,
-                             const char    *format,
-                             va_list       arguments
+LOCAL Errors vexecuteCommand(ConnectorInfo                  *connectorInfo,
+                             uint                           debugLevel,
+                             long                           timeout,
+                             ConnectorCommandResultFunction commandResultFunction,
+                             void                           *commandResultUserData,
+                             const char                     *format,
+                             va_list                        arguments
                             )
 {
   Errors error;
 
   assert(connectorInfo != NULL);
 
-//TODO
   // init variables
 
   error = ServerIO_vexecuteCommand(&connectorInfo->io,
                                    debugLevel,
                                    timeout,
-                                   resultMap,
+                                   CALLBACK_(commandResultFunction,commandResultUserData),
                                    format,
                                    arguments
                                   );
@@ -3107,7 +3110,7 @@ Errors Connector_authorize(ConnectorInfo *connectorInfo)
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,  // resultMap
+                                   CALLBACK_(NULL,NULL),
                                    "AUTHORIZE encryptType=%s name=%'S encryptedUUID=%'S",
                                    ServerIO_encryptTypeToString(connectorInfo->io.encryptType,"NONE"),
                                    hostName,
@@ -3217,11 +3220,12 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo)
   return ERROR_NONE;
 }
 
-Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
-                                uint          debugLevel,
-                                long          timeout,
-                                StringMap     resultMap,
-                                const char    *format,
+Errors Connector_executeCommand(ConnectorInfo                  *connectorInfo,
+                                uint                           debugLevel,
+                                long                           timeout,
+                                ConnectorCommandResultFunction commandResultFunction,
+                                void                           *commandResultUserData,
+                                const char                     *format,
                                 ...
                                )
 {
@@ -3232,7 +3236,14 @@ Errors Connector_executeCommand(ConnectorInfo *connectorInfo,
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
 
   va_start(arguments,format);
-  error = vexecuteCommand(connectorInfo,debugLevel,timeout,resultMap,format,arguments);
+  error = vexecuteCommand(connectorInfo,
+                          debugLevel,
+                          timeout,
+                          commandResultFunction,
+                          commandResultUserData,
+                          format,
+                          arguments
+                         );
   va_end(arguments);
 
   return error;
@@ -3253,7 +3264,7 @@ Errors Connector_jobAbort(ConnectorInfo *connectorInfo,
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
+                                   CALLBACK_(NULL,NULL),
                                    "JOB_ABORT jobUUID=%S",
                                    jobUUID
                                   );
@@ -3365,7 +3376,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
     (void)Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
+                                   CALLBACK_(NULL,NULL),
                                    "JOB_DELETE jobUUID=%S",
                                    jobUUID
                                   );
@@ -3379,7 +3390,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
   error = Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
+                                   CALLBACK_(NULL,NULL),
                                    "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S noStorage=%y archiveType=%s dryRun=%y noStorage=%y",
                                    jobUUID,
                                    scheduleUUID,
@@ -3394,7 +3405,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
     (void)Connector_executeCommand(connectorInfo,
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
-                                   NULL,
+                                   CALLBACK_(NULL,NULL),
                                    "JOB_DELETE jobUUID=%S",
                                    jobUUID
                                   );
@@ -3411,7 +3422,9 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
     error = Connector_executeCommand(connectorInfo,
                                      CONNECTOR_DEBUG_LEVEL,
                                      CONNECTOR_COMMAND_TIMEOUT,
-                                     resultMap,
+//TODO
+CALLBACK_(NULL,NULL),
+//                                     resultMap,
                                      "JOB_STATUS jobUUID=%S",
                                      jobUUID
                                     );
