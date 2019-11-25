@@ -1691,9 +1691,9 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
                                 &completedFlag,
                                 resultMap
                                );
-    if (commandResultFunction != NULL)
+    if ((error == ERROR_NONE) && (commandResultFunction != NULL))
     {
-      commandResultFunction(error,resultMap,commandResultUserData);
+      error = commandResultFunction(resultMap,commandResultUserData);
     }
   }
   while ((error == ERROR_NONE) && !completedFlag);
@@ -1837,6 +1837,8 @@ Errors ServerIO_passResult(ServerIO        *serverIO,
     String_format(s,"%u %d %u ",id,completedFlag ? 1 : 0,Error_getCode(error));
     STRINGMAP_ITERATE(resultMap,iteratorVariable,name,type,value)
     {
+      UNUSED_VARIABLE(type);
+
       String_appendFormat(s," %s=%'S",name,value.text);
     }
   }
@@ -1936,10 +1938,17 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
   if (completedFlag != NULL) (*completedFlag) = resultNode->completedFlag;
   if (resultMap != NULL)
   {
-    if (!StringMap_parse(resultMap,resultNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+    if (resultNode->error == ERROR_NONE)
     {
-      deleteResultNode(resultNode);
-      return ERROR_PARSE;
+      if (!StringMap_parse(resultMap,resultNode->data,STRINGMAP_ASSIGN,STRING_QUOTES,NULL,STRING_BEGIN,NULL))
+      {
+        deleteResultNode(resultNode);
+        return ERROR_PARSE;
+      }
+    }
+    else
+    {
+      StringMap_clear(resultMap);
     }
   }
 
