@@ -159,14 +159,14 @@ typedef struct
 /***********************************************************************\
 * Name   : ServerIOCommandResultFunction
 * Purpose: command result function
-* Input  : errorCode - error code
-*          resultMap - resultMap
+* Input  : resultMap - resultMap
+*          userData  - user data
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-typedef void(*ServerIOCommandResultFunction)(Errors error, const StringMap resultMap, void *userData);
+typedef Errors(*ServerIOCommandResultFunction)(const StringMap resultMap, void *userData);
 
 /***************************** Variables *******************************/
 
