@@ -4185,6 +4185,7 @@ class Dialogs
                   tableItem.setData(file);
                   tableItem.setText(0,file.getName());
                   if (file.isDirectory()) tableItem.setText(1,tr("directory"));
+//                  else if file.isSymbolicLink())tableItem.setText(1,tr("directory"));
                   else                    tableItem.setText(1,tr("file"));
                   tableItem.setText(2,simpleDateFormat.format(new Date(file.lastModified())));
                   if (file.isDirectory()) tableItem.setText(3,"");

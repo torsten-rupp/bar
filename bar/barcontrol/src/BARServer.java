@@ -1500,6 +1500,7 @@ public class BARServer
    */
   enum FileTypes
   {
+    NONE,
     FILE,
     DIRECTORY,
     LINK,
@@ -3915,6 +3916,8 @@ throw new Error("NYI");
     }
   };
 
+  /** remote directory list class
+   */
   static class RemoteListDirectory extends ListDirectory<RemoteFile>
   {
     private String jobUUID;
@@ -3938,7 +3941,8 @@ throw new Error("NYI");
       try
       {
         ValueMap valueMap = new ValueMap();
-        BARServer.executeCommand(StringParser.format("FILE_INFO name=%'S",
+        BARServer.executeCommand(StringParser.format("FILE_INFO jobUUID=%s name=%'S",
+                                                     (jobUUID != null) ? jobUUID : "",
                                                      name
                                                     ),
                                  1,  // debugLevel
@@ -3976,8 +3980,6 @@ throw new Error("NYI");
     public void getShortcuts(List<RemoteFile> shortcutList)
     {
       final HashMap<String,RemoteFile> shortcutMap = new HashMap<String,RemoteFile>();
-Dprintf.printStackTrace();
-Dprintf.dprintf("jobUUID=%s",jobUUID);
 
       // add manual shortcuts
       for (String name : Settings.shortcuts)
@@ -3988,7 +3990,9 @@ Dprintf.dprintf("jobUUID=%s",jobUUID);
       // add root shortcuts
       try
       {
-        BARServer.executeCommand(StringParser.format("ROOT_LIST jobUUID=%s",jobUUID),
+        BARServer.executeCommand(StringParser.format("ROOT_LIST jobUUID=%s",
+                                                     (jobUUID != null) ? jobUUID : ""
+                                                    ),
                                  1,  // debugLevel
                                  new Command.ResultHandler()
                                  {
@@ -4047,8 +4051,10 @@ Dprintf.dprintf("jobUUID=%s",jobUUID);
         fileList.clear();
         try
         {
+Dprintf.dprintf("path=%s",path);
+Dprintf.dprintf("path.getAbsolutePath()=%s",path.getAbsolutePath());
           BARServer.executeCommand(StringParser.format("FILE_LIST jobUUID=%s directory=%'S",
-                                                       jobUUID,
+                                                       (jobUUID != null) ? jobUUID : "",
                                                        path.getAbsolutePath()
                                                       ),
                                    1,  // debugLevel
@@ -4087,10 +4093,12 @@ Dprintf.dprintf("jobUUID=%s",jobUUID);
                                            case LINK:
                                              {
                                                String  name         = valueMap.getString ("name"    );
+                                               FileTypes destinationFileType = valueMap.getEnum("destinationFileType",FileTypes.class);
                                                long    dateTime     = valueMap.getLong   ("dateTime");
                                                boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
 
-                                               file = new RemoteFile(name,FileTypes.LINK,dateTime);
+//                                               file = new RemoteFile(name,FileTypes.LINK,dateTime);
+                                               file = new RemoteFile(name,destinationFileType,dateTime);
                                              }
                                              break;
                                            case HARDLINK:

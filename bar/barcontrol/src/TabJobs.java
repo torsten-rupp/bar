@@ -120,6 +120,7 @@ public class TabJobs
    */
   enum FileTypes
   {
+    NONE,
     FILE,
     DIRECTORY,
     LINK,
