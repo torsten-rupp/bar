@@ -1182,7 +1182,6 @@ LOCAL void resetDefinition(ChunkDefinition *definition,
         case CHUNK_DATATYPE_INT64 |CHUNK_DATATYPE_ARRAY|CHUNK_DATATYPE_FIXED:
           {
 //TODO
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 #if 0
             uint arrayLength;
             void *arrayData;
