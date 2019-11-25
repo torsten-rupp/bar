@@ -1362,9 +1362,12 @@ class Dialogs
         catch (Throwable throwable)
         {
           // close dialog
-          Event event = new Event();
-          event.widget = dialog;
-          dialog.notifyListeners(SWT.Close,event);
+          if (!dialog.isDisposed())
+          {
+            Event event = new Event();
+            event.widget = dialog;
+            dialog.notifyListeners(SWT.Close,event);
+          }
         }
 
         // update all
