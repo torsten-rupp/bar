@@ -116,42 +116,18 @@ public class TabJobs
     EXTENDED_REGEX
   };
 
-  /** file types
-   */
-  enum FileTypes
-  {
-    NONE,
-    FILE,
-    DIRECTORY,
-    LINK,
-    HARDLINK,
-    SPECIAL,
-    UNKNOWN
-  };
-
-  enum SpecialTypes
-  {
-    NONE,
-
-    CHARACTER_DEVICE,
-    BLOCK_DEVICE,
-    FIFO,
-    SOCKET,
-    OTHER
-  };
-
   /** file tree data
    */
   class FileTreeData
   {
-    String       name;
-    FileTypes    fileType;
-    long         size;
-    long         dateTime;
-    String       title;
-    SpecialTypes specialType;
-    boolean      noBackup;                 // true iff .nobackup exists in directory
-    boolean      noDump;                   // true iff no-dump attribute is set
+    String                 name;
+    BARServer.FileTypes    fileType;
+    long                   size;
+    long                   dateTime;
+    String                 title;
+    BARServer.SpecialTypes specialType;
+    boolean                noBackup;       // true iff .nobackup exists in directory
+    boolean                noDump;         // true iff no-dump attribute is set
 
     /** create file tree data
      * @param name file name
@@ -163,7 +139,7 @@ public class TabJobs
      * @param noBackup true iff .nobackup exists (directory)
      * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, FileTypes fileType, long size, long dateTime, String title, SpecialTypes specialType, boolean noBackup, boolean noDump)
+    FileTreeData(String name, BARServer.FileTypes fileType, long size, long dateTime, String title, BARServer.SpecialTypes specialType, boolean noBackup, boolean noDump)
     {
       this.name        = name;
       this.fileType    = fileType;
@@ -184,9 +160,9 @@ public class TabJobs
      * @param noBackup true iff .nobackup exists (directory)
      * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, FileTypes fileType, long size, long dateTime, String title, boolean noBackup, boolean noDump)
+    FileTreeData(String name, BARServer.FileTypes fileType, long size, long dateTime, String title, boolean noBackup, boolean noDump)
     {
-      this(name,fileType,size,dateTime,title,SpecialTypes.NONE,noBackup,noDump);
+      this(name,fileType,size,dateTime,title,BARServer.SpecialTypes.NONE,noBackup,noDump);
     }
 
     /** create file tree data
@@ -197,7 +173,7 @@ public class TabJobs
      * @param noBackup true iff .nobackup exists (directory)
      * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, FileTypes fileType, long dateTime, String title, boolean noBackup, boolean noDump)
+    FileTreeData(String name, BARServer.FileTypes fileType, long dateTime, String title, boolean noBackup, boolean noDump)
     {
       this(name,fileType,0L,dateTime,title,noBackup,noDump);
     }
@@ -209,7 +185,7 @@ public class TabJobs
      * @param noBackup true iff .nobackup exists (directory)
      * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, FileTypes fileType, String title, boolean noBackup, boolean noDump)
+    FileTreeData(String name, BARServer.FileTypes fileType, String title, boolean noBackup, boolean noDump)
     {
       this(name,fileType,0L,title,noBackup,noDump);
     }
@@ -223,9 +199,9 @@ public class TabJobs
      * @param noBackup true iff .nobackup exists (directory)
      * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, SpecialTypes specialType, long size, long dateTime, String title, boolean noBackup, boolean noDump)
+    FileTreeData(String name, BARServer.SpecialTypes specialType, long size, long dateTime, String title, boolean noBackup, boolean noDump)
     {
-      this(name,FileTypes.SPECIAL,size,dateTime,title,specialType,noBackup,noDump);
+      this(name,BARServer.FileTypes.SPECIAL,size,dateTime,title,specialType,noBackup,noDump);
     }
 
     /** create file tree data
@@ -236,9 +212,9 @@ public class TabJobs
      * @param noBackup true iff .nobackup exists (directory)
      * @param noDump true iff no-dump attribute is set
      */
-    FileTreeData(String name, SpecialTypes specialType, long dateTime, String title, boolean noBackup, boolean noDump)
+    FileTreeData(String name, BARServer.SpecialTypes specialType, long dateTime, String title, boolean noBackup, boolean noDump)
     {
-      this(name,FileTypes.SPECIAL,0L,dateTime,title,specialType,noBackup,noDump);
+      this(name,BARServer.FileTypes.SPECIAL,0L,dateTime,title,specialType,noBackup,noDump);
     }
 
     /** get image for entry data
@@ -297,7 +273,7 @@ public class TabJobs
     {
       includeListAdd(new EntryData(EntryTypes.FILE,name));
       excludeListRemove(name);
-      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,false);
+      if (fileType == BARServer.FileTypes.DIRECTORY) setNoBackup(name,false);
       setNoDump(name,false);
 
       noBackup = false;
@@ -308,7 +284,7 @@ public class TabJobs
     {
       includeListRemove(name);
       excludeListAdd(name);
-      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,false);
+      if (fileType == BARServer.FileTypes.DIRECTORY) setNoBackup(name,false);
       setNoDump(name,false);
 
       noBackup = false;
@@ -319,7 +295,7 @@ public class TabJobs
     {
       includeListRemove(name);
       excludeListRemove(name);
-      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,true);
+      if (fileType == BARServer.FileTypes.DIRECTORY) setNoBackup(name,true);
       setNoDump(name,false);
 
       noBackup = true;
@@ -330,7 +306,7 @@ public class TabJobs
     {
       includeListRemove(name);
       excludeListRemove(name);
-      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,false);
+      if (fileType == BARServer.FileTypes.DIRECTORY) setNoBackup(name,false);
       setNoDump(name,true);
 
       noBackup = false;
@@ -341,7 +317,7 @@ public class TabJobs
     {
       includeListRemove(name);
       excludeListRemove(name);
-      if (fileType == FileTypes.DIRECTORY) setNoBackup(name,false);
+      if (fileType == BARServer.FileTypes.DIRECTORY) setNoBackup(name,false);
       setNoDump(name,false);
 
       noBackup = false;
@@ -404,9 +380,9 @@ public class TabJobs
       if (sortMode == SortModes.NAME)
       {
         // directories first, then files
-        if (fileTreeData1.fileType == FileTypes.DIRECTORY)
+        if (fileTreeData1.fileType == BARServer.FileTypes.DIRECTORY)
         {
-          if (fileTreeData2.fileType == FileTypes.DIRECTORY)
+          if (fileTreeData2.fileType == BARServer.FileTypes.DIRECTORY)
           {
             return compareWithoutType(fileTreeData1,fileTreeData2);
           }
@@ -417,7 +393,7 @@ public class TabJobs
         }
         else
         {
-          if (fileTreeData2.fileType == FileTypes.DIRECTORY)
+          if (fileTreeData2.fileType == BARServer.FileTypes.DIRECTORY)
           {
             return 1;
           }
@@ -2746,7 +2722,7 @@ public class TabJobs
               else
                 isNone     = true;
 
-              menuItemOpenClose.setEnabled(fileTreeData.fileType == FileTypes.DIRECTORY);
+              menuItemOpenClose.setEnabled(fileTreeData.fileType == BARServer.FileTypes.DIRECTORY);
               menuItemInclude.setSelection(isIncluded);
               menuItemExcludeByList.setSelection(isExcludedByList);
               menuItemExcludeByNoBackup.setSelection(isExcludedByNoBackup);
@@ -2768,7 +2744,7 @@ public class TabJobs
             if (treeItem != null)
             {
               FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-              if (fileTreeData.fileType == FileTypes.DIRECTORY)
+              if (fileTreeData.fileType == BARServer.FileTypes.DIRECTORY)
               {
                 Event treeEvent = new Event();
                 treeEvent.item = treeItem;
@@ -2872,7 +2848,7 @@ public class TabJobs
               if (treeItem != null)
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                if (fileTreeData.fileType == FileTypes.DIRECTORY)
+                if (fileTreeData.fileType == BARServer.FileTypes.DIRECTORY)
                 {
                   Event treeEvent = new Event();
                   treeEvent.item = treeItem;
@@ -2910,7 +2886,7 @@ public class TabJobs
               if (treeItems != null)
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItems[0].getData();
-                if (fileTreeData.fileType == FileTypes.DIRECTORY)
+                if (fileTreeData.fileType == BARServer.FileTypes.DIRECTORY)
                 {
                   Event treeEvent = new Event();
                   treeEvent.item = treeItems[0];
@@ -11273,7 +11249,7 @@ throw new Error("NYI");
   {
     Widgets.removeAllTreeItems(widgetFileTree);
     Widgets.addTreeItem(widgetFileTree,
-                        new FileTreeData("/",FileTypes.DIRECTORY,"/",false,false),
+                        new FileTreeData("/",BARServer.FileTypes.DIRECTORY,"/",false,false),
                         IMAGE_DIRECTORY,
                         Widgets.TREE_ITEM_FLAG_FOLDER,
                         "/"
@@ -11336,7 +11312,7 @@ throw new Error("NYI");
         if (treeItem != null)
         {
           FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-          if (fileTreeData.fileType == FileTypes.DIRECTORY)
+          if (fileTreeData.fileType == BARServer.FileTypes.DIRECTORY)
           {
             // open sub-directory
             if (!treeItem.getExpanded())
@@ -11384,7 +11360,7 @@ throw new Error("NYI");
                                  {
                                    final FileTreeData fileTreeData;
 
-                                   FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
+                                   BARServer.FileTypes fileType = valueMap.getEnum("fileType",BARServer.FileTypes.class);
                                    switch (fileType)
                                    {
                                      case FILE:
@@ -11395,7 +11371,7 @@ throw new Error("NYI");
                                          final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
 
                                          // create file tree data
-                                         fileTreeData = new FileTreeData(name,FileTypes.FILE,size,dateTime,new File(name).getName(),false,noDumpFlag);
+                                         fileTreeData = new FileTreeData(name,BARServer.FileTypes.FILE,size,dateTime,new File(name).getName(),false,noDumpFlag);
 
                                          // add entry
                                          final Image image;
@@ -11437,7 +11413,7 @@ throw new Error("NYI");
                                          final boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
 
                                          // create file tree data
-                                         fileTreeData = new FileTreeData(name,FileTypes.DIRECTORY,dateTime,new File(name).getName(),noBackupFlag,noDumpFlag);
+                                         fileTreeData = new FileTreeData(name,BARServer.FileTypes.DIRECTORY,dateTime,new File(name).getName(),noBackupFlag,noDumpFlag);
 
                                          // add entry
                                          final Image image;
@@ -11479,7 +11455,7 @@ throw new Error("NYI");
                                          final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
 
                                          // create file tree data
-                                         fileTreeData = new FileTreeData(name,FileTypes.LINK,dateTime,new File(name).getName(),false,noDumpFlag);
+                                         fileTreeData = new FileTreeData(name,BARServer.FileTypes.LINK,dateTime,new File(name).getName(),false,noDumpFlag);
 
                                          // add entry
                                          final Image image;
@@ -11521,7 +11497,7 @@ throw new Error("NYI");
                                          final boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
 
                                          // create file tree data
-                                         fileTreeData = new FileTreeData(name,FileTypes.HARDLINK,size,dateTime,new File(name).getName(),false,noDumpFlag);
+                                         fileTreeData = new FileTreeData(name,BARServer.FileTypes.HARDLINK,size,dateTime,new File(name).getName(),false,noDumpFlag);
 
                                          // add entry
                                          final Image image;
@@ -11557,12 +11533,12 @@ throw new Error("NYI");
                                        break;
                                      case SPECIAL:
                                        {
-                                         final String  name             = valueMap.getString ("name"                          );
-                                         final long    size             = valueMap.getLong   ("size",       0L                );
-                                         final long    dateTime         = valueMap.getLong   ("dateTime"                      );
-                                         final boolean noBackupFlag     = valueMap.getBoolean("noBackup",   false             );
-                                         final boolean noDumpFlag       = valueMap.getBoolean("noDump",     false             );
-                                         final SpecialTypes specialType = valueMap.getEnum   ("specialType",SpecialTypes.class);
+                                         final String                 name         = valueMap.getString ("name"                                    );
+                                         final long                   size         = valueMap.getLong   ("size",       0L                          );
+                                         final long                   dateTime     = valueMap.getLong   ("dateTime"                                );
+                                         final boolean                noBackupFlag = valueMap.getBoolean("noBackup",   false                       );
+                                         final boolean                noDumpFlag   = valueMap.getBoolean("noDump",     false                       );
+                                         final BARServer.SpecialTypes specialType  = valueMap.getEnum   ("specialType",BARServer.SpecialTypes.class);
 
                                          final Image image;
                                          if      (includeHashMap.containsKey(name) && !excludeHashSet.contains(name))
@@ -11576,7 +11552,7 @@ throw new Error("NYI");
                                          {
                                            case CHARACTER_DEVICE:
                                              // create file tree data
-                                             fileTreeData = new FileTreeData(name,SpecialTypes.CHARACTER_DEVICE,dateTime,name,false,noDumpFlag);
+                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.CHARACTER_DEVICE,dateTime,name,false,noDumpFlag);
 
                                              // insert entry
                                              if (!treeItem.isDisposed())
@@ -11601,7 +11577,7 @@ throw new Error("NYI");
                                              break;
                                            case BLOCK_DEVICE:
                                              // create file tree data
-                                             fileTreeData = new FileTreeData(name,SpecialTypes.BLOCK_DEVICE,size,dateTime,name,false,noDumpFlag);
+                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.BLOCK_DEVICE,size,dateTime,name,false,noDumpFlag);
 
                                              // insert entry
                                              if (!treeItem.isDisposed())
@@ -11627,7 +11603,7 @@ throw new Error("NYI");
                                              break;
                                            case FIFO:
                                              // create file tree data
-                                             fileTreeData = new FileTreeData(name,SpecialTypes.FIFO,dateTime,name,false,noDumpFlag);
+                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.FIFO,dateTime,name,false,noDumpFlag);
 
                                              // insert entry
                                              if (!treeItem.isDisposed())
@@ -11653,7 +11629,7 @@ throw new Error("NYI");
                                              break;
                                            case SOCKET:
                                              // create file tree data
-                                             fileTreeData = new FileTreeData(name,SpecialTypes.SOCKET,dateTime,name,false,noDumpFlag);
+                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.SOCKET,dateTime,name,false,noDumpFlag);
 
                                              // insert entry
                                              if (!treeItem.isDisposed())
@@ -11678,7 +11654,7 @@ throw new Error("NYI");
                                              break;
                                            case OTHER:
                                              // create file tree data
-                                             fileTreeData = new FileTreeData(name,SpecialTypes.OTHER,dateTime,name,false,noDumpFlag);
+                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.OTHER,dateTime,name,false,noDumpFlag);
 
                                              // insert entry
                                              if (!treeItem.isDisposed())

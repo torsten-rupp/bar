@@ -1509,6 +1509,19 @@ public class BARServer
     UNKNOWN
   };
 
+  /** special types
+   */
+  enum SpecialTypes
+  {
+    NONE,
+
+    CHARACTER_DEVICE,
+    BLOCK_DEVICE,
+    FIFO,
+    SOCKET,
+    OTHER
+  };
+
   // --------------------------- variables --------------------------------
   private static Object                      lock = new Object();
   private static JcaX509CertificateConverter certificateConverter;
