@@ -807,7 +807,7 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
   ClientNode *clientNode,*disconnectClientNode;
 
   SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {  
+  {
     if (newMaster.pairingMode == PAIRING_MODE_NONE)
     {
       logMessage(NULL,  // logHandle,
@@ -862,7 +862,7 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
   assert(uuidHash != NULL);
 
   SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {  
+  {
     // set/clear paired master
     if (!String_isEmpty(name))
     {
@@ -921,7 +921,7 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
 LOCAL void abortPairingMaster(void)
 {
   SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {  
+  {
     if (newMaster.pairingMode != PAIRING_MODE_NONE)
     {
       logMessage(NULL,  // logHandle,
@@ -954,7 +954,7 @@ LOCAL Errors clearPairedMaster(void)
   // clear paired master
   clearedFlag = FALSE;
   SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
-  {  
+  {
     assert(newMaster.pairingMode == PAIRING_MODE_NONE);
 
     if (!String_isEmpty(globalOptions.masterInfo.name))
@@ -1534,7 +1534,7 @@ LOCAL void jobThreadCode(void)
       storageFlags  = jobNode->storageFlags;
       String_set(byName,jobNode->byName);
 
-      // get connector (if remote job)
+      // get and lock connector (if remote job)
       connectorInfo = Job_connectorLock(jobNode,LOCK_TIMEOUT);
 
       // start job
@@ -6416,7 +6416,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
 
 /***********************************************************************\
 * Name   : serverCommand_rootList
-* Purpose: root list
+* Purpose: root list (local+remote)
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -6470,31 +6470,31 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
-      // get connector
-      connectorInfo = Job_connectorLock(jobNode,LOCK_TIMEOUT);
-      if ((connectorInfo != NULL) && Connector_isConnected(connectorInfo))
+      // remote directory list
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
-        // send results from slave
-        error = Connector_executeCommand(connectorInfo,
-                                         1,
-                                         10*MS_PER_SECOND,
-                                         CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
-                                         {
-                                           assert(resultMap != NULL);
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
 
-                                           UNUSED_VARIABLE(userData);
+                                             UNUSED_VARIABLE(userData);
 
-                                           return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
-                                         },NULL),
-                                         "ROOT_LIST"
-                                        );
-
-        // free connector
-        Job_connectorUnlock(connectorInfo);
+                                             return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "ROOT_LIST"
+                                          );
+        }
       }
     }
     else
     {
+      // local directory list
+
       // open root list
       error = File_openRootList(&rootListHandle);
       if (error != ERROR_NONE)
@@ -6545,7 +6545,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 
 /***********************************************************************\
 * Name   : serverCommand_fileInfo
-* Purpose: get file info
+* Purpose: get file info (local+remote)
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -6553,11 +6553,12 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            jobUUID=<uuid>|""
 *            name=<name>
 *          Result:
 *            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
 *            fileType=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
-*            fileType=LINK name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=LINK destinationFileType=<type> name=<name> dateTime=<time stamp> noDump=yes|no
 *            fileType=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
 *            fileType=DEVICE CHARACTER name=<name> dateTime=<time stamp> noDump=yes|no
 *            fileType=DEVICE BLOCK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
@@ -6568,18 +6569,24 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String   name;
-  Errors   error;
-  String              noBackupFileName;
-  FileInfo fileInfo;
-  bool                noBackupExists;
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  String        name;
+  const JobNode *jobNode;
+  String        noBackupFileName;
+  Errors        error;
+  ConnectorInfo *connectorInfo;
+  FileInfo      fileInfo;
+  bool          noBackupExists;
+  FileTypes     destinationFileType;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get name
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+  // get job UUID, name
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
@@ -6588,108 +6595,162 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
-  // read file info
-  noBackupFileName = String_new();
-  error = File_getInfo(&fileInfo,name);
-  if (error == ERROR_NONE)
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    switch (fileInfo.type)
+    // find job
+    if (!String_isEmpty(jobUUID))
     {
-      case FILE_TYPE_FILE:
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                            "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
-                            name,
-                            fileInfo.size,
-                            fileInfo.timeModified,
-                            ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                           );
-        break;
-      case FILE_TYPE_DIRECTORY:
-        // check if .nobackup exists
-        noBackupExists = FALSE;
-        if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
-        if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        String_delete(name);
+        return;
+      }
+    }
+    else
+    {
+      jobNode = NULL;
+    }
 
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                            "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
-                            name,
-                            fileInfo.timeModified,
-                            noBackupExists,
-                            ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                           );
-        break;
-      case FILE_TYPE_LINK:
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                            "fileType=LINK name=%'S dateTime=%"PRIu64" noDump=%y",
-                            name,
-                            fileInfo.timeModified,
-                            ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                           );
-        break;
-      case FILE_TYPE_HARDLINK:
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                            "fileType=HARDLINK name=%'S dateTime=%"PRIu64" noDump=%y",
-                            name,
-                            fileInfo.timeModified,
-                            ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                           );
-        break;
-      case FILE_TYPE_SPECIAL:
-        switch (fileInfo.specialType)
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
+    {
+      // remote file info
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
         {
-          case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
+
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "FILE_INFO name=%'S",
+                                           name
+                                          );
+        }
+      }
+    }
+    else
+    {
+      // local file info
+
+      noBackupFileName = String_new();
+
+      // read file info
+      error = File_getInfo(&fileInfo,name);
+
+      if (error == ERROR_NONE)
+      {
+        switch (fileInfo.type)
+        {
+          case FILE_TYPE_FILE:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
-                                name,
-                                fileInfo.timeModified,
-                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                               );
-            break;
-          case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" noDump=%y",
+                                "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
                                 name,
                                 fileInfo.size,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                );
             break;
-          case FILE_SPECIAL_TYPE_FIFO:
+          case FILE_TYPE_DIRECTORY:
+            // check if .nobackup exists
+            noBackupExists = FALSE;
+            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
+            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
+
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" noDump=%y",
+                                "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
+                                name,
+                                fileInfo.timeModified,
+                                noBackupExists,
+                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                               );
+            break;
+          case FILE_TYPE_LINK:
+            destinationFileType = File_getRealType(name);
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                "fileType=LINK destinationFileType=%s name=%'S dateTime=%"PRIu64" noDump=%y",
+                                File_fileTypeToString(destinationFileType,NULL),
                                 name,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                );
             break;
-          case FILE_SPECIAL_TYPE_SOCKET:
+          case FILE_TYPE_HARDLINK:
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
+                                "fileType=HARDLINK name=%'S dateTime=%"PRIu64" noDump=%y",
                                 name,
                                 fileInfo.timeModified,
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                );
+            break;
+          case FILE_TYPE_SPECIAL:
+            switch (fileInfo.specialType)
+            {
+              case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
+                ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
+                                    name,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
+                break;
+              case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
+                ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" noDump=%y",
+                                    name,
+                                    fileInfo.size,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
+                break;
+              case FILE_SPECIAL_TYPE_FIFO:
+                ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" noDump=%y",
+                                    name,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
+                break;
+              case FILE_SPECIAL_TYPE_SOCKET:
+                ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
+                                    name,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
+                break;
+              default:
+                ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
+                                    "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
+                                    name,
+                                    fileInfo.timeModified,
+                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                   );
+                break;
+            }
             break;
           default:
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                                "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
-                                name,
-                                fileInfo.timeModified,
-                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-                               );
+            // skipped
             break;
         }
-        break;
-      default:
-        // skipped
-        break;
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read file info fail: %s",Error_getText(error));
+      }
+
+      String_delete(noBackupFileName);
     }
   }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read file info fail: %s",Error_getText(error));
-  }
-  String_delete(noBackupFileName);
 
   // free resources
   String_delete(name);
@@ -6697,7 +6758,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
 
 /***********************************************************************\
 * Name   : serverCommand_fileList
-* Purpose: file list
+* Purpose: file list (local+remote)
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -6710,7 +6771,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
 *          Result:
 *            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
 *            fileType=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
-*            fileType=LINK name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=LINK destinationFileType=<type> name=<name> dateTime=<time stamp> noDump=yes|no
 *            fileType=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
 *            fileType=DEVICE CHARACTER name=<name> dateTime=<time stamp> noDump=yes|no
 *            fileType=DEVICE BLOCK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
@@ -6726,11 +6787,12 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   const JobNode       *jobNode;
   Errors              error;
   DirectoryListHandle directoryListHandle;
-  String              fileName;
+  String              name;
   String              noBackupFileName;
   ConnectorInfo       *connectorInfo;
   FileInfo            fileInfo;
   bool                noBackupExists;
+  FileTypes           destinationFileType;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6758,7 +6820,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
         Job_listUnlock();
         String_delete(noBackupFileName);
-        String_delete(fileName);
+        String_delete(name);
         String_delete(directory);
         return;
       }
@@ -6770,32 +6832,32 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 
     if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
-      // get connector
-      connectorInfo = Job_connectorLock(jobNode,LOCK_TIMEOUT);
-      if ((connectorInfo != NULL) && Connector_isConnected(connectorInfo))
+      // remote file list
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
-        // send results from slave
-        error = Connector_executeCommand(connectorInfo,
-                                         1,
-                                         10*MS_PER_SECOND,
-                                         CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
-                                         {
-                                           assert(resultMap != NULL);
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
 
-                                           UNUSED_VARIABLE(userData);
+                                             UNUSED_VARIABLE(userData);
 
-                                           return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
-                                         },NULL),
-                                         "FILE_LIST directory=%S",
-                                         directory
-                                        );
-
-        // free connector
-        Job_connectorUnlock(connectorInfo);
+                                             return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "FILE_LIST directory=%'S",
+                                           directory
+                                          );
+        }
       }
     }
     else
     {
+      // local file list
+
       // open directory
       error = File_openDirectoryList(&directoryListHandle,
                                      directory
@@ -6808,14 +6870,14 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
       }
 
       // read directory entries
-      fileName         = String_new();
+      name             = String_new();
       noBackupFileName = String_new();
       while (!File_endOfDirectoryList(&directoryListHandle))
       {
-        error = File_readDirectoryList(&directoryListHandle,fileName);
+        error = File_readDirectoryList(&directoryListHandle,name);
         if (error == ERROR_NONE)
         {
-          error = File_getInfo(&fileInfo,fileName);
+          error = File_getInfo(&fileInfo,name);
           if (error == ERROR_NONE)
           {
             switch (fileInfo.type)
@@ -6823,7 +6885,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
               case FILE_TYPE_FILE:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                     "fileType=FILE name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
-                                    fileName,
+                                    name,
                                     fileInfo.size,
                                     fileInfo.timeModified,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -6832,21 +6894,23 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
               case FILE_TYPE_DIRECTORY:
                 // check if .nobackup exists
                 noBackupExists = FALSE;
-                if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,fileName),".nobackup"));
-                if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,fileName),".NOBACKUP"));
+                if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
+                if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
 
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                     "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
-                                    fileName,
+                                    name,
                                     fileInfo.timeModified,
                                     noBackupExists,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                    );
                 break;
               case FILE_TYPE_LINK:
+                destinationFileType = File_getRealType(name);
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=LINK name=%'S dateTime=%"PRIu64" noDump=%y",
-                                    fileName,
+                                    "fileType=LINK destinationFileType=%s name=%'S dateTime=%"PRIu64" noDump=%y",
+                                    File_fileTypeToString(destinationFileType,NULL),
+                                    name,
                                     fileInfo.timeModified,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                    );
@@ -6854,7 +6918,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
               case FILE_TYPE_HARDLINK:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                     "fileType=HARDLINK name=%'S dateTime=%"PRIu64" noDump=%y",
-                                    fileName,
+                                    name,
                                     fileInfo.timeModified,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                    );
@@ -6865,7 +6929,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                   case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                         "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
-                                        fileName,
+                                        name,
                                         fileInfo.timeModified,
                                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                        );
@@ -6873,7 +6937,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                   case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                         "fileType=SPECIAL name=%'S size=%"PRIu64" specialType=DEVICE_BLOCK dateTime=%"PRIu64" noDump=%y",
-                                        fileName,
+                                        name,
                                         fileInfo.size,
                                         fileInfo.timeModified,
                                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
@@ -6882,7 +6946,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                   case FILE_SPECIAL_TYPE_FIFO:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                         "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" noDump=%y",
-                                        fileName,
+                                        name,
                                         fileInfo.timeModified,
                                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                        );
@@ -6890,7 +6954,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                   case FILE_SPECIAL_TYPE_SOCKET:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                         "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
-                                        fileName,
+                                        name,
                                         fileInfo.timeModified,
                                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                        );
@@ -6898,7 +6962,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                   default:
                     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                         "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
-                                        fileName,
+                                        name,
                                         fileInfo.timeModified,
                                         ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                        );
@@ -6927,7 +6991,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
         }
       }
       String_delete(noBackupFileName);
-      String_delete(fileName);
+      String_delete(name);
 
       // close directory
       File_closeDirectoryList(&directoryListHandle);
