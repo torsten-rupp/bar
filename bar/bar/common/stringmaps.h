@@ -58,6 +58,8 @@ typedef struct
 typedef struct
 {
   String text;
+//TODO: NYI
+  bool   quotedFlag;
   union
   {
     int    i;
@@ -115,7 +117,7 @@ typedef bool(*StringMapParseEnumFunction)(const char *name, uint *value);
   #define StringMap_duplicate(...)      __StringMap_duplicate     (__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringMap_delete(...)         __StringMap_delete        (__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringMap_putText(...)        __StringMap_putText       (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define StringMap_putTextCString(...) __StringMap_putTextCString(__FILE__, ## __LINE__,__VA_ARGS__)
+  #define StringMap_putTextCString(...) __StringMap_putTextCString(__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringMap_put(...)            __StringMap_put           (__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringMap_putInt(...)         __StringMap_putInt        (__FILE__,__LINE__, ## __VA_ARGS__)
   #define StringMap_putLong(...)        __StringMap_putLong       (__FILE__,__LINE__, ## __VA_ARGS__)

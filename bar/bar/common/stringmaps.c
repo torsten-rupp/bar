@@ -163,10 +163,11 @@ LOCAL StringMapEntry *addStringMapEntry(const char *__fileName__, ulong __lineNb
     // init new entries
     for (i = 0; i < newStringMapSize; i++)
     {
-      newEntries[i].name         = NULL;
-      newEntries[i].type         = STRINGMAP_TYPE_NONE;
-      newEntries[i].value.text   = NULL;
-      newEntries[i].value.data.p = NULL;
+      newEntries[i].name             = NULL;
+      newEntries[i].type             = STRINGMAP_TYPE_NONE;
+      newEntries[i].value.text       = NULL;
+      newEntries[i].value.quotedFlag = FALSE;
+      newEntries[i].value.data.p     = NULL;
       #ifndef NDEBUG
         newEntries[i].fileName = NULL;
         newEntries[i].lineNb   = 0L;
@@ -229,7 +230,8 @@ LOCAL void removeStringMapEntry(StringMapEntry *stringMapEntry)
   if (stringMapEntry->value.text != NULL)
   {
     String_delete(stringMapEntry->value.text);
-    stringMapEntry->value.text = NULL;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
   }
   switch (stringMapEntry->type)
   {
@@ -402,9 +404,10 @@ StringMap StringMap_copy(StringMap stringMap, const StringMap fromStringMap)
   {
     if (fromStringMap->entries[i].name != NULL)
     {
-      stringMap->entries[i].name       = stringDuplicate(fromStringMap->entries[i].name);
-      stringMap->entries[i].type       = fromStringMap->entries[i].type;
-      stringMap->entries[i].value.text = String_duplicate(fromStringMap->entries[i].value.text);
+      stringMap->entries[i].name             = stringDuplicate(fromStringMap->entries[i].name);
+      stringMap->entries[i].type             = fromStringMap->entries[i].type;
+      stringMap->entries[i].value.text       = String_duplicate(fromStringMap->entries[i].value.text);
+      stringMap->entries[i].value.quotedFlag = fromStringMap->entries[i].value.quotedFlag;
       switch (fromStringMap->entries[i].type)
       {
         case STRINGMAP_TYPE_NONE:                                                                                                             break;
@@ -468,9 +471,10 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
   // move entries
   for (i = 0; i < fromStringMap->size; i++)
   {
-    stringMap->entries[i].name       = fromStringMap->entries[i].name;
-    stringMap->entries[i].type       = fromStringMap->entries[i].type;
-    stringMap->entries[i].value.text = fromStringMap->entries[i].value.text;
+    stringMap->entries[i].name             = fromStringMap->entries[i].name;
+    stringMap->entries[i].type             = fromStringMap->entries[i].type;
+    stringMap->entries[i].value.text       = fromStringMap->entries[i].value.text;
+    stringMap->entries[i].value.quotedFlag = fromStringMap->entries[i].value.quotedFlag;
     switch (fromStringMap->entries[i].type)
     {
       case STRINGMAP_TYPE_NONE:                                                                                           break;
@@ -646,8 +650,9 @@ void __StringMap_putText(const char *__fileName__, ulong __lineNb__, StringMap s
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type       = STRINGMAP_TYPE_NONE;
-    stringMapEntry->value.text = String_duplicate(text);
+    stringMapEntry->type             = STRINGMAP_TYPE_NONE;
+    stringMapEntry->value.text       = String_duplicate(text);
+    stringMapEntry->value.quotedFlag = FALSE;
   }
 }
 
@@ -670,8 +675,9 @@ void __StringMap_putTextCString(const char *__fileName__, ulong __lineNb__, Stri
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type       = STRINGMAP_TYPE_NONE;
-    stringMapEntry->value.text = String_newCString(text);
+    stringMapEntry->type             = STRINGMAP_TYPE_NONE;
+    stringMapEntry->value.text       = String_newCString(text);
+    stringMapEntry->value.quotedFlag = FALSE;
   }
 }
 
@@ -693,9 +699,10 @@ void __StringMap_put(const char *__fileName__, ulong __lineNb__, StringMap strin
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type         = STRINGMAP_TYPE_STRING;
-    stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.p = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_STRING;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.p     = value;
   }
 }
 
@@ -717,9 +724,10 @@ void __StringMap_putInt(const char *__fileName__, ulong __lineNb__, StringMap st
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type         = STRINGMAP_TYPE_INT;
-    stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.i = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_INT;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.i     = value;
   }
 }
 
@@ -741,9 +749,10 @@ void __StringMap_putLong(const char *__fileName__, ulong __lineNb__, StringMap s
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type         = STRINGMAP_TYPE_INT64;
-    stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.l = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_INT64;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.l     = value;
   }
 }
 
@@ -765,9 +774,10 @@ void __StringMap_putInt64(const char *__fileName__, ulong __lineNb__, StringMap 
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type         = STRINGMAP_TYPE_INT64;
-    stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.l = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_INT64;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.l     = value;
   }
 }
 
@@ -789,9 +799,10 @@ void __StringMap_putUInt(const char *__fileName__, ulong __lineNb__, StringMap s
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type          = STRINGMAP_TYPE_UINT;
-    stringMapEntry->value.text    = NULL;
-    stringMapEntry->value.data.ui = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_UINT;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.ui    = value;
   }
 }
 
@@ -813,9 +824,10 @@ void __StringMap_putULong(const char *__fileName__, ulong __lineNb__, StringMap 
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type          = STRINGMAP_TYPE_UINT64;
-    stringMapEntry->value.text    = NULL;
-    stringMapEntry->value.data.ul = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_UINT64;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.ul    = value;
   }
 }
 
@@ -837,9 +849,10 @@ void __StringMap_putUInt64(const char *__fileName__, ulong __lineNb__, StringMap
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type          = STRINGMAP_TYPE_UINT64;
-    stringMapEntry->value.text    = NULL;
-    stringMapEntry->value.data.ul = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_UINT64;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.ul    = value;
   }
 }
 
@@ -861,9 +874,10 @@ void __StringMap_putDouble(const char *__fileName__, ulong __lineNb__, StringMap
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type         = STRINGMAP_TYPE_DOUBLE;
-    stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.d = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_DOUBLE;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.d     = value;
   }
 }
 
@@ -885,9 +899,10 @@ void __StringMap_putBool(const char *__fileName__, ulong __lineNb__, StringMap s
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type         = STRINGMAP_TYPE_BOOL;
-    stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.b = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_BOOL;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.b     = value;
   }
 }
 
@@ -909,9 +924,10 @@ void __StringMap_putFlag(const char *__fileName__, ulong __lineNb__, StringMap s
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type            = STRINGMAP_TYPE_FLAG;
-    stringMapEntry->value.text      = NULL;
-    stringMapEntry->value.data.flag = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_FLAG;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.flag  = value;
   }
 }
 
@@ -933,9 +949,10 @@ void __StringMap_putChar(const char *__fileName__, ulong __lineNb__, StringMap s
   #endif /* NDEBUG */
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type         = STRINGMAP_TYPE_CHAR;
-    stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.c = value;
+    stringMapEntry->type             = STRINGMAP_TYPE_CHAR;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.c     = value;
   }
 }
 
@@ -958,9 +975,10 @@ void __StringMap_putCString(const char *__fileName__, ulong __lineNb__, StringMa
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type         = STRINGMAP_TYPE_CSTRING;
-    stringMapEntry->value.text   = NULL;
-    stringMapEntry->value.data.s = stringDuplicate(value);
+    stringMapEntry->type             = STRINGMAP_TYPE_CSTRING;
+    stringMapEntry->value.text       = NULL;
+    stringMapEntry->value.quotedFlag = FALSE;
+    stringMapEntry->value.data.s     = stringDuplicate(value);
   }
 }
 
@@ -985,6 +1003,7 @@ void __StringMap_putString(const char *__fileName__, ulong __lineNb__, StringMap
   {
     stringMapEntry->type              = STRINGMAP_TYPE_STRING;
     stringMapEntry->value.text        = NULL;
+    stringMapEntry->value.quotedFlag  = FALSE;
     stringMapEntry->value.data.string = String_duplicate(value);
   }
 }
@@ -1008,8 +1027,9 @@ void __StringMap_putData(const char *__fileName__, ulong __lineNb__, StringMap s
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type       = STRINGMAP_TYPE_DATA;
-    stringMapEntry->value.text = stringMapFormatFunction(data,stringMapFormatUserData);
+    stringMapEntry->type             = STRINGMAP_TYPE_DATA;
+    stringMapEntry->value.text       = stringMapFormatFunction(data,stringMapFormatUserData);
+    stringMapEntry->value.quotedFlag = FALSE;
   }
 }
 
@@ -1033,8 +1053,9 @@ void __StringMap_putValue(const char *__fileName__, ulong __lineNb__,StringMap s
 
   if (stringMapEntry != NULL)
   {
-    stringMapEntry->type = type;
-    stringMapEntry->value.text = String_duplicate(value->text);
+    stringMapEntry->type             = type;
+    stringMapEntry->value.text       = String_duplicate(value->text);
+    stringMapEntry->value.quotedFlag = value->quotedFlag;
     switch (type)
     {
       case STRINGMAP_TYPE_NONE:                                                                              break;
