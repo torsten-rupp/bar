@@ -4751,9 +4751,7 @@ public class TabJobs
               }
             }
           });
-Dprintf.dprintf("------------");
           Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
-Dprintf.dprintf("------------2");
         }
 
         // xdelta source
@@ -10571,9 +10569,7 @@ TODO: implement delete entity
 
         String[] compressAlgorithms = StringUtils.splitArray(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"),"+");
         deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
-Dprintf.dprintf("compressAlgorithms[0]=%s",compressAlgorithms[0]);
         byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
-Dprintf.dprintf("compressAlgorithms[1]=%s",compressAlgorithms[1]);
         cryptAlgorithm.set(BARServer.getStringJobOption(jobData.uuid,"crypt-algorithm"));
         cryptType.set(BARServer.getStringJobOption(jobData.uuid,"crypt-type"));
         BARServer.getJobOption(jobData.uuid,cryptPublicKeyFileName);
@@ -10583,10 +10579,10 @@ Dprintf.dprintf("compressAlgorithms[1]=%s",compressAlgorithms[1]);
         archiveFileMode.set(BARServer.getStringJobOption(jobData.uuid,"archive-file-mode"));
         BARServer.getJobOption(jobData.uuid,sshPublicKeyFileName);
         BARServer.getJobOption(jobData.uuid,sshPrivateKeyFileName);
-  /* NYI ???
+/* NYI ???
         maxBandWidth.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-band-width")));
         maxBandWidthFlag.set(maxBandWidth.getLongOption() > 0);
-  */
+*/
         volumeSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"volume-size"),0));
         BARServer.getJobOption(jobData.uuid,ecc);
         BARServer.getJobOption(jobData.uuid,blank);
@@ -10597,7 +10593,7 @@ Dprintf.dprintf("compressAlgorithms[1]=%s",compressAlgorithms[1]);
         BARServer.getJobOption(jobData.uuid,overwriteFiles);
         BARServer.getJobOption(jobData.uuid,preCommand);
         BARServer.getJobOption(jobData.uuid,postCommand);
-  //      maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
+//        maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
         maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
         BARServer.getJobOption(jobData.uuid,maxStorageSize);
         BARServer.getJobOption(jobData.uuid,comment);
