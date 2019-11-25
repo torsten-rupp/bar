@@ -436,6 +436,7 @@ class WidgetVariable<T>
       changedFlag = (!((String)this.value).equals(value));
 
       this.value = (T)new String(value);
+Dprintf.dprintf("cccc value=%s",value);
       Widgets.modified(this);
     }
     else if (type == Enum.class)
@@ -516,6 +517,7 @@ class WidgetModifyListener
   WidgetModifyListener(Widget widget, WidgetVariable variable)
   {
     this(widget,new WidgetVariable[]{variable});
+Dprintf.dprintf("add %s: %s",widget,variable);
   }
 
   /** create widget listener
@@ -880,6 +882,7 @@ class WidgetModifyListener
    */
   void modified(Control control, WidgetVariable variable)
   {
+Dprintf.dprintf("xxxxxxxxxxx5");
     modified((Widget)control,variable);
   }
 
@@ -946,6 +949,7 @@ class WidgetModifyListener
   {
     if (!control.isDisposed())
     {
+Dprintf.dprintf("xxxxxxxxxxx4");
       for (WidgetVariable variable : variables)
       {
         modified(control,variable);
@@ -968,6 +972,7 @@ class WidgetModifyListener
    */
   public void modified(Combo combo, WidgetVariable[] variables)
   {
+Dprintf.dprintf("xxxxxxxxxxx3");
     modified((Control)combo,variables);
   }
 
@@ -1060,6 +1065,7 @@ class WidgetModifyListener
    */
   public void modified(Combo combo)
   {
+Dprintf.dprintf("xxxxxxxxxxx2");
     modified(combo,variables);
   }
 
@@ -1091,7 +1097,7 @@ class WidgetModifyListener
       {
         Display display = widget.getDisplay();
 
-        // call widget set method
+        // call widget modified method
         if (!display.isDisposed())
         {
           display.syncExec(new Runnable()
@@ -1111,6 +1117,7 @@ class WidgetModifyListener
                 }
                 else if (widget instanceof Combo)
                 {
+Dprintf.dprintf("xxxxxxxxxxx");
                   modified((Combo)widget);
                 }
                 else if (widget instanceof Text)
@@ -5147,7 +5154,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           assert((dataArray == null) || dataArray.size() == combo.getItemCount());
 
           combo.add(text,index);
-          dataArray.add(index,data);          
+          dataArray.add(index,data);
         }
       });
     }

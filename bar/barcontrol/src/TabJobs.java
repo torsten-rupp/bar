@@ -4751,7 +4751,9 @@ public class TabJobs
               }
             }
           });
+Dprintf.dprintf("------------");
           Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
+Dprintf.dprintf("------------2");
         }
 
         // xdelta source
@@ -10569,7 +10571,9 @@ TODO: implement delete entity
 
         String[] compressAlgorithms = StringUtils.splitArray(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"),"+");
         deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
+Dprintf.dprintf("compressAlgorithms[0]=%s",compressAlgorithms[0]);
         byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
+Dprintf.dprintf("compressAlgorithms[1]=%s",compressAlgorithms[1]);
         cryptAlgorithm.set(BARServer.getStringJobOption(jobData.uuid,"crypt-algorithm"));
         cryptType.set(BARServer.getStringJobOption(jobData.uuid,"crypt-type"));
         BARServer.getJobOption(jobData.uuid,cryptPublicKeyFileName);

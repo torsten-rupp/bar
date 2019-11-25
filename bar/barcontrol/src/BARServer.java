@@ -843,7 +843,7 @@ class ReadThread extends Thread
                         command.resultList.add(data);
                         if (command.resultList.size() > RESULT_WARNING)
                         {
-                          BARServer.logReceived(command.debugLevel,"%d %s",command.resultList.size(),line);
+                          BARServer.logReceived(command.debugLevel,"Stored huge number of results: %d %s",command.resultList.size(),line);
                         }
                         command.notifyAll();
                       }
@@ -872,6 +872,10 @@ class ReadThread extends Thread
                       catch (Throwable throwable)
                       {
                         // ignored
+                        if (Settings.debugLevel > 0)
+                        {
+                          BARControl.printStackTrace(throwable);
+                        }
                       }
                     }
 
@@ -2863,7 +2867,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param valueMap value map
    * @param busyIndicator busy indicator or null
    */
-  public static void executeCommand(String         commandString,
+  public static void executeCommand(final         String         commandString,
                                     int            debugLevel,
                                     final ValueMap valueMap,
                                     BusyIndicator  busyIndicator
@@ -3783,6 +3787,7 @@ throw new Error("NYI");
       }
       catch (InvalidKeyException exception)
       {
+        // ignored
         if (Settings.debugLevel > 0)
         {
           BARControl.printStackTrace(exception);
@@ -3966,8 +3971,8 @@ throw new Error("NYI");
         switch (fileType)
         {
           case FILE:
-            size = valueMap.getLong("size");
           case HARDLINK:
+            size = valueMap.getLong("size");
             break;
           case DIRECTORY:
           case LINK:
@@ -4064,8 +4069,6 @@ throw new Error("NYI");
         fileList.clear();
         try
         {
-Dprintf.dprintf("path=%s",path);
-Dprintf.dprintf("path.getAbsolutePath()=%s",path.getAbsolutePath());
           BARServer.executeCommand(StringParser.format("FILE_LIST jobUUID=%s directory=%'S",
                                                        (jobUUID != null) ? jobUUID : "",
                                                        path.getAbsolutePath()
@@ -4183,12 +4186,12 @@ Dprintf.dprintf("path.getAbsolutePath()=%s",path.getAbsolutePath());
 
   public static RemoteListDirectory remoteListDirectory(String jobUUID)
   {
-Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxx");
     return new RemoteListDirectory(jobUUID);
   }
 
   /** list remote directory
    */
+//TODO: obsolete, replace by RemoteListDirectory()
   public static ListDirectory<RemoteFile> remoteListDirectory = new ListDirectory<RemoteFile>()
   {
     /** get new file instance
@@ -4216,8 +4219,8 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxxxxxxxxxx");
         switch (fileType)
         {
           case FILE:
-            size = valueMap.getLong("size");
           case HARDLINK:
+            size = valueMap.getLong("size");
             break;
           case DIRECTORY:
           case LINK:
