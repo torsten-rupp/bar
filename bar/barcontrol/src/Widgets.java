@@ -107,6 +107,8 @@ import org.eclipse.swt.events.PaintEvent;
  */
 class WidgetVariable<T>
 {
+//debug only
+//public static long xxx = 0;
   private final String   name;
   private final Class    type;
   private final String[] values;     // possible values or null
@@ -436,7 +438,6 @@ class WidgetVariable<T>
       changedFlag = (!((String)this.value).equals(value));
 
       this.value = (T)new String(value);
-Dprintf.dprintf("cccc value=%s",value);
       Widgets.modified(this);
     }
     else if (type == Enum.class)
@@ -517,7 +518,6 @@ class WidgetModifyListener
   WidgetModifyListener(Widget widget, WidgetVariable variable)
   {
     this(widget,new WidgetVariable[]{variable});
-Dprintf.dprintf("add %s: %s",widget,variable);
   }
 
   /** create widget listener
@@ -767,12 +767,30 @@ Dprintf.dprintf("add %s: %s",widget,variable);
           }
           if ((text != null) && !text.equals(cachedText))
           {
-            // Fix layout: save current bounds and restore after pack()
-            Rectangle bounds = widgetCombo.getBounds();
-            widgetCombo.setText(text);
-            widgetCombo.pack();
-            widgetCombo.setBounds(bounds);
-
+            ArrayList<Object> dataArray = (ArrayList<Object>)widgetCombo.getData();
+            if (dataArray != null)
+            {
+              for (int i = 0; i < dataArray.size(); i++)
+              {
+                if (dataArray.get(i).equals(text))
+                {
+                  // Fix layout: save current bounds and restore after pack()
+                  Rectangle bounds = widgetCombo.getBounds();
+                  widgetCombo.select(i);
+                  widgetCombo.pack();
+                  widgetCombo.setBounds(bounds);
+                  break;
+                }
+              }
+            }
+            else
+            {
+              // Fix layout: save current bounds and restore after pack()
+              Rectangle bounds = widgetCombo.getBounds();
+              widgetCombo.setText(text);
+              widgetCombo.pack();
+              widgetCombo.setBounds(bounds);
+            }
             cachedText = text;
           }
         }
@@ -882,7 +900,6 @@ Dprintf.dprintf("add %s: %s",widget,variable);
    */
   void modified(Control control, WidgetVariable variable)
   {
-Dprintf.dprintf("xxxxxxxxxxx5");
     modified((Widget)control,variable);
   }
 
@@ -949,7 +966,6 @@ Dprintf.dprintf("xxxxxxxxxxx5");
   {
     if (!control.isDisposed())
     {
-Dprintf.dprintf("xxxxxxxxxxx4");
       for (WidgetVariable variable : variables)
       {
         modified(control,variable);
@@ -972,7 +988,6 @@ Dprintf.dprintf("xxxxxxxxxxx4");
    */
   public void modified(Combo combo, WidgetVariable[] variables)
   {
-Dprintf.dprintf("xxxxxxxxxxx3");
     modified((Control)combo,variables);
   }
 
@@ -1065,7 +1080,6 @@ Dprintf.dprintf("xxxxxxxxxxx3");
    */
   public void modified(Combo combo)
   {
-Dprintf.dprintf("xxxxxxxxxxx2");
     modified(combo,variables);
   }
 
@@ -1117,7 +1131,6 @@ Dprintf.dprintf("xxxxxxxxxxx2");
                 }
                 else if (widget instanceof Combo)
                 {
-Dprintf.dprintf("xxxxxxxxxxx");
                   modified((Combo)widget);
                 }
                 else if (widget instanceof Text)
