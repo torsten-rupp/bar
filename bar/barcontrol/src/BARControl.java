@@ -3645,6 +3645,7 @@ if (false) {
                          (loginData.serverPort != 0) ? loginData.serverPort : loginData.serverTLSPort,
                          loginData.password
                         );
+      Settings.save();
 
       return true;
     }
