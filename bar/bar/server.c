@@ -6434,7 +6434,6 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
   StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
   const JobNode  *jobNode;
   Errors         error;
-  ConnectorInfo  *connectorInfo;
   RootListHandle rootListHandle;
   String         name;
   DeviceInfo     deviceInfo;
@@ -6458,7 +6457,6 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
         Job_listUnlock();
-        String_delete(name);
         return;
       }
     }
@@ -6573,7 +6571,6 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
   const JobNode *jobNode;
   String        noBackupFileName;
   Errors        error;
-  ConnectorInfo *connectorInfo;
   FileInfo      fileInfo;
   bool          noBackupExists;
   FileTypes     destinationFileType;
@@ -6786,7 +6783,6 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   DirectoryListHandle directoryListHandle;
   String              name;
   String              noBackupFileName;
-  ConnectorInfo       *connectorInfo;
   FileInfo            fileInfo;
   bool                noBackupExists;
   FileTypes           destinationFileType;
@@ -6816,8 +6812,6 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
         Job_listUnlock();
-        String_delete(noBackupFileName);
-        String_delete(name);
         String_delete(directory);
         return;
       }
