@@ -6444,7 +6444,6 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
   assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
-  UNUSED_VARIABLE(argumentMap);
 
   // get job UUID
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
@@ -6580,11 +6579,9 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
   FileTypes     destinationFileType;
 
   assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
 
   UNUSED_VARIABLE(indexHandle);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // get job UUID, name
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   name = String_new();
@@ -6630,7 +6627,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
                                              UNUSED_VARIABLE(userData);
 
-                                             return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
                                            },NULL),
                                            "FILE_INFO name=%'S",
                                            name
