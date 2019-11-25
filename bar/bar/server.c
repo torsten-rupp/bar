@@ -349,6 +349,7 @@ LOCAL struct
 LOCAL uint64                pauseEndDateTime;            // pause end date/time [s]
 LOCAL struct
 {
+  Semaphore    lock;
   PairingModes pairingMode;
   TimeoutInfo  pairingTimeoutInfo;                       // master pairing timeout info
   String       name;                                     // new master name
@@ -793,43 +794,6 @@ LOCAL StorageRequestVolumeResults storageRequestVolume(StorageRequestVolumeTypes
 }
 
 /***********************************************************************\
-* Name   : setPairedMaster
-* Purpose: set paired master
-* Input  : -
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors setPairedMaster(void)
-{
-  Errors error;
-
-  assert(newMaster.pairingMode == PAIRING_MODE_NONE);
-
-  // set paired master
-  String_set(globalOptions.masterInfo.name,newMaster.name);
-  if (!setHash(&globalOptions.masterInfo.uuidHash,&newMaster.uuidHash))
-  {
-    return ERROR_INSUFFICIENT_MEMORY;
-  }
-  logMessage(NULL,  // logHandle,
-            LOG_TYPE_ALWAYS,
-            "Paired master '%s'",
-            String_cString(globalOptions.masterInfo.name)
-           );
-
-  // update config file
-  error = updateConfig();
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
 * Name   : startPairing
 * Purpose: start pairing master (if not already started)
 * Input  : timeout - timeout [s]
@@ -842,29 +806,23 @@ LOCAL void startPairingMaster(uint timeout, PairingModes pairingMode)
 {
   ClientNode *clientNode,*disconnectClientNode;
 
-  if (newMaster.pairingMode == PAIRING_MODE_NONE)
-  {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               (pairingMode == PAIRING_MODE_AUTO)
-                 ? "Start auto pairing master"
-                 : "Start pairing master"
-              );
-  }
-  else
-  {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               (pairingMode == PAIRING_MODE_AUTO)
-                 ? "Restart auto pairing master"
-                 : "Restart pairing master"
-              );
-  }
+  SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {  
+    if (newMaster.pairingMode == PAIRING_MODE_NONE)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 (pairingMode == PAIRING_MODE_AUTO)
+                   ? "Start auto pairing master"
+                   : "Start pairing master"
+                );
+    }
 
-  // start pairing new master
-  newMaster.pairingMode = pairingMode;
-  String_clear(newMaster.name);
-  Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
+    // start pairing new master
+    newMaster.pairingMode = pairingMode;
+    String_clear(newMaster.name);
+    Misc_restartTimeout(&newMaster.pairingTimeoutInfo,timeout*MS_PER_S);
+  }
 
   // disconnect all currently connected masters for re-pairing
   SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -903,44 +861,49 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
   assert(name != NULL);
   assert(uuidHash != NULL);
 
-  // set/clear paired master
-  if (!String_isEmpty(name))
-  {
-    String_set(globalOptions.masterInfo.name,name);
-    if (!setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
+  SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {  
+    // set/clear paired master
+    if (!String_isEmpty(name))
     {
-      return ERROR_INSUFFICIENT_MEMORY;
+      String_set(globalOptions.masterInfo.name,name);
+      if (!setHash(&globalOptions.masterInfo.uuidHash,uuidHash))
+      {
+        Semaphore_unlock(&newMaster.lock);
+        return ERROR_INSUFFICIENT_MEMORY;
+      }
+      logMessage(NULL,  // logHandle,
+                LOG_TYPE_ALWAYS,
+                "Paired master '%s'",
+                String_cString(globalOptions.masterInfo.name)
+               );
     }
-    logMessage(NULL,  // logHandle,
-              LOG_TYPE_ALWAYS,
-              "Paired master '%s'",
-              String_cString(globalOptions.masterInfo.name)
-             );
-  }
-  else
-  {
-    String_clear(globalOptions.masterInfo.name);
-    clearHash(&globalOptions.masterInfo.uuidHash);
+    else
+    {
+      String_clear(globalOptions.masterInfo.name);
+      clearHash(&globalOptions.masterInfo.uuidHash);
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Cleared paired master"
+                );
+    }
+
+    // stop pairing
+    newMaster.pairingMode = PAIRING_MODE_NONE;
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Cleared paired master"
+               (newMaster.pairingMode == PAIRING_MODE_AUTO)
+                 ? "Stopped auto pairing master"
+                 : "Stopped pairing master"
               );
-  }
 
-  // stop pairing
-  newMaster.pairingMode = PAIRING_MODE_NONE;
-  logMessage(NULL,  // logHandle,
-             LOG_TYPE_ALWAYS,
-             (newMaster.pairingMode == PAIRING_MODE_AUTO)
-               ? "Stopped auto pairing master"
-               : "Stopped pairing master"
-            );
-
-  // update config file
-  error = updateConfig();
-  if (error != ERROR_NONE)
-  {
-    return error;
+    // update config file
+    error = updateConfig();
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&newMaster.lock);
+      return error;
+    }
   }
 
   return ERROR_NONE;
@@ -957,16 +920,19 @@ LOCAL Errors stopPairingMaster(ConstString name, const CryptHash *uuidHash)
 
 LOCAL void abortPairingMaster(void)
 {
-  if (newMaster.pairingMode != PAIRING_MODE_NONE)
-  {
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               (newMaster.pairingMode == PAIRING_MODE_AUTO)
-                 ? "Aborted auto pairing master"
-                 : "Aborted pairing master"
-              );
+  SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {  
+    if (newMaster.pairingMode != PAIRING_MODE_NONE)
+    {
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 (newMaster.pairingMode == PAIRING_MODE_AUTO)
+                   ? "Aborted auto pairing master"
+                   : "Aborted pairing master"
+                );
 
-    newMaster.pairingMode = PAIRING_MODE_NONE;
+      newMaster.pairingMode = PAIRING_MODE_NONE;
+    }
   }
 }
 
@@ -981,21 +947,31 @@ LOCAL void abortPairingMaster(void)
 
 LOCAL Errors clearPairedMaster(void)
 {
+  bool       clearedFlag;
   ClientNode *clientNode,*disconnectClientNode;
   Errors     error;
 
-  assert(newMaster.pairingMode == PAIRING_MODE_NONE);
+  // clear paired master
+  clearedFlag = FALSE;
+  SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {  
+    assert(newMaster.pairingMode == PAIRING_MODE_NONE);
 
-  if (!String_isEmpty(globalOptions.masterInfo.name))
+    if (!String_isEmpty(globalOptions.masterInfo.name))
+    {
+      String_clear(globalOptions.masterInfo.name);
+      clearHash(&globalOptions.masterInfo.uuidHash);
+      logMessage(NULL,  // logHandle,
+                 LOG_TYPE_ALWAYS,
+                 "Cleared paired master"
+                );
+
+      clearedFlag = TRUE;
+    }
+  }
+
+  if (clearedFlag)
   {
-    // clear paired master
-    String_clear(globalOptions.masterInfo.name);
-    clearHash(&globalOptions.masterInfo.uuidHash);
-    logMessage(NULL,  // logHandle,
-               LOG_TYPE_ALWAYS,
-               "Cleared paired master"
-              );
-
     // disconnect all currently connected masters
     SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
@@ -1860,7 +1836,6 @@ NULL,//                                                        scheduleTitle,
                                   textMacros.data,
                                   textMacros.count
                                  );
-//exit(1);
           if (error == ERROR_NONE)
           {
             logMessage(&logHandle,
@@ -2425,7 +2400,7 @@ Connector_isConnected(&slaveNode->connectorInfo)
           {
             if (Misc_getCurrentDateTime() < pairingStopDateTime)
             {
-              startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_MANUAL);
+              startPairingMaster(DEFAULT_PAIRING_MASTER_TIMEOUT,PAIRING_MODE_AUTO);
             }
             else
             {
@@ -2444,8 +2419,6 @@ Connector_isConnected(&slaveNode->connectorInfo)
             abortPairingMaster();
           }
         }
-
-//TODO: setPairedMaster
 
         if (   (newMaster.pairingMode != PAIRING_MODE_NONE)
             || String_isEmpty(globalOptions.masterInfo.name)
@@ -4847,50 +4820,63 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       assert(buffer != NULL);
       assert(bufferLength > 0);
 
-      if (newMaster.pairingMode == PAIRING_MODE_NONE)
+      switch (newMaster.pairingMode)
       {
-        // not pairing -> verify master UUID
+        case PAIRING_MODE_NONE:
+          // not pairing -> verify master UUID
 //fprintf(stderr,"%s, %d: decrypted uuid\n",__FILE__,__LINE__); debugDumpMemory(buffer,bufferLength,0);
+          // calculate hash from UUID
+          (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
+          Crypt_updateHash(&uuidHash,buffer,bufferLength);
 
-        // calculate hash from UUID
-        (void)Crypt_initHash(&uuidHash,PASSWORD_HASH_ALGORITHM);
-        Crypt_updateHash(&uuidHash,buffer,bufferLength);
-
-        // verify master UUID (UUID hash)
+          // verify master UUID (UUID hash)
 //fprintf(stderr,"%s, %d: globalOptions.masterInfo.uuidHash length=%d: \n",__FILE__,__LINE__,globalOptions.masterInfo.uuidHash.length);
 //if (globalOptions.masterInfo.uuidHash.data != NULL) debugDumpMemory(globalOptions.masterInfo.uuidHash.data,globalOptions.masterInfo.uuidHash.length,0);
-//TODO: lock required?
-        if (!equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
-        {
-          error = ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
-                    ? ERROR_NOT_PAIRED
-                    : ERROR_INVALID_PASSWORD;
-          logMessage(NULL,  // logHandle,
-                     LOG_TYPE_ALWAYS,
-                     "Authorization client %s fail (error: %s)",
-                     getClientInfo(clientInfo,s,sizeof(s)),
-                     Error_getText(error)
-                    );
-        }
+          if (!equalsHash(&globalOptions.masterInfo.uuidHash,&uuidHash))
+          {
+            error = ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
+                      ? ERROR_NOT_PAIRED
+                      : ERROR_INVALID_PASSWORD;
+            logMessage(NULL,  // logHandle,
+                       LOG_TYPE_ALWAYS,
+                       "Authorization client %s fail (error: %s)",
+                       getClientInfo(clientInfo,s,sizeof(s)),
+                       Error_getText(error)
+                      );
+          }
 
-        // free resources
-        Crypt_doneHash(&uuidHash);
-      }
-      else
-      {
-        // pairing -> store new master name+UUID hash
-//TODO: lock required?
-        if (String_isEmpty(newMaster.name))
-        {
-          // store name,
-          String_set(newMaster.name,name);
+          // free resources
+          Crypt_doneHash(&uuidHash);
+          break;
+        case PAIRING_MODE_AUTO:
+          // auto pairing -> done pairing
+          SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            // store name
+            String_set(newMaster.name,name);
 
-          // calculate hash from UUID
-          (void)Crypt_resetHash(&newMaster.uuidHash);
-          Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
-        }
+            // calculate hash from UUID
+            (void)Crypt_resetHash(&newMaster.uuidHash);
+            Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
+          }
 
-        error = ERROR_NOT_PAIRED;
+          error = stopPairingMaster(newMaster.name,&newMaster.uuidHash);
+          break;
+        case PAIRING_MODE_MANUAL:
+          // manual pairing -> just store new master name+UUID hash
+          SEMAPHORE_LOCKED_DO(&newMaster.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+          {
+            // store name
+            String_set(newMaster.name,name);
+
+            // calculate hash from UUID
+            (void)Crypt_resetHash(&newMaster.uuidHash);
+            Crypt_updateHash(&newMaster.uuidHash,buffer,bufferLength);
+          }
+
+          // still not paired: new master must be confirmed
+          error = ERROR_NOT_PAIRED;
+          break;
       }
 
       // free resources
@@ -5410,7 +5396,7 @@ LOCAL void serverCommand_masterPairingStop(ClientInfo *clientInfo, IndexHandle *
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get pair state
+  // get pair flag
   if (!StringMap_getBool(argumentMap,"pair",&pairFlag,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"pair=yes|no");
@@ -6463,7 +6449,6 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
   // get job UUID
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -6487,19 +6472,19 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       // get connector
       connectorInfo = Job_connectorLock(jobNode,LOCK_TIMEOUT);
-      if (connectorInfo != NULL)
+      if ((connectorInfo != NULL) && Connector_isConnected(connectorInfo))
       {
         // send results from slave
         error = Connector_executeCommand(connectorInfo,
                                          1,
                                          10*MS_PER_SECOND,
-                                         CALLBACK_LAMBDA_(void,(Errors error, const StringMap resultMap, void *userData),
+                                         CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
                                          {
                                            assert(resultMap != NULL);
 
                                            UNUSED_VARIABLE(userData);
 
-                                           ServerIO_passResult(&clientInfo->io,id,FALSE,error,resultMap);
+                                           return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
                                          },NULL),
                                          "ROOT_LIST"
                                         );
@@ -6752,7 +6737,6 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // get job UUID, directoy
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   directory = String_new();
@@ -6788,20 +6772,19 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     {
       // get connector
       connectorInfo = Job_connectorLock(jobNode,LOCK_TIMEOUT);
-      if (connectorInfo != NULL)
+      if ((connectorInfo != NULL) && Connector_isConnected(connectorInfo))
       {
         // send results from slave
         error = Connector_executeCommand(connectorInfo,
                                          1,
                                          10*MS_PER_SECOND,
-                                         CALLBACK_LAMBDA_(void,(Errors error, const StringMap resultMap, void *userData),
+                                         CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
                                          {
                                            assert(resultMap != NULL);
 
                                            UNUSED_VARIABLE(userData);
 
-                                           ServerIO_passResult(&clientInfo->io,id,FALSE,error,resultMap);
-
+                                           return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
                                          },NULL),
                                          "FILE_LIST directory=%S",
                                          directory
@@ -18185,6 +18168,7 @@ Errors Server_run(ServerModes       mode,
   pauseFlags.restore             = FALSE;
   pauseFlags.indexUpdate         = FALSE;
   pauseEndDateTime               = 0LL;
+  Semaphore_init(&newMaster.lock,SEMAPHORE_TYPE_BINARY);
   newMaster.pairingMode          = PAIRING_MODE_NONE;
   Misc_initTimeout(&newMaster.pairingTimeoutInfo,0LL);
   newMaster.name                 = String_new();
@@ -18196,6 +18180,7 @@ Errors Server_run(ServerModes       mode,
   AUTOFREE_ADD(&autoFreeList,&clientList.lock,{ Semaphore_done(&clientList.lock); });
   AUTOFREE_ADD(&autoFreeList,&authorizationFailList,{ List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL)); });
   AUTOFREE_ADD(&autoFreeList,&serverStateLock,{ Semaphore_done(&serverStateLock); });
+  AUTOFREE_ADD(&autoFreeList,&newMaster.lock,{ Semaphore_done(&newMaster.lock); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.pairingTimeoutInfo,{ Misc_doneTimeout(&newMaster.pairingTimeoutInfo); });
   AUTOFREE_ADD(&autoFreeList,newMaster.name,{ String_delete(newMaster.name); });
   AUTOFREE_ADD(&autoFreeList,&newMaster.uuidHash,{ Crypt_doneHash(&newMaster.uuidHash); });
@@ -18882,7 +18867,7 @@ Errors Server_run(ServerModes       mode,
         // set paired master
         if (!String_isEmpty(newMaster.name))
         {
-          error = setPairedMaster();
+          error = stopPairingMaster(newMaster.name,&newMaster.uuidHash);
           if (error != ERROR_NONE)
           {
             logMessage(NULL,  // logHandle,
@@ -18892,9 +18877,6 @@ Errors Server_run(ServerModes       mode,
                       );
           }
         }
-
-        // stop auto-pairing master
-abortPairingMaster();
       }
     }
   }
@@ -18973,6 +18955,7 @@ abortPairingMaster();
   Crypt_doneHash(&newMaster.uuidHash);
   String_delete(newMaster.name);
   Misc_doneTimeout(&newMaster.pairingTimeoutInfo);
+  Semaphore_done(&newMaster.lock);
   Semaphore_done(&serverStateLock);
   if (!stringIsEmpty(indexDatabaseFileName)) Index_done();
   List_done(&authorizationFailList,CALLBACK_((ListNodeFreeFunction)freeAuthorizationFailNode,NULL));
