@@ -809,6 +809,14 @@ LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHan
     return;
   }
 
+  // check if storage initialized
+  if (!connectorInfo->storageInitFlag)
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_INIT_STORAGE,"");
+    String_delete(archiveName);
+    return;
+  }
+
   // create storage
   error = Storage_create(&connectorInfo->storageHandle,
                          &connectorInfo->storageInfo,
@@ -3018,6 +3026,7 @@ void Connector_doneAll(void)
 //TODO: remove
 //  connectorInfo->forceSSL        = forceSSL;
   connectorInfo->state           = CONNECTOR_STATE_NONE;
+  connectorInfo->storageInitFlag = FALSE;
   connectorInfo->storageOpenFlag = FALSE;
 
   #ifdef NDEBUG
@@ -3194,6 +3203,7 @@ CALLBACK_(NULL,NULL),//                       CALLBACK_(storageRequestVolumeFunc
     return error;
   }
   DEBUG_TESTCODE() { Storage_done(&connectorInfo->storageInfo); Storage_doneSpecifier(&storageSpecifier); return DEBUG_TESTCODE_ERROR(); }
+  connectorInfo->storageInitFlag = TRUE;
 
   // free resources
   Storage_doneSpecifier(&storageSpecifier);
@@ -3215,6 +3225,7 @@ Errors Connector_doneStorage(ConnectorInfo *connectorInfo)
   connectorInfo->storageOpenFlag = FALSE;
 
   // done storage
+  connectorInfo->storageInitFlag = FALSE;
   Storage_done(&connectorInfo->storageInfo);
 
   return ERROR_NONE;
@@ -3334,12 +3345,13 @@ Errors Connector_create(ConnectorInfo                *connectorInfo,
     return TRUE;
   }
 
-  Errors     error;
-  StringMap  resultMap;
-  JobStates  state;
-  uint       errorCode;
-  String     errorData;
-  StatusInfo statusInfo;
+  AutoFreeList autoFreeList;
+  Errors       error;
+  StringMap    resultMap;
+  JobStates    state;
+  uint         errorCode;
+  String       errorData;
+  StatusInfo   statusInfo;
 
   assert(connectorInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
@@ -3350,6 +3362,7 @@ UNUSED_VARIABLE(storageRequestVolumeFunction);
 UNUSED_VARIABLE(storageRequestVolumeUserData);
 
   // init variables
+  AutoFree_init(&autoFreeList);
   errorData = String_new();
   initStatusInfo(&statusInfo);
   resultMap = StringMap_new();
@@ -3357,6 +3370,9 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  AUTOFREE_ADD(&autoFreeList,errorData,{ String_delete(errorData); });
+  AUTOFREE_ADD(&autoFreeList,&statusInfo,{ doneStatusInfo(&statusInfo); });
+  AUTOFREE_ADD(&autoFreeList,resultMap,{ StringMap_delete(resultMap); });
 
   // transmit job to slave
   error = transmitJob(connectorInfo,
@@ -3380,9 +3396,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                    "JOB_DELETE jobUUID=%S",
                                    jobUUID
                                   );
-    StringMap_delete(resultMap);
-    doneStatusInfo(&statusInfo);
-    String_delete(errorData);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
 
@@ -3409,9 +3423,7 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                    "JOB_DELETE jobUUID=%S",
                                    jobUUID
                                   );
-    StringMap_delete(resultMap);
-    doneStatusInfo(&statusInfo);
-    String_delete(errorData);
+    AutoFree_cleanup(&autoFreeList);
     return error;
   }
 
@@ -3422,58 +3434,53 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
     error = Connector_executeCommand(connectorInfo,
                                      CONNECTOR_DEBUG_LEVEL,
                                      CONNECTOR_COMMAND_TIMEOUT,
+                                     CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                     {
+                                       assert(resultMap != NULL);
+
+                                       UNUSED_VARIABLE(userData);
+
+                                       // get status values
+                                       StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
+                                       StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_CODE_NONE);
+                                       StringMap_getString(resultMap,"errorData",            errorData,NULL);
+                                       StringMap_getULong (resultMap,"doneCount",            &statusInfo.done.count,0L);
+                                       StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.done.size,0LL);
+                                       StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.total.count,0L);
+                                       StringMap_getUInt64(resultMap,"totalEntrySize",       &statusInfo.total.size,0LL);
+                                       StringMap_getBool  (resultMap,"collectTotalSumDone",  &statusInfo.collectTotalSumDone,FALSE);
+                                       StringMap_getULong (resultMap,"skippedEntryCount",    &statusInfo.skipped.count,0L);
+                                       StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skipped.size,0LL);
+                                       StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.error.count,0L);
+                                       StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.error.size,0LL);
+                                       StringMap_getUInt64(resultMap,"archiveSize",          &statusInfo.archiveSize,0LL);
+                                       StringMap_getDouble(resultMap,"compressionRatio",     &statusInfo.compressionRatio,0.0);
+                                       StringMap_getString(resultMap,"entryName",            statusInfo.entry.name,NULL);
+                                       StringMap_getUInt64(resultMap,"entryDoneSize",        &statusInfo.entry.doneSize,0LL);
+                                       StringMap_getUInt64(resultMap,"entryTotalSize",       &statusInfo.entry.totalSize,0LL);
+                                       StringMap_getString(resultMap,"storageName",          statusInfo.storage.name,NULL);
+                                       StringMap_getUInt64(resultMap,"storageDoneSize",      &statusInfo.storage.doneSize,0L);
+                                       StringMap_getUInt64(resultMap,"storageTotalSize",     &statusInfo.storage.totalSize,0L);
+                                       StringMap_getUInt  (resultMap,"volumeNumber",         &statusInfo.volume.number,0);
+                                       StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volume.progress,0.0);
+                                       StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
 //TODO
-CALLBACK_(NULL,NULL),
+//                                       StringMap_getULong (resultMap,"entriesPerSecond",    &statusInfo.entriesPerSecond,0L);
+//                                       StringMap_getULong (resultMap,"bytesPerSecond",    &statusInfo.bytesPerSecond,0L);
+//                                       StringMap_getULong (resultMap,"storageBytesPerSecond",    &statusInfo.storageBytesPerSecond,0L);
+//                                       StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
+
+                                       return (errorCode != ERROR_CODE_NONE)
+                                                ? ERRORF_(errorCode,"%s",String_cString(errorData))
+                                                : ERROR_NONE;
+                                     },NULL),
 //                                     resultMap,
                                      "JOB_STATUS jobUUID=%S",
                                      jobUUID
                                     );
-    if (error == ERROR_NONE)
-    {
-      // get status values
-      StringMap_getEnum  (resultMap,"state",                &state,(StringMapParseEnumFunction)parseJobState,JOB_STATE_NONE);
-      StringMap_getUInt  (resultMap,"errorCode",            &errorCode,ERROR_CODE_NONE);
-      StringMap_getString(resultMap,"errorData",            errorData,NULL);
-      StringMap_getULong (resultMap,"doneCount",            &statusInfo.done.count,0L);
-      StringMap_getUInt64(resultMap,"doneSize",             &statusInfo.done.size,0LL);
-      StringMap_getULong (resultMap,"totalEntryCount",      &statusInfo.total.count,0L);
-      StringMap_getUInt64(resultMap,"totalEntrySize",       &statusInfo.total.size,0LL);
-      StringMap_getBool  (resultMap,"collectTotalSumDone",  &statusInfo.collectTotalSumDone,FALSE);
-      StringMap_getULong (resultMap,"skippedEntryCount",    &statusInfo.skipped.count,0L);
-      StringMap_getUInt64(resultMap,"skippedEntrySize",     &statusInfo.skipped.size,0LL);
-      StringMap_getULong (resultMap,"errorEntryCount",      &statusInfo.error.count,0L);
-      StringMap_getUInt64(resultMap,"errorEntrySize",       &statusInfo.error.size,0LL);
-      StringMap_getUInt64(resultMap,"archiveSize",          &statusInfo.archiveSize,0LL);
-      StringMap_getDouble(resultMap,"compressionRatio",     &statusInfo.compressionRatio,0.0);
-      StringMap_getString(resultMap,"entryName",            statusInfo.entry.name,NULL);
-      StringMap_getUInt64(resultMap,"entryDoneSize",        &statusInfo.entry.doneSize,0LL);
-      StringMap_getUInt64(resultMap,"entryTotalSize",       &statusInfo.entry.totalSize,0LL);
-      StringMap_getString(resultMap,"storageName",          statusInfo.storage.name,NULL);
-      StringMap_getUInt64(resultMap,"storageDoneSize",      &statusInfo.storage.doneSize,0L);
-      StringMap_getUInt64(resultMap,"storageTotalSize",     &statusInfo.storage.totalSize,0L);
-      StringMap_getUInt  (resultMap,"volumeNumber",         &statusInfo.volume.number,0);
-      StringMap_getDouble(resultMap,"volumeProgress",       &statusInfo.volume.progress,0.0);
-      StringMap_getString(resultMap,"message",              statusInfo.message,NULL);
 
-//TODO
-//      StringMap_getULong (resultMap,"entriesPerSecond",    &statusInfo.entriesPerSecond,0L);
-//      StringMap_getULong (resultMap,"bytesPerSecond",    &statusInfo.bytesPerSecond,0L);
-//      StringMap_getULong (resultMap,"storageBytesPerSecond",    &statusInfo.storageBytesPerSecond,0L);
-//      StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
-
-      // get error
-      if (errorCode == ERROR_CODE_NONE)
-      {
-        error = ERROR_NONE;
-      }
-      else
-      {
-        error = Errorx_(errorCode,0,"%s",String_cString(errorData));
-      }
-
-      // update job status
-      statusInfoFunction(error,&statusInfo,statusInfoUserData);
-    }
+    // update job status
+    statusInfoFunction(error,&statusInfo,statusInfoUserData);
 
     // sleep a short time
     Misc_mdelay(SLEEP_TIME_STATUS_UPDATE);
@@ -3483,10 +3490,18 @@ CALLBACK_(NULL,NULL),
          && Connector_isConnected(connectorInfo)
         );
 
+  // close storage
+  if (connectorInfo->storageOpenFlag)
+  {
+    Storage_close(&connectorInfo->storageHandle);
+  }
+  connectorInfo->storageOpenFlag = FALSE;
+
   // free resources
   StringMap_delete(resultMap);
   doneStatusInfo(&statusInfo);
   String_delete(errorData);
+  AutoFree_done(&autoFreeList);
 
   return error;
 }

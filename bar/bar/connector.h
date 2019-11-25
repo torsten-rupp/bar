@@ -59,8 +59,9 @@ bool            forceSSL;                // force SSL connection to connector ho
   Thread          thread;
 
   StorageInfo     storageInfo;
+  bool            storageInitFlag;       // TRUE iff storage initialized
   StorageHandle   storageHandle;
-  bool            storageOpenFlag;         // TRUE iff storage created and open
+  bool            storageOpenFlag;       // TRUE iff storage created and open
 } ConnectorInfo;
 
 // command result function callback
