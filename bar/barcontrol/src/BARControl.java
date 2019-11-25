@@ -3835,7 +3835,7 @@ if (false) {
    */
   private void updateMaster()
   {
-    String masterName = null;
+    String masterName = "";
     try
     {
       ValueMap resultMap = new ValueMap();
@@ -4199,7 +4199,7 @@ if (false) {
 
     updateMaster();
 
-    return result;
+    return (result != null) ? result : false;
   }
 
   /** clear paired master
