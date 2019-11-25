@@ -83,6 +83,7 @@ LOCAL const struct
   FileTypes  fileType;
 } FILE_TYPES[] =
 {
+  {"NONE",     FILE_TYPE_NONE     },
   {"FILE",     FILE_TYPE_FILE     },
   {"DIRECTORY",FILE_TYPE_DIRECTORY},
   {"LINK",     FILE_TYPE_LINK     },
@@ -223,6 +224,15 @@ LOCAL const struct
 #endif
 
 #ifndef NDEBUG
+/***********************************************************************\
+* Name   : debugFileInit
+* Purpose: debug init
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
 LOCAL void debugFileInit(void)
 {
   if (pthread_mutexattr_init(&debugFileLockAttribute) != 0)
@@ -235,6 +245,33 @@ LOCAL void debugFileInit(void)
   List_init(&debugClosedFileList);
 }
 #endif /* NDEBUG */
+
+/***********************************************************************\
+* Name   : getFileType
+* Purpose: get file type from file state
+* Input  : fileStat - file state
+* Output : file type; see FileTypes
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL FileTypes getFileType(const FileStat *fileStat)
+{
+  assert(fileStat != NULL);
+
+  if      (S_ISREG(fileStat->st_mode))  return (fileStat->st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
+  else if (S_ISDIR(fileStat->st_mode))  return FILE_TYPE_DIRECTORY;
+  #ifdef S_ISLNK
+  else if (S_ISLNK(fileStat->st_mode))  return FILE_TYPE_LINK;
+  #endif /* S_ISLNK */
+  else if (S_ISCHR(fileStat->st_mode))  return FILE_TYPE_SPECIAL;
+  else if (S_ISBLK(fileStat->st_mode))  return FILE_TYPE_SPECIAL;
+  else if (S_ISFIFO(fileStat->st_mode)) return FILE_TYPE_SPECIAL;
+  #ifdef S_ISSOCK
+  else if (S_ISSOCK(fileStat->st_mode)) return FILE_TYPE_SPECIAL;
+  #endif /* S_ISSOCK */
+  else                                  return FILE_TYPE_UNKNOWN;
+}
 
 #ifndef NDEBUG
 /***********************************************************************\
@@ -3128,22 +3165,27 @@ FileTypes File_getType(ConstString fileName)
 
   if (LSTAT(String_cString(fileName),&fileStat) == 0)
   {
-    if      (S_ISREG(fileStat.st_mode))  return (fileStat.st_nlink > 1) ? FILE_TYPE_HARDLINK : FILE_TYPE_FILE;
-    else if (S_ISDIR(fileStat.st_mode))  return FILE_TYPE_DIRECTORY;
-    #ifdef S_ISLNK
-    else if (S_ISLNK(fileStat.st_mode))  return FILE_TYPE_LINK;
-    #endif /* S_ISLNK */
-    else if (S_ISCHR(fileStat.st_mode))  return FILE_TYPE_SPECIAL;
-    else if (S_ISBLK(fileStat.st_mode))  return FILE_TYPE_SPECIAL;
-    else if (S_ISFIFO(fileStat.st_mode)) return FILE_TYPE_SPECIAL;
-    #ifdef S_ISSOCK
-    else if (S_ISSOCK(fileStat.st_mode)) return FILE_TYPE_SPECIAL;
-    #endif /* S_ISSOCK */
-    else                                 return FILE_TYPE_UNKNOWN;
+    return getFileType(&fileStat);
   }
   else
   {
-    return FILE_TYPE_UNKNOWN;
+    return FILE_TYPE_NONE;
+  }
+}
+
+FileTypes File_getRealType(ConstString fileName)
+{
+  FileStat fileStat;
+
+  assert(fileName != NULL);
+
+  if (STAT(String_cString(fileName),&fileStat) == 0)
+  {
+    return getFileType(&fileStat);
+  }
+  else
+  {
+    return FILE_TYPE_NONE;
   }
 }
 

@@ -645,6 +645,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
                                        const char *directory
                                       );
 
+//TODO
 void File_registerTmpFile(FileHandle *fileHandle);
 void File_unregisterTmpFile(FileHandle *fileHandle);
 uint64 File_getRegisterTmpFileSize(void);
@@ -1197,6 +1198,17 @@ const char *File_permissionToString(char *string, uint stringSize, FilePermissio
 \***********************************************************************/
 
 FileTypes File_getType(ConstString fileName);
+
+/***********************************************************************\
+* Name   : File_getRealType
+* Purpose: get real file type (follow symbolic links)
+* Input  : fileName - file name
+* Output : -
+* Return : file type; see FileTypes
+* Notes  : -
+\***********************************************************************/
+
+FileTypes File_getRealType(ConstString fileName);
 
 /***********************************************************************\
 * Name   : File_getData
