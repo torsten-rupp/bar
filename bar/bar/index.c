@@ -2453,29 +2453,14 @@ LOCAL void indexThreadCode(void)
                 assert(doneFlag || (deletedCounter > 0));
                 if ((error == ERROR_NONE) && doneFlag)
                 {
-#if 0
-ulong x;
-
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
-&x,//                                         NULL,  // deletedCounter
+                                         &deletedCounter,
                                          "storage",
                                          "id=%lld",
                                          databaseId
                                         );
-fprintf(stderr,"%s, %d: storageId=%lld done=%d x=%llu\n",__FILE__,__LINE__,databaseId,doneFlag,x);
-#else
-                  error = Database_execute(&indexHandle.databaseHandle,
-                                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                           NULL,  // changedRowCount,
-                                           "DELETE FROM storage \
-                                            WHERE id=%lld \
-                                           ",
-                                           databaseId
-                                          );
-#endif
 //fprintf(stderr,"%s, %d: final delete error=%s\n",__FILE__,__LINE__,Error_getText(error));
-                  assert((error != ERROR_NONE) || !Database_exists(&indexHandle.databaseHandle,"storage","id","WHERE id=%lld",databaseId));
                 }
 
                 (void)Index_endTransaction(&indexHandle);
@@ -4112,9 +4097,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
   String              filterString;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
-  bool                result;
   DatabaseId          uuidDatabaseId;
-  StringMap           resultMap;
 
   assert(indexHandle != NULL);
 
@@ -4182,27 +4165,32 @@ bool Index_findUUID(IndexHandle  *indexHandle,
         return error;
       }
 
-      result = Database_getNextRow(&databaseQueryHandle,
-                                   "%lld %lld %S %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
-                                   &uuidDatabaseId,
-                                   lastExecutedDateTime,
-                                   lastErrorMessage,
-                                   executionCountNormal,
-                                   executionCountFull,
-                                   executionCountIncremental,
-                                   executionCountDifferential,
-                                   executionCountContinuous,
-                                   averageDurationNormal,
-                                   averageDurationFull,
-                                   averageDurationIncremental,
-                                   averageDurationDifferential,
-                                   averageDurationContinuous,
-                                   totalEntityCount,
-                                   totalStorageCount,
-                                   totalStorageSize,
-                                   totalEntryCount,
-                                   totalEntrySize
-                                  );
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%lld %lld %S %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
+                               &uuidDatabaseId,
+                               lastExecutedDateTime,
+                               lastErrorMessage,
+                               executionCountNormal,
+                               executionCountFull,
+                               executionCountIncremental,
+                               executionCountDifferential,
+                               executionCountContinuous,
+                               averageDurationNormal,
+                               averageDurationFull,
+                               averageDurationIncremental,
+                               averageDurationDifferential,
+                               averageDurationContinuous,
+                               totalEntityCount,
+                               totalStorageCount,
+                               totalStorageSize,
+                               totalEntryCount,
+                               totalEntrySize
+                              )
+         )
+      {
+        Database_finalize(&databaseQueryHandle);
+        return ERROR_DATABASE_INDEX_NOT_FOUND;
+      }
 
       Database_finalize(&databaseQueryHandle);
 
@@ -4215,57 +4203,50 @@ bool Index_findUUID(IndexHandle  *indexHandle,
   }
   else
   {
-    resultMap        = StringMap_new();
-    lastErrorMessage = String_new();
-
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    resultMap,
+                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    {
+                                      assert(resultMap != NULL);
+
+                                      UNUSED_VARIABLE(userData);
+
+                                      StringMap_getInt64 (resultMap,"uuidId",uuidIndexId,INDEX_ID_NONE);
+                                      if ((*uuidIndexId) != INDEX_ID_NONE)
+                                      {
+                                        if (lastExecutedDateTime        != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",       lastExecutedDateTime,       0LL );
+                                        if (lastErrorMessage            != NULL) StringMap_getString(resultMap,"lastErrorMessage",           lastErrorMessage,           NULL);
+                                        if (executionCountNormal        != NULL) StringMap_getULong (resultMap,"executionCountNormal",       executionCountNormal,       0L  );
+                                        if (executionCountFull          != NULL) StringMap_getULong (resultMap,"executionCountFull",         executionCountFull,         0L  );
+                                        if (executionCountIncremental   != NULL) StringMap_getULong (resultMap,"executionCountIncremental",  executionCountIncremental,  0L  );
+                                        if (executionCountDifferential  != NULL) StringMap_getULong (resultMap,"executionCountDifferential", executionCountDifferential, 0L  );
+                                        if (executionCountContinuous    != NULL) StringMap_getULong (resultMap,"executionCountContinuous",   executionCountContinuous,   0L  );
+                                        if (averageDurationNormal       != NULL) StringMap_getUInt64(resultMap,"averageDurationNormal",      averageDurationNormal,      0LL );
+                                        if (averageDurationFull         != NULL) StringMap_getUInt64(resultMap,"averageDurationFull",        averageDurationFull,        0LL );
+                                        if (averageDurationIncremental  != NULL) StringMap_getUInt64(resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL );
+                                        if (averageDurationDifferential != NULL) StringMap_getUInt64(resultMap,"averageDurationDifferential",averageDurationDifferential,0LL );
+                                        if (averageDurationContinuous   != NULL) StringMap_getUInt64(resultMap,"averageDurationContinuous",  averageDurationContinuous,  0LL );
+                                        if (totalEntityCount            != NULL) StringMap_getULong (resultMap,"totalEntityCount",           totalEntityCount,           0L  );
+                                        if (totalStorageCount           != NULL) StringMap_getULong (resultMap,"totalStorageCount",          totalStorageCount,          0L  );
+                                        if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL );
+                                        if (totalEntryCount             != NULL) StringMap_getULong (resultMap,"totalEntryCount",            totalEntryCount,            0L  );
+                                        if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL );
+                                        
+                                        return ERROR_NONE;
+                                      }
+                                      else
+                                      {
+                                        return ERROR_DATABASE_INDEX_NOT_FOUND;
+                                      }
+                                    },NULL),
                                     "INDEX_FIND_UUID jobUUID=%'S scheduleUUID=%'s",
                                     findJobUUID,
                                     (findScheduleUUID != NULL) ? String_cString(findScheduleUUID) : ""
                                    );
-    if (error == ERROR_NONE)
-    {
-      StringMap_getInt64 (resultMap,"uuidId",uuidIndexId,INDEX_ID_NONE);
-      if ((*uuidIndexId) != INDEX_ID_NONE)
-      {
-        if (lastExecutedDateTime        != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",       lastExecutedDateTime,       0LL );
-        if (lastErrorMessage            != NULL) StringMap_getString(resultMap,"lastErrorMessage",           lastErrorMessage,           NULL);
-        if (executionCountNormal        != NULL) StringMap_getULong (resultMap,"executionCountNormal",       executionCountNormal,       0L  );
-        if (executionCountFull          != NULL) StringMap_getULong (resultMap,"executionCountFull",         executionCountFull,         0L  );
-        if (executionCountIncremental   != NULL) StringMap_getULong (resultMap,"executionCountIncremental",  executionCountIncremental,  0L  );
-        if (executionCountDifferential  != NULL) StringMap_getULong (resultMap,"executionCountDifferential", executionCountDifferential, 0L  );
-        if (executionCountContinuous    != NULL) StringMap_getULong (resultMap,"executionCountContinuous",   executionCountContinuous,   0L  );
-        if (averageDurationNormal       != NULL) StringMap_getUInt64(resultMap,"averageDurationNormal",      averageDurationNormal,      0LL );
-        if (averageDurationFull         != NULL) StringMap_getUInt64(resultMap,"averageDurationFull",        averageDurationFull,        0LL );
-        if (averageDurationIncremental  != NULL) StringMap_getUInt64(resultMap,"averageDurationIncremental", averageDurationIncremental, 0LL );
-        if (averageDurationDifferential != NULL) StringMap_getUInt64(resultMap,"averageDurationDifferential",averageDurationDifferential,0LL );
-        if (averageDurationContinuous   != NULL) StringMap_getUInt64(resultMap,"averageDurationContinuous",  averageDurationContinuous,  0LL );
-        if (totalEntityCount            != NULL) StringMap_getULong (resultMap,"totalEntityCount",           totalEntityCount,           0L  );
-        if (totalStorageCount           != NULL) StringMap_getULong (resultMap,"totalStorageCount",          totalStorageCount,          0L  );
-        if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL );
-        if (totalEntryCount             != NULL) StringMap_getULong (resultMap,"totalEntryCount",            totalEntryCount,            0L  );
-        if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL );
-
-        result = TRUE;
-      }
-      else
-      {
-        result = FALSE;
-      }
-    }
-
-    String_delete(lastErrorMessage);
-    StringMap_delete(resultMap);
-  }
-  if (error != ERROR_NONE)
-  {
-    return FALSE;
   }
 
-  return result;
+  return (error == ERROR_NONE);
 }
 
 bool Index_findEntity(IndexHandle  *indexHandle,
@@ -4909,7 +4890,7 @@ Errors Index_setState(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_SET_STATE indexId=%lld indexState=%'s lastCheckedDateTime=%llu errorMessage=%'S",
                                     indexId,
                                     Index_stateToString(indexState,NULL),
@@ -5136,8 +5117,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                         IndexId      *historyIndexId
                        )
 {
-  Errors    error;
-  StringMap resultMap;
+  Errors error;
 
   assert(indexHandle != NULL);
 
@@ -5219,12 +5199,29 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
   }
   else
   {
-    resultMap = StringMap_new();
-
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    resultMap,
+                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    {
+                                      Errors error;
+
+                                      assert(resultMap != NULL);
+                                      
+                                      UNUSED_VARIABLE(userData);
+
+                                      error = ERROR_NONE;
+
+                                      if (historyIndexId != NULL)
+                                      {
+                                        if (!StringMap_getInt64(resultMap,"historyId",historyIndexId,INDEX_ID_NONE))
+                                        {
+                                          error = ERROR_EXPECTED_PARAMETER;
+                                        }
+                                      }
+                                      
+                                      return error;
+                                    },NULL),
                                     "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%'S userName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
@@ -5241,18 +5238,6 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                     errorEntryCount,
                                     errorEntrySize
                                    );
-    if (error == ERROR_NONE)
-    {
-      if (historyIndexId != NULL)
-      {
-        if (!StringMap_getInt64(resultMap,"historyId",historyIndexId,INDEX_ID_NONE))
-        {
-          error = ERROR_EXPECTED_PARAMETER;
-        }
-      }
-    }
-
-    StringMap_delete(resultMap);
   }
   if (error != ERROR_NONE)
   {
@@ -5541,8 +5526,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                      IndexId     *uuidIndexId
                     )
 {
-  Errors    error;
-  StringMap resultMap;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(uuidIndexId != NULL);
@@ -5584,25 +5568,27 @@ Errors Index_newUUID(IndexHandle *indexHandle,
   }
   else
   {
-    resultMap = StringMap_new();
-
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    resultMap,
+                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    {
+                                      assert(resultMap != NULL);
+                                      
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (StringMap_getInt64(resultMap,"uuidId",uuidIndexId,INDEX_ID_NONE))
+                                      {
+                                        return ERROR_NONE;
+                                      }
+                                      else
+                                      {
+                                        return ERROR_EXPECTED_PARAMETER;
+                                      }
+                                    },NULL),
                                     "INDEX_NEW_UUID jobUUID=%S",
                                     jobUUID
                                    );
-    if (error == ERROR_NONE)
-    {
-      if (!StringMap_getInt64(resultMap,"uuidId",uuidIndexId,INDEX_ID_NONE))
-      {
-        StringMap_delete(resultMap);
-        error = ERROR_EXPECTED_PARAMETER;
-      }
-    }
-
-    StringMap_delete(resultMap);
   }
   if (error != ERROR_NONE)
   {
@@ -5918,8 +5904,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        IndexId      *entityIndexId
                       )
 {
-  Errors    error;
-  StringMap resultMap;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(jobUUID != NULL);
@@ -6000,12 +5985,24 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
   }
   else
   {
-    resultMap = StringMap_new();
-
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    resultMap,
+                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    {
+                                      assert(resultMap != NULL);
+                                      
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (StringMap_getInt64 (resultMap,"entityId",entityIndexId,INDEX_ID_NONE))
+                                      {
+                                        return ERROR_NONE;
+                                      }
+                                      else
+                                      {
+                                        return ERROR_EXPECTED_PARAMETER;
+                                      }
+                                    },NULL),
                                     "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s hostName=%S archiveType=%s createdDateTime=%llu locked=%y",
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
@@ -6014,15 +6011,6 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                     createdDateTime,
                                     locked
                                    );
-    if (error == ERROR_NONE)
-    {
-      if (!StringMap_getInt64 (resultMap,"entityId",entityIndexId,INDEX_ID_NONE))
-      {
-        error = ERROR_EXPECTED_PARAMETER;
-      }
-    }
-
-    StringMap_delete(resultMap);
   }
   if (error != ERROR_NONE)
   {
@@ -6113,8 +6101,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                           uint64       createdDateTime
                          )
 {
-  Errors    error;
-  StringMap resultMap;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(Index_getType(entityIndexId) == INDEX_TYPE_ENTITY);
@@ -6158,12 +6145,10 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
   }
   else
   {
-    resultMap = StringMap_new();
-
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    resultMap,
+                                    CALLBACK_(NULL,NULL),
                                     "INDEX_UPDATE_ENTITY jobUUID=%S scheduleUUID=%s hostName=%S archiveType=%s createdDateTime=%llu",
                                     jobUUID,
                                     (scheduleUUID != NULL) ? String_cString(scheduleUUID) : "",
@@ -6171,8 +6156,6 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                                     Archive_archiveTypeToString(archiveType),
                                     createdDateTime
                                    );
-
-    StringMap_delete(resultMap);
   }
   if (error != ERROR_NONE)
   {
@@ -6865,7 +6848,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_STORAGE_UPDATE_INFOS storageId=%lld",
                                     storageIndexId
                                    );
@@ -7117,8 +7100,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                         IndexId     *storageIndexId
                        )
 {
-  Errors    error;
-  StringMap resultMap;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(storageIndexId != NULL);
@@ -7179,12 +7161,24 @@ Errors Index_newStorage(IndexHandle *indexHandle,
   }
   else
   {
-    resultMap = StringMap_new();
-
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    resultMap,
+                                    CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                    {
+                                      assert(resultMap != NULL);
+                                      
+                                      UNUSED_VARIABLE(userData);
+
+                                      if (StringMap_getInt64 (resultMap,"storageId",storageIndexId,INDEX_ID_NONE))
+                                      {
+                                        return ERROR_NONE;
+                                      }
+                                      else
+                                      {
+                                        return ERROR_EXPECTED_PARAMETER;
+                                      }
+                                    },NULL),
                                     "INDEX_NEW_STORAGE entityId=%lld hostName=%'S userName=%'S storageName=%'S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
                                     entityIndexId,
 //TODO: remove hostName, userName -> entity
@@ -7196,15 +7190,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                     Index_stateToString(indexState,NULL),
                                     Index_modeToString(indexMode,NULL)
                                    );
-    if (error == ERROR_NONE)
-    {
-      if (!StringMap_getInt64 (resultMap,"storageId",storageIndexId,INDEX_ID_NONE))
-      {
-        error = ERROR_EXPECTED_PARAMETER;
-      }
-    }
-
-    StringMap_delete(resultMap);
   }
 
   return error;
@@ -7351,7 +7336,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_STORAGE_DELETE storageId=%lld",
                                     storageIndexId
                                    );
@@ -7455,7 +7440,6 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
           deletedCounter = 0;
         #endif
 
-//fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
         if ((error == ERROR_NONE) && doneFlag)
         {
           error = purgeFromIndex(indexHandle,
@@ -7902,7 +7886,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_STORAGE_UPDATE storageId=%lld storageName=%'S storageSize=%llu",
                                     storageIndexId,
                                     storageName,
@@ -10848,7 +10832,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_ADD_FILE storageId=%llu name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     storageIndexId,
                                     name,
@@ -10991,7 +10975,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_ADD_IMAGE storageId=%llu type=IMAGE name=%'S fileSystemType=%'s size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
                                     storageIndexId,
                                     name,
@@ -11134,7 +11118,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_ADD_DIRECTORY storageId=%llu type=DIRECTORY name=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
                                     storageIndexId,
                                     name,
@@ -11274,7 +11258,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_ADD_LINK storageId=%llu type=LINK name=%'S destinationName=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
                                     storageIndexId,
                                     linkName,
@@ -11430,7 +11414,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_ADD_HARDLINK storageId=%llu type=HARDLINK name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     storageIndexId,
                                     name,
@@ -11578,7 +11562,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_ADD_SPECIAL storageId=%llu type=SPECIAL name=%'S specialType=%s timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
                                     storageIndexId,
                                     name,
@@ -11788,7 +11772,7 @@ Errors Index_pruneUUID(IndexHandle *indexHandle,
     error = ServerIO_executeCommand(indexHandle->masterIO,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
-                                    NULL,  // resultMap
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
                                     "INDEX_PRUNE_UUID uuidId=%lld",
                                     indexId
                                    );
@@ -11822,7 +11806,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
       error = ServerIO_executeCommand(indexHandle->masterIO,
                                       SERVER_IO_DEBUG_LEVEL,
                                       SERVER_IO_TIMEOUT,
-                                      NULL,  // resultMap
+                                      CALLBACK_(NULL,NULL),  // commandResultFunction
                                       "INDEX_PRUNE_ENTITY entityId=%lld",
                                       indexId
                                      );
