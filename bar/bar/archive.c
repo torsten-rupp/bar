@@ -5742,9 +5742,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open((archiveHandle->storageInfo->type == STORAGE_TYPE_MASTER) ? archiveHandle->storageInfo->master.io : NULL,
-                                          INDEX_TIMEOUT
-                                         );
+  archiveHandle->indexHandle = Index_open(storageInfo->masterIO,INDEX_TIMEOUT);
   if (archiveHandle->indexHandle != NULL)
   {
     AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
@@ -6012,9 +6010,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open((archiveHandle->storageInfo->type == STORAGE_TYPE_MASTER) ? archiveHandle->storageInfo->master.io : NULL,
-                                          INDEX_TIMEOUT
-                                         );
+  archiveHandle->indexHandle = Index_open(storageInfo->masterIO,INDEX_TIMEOUT);
   if (archiveHandle->indexHandle != NULL)
   {
     AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
@@ -6158,9 +6154,7 @@ UNUSED_VARIABLE(storageInfo);
   archiveHandle->interrupt.offset        = 0LL;
 
   // open index
-  archiveHandle->indexHandle = Index_open((archiveHandle->storageInfo->type == STORAGE_TYPE_MASTER) ? archiveHandle->storageInfo->master.io : NULL,
-                                          INDEX_TIMEOUT
-                                         );
+  archiveHandle->indexHandle = Index_open(fromArchiveHandle->storageInfo->masterIO,INDEX_TIMEOUT);
   if (archiveHandle->indexHandle != NULL)
   {
     AUTOFREE_ADD(&autoFreeList,archiveHandle->indexHandle,{ Index_close(archiveHandle->indexHandle); });
