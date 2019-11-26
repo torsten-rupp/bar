@@ -35,7 +35,7 @@
 
 /***************************** Constants *******************************/
 #ifndef NDEBUG
-  #define __SEMAPHORE_MAX_THREAD_INFO 256
+  #define __SEMAPHORE_MAX_THREAD_INFO 64
 #endif /* not NDEBUG */
 
 /***************************** Datatypes *******************************/
