@@ -568,7 +568,7 @@ UNUSED_VARIABLE(scheduleCustomText);
   SET_OPTION_STRING   ("pre-command",               jobOptions->slavePreProcessScript       );
   SET_OPTION_STRING   ("post-command",              jobOptions->slavePostProcessScript      );
 
-  SET_OPTION_BOOLEAN  ("direct-storage",            jobOptions->directStorage);
+  SET_OPTION_BOOLEAN  ("storage-on-master",         jobOptions->storageOnMaster);
 
   SET_OPTION_STRING   ("ftp-login-name",            jobOptions->ftpServer.loginName         );
   SET_OPTION_PASSWORD ("ftp-password",              &jobOptions->ftpServer.password         );
@@ -784,7 +784,11 @@ LOCAL void sendResult(ConnectorInfo  *connectorInfo,
 *          Result:
 \***********************************************************************/
 
-LOCAL void connectorCommand_storageCreate(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void connectorCommand_storageCreate(ConnectorInfo   *connectorInfo,
+                                          IndexHandle     *indexHandle,
+                                          uint            id,
+                                          const StringMap argumentMap
+                                         )
 {
   String archiveName;
   uint64 archiveSize;
