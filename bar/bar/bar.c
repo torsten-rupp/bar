@@ -6459,7 +6459,6 @@ uint getServerSettings(Server                 *server,
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
     case STORAGE_TYPE_DEVICE:
-    case STORAGE_TYPE_MASTER:
       // nothing to do
       break;
     case STORAGE_TYPE_ANY:
