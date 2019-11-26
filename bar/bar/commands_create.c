@@ -4143,7 +4143,8 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
         if (error == ERROR_NONE)
         {
           error = Storage_init(&storageInfo,
-  NULL, // masterIO
+//TODO
+NULL, // masterIO
                                &storageSpecifier,
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
@@ -4360,7 +4361,8 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
         if (error == ERROR_NONE)
         {
           error = Storage_init(&storageInfo,
-  NULL, // masterIO
+//TODO
+NULL, // masterIO
                                &storageSpecifier,
                                NULL,  // jobOptions
                                &globalOptions.indexDatabaseMaxBandWidthList,
@@ -7511,10 +7513,10 @@ Errors Command_create(ServerIO                     *masterIO,
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   // init storage
-//fprintf(stderr,"%s, %d: masterIO=%p\n",__FILE__,__LINE__,masterIO);
+fprintf(stderr,"%s, %d: %d masterIO=%p\n",__FILE__,__LINE__,jobOptions->directStorage,masterIO);
   error = Storage_init(&createInfo.storageInfo,
 //TODO
-masterIO, // masterIO
+!jobOptions->directStorage ? masterIO : NULL,
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
