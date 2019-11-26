@@ -75,7 +75,7 @@ struct JobOptions
   String                      slavePreProcessScript;         // script to execute before start of job on slave
   String                      slavePostProcessScript;        // script to execute after after termination of job on slave
 
-  bool                        directStorage;
+  bool                        storageOnMaster;               // TRUE for storage operation on master
   FileServer                  fileServer;                    // job specific file server settings
   FTPServer                   ftpServer;                     // job specific FTP server settings
   SSHServer                   sshServer;                     // job specific SSH server settings
