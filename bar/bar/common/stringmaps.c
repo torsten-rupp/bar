@@ -37,7 +37,7 @@
 #define STRINGMAP_START_SIZE 32   // string map start size
 #define STRINGMAP_DELTA_SIZE 16   // string map delta increasing size
 
-const StringMapValue STRINGMAP_VALUE_NONE = {NULL,{0}};
+const StringMapValue STRINGMAP_VALUE_NONE = {NULL,FALSE,{0}};
 
 LOCAL const char *TRUE_STRINGS[] =
 {
