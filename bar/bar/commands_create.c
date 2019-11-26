@@ -7513,10 +7513,8 @@ Errors Command_create(ServerIO                     *masterIO,
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
   // init storage
-fprintf(stderr,"%s, %d: %d masterIO=%p\n",__FILE__,__LINE__,jobOptions->directStorage,masterIO);
   error = Storage_init(&createInfo.storageInfo,
-//TODO
-!jobOptions->directStorage ? masterIO : NULL,
+                       masterIO,
                        &storageSpecifier,
                        jobOptions,
                        &globalOptions.maxBandWidthList,
@@ -7698,7 +7696,7 @@ fprintf(stderr,"%s, %d: %d masterIO=%p\n",__FILE__,__LINE__,jobOptions->directSt
   }
 
   // create new archive
-  error = Archive_create(&createInfo.archiveHandle,
+   error = Archive_create(&createInfo.archiveHandle,
                          NULL,  // hostName
                          &createInfo.storageInfo,
                          NULL,  // archiveName
