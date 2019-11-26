@@ -171,6 +171,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING      ("slave-pre-command",         JobNode,job.options.slavePreProcessScript        ),
   CONFIG_STRUCT_VALUE_STRING      ("slave-post-command",        JobNode,job.options.slavePostProcessScript       ),
 
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("direct-storage",            JobNode,job.options.directStorage                ),
+
   CONFIG_STRUCT_VALUE_STRING      ("ftp-login-name",            JobNode,job.options.ftpServer.loginName          ),
   CONFIG_STRUCT_VALUE_SPECIAL     ("ftp-password",              JobNode,job.options.ftpServer.password,          configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
 
@@ -1219,6 +1221,8 @@ LOCAL void clearOptions(JobOptions *jobOptions)
   String_clear(jobOptions->postProcessScript);
   String_clear(jobOptions->slavePreProcessScript );
   String_clear(jobOptions->slavePostProcessScript);
+
+  jobOptions->directStorage              = FALSE;
 
   clearOptionsFileServer(&jobOptions->fileServer);
   clearOptionsFTPServer(&jobOptions->ftpServer);
@@ -3153,8 +3157,8 @@ bool Job_read(JobNode *jobNode)
   // reset job values
   String_clear(jobNode->job.uuid);
   String_clear(jobNode->job.slaveHost.name);
-  jobNode->job.slaveHost.port     = 0;
-  jobNode->job.slaveHost.forceSSL = FALSE;
+  jobNode->job.slaveHost.port          = 0;
+  jobNode->job.slaveHost.forceSSL      = FALSE;
   String_clear(jobNode->job.archiveName);
   EntryList_clear(&jobNode->job.includeEntryList);
   PatternList_clear(&jobNode->job.excludePatternList);
@@ -3961,6 +3965,8 @@ void Job_initOptions(JobOptions *jobOptions)
   jobOptions->slavePreProcessScript                     = String_new();
   jobOptions->slavePostProcessScript                    = String_new();
 
+  jobOptions->directStorage                             = FALSE;
+
   initOptionsFileServer(&jobOptions->fileServer);
   initOptionsFTPServer(&jobOptions->ftpServer);
   initOptionsSSHServer(&jobOptions->sshServer);
@@ -4079,6 +4085,8 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
   jobOptions->postProcessScript                         = String_duplicate(fromJobOptions->postProcessScript);
   jobOptions->slavePreProcessScript                     = String_duplicate(fromJobOptions->slavePreProcessScript);
   jobOptions->slavePostProcessScript                    = String_duplicate(fromJobOptions->slavePostProcessScript);
+
+  jobOptions->directStorage                             = fromJobOptions->directStorage;
 
   duplicateOptionsFileServer(&jobOptions->fileServer,&fromJobOptions->fileServer);
   duplicateOptionsFTPServer(&jobOptions->ftpServer,&fromJobOptions->ftpServer);
