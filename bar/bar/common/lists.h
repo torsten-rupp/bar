@@ -140,6 +140,28 @@ typedef enum
   } type ## List
 
 /***********************************************************************\
+* Name   : LIST_DONE
+* Purpose: iterated over list and execute block then delete node
+* Input  : list     - list
+*          variable - iterator variable
+* Output : -
+* Return : -
+* Notes  : usage:
+*            ListNode *variable;
+*
+*            LIST_DONE(list,variable)
+*            {
+*              ... = variable->...
+*            }
+\***********************************************************************/
+
+#define LIST_DONE(list,variable) \
+  for ((variable) = (list)->head; \
+       (variable) != NULL; \
+       (variable) = (typeof(variable))List_deleteNode((Node*)variable) \
+      )
+
+/***********************************************************************\
 * Name   : LIST_HEAD
 * Purpose: get list head (first node)
 * Input  : list - list
