@@ -1773,8 +1773,8 @@ Errors Crypt_getPublicPrivateKeyData(CryptKey            *cryptKey,
         data = malloc(alignedDataLength);
         memcpy(data,encryptedKeyInfo->data,alignedDataLength);
         Crypt_decrypt(&cryptInfo,(char*)data,alignedDataLength);
-        fprintf(stderr,"%s, %d: decrypted key\n",__FILE__,__LINE__);
-        debugDumpMemory(d,alignedDataLength,0);
+//fprintf(stderr,"%s, %d: decrypted key\n",__FILE__,__LINE__);
+//debugDumpMemory(d,alignedDataLength,0);
         free(data);
 
         Crypt_done(&cryptInfo);
