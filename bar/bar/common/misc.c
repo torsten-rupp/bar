@@ -910,7 +910,9 @@ uint64 Misc_parseDateTime(const char *string)
      DATE_TIME_FORMAT_DEFAULT
   };
 
-  struct tm  tmBuffer;
+  #ifdef HAVE_GETDATE_R
+    struct tm tmBuffer;
+  #endif /* HAVE_GETDATE_R */
   struct tm  *tm;
   uint       z;
   const char *s;
