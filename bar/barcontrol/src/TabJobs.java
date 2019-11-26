@@ -10546,7 +10546,7 @@ TODO: implement delete entity
 
   /** update selected job data
    */
-  public void updateJobData()
+  public synchronized void updateJobData()
   {
     final JobData jobData = selectedJobData;
 
