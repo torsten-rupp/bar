@@ -3852,15 +3852,18 @@ if (false) {
       // ignored
     }
 
-    if (!masterName.isEmpty())
+    if (!masterMenuItem.isDisposed())
     {
-      masterMenuItem.setText(BARControl.tr("Master")+": "+masterName);
-      masterMenuItem.setSelection(true);
-    }
-    else
-    {
-      masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
-      masterMenuItem.setSelection(false);
+      if (!masterName.isEmpty())
+      {
+        masterMenuItem.setText(BARControl.tr("Master")+": "+masterName);
+        masterMenuItem.setSelection(true);
+      }
+      else
+      {
+        masterMenuItem.setText(BARControl.tr("Pair master")+"\u2026");
+        masterMenuItem.setSelection(false);
+      }
     }
   }
 
@@ -4524,10 +4527,10 @@ if (false) {
           final int n[] = {0};
           try
           {
-            System.out.println(String.format("%-32s %-20s %-10s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
+            System.out.println(String.format("%-32s %-12s %-20s %-12s %-14s %-25s %-14s %-10s %-8s %-19s %-12s",
                                              "Name",
-                                             "Host name",
                                              "State",
+                                             "Host name",
                                              "Type",
                                              "Part size",
                                              "Compress",
@@ -4548,19 +4551,20 @@ if (false) {
                                          throws BARException
                                        {
                                          // get data
-                                         String jobUUID                = valueMap.getString("jobUUID"                 );
-                                         String name                   = valueMap.getString("name"                    );
-                                         String hostName               = valueMap.getString("hostName",             "");
-                                         String state                  = valueMap.getString("state"                   );
-                                         String archiveType            = valueMap.getString("archiveType"             );
-                                         long   archivePartSize        = valueMap.getLong  ("archivePartSize"         );
-                                         String deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"  );
-                                         String byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"   );
-                                         String cryptAlgorithm         = valueMap.getString("cryptAlgorithm"          );
-                                         String cryptType              = valueMap.getString("cryptType"               );
-                                         String cryptPasswordMode      = valueMap.getString("cryptPasswordMode"       );
-                                         long   lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"    );
-                                         long   estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"       );
+                                         String              jobUUID                = valueMap.getString("jobUUID"                 );
+                                         String              name                   = valueMap.getString("name"                    );
+                                         JobData.States      state                  = valueMap.getEnum  ("state",JobData.States.class          );
+                                         String              slaveHostName          = valueMap.getString("slaveHostName",        "");
+                                         JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
+                                         String              archiveType            = valueMap.getString("archiveType"             );
+                                         long                archivePartSize        = valueMap.getLong  ("archivePartSize"         );
+                                         String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"  );
+                                         String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"   );
+                                         String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"          );
+                                         String              cryptType              = valueMap.getString("cryptType"               );
+                                         String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"       );
+                                         long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"    );
+                                         long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"       );
 
                                          String compressAlgorithms;
                                          if      (!deltaCompressAlgorithm.equalsIgnoreCase("none") && !byteCompressAlgorithm.equalsIgnoreCase("none")) compressAlgorithms = deltaCompressAlgorithm+"+"+byteCompressAlgorithm;
@@ -4574,11 +4578,14 @@ if (false) {
                                            cryptPasswordMode = "-";
                                          }
 
-                                         System.out.println(String.format("%-32s %-20s %-10s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
+                                         System.out.println(String.format("%-32s %-12s %-20s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
                                                                           name,
-                                                                          hostName,
-                                                                          (serverState[0] == BARServer.States.RUNNING) ? state : serverState[0],
-                                                                          archiveType,
+//                                                                          (serverState[0] == BARServer.States.RUNNING) ? state.toString() : serverState[0],
+                                                                          (serverState[0] == BARServer.States.RUNNING)
+                                                                            ? JobData.formatStateText(state,slaveHostName,slaveState)
+                                                                            : BARControl.tr("suspended"),
+                                                                          slaveHostName,
+                                                                          archiveType.toString(),
                                                                           archivePartSize,
                                                                           compressAlgorithms,
                                                                           cryptAlgorithm,

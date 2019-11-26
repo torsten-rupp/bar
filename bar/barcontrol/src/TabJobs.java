@@ -2149,6 +2149,7 @@ public class TabJobs
   private WidgetVariable  cryptPasswordMode       = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
   private WidgetVariable  cryptPassword           = new WidgetVariable<String> ("crypt-password","");
   private WidgetVariable  incrementalListFileName = new WidgetVariable<String> ("incremental-list-file","");
+  private WidgetVariable  directStorage           = new WidgetVariable<Boolean>("direct-storage",false);
   private WidgetVariable  storageType             = new WidgetVariable<String> ("storage-type",
                                                                                 new String[]{"filesystem",
                                                                                              "ftp",
@@ -4432,7 +4433,7 @@ public class TabJobs
 
           widgetArchivePartSize = Widgets.newCombo(composite);
           widgetArchivePartSize.setToolTipText(BARControl.tr("Size limit for one storage file part."));
-          widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","140M","256M","280M","512M","620M","800M","1G","1800M","2G","4G","8G","10G","20G"});
+          widgetArchivePartSize.setItems(new String[]{"32M","64M","128M","140M","215M","240M","250M","256M","260M","280M","425M","470M","512M","620M","660M","800M","850M","1G","1800M","2G","4G","5G","6.4G","8G","10G","20G"});
           widgetArchivePartSize.setData("showedErrorDialog",false);
           Widgets.layout(widgetArchivePartSize,0,2,TableLayoutData.W);
           Widgets.addModifyListener(new WidgetModifyListener(widgetArchivePartSize,archivePartSizeFlag)
@@ -6177,6 +6178,159 @@ public class TabJobs
         composite = Widgets.newComposite(tab);
         Widgets.layout(composite,10,1,TableLayoutData.WE);
         {
+          combo = Widgets.newOptionMenu(composite);
+          combo.setToolTipText(BARControl.tr("Storage destination type:\n"+
+                                             "  into file system\n"+
+                                             "  on FTP server\n"+
+                                             "  on SSH server with scp (secure copy)\n"+
+                                             "  on SSH server with sftp (secure FTP)\n"+
+                                             "  on WebDAV server\n"+
+                                             "  on WebDAV secure server\n"+
+                                             "  on CD\n"+
+                                             "  on DVD\n"+
+                                             "  on BD\n"+
+                                             "  on generic device\n"
+                                            )
+                              );
+          Widgets.setComboItems(combo,
+                                new String[]{BARControl.tr("file system"),"filesystem",
+                                                           "ftp",         "ftp",
+                                                           "scp",         "scp",
+                                                           "sftp",        "sftp",
+                                                           "webdav",      "webdav",
+                                                           "webdavs",     "webdavs",
+                                                           "CD",          "cd",
+                                                           "DVD",         "dvd",
+                                                           "BD",          "bd",
+                                             BARControl.tr("device"),     "device"
+                                            }
+                          );
+          Widgets.layout(combo,0,0,TableLayoutData.W);
+          combo.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Combo  widget = (Combo)selectionEvent.widget;
+              String string = Widgets.getSelectedComboItem(widget);
+
+              try
+              {
+                storageType.set(string);
+//                BARServer.setJobOption(selectedJobData.uuid,storageType);
+                BARServer.setJobOption(selectedJobData.uuid,"archive-name",getArchiveName());
+
+                if      (string.equals("cd"))
+                {
+                  if (   archivePartSizeFlag.getBoolean()
+                      && (volumeSize.getLong() <= 0)
+                     )
+                  {
+                    Dialogs.warning(shell,BARControl.tr("When writing to a CD without setting medium size\nthe resulting archive file may not fit on medium."));
+                  }
+
+                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  if (   ecc.getBoolean()
+                      && archivePartSizeFlag.getBoolean()
+                      && (archivePartSize.getLong() > 0)
+                      && ((size%archivePartSize.getLong()) > 0)
+                      && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
+                     )
+                  {
+                    Dialogs.warning(shell,
+                                    BARControl.tr("When writing to a CD with error-correction codes enabled\nsome free space should be available on medium for error-correction codes (~20%).\n"+
+                                                  "\n"+
+                                                  "Good settings may be:\n"+
+                                                  "- part size 215M, size 430M, medium 540\n"+
+                                                  "- part size 260M, size 520M, medium 650\n"+
+                                                  "- part size 280M, size 560M, medium 700\n"+
+                                                  "- part size 250M, size 650M, medium 800\n"+
+                                                  "- part size 240M, size 720M, medium 900\n"
+                                                 )
+                                   );
+                  }
+                }
+                else if (string.equals("dvd"))
+                {
+                  if (   archivePartSizeFlag.getBoolean()
+                      && (volumeSize.getLong() <= 0)
+                     )
+                  {
+                    Dialogs.warning(shell,BARControl.tr("When writing to a DVD without setting medium size\n"+
+                                                        "the resulting archive file may not fit on medium."
+                                                       )
+                                   );
+                  }
+
+                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  if (   ecc.getBoolean()
+                      && archivePartSizeFlag.getBoolean()
+                      && (archivePartSize.getLong() > 0)
+                      && ((size%archivePartSize.getLong()) > 0)
+                      && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
+                     )
+                  {
+                    Dialogs.warning(shell,
+                                    BARControl.tr("When writing to a DVD with error-correction codes enabled\n"+
+                                                  "some free space should be available on medium for error-correction codes (~20%).\n"+
+                                                  "\n"+
+                                                  "Good settings may be:\n"+
+                                                  "- part size 470M, size 3.7G,\tmedium 4.7G\n"+
+                                                  "- part size 425M, size 6.8G,\tmedium 8.5G\n"+
+                                                  "- part size 470M, size 7.52G,\tmedium 9.4G\n"+
+                                                  "- part size 660M, size 10.56G,\tmedium 13.2G\n"+
+                                                  "- part size 850M, size 13.6G,\tmedium 17G"
+                                                 )
+                                   );
+                  }
+                }
+                else if (string.equals("bd"))
+                {
+                  if (   archivePartSizeFlag.getBoolean()
+                      && (volumeSize.getLong() <= 0)
+                     )
+                  {
+                    Dialogs.warning(shell,BARControl.tr("When writing to a BD without setting medium size\n"+
+                                                        "the resulting archive file may not fit on medium."
+                                                       )
+                                   );
+                  }
+
+                  long size = (long)((double)volumeSize.getLong()*MAX_MEDIUM_SIZE_ECC);
+                  if (   ecc.getBoolean()
+                      && archivePartSizeFlag.getBoolean()
+                      && (archivePartSize.getLong() > 0)
+                      && ((size%archivePartSize.getLong()) > 0)
+                      && ((double)(size%archivePartSize.getLong()) < (double)archivePartSize.getLong()*0.5)
+                     )
+                  {
+                    Dialogs.warning(shell,
+                                    BARControl.tr("When writing to a BD with error-correction codes enabled\n"+
+                                                  "some free space should be available on medium for error-correction codes (~20%).\n"+
+                                                  "\n"+
+                                                  "Good settings may be:\n"+
+                                                  "- part size 1G,\t\tsize 20G,\t\tmedium 25G\n"+
+                                                  "- part size 2G,\t\tsize 40G,\t\tmedium 50G\n"+
+                                                  "- part size 5G,\t\tsize 80G,\t\tmedium 100G\n"+
+                                                  "- part size 6.4G,\tsize 102.4G,\tmedium 128G\n"
+                                                 )
+                                   );
+                  }
+                }
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(combo,storageType));
+
+/*
           button = Widgets.newRadio(composite,BARControl.tr("file system"));
           button.setToolTipText(BARControl.tr("Store created storage files into file system destination."));
           Widgets.layout(button,0,0,TableLayoutData.W);
@@ -6620,6 +6774,51 @@ public class TabJobs
               ((Button)control).setSelection(storageType.equals("device"));
             }
           });
+*/
+
+          button = Widgets.newCheckbox(composite,BARControl.tr("direct"));
+          button.setToolTipText(BARControl.tr("Enable for direct storage operations."));
+          button.setEnabled(false);
+          Widgets.layout(button,0,10,TableLayoutData.DEFAULT);
+          Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
+          {
+            @Override
+            public void trigger(Control control)
+            {
+              Widgets.setEnabled(control,(selectedJobData != null) && !slaveHostName.getString().isEmpty());
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(button,slaveHostName)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable slaveHostName)
+            {
+              Widgets.setEnabled(control,!slaveHostName.getString().isEmpty());
+            }
+          });
+          button.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Button widget = (Button)selectionEvent.widget;
+
+              try
+              {
+                directStorage.set(widget.getSelection());
+                BARServer.setJobOption(selectedJobData.uuid,directStorage);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(button,directStorage));
         }
 
         // destination file system
@@ -10577,6 +10776,7 @@ TODO: implement delete entity
         BARServer.getJobOption(jobData.uuid,cryptPassword);
         BARServer.getJobOption(jobData.uuid,incrementalListFileName);
         archiveFileMode.set(BARServer.getStringJobOption(jobData.uuid,"archive-file-mode"));
+        BARServer.getJobOption(jobData.uuid,directStorage);
         BARServer.getJobOption(jobData.uuid,sshPublicKeyFileName);
         BARServer.getJobOption(jobData.uuid,sshPrivateKeyFileName);
 /* NYI ???

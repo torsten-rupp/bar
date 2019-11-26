@@ -118,6 +118,45 @@ class JobData
     PAIRED;
   };
 
+  /** get state text
+   * @return state text
+   */
+  public static String formatStateText(States state, String slaveHostName, SlaveStates slaveState)
+  {
+    StringBuilder buffer = new StringBuilder();
+
+    buffer.append(state.getText());
+
+    if (!slaveHostName.isEmpty() && (slaveState != SlaveStates.PAIRED))
+    {
+      if (buffer.length() > 0)
+      {
+        buffer.append(" ");
+        switch (slaveState)
+        {
+          case OFFLINE: buffer.append(BARControl.tr("(offline)"));      break;
+          case ONLINE:  buffer.append(BARControl.tr("(wait pairing)")); break;
+        }
+      }
+      else
+      {
+        switch (slaveState)
+        {
+          case OFFLINE: buffer.append(BARControl.tr("offline"));      break;
+          case ONLINE:  buffer.append(BARControl.tr("wait pairing")); break;
+        }
+      }
+    }
+
+    if (buffer.length() == 0)
+    {
+      buffer.append("-");
+    }
+
+    return buffer.toString();
+  }
+
+
   String       uuid;
   String       master;
   String       name;
@@ -171,44 +210,6 @@ class JobData
     this.cryptPasswordMode      = cryptPasswordMode;
     this.lastExecutedDateTime   = lastExecutedDateTime;
     this.estimatedRestTime      = estimatedRestTime;
-  }
-
-  /** get state text
-   * @return state text
-   */
-  public String formatStateText()
-  {
-    StringBuilder buffer = new StringBuilder();
-
-    buffer.append(state.getText());
-
-    if (!slaveHostName.isEmpty() && (slaveState != SlaveStates.PAIRED))
-    {
-      if (buffer.length() > 0)
-      {
-        buffer.append(" ");
-        switch (slaveState)
-        {
-          case OFFLINE: buffer.append(BARControl.tr("(offline)"));      break;
-          case ONLINE:  buffer.append(BARControl.tr("(wait pairing)")); break;
-        }
-      }
-      else
-      {
-        switch (slaveState)
-        {
-          case OFFLINE: buffer.append(BARControl.tr("offline"));      break;
-          case ONLINE:  buffer.append(BARControl.tr("wait pairing")); break;
-        }
-      }
-    }
-
-    if (buffer.length() == 0)
-    {
-      buffer.append("-");
-    }
-
-    return buffer.toString();
   }
 
   /** format job compress algorithms
@@ -1974,10 +1975,15 @@ public class TabStatus
                                    JobData.SlaveStates slaveState             = valueMap.getEnum  ("slaveState",JobData.SlaveStates.class);
                                    ArchiveTypes        archiveType            = valueMap.getEnum  ("archiveType",ArchiveTypes.class      );
                                    long                archivePartSize        = valueMap.getLong  ("archivePartSize"                     );
+//TODO: enum?
                                    String              deltaCompressAlgorithm = valueMap.getString("deltaCompressAlgorithm"              );
+//TODO: enum?
                                    String              byteCompressAlgorithm  = valueMap.getString("byteCompressAlgorithm"               );
+//TODO: enum?
                                    String              cryptAlgorithm         = valueMap.getString("cryptAlgorithm"                      );
+//TODO: enum?
                                    String              cryptType              = valueMap.getString("cryptType"                           );
+//TODO: enum?
                                    String              cryptPasswordMode      = valueMap.getString("cryptPasswordMode"                   );
                                    long                lastExecutedDateTime   = valueMap.getLong  ("lastExecutedDateTime"                );
                                    long                estimatedRestTime      = valueMap.getLong  ("estimatedRestTime"                   );
@@ -2053,7 +2059,9 @@ public class TabStatus
                 Widgets.updateTableItem(tableItem,
                                         jobData,
                                         jobData.name,
-                                        (serverState == BARServer.States.RUNNING) ? jobData.formatStateText() : BARControl.tr("suspended"),
+                                        (serverState == BARServer.States.RUNNING)
+                                          ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
+                                          : BARControl.tr("suspended"),
                                         jobData.slaveHostName,
                                         jobData.archiveType.getText(),
                                         (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
@@ -2073,7 +2081,9 @@ public class TabStatus
                                                     findJobTableItemIndex(jobData),
                                                     jobData,
                                                     jobData.name,
-                                                    (serverState == BARServer.States.RUNNING) ? jobData.state.toString() : BARControl.tr("suspended"),
+                                                    (serverState == BARServer.States.RUNNING)
+                                                      ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
+                                                      : BARControl.tr("suspended"),
                                                     jobData.slaveHostName,
                                                     jobData.archiveType.toString(),
                                                     (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
