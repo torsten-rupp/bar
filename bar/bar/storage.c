@@ -1706,6 +1706,7 @@ String Storage_getPrintableName(String                 string,
   AUTOFREE_ADD(&autoFreeList,&storageInfo->storageSpecifier,{ Storage_doneSpecifier(&storageInfo->storageSpecifier); });
 
   // init protocol specific values
+  error = ERROR_UNKNOWN;
   if (   jobOptions->storageOnMaster
       && (masterIO != NULL)
      )
@@ -1756,6 +1757,7 @@ String Storage_getPrintableName(String                 string,
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
@@ -1799,11 +1801,12 @@ String Storage_getPrintableName(String                 string,
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,storageInfo,StorageInfo);
   #endif /* NDEBUG */
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
   {
-error = ERROR_STILL_NOT_IMPLEMENTED;
+    error = StorageMaster_done(storageInfo);
   }
   else
   {
@@ -1844,6 +1847,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   Storage_doneSpecifier(&storageInfo->storageSpecifier);
   Semaphore_done(&storageInfo->lock);
@@ -1859,12 +1863,12 @@ bool Storage_isServerAllocationPending(StorageInfo *storageInfo)
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   assert(storageInfo->jobOptions != NULL);
 
+  serverAllocationPending = FALSE;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
   {
 //TODO
-serverAllocationPending = FALSE;
   }
   else
   {
@@ -1944,6 +1948,7 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   assert(storageInfo->jobOptions != NULL);
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -1955,6 +1960,7 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
     switch (storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_preProcess(storageInfo,archiveName,time,initialFlag);
@@ -1988,6 +1994,7 @@ Errors Storage_preProcess(StorageInfo *storageInfo,
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -2004,6 +2011,7 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   assert(storageInfo->jobOptions != NULL);
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -2015,6 +2023,7 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
     switch (storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_postProcess(storageInfo,archiveName,time,finalFlag);
@@ -2048,6 +2057,7 @@ Errors Storage_postProcess(StorageInfo *storageInfo,
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -2076,6 +2086,7 @@ Errors Storage_unloadVolume(StorageInfo *storageInfo)
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
   assert(storageInfo->jobOptions != NULL);
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -2119,6 +2130,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -2138,17 +2150,19 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  existsFlag = FALSE;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
   {
 //TODO
-existsFlag = FALSE;
   }
   else
   {
     switch (storageInfo->storageSpecifier.type)
     {
+      case STORAGE_TYPE_NONE:
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         existsFlag = StorageFile_exists(storageInfo,archiveName);
         break;
@@ -2201,17 +2215,19 @@ bool Storage_isFile(StorageInfo *storageInfo, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  isFileFlag = FALSE;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
   {
 //TODO
-isFileFlag = FALSE;
   }
   else
   {
     switch (storageInfo->storageSpecifier.type)
     {
+      case STORAGE_TYPE_NONE:
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         isFileFlag = StorageFile_isFile(storageInfo,archiveName);
         break;
@@ -2264,17 +2280,19 @@ bool Storage_isDirectory(StorageInfo *storageInfo, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  isDirectoryFlag = FALSE;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
   {
 //TODO
-isDirectoryFlag = FALSE;
   }
   else
   {
     switch (storageInfo->storageSpecifier.type)
     {
+      case STORAGE_TYPE_NONE:
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         isDirectoryFlag = StorageFile_isDirectory(storageInfo,archiveName);
         break;
@@ -2327,17 +2345,19 @@ bool Storage_isReadable(StorageInfo *storageInfo, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  isReadableFlag = FALSE;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
   {
 //TODO
-isReadableFlag = FALSE;
   }
   else
   {
     switch (storageInfo->storageSpecifier.type)
     {
+      case STORAGE_TYPE_NONE:
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         isReadableFlag = StorageFile_isReadable(storageInfo,archiveName);
         break;
@@ -2390,17 +2410,19 @@ bool Storage_isWritable(StorageInfo *storageInfo, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  isWritableFlag = FALSE;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
   {
 //TODO
-isWritableFlag = FALSE;
   }
   else
   {
     switch (storageInfo->storageSpecifier.type)
     {
+      case STORAGE_TYPE_NONE:
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         isWritableFlag = StorageFile_isWritable(storageInfo,archiveName);
         break;
@@ -2455,6 +2477,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
     String_setCString(archiveName,"archive");
   }
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -2465,6 +2488,9 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   {
     switch (storageInfo->storageSpecifier.type)
     {
+      case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_getTmpName(archiveName,storageInfo);
         break;
@@ -2498,6 +2524,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -2538,6 +2565,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -2548,6 +2576,9 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
   {
     switch (storageInfo->storageSpecifier.type)
     {
+      case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
+        break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_create(storageHandle,archiveName,archiveSize,forceFlag);
         break;
@@ -2581,6 +2612,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2626,6 +2658,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -2637,6 +2670,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
     switch (storageHandle->storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_open(storageHandle,archiveName);
@@ -2671,6 +2705,7 @@ Errors Storage_getTmpName(String archiveName, StorageInfo *storageInfo)
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
   if (error != ERROR_NONE)
   {
     return error;
@@ -2765,19 +2800,18 @@ bool Storage_eof(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
   assert(storageHandle->storageInfo->jobOptions != NULL);
 
+  eofFlag = TRUE;
   if (   storageHandle->storageInfo->jobOptions->storageOnMaster
       && (storageHandle->storageInfo->masterIO != NULL)
      )
   {
 //TODO
-eofFlag = TRUE;
   }
   else
   {
     switch (storageHandle->storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
-        eofFlag = TRUE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         eofFlag = StorageFile_eof(storageHandle);
@@ -2838,6 +2872,7 @@ Errors Storage_read(StorageHandle *storageHandle,
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
 
+  error = ERROR_UNKNOWN;
   if (   storageHandle->storageInfo->jobOptions->storageOnMaster
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -2883,6 +2918,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -2902,6 +2938,7 @@ Errors Storage_write(StorageHandle *storageHandle,
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(buffer != NULL);
 
+  error = ERROR_UNKNOWN;
   if (   storageHandle->storageInfo->jobOptions->storageOnMaster
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -2913,6 +2950,7 @@ Errors Storage_write(StorageHandle *storageHandle,
     switch (storageHandle->storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_write(storageHandle,buffer,bufferLength);
@@ -2947,6 +2985,7 @@ Errors Storage_write(StorageHandle *storageHandle,
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -2965,6 +3004,7 @@ Errors Storage_transfer(StorageHandle *storageHandle,
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
   assert(fromFileHandle != NULL);
 
+  error = ERROR_UNKNOWN;
   if (   storageHandle->storageInfo->jobOptions->storageOnMaster
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -2976,6 +3016,7 @@ Errors Storage_transfer(StorageHandle *storageHandle,
     switch (storageHandle->storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = transferToStorage(storageHandle,fromFileHandle);
@@ -3010,6 +3051,7 @@ Errors Storage_transfer(StorageHandle *storageHandle,
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -3029,6 +3071,7 @@ Errors Storage_tell(StorageHandle *storageHandle,
 
   (*offset) = 0LL;
 
+  error = ERROR_UNKNOWN;
   if (   storageHandle->storageInfo->jobOptions->storageOnMaster
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3040,6 +3083,8 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     switch (storageHandle->storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        (*offset) = 0LL;
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_tell(storageHandle,offset);
@@ -3078,6 +3123,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -3094,6 +3140,7 @@ Errors Storage_seek(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
   assert(storageHandle->storageInfo->jobOptions != NULL);
 
+  error = ERROR_UNKNOWN;
   if (   storageHandle->storageInfo->jobOptions->storageOnMaster
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3105,6 +3152,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     switch (storageHandle->storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_seek(storageHandle,offset);
@@ -3143,6 +3191,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -3157,6 +3206,7 @@ uint64 Storage_getSize(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(storageHandle->storageInfo);
   assert(storageHandle->storageInfo->jobOptions != NULL);
 
+  size = 0LL;
   if (   storageHandle->storageInfo->jobOptions->storageOnMaster
       && (storageHandle->storageInfo->masterIO != NULL)
      )
@@ -3228,6 +3278,7 @@ Errors Storage_rename(const StorageInfo *storageInfo,
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -3239,6 +3290,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     switch (storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_rename(storageInfo,fromArchiveName,toArchiveName);
@@ -3276,6 +3328,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -3295,6 +3348,7 @@ Errors Storage_delete(StorageInfo *storageInfo, ConstString archiveName)
     return ERROR_NO_ARCHIVE_FILE_NAME;
   }
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -3306,6 +3360,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
     switch (storageInfo->storageSpecifier.type)
     {
       case STORAGE_TYPE_NONE:
+        error = ERROR_NONE;
         break;
       case STORAGE_TYPE_FILESYSTEM:
         error = StorageFile_delete(storageInfo,archiveName);
@@ -3343,6 +3398,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
@@ -3386,6 +3442,7 @@ Errors Storage_pruneDirectories(StorageInfo *storageInfo, ConstString archiveNam
       // delete empty directory
       if (isEmpty)
       {
+        error = ERROR_UNKNOWN;
         if (   storageInfo->jobOptions->storageOnMaster
             && (storageInfo->masterIO != NULL)
            )
@@ -3434,6 +3491,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
               break;
           }
         }
+        assert(error != ERROR_UNKNOWN);
       }
     }
 
@@ -3467,6 +3525,7 @@ Errors Storage_getInfo(StorageInfo *storageInfo,
   infoFileName = (fileName != NULL) ? archiveName : storageInfo->storageSpecifier.archiveName;
   memClear(fileInfo,sizeof(fileInfo));
 
+  error = ERROR_UNKNOWN;
   if (   storageInfo->jobOptions->storageOnMaster
       && (storageInfo->masterIO != NULL)
      )
@@ -3515,6 +3574,7 @@ error = ERROR_STILL_NOT_IMPLEMENTED;
         break;
     }
   }
+  assert(error != ERROR_UNKNOWN);
 
   return error;
 }
