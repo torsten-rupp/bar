@@ -70,89 +70,6 @@ LOCAL void StorageMaster_doneAll(void)
 {
 }
 
-//TODO: required?
-#if 0
-LOCAL bool StorageMaster_equalSpecifiers(const StorageSpecifier *storageSpecifier1,
-                                         ConstString            archiveName1,
-                                         const StorageSpecifier *storageSpecifier2,
-                                         ConstString            archiveName2
-                                        )
-{
-  assert(storageSpecifier1 != NULL);
-  assert(storageSpecifier1->type == STORAGE_TYPE_MASTER);
-  assert(storageSpecifier2 != NULL);
-  assert(storageSpecifier2->type == STORAGE_TYPE_MASTER);
-
-  if (archiveName1 == NULL) archiveName1 = storageSpecifier1->archiveName;
-  if (archiveName2 == NULL) archiveName2 = storageSpecifier2->archiveName;
-
-  return String_equals(archiveName1,archiveName2);
-}
-
-LOCAL String StorageMaster_getName(String                 string,
-                                   const StorageSpecifier *storageSpecifier,
-                                   ConstString            archiveName
-                                  )
-{
-  ConstString storageFileName;
-
-  assert(storageSpecifier != NULL);
-
-  // get file to use
-  if      (!String_isEmpty(archiveName))
-  {
-    storageFileName = archiveName;
-  }
-  else if (storageSpecifier->archivePatternString != NULL)
-  {
-    storageFileName = storageSpecifier->archivePatternString;
-  }
-  else
-  {
-    storageFileName = storageSpecifier->archiveName;
-  }
-
-  String_clear(string);
-  if (!String_isEmpty(storageFileName))
-  {
-    String_append(string,storageFileName);
-  }
-
-  return string;
-}
-
-LOCAL void StorageMaster_getPrintableName(String                 string,
-                                          const StorageSpecifier *storageSpecifier,
-                                          ConstString            archiveName
-                                         )
-{
-  ConstString storageFileName;
-
-  assert(string != NULL);
-  assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_MASTER);
-
-  // get file to use
-  if      (!String_isEmpty(archiveName))
-  {
-    storageFileName = archiveName;
-  }
-  else if (!String_isEmpty(storageSpecifier->archivePatternString))
-  {
-    storageFileName = storageSpecifier->archivePatternString;
-  }
-  else
-  {
-    storageFileName = storageSpecifier->archiveName;
-  }
-
-  if (!String_isEmpty(storageFileName))
-  {
-    String_append(string,storageFileName);
-  }
-}
-#endif
-
 LOCAL Errors StorageMaster_init(StorageInfo            *storageInfo,
                                 const StorageSpecifier *storageSpecifier,
                                 const JobOptions       *jobOptions
@@ -168,28 +85,15 @@ LOCAL Errors StorageMaster_init(StorageInfo            *storageInfo,
   return ERROR_NONE;
 }
 
-//TODO: required?
-#if 0
 LOCAL Errors StorageMaster_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageInfo->jobOptions->storageOnMaster);
 
   UNUSED_VARIABLE(storageInfo);
 
   return ERROR_NONE;
 }
-
-LOCAL bool StorageMaster_isServerAllocationPending(const StorageInfo *storageInfo)
-{
-  assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_MASTER);
-
-  UNUSED_VARIABLE(storageInfo);
-
-  return FALSE;
-}
-#endif
 
 LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
                                       ConstString       archiveName,
@@ -201,7 +105,7 @@ LOCAL Errors StorageMaster_preProcess(const StorageInfo *storageInfo,
   Errors     error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageInfo->jobOptions->storageOnMaster);
 
   error = ERROR_NONE;
 
@@ -239,7 +143,7 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
   Errors     error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageInfo->jobOptions->storageOnMaster);
 
   error = ERROR_NONE;
 
@@ -267,61 +171,6 @@ LOCAL Errors StorageMaster_postProcess(const StorageInfo *storageInfo,
   return error;
 }
 
-//TODO: required?
-#if 0
-LOCAL bool StorageMaster_exists(const StorageInfo *storageInfo, ConstString archiveName)
-{
-  assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
-
-  UNUSED_VARIABLE(storageInfo);
-
-HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
-//TODO
-return TRUE;
-}
-
-LOCAL bool StorageMaster_isFile(const StorageInfo *storageInfo, ConstString archiveName)
-{
-  assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
-
-  UNUSED_VARIABLE(storageInfo);
-
-  return File_exists(archiveName);
-}
-
-LOCAL bool StorageMaster_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
-{
-  assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
-
-  UNUSED_VARIABLE(storageInfo);
-
-  return File_exists(archiveName);
-}
-
-LOCAL bool StorageMaster_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
-{
-  assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
-
-  UNUSED_VARIABLE(storageInfo);
-
-  return File_exists(archiveName);
-}
-
-LOCAL bool StorageMaster_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
-{
-  assert(storageInfo != NULL);
-  assert(!String_isEmpty(archiveName));
-
-  UNUSED_VARIABLE(storageInfo);
-
-  return File_exists(archiveName);
-}
-#endif
-
 LOCAL Errors StorageMaster_getTmpName(String archiveName, const StorageInfo *storageInfo)
 {
   assert(archiveName != NULL);
@@ -345,7 +194,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
@@ -355,7 +204,7 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
   storageHandle->master.index = 0LL;
   storageHandle->master.size  = 0LL;
 
-  error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
+  error = ServerIO_executeCommand(storageHandle->storageInfo->masterIO,
                                   MASTER_DEBUG_LEVEL,
                                   MASTER_COMMAND_TIMEOUT,
                                   CALLBACK_(NULL,NULL),  // commandResultFunction
@@ -365,7 +214,6 @@ LOCAL Errors StorageMaster_create(StorageHandle *storageHandle,
                                  );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: EEE %s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -382,7 +230,7 @@ LOCAL Errors StorageMaster_open(StorageHandle *storageHandle,
 {
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
   assert(!String_isEmpty(fileName));
 
   // init variables
@@ -399,11 +247,11 @@ LOCAL void StorageMaster_close(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
 
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->master,StorageHandleMaster);
 
-  error = ServerIO_executeCommand(storageHandle->storageInfo->master.io,
+  error = ServerIO_executeCommand(storageHandle->storageInfo->masterIO,
                                   MASTER_DEBUG_LEVEL,
                                   MASTER_COMMAND_TIMEOUT,
                                   CALLBACK_(NULL,NULL),  // commandResultFunction
@@ -426,7 +274,7 @@ LOCAL bool StorageMaster_eof(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
 
   return storageHandle->master.index >= storageHandle->master.size;
 }
@@ -443,7 +291,7 @@ LOCAL Errors StorageMaster_read(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
   assert(buffer != NULL);
 
 UNUSED_VARIABLE(buffer);
@@ -474,7 +322,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
   assert(buffer != NULL);
 
   // init variables
@@ -492,7 +340,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
 
     // send data
 //fprintf(stderr,"%s, %d: n=%llu\n",__FILE__,__LINE__,n);
-    error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
+    error = ServerIO_sendCommand(storageHandle->storageInfo->masterIO,
                                  MASTER_DEBUG_LEVEL_DATA,
                                  &ids[idCount],
                                  "STORAGE_WRITE offset=%llu length=%u data=%s",
@@ -511,7 +359,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
     // wait for result
     if (idCount >= MAX_BLOCKS)
     {
-      error = ServerIO_waitResults(storageHandle->storageInfo->master.io,
+      error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,
                                    MASTER_COMMAND_TIMEOUT,
                                    ids,
                                    idCount,
@@ -534,7 +382,7 @@ LOCAL Errors StorageMaster_write(StorageHandle *storageHandle,
   }
   while (idCount > 0)
   {
-    error = ServerIO_waitResults(storageHandle->storageInfo->master.io,
+    error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,
                                  MASTER_COMMAND_TIMEOUT,
                                  ids,
                                  idCount,
@@ -583,7 +431,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
 
   // init variables
   buffer = malloc(MAX_BLOCK_SIZE);
@@ -623,7 +471,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     Misc_base64Encode(String_clear(encodedData),buffer,length);
 
     // send data
-    error = ServerIO_sendCommand(storageHandle->storageInfo->master.io,
+    error = ServerIO_sendCommand(storageHandle->storageInfo->masterIO,
                                  MASTER_DEBUG_LEVEL_DATA,
                                  &ids[idCount],
                                  "STORAGE_WRITE offset=%llu length=%u data=%s",
@@ -644,7 +492,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
     // wait for result
     if (idCount >= MAX_BLOCKS)
     {
-      error = ServerIO_waitResults(storageHandle->storageInfo->master.io,
+      error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,
                                    MASTER_COMMAND_TIMEOUT,
                                    ids,
                                    idCount,
@@ -678,7 +526,7 @@ LOCAL Errors StorageMaster_transfer(StorageHandle *storageHandle,
   }
   while (idCount > 0)
   {
-    error = ServerIO_waitResults(storageHandle->storageInfo->master.io,
+    error = ServerIO_waitResults(storageHandle->storageInfo->masterIO,
                                  MASTER_COMMAND_TIMEOUT,
                                  ids,
                                  idCount,
@@ -720,7 +568,7 @@ LOCAL Errors StorageMaster_tell(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
   assert(offset != NULL);
 
   (*offset) = storageHandle->master.index;
@@ -737,7 +585,7 @@ LOCAL Errors StorageMaster_seek(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
 
   storageHandle->master.index = offset;
 
@@ -752,124 +600,10 @@ LOCAL uint64 StorageMaster_getSize(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->master);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_MASTER);
+  assert(storageHandle->storageInfo->jobOptions->storageOnMaster);
 
   return storageHandle->master.size;
 }
-
-//TODO: required?
-#if 0
-LOCAL Errors StorageMaster_rename(const StorageInfo *storageInfo,
-                                  ConstString       fromArchiveName,
-                                  ConstString       toArchiveName
-                                 )
-{
-  Errors error;
-
-  assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_MASTER);
-
-UNUSED_VARIABLE(storageInfo);
-UNUSED_VARIABLE(fromArchiveName);
-UNUSED_VARIABLE(toArchiveName);
-error = ERROR_STILL_NOT_IMPLEMENTED;
-
-  return error;
-}
-
-LOCAL Errors StorageMaster_delete(const StorageInfo *storageInfo,
-                                  ConstString       fileName
-                                 )
-{
-//  Errors error;
-
-  assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_MASTER);
-  assert(!String_isEmpty(fileName));
-x
-
-return ERROR_(STILL_NOT_IMPLEMENTED,0,"");
-}
-#endif
-
-#if 0
-still not complete
-LOCAL Errors StorageMaster_getInfo(const StorageInfo *storageInfo,
-                                   ConstString       fileName,
-                                   FileInfo          *fileInfo
-                                  )
-{
-  String infoFileName;
-  Errors error;
-
-  assert(storageInfo != NULL);
-  assert(fileInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_MASTER);
-
-  error = File_getInfo(fileInfo,infoFileName);
-
-  return error;
-}
-#endif /* 0 */
-
-/*---------------------------------------------------------------------*/
-
-//TODO: required?
-#if 0
-LOCAL Errors StorageMaster_openDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
-                                             const StorageSpecifier     *storageSpecifier,
-                                             ConstString                pathName,
-                                             const JobOptions           *jobOptions,
-                                             ServerConnectionPriorities serverConnectionPriority
-                                            )
-{
-//  Errors error;
-
-  assert(storageDirectoryListHandle != NULL);
-  assert(storageSpecifier != NULL);
-  assert(storageSpecifier->type == STORAGE_TYPE_MASTER);
-  assert(!String_isEmpty(pathName));
-
-  UNUSED_VARIABLE(storageSpecifier);
-  UNUSED_VARIABLE(jobOptions);
-  UNUSED_VARIABLE(serverConnectionPriority);
-
-  // init variables
-  storageDirectoryListHandle->type = STORAGE_TYPE_MASTER;
-
-return ERROR_STILL_NOT_IMPLEMENTED;
-}
-
-LOCAL void StorageMaster_closeDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
-{
-  assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
-}
-
-LOCAL bool StorageMaster_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
-{
-  assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
-
-return ERROR_STILL_NOT_IMPLEMENTED;
-}
-
-LOCAL Errors StorageMaster_readDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle,
-                                             String                     fileName,
-                                             FileInfo                   *fileInfo
-                                            )
-{
-//  Errors error;
-
-  assert(storageDirectoryListHandle != NULL);
-  assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_MASTER);
-
-UNUSED_VARIABLE(fileName);
-UNUSED_VARIABLE(fileInfo);
-return ERROR_STILL_NOT_IMPLEMENTED;
-//  return error;
-}
-#endif
 
 #ifdef __cplusplus
   }

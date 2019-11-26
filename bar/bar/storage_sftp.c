@@ -101,7 +101,7 @@ LOCAL LIBSSH2_SEND_FUNC(sftpSendCallback)
 
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->sftp);
   assert(storageHandle->sftp.oldSendCallback != NULL);
 
@@ -135,7 +135,7 @@ LOCAL LIBSSH2_RECV_FUNC(sftpReceiveCallback)
   storageHandle = *((StorageHandle**)abstract);
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->sftp);
   assert(storageHandle->sftp.oldReceiveCallback != NULL);
 
@@ -497,7 +497,7 @@ LOCAL Errors StorageSFTP_init(StorageInfo                *storageInfo,
 LOCAL Errors StorageSFTP_done(StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   #ifdef HAVE_SSH2
     doneKey(&storageInfo->sftp.privateKey);
@@ -515,7 +515,7 @@ LOCAL bool StorageSFTP_isServerAllocationPending(const StorageInfo *storageInfo)
   bool serverAllocationPending;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   serverAllocationPending = FALSE;
   #if defined(HAVE_SSH2)
@@ -541,7 +541,7 @@ LOCAL Errors StorageSFTP_preProcess(const StorageInfo *storageInfo,
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   error = ERROR_NONE;
 
@@ -591,7 +591,7 @@ LOCAL Errors StorageSFTP_postProcess(const StorageInfo *storageInfo,
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   error = ERROR_NONE;
 
@@ -639,7 +639,7 @@ LOCAL bool StorageSFTP_exists(const StorageInfo *storageInfo, ConstString archiv
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   existsFlag = FALSE;
 
@@ -706,7 +706,7 @@ LOCAL bool StorageSFTP_isFile(const StorageInfo *storageInfo, ConstString archiv
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   isFileFlag = FALSE;
 
@@ -773,7 +773,7 @@ LOCAL bool StorageSFTP_isDirectory(const StorageInfo *storageInfo, ConstString a
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   isDirectoryFlag = FALSE;
 
@@ -880,7 +880,7 @@ LOCAL Errors StorageSFTP_create(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
@@ -999,7 +999,7 @@ LOCAL Errors StorageSFTP_open(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
 
   assert(storageHandle != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_SSH2
@@ -1124,7 +1124,7 @@ LOCAL void StorageSFTP_close(StorageHandle *storageHandle)
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->sftp);
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   #ifdef HAVE_SSH2
     switch (storageHandle->mode)
@@ -1159,7 +1159,7 @@ LOCAL bool StorageSFTP_eof(StorageHandle *storageHandle)
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   #ifdef HAVE_SSH2
     return storageHandle->sftp.index >= storageHandle->sftp.size;
@@ -1184,7 +1184,7 @@ LOCAL Errors StorageSFTP_read(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_READ);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -1343,7 +1343,7 @@ LOCAL Errors StorageSFTP_write(StorageHandle *storageHandle,
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(buffer != NULL);
 
   error = ERROR_NONE;
@@ -1455,7 +1455,7 @@ LOCAL uint64 StorageSFTP_getSize(StorageHandle *storageHandle)
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->sftp);
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   size = 0LL;
   #ifdef HAVE_SSH2
@@ -1478,7 +1478,7 @@ LOCAL Errors StorageSFTP_tell(StorageHandle *storageHandle,
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->sftp);
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -1509,7 +1509,7 @@ LOCAL Errors StorageSFTP_seek(StorageHandle *storageHandle,
     DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->sftp);
   #endif /* HAVE_SSH2 */
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
   error = ERROR_NONE;
   #ifdef HAVE_SSH2
@@ -1573,7 +1573,7 @@ LOCAL Errors StorageSFTP_rename(const StorageInfo *storageInfo,
   Errors error;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
 
 UNUSED_VARIABLE(storageInfo);
 UNUSED_VARIABLE(fromArchiveName);
@@ -1596,7 +1596,7 @@ LOCAL Errors StorageSFTP_delete(const StorageInfo *storageInfo,
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(!String_isEmpty(archiveName));
 
   error = ERROR_UNKNOWN;
@@ -1684,7 +1684,7 @@ Errors StorageSFTP_getInfo(FileInfo          *fileInfo,
   #endif /* HAVE_SSH2 */
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_SFTP);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SFTP);
   assert(fileInfo != NULL);
 
   memClear(fileInfo,sizeof(FileInfo));

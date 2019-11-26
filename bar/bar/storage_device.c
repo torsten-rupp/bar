@@ -485,7 +485,7 @@ LOCAL Errors StorageDevice_done(StorageInfo *storageInfo)
   Errors tmpError;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   error = ERROR_NONE;
 
@@ -522,7 +522,7 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   TextMacros (textMacros,3);
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(globalOptions.device != NULL);
 
   UNUSED_VARIABLE(initialFlag);
@@ -579,7 +579,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
   String     fileName;
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(globalOptions.device != NULL);
 
   error = ERROR_NONE;
@@ -742,7 +742,7 @@ LOCAL Errors StorageDevice_unloadVolume(const StorageInfo *storageInfo)
   TextMacros (textMacros,1);
 
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   TEXT_MACROS_INIT(textMacros)
   {
@@ -841,7 +841,7 @@ LOCAL Errors StorageDevice_create(StorageHandle *storageHandle,
 
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(!String_isEmpty(fileName));
 
   UNUSED_VARIABLE(fileSize);
@@ -905,7 +905,7 @@ LOCAL Errors StorageDevice_open(StorageHandle *storageHandle,
 {
   assert(storageHandle != NULL);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(!String_isEmpty(archiveName));
 
   // init variables
@@ -940,7 +940,7 @@ LOCAL void StorageDevice_close(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   DEBUG_REMOVE_RESOURCE_TRACE(&storageHandle->device,StorageHandleDevice);
 
@@ -972,7 +972,7 @@ LOCAL bool StorageDevice_eof(StorageHandle *storageHandle)
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   return File_eof(&storageHandle->device.write.fileHandle);
 }
@@ -987,7 +987,7 @@ LOCAL Errors StorageDevice_read(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->mode == STORAGE_MODE_READ);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(buffer != NULL);
 
   if (bytesRead != NULL) (*bytesRead) = 0L;
@@ -1004,7 +1004,7 @@ LOCAL Errors StorageDevice_write(StorageHandle *storageHandle,
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
   assert(storageHandle->mode == STORAGE_MODE_WRITE);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(buffer != NULL);
 
   return File_write(&storageHandle->device.write.fileHandle,buffer,bufferLength);
@@ -1017,7 +1017,7 @@ LOCAL Errors StorageDevice_tell(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(offset != NULL);
 
   (*offset) = 0LL;
@@ -1032,7 +1032,7 @@ LOCAL Errors StorageDevice_seek(StorageHandle *storageHandle,
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   return File_seek(&storageHandle->device.write.fileHandle,offset);
 }
@@ -1042,7 +1042,7 @@ LOCAL uint64 StorageDevice_getSize(StorageHandle *storageHandle)
   assert(storageHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(&storageHandle->device);
   assert(storageHandle->storageInfo != NULL);
-  assert(storageHandle->storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageHandle->storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
 
   return File_getSize(&storageHandle->device.write.fileHandle);
 }
@@ -1053,7 +1053,7 @@ LOCAL Errors StorageDevice_rename(const StorageInfo *storageInfo,
                                  )
 {
   assert(storageInfo != NULL);
-  assert(storageInfo->type == STORAGE_TYPE_FILESYSTEM);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FILESYSTEM);
 
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(fromArchiveName);
@@ -1072,7 +1072,7 @@ LOCAL Errors StorageDevice_delete(const StorageInfo *storageInfo,
 {
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert(storageInfo->type == STORAGE_TYPE_DEVICE);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(!String_isEmpty(archiveName));
 
   UNUSED_VARIABLE(storageInfo);
