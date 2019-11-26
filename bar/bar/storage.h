@@ -169,8 +169,6 @@ typedef enum
   STORAGE_TYPE_BD,
   STORAGE_TYPE_DEVICE,
 
-  STORAGE_TYPE_MASTER,
-
 //TODO: remove from enum
   STORAGE_TYPE_ANY,
 
@@ -228,6 +226,7 @@ typedef struct
 
   StorageSpecifier                storageSpecifier;          // storage specifier data
   const JobOptions                *jobOptions;
+  ServerIO                        *masterIO;
   StorageFlags                    storageFlags;              // storage flags; see STORAGE_FLAG_...
 
   LogHandle                       *logHandle;                // log handle
@@ -247,7 +246,6 @@ typedef struct
   uint                            requestedVolumeNumber;     // requested volume number
   StorageVolumeStates             volumeState;               // volume state
 
-  StorageTypes                    type;                      // storage type
   union
   {
     // file storage
@@ -389,12 +387,6 @@ typedef struct
         uint64     totalSize;                                // current size [bytes]
       } write;
     } device;
-
-    // master
-    struct
-    {
-      ServerIO   *io;
-    } master;
   };
 
   StorageStatusInfo runningInfo;
@@ -551,6 +543,7 @@ typedef struct
     } device;
 
     // master storage
+//TODO: required?
     struct
     {
       uint64     index;                                      // current read/write index in file [0..n-1]
@@ -1162,7 +1155,7 @@ INLINE StorageTypes Storage_getType(const StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
 
-  return storageInfo->type;
+  return storageInfo->storageSpecifier.type;
 }
 #endif /* NDEBUG || __STORAGE_IMPLEMENTATION__ */
 
