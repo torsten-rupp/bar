@@ -10163,7 +10163,7 @@ LOCAL Errors runDaemon(void)
   if (String_isEmpty(uuid))
   {
     Misc_getUUID(uuid);
-    configModified = TRUE;
+    (void)updateConfig();
   }
 
   // create pid file
