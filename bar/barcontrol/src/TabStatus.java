@@ -2199,7 +2199,7 @@ public class TabStatus
 
   /** update job trigger
    */
-  private synchronized void updateJobTrigger()
+  private void updateJobTrigger()
   {
     // clear trigger menu
     display.syncExec(new Runnable()
@@ -2321,7 +2321,7 @@ public class TabStatus
 
   /** update server status
    */
-  private synchronized void updateStatus()
+  private void updateStatus()
     throws Exception
   {
     try
@@ -2457,7 +2457,7 @@ public class TabStatus
 
   /** update job information
    */
-  private synchronized void updateJobInfo()
+  private void updateJobInfo()
   {
     if (selectedJobData != null)
     {
@@ -2603,7 +2603,7 @@ public class TabStatus
 
   /** update status, job list, job data
    */
-  private synchronized void update()
+  private void update()
   {
     try
     {
