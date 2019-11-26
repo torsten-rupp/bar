@@ -40,6 +40,7 @@
 #include "common/passwords.h"
 
 #include "entrylists.h"
+#include "crypt.h"
 #include "archive.h"
 #include "storage.h"
 #include "index.h"
@@ -2187,6 +2188,35 @@ NULL,//                                                        scheduleTitle,
 
 LOCAL void pairingThreadCode(void)
 {
+  /***********************************************************************\
+  * Name   : updateSlaveState
+  * Purpose: update slave state in job
+  * Input  : slaveNode  - slave node
+  *          slaveState - slave state
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState);
+  void updateSlaveState(const SlaveNode *slaveNode, SlaveStates slaveState)
+  {
+    JobNode *jobNode;
+
+    // update slave state in job
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    {
+      jobNode = JOB_LIST_FIND(jobNode,
+                                 (jobNode->job.slaveHost.port == slaveNode->port)
+                              && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
+                             );
+      if (jobNode != NULL)
+      {
+        jobNode->slaveState = slaveState;
+      }
+    }
+  }
+
   JobNode    *jobNode;
   SlaveNode  *slaveNode;
   Errors     error;
@@ -2211,16 +2241,23 @@ LOCAL void pairingThreadCode(void)
           {
             if (Connector_isDisconnected(&slaveNode->connectorInfo))
             {
+              // disconnect slave
               Connector_disconnect(&slaveNode->connectorInfo);
+
+              // update slave state in job
+              updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE);
+
+              // log info
               if (slaveNode->authorizedFlag)
               {
-                slaveNode->authorizedFlag = FALSE;
                 logMessage(NULL,  // logHandle,
                            LOG_TYPE_INFO,
                            "Slave %s:%d disconnected",
                            String_cString(slaveNode->name),slaveNode->port
                           );
               }
+
+              slaveNode->authorizedFlag = FALSE;
             }
           }
 
@@ -2251,8 +2288,8 @@ LOCAL void pairingThreadCode(void)
             {
               if (   !Job_isSlaveLocked(slaveNode)
                   && !JOB_LIST_CONTAINS(jobNode,
-                                           (slaveNode->port == jobNode->job.slaveHost.port)
-                                        && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
+                                           (jobNode->job.slaveHost.port == slaveNode->port)
+                                        && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
                                        )
                  )
               {
@@ -2271,7 +2308,7 @@ LOCAL void pairingThreadCode(void)
             assert(slaveNode->name != NULL);
 
             if (!Connector_isDisconnected(&slaveNode->connectorInfo))
-              {
+            {
               if (!Connector_isConnected(&slaveNode->connectorInfo))
               {
                 // try connect to slave
@@ -2281,6 +2318,10 @@ LOCAL void pairingThreadCode(void)
                                          );
                 if (error == ERROR_NONE)
                 {
+                  // update slave state in job
+                  updateSlaveState(slaveNode,SLAVE_STATE_ONLINE);
+
+                  // log info
                   if (Misc_getCurrentDateTime() > (slaveNode->lastOnlineDateTime+10*S_PER_MINUTE))
                   {
                     logMessage(NULL,  // logHandle,
@@ -2288,6 +2329,7 @@ LOCAL void pairingThreadCode(void)
                                "Slave %s:%d online",
                                String_cString(slaveNode->name),slaveNode->port
                               );
+
                   }
                   slaveNode->lastOnlineDateTime = Misc_getCurrentDateTime();
                 }
@@ -2306,6 +2348,11 @@ LOCAL void pairingThreadCode(void)
                 if (error == ERROR_NONE)
                 {
                   slaveNode->authorizedFlag = TRUE;
+
+                  // update slave state in job
+                  updateSlaveState(slaveNode,SLAVE_STATE_PAIRED);
+
+                  // log info
                   logMessage(NULL,  // logHandle,
                              LOG_TYPE_INFO,
                              "Slave %s:%d authorized",
@@ -2317,6 +2364,13 @@ LOCAL void pairingThreadCode(void)
                   anyUnpairedFlag = TRUE;
                 }
               }
+
+              if (!Connector_isConnected(&slaveNode->connectorInfo))
+              {
+                // update slave state in job
+                updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE);
+              }
+
 #if 0
 fprintf(stderr,"%s, %d: checked %s:%d : slavestate=%d slaveNode=%p connectstate=%d Connector_isConnected=%d\n",__FILE__,__LINE__,
 String_cString(slaveNode->name),
@@ -2327,36 +2381,6 @@ slaveNode->connectorInfo.state,
 Connector_isConnected(&slaveNode->connectorInfo)
 );
 #endif
-            }
-          }
-
-          // store slave state in job
-          JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-          {
-            JOB_LIST_ITERATE(jobNode)
-            {
-              if (Job_isRemote(jobNode))
-              {
-                slaveNode = JOB_SLAVE_LIST_FIND(slaveNode,
-                                                   (slaveNode->port == jobNode->job.slaveHost.port)
-                                                && String_equals(slaveNode->name,jobNode->job.slaveHost.name)
-                                               );
-                if (slaveNode != NULL)
-                {
-                  if      (Connector_isAuthorized(&slaveNode->connectorInfo))
-                  {
-                    jobNode->slaveState = SLAVE_STATE_PAIRED;
-                  }
-                  else if (Connector_isConnected(&slaveNode->connectorInfo))
-                  {
-                    jobNode->slaveState = SLAVE_STATE_ONLINE;
-                  }
-                  else
-                  {
-                    jobNode->slaveState = SLAVE_STATE_OFFLINE;
-                  }
-                }
-              }
             }
           }
         }
@@ -4790,7 +4814,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
       {
         logMessage(NULL,  // logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Authorization client %s fail - invalid password",
+                   "Authorization of client %s fail - invalid password",
                    getClientInfo(clientInfo,s,sizeof(s))
                   );
         error = ERROR_INVALID_PASSWORD;
@@ -4839,7 +4863,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                       : ERROR_INVALID_PASSWORD;
             logMessage(NULL,  // logHandle,
                        LOG_TYPE_ALWAYS,
-                       "Authorization client %s fail (error: %s)",
+                       "Authorization of client %s fail (error: %s)",
                        getClientInfo(clientInfo,s,sizeof(s)),
                        Error_getText(error)
                       );
@@ -4886,7 +4910,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
     {
       logMessage(NULL,  // logHandle,
                  LOG_TYPE_ALWAYS,
-                 "Authorization client %s fail (error: %s)",
+                 "Authorization of client %s fail (error: %s)",
                  getClientInfo(clientInfo,s,sizeof(s)),
                  Error_getText(error)
                 );
@@ -7731,10 +7755,10 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 *            master=<name> \
 *            name=<name> \
 *            state=<state> \
-*            slaveState=<slave state>
 *            slaveHostName=<name> \
 *            slaveHostPort=<n> \
 *            slaveHostForceSSL=yes|no
+*            slaveState=<slave state>
 *            archiveType=<type> \
 *            archivePartSize=<n> \
 *            deltaCompressAlgorithm=<delta compress algorithm> \
