@@ -4246,7 +4246,6 @@ throw new Error("NYI");
     public void getShortcuts(List<RemoteFile> shortcutList)
     {
       final HashMap<String,RemoteFile> shortcutMap = new HashMap<String,RemoteFile>();
-Dprintf.printStackTrace();
 
       // add manual shortcuts
       for (String name : Settings.shortcuts)

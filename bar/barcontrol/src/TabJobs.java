@@ -11844,6 +11844,8 @@ throw new Error("NYI");
    */
   private void includeListAdd(EntryData entryData)
   {
+    final EntryDataComparator entryDataComparator = new EntryDataComparator(widgetIncludeTable);
+
     assert selectedJobData != null;
 
     // update include list
@@ -11873,7 +11875,7 @@ throw new Error("NYI");
 
     // update/insert table widget
     Widgets.updateInsertTableItem(widgetIncludeTable,
-                                  new EntryDataComparator(widgetIncludeTable),
+                                  entryDataComparator,
                                   entryData,
                                   entryData.getImage(),
                                   entryData.pattern
@@ -12264,11 +12266,11 @@ throw new Error("NYI");
     excludeHashSet.add(pattern);
 
     // update list
-    Widgets.insertListItem(widgetExcludeList,
-                           Widgets.getListItemIndex(widgetExcludeList,String.CASE_INSENSITIVE_ORDER,pattern),
-                           (Object)pattern,
-                           pattern
-                          );
+    Widgets.updateInsertListItem(widgetExcludeList,
+                                 String.CASE_INSENSITIVE_ORDER,
+                                 pattern,
+                                 pattern
+                                );
 
     // update file tree/device images
     updateFileTreeImages();
@@ -12718,6 +12720,8 @@ throw new Error("NYI");
    */
   private void mountListAdd(MountData mountData)
   {
+    final MountDataComparator mountDataComparator = new MountDataComparator(widgetMountTable);
+
     assert selectedJobData != null;
 
     // add to mount list
@@ -12746,7 +12750,7 @@ throw new Error("NYI");
 
     // insert into table
     Widgets.updateInsertTableItem(widgetMountTable,
-                                  new MountDataComparator(widgetMountTable),
+                                  mountDataComparator,
                                   mountData,
                                   mountData.name,
                                   (mountData.device != null) ? mountData.device : ""
@@ -12769,9 +12773,11 @@ throw new Error("NYI");
    */
   private void mountListUpdate(MountData mountData)
   {
+    final MountDataComparator mountDataComparator = new MountDataComparator(widgetMountTable);
+
     assert selectedJobData != null;
 
-    // add to mount list
+    // update mount data
     try
     {
       BARServer.executeCommand(StringParser.format("MOUNT_LIST_UPDATE jobUUID=%s id=%d name=%'S device=%'S",
@@ -12795,6 +12801,7 @@ throw new Error("NYI");
 
     // update table item
     Widgets.updateInsertTableItem(widgetMountTable,
+                                  mountDataComparator,
                                   mountData,
                                   mountData.name,
                                   (mountData.device != null) ? mountData.device : ""
