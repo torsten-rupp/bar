@@ -197,9 +197,9 @@ VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR
 VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
 ifneq ($(SVNVERSION),)
-  VERSION_REPOSITORY   := $(shell $(SVNVERSION) . 2>/dev/null || $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE|$(SED) 's/RELEASE=//g')
+  VERSION_REPOSITORY := $(shell ($(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE= || $(SVNVERSION) . 2>/dev/null)|$(SED) 's/RELEASE=//g')
 else
-  VERSION_REPOSITORY   := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE|$(SED) 's/RELEASE=//g')
+  VERSION_REPOSITORY := $(shell $(CAT) $(SOURCE_DIR)/../version|$(GREP) RELEASE=|$(SED) 's/RELEASE=//g')
 endif
 
 # supported min. compress algorithms
