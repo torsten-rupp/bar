@@ -6932,8 +6932,9 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 break;
               case FILE_TYPE_HARDLINK:
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                    "fileType=HARDLINK name=%'S dateTime=%"PRIu64" noDump=%y",
+                                    "fileType=HARDLINK name=%'S size=%"PRIu64" dateTime=%"PRIu64" noDump=%y",
                                     name,
+                                    fileInfo.size,
                                     fileInfo.timeModified,
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                    );
