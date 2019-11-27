@@ -829,7 +829,7 @@ dnl ----------------------- initialize variables -----------------------
 CPP_FLAGS="$CPPFLAGS"
 CC_FLAGS="$CFLAGS"
 CC_WARN_FLAGS=""
-CXX_FLAGS="$CFLAGS"
+CXX_FLAGS="$CXXFLAGS"
 CXX_WARN_FLAGS=""
 CC_FLAGS_OPTIMIZE=""
 CC_FLAGS_OPTIMIZE_RELEASE=""
