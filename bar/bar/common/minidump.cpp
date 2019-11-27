@@ -299,8 +299,8 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
   #define __TO_STRING_TMP(z) #z
   #define VERSION_MAJOR_STRING __TO_STRING(VERSION_MAJOR)
   #define VERSION_MINOR_STRING __TO_STRING(VERSION_MINOR)
-  #define VERSION_SVN_STRING __TO_STRING(VERSION_SVN)
-  #define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING " (rev. " VERSION_SVN_STRING ")"
+  #define VERSION_REPOSITORY_STRING __TO_STRING(VERSION_REPOSITORY)
+  #define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING " (rev. " VERSION_REPOSITORY_STRING ")"
 
   UNUSED_VARIABLE(&minidumpDescriptor);
   UNUSED_VARIABLE(context);
@@ -357,7 +357,7 @@ LOCAL bool minidumpCallback(const google_breakpad::MinidumpDescriptor &minidumpD
   #undef __TO_STRING_TMP
   #undef VERSION_MAJOR_STRING
   #undef VERSION_MINOR_STRING
-  #undef VERSION_SVN_STRING
+  #undef VERSION_REPOSITORY_STRING
   #undef VERSION_STRING
 }
 #endif /* HAVE_BREAKPAD */
