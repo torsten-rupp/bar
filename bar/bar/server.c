@@ -8149,6 +8149,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
   {
     jobNode = NULL;
 
+//TODO: use serverMode?
     if (String_isEmpty(master))
     {
       // add new local job
@@ -18285,28 +18286,31 @@ Errors Server_run(ServerModes       mode,
            );
 
   // create jobs directory if necessary
-  if (!File_exists(globalOptions.jobsDirectory))
+  if (mode == SERVER_MODE_MASTER)
   {
-    error = File_makeDirectory(globalOptions.jobsDirectory,
-                               FILE_DEFAULT_USER_ID,
-                               FILE_DEFAULT_GROUP_ID,
-                               FILE_DEFAULT_PERMISSION
-                              );
-    if (error != ERROR_NONE)
+    if (!File_exists(globalOptions.jobsDirectory))
     {
-      printError("Cannot create directory '%s' (error: %s)",
-                 String_cString(globalOptions.jobsDirectory),
-                 Error_getText(error)
-                );
-      AutoFree_cleanup(&autoFreeList);
-      return error;
+      error = File_makeDirectory(globalOptions.jobsDirectory,
+                                 FILE_DEFAULT_USER_ID,
+                                 FILE_DEFAULT_GROUP_ID,
+                                 FILE_DEFAULT_PERMISSION
+                                );
+      if (error != ERROR_NONE)
+      {
+        printError("Cannot create directory '%s' (error: %s)",
+                   String_cString(globalOptions.jobsDirectory),
+                   Error_getText(error)
+                  );
+        AutoFree_cleanup(&autoFreeList);
+        return error;
+      }
     }
-  }
-  if (!File_isDirectory(globalOptions.jobsDirectory))
-  {
-    printError("'%s' is not a directory!",String_cString(globalOptions.jobsDirectory));
-    AutoFree_cleanup(&autoFreeList);
-    return ERROR_NOT_A_DIRECTORY;
+    if (!File_isDirectory(globalOptions.jobsDirectory))
+    {
+      printError("'%s' is not a directory!",String_cString(globalOptions.jobsDirectory));
+      AutoFree_cleanup(&autoFreeList);
+      return ERROR_NOT_A_DIRECTORY;
+    }
   }
 
   // init index database
@@ -18495,39 +18499,43 @@ Errors Server_run(ServerModes       mode,
   {
     HALT_FATAL_ERROR("Cannot initialize job thread!");
   }
-  if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
-  {
-    HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
-  }
   if (!Thread_init(&pauseThread,"BAR pause",globalOptions.niceLevel,pauseThreadCode,NULL))
   {
     HALT_FATAL_ERROR("Cannot initialize pause thread!");
   }
-  if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
+  if (serverMode == SERVER_MODE_MASTER)
   {
-    HALT_FATAL_ERROR("Cannot initialize pause thread!");
-  }
-  if (Index_isAvailable())
-  {
-//TODO: required?
-    // init database pause callbacks
-    Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
+    if (!Thread_init(&schedulerThread,"BAR scheduler",globalOptions.niceLevel,schedulerThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize scheduler thread!");
+    }
+    if (!Thread_init(&pairingThread,"BAR pairing",globalOptions.niceLevel,pairingThreadCode,NULL))
+    {
+      HALT_FATAL_ERROR("Cannot initialize pause thread!");
+    }
 
-    Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-    if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
+    if (Index_isAvailable())
     {
-      HALT_FATAL_ERROR("Cannot initialize index thread!");
-    }
-    if (globalOptions.indexDatabaseAutoUpdateFlag)
-    {
-      if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
+  //TODO: required?
+      // init database pause callbacks
+      Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
+
+      Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
       {
-        HALT_FATAL_ERROR("Cannot initialize index update thread!");
+        HALT_FATAL_ERROR("Cannot initialize index thread!");
       }
-    }
-    if (!Thread_init(&purgeExpiredEntitiesThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredEntitiesThreadCode,NULL))
-    {
-      HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
+      if (globalOptions.indexDatabaseAutoUpdateFlag)
+      {
+        if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
+        {
+          HALT_FATAL_ERROR("Cannot initialize index update thread!");
+        }
+      }
+      if (!Thread_init(&purgeExpiredEntitiesThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredEntitiesThreadCode,NULL))
+      {
+        HALT_FATAL_ERROR("Cannot initialize purge expire thread!");
+      }
     }
   }
 
@@ -18975,48 +18983,52 @@ Errors Server_run(ServerModes       mode,
 
   // wait for thread exit
   Job_listSetEnd();
-  if (Index_isAvailable())
+  if (serverMode == SERVER_MODE_MASTER)
   {
-    if (!Thread_join(&purgeExpiredEntitiesThread))
+    if (Index_isAvailable())
     {
-      HALT_INTERNAL_ERROR("Cannot stop purge expired entities thread!");
-    }
-    Thread_done(&purgeExpiredEntitiesThread);
-
-    if (globalOptions.indexDatabaseAutoUpdateFlag)
-    {
-      if (!Thread_join(&autoIndexThread))
+      if (!Thread_join(&purgeExpiredEntitiesThread))
       {
-        HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
+        HALT_INTERNAL_ERROR("Cannot stop purge expired entities thread!");
       }
-      Thread_done(&autoIndexThread);
+      Thread_done(&purgeExpiredEntitiesThread);
+
+      if (globalOptions.indexDatabaseAutoUpdateFlag)
+      {
+        if (!Thread_join(&autoIndexThread))
+        {
+          HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
+        }
+        Thread_done(&autoIndexThread);
+      }
+      if (!Thread_join(&indexThread))
+      {
+        HALT_INTERNAL_ERROR("Cannot stop index thread!");
+      }
+      Thread_done(&indexThread);
+
+      Semaphore_done(&indexThreadTrigger);
+
+      // done database pause callbacks
+      Index_setPauseCallback(CALLBACK_(NULL,NULL));
     }
-    if (!Thread_join(&indexThread))
+
+    if (!Thread_join(&pairingThread))
     {
-      HALT_INTERNAL_ERROR("Cannot stop index thread!");
+      HALT_INTERNAL_ERROR("Cannot stop pairing thread!");
     }
-    Thread_done(&indexThread);
-
-    Semaphore_done(&indexThreadTrigger);
-
-    // done database pause callbacks
-    Index_setPauseCallback(CALLBACK_(NULL,NULL));
+    Thread_done(&pairingThread);
+    if (!Thread_join(&schedulerThread))
+    {
+      HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");
+    }
+    Thread_done(&schedulerThread);
   }
-  if (!Thread_join(&pairingThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop pairing thread!");
-  }
-  Thread_done(&pairingThread);
   if (!Thread_join(&pauseThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop pause thread!");
   }
   Thread_done(&pauseThread);
-  if (!Thread_join(&schedulerThread))
-  {
-    HALT_INTERNAL_ERROR("Cannot stop scheduler thread!");
-  }
-  Thread_done(&schedulerThread);
   if (!Thread_join(&jobThread))
   {
     HALT_INTERNAL_ERROR("Cannot stop job thread!");
