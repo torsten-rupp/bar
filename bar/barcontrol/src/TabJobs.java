@@ -11871,13 +11871,13 @@ throw new Error("NYI");
     // update hash map
     includeHashMap.put(entryData.pattern,entryData);
 
-    // update table widget
-    Widgets.insertTableItem(widgetIncludeTable,
-                            new EntryDataComparator(widgetIncludeTable),
-                            entryData,
-                            entryData.getImage(),
-                            entryData.pattern
-                           );
+    // update/insert table widget
+    Widgets.updateInsertTableItem(widgetIncludeTable,
+                                  new EntryDataComparator(widgetIncludeTable),
+                                  entryData,
+                                  entryData.getImage(),
+                                  entryData.pattern
+                                 );
 
     // update file tree/device images
     updateFileTreeImages();
@@ -12516,12 +12516,12 @@ throw new Error("NYI");
                                          @Override
                                          public void run()
                                          {
-                                           Widgets.insertTableItem(widgetMountTable,
-                                                                   mountDataComparator,
-                                                                   mountData,
-                                                                   mountData.name,
-                                                                   (mountData.device != null) ? mountData.device : ""
-                                                                  );
+                                           Widgets.updateInsertTableItem(widgetMountTable,
+                                                                         mountDataComparator,
+                                                                         mountData,
+                                                                         mountData.name,
+                                                                         (mountData.device != null) ? mountData.device : ""
+                                                                        );
                                          }
                                        });
                                      }
@@ -12745,12 +12745,12 @@ throw new Error("NYI");
     }
 
     // insert into table
-    Widgets.insertTableItem(widgetMountTable,
-                            new MountDataComparator(widgetMountTable),
-                            mountData,
-                            mountData.name,
-                            (mountData.device != null) ? mountData.device : ""
-                           );
+    Widgets.updateInsertTableItem(widgetMountTable,
+                                  new MountDataComparator(widgetMountTable),
+                                  mountData,
+                                  mountData.name,
+                                  (mountData.device != null) ? mountData.device : ""
+                                 );
 
     // remove duplicate names
     TableItem tableItems[] = widgetMountTable.getItems();
@@ -12794,11 +12794,11 @@ throw new Error("NYI");
     }
 
     // update table item
-    Widgets.updateTableItem(widgetMountTable,
-                            mountData,
-                            mountData.name,
-                            (mountData.device != null) ? mountData.device : ""
-                           );
+    Widgets.updateInsertTableItem(widgetMountTable,
+                                  mountData,
+                                  mountData.name,
+                                  (mountData.device != null) ? mountData.device : ""
+                                 );
 
     // remove duplicate names
     TableItem tableItems[] = widgetMountTable.getItems();
@@ -15216,15 +15216,15 @@ throw new Error("NYI");
           return;
         }
 
-        TableItem tableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                      new ScheduleDataComparator(widgetScheduleTable),
-                                                      scheduleData,
-                                                      scheduleData.getDate(),
-                                                      scheduleData.getWeekDays(),
-                                                      scheduleData.getTime(),
-                                                      scheduleData.archiveType.toString(),
-                                                      scheduleData.customText
-                                                     );
+        TableItem tableItem = Widgets.updateInsertTableItem(widgetScheduleTable,
+                                                            new ScheduleDataComparator(widgetScheduleTable),
+                                                            scheduleData,
+                                                            scheduleData.getDate(),
+                                                            scheduleData.getWeekDays(),
+                                                            scheduleData.getTime(),
+                                                            scheduleData.archiveType.toString(),
+                                                            scheduleData.customText
+                                                           );
         tableItem.setChecked(scheduleData.enabled);
         tableItem.setData(scheduleData);
       }
@@ -15324,15 +15324,15 @@ throw new Error("NYI");
             return;
           }
 
-          TableItem newTableItem = Widgets.insertTableItem(widgetScheduleTable,
-                                                           new ScheduleDataComparator(widgetScheduleTable),
-                                                           newScheduleData,
-                                                           newScheduleData.getDate(),
-                                                           newScheduleData.getWeekDays(),
-                                                           newScheduleData.getTime(),
-                                                           newScheduleData.archiveType.toString(),
-                                                           newScheduleData.customText
-                                                          );
+          TableItem newTableItem = Widgets.updateInsertTableItem(widgetScheduleTable,
+                                                                 new ScheduleDataComparator(widgetScheduleTable),
+                                                                 newScheduleData,
+                                                                 newScheduleData.getDate(),
+                                                                 newScheduleData.getWeekDays(),
+                                                                 newScheduleData.getTime(),
+                                                                 newScheduleData.archiveType.toString(),
+                                                                 newScheduleData.customText
+                                                                );
           newTableItem.setChecked(newScheduleData.enabled);
           newTableItem.setData(newScheduleData);
         }

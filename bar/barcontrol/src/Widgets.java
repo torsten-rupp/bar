@@ -4417,9 +4417,9 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    */
   public static <T> ListItem updateInsertListItem(final List list, final Comparator<T> comparator, final T data, final String text)
   {
-    /** list update runnable
+    /** list update/insert runnable
      */
-    class UpdateRunnable implements Runnable
+    class UpdateInsertRunnable implements Runnable
     {
       ListItem listItem = null;
 
@@ -4516,9 +4516,9 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     ListItem listItem = null;
     if (!list.isDisposed())
     {
-      UpdateRunnable updateRunnable = new UpdateRunnable();
-      list.getDisplay().syncExec(updateRunnable);
-      listItem = updateRunnable.listItem;
+      UpdateInsertRunnable updateInsertRunnable = new UpdateInsertRunnable();
+      list.getDisplay().syncExec(updateInsertRunnable);
+      listItem = updateInsertRunnable.listItem;
     }
 
     return listItem;
@@ -5234,13 +5234,13 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param comparator comparator
    * @param data item data
    * @param text item text
-   * @param true if updated, false inserted
+   * @param true if updated, false if inserted
    */
   public static <T> boolean updateInsertComboItem(final Combo combo, final Comparator<T> comparator, final T data, final String text)
   {
-    /** combo update runnable
+    /** combo update/insert runnable
      */
-    class UpdateRunnable implements Runnable
+    class UpdateInsertRunnable implements Runnable
     {
       boolean updatedFlag = false;
 
@@ -5325,13 +5325,13 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       }
     }
 
-    UpdateRunnable updateRunnable = new UpdateRunnable();
+    UpdateInsertRunnable updateInsertRunnable = new UpdateInsertRunnable();
     if (!combo.isDisposed())
     {
-      combo.getDisplay().syncExec(updateRunnable);
+      combo.getDisplay().syncExec(updateInsertRunnable);
     }
 
-    return updateRunnable.updatedFlag;
+    return updateInsertRunnable.updatedFlag;
   }
 
   /** update/insert combo item
@@ -7091,19 +7091,19 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     }
   }
 
-  /** update table item
+  /** update/insert table item
    * @param table table
    * @param data item data
    * @param values values list
    * @return updated or added table item
    */
-  public static TableItem updateTableItem(final Table table, final Object data, final Object... values)
+  public static <T> TableItem updateInsertTableItem(final Table table, final Comparator<T> comparator, final T data, final Object... values)
   {
-    /** table update runnable
+    /** table update/insert runnable
      */
-    class UpdateRunnable implements Runnable
+    class UpdateInsertRunnable implements Runnable
     {
-      TableItem updatedTableItem = null;
+      TableItem tableItem = null;
 
       /** run
        */
@@ -7115,7 +7115,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           {
             try
             {
-              if (data.equals(tableItem.getData()))
+              if (comparator.compare(data,tableItem.getData()) == 0)
               {
                 for (int i = 0; i < values.length; i++)
                 {
@@ -7147,7 +7147,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     }
                   }
                 }
-                updatedTableItem = tableItem;
+                this.tableItem = tableItem;
                 break;
               }
             }
@@ -7156,75 +7156,63 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
               // ignored
             }
           }
-        }
-      }
-    }
-
-    /** table add runnable
-     */
-    class AddRunnable implements Runnable
-    {
-      TableItem addedTableItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!table.isDisposed())
-        {
-          addedTableItem = new TableItem(table,SWT.NONE);
-          addedTableItem.setData(data);
-          for (int i = 0; i < values.length; i++)
+          if (this.tableItem == null)
           {
-            if (values[i] != null)
+            int i = 0;
+            while (i < listItems.size())
             {
-              if      (values[i] instanceof String)
+              if (comparator.compare(data,listItems.get(i).data) > 0)
               {
-                addedTableItem.setText(i,(String)values[i]);
+                list.add(text,i);
+                listItems.add(i,listItem);
+                break;
               }
-              else if (values[i] instanceof Integer)
+              i++;
+            }
+
+            this.tableItem = new TableItem(table,SWT.NONE);
+            this.tableItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
               {
-                addedTableItem.setText(i,Integer.toString((Integer)values[i]));
-              }
-              else if (values[i] instanceof Long)
-              {
-                addedTableItem.setText(i,Long.toString((Long)values[i]));
-              }
-              else if (values[i] instanceof Double)
-              {
-                addedTableItem.setText(i,Double.toString((Double)values[i]));
-              }
-              else if (values[i] instanceof Image)
-              {
-                addedTableItem.setImage(i,(Image)values[i]);
-              }
-              else
-              {
-                addedTableItem.setText(i,values[i].toString());
+                if      (values[i] instanceof String)
+                {
+                  this.tableItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  this.tableItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  this.tableItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  this.tableItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  this.tableItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  this.tableItem.setText(i,values[i].toString());
+                }
               }
             }
           }
         }
       }
-    };
+    }
 
     TableItem tableItem = null;
     if (!table.isDisposed())
     {
-      Display display = table.getDisplay();
-
-      // try update existing tree item
-      UpdateRunnable updateRunnable = new UpdateRunnable();
-      display.syncExec(updateRunnable);
-      tableItem = updateRunnable.updatedTableItem;
-
-      if (tableItem == null)
-      {
-        // add new table item
-        AddRunnable addRunnable = new AddRunnable();
-        display.syncExec(addRunnable);
-        tableItem = addRunnable.addedTableItem;
-      }
+      UpdateInsertRunnable updateInsertRunnable = new UpdateInsertRunnable();
+      table.getDisplay().syncExec(updateInsertRunnable);
+      tableItem = updateInsertRunnable.tableItem;
     }
 
     return tableItem;
