@@ -330,6 +330,12 @@ extern JobList   jobList;
 *            }
 \***********************************************************************/
 
+//TODO:
+//#define JOB_LIST_ITERATE(variable) \
+//  for (JobNode *variable = jobList.head; \
+//       variable != NULL; \
+//       variable = (variable)->next \
+//      )
 #define JOB_LIST_ITERATE(variable) \
   for ((variable) = jobList.head; \
        (variable) != NULL; \
