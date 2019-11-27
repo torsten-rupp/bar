@@ -8961,7 +8961,7 @@ public class TabJobs
         tabFolder = Widgets.newTabFolder(tab);
         Widgets.layout(tabFolder,0,0,TableLayoutData.NSWE);
         {
-          subTab = Widgets.addTab(tabFolder,BARControl.tr("Master"),Settings.hasExpertRole());
+          subTab = Widgets.addTab(tabFolder,BARControl.tr("Local"),Settings.hasExpertRole());
           subTab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0,1.0},1.0));
           Widgets.layout(subTab,0,0,TableLayoutData.NSWE);
           {
@@ -10347,6 +10347,8 @@ TODO: implement delete entity
         BARServer.getJobOption(jobData.uuid,overwriteFiles);
         BARServer.getJobOption(jobData.uuid,preCommand);
         BARServer.getJobOption(jobData.uuid,postCommand);
+        BARServer.getJobOption(jobData.uuid,slavePreCommand);
+        BARServer.getJobOption(jobData.uuid,slavePostCommand);
 //        maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
         maxStorageSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"max-storage-size"),0));
         BARServer.getJobOption(jobData.uuid,maxStorageSize);
@@ -11103,7 +11105,8 @@ throw new Error("NYI");
     {
       treeItem.removeAll();
 
-      BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
+      BARServer.executeCommand(StringParser.format("FILE_LIST jobUUID=%s directory=%'S",
+                                                   (selectedJobData.uuid != null) ? selectedJobData.uuid : "",
                                                    fileTreeData.name
                                                   ),
                                0,  // debugLevel
