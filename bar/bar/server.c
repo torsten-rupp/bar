@@ -2204,15 +2204,16 @@ LOCAL void pairingThreadCode(void)
     JobNode *jobNode;
 
     // update slave state in job
-    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      jobNode = JOB_LIST_FIND(jobNode,
-                                 (jobNode->job.slaveHost.port == slaveNode->port)
-                              && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
-                             );
-      if (jobNode != NULL)
+      JOB_LIST_ITERATE(jobNode)
       {
-        jobNode->slaveState = slaveState;
+        if (   (jobNode->job.slaveHost.port == slaveNode->port)
+            && String_equals(jobNode->job.slaveHost.name,slaveNode->name)
+           )
+        {
+          jobNode->slaveState = slaveState;
+        }
       }
     }
   }
