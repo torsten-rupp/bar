@@ -597,6 +597,7 @@ public class TabJobs
      */
     class DirectoryInfoRequest
     {
+      String   jobUUID;
       String   name;
       boolean  forceFlag;
       int      depth;
@@ -604,13 +605,15 @@ public class TabJobs
       TreeItem treeItem;
 
       /** create directory info request
+       * @param jobUUID job UUID or null
        * @param name directory name
        * @param forceFlag true to force update size
        * @param treeItem tree item
        * @param timeout timeout [ms] or -1 for no timeout
        */
-      DirectoryInfoRequest(String name, boolean forceFlag, TreeItem treeItem, int timeout)
+      DirectoryInfoRequest(String jobUUID, String name, boolean forceFlag, TreeItem treeItem, int timeout)
       {
+        this.jobUUID   = jobUUID;
         this.name      = name;
         this.forceFlag = forceFlag;
         this.depth     = StringUtils.splitArray(name,BARServer.fileSeparator,true).length;
@@ -623,11 +626,11 @@ public class TabJobs
        */
       public String toString()
       {
-      return "DirectoryInfoRequest {"+name+", "+forceFlag+", "+depth+", "+timeout+"}";
+      return "DirectoryInfoRequest {"+jobUUID+", "+name+", "+forceFlag+", "+depth+", "+timeout+"}";
       }
     }
 
-    // timeouts to get directory information
+    // timeouts to get directory information [ms]
     private final int DEFAULT_TIMEOUT = 1*1000;
     private final int TIMEOUT_DETLA   = 2*1000;
     private final int MAX_TIMEOUT     = 5*1000;
@@ -701,7 +704,8 @@ public class TabJobs
             try
             {
               ValueMap valueMap = new ValueMap();
-              BARServer.executeCommand(StringParser.format("DIRECTORY_INFO name=%S timeout=%d",
+              BARServer.executeCommand(StringParser.format("DIRECTORY_INFO jobUUID=%s name=%'S timeout=%d",
+                                                           (directoryInfoRequest.jobUUID != null) ? directoryInfoRequest.jobUUID : "",
                                                            directoryInfoRequest.name,
                                                            directoryInfoRequest.timeout
                                                           ),
@@ -763,45 +767,49 @@ public class TabJobs
     }
 
     /** add directory info request
+     * @param jobUUID job UUID or null
      * @param name path name
      * @param forceFlag true to force update
      * @param treeItem tree item
      * @param timeout timeout [ms]
      */
-    public void add(String name, boolean forceFlag, TreeItem treeItem, int timeout)
+    public void add(String jobUUID, String name, boolean forceFlag, TreeItem treeItem, int timeout)
     {
-      DirectoryInfoRequest directoryInfoRequest = new DirectoryInfoRequest(name,forceFlag,treeItem,timeout);
+      DirectoryInfoRequest directoryInfoRequest = new DirectoryInfoRequest(jobUUID,name,forceFlag,treeItem,timeout);
       add(directoryInfoRequest);
     }
 
     /** add directory info request
+     * @param jobUUID job UUID or null
      * @param name path name
      * @param treeItem tree item
      * @param timeout timeout [ms]
      */
-    public void add(String name, TreeItem treeItem, int timeout)
+    public void add(String jobUUID, String name, TreeItem treeItem, int timeout)
     {
-      DirectoryInfoRequest directoryInfoRequest = new DirectoryInfoRequest(name,false,treeItem,timeout);
+      DirectoryInfoRequest directoryInfoRequest = new DirectoryInfoRequest(jobUUID,name,false,treeItem,timeout);
       add(directoryInfoRequest);
     }
 
     /** add directory info request with default timeout
+     * @param jobUUID job UUID or null
      * @param name path name
      * @param forceFlag true to force update
      * @param treeItem tree item
      */
-    public void add(String name, boolean forceFlag, TreeItem treeItem)
+    public void add(String jobUUID, String name, boolean forceFlag, TreeItem treeItem)
     {
-      add(name,forceFlag,treeItem,DEFAULT_TIMEOUT);
+      add(jobUUID,name,forceFlag,treeItem,DEFAULT_TIMEOUT);
     }
 
     /** add directory info request with default timeout
+     * @param jobUUID job UUID or null
      * @param name path name
      * @param treeItem tree item
      */
-    public void add(String name, TreeItem treeItem)
+    public void add(String jobUUID, String name, TreeItem treeItem)
     {
-      add(name,false,treeItem,DEFAULT_TIMEOUT);
+      add(jobUUID,name,false,treeItem,DEFAULT_TIMEOUT);
     }
 
     /** clear all directory info requests
@@ -3111,7 +3119,7 @@ public class TabJobs
               for (TreeItem treeItem : widgetFileTree.getSelection())
               {
                 FileTreeData fileTreeData = (FileTreeData)treeItem.getData();
-                directoryInfoThread.add(fileTreeData.name,true,treeItem);
+                directoryInfoThread.add(selectedJobData.uuid,fileTreeData.name,true,treeItem);
               }
             }
           });
@@ -4294,7 +4302,7 @@ public class TabJobs
             Widgets.addModifyListener(new WidgetModifyListener(button,skipUnreadable));
 
             button = Widgets.newCheckbox(subComposite,BARControl.tr("no stop on attribute error"));
-            button.setToolTipText(BARControl.tr("If enabled then do not stop if there is an attribute error."));
+            button.setToolTipText(BARControl.tr("If enabled then do not stop if there is an attribute error when reading a file."));
             Widgets.layout(button,1,0,TableLayoutData.W);
             button.addSelectionListener(new SelectionListener()
             {
@@ -11199,7 +11207,7 @@ throw new Error("NYI");
                                                                                              null,
                                                                                              SIMPLE_DATE_FORMAT.format(new Date(dateTime*1000))
                                                                                             );
-                                               directoryInfoThread.add(name,subTreeItem);
+                                               directoryInfoThread.add(selectedJobData.uuid,name,subTreeItem);
                                              }
                                            });
                                          }
