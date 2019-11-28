@@ -848,6 +848,7 @@ INLINE void Job_listAppend(JobNode *jobNode)
   assert(jobNode != NULL);
 
   List_append(&jobList,jobNode);
+  Job_listChanged();
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -867,6 +868,7 @@ INLINE void Job_listRemove(JobNode *jobNode)
   assert(jobNode != NULL);
 
   List_remove(&jobList,jobNode);
+  Job_listChanged();
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
