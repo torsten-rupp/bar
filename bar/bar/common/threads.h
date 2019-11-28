@@ -294,7 +294,7 @@ void Thread_delay(uint time);
 * Purpose: get thread id
 * Input  : thread - thread
 * Output : -
-* Return : current thread id
+* Return : thread id
 * Notes  : -
 \***********************************************************************/
 
