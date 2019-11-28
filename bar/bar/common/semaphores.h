@@ -100,6 +100,7 @@ typedef struct Semaphore
   uint                readLockCount;         // current number of read locks
   uint                readWriteLockCount;    // current number of read/write locks
   ThreadId            readWriteLockOwnedBy;  // current read/write lock owner thread
+  uint                waitModifiedCount;     // current number of wait modified calls
   #if   defined(PLATFORM_LINUX)
     pthread_cond_t      readLockZero;        // signal read-lock became 0
     pthread_cond_t      modified;            // signal values are modified
