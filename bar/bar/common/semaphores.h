@@ -97,9 +97,9 @@ typedef struct Semaphore
   pthread_mutexattr_t lockAttributes;
 
   SemaphoreLockTypes  lockType;              // current lock type
-  uint                readLockCount;         // number of read locks
-  uint                readWriteLockCount;    // number of read/write locks
-//TODO
+  uint                readLockCount;         // current number of read locks
+  uint                readWriteLockCount;    // current number of read/write locks
+  ThreadId            readWriteLockOwnedBy;  // current read/write lock owner thread
   #if   defined(PLATFORM_LINUX)
     pthread_cond_t      readLockZero;        // signal read-lock became 0
     pthread_cond_t      modified;            // signal values are modified
@@ -110,22 +110,25 @@ typedef struct Semaphore
   bool                endFlag;
 
   #ifndef NDEBUG
-    const char            *fileName;         // file+line number of creation
-    ulong                 lineNb;
-    const char            *name;             // semaphore name (variable)
-    __SemaphoreThreadInfo pendingBy[__SEMAPHORE_MAX_THREAD_INFO];  // threads who wait for semaphore
-    uint                  pendingByCount;    // number of threads who wait for semaphore
-    __SemaphoreThreadInfo lockedBy[__SEMAPHORE_MAX_THREAD_INFO];  // threads who locked semaphore
-    uint                  lockedByCount;     // number of threads who locked semaphore
+    struct
+    {
+      const char            *fileName;       // file+line number of creation
+      ulong                 lineNb;
+      const char            *name;           // semaphore name (variable)
+      __SemaphoreThreadInfo pendingBy[__SEMAPHORE_MAX_THREAD_INFO];  // threads who wait for semaphore
+      uint                  pendingByCount;  // number of threads who wait for semaphore
+      __SemaphoreThreadInfo lockedBy[__SEMAPHORE_MAX_THREAD_INFO];  // threads who locked semaphore
+      uint                  lockedByCount;   // number of threads who locked semaphore
 
-    SemaphoreState        lastReadRequest;
-    SemaphoreState        lastReadWakeup;
-    SemaphoreState        lastReadLock;
-    SemaphoreState        lastReadUnlock;
-    SemaphoreState        lastReadWriteRequest;
-    SemaphoreState        lastReadWriteWakeup;
-    SemaphoreState        lastReadWriteLock;
-    SemaphoreState        lastReadWriteUnlock;
+      SemaphoreState        lastReadRequest;
+      SemaphoreState        lastReadWakeup;
+      SemaphoreState        lastReadLock;
+      SemaphoreState        lastReadUnlock;
+      SemaphoreState        lastReadWriteRequest;
+      SemaphoreState        lastReadWriteWakeup;
+      SemaphoreState        lastReadWriteLock;
+      SemaphoreState        lastReadWriteUnlock;
+    } debug;
   #endif /* not NDEBUG */
 } Semaphore;
 
