@@ -1268,7 +1268,7 @@ LOCAL bool lock(const char         *__fileName__,
         incrementReadRequest(semaphore);
       #endif /* not NDEBUG */
 
-      // read: aquire lock temporary
+      // read: aquire temporary lock
       if (timeout != WAIT_FOREVER)
       {
         __SEMAPHORE_LOCK_TIMEOUT(semaphore,semaphoreLockType,DEBUG_FLAG_READ,"R",timeout,lockedFlag);
@@ -1286,6 +1286,25 @@ LOCAL bool lock(const char         *__fileName__,
       else
       {
         __SEMAPHORE_LOCK(semaphore,semaphoreLockType,DEBUG_FLAG_READ,"R");
+      }
+      assert(semaphore->lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
+
+      // wait until no other read/write locks
+      while ((semaphore->readWriteLockCount > 0) && !Semaphore_isOwned(semaphore))
+      {
+        __SEMAPHORE_WAIT_TIMEOUT(semaphore,DEBUG_FLAG_READ_WRITE,"R",&semaphore->modified,&semaphore->lock,timeout,lockedFlag);
+        if (!lockedFlag)
+        {
+          __SEMAPHORE_UNLOCK(semaphore,DEBUG_FLAG_READ,"R");
+
+          #ifndef NDEBUG
+            decrementReadRequest(semaphore,__fileName__,__lineNb__);
+          #else /* NDEBUG */
+            decrementReadRequest(semaphore);
+          #endif /* not NDEBUG */
+
+          return FALSE;
+        }
       }
       assert((semaphore->readWriteLockCount == 0) || Semaphore_isOwned(semaphore));
 //++fprintf(stderr,"%s, %d: thread=%s lock sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
