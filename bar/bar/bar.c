@@ -1650,11 +1650,11 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   error = File_open(&fileHandle,fileName,FILE_OPEN_READ);
   if (error != ERROR_NONE)
   {
-    printError(_("Cannot open configuration file '%s' (error: %s)!"),
-               String_cString(fileName),
-               Error_getText(error)
-              );
-    return FALSE;
+    printWarning(_("Cannot open configuration file '%s' (error: %s)!"),
+                 String_cString(fileName),
+                 Error_getText(error)
+                );
+    return TRUE;
   }
 
   // parse file
@@ -10814,35 +10814,38 @@ exit(1);
     return ERROR_INVALID_ARGUMENT;
   }
 
-  // read jobs (if possible)
-  (void)Job_rereadAll(globalOptions.jobsDirectory);
-
-  // read options from job file
-  if (!String_isEmpty(jobUUIDName))
+  if (serverMode == SERVER_MODE_MASTER)
   {
-    JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
+    // read jobs (if possible)
+    (void)Job_rereadAll(globalOptions.jobsDirectory);
+
+    // read options from job file (if job is given)
+    if (!String_isEmpty(jobUUIDName))
     {
-      // find job
-      jobNode = NULL;
-      if (jobNode == NULL) jobNode = Job_findByName(jobUUIDName);
-      if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
-      if      (jobNode != NULL)
+      JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
       {
-        // get job uuid
-        String_set(jobUUID,jobNode->job.uuid);
-      }
-      else if (String_matchCString(jobUUIDName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
-      {
-        // get job uuid
-        String_set(jobUUID,jobUUIDName);
-      }
-      else
-      {
-        printError(_("Cannot find job '%s'!"),
-                   String_cString(jobUUIDName)
-                  );
-        Job_listUnlock();
-        return ERROR_CONFIG;
+        // find job by name or UUID
+        jobNode = NULL;
+        if (jobNode == NULL) jobNode = Job_findByName(jobUUIDName);
+        if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
+        if      (jobNode != NULL)
+        {
+          // get job uuid
+          String_set(jobUUID,jobNode->job.uuid);
+        }
+        else if (String_matchCString(jobUUIDName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
+        {
+          // get job uuid
+          String_set(jobUUID,jobUUIDName);
+        }
+        else
+        {
+          printError(_("Cannot find job '%s'!"),
+                     String_cString(jobUUIDName)
+                    );
+          Job_listUnlock();
+          return ERROR_CONFIG;
+        }
       }
     }
   }
