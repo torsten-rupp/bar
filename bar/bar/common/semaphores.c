@@ -1729,10 +1729,10 @@ LOCAL bool waitModified(const char *__fileName__,
 
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
-if (!Thread_isCurrentThread(semaphore->readWriteLockOwnedBy)) {
-fprintf(stderr,"%s, %d: owner=%s current=%s\n",__FILE__,__LINE__,Thread_getIdString(semaphore->readWriteLockOwnedBy),Thread_getCurrentIdString());
-Semaphore_debugPrintInfo();
-}
+//if (!Thread_isCurrentThread(semaphore->readWriteLockOwnedBy)) {
+//fprintf(stderr,"%s, %d: owner=%s current=%s\n",__FILE__,__LINE__,Thread_getIdString(semaphore->readWriteLockOwnedBy),Thread_getCurrentIdString());
+//Semaphore_debugPrintInfo();
+//}
       assert(Thread_isCurrentThread(semaphore->readWriteLockOwnedBy));
       assert(semaphore->debug.lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
 
