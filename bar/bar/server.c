@@ -1649,11 +1649,12 @@ LOCAL void jobThreadCode(void)
       }
     }
 
-    // execute create/restore
+    // execute create/restore operation
     Index_beginInUse();
     {
       if      (!Job_isRemote(jobNode))
       {
+fprintf(stderr,"%s, %d: ola\n",__FILE__,__LINE__);
         // local job -> run on this machine
 
         // parse storage name
@@ -1820,6 +1821,7 @@ NULL,//                                                        scheduleTitle,
       }
       else
       {
+fprintf(stderr,"%s, %d: sklave\n",__FILE__,__LINE__);
         // slave job -> send to slave and run on slave machine
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
@@ -7032,6 +7034,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            jobUUID=<uuid>|""
 *            name=<name>
 *            attribute=NOBACKUP|NODUMP
 *          Result:
@@ -7040,12 +7043,14 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String   name;
-  String   attribute;
-  String   noBackupFileName;
-  bool     noBackupExists;
-  Errors   error;
-  FileInfo fileInfo;
+  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
+  String         name;
+  String         attribute;
+  const JobNode  *jobNode;
+  Errors         error;
+  String         noBackupFileName;
+  bool           noBackupExists;
+  FileInfo       fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7068,36 +7073,84 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
-  // send attribute value
-  if      (String_equalsCString(attribute,"NOBACKUP"))
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    noBackupFileName = String_new();
-
-    noBackupExists = FALSE;
-    if (File_isDirectory(name))
+    // find job
+    if (!String_isEmpty(jobUUID))
     {
-      if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
-      if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
-    }
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",FALSE);
-
-    String_delete(noBackupFileName);
-  }
-  else if (String_equalsCString(attribute,"NODUMP"))
-  {
-    error = File_getInfo(&fileInfo,name);
-    if (error == ERROR_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        String_delete(name);
+        return;
+      }
     }
     else
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info '%S' fail: %s",attribute,name,Error_getText(error));
+      jobNode = NULL;
     }
-  }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
+
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
+    {
+      // remote file list
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
+
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "FILE_ATTRIBUTE_GET name=%'S attribute=%S",
+                                           name,
+                                           attribute
+                                          );
+        }
+      }
+    }
+    else
+    {
+      // get attribute value
+      if      (String_equalsCString(attribute,"NOBACKUP"))
+      {
+        noBackupFileName = String_new();
+
+        noBackupExists = FALSE;
+        if (File_isDirectory(name))
+        {
+          if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
+          if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
+        }
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",FALSE);
+
+        String_delete(noBackupFileName);
+      }
+      else if (String_equalsCString(attribute,"NODUMP"))
+      {
+        error = File_getInfo(&fileInfo,name);
+        if (error == ERROR_NONE)
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
+        }
+        else
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info '%S' fail: %s",attribute,name,Error_getText(error));
+        }
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
+      }
+    }
   }
 
   // free resources
@@ -7115,6 +7168,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            jobUUID=<uuid>|""
 *            name=<name>
 *            attribute=NOBACKUP|NODUMP
 *            value=<value>
@@ -7123,11 +7177,13 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
 
 LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
   String         name;
   String         attribute;
   String         value;
-  String         noBackupFileName;
+  const JobNode  *jobNode;
   Errors         error;
+  String         noBackupFileName;
   FileAttributes fileAttributes;
 
   assert(clientInfo != NULL);
@@ -7155,65 +7211,114 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
 //TODO: value still not used
 UNUSED_VARIABLE(value);
 
-  // set attribute
-  if      (String_equalsCString(attribute,"NOBACKUP"))
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (!File_isDirectory(name))
+    // find job
+    if (!String_isEmpty(jobUUID))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
-      String_delete(value);
-      String_delete(attribute);
-      String_delete(name);
-      return;
-    }
-
-    noBackupFileName = String_new();
-    File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
-    if (!File_exists(noBackupFileName))
-    {
-      error = File_touch(noBackupFileName);
-      if (error != ERROR_NONE)
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
       {
-        String_delete(noBackupFileName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
-        String_delete(value);
-        String_delete(attribute);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
         String_delete(name);
         return;
       }
     }
-    String_delete(noBackupFileName);
-
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-  }
-  else if (String_equalsCString(attribute,"NODUMP"))
-  {
-    error = File_getAttributes(&fileAttributes,name);
-    if (error != ERROR_NONE)
+    else
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
-      String_delete(value);
-      String_delete(attribute);
-      String_delete(name);
-      return;
+      jobNode = NULL;
     }
 
-    fileAttributes |= FILE_ATTRIBUTE_NO_DUMP;
-    error = File_setAttributes(fileAttributes,name);
-    if (error != ERROR_NONE)
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
-      String_delete(value);
-      String_delete(attribute);
-      String_delete(name);
-      return;
-    }
+      // remote file list
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
 
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-  }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "FILE_ATTRIBUTE_SET name=%'S attribute=%S value=%'S",
+                                           name,
+                                           attribute,
+                                           value
+                                          );
+        }
+      }
+    }
+    else
+    {
+      // set attribute
+      if      (String_equalsCString(attribute,"NOBACKUP"))
+      {
+        if (!File_isDirectory(name))
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+          String_delete(value);
+          String_delete(attribute);
+          String_delete(name);
+          return;
+        }
+
+        noBackupFileName = String_new();
+        File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
+        if (!File_exists(noBackupFileName))
+        {
+          error = File_touch(noBackupFileName);
+          if (error != ERROR_NONE)
+          {
+            String_delete(noBackupFileName);
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
+            String_delete(value);
+            String_delete(attribute);
+            String_delete(name);
+            return;
+          }
+        }
+        String_delete(noBackupFileName);
+
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+      }
+      else if (String_equalsCString(attribute,"NODUMP"))
+      {
+        error = File_getAttributes(&fileAttributes,name);
+        if (error != ERROR_NONE)
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+          String_delete(value);
+          String_delete(attribute);
+          String_delete(name);
+          return;
+        }
+
+        fileAttributes |= FILE_ATTRIBUTE_NO_DUMP;
+        error = File_setAttributes(fileAttributes,name);
+        if (error != ERROR_NONE)
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+          String_delete(value);
+          String_delete(attribute);
+          String_delete(name);
+          return;
+        }
+
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
+      }
+    }
   }
 
   // free resources
@@ -7232,6 +7337,7 @@ UNUSED_VARIABLE(value);
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            jobUUID=<uuid>|""
 *            name=<name>
 *            attribute=NOBACKUP|NODUMP
 *          Result:
@@ -7239,10 +7345,12 @@ UNUSED_VARIABLE(value);
 
 LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
   String         name;
   String         attribute;
-  String         noBackupFileName;
+  const JobNode  *jobNode;
   Errors         error;
+  String         noBackupFileName;
   FileAttributes fileAttributes;
 
   assert(clientInfo != NULL);
@@ -7266,64 +7374,112 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
     return;
   }
 
-  // clear attribute
-  if      (String_equalsCString(attribute,"NOBACKUP"))
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    if (!File_isDirectory(name))
+    // find job
+    if (!String_isEmpty(jobUUID))
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
-      String_delete(attribute);
-      String_delete(name);
-      return;
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        String_delete(name);
+        return;
+      }
+    }
+    else
+    {
+      jobNode = NULL;
     }
 
-    noBackupFileName = String_new();
-    File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
-    if (File_exists(noBackupFileName))
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
     {
-      error = File_delete(noBackupFileName,FALSE);
-      if (error != ERROR_NONE)
+      // remote file list
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
       {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
+
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "FILE_ATTRIBUTE_CLEAR name=%'S attribute=%S",
+                                           name,
+                                           attribute
+                                          );
+        }
+      }
+    }
+    else
+    {
+      // clear attribute
+      if      (String_equalsCString(attribute,"NOBACKUP"))
+      {
+        if (!File_isDirectory(name))
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+          String_delete(attribute);
+          String_delete(name);
+          return;
+        }
+
+        noBackupFileName = String_new();
+        File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
+        if (File_exists(noBackupFileName))
+        {
+          error = File_delete(noBackupFileName,FALSE);
+          if (error != ERROR_NONE)
+          {
+            String_delete(noBackupFileName);
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
+            String_delete(attribute);
+            String_delete(name);
+            return;
+          }
+        }
         String_delete(noBackupFileName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
-        String_delete(attribute);
-        String_delete(name);
-        return;
+
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
       }
-    }
-    String_delete(noBackupFileName);
-
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-  }
-  else if (String_equalsCString(attribute,"NODUMP"))
-  {
-    error = File_getAttributes(&fileAttributes,name);
-    if (error != ERROR_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
-      String_delete(attribute);
-      String_delete(name);
-      return;
-    }
-
-    if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
-    {
-      fileAttributes &= ~FILE_ATTRIBUTE_NO_DUMP;
-      error = File_setAttributes(fileAttributes,name);
-      if (error != ERROR_NONE)
+      else if (String_equalsCString(attribute,"NODUMP"))
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
-        String_delete(attribute);
-        String_delete(name);
-        return;
+        error = File_getAttributes(&fileAttributes,name);
+        if (error != ERROR_NONE)
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+          String_delete(attribute);
+          String_delete(name);
+          return;
+        }
+
+        if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+        {
+          fileAttributes &= ~FILE_ATTRIBUTE_NO_DUMP;
+          error = File_setAttributes(fileAttributes,name);
+          if (error != ERROR_NONE)
+          {
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+            String_delete(attribute);
+            String_delete(name);
+            return;
+          }
+        }
+
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
+      }
+      else
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
       }
     }
-
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-  }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"unknown file attribute '%S' of '%S'",attribute,name);
   }
 
   // free resources
@@ -7341,16 +7497,20 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            jobUUID=<uuid>|""
 *            name=<directory>
-*            timeout=<n [s]>
+*            timeout=<n [ms]>|-1
 *          Result:
 *            count=<file count> size=<total file size> timedOut=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  StaticString      (jobUUID,MISC_UUID_STRING_LENGTH);
   String            name;
   int64             timeout;
+  const JobNode     *jobNode;
+  Errors            error;
   DirectoryInfoNode *directoryInfoNode;
   uint64            fileCount;
   uint64            fileSize;
@@ -7362,11 +7522,12 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get path/file name, timeout
+  // get job UUID, path/file name, timeout
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<directory name>");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<name>");
     String_delete(name);
     return;
   }
@@ -7375,39 +7536,87 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   fileCount = 0LL;
   fileSize  = 0LL;
   timedOut  = FALSE;
-  if (File_isDirectory(name))
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-//TODO: avoid lock with getDirectoryInfo inside
-    SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+    // find job
+    if (!String_isEmpty(jobUUID))
     {
-      // find/create directory info
-      directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
-      if (directoryInfoNode == NULL)
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
       {
-        directoryInfoNode = newDirectoryInfo(name);
-        List_append(&clientInfo->directoryInfoList,directoryInfoNode);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        String_delete(name);
+        return;
+      }
+    }
+    else
+    {
+      jobNode = NULL;
+    }
+
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
+    {
+      // remote file list
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
+
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "DIRECTORY_INFO name=%'S timeout=%lld",
+                                           name,
+                                           timeout
+                                          );
+        }
+      }
+    }
+    else
+    {
+      if (File_isDirectory(name))
+      {
+    //TODO: avoid lock with getDirectoryInfo inside
+        SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+        {
+          // find/create directory info
+          directoryInfoNode = findDirectoryInfo(&clientInfo->directoryInfoList,name);
+          if (directoryInfoNode == NULL)
+          {
+            directoryInfoNode = newDirectoryInfo(name);
+            List_append(&clientInfo->directoryInfoList,directoryInfoNode);
+          }
+
+          // get total size of directoy/file
+          getDirectoryInfo(directoryInfoNode,
+                           timeout,
+                           &fileCount,
+                           &fileSize,
+                           &timedOut
+                          );
+        }
+      }
+      else
+      {
+        // get file size
+        if (File_getInfo(&fileInfo,name) == ERROR_NONE)
+        {
+          fileCount = 1LL;
+          fileSize  = fileInfo.size;
+        }
       }
 
-      // get total size of directoy/file
-      getDirectoryInfo(directoryInfoNode,
-                       timeout,
-                       &fileCount,
-                       &fileSize,
-                       &timedOut
-                      );
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"count=%"PRIu64" size=%"PRIu64" timedOut=%y",fileCount,fileSize,timedOut);
     }
   }
-  else
-  {
-    // get file size
-    if (File_getInfo(&fileInfo,name) == ERROR_NONE)
-    {
-      fileCount = 1LL;
-      fileSize  = fileInfo.size;
-    }
-  }
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"count=%"PRIu64" size=%"PRIu64" timedOut=%y",fileCount,fileSize,timedOut);
 
   // free resources
   String_delete(name);
@@ -8149,8 +8358,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
   {
     jobNode = NULL;
 
-//TODO: use serverMode?
-    if (String_isEmpty(master))
+    if (serverMode == SERVER_MODE_MASTER)
     {
       // add new local job
 
