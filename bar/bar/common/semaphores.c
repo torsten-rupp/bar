@@ -1659,6 +1659,7 @@ LOCAL bool waitModified(const char *__fileName__,
       {
         assert(semaphore->readLockCount > 0);
         assert(semaphore->readWriteLockCount == 0);
+        assert(semaphore->debug.lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
 
         // temporary revert read-lock
         semaphore->readLockCount--;
@@ -1722,12 +1723,14 @@ LOCAL bool waitModified(const char *__fileName__,
       assert(Semaphore_isOwned(semaphore));
       assert(semaphore->readLockCount == 0);
       assert(semaphore->readWriteLockCount > 0);
+      assert(semaphore->debug.lockedByCount == (semaphore->readLockCount+semaphore->readWriteLockCount));
 
       // temporary revert write-lock
       savedReadWriteLockCount = semaphore->readWriteLockCount;
       semaphore->readWriteLockCount = 0;
       #ifndef NDEBUG
-        debugRemoveLockedThreadInfo(semaphore,__fileName__,__lineNb__);
+//        semaphore->debug.lockedByCount -= savedReadWriteLockCount;
+//        debugRemoveLockedThreadInfo(semaphore,__fileName__,__lineNb__);
       #endif /* not NDEBUG */
 
       // semaphore is now free
@@ -1803,7 +1806,8 @@ LOCAL bool waitModified(const char *__fileName__,
         __SEMAPHORE_REQUEST_UNLOCK(semaphore);
       #endif /* USE_ATOMIC_INCREMENT */
       #ifndef NDEBUG
-        debugAddLockedThreadInfo(semaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE,__fileName__,__lineNb__);
+//        semaphore->debug.lockedByCount += savedReadWriteLockCount;
+//        debugAddLockedThreadInfo(semaphore,SEMAPHORE_LOCK_TYPE_READ_WRITE,__fileName__,__lineNb__);
       #endif /* not NDEBUG */
       break;
 
