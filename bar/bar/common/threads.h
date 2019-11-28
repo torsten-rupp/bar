@@ -344,7 +344,7 @@ INLINE bool Thread_equalThreads(const ThreadId threadId0, const ThreadId threadI
 
 /***********************************************************************\
 * Name   : Thread_isCurrentThread
-* Purpose: check if thread is current thread
+* Purpose: check if thread id is current thread
 * Input  : threadId thread Id
 * Output : -
 * Return : TRUE if thread id is current thread
@@ -356,6 +356,23 @@ INLINE bool Thread_isCurrentThread(const ThreadId threadId);
 INLINE bool Thread_isCurrentThread(const ThreadId threadId)
 {
   return pthread_equal(threadId,pthread_self()) != 0;
+}
+#endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Thread_isNone
+* Purpose: check if thread id is none
+* Input  : threadId thread Id
+* Output : -
+* Return : TRUE if thread id is none
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Thread_isNone(const ThreadId threadId);
+#if defined(NDEBUG) || defined(__THREADS_IMPLEMENTATION__)
+INLINE bool Thread_isNone(const ThreadId threadId)
+{
+  return memEquals(&threadId,sizeof(threadId),&THREAD_ID_NONE,sizeof(THREAD_ID_NONE));
 }
 #endif /* NDEBUG || __THREADS_IMPLEMENTATION__ */
 
