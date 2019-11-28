@@ -2934,14 +2934,14 @@ LOCAL void connectorThreadCode(ConnectorInfo *connectorInfo)
         }
         else
         {
-          // disconnect -> stop
-          setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
+          // no data -> shut down
+          setConnectorState(connectorInfo,CONNECTOR_STATE_SHUTDOWN);
         }
       }
       else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID)) != 0)
       {
-        // error/disconnect -> stop
-        setConnectorState(connectorInfo,CONNECTOR_STATE_DISCONNECTED);
+        // error/invalid -> shut down
+        setConnectorState(connectorInfo,CONNECTOR_STATE_SHUTDOWN);
       }
       #ifndef NDEBUG
         else

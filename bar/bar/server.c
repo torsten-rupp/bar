@@ -2243,7 +2243,7 @@ LOCAL void pairingThreadCode(void)
           // disconnect disconnected slaves
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
-            if (Connector_isDisconnected(&slaveNode->connectorInfo))
+            if (Connector_isShutdown(&slaveNode->connectorInfo))
             {
               // disconnect slave
               Connector_disconnect(&slaveNode->connectorInfo);
@@ -2311,7 +2311,7 @@ LOCAL void pairingThreadCode(void)
           {
             assert(slaveNode->name != NULL);
 
-            if (!Connector_isDisconnected(&slaveNode->connectorInfo))
+            if (!Connector_isShutdown(&slaveNode->connectorInfo))
             {
               if (!Connector_isConnected(&slaveNode->connectorInfo))
               {
@@ -2322,9 +2322,6 @@ LOCAL void pairingThreadCode(void)
                                          );
                 if (error == ERROR_NONE)
                 {
-                  // update slave state in job
-                  updateSlaveState(slaveNode,SLAVE_STATE_ONLINE);
-
                   // log info
                   if (Misc_getCurrentDateTime() > (slaveNode->lastOnlineDateTime+10*S_PER_MINUTE))
                   {
@@ -2353,9 +2350,6 @@ LOCAL void pairingThreadCode(void)
                 {
                   slaveNode->authorizedFlag = TRUE;
 
-                  // update slave state in job
-                  updateSlaveState(slaveNode,SLAVE_STATE_PAIRED);
-
                   // log info
                   logMessage(NULL,  // logHandle,
                              LOG_TYPE_INFO,
@@ -2369,9 +2363,17 @@ LOCAL void pairingThreadCode(void)
                 }
               }
 
-              if (!Connector_isConnected(&slaveNode->connectorInfo))
+              // update slave state in job
+              if      (Connector_isAuthorized(&slaveNode->connectorInfo))
               {
-                // update slave state in job
+                updateSlaveState(slaveNode,SLAVE_STATE_PAIRED);
+              }
+              else if (Connector_isConnected(&slaveNode->connectorInfo))
+              {
+                updateSlaveState(slaveNode,SLAVE_STATE_ONLINE);
+              }
+              else
+              {
                 updateSlaveState(slaveNode,SLAVE_STATE_OFFLINE);
               }
 

@@ -37,9 +37,9 @@
 
 /* connector states
 
-   NONE -> CONNECTED -> AUTHORIZED -> DISCONNECTED -\
-    ^                                               |
-    \-----------------------------------------------/
+   NONE -> CONNECTED -> AUTHORIZED -> SHUTDOWN -\
+    ^                                           |
+    \-------------------------------------------/
 
 */
 typedef enum
@@ -47,7 +47,7 @@ typedef enum
   CONNECTOR_STATE_NONE,
   CONNECTOR_STATE_CONNECTED,
   CONNECTOR_STATE_AUTHORIZED,
-  CONNECTOR_STATE_DISCONNECTED
+  CONNECTOR_STATE_SHUTDOWN
 } ConnectorStates;
 
 // connector info
@@ -201,21 +201,21 @@ INLINE bool Connector_isConnected(const ConnectorInfo *connectorInfo)
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
 /***********************************************************************\
-* Name   : Connector_isDisconnected
-* Purpose: check if connector is disconnected
+* Name   : Connector_isShutdown
+* Purpose: check if connector is shut down
 * Input  : connectorInfo - connector info
 * Output : -
-* Return : TRUE iff disconnected
+* Return : TRUE iff shut down
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool Connector_isDisconnected(const ConnectorInfo *connectorInfo);
+INLINE bool Connector_isShutdown(const ConnectorInfo *connectorInfo);
 #if defined(NDEBUG) || defined(__CONNECTOR_IMPLEMENTATION__)
-INLINE bool Connector_isDisconnected(const ConnectorInfo *connectorInfo)
+INLINE bool Connector_isShutdown(const ConnectorInfo *connectorInfo)
 {
   assert(connectorInfo != NULL);
 
-  return (connectorInfo->state == CONNECTOR_STATE_DISCONNECTED);
+  return (connectorInfo->state == CONNECTOR_STATE_SHUTDOWN);
 }
 #endif /* NDEBUG || __CONNECTOR_IMPLEMENTATION__ */
 
