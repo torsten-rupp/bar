@@ -3411,11 +3411,10 @@ UNUSED_VARIABLE(storageRequestVolumeUserData);
                                    CONNECTOR_DEBUG_LEVEL,
                                    CONNECTOR_COMMAND_TIMEOUT,
                                    CALLBACK_(NULL,NULL),
-                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S noStorage=%y archiveType=%s dryRun=%y noStorage=%y",
+                                   "JOB_START jobUUID=%S scheduleUUID=%S scheduleCustomText=%'S archiveType=%s dryRun=%y noStorage=%y",
                                    jobUUID,
                                    scheduleUUID,
                                    NULL,  // scheduleCustomText
-                                   FALSE,  // noStorage
                                    Archive_archiveTypeToString(archiveType),
                                    storageFlags.dryRun,
                                    storageFlags.noStorage
