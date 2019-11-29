@@ -1436,8 +1436,8 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
                                 );
 
 /***********************************************************************\
-* Name   : File_haveAttributeCompress, File_haveAttributeNoCompress,
-*          File_haveAttributeNoDump
+* Name   : File_hasAttributeCompress, File_hasAttributeNoCompress,
+*          File_hasAttributeNoDump
 * Purpose: check if compress/no-compress/no-dump attribute is set
 * Input  : fileInfo - file info variable
 * Output : -
@@ -1445,9 +1445,9 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool File_haveAttributeCompress(const FileInfo *fileInfo);
+INLINE bool File_hasAttributeCompress(const FileInfo *fileInfo);
 #if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
-INLINE bool File_haveAttributeCompress(const FileInfo *fileInfo)
+INLINE bool File_hasAttributeCompress(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
 
@@ -1461,9 +1461,9 @@ INLINE bool File_haveAttributeCompress(const FileInfo *fileInfo)
 }
 #endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
-INLINE bool File_haveAttributeNoCompress(const FileInfo *fileInfo);
+INLINE bool File_hasAttributeNoCompress(const FileInfo *fileInfo);
 #if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
-INLINE bool File_haveAttributeNoCompress(const FileInfo *fileInfo)
+INLINE bool File_hasAttributeNoCompress(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
 
@@ -1477,9 +1477,9 @@ INLINE bool File_haveAttributeNoCompress(const FileInfo *fileInfo)
 }
 #endif /* NDEBUG || __FILES_IMPLEMENTATION__ */
 
-INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo);
+INLINE bool File_hasAttributeNoDump(const FileInfo *fileInfo);
 #if defined(NDEBUG) || defined(__FILES_IMPLEMENTATION__)
-INLINE bool File_haveAttributeNoDump(const FileInfo *fileInfo)
+INLINE bool File_hasAttributeNoDump(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
 

@@ -9505,35 +9505,35 @@ bool isInExcludedList(const PatternList *excludePatternList,
 bool hasNoBackup(ConstString pathName)
 {
   String fileName;
-  bool   haveNoBackupFlag;
+  bool   hasNoBackupFlag;
 
   assert(pathName != NULL);
 
-  haveNoBackupFlag = FALSE;
+  hasNoBackupFlag = FALSE;
 
   fileName = String_new();
-  haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
-  haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
+  hasNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
+  hasNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
   String_delete(fileName);
 
-  return haveNoBackupFlag;
+  return hasNoBackupFlag;
 }
 
 bool hasNoDumpAttribute(ConstString name)
 {
-  bool     haveNoDumpAttributeFlag;
+  bool     hasNoDumpAttributeFlag;
   FileInfo fileInfo;
 
   assert(name != NULL);
 
-  haveNoDumpAttributeFlag = FALSE;
+  hasNoDumpAttributeFlag = FALSE;
 
   if (File_getInfo(&fileInfo,name))
   {
-    haveNoDumpAttributeFlag = File_haveAttributeNoDump(&fileInfo);
+    hasNoDumpAttributeFlag = File_hasAttributeNoDump(&fileInfo);
   }
 
-  return haveNoDumpAttributeFlag;
+  return hasNoDumpAttributeFlag;
 }
 
 // ----------------------------------------------------------------------

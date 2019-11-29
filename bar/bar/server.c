@@ -6599,7 +6599,6 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
   StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
   String        name;
   const JobNode *jobNode;
-  String        noBackupFileName;
   Errors        error;
   FileInfo      fileInfo;
   bool          noBackupExists;
@@ -6666,8 +6665,6 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
     {
       // local file info
 
-      noBackupFileName = String_new();
-
       // read file info
       error = File_getInfo(&fileInfo,name);
 
@@ -6681,7 +6678,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                 name,
                                 fileInfo.size,
                                 fileInfo.timeModified,
-                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                File_hasAttributeNoDump(&fileInfo)
                                );
             break;
           case FILE_TYPE_DIRECTORY:
@@ -6692,7 +6689,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                 name,
                                 fileInfo.timeModified,
                                 noBackupExists,
-                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                File_hasAttributeNoDump(&fileInfo)
                                );
             break;
           case FILE_TYPE_LINK:
@@ -6702,8 +6699,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                 File_fileTypeToString(destinationFileType,NULL),
                                 name,
                                 fileInfo.timeModified,
-//TODO: use hasNoDumpAttribute
-                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                File_hasAttributeNoDump(&fileInfo)
                                );
             break;
           case FILE_TYPE_HARDLINK:
@@ -6711,7 +6707,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                 "fileType=HARDLINK name=%'S dateTime=%"PRIu64" noDump=%y",
                                 name,
                                 fileInfo.timeModified,
-                                ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                File_hasAttributeNoDump(&fileInfo)
                                );
             break;
           case FILE_TYPE_SPECIAL:
@@ -6722,7 +6718,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                     "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
                                     name,
                                     fileInfo.timeModified,
-                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                    File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
@@ -6731,7 +6727,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                     name,
                                     fileInfo.size,
                                     fileInfo.timeModified,
-                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                    File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_SPECIAL_TYPE_FIFO:
@@ -6747,7 +6743,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                     "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
                                     name,
                                     fileInfo.timeModified,
-                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                    File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               default:
@@ -6755,7 +6751,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                     "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
                                     name,
                                     fileInfo.timeModified,
-                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                    File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
             }
@@ -6769,8 +6765,6 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read file info fail: %s",Error_getText(error));
       }
-
-      String_delete(noBackupFileName);
     }
   }
 
@@ -6810,7 +6804,6 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
   Errors              error;
   DirectoryListHandle directoryListHandle;
   String              name;
-  String              noBackupFileName;
   FileInfo            fileInfo;
   bool                noBackupExists;
   FileTypes           destinationFileType;
@@ -6889,8 +6882,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
       }
 
       // read directory entries
-      name             = String_new();
-      noBackupFileName = String_new();
+      name = String_new();
       while (!File_endOfDirectoryList(&directoryListHandle))
       {
         error = File_readDirectoryList(&directoryListHandle,name);
@@ -6907,7 +6899,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                     name,
                                     fileInfo.size,
                                     fileInfo.timeModified,
-                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                    File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_TYPE_DIRECTORY:
@@ -6918,8 +6910,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                     name,
                                     fileInfo.timeModified,
                                     noBackupExists,
-//TODO: use hasNoDumpAttribute
-                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                    File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_TYPE_LINK:
@@ -6938,7 +6929,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                     name,
                                     fileInfo.size,
                                     fileInfo.timeModified,
-                                    ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                    File_hasAttributeNoDump(&fileInfo)
                                    );
                 break;
               case FILE_TYPE_SPECIAL:
@@ -6949,7 +6940,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                         "fileType=SPECIAL name=%'S specialType=DEVICE_CHARACTER dateTime=%"PRIu64" noDump=%y",
                                         name,
                                         fileInfo.timeModified,
-                                        ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                        File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                   case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
@@ -6958,7 +6949,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                         name,
                                         fileInfo.size,
                                         fileInfo.timeModified,
-                                        ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                        File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                   case FILE_SPECIAL_TYPE_FIFO:
@@ -6966,7 +6957,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                         "fileType=SPECIAL name=%'S specialType=FIFO dateTime=%"PRIu64" noDump=%y",
                                         name,
                                         fileInfo.timeModified,
-                                        ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                        File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                   case FILE_SPECIAL_TYPE_SOCKET:
@@ -6974,7 +6965,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                         "fileType=SPECIAL name=%'S specialType=SOCKET dateTime=%"PRIu64" noDump=%y",
                                         name,
                                         fileInfo.timeModified,
-                                        ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                        File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                   default:
@@ -6982,7 +6973,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                         "fileType=SPECIAL name=%'S specialType=OTHER dateTime=%"PRIu64" noDump=%y",
                                         name,
                                         fileInfo.timeModified,
-                                        ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
+                                        File_hasAttributeNoDump(&fileInfo)
                                        );
                     break;
                 }
@@ -7008,7 +6999,6 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                              );
         }
       }
-      String_delete(noBackupFileName);
       String_delete(name);
 
       // close directory
@@ -7046,8 +7036,8 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   String         attribute;
   const JobNode  *jobNode;
   Errors         error;
-  String         noBackupFileName;
   bool           noBackupExists;
+  bool           noDumpAtrribute;
   FileInfo       fileInfo;
 
   assert(clientInfo != NULL);
@@ -7128,15 +7118,8 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
       else if (String_equalsCString(attribute,"NODUMP"))
       {
         // nodump attribute
-        error = File_getInfo(&fileInfo,name);
-        if (error == ERROR_NONE)
-        {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",(fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP);
-        }
-        else
-        {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_UNKNOWN_VALUE,"get file info '%S' fail: %s",attribute,name,Error_getText(error));
-        }
+        noDumpAtrribute = hasNoDumpAttribute(name);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",noDumpAtrribute);
       }
       else
       {
@@ -7265,8 +7248,7 @@ UNUSED_VARIABLE(value);
           return;
         }
 
-        noBackupFileName = String_new();
-        File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
+        noBackupFileName = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
         if (!File_exists(noBackupFileName))
         {
           error = File_touch(noBackupFileName);
@@ -7431,8 +7413,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
           return;
         }
 
-        noBackupFileName = String_new();
-        File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup");
+        noBackupFileName = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
         if (File_exists(noBackupFileName))
         {
           error = File_delete(noBackupFileName,FALSE);
@@ -7513,7 +7494,6 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   String            name;
   int64             timeout;
   const JobNode     *jobNode;
-  Errors            error;
   DirectoryInfoNode *directoryInfoNode;
   uint64            fileCount;
   uint64            fileSize;
@@ -7565,21 +7545,21 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
       {
         if (Connector_isConnected(connectorInfo))
         {
-          error = Connector_executeCommand(connectorInfo,
-                                           1,
-                                           10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
-                                           {
-                                             assert(resultMap != NULL);
+          Connector_executeCommand(connectorInfo,
+                                   1,
+                                   10*MS_PER_SECOND,
+                                   CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                   {
+                                     assert(resultMap != NULL);
 
-                                             UNUSED_VARIABLE(userData);
+                                     UNUSED_VARIABLE(userData);
 
-                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
-                                           },NULL),
-                                           "DIRECTORY_INFO name=%'S timeout=%lld",
-                                           name,
-                                           timeout
-                                          );
+                                     return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                   },NULL),
+                                   "DIRECTORY_INFO name=%'S timeout=%lld",
+                                   name,
+                                   timeout
+                                  );
         }
       }
     }

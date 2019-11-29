@@ -1658,7 +1658,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
             continue;
           }
 
-          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
+          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_hasAttributeNoDump(&fileInfo))
           {
             switch (fileInfo.type)
             {
@@ -1879,7 +1879,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
           continue;
         }
 
-        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
+        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_hasAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
           {
@@ -1985,7 +1985,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       {
                         if (!isInExcludedList(createInfo->excludePatternList,fileName))
                         {
-                          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
+                          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_hasAttributeNoDump(&fileInfo))
                           {
                             switch (fileInfo.type)
                             {
@@ -2543,7 +2543,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           continue;
         }
 
-        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
+        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_hasAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
           {
@@ -2853,7 +2853,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           continue;
         }
 
-        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
+        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_hasAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
           {
@@ -3017,7 +3017,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     {
                       if (!isInExcludedList(createInfo->excludePatternList,fileName))
                       {
-                        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
+                        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_hasAttributeNoDump(&fileInfo))
                         {
                           switch (fileInfo.type)
                           {
@@ -4883,7 +4883,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             continue;
           }
 
-          // append storage to existing entity which have the same storage directory
+          // append storage to existing entity which has the same storage directory
           if (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
           {
 //fprintf(stderr,"%s, %d: append to entity of uuid %llu\n",__FILE__,__LINE__,storageMsg.uuidId);
