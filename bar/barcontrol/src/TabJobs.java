@@ -2113,7 +2113,7 @@ public class TabJobs
   // BAR variables
   private WidgetVariable  slaveHostName           = new WidgetVariable<String> ("slave-host-name","");
   private WidgetVariable  slaveHostPort           = new WidgetVariable<Integer>("slave-host-port",0);
-  private WidgetVariable  slaveHostForceSSL       = new WidgetVariable<Boolean>("slave-host-force-ssl",false);
+  private WidgetVariable  slaveHostForceTLS       = new WidgetVariable<Boolean>("slave-host-force-ssl",false);
   private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("include-file-command","");
   private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("include-image-command","");
   private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("exclude-command","");
@@ -2593,8 +2593,8 @@ public class TabJobs
       });
       Widgets.addModifyListener(new WidgetModifyListener(spinner,slaveHostPort));
 
-      button = Widgets.newCheckbox(composite,BARControl.tr("SSL"));
-      button.setToolTipText(BARControl.tr("Enable to force SSL connection."));
+      button = Widgets.newCheckbox(composite,BARControl.tr("TLS"));
+      button.setToolTipText(BARControl.tr("Enable to force TLS protected connection."));
       button.setEnabled(false);
       Widgets.layout(button,0,4,TableLayoutData.DEFAULT);
       Widgets.addEventListener(new WidgetEventListener(button,selectJobEvent)
@@ -2626,8 +2626,8 @@ public class TabJobs
 
           try
           {
-            slaveHostForceSSL.set(widget.getSelection());
-            BARServer.setJobOption(selectedJobData.uuid,slaveHostForceSSL);
+            slaveHostForceTLS.set(widget.getSelection());
+            BARServer.setJobOption(selectedJobData.uuid,slaveHostForceTLS);
           }
           catch (Exception exception)
           {
@@ -2635,7 +2635,7 @@ public class TabJobs
           }
         }
       });
-      Widgets.addModifyListener(new WidgetModifyListener(button,slaveHostForceSSL));
+      Widgets.addModifyListener(new WidgetModifyListener(button,slaveHostForceTLS));
     }
 
     // create sub-tabs
@@ -10318,7 +10318,7 @@ TODO: implement delete entity
         // get job data
         BARServer.getJobOption(jobData.uuid,slaveHostName);
         BARServer.getJobOption(jobData.uuid,slaveHostPort);
-        BARServer.getJobOption(jobData.uuid,slaveHostForceSSL);
+        BARServer.getJobOption(jobData.uuid,slaveHostForceTLS);
         BARServer.getJobOption(jobData.uuid,includeFileCommand);
         BARServer.getJobOption(jobData.uuid,includeImageCommand);
         BARServer.getJobOption(jobData.uuid,excludeCommand);

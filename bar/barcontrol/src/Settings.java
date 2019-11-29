@@ -433,10 +433,10 @@ public class Settings
   public static String                         serverCertificateFileName       = null;
   @SettingValue(name="server-key-file")
   public static String                         serverKeyFileName               = null;
-  @SettingValue(name="no-ssl")
-  public static boolean                        serverNoSSL                     = false;
-  @SettingValue(name="force-ssl")
-  public static boolean                        serverForceSSL                  = false;
+  @SettingValue(name="no-tls")
+  public static boolean                        serverNoTLS                     = false;
+  @SettingValue(name="force-tls")
+  public static boolean                        serverForceTLS                  = false;
   @SettingValue(name="role")
   public static BARControl.Roles               role                            = BARControl.Roles.BASIC;
 

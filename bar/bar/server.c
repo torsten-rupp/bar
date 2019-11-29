@@ -4678,8 +4678,8 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 }
 
 /***********************************************************************\
-* Name   : serverCommand_startSSL
-* Purpose: start SSL connection
+* Name   : serverCommand_startTLS
+* Purpose: start TLS connection
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -4690,7 +4690,7 @@ LOCAL void serverCommand_errorInfo(ClientInfo *clientInfo, IndexHandle *indexHan
 *          Result:
 \***********************************************************************/
 
-LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+LOCAL void serverCommand_startTLS(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   #ifdef HAVE_GNU_TLS
     Errors error;
@@ -4723,7 +4723,7 @@ LOCAL void serverCommand_startSSL(ClientInfo *clientInfo, IndexHandle *indexHand
 
     SEMAPHORE_LOCKED_DO(&clientInfo->io.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
     {
-      error = Network_startSSL(&clientInfo->io.network.socketHandle,
+      error = Network_startTLS(&clientInfo->io.network.socketHandle,
                                serverCA->data,
                                serverCA->length,
                                serverCert->data,
@@ -8034,7 +8034,7 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           Job_getStateText(jobNode->jobState,jobNode->storageFlags),
                           jobNode->job.slaveHost.name,
                           jobNode->job.slaveHost.port,
-                          jobNode->job.slaveHost.forceSSL,
+                          jobNode->job.slaveHost.forceTLS,
                           getSlaveStateText(jobNode->slaveState),
                           ConfigValue_selectToString(CONFIG_VALUE_ARCHIVE_TYPES,
                                                      (   (jobNode->archiveType == ARCHIVE_TYPE_FULL        )
@@ -17380,7 +17380,7 @@ const struct
 SERVER_COMMANDS[] =
 {
   { "ERROR_INFO",                  serverCommand_errorInfo,                AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
-  { "START_SSL",                   serverCommand_startSSL,                 AUTHORIZATION_STATE_WAITING                           },
+  { "START_TLS",                   serverCommand_startTLS,                 AUTHORIZATION_STATE_WAITING                           },
   { "AUTHORIZE",                   serverCommand_authorize,                AUTHORIZATION_STATE_WAITING                           },
   { "VERSION",                     serverCommand_version,                  AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
   { "QUIT",                        serverCommand_quit,                     AUTHORIZATION_STATE_CLIENT|AUTHORIZATION_STATE_MASTER },
@@ -18929,7 +18929,7 @@ Errors Server_run(ServerModes       mode,
         {
           // start SSL
           #ifdef HAVE_GNU_TLS
-            error = Network_startSSL(&clientNode->clientInfo.io.network.socketHandle,
+            error = Network_startTLS(&clientNode->clientInfo.io.network.socketHandle,
                                      serverCA->data,
                                      serverCA->length,
                                      serverCert->data,

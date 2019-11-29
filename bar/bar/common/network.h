@@ -506,8 +506,8 @@ Errors Network_accept(SocketHandle             *socketHandle,
                      );
 
 /***********************************************************************\
-* Name   : Network_startSSL
-* Purpose: start SSL/TLS encryption on socket connection
+* Name   : Network_startTLS
+* Purpose: start TLS (TLS) encryption on socket connection
 * Input  : socketHandle - socket handle
 *          caData       - TLS CA data or NULL (PEM encoded)
 *          caLength     - TLS CA data length
@@ -520,7 +520,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
 * Notes  : call after Network_accept() to establish a SSL encryption
 \***********************************************************************/
 
-Errors Network_startSSL(SocketHandle *socketHandle,
+Errors Network_startTLS(SocketHandle *socketHandle,
                         const void   *caData,
                         uint         caLength,
                         const void   *certData,

@@ -920,8 +920,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER           ("continuous-min-time-delta",        &globalOptions.continuousMinTimeDelta,-1,                      0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
   // global job settings
-  CONFIG_VALUE_IGNORE            ("host-name"),
-  CONFIG_VALUE_IGNORE            ("host-port"),
+  CONFIG_VALUE_IGNORE            ("host-name",                                                                                       NULL,FALSE),
+  CONFIG_VALUE_IGNORE            ("host-port",                                                                                       NULL,FALSE),
   CONFIG_VALUE_STRING            ("archive-name",                     &storageName,-1                                                ),
   CONFIG_VALUE_SELECT            ("archive-type",                     &globalOptions.archiveType,-1,                                 CONFIG_VALUE_ARCHIVE_TYPES),
 
@@ -988,25 +988,25 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   // ignored schedule settings (server only)
   CONFIG_VALUE_BEGIN_SECTION     ("schedule",-1),
-    CONFIG_VALUE_IGNORE          ("UUID"),
-    CONFIG_VALUE_IGNORE          ("parentUUID"),
-    CONFIG_VALUE_IGNORE          ("date"),
-    CONFIG_VALUE_IGNORE          ("weekdays"),
-    CONFIG_VALUE_IGNORE          ("time"),
-    CONFIG_VALUE_IGNORE          ("archive-type"),
-    CONFIG_VALUE_IGNORE          ("interval"),
-    CONFIG_VALUE_IGNORE          ("text"),
-    CONFIG_VALUE_IGNORE          ("min-keep"),
-    CONFIG_VALUE_IGNORE          ("max-keep"),
-    CONFIG_VALUE_IGNORE          ("max-age"),
-    CONFIG_VALUE_IGNORE          ("enabled"),
+    CONFIG_VALUE_IGNORE          ("UUID",                                                                                            NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("parentUUID",                                                                                      NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("date",                                                                                            NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("weekdays",                                                                                        NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("time",                                                                                            NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("archive-type",                                                                                    NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("interval",                                                                                        NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("text",                                                                                            NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("min-keep",                                                                                        NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("max-age",                                                                                         NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("enabled",                                                                                         NULL,FALSE),
   CONFIG_VALUE_END_SECTION(),
 
   // ignored persitence settings (server only)
   CONFIG_VALUE_BEGIN_SECTION     ("persistence",-1),
-    CONFIG_VALUE_IGNORE          ("min-keep"),
-    CONFIG_VALUE_IGNORE          ("max-keep"),
-    CONFIG_VALUE_IGNORE          ("max-age"),
+    CONFIG_VALUE_IGNORE          ("min-keep",                                                                                        NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("max-keep",                                                                                        NULL,FALSE),
+    CONFIG_VALUE_IGNORE          ("max-age",                                                                                         NULL,FALSE),
   CONFIG_VALUE_END_SECTION(),
 
   // commands
@@ -1189,18 +1189,18 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1                   ),
 
   // deprecated
-  CONFIG_VALUE_STRING            ("server-jobs-directory",            &globalOptions.jobsDirectory,-1                                ),
-  CONFIG_VALUE_DEPRECATED        ("remote-host-name",                 NULL,                                                          NULL,NULL,NULL,TRUE),
-  CONFIG_VALUE_DEPRECATED        ("remote-host-port",                 NULL,                                                          NULL,NULL,NULL,TRUE),
-  CONFIG_VALUE_DEPRECATED        ("remote-host-force-ssl",            NULL,                                                          NULL,NULL,NULL,TRUE),
-  CONFIG_VALUE_DEPRECATED        ("mount-device",                     &globalOptions.mountList,                                      configValueParseDeprecatedMountDevice,NULL,NULL,TRUE),
-  CONFIG_VALUE_DEPRECATED        ("schedule",                         NULL,                                                          NULL,NULL,NULL,TRUE),
-//  CONFIG_VALUE_IGNORE            ("schedule"),
+  CONFIG_VALUE_DEPRECATED        ("server-jobs-directory",            &globalOptions.jobsDirectory,-1,                               NULL,NULL,"jobs-directory",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("remote-host-name",                 NULL,-1,                                                       NULL,NULL,"slave-host-name",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("remote-host-port",                 NULL,-1,                                                       NULL,NULL,"slave-host-port",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("remote-host-force-ssl",            NULL,-1,                                                       NULL,NULL,"slave-host-force-tls",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("slave-host-force-ssl",             NULL,-1,                                                       NULL,NULL,"slave-host-force-tls",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("mount-device",                     &globalOptions.mountList,-1,                                   configValueParseDeprecatedMountDevice,NULL,NULL,TRUE),
+  CONFIG_VALUE_DEPRECATED        ("schedule",                         NULL,-1,                                                       NULL,NULL,NULL,TRUE),
   // Note: new --archive-file-mode=overwrite
-  CONFIG_VALUE_DEPRECATED        ("overwrite-archive-files",          &globalOptions,                                                configValueParseDeprecatedArchiveFileModeOverwrite,NULL,"archive-file-mode=overwrite",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("overwrite-archive-files",          &globalOptions,-1,                                             configValueParseDeprecatedArchiveFileModeOverwrite,NULL,"archive-file-mode=overwrite",TRUE),
   // Note: new --restore-entry-mode=overwrite
-  CONFIG_VALUE_DEPRECATED        ("overwrite-files",                  &globalOptions,                                                configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entry-mode=overwrite",TRUE),
-  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                    &globalOptions,                                                configValueParseDeprecatedStopOnError,NULL,NULL,TRUE),
+  CONFIG_VALUE_DEPRECATED        ("overwrite-files",                  &globalOptions,-1,                                             configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entry-mode=overwrite",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                    &globalOptions,-1,                                             configValueParseDeprecatedStopOnError,NULL,NULL,TRUE),
 );
 
 /*---------------------------------------------------------------------*/

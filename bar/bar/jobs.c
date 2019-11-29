@@ -128,7 +128,6 @@ LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userD
 // handle deprecated configuration values
 LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -143,7 +142,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING      ("UUID",                      JobNode,job.uuid                                 ),
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ),
   CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL),
-  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-ssl",      JobNode,job.slaveHost.forceSSL                   ),
+  CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-tls",      JobNode,job.slaveHost.forceTLS                   ),
   CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.archiveName                          ),
   CONFIG_STRUCT_VALUE_SELECT      ("archive-type",              JobNode,job.options.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
@@ -224,9 +223,9 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled                             ),
 
     // deprecated
-    CONFIG_STRUCT_VALUE_DEPRECATED("min-keep",                                                                   configValueParseDeprecatedScheduleMinKeep,NULL,NULL,TRUE),
-    CONFIG_STRUCT_VALUE_DEPRECATED("max-keep",                                                                   configValueParseDeprecatedScheduleMaxKeep,NULL,NULL,TRUE),
-    CONFIG_STRUCT_VALUE_DEPRECATED("max-age",                                                                    configValueParseDeprecatedScheduleMaxAge,NULL,NULL,TRUE),
+    CONFIG_VALUE_IGNORE           ("min-keep",                                                                   NULL,TRUE),
+    CONFIG_VALUE_IGNORE           ("max-keep",                                                                   NULL,TRUE),
+    CONFIG_VALUE_IGNORE           ("max-age",                                                                    NULL,TRUE),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_BEGIN_SECTION("persistence",-1),
@@ -238,16 +237,18 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",                                                           configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",                                                           configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",                                                      configValueParseDeprecatedRemoteForceSSL,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",                                                               configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("schedule",                                                                   NULL,NULL,NULL,FALSE),
-//TODO
-  CONFIG_STRUCT_VALUE_IGNORE      ("overwrite-archive-files"                                                     ),
-  // Note: shortcut for --restore-entries-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",                                                            configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",                                                              configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
+  // Note: shortcut for --restore-entry-mode=overwrite
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+
+  // ignored
+  CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
+  CONFIG_VALUE_IGNORE             ("overwrite-archive-files",                                                    "archive-file-mode",TRUE),
 );
 
 /***************************** Variables *******************************/
@@ -2098,7 +2099,7 @@ bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const 
                   STRING_ESCAPE_CHARACTER_MAP_LENGTH
                 );
 
-  String_set(((JobNode*)variable)->job.slaveHost.name,string);
+  String_set(*((String*)variable),string);
 
   // free resources
   String_delete(string);
@@ -2129,62 +2130,13 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
 
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
 
   if (!stringToUInt(value,&n))
   {
+    stringFormat(errorMessage,errorMessageSize,"expected port number: 0..65535");
     return FALSE;
   }
-  ((JobNode*)variable)->job.slaveHost.port = n;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedRemoteForceSSL
-* Purpose: config value option call back for deprecated remote force SSL
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseDeprecatedRemoteForceSSL(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if      (   stringEqualsIgnoreCase(value,"1")
-           || stringEqualsIgnoreCase(value,"true")
-           || stringEqualsIgnoreCase(value,"on")
-           || stringEqualsIgnoreCase(value,"yes")
-          )
-  {
-    (*(bool*)variable) = TRUE;
-  }
-  else if (   stringEqualsIgnoreCase(value,"0")
-           || stringEqualsIgnoreCase(value,"false")
-           || stringEqualsIgnoreCase(value,"off")
-           || stringEqualsIgnoreCase(value,"no")
-          )
-  {
-    ((JobNode*)variable)->job.slaveHost.forceSSL = FALSE;
-  }
-  else
-  {
-    return FALSE;
-  }
+  (*(uint*)variable) = n;
 
   return TRUE;
 }
@@ -2503,7 +2455,7 @@ void Job_init(Job *job)
   job->uuid                    = String_new();
   job->slaveHost.name          = String_new();
   job->slaveHost.port          = 0;
-  job->slaveHost.forceSSL      = FALSE;
+  job->slaveHost.forceTLS      = FALSE;
   job->archiveName             = String_new();
   job->storageNameListStdin    = FALSE;
   job->storageNameListFileName = String_new();
@@ -2525,7 +2477,7 @@ void Job_initDuplicate(Job *job, const Job *fromJob)
   job->uuid                    = String_duplicate(fromJob->uuid);
   job->slaveHost.name          = String_duplicate(fromJob->slaveHost.name);
   job->slaveHost.port          = fromJob->slaveHost.port;
-  job->slaveHost.forceSSL      = fromJob->slaveHost.forceSSL;
+  job->slaveHost.forceTLS      = fromJob->slaveHost.forceTLS;
 
   job->archiveName             = String_duplicate(fromJob->archiveName);
   job->storageNameListStdin    = fromJob->storageNameListStdin;
@@ -3157,7 +3109,7 @@ bool Job_read(JobNode *jobNode)
   String_clear(jobNode->job.uuid);
   String_clear(jobNode->job.slaveHost.name);
   jobNode->job.slaveHost.port          = 0;
-  jobNode->job.slaveHost.forceSSL      = FALSE;
+  jobNode->job.slaveHost.forceTLS      = FALSE;
   String_clear(jobNode->job.archiveName);
   EntryList_clear(&jobNode->job.includeEntryList);
   PatternList_clear(&jobNode->job.excludePatternList);
@@ -4183,6 +4135,7 @@ SlaveNode *Job_addSlave(ConstString name, uint port)
   Connector_init(&slaveNode->connectorInfo);
   slaveNode->lastOnlineDateTime = 0LL;
   slaveNode->authorizedFlag     = FALSE;
+  slaveNode->lockCount          = 0;
 
   List_append(&slaveList,slaveNode);
 

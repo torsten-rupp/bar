@@ -1953,8 +1953,6 @@ public class TabStatus
    */
   public void updateJobList()
   {
-    synchronized(this)
-    {
     try
     {
       // get job list
@@ -2048,75 +2046,78 @@ public class TabStatus
               removeTableItemSet.add(tableItem);
             }
 
-            for (JobData jobData : jobDataMap.values())
+            synchronized(jobDataMap)
             {
-              // find table item
-              TableItem tableItem = Widgets.getTableItem(widgetJobTable,jobData);
-
-              // update/create table item
-              if (tableItem != null)
+              for (JobData jobData : jobDataMap.values())
               {
-                Widgets.updateTableItem(tableItem,
-                                        jobData,
-                                        jobData.name,
-                                        (serverState == BARServer.States.RUNNING)
-                                          ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
-                                          : BARControl.tr("suspended"),
-                                        jobData.slaveHostName,
-                                        jobData.archiveType.getText(),
-                                        (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
-                                        jobData.formatCompressAlgorithm(),
-                                        jobData.formatCryptAlgorithm(),
-                                        jobData.formatLastExecutedDateTime(),
-                                        jobData.formatEstimatedRestTime()
-                                       );
+                // find table item
+                TableItem tableItem = Widgets.getTableItem(widgetJobTable,jobData);
 
-                // keep table item
-                removeTableItemSet.remove(tableItem);
-              }
-              else
-              {
-                // insert new item
-                tableItem = Widgets.insertTableItem(widgetJobTable,
-                                                    findJobTableItemIndex(jobData),
-                                                    jobData,
-                                                    jobData.name,
-                                                    (serverState == BARServer.States.RUNNING)
-                                                      ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
-                                                      : BARControl.tr("suspended"),
-                                                    jobData.slaveHostName,
-                                                    jobData.archiveType.toString(),
-                                                    (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
-                                                    jobData.formatCompressAlgorithm(),
-                                                    jobData.formatCryptAlgorithm(),
-                                                    jobData.formatLastExecutedDateTime(),
-                                                    jobData.formatEstimatedRestTime()
-                                                   );
-                tableItem.setData(jobData);
-              }
+                // update/create table item
+                if (tableItem != null)
+                {
+                  Widgets.updateTableItem(tableItem,
+                                          jobData,
+                                          jobData.name,
+                                          (serverState == BARServer.States.RUNNING)
+                                            ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
+                                            : BARControl.tr("suspended"),
+                                          jobData.slaveHostName,
+                                          jobData.archiveType.getText(),
+                                          (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                          jobData.formatCompressAlgorithm(),
+                                          jobData.formatCryptAlgorithm(),
+                                          jobData.formatLastExecutedDateTime(),
+                                          jobData.formatEstimatedRestTime()
+                                         );
 
-              switch (jobData.state)
-              {
-                case RUNNING:
-                case DRY_RUNNING:
-                  tableItem.setBackground(COLOR_RUNNING);
-                  break;
-                case REQUEST_FTP_PASSWORD:
-                case REQUEST_SSH_PASSWORD:
-                case REQUEST_WEBDAV_PASSWORD:
-                case REQUEST_CRYPT_PASSWORD:
-                case REQUEST_VOLUME:
-                  tableItem.setBackground(COLOR_REQUEST);
-                  break;
-                case ERROR:
-                  tableItem.setBackground(COLOR_ERROR);
-                  break;
-                case ABORTED:
-                  tableItem.setBackground(COLOR_ABORTED);
-                  break;
-                default:
-                  tableItem.setBackground(null);
-                  break;
+                  // keep table item
+                  removeTableItemSet.remove(tableItem);
+                }
+                else
+                {
+                  // insert new item
+                  tableItem = Widgets.insertTableItem(widgetJobTable,
+                                                      findJobTableItemIndex(jobData),
+                                                      jobData,
+                                                      jobData.name,
+                                                      (serverState == BARServer.States.RUNNING)
+                                                        ? JobData.formatStateText(jobData.state,jobData.slaveHostName,jobData.slaveState)
+                                                        : BARControl.tr("suspended"),
+                                                      jobData.slaveHostName,
+                                                      jobData.archiveType.toString(),
+                                                      (jobData.archivePartSize > 0) ? Units.formatByteSize(jobData.archivePartSize) : BARControl.tr("unlimited"),
+                                                      jobData.formatCompressAlgorithm(),
+                                                      jobData.formatCryptAlgorithm(),
+                                                      jobData.formatLastExecutedDateTime(),
+                                                      jobData.formatEstimatedRestTime()
+                                                     );
+                  tableItem.setData(jobData);
+                }
+
+                switch (jobData.state)
+                {
+                  case RUNNING:
+                  case DRY_RUNNING:
+                    tableItem.setBackground(COLOR_RUNNING);
+                    break;
+                  case REQUEST_FTP_PASSWORD:
+                  case REQUEST_SSH_PASSWORD:
+                  case REQUEST_WEBDAV_PASSWORD:
+                  case REQUEST_CRYPT_PASSWORD:
+                  case REQUEST_VOLUME:
+                    tableItem.setBackground(COLOR_REQUEST);
+                    break;
+                  case ERROR:
+                    tableItem.setBackground(COLOR_ERROR);
+                    break;
+                  case ABORTED:
+                    tableItem.setBackground(COLOR_ABORTED);
+                    break;
+                  default:
+                    tableItem.setBackground(null);
+                    break;
+                }
               }
             }
 
@@ -2137,7 +2138,6 @@ public class TabStatus
     catch (ConnectionError error)
     {
       // ignored
-    }
     }
 
     // update tab jobs list

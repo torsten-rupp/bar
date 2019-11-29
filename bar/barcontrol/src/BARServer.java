@@ -1565,8 +1565,8 @@ public class BARServer
    * @param name host name
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
-   * @param noSSL TRUE to disable SSL
-   * @param forceSSL TRUE to force SSL
+   * @param noTLS TRUE to disable TLS
+   * @param forceTLS TRUE to force TLS
    * @param password server password
    * @param caFileName server CA file name
    * @param certificateFileName server certificate file name
@@ -1576,8 +1576,8 @@ public class BARServer
                              String  name,
                              int     port,
                              int     tlsPort,
-                             boolean noSSL,
-                             boolean forceSSL,
+                             boolean noTLS,
+                             boolean forceTLS,
                              String  password,
                              String  caFileName,
                              String  certificateFileName,
@@ -1645,13 +1645,13 @@ public class BARServer
     String connectErrorMessage = null;
     if ((socket == null) && (port != 0))
     {
-      // try to create TLS socket with PEM on plain socket+startSSL
+      // try to create TLS socket with PEM on plain socket+startTLS
       for (KeyData keyData : keyData_)
       {
         if (   (keyData.caFileName          != null)
             && (keyData.certificateFileName != null)
             && (keyData.keyFileName         != null)
-            && !noSSL
+            && !noTLS
            )
         {
           File caFile          = new File(keyData.caFileName);
@@ -1683,11 +1683,11 @@ public class BARServer
               // accept session
               acceptSession(input,output);
 
-              // send startSSL, wait for response
+              // send startTLS, wait for response
               String[] errorMessage = new String[1];
               syncExecuteCommand(input,
                                  output,
-                                 StringParser.format("START_SSL"),
+                                 StringParser.format("START_TLS"),
                                  2  // debugLevel
                                 );
 
@@ -1777,7 +1777,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if ((socket == null) && (tlsPort != 0) && !noSSL)
+    if ((socket == null) && (tlsPort != 0) && !noTLS)
     {
       // try to create TLS socket with PEM
       for (KeyData keyData : keyData_)
@@ -1804,7 +1804,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
                                                                    ""
                                                                   );
 
-              // create TLS socket
+              // create TLS (SSL) socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
@@ -1915,11 +1915,11 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
               // accept session
               acceptSession(input,output);
 
-              // send startSSL on plain socket, wait for response
+              // send start TLS on plain socket, wait for response
               String[] errorMessage = new String[1];
               syncExecuteCommand(input,
                                  output,
-                                 StringParser.format("START_SSL"),
+                                 StringParser.format("START_TLS"),
                                  2  // debugLevel
                                 );
 
@@ -2009,7 +2009,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if ((socket == null) && (tlsPort != 0) && !noSSL)
+    if ((socket == null) && (tlsPort != 0) && !noTLS)
     {
       // try to create TLS socket with JKS
       for (KeyData keyData : keyData_)
@@ -2031,7 +2031,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
 
               SSLSocketFactory sslSocketFactory = (SSLSocketFactory)SSLSocketFactory.getDefault();
 
-              // create TLS socket
+              // create TLS (SSL) socket
               sslSocket = (SSLSocket)sslSocketFactory.createSocket(name,tlsPort);
               sslSocket.setSoTimeout(SOCKET_READ_TIMEOUT);
               sslSocket.startHandshake();
@@ -2109,7 +2109,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       }
     }
 
-    if ((socket == null) && (port != 0) && !forceSSL)
+    if ((socket == null) && (port != 0) && !forceTLS)
     {
       Socket plainSocket = null;
       try
@@ -2241,8 +2241,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
    * @param name host name
    * @param port host port number or 0
    * @param tlsPort TLS port number of 0
-   * @param noSSL TRUE to disable SSL
-   * @param forceSSL TRUE to force SSL
+   * @param noTLS TRUE to disable TLS
+   * @param forceTLS TRUE to force TLS
    * @param password server password
    * @param caFileName server CA file name
    * @param certificateFileName server certificate file name
@@ -2251,8 +2251,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
   public static void connect(String  name,
                              int     port,
                              int     tlsPort,
-                             boolean noSSL,
-                             boolean forceSSL,
+                             boolean noTLS,
+                             boolean forceTLS,
                              String  password,
                              String  caFileName,
                              String  certificateFileName,
@@ -2263,8 +2263,8 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
             name,
             port,
             tlsPort,
-            noSSL,
-            forceSSL,
+            noTLS,
+            forceTLS,
             password,
             caFileName,
             certificateFileName,
@@ -4429,7 +4429,7 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
-  /** create SSL socket factory with PEM files
+  /** create TLS (SSL) socket factory with PEM files
    * original from: https://gist.github.com/rohanag12/07ab7eb22556244e9698
    * @param certificateAuthorityFile certificate authority PEM file
    * @param certificateFile certificate PEM file
@@ -4500,7 +4500,7 @@ throw new Error("NYI");
     KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagerFactory.init(keyStore,passwordChars);
 
-    // create SSL socket factory
+    // create TLS (SSL) socket factory
     SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
     sslContext.init(keyManagerFactory.getKeyManagers(),
                     trustManagerFactory.getTrustManagers(),

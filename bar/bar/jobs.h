@@ -126,7 +126,7 @@ typedef struct
   {
     String name;
     uint   port;
-    bool   forceSSL;
+    bool   forceTLS;
   }                   slaveHost;                        // slave host
 
 //TODO: rename: storageName

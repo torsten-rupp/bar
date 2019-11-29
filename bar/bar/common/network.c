@@ -1788,7 +1788,7 @@ void Network_doneServer(ServerSocketHandle *serverSocketHandle)
   close(serverSocketHandle->handle);
 }
 
-Errors Network_startSSL(SocketHandle *socketHandle,
+Errors Network_startTLS(SocketHandle *socketHandle,
                         const void   *caData,
                         uint         caLength,
                         const void   *certData,

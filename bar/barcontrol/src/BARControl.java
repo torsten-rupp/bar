@@ -1412,7 +1412,7 @@ public class BARControl
     String  serverName;       // server name
     int     serverPort;       // server port
     int     serverTLSPort;    // server TLS port
-    boolean forceSSL;         // force SSL
+    boolean forceTLS;         // force TLS
     String  password;         // login password
     Roles   role;             // role
 
@@ -1421,17 +1421,17 @@ public class BARControl
      * @param port server port
      * @param tlsPort server TLS port
      * @param password server password
-     * @param forceSSL TRUE to force SSL
+     * @param forceTLS TRUE to force TLS
      * @param role role
      */
-    LoginData(String name, int port, int tlsPort, boolean forceSSL, String password, Roles role)
+    LoginData(String name, int port, int tlsPort, boolean forceTLS, String password, Roles role)
     {
       final Settings.Server lastServer = Settings.getLastServer();
 
       this.serverName    = !name.isEmpty()     ? name     : ((lastServer != null) ? lastServer.name : Settings.DEFAULT_SERVER_NAME    );
       this.serverPort    = (port != 0        ) ? port     : ((lastServer != null) ? lastServer.port : Settings.DEFAULT_SERVER_PORT    );
       this.serverTLSPort = (port != 0        ) ? tlsPort  : ((lastServer != null) ? lastServer.port : Settings.DEFAULT_SERVER_TLS_PORT);
-      this.forceSSL      = forceSSL;
+      this.forceTLS      = forceTLS;
       this.password      = !password.isEmpty() ? password : "";
       this.role          = role;
     }
@@ -1440,23 +1440,23 @@ public class BARControl
      * @param serverName server name
      * @param port server port
      * @param tlsPort server TLS port
-     * @param forceSSL TRUE to force SSL
+     * @param forceTLS TRUE to force TLS
      * @param role role
      */
-    LoginData(String name, int port, int tlsPort, boolean forceSSL, Roles role)
+    LoginData(String name, int port, int tlsPort, boolean forceTLS, Roles role)
     {
-      this(name,port,tlsPort,forceSSL,"",role);
+      this(name,port,tlsPort,forceTLS,"",role);
     }
 
     /** create login data
      * @param port server port
      * @param tlsPort server TLS port
-     * @param forceSSL TRUE to force SSL
+     * @param forceTLS TRUE to force TLS
      * @param role role
      */
-    LoginData(int port, int tlsPort, boolean forceSSL, Roles role)
+    LoginData(int port, int tlsPort, boolean forceTLS, Roles role)
     {
-      this("",port,tlsPort,forceSSL,role);
+      this("",port,tlsPort,forceTLS,role);
     }
 
     /** convert data to string
@@ -1465,7 +1465,7 @@ public class BARControl
     @Override
     public String toString()
     {
-      return "LoginData {"+serverName+", "+serverPort+", "+serverTLSPort+", "+(forceSSL ? "SSL" : "plain")+"}";
+      return "LoginData {"+serverName+", "+serverPort+", "+serverTLSPort+", "+(forceTLS ? "TLS" : "plain")+"}";
     }
   }
 
@@ -1680,8 +1680,8 @@ public class BARControl
     new Option("--ca-file",                      null,Options.Types.STRING,     "serverCAFileName"),
     new Option("--cert-file",                    null,Options.Types.STRING,     "serverCertificateFileName"),
     new Option("--key-file",                     null,Options.Types.STRING,     "serverKeyFileName"),
-    new Option("--no-ssl",                       null,Options.Types.BOOLEAN,    "serverNoSSL"),
-    new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "serverForceSSL"),
+    new Option("--no-tls",                       null,Options.Types.BOOLEAN,    "serverNoTLS"),
+    new Option("--force-tls",                    null,Options.Types.BOOLEAN,    "serverForceTLS"),
     new Option("--password",                     null,Options.Types.STRING,     "serverPassword"),
 
     new Option("--login-dialog",                 null,Options.Types.BOOLEAN,    "loginDialogFlag"),
@@ -1719,6 +1719,10 @@ public class BARControl
     new Option("--debug",                        "-d",Options.Types.INCREMENT,  "debugLevel"),
     new Option("--debug-ignore-protocol-version",null,Options.Types.BOOLEAN,    "debugIgnoreProtocolVersion"),
     new Option("--debug-quit-server",            null,Options.Types.BOOLEAN,    "debugQuitServerFlag"),
+
+    // deprecated
+    new Option("--no-ssl",                       null,Options.Types.BOOLEAN,    "serverNoTLS"),
+    new Option("--force-ssl",                    null,Options.Types.BOOLEAN,    "serverForceTLS"),
 
     // ignored
     new Option("--swing",                        null, Options.Types.BOOLEAN,   null),
@@ -2009,8 +2013,8 @@ public class BARControl
     System.out.println("                                                        "+System.getProperty("user.home")+File.separator+".bar"+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME+" or ");
     System.out.println("                                                        "+Config.CONFIG_DIR+File.separator+BARServer.DEFAULT_JAVA_KEY_FILE_NAME);
     System.out.println("                                                      )" );
-    System.out.println("         --no-ssl                                   - no SSL connection");
-    System.out.println("         --force-ssl                                - force SSL connection");
+    System.out.println("         --no-tls                                   - no TLS connection");
+    System.out.println("         --force-tls                                - force TLS connection");
     System.out.println("         --login-dialog                             - force to open login dialog");
     System.out.println("         --pair-master                              - start pairing new master");
     System.out.println("");
@@ -2584,7 +2588,7 @@ if (false) {
             final Settings.Server defaultServer = Settings.getLastServer();
             loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                       (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                      !Settings.serverNoSSL && Settings.serverForceSSL,
+                                      !Settings.serverNoTLS && Settings.serverForceTLS,
                                       Settings.role
                                      );
             if (getLoginData(loginData,false))
@@ -2595,8 +2599,8 @@ if (false) {
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
-                                  Settings.serverNoSSL,
-                                  loginData.forceSSL,
+                                  Settings.serverNoTLS,
+                                  loginData.forceTLS,
                                   loginData.password,
                                   Settings.serverCAFileName,
                                   Settings.serverCertificateFileName,
@@ -3219,8 +3223,8 @@ if (false) {
                             loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
-                            Settings.serverNoSSL,
-                            loginData.forceSSL,
+                            Settings.serverNoTLS,
+                            loginData.forceTLS,
                             loginData.password,
                             Settings.serverCAFileName,
                             Settings.serverCertificateFileName,
@@ -3271,8 +3275,8 @@ if (false) {
                             loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
-                            Settings.serverNoSSL,
-                            loginData.forceSSL,
+                            Settings.serverNoTLS,
+                            loginData.forceTLS,
                             loginData.password,
                             Settings.serverCAFileName,
                             Settings.serverCertificateFileName,
@@ -3473,7 +3477,7 @@ if (false) {
 
     final Combo   widgetServerName;
     final Spinner widgetServerPort;
-    final Button  widgetForceSSL;
+    final Button  widgetForceTLS;
     final Text    widgetPassword;
     final Button  widgetRoleBasic,widgetRoleNormal,widgetRoleExpert;
     final Button  widgetLoginButton;
@@ -3500,9 +3504,9 @@ if (false) {
         widgetServerPort.setSelection(loginData.serverPort);
         Widgets.layout(widgetServerPort,0,1,TableLayoutData.W,0,0,0,0,100,SWT.DEFAULT);
 
-        widgetForceSSL = Widgets.newCheckbox(subComposite,BARControl.tr("SSL"));
-        widgetForceSSL.setSelection(loginData.forceSSL);
-        Widgets.layout(widgetForceSSL,0,2,TableLayoutData.W);
+        widgetForceTLS = Widgets.newCheckbox(subComposite,BARControl.tr("TLS"));
+        widgetForceTLS.setSelection(loginData.forceTLS);
+        Widgets.layout(widgetForceTLS,0,2,TableLayoutData.W);
       }
 
       label = Widgets.newLabel(composite);
@@ -3563,7 +3567,7 @@ if (false) {
         {
           loginData.serverName = widgetServerName.getText();
           loginData.serverPort = widgetServerPort.getSelection();
-          loginData.forceSSL   = widgetForceSSL.getSelection();
+          loginData.forceTLS   = widgetForceTLS.getSelection();
           loginData.password   = widgetPassword.getText();
           if (roleFlag)
           {
@@ -3704,7 +3708,7 @@ if (false) {
               loginData = new LoginData((!server.name.isEmpty()    ) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0          ) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        !Settings.serverNoSSL && Settings.serverForceSSL,
+                                        !Settings.serverNoTLS && Settings.serverForceTLS,
                                         (!server.password.isEmpty()) ? server.password : "",
                                         Settings.role
                                        );
@@ -3714,8 +3718,8 @@ if (false) {
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
-                                  Settings.serverNoSSL,
-                                  loginData.forceSSL,
+                                  Settings.serverNoTLS,
+                                  loginData.forceTLS,
                                   loginData.password,
                                   Settings.serverCAFileName,
                                   Settings.serverCertificateFileName,
@@ -3733,13 +3737,13 @@ if (false) {
               }
             }
 
-            // try to connect to server without TLS/SSL
-            if (!connectOkFlag && loginData.forceSSL)
+            // try to connect to server without TLS/TLS
+            if (!connectOkFlag && loginData.forceTLS)
             {
               if (Dialogs.confirmError(new Shell(),
                                        BARControl.tr("Connection fail"),
-                                       BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),
-                                       BARControl.tr("Try without TLS/SSL"),
+                                       BARControl.tr("Connection fail. Try to connect without TLS (SSL)?"),
+                                       BARControl.tr("Try without TLS (SSL)"),
                                        BARControl.tr("Cancel")
                                       )
                  )
@@ -3750,8 +3754,8 @@ if (false) {
                                     loginData.serverName,
                                     loginData.serverPort,
                                     loginData.serverTLSPort,
-                                    true,  // noSSL,
-                                    false,  // forceSSL
+                                    true,  // noTLS,
+                                    false,  // forceTLS
                                     loginData.password,
                                     (String)null,  // serverCAFileName
                                     (String)null,  // serverCertificateFileName
@@ -3776,7 +3780,7 @@ if (false) {
               loginData = new LoginData((!server.name.isEmpty()) ? server.name : Settings.DEFAULT_SERVER_NAME,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_PORT,
                                         (server.port != 0      ) ? server.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                        !Settings.serverNoSSL && Settings.serverForceSSL,
+                                        !Settings.serverNoTLS && Settings.serverForceTLS,
                                         Settings.role
                                        );
               if (getLoginData(loginData,false))
@@ -3787,8 +3791,8 @@ if (false) {
                                     loginData.serverName,
                                     loginData.serverPort,
                                     loginData.serverTLSPort,
-                                    Settings.serverNoSSL,
-                                    loginData.forceSSL,
+                                    Settings.serverNoTLS,
+                                    loginData.forceTLS,
                                     loginData.password,
                                     Settings.serverCAFileName,
                                     Settings.serverCertificateFileName,
@@ -4264,7 +4268,7 @@ if (false) {
       loginData = new LoginData((server != null) ? server.name     : Settings.DEFAULT_SERVER_NAME,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_PORT,
                                 (server != null) ? server.port     : Settings.DEFAULT_SERVER_TLS_PORT,
-                                !Settings.serverNoSSL && Settings.serverForceSSL,
+                                !Settings.serverNoTLS && Settings.serverForceTLS,
                                 (server != null) ? server.password : "",
                                 Settings.role
                                );
@@ -4302,8 +4306,8 @@ if (false) {
           BARServer.connect(loginData.serverName,
                             loginData.serverPort,
                             loginData.serverTLSPort,
-                            Settings.serverNoSSL,
-                            loginData.forceSSL,
+                            Settings.serverNoTLS,
+                            loginData.forceTLS,
                             loginData.password,
                             Settings.serverCAFileName,
                             Settings.serverCertificateFileName,
@@ -5261,8 +5265,8 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
-                                Settings.serverNoSSL,
-                                loginData.forceSSL,
+                                Settings.serverNoTLS,
+                                loginData.forceTLS,
                                 loginData.password,
                                 Settings.serverCAFileName,
                                 Settings.serverCertificateFileName,
@@ -5284,8 +5288,8 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
-                                Settings.serverNoSSL,
-                                loginData.forceSSL,
+                                Settings.serverNoTLS,
+                                loginData.forceTLS,
                                 "",  // password
                                 Settings.serverCAFileName,
                                 Settings.serverCertificateFileName,
@@ -5322,8 +5326,8 @@ Dprintf.dprintf("still not supported");
                                 loginData.serverName,
                                 loginData.serverPort,
                                 loginData.serverTLSPort,
-                                Settings.serverNoSSL,
-                                loginData.forceSSL,
+                                Settings.serverNoTLS,
+                                loginData.forceTLS,
                                 loginData.password,
                                 Settings.serverCAFileName,
                                 Settings.serverCertificateFileName,
@@ -5353,12 +5357,12 @@ Dprintf.dprintf("still not supported");
               }
             }
           }
-          if (!connectOkFlag && loginData.forceSSL)
+          if (!connectOkFlag && loginData.forceTLS)
           {
             if (Dialogs.confirmError(new Shell(),
                                      BARControl.tr("Connection fail"),
-                                     BARControl.tr("Connection fail. Try to connect without TLS/SSL?"),
-                                     BARControl.tr("Try without TLS/SSL"),
+                                     BARControl.tr("Connection fail. Try to connect without TLS (SSL)?"),
+                                     BARControl.tr("Try without TLS (SSL)"),
                                      BARControl.tr("Cancel")
                                     )
                )
@@ -5369,8 +5373,8 @@ Dprintf.dprintf("still not supported");
                                   loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
-                                  true, // serverNoSSL,
-                                  false,  // forceSSL
+                                  true, // serverNoTLS,
+                                  false,  // forceTLS
                                   loginData.password,
                                   (String)null,  // serverCAFileName
                                   (String)null,  // serverCertificateFileName
@@ -5422,7 +5426,7 @@ error.printStackTrace();
             }
           }
         }
-        Settings.serverForceSSL = loginData.forceSSL;
+        Settings.serverForceTLS = loginData.forceTLS;
         Settings.role           = loginData.role;
 
         do

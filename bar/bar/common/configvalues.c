@@ -1773,6 +1773,39 @@ bool ConfigValue_parse(const char           *name,
   return TRUE;
 }
 
+bool ConfigValue_parseDeprecatedBoolean(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  if      (   stringEqualsIgnoreCase(value,"1")
+           || stringEqualsIgnoreCase(value,"true")
+           || stringEqualsIgnoreCase(value,"on")
+           || stringEqualsIgnoreCase(value,"yes")
+          )
+  {
+    (*(bool*)variable) = TRUE;
+  }
+  else if (   stringEqualsIgnoreCase(value,"0")
+           || stringEqualsIgnoreCase(value,"false")
+           || stringEqualsIgnoreCase(value,"off")
+           || stringEqualsIgnoreCase(value,"no")
+          )
+  {
+    (*(bool*)variable) = FALSE;
+  }
+  else
+  {
+    stringFormat(errorMessage,errorMessageSize,"expected boolean value: yes|no");
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 bool ConfigValue_getIntegerValue(int                   *value,
                                  const char            *string,
                                  const ConfigValueUnit *units
