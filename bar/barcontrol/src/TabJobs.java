@@ -30,6 +30,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 // graphics
 import org.eclipse.swt.widgets.TabItem;
@@ -2139,6 +2142,10 @@ public class TabJobs
                                                                                             },
                                                                                 "none"
                                                                                );
+  private WidgetVariable  byteCompressAlgorithmType  = new WidgetVariable<String> (new String[]{"none","zip","bzip","lzma","lzo","lz4-","zstd",},
+                                                                                   "none"
+                                                                                  );
+  private WidgetVariable  byteCompressAlgorithmLevel = new WidgetVariable<String> ();
   private WidgetVariable  compressMinSize         = new WidgetVariable<Long>   ("compress-min-size",0L);
   private WidgetVariable  cryptAlgorithm          = new WidgetVariable<String> ("crypt-algorithm",
                                                                                 new String[]{"none",
@@ -2231,6 +2238,9 @@ public class TabJobs
     Control     control;
     Text        text;
     StyledText  styledText;
+
+    final Combo widgetByteCompressAlgorithmType;
+    final Combo widgetByteCompressAlgorithmLevel;
 
     // get shell, display
     shell   = parentTabFolder.getShell();
@@ -4761,6 +4771,185 @@ public class TabJobs
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
+
+// ---
+          widgetByteCompressAlgorithmType = Widgets.newOptionMenu(composite);
+          widgetByteCompressAlgorithmType.setToolTipText(BARControl.tr("Byte compression method to use."));
+          widgetByteCompressAlgorithmType.setItems(new String[]{" ","zip","bzip","lzma","lzo","lz4","zstd"});
+          Widgets.layout(widgetByteCompressAlgorithmType,0,3,TableLayoutData.W);
+
+          widgetByteCompressAlgorithmLevel = Widgets.newOptionMenu(composite);
+          widgetByteCompressAlgorithmLevel.setToolTipText(BARControl.tr("Byte compression method to use."));
+          Widgets.layout(widgetByteCompressAlgorithmLevel,0,4,TableLayoutData.W,0,0,0,0,50,SWT.DEFAULT);
+          widgetByteCompressAlgorithmLevel.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Combo  widget = (Combo)selectionEvent.widget;
+              String string = Widgets.getSelectedComboItem(widget);
+
+              try
+              {
+                byteCompressAlgorithm.set(string);
+                BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetByteCompressAlgorithmLevel,byteCompressAlgorithmType));
+          widgetByteCompressAlgorithmType.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Combo  widget = (Combo)selectionEvent.widget;
+              String string = widget.getText();
+
+              String  byteCompressAlgorithms[];
+              boolean byteCompressAlgrithmLevelEnabledFlag;
+              if      (string.equals("none"))
+              {
+                byteCompressAlgorithms = new String[]{" ",     "none",
+                                                     };
+                byteCompressAlgrithmLevelEnabledFlag = false;
+              }
+              else if (string.equals("zip"))
+              {
+                byteCompressAlgorithms = new String[]{"0",  "zip0",
+                                                      "1",  "zip1",
+                                                      "2",  "zip2",
+                                                      "3",  "zip3",
+                                                      "4",  "zip4",
+                                                      "5",  "zip5",
+                                                      "6",  "zip6",
+                                                      "7",  "zip7",
+                                                      "8",  "zip8",
+                                                      "9",  "zip9",
+                                                     };
+                byteCompressAlgrithmLevelEnabledFlag = true;
+              }
+              else if (string.equals("bzip"))
+              {
+                byteCompressAlgorithms = new String[]{"1", "bzip1",
+                                                      "2", "bzip2",
+                                                      "3", "bzip3",
+                                                      "4", "bzip4",
+                                                      "5", "bzip5",
+                                                      "6", "bzip6",
+                                                      "7", "bzip7",
+                                                      "8", "bzip8",
+                                                      "9", "bzip9",
+                                                     };
+                byteCompressAlgrithmLevelEnabledFlag = true;
+              }
+              else if (string.equals("lzma"))
+              {
+                byteCompressAlgorithms = new String[]{"1", "lzma1",
+                                                      "2", "lzma2",
+                                                      "3", "lzma3",
+                                                      "4", "lzma4",
+                                                      "5", "lzma5",
+                                                      "6", "lzma6",
+                                                      "7", "lzma7",
+                                                      "8", "lzma8",
+                                                      "9", "lzma9",
+                                                     };
+                byteCompressAlgrithmLevelEnabledFlag = true;
+              }
+              else if (string.equals("lzo"))
+              {
+                byteCompressAlgorithms = new String[]{"1",  "lzo1",
+                                                      "2",  "lzo2",
+                                                      "3",  "lzo3",
+                                                      "4",  "lzo4",
+                                                      "5",  "lzo5",
+                                                     };
+                byteCompressAlgrithmLevelEnabledFlag = true;
+              }
+              else if (string.equals("lz4"))
+              {
+                byteCompressAlgorithms = new String[]{"0", "lz4-0",
+                                                      "1", "lz4-1",
+                                                      "2", "lz4-2",
+                                                      "3", "lz4-3",
+                                                      "4", "lz4-4",
+                                                      "5", "lz4-5",
+                                                      "6", "lz4-6",
+                                                      "7", "lz4-7",
+                                                      "8", "lz4-8",
+                                                      "9", "lz4-9",
+                                                      "10","lz4-10",
+                                                      "11","lz4-11",
+                                                      "12","lz4-12",
+                                                      "13","lz4-13",
+                                                      "14","lz4-14",
+                                                      "15","lz4-15",
+                                                      "16","lz4-16",
+                                                     };
+                byteCompressAlgrithmLevelEnabledFlag = true;
+              }
+              else if (string.equals("zstd"))
+              {
+                byteCompressAlgorithms = new String[]{"0", "zstd0",
+                                                      "1", "zstd1",
+                                                      "2", "zstd2",
+                                                      "3", "zstd3",
+                                                      "4", "zstd4",
+                                                      "5", "zstd5",
+                                                      "6", "zstd6",
+                                                      "7", "zstd7",
+                                                      "8", "zstd8",
+                                                      "9", "zstd9",
+                                                      "10","zstd10",
+                                                      "11","zstd11",
+                                                      "12","zstd12",
+                                                      "13","zstd13",
+                                                      "14","zstd14",
+                                                      "15","zstd15",
+                                                      "16","zstd16",
+                                                      "17","zstd17",
+                                                      "18","zstd18",
+                                                      "19","zstd19"
+                                                     };
+                byteCompressAlgrithmLevelEnabledFlag = true;
+              }
+              else
+              {
+                byteCompressAlgorithms = new String[]{" ",     "none",
+                                                     };
+                byteCompressAlgrithmLevelEnabledFlag = false;
+              }
+              Widgets.setComboItems(widgetByteCompressAlgorithmLevel,byteCompressAlgorithms);
+              Widgets.setSelectedComboItem(widgetByteCompressAlgorithmLevel,0);
+              widgetByteCompressAlgorithmLevel.setEnabled(byteCompressAlgrithmLevelEnabledFlag);
+
+              string = Widgets.getSelectedComboItem(widgetByteCompressAlgorithmLevel);
+              try
+              {
+                byteCompressAlgorithm.set(string);
+                BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetByteCompressAlgorithmLevel,byteCompressAlgorithmLevel));
+// ---
+
         }
 
         // xdelta source
@@ -10328,6 +10517,11 @@ TODO: implement delete entity
         archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
         archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
+String s[] = parseCompressAlgorithm(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"));
+Dprintf.dprintf("s=%s:%s:%s",s[0],s[1],s[2]);
+byteCompressAlgorithmType.set(s[1]);
+byteCompressAlgorithmLevel.set(s[1]);
+
         String[] compressAlgorithms = StringUtils.splitArray(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"),"+");
         deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
         byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
@@ -10900,6 +11094,71 @@ throw new Error("NYI");
   }
 
   //-----------------------------------------------------------------------
+
+  private String[] parseCompressAlgorithm(String string)
+  {
+    final String BYTE_COMPRESS_PATTERN = "(none|zip|bzip|lzma|lzo|lz4-|zstd){([0-9+]){0,1}";
+
+    try
+    {
+Dprintf.dprintf("");
+    String[] compressAlgorithms = StringUtils.splitArray(string,"+");
+    if      (compressAlgorithms.length >= 2)
+    {
+      String  type,level;
+      Matcher matcher;
+
+Dprintf.dprintf("%s",compressAlgorithms[1]);
+      if ((matcher = Pattern.compile("^(none|zip|bzip|lzma|lzo|lz4-|zstd)([0-9]+){0,1}$").matcher(compressAlgorithms[1])).matches())
+      {
+Dprintf.dprintf("");
+        type  = matcher.group(1);
+        level = matcher.group(2);
+      }
+      else
+      {
+        type  = "";
+        level = "";
+      }
+
+Dprintf.dprintf("");
+      return new String[]{compressAlgorithms[0],type,level};
+    }
+    else if (compressAlgorithms.length >= 1)
+    {
+      String  type,level;
+      Matcher matcher;
+
+Dprintf.dprintf("%s",compressAlgorithms[0]);
+      if ((matcher = Pattern.compile("^(none|zip|bzip|lzma|lzo|lz4-|zstd)([0-9]+){0,1}$").matcher(compressAlgorithms[0])).matches())
+      {
+Dprintf.dprintf("");
+        type  = matcher.group(1);
+        level = matcher.group(2);
+      }
+      else
+      {
+        type  = "";
+        level = "";
+      }
+
+Dprintf.dprintf("");
+      return new String[]{"",type,level};
+    }
+    else
+    {
+Dprintf.dprintf("");
+      return new String[]{"","",""};
+    }
+    }
+    catch (PatternSyntaxException e)
+    {
+Dprintf.dprintf("e=%s",e);
+//e.printStackt
+System.exit(1);
+return null;
+    }
+  }
 
   /** get archive name
    * @return archive name

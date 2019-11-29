@@ -213,6 +213,18 @@ class WidgetVariable<T>
   }
 
   /** create widget variable
+   * @param value value
+   * @param values values
+   */
+  WidgetVariable(String[] values, T value)
+  {
+    this.name   = (String)null;
+    this.type   = String.class;
+    this.values = values;
+    this.value  = value;
+  }
+
+  /** create widget variable
    * @param name name
    * @param b/i/l/d/string/enumeration value
    */
@@ -259,6 +271,13 @@ class WidgetVariable<T>
   WidgetVariable(double d)
   {
     this((String)null,d);
+  }
+  WidgetVariable()
+  {
+    this.name   = null;
+    this.type   = String.class;
+    this.values = null;
+    this.value  = (T)new String();
   }
 
   /** get variable name
