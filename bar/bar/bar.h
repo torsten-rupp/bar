@@ -2342,26 +2342,15 @@ bool isInExcludedList(const PatternList *excludePatternList,
 bool hasNoBackup(ConstString pathName);
 
 /***********************************************************************\
-* Name   : isNoDumpAttribute
-* Purpose: check if file attribute 'no dump' is set
-* Input  : fileInfo   - file info
-*          jobOptions - job options
+* Name   : hasNoDumpAttribute
+* Purpose: check if file has attribute 'no dump'
+* Input  : name - file name
 * Output : -
-* Return : TRUE if 'no dump' attribute is set and option ignoreNoDump is
-*          not set, FALSE otherwise
+* Return : TRUE iff file has 'no dump' attribute
 * Notes  : -
 \***********************************************************************/
 
-INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions);
-#if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
-INLINE bool isNoDumpAttribute(const FileInfo *fileInfo, const JobOptions *jobOptions)
-{
-  assert(fileInfo != NULL);
-  assert(jobOptions != NULL);
-
-  return !jobOptions->ignoreNoDumpAttributeFlag && File_haveAttributeNoDump(fileInfo);
-}
-#endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
+bool hasNoDumpAttribute(ConstString name);
 
 #ifdef __cplusplus
   }

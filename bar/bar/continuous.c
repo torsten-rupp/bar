@@ -687,7 +687,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
     // get next entry to process
     StringList_removeLast(&directoryList,name);
 
-    if (!hasNoBackup(name))
+    if (globalOptions.ignoreNoBackupFileFlag || !hasNoBackup(name))
     {
 //fprintf(stderr,"%s, %d: name=%s %d\n",__FILE__,__LINE__,String_cString(name),StringList_count(&directoryList));
       // read file info
@@ -749,7 +749,7 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
               continue;
             }
 
-            if (!hasNoBackup(name))
+            if (globalOptions.ignoreNoBackupFileFlag || !hasNoBackup(name))
             {
               // read file info
               error = File_getInfo(&fileInfo,name);

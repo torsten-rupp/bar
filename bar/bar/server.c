@@ -6686,10 +6686,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
             break;
           case FILE_TYPE_DIRECTORY:
             // check if .nobackup exists
-            noBackupExists = FALSE;
-            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
-            if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
-
+            noBackupExists = hasNoBackup(name);
             ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                                 "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
                                 name,
@@ -6705,6 +6702,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
                                 File_fileTypeToString(destinationFileType,NULL),
                                 name,
                                 fileInfo.timeModified,
+//TODO: use hasNoDumpAttribute
                                 ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                );
             break;
@@ -6914,15 +6912,13 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                 break;
               case FILE_TYPE_DIRECTORY:
                 // check if .nobackup exists
-                noBackupExists = FALSE;
-                if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
-                if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
-
+                noBackupExists = hasNoBackup(name);
                 ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
                                     "fileType=DIRECTORY name=%'S dateTime=%"PRIu64" noBackup=%y noDump=%y",
                                     name,
                                     fileInfo.timeModified,
                                     noBackupExists,
+//TODO: use hasNoDumpAttribute
                                     ((fileInfo.attributes & FILE_ATTRIBUTE_NO_DUMP) == FILE_ATTRIBUTE_NO_DUMP)
                                    );
                 break;
@@ -7125,20 +7121,13 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
       // get attribute value
       if      (String_equalsCString(attribute,"NOBACKUP"))
       {
-        noBackupFileName = String_new();
-
-        noBackupExists = FALSE;
-        if (File_isDirectory(name))
-        {
-          if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".nobackup"));
-          if (!noBackupExists) noBackupExists = File_isFile(File_appendFileNameCString(File_setFileName(noBackupFileName,name),".NOBACKUP"));
-        }
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",FALSE);
-
-        String_delete(noBackupFileName);
+        // .nobackup
+        noBackupExists = hasNoBackup(name);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",noBackupExists);
       }
       else if (String_equalsCString(attribute,"NODUMP"))
       {
+        // nodump attribute
         error = File_getInfo(&fileInfo,name);
         if (error == ERROR_NONE)
         {

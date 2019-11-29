@@ -1658,7 +1658,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
             continue;
           }
 
-          if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
           {
             switch (fileInfo.type)
             {
@@ -1879,7 +1879,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
           continue;
         }
 
-        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
           {
@@ -1924,7 +1924,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
               // add to known names history
               Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-              if (!hasNoBackup(name))
+              if (globalOptions.ignoreNoBackupFileFlag || !hasNoBackup(name))
               {
                 if (isIncluded(includeEntryNode,name))
                 {
@@ -1985,7 +1985,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                       {
                         if (!isInExcludedList(createInfo->excludePatternList,fileName))
                         {
-                          if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+                          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
                           {
                             switch (fileInfo.type)
                             {
@@ -2543,7 +2543,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           continue;
         }
 
-        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
           {
@@ -2853,7 +2853,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           continue;
         }
 
-        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
           {
@@ -2913,7 +2913,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               // add to known names history
               Dictionary_add(&duplicateNamesDictionary,String_cString(name),String_length(name),NULL,0);
 
-              if (!hasNoBackup(name))
+              if (globalOptions.ignoreNoBackupFileFlag || !hasNoBackup(name))
               {
                 if (isIncluded(includeEntryNode,name))
                 {
@@ -3017,7 +3017,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     {
                       if (!isInExcludedList(createInfo->excludePatternList,fileName))
                       {
-                        if (!isNoDumpAttribute(&fileInfo,createInfo->jobOptions))
+                        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_haveAttributeNoDump(&fileInfo))
                         {
                           switch (fileInfo.type)
                           {

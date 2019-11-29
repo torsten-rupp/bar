@@ -9510,15 +9510,30 @@ bool hasNoBackup(ConstString pathName)
   assert(pathName != NULL);
 
   haveNoBackupFlag = FALSE;
-  if (!globalOptions.ignoreNoBackupFileFlag)
-  {
-    fileName = String_new();
-    haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
-    haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
-    String_delete(fileName);
-  }
+
+  fileName = String_new();
+  haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".nobackup"));
+  haveNoBackupFlag |= File_exists(File_appendFileNameCString(File_setFileName(fileName,pathName),".NOBACKUP"));
+  String_delete(fileName);
 
   return haveNoBackupFlag;
+}
+
+bool hasNoDumpAttribute(ConstString name)
+{
+  bool     haveNoDumpAttributeFlag;
+  FileInfo fileInfo;
+
+  assert(name != NULL);
+
+  haveNoDumpAttributeFlag = FALSE;
+
+  if (File_getInfo(&fileInfo,name))
+  {
+    haveNoDumpAttributeFlag = File_haveAttributeNoDump(&fileInfo);
+  }
+
+  return haveNoDumpAttributeFlag;
 }
 
 // ----------------------------------------------------------------------
