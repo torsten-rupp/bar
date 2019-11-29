@@ -2727,6 +2727,10 @@ void Job_delete(JobNode *jobNode)
   LIST_DELETE_NODE(jobNode);
 }
 
+void Job_listChanged(void)
+{
+}
+
 bool Job_isSomeRunning(void)
 {
   const JobNode *jobNode;
@@ -2823,10 +2827,6 @@ ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString schedul
   }
 
   return scheduleNode;
-}
-
-void Job_listChanged(void)
-{
 }
 
 void Job_includeExcludeChanged(JobNode *jobNode)

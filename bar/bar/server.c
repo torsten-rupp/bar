@@ -7035,8 +7035,6 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   String         name;
   String         attribute;
   const JobNode  *jobNode;
-  Errors         error;
-  FileInfo       fileInfo;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7086,21 +7084,21 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
       {
         if (Connector_isConnected(connectorInfo))
         {
-          error = Connector_executeCommand(connectorInfo,
-                                           1,
-                                           10*MS_PER_SECOND,
-                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
-                                           {
-                                             assert(resultMap != NULL);
+          Connector_executeCommand(connectorInfo,
+                                   1,
+                                   10*MS_PER_SECOND,
+                                   CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                   {
+                                     assert(resultMap != NULL);
 
-                                             UNUSED_VARIABLE(userData);
+                                     UNUSED_VARIABLE(userData);
 
-                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
-                                           },NULL),
-                                           "FILE_ATTRIBUTE_GET name=%'S attribute=%S",
-                                           name,
-                                           attribute
-                                          );
+                                     return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                   },NULL),
+                                   "FILE_ATTRIBUTE_GET name=%'S attribute=%S",
+                                   name,
+                                   attribute
+                                  );
         }
       }
     }
@@ -7638,6 +7636,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
+  error = ERROR_UNKNOWN;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -7680,6 +7679,10 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
                                            name,
                                            script
                                           );
+        }
+        else
+        {
+          error = ERROR_DISCONNECTED;
         }
       }
     }

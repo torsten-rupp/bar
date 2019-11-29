@@ -893,6 +893,17 @@ INLINE bool Job_isLocal(const JobNode *jobNode)
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
 /***********************************************************************\
+* Name   : Job_listChanged
+* Purpose: called when job list changed
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_listChanged(void);
+
+/***********************************************************************\
 * Name   : Job_listAppend
 * Purpose: append job to job list
 * Input  : jobNode - job node
@@ -1161,17 +1172,6 @@ INLINE JobNode *Job_findByName(ConstString name)
 \***********************************************************************/
 
 ScheduleNode *Job_findScheduleByUUID(const JobNode *jobNode, ConstString scheduleUUID);
-
-/***********************************************************************\
-* Name   : Job_listChanged
-* Purpose: called when job list changed
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void Job_listChanged(void);
 
 /***********************************************************************\
 * Name   : Job_includeExcludeChanged
