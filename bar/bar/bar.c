@@ -1189,7 +1189,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_CSTRING           ("pairing-master-file",              &globalOptions.masterInfo.pairingFileName,-1                   ),
 
   // deprecated
-  CONFIG_VALUE_DEPRECATED        ("server-jobs-directory",            &globalOptions.jobsDirectory,-1,                               NULL,NULL,"jobs-directory",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("server-jobs-directory",            &globalOptions.jobsDirectory,-1,                               ConfigValue_parseDeprecatedString,NULL,"jobs-directory",TRUE),
   CONFIG_VALUE_DEPRECATED        ("remote-host-name",                 NULL,-1,                                                       NULL,NULL,"slave-host-name",TRUE),
   CONFIG_VALUE_DEPRECATED        ("remote-host-port",                 NULL,-1,                                                       NULL,NULL,"slave-host-port",TRUE),
   CONFIG_VALUE_DEPRECATED        ("remote-host-force-ssl",            NULL,-1,                                                       NULL,NULL,"slave-host-force-tls",TRUE),

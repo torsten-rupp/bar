@@ -1257,6 +1257,28 @@ bool ConfigValue_parseDeprecatedBoolean(void       *userData,
                                        );
 
 /***********************************************************************\
+* Name   : ConfigValue_parseDeprecatedString
+* Purpose: config value option call back for deprecated string value
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool ConfigValue_parseDeprecatedString(void       *userData,
+                                       void       *variable,
+                                       const char *name,
+                                       const char *value,
+                                       char       errorMessage[],
+                                       uint       errorMessageSize
+                                      );
+
+/***********************************************************************\
 * Name   : ConfigValue_getIntegerValue
 * Purpose: get integer value
 * Input  : value  - value variable
