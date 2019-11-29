@@ -1654,7 +1654,6 @@ LOCAL void jobThreadCode(void)
     {
       if      (!Job_isRemote(jobNode))
       {
-fprintf(stderr,"%s, %d: ola\n",__FILE__,__LINE__);
         // local job -> run on this machine
 
         // parse storage name
@@ -5752,7 +5751,7 @@ LOCAL void serverCommand_serverListAdd(ClientInfo *clientInfo, IndexHandle *inde
   if (error != ERROR_NONE)
   {
     Semaphore_unlock(&globalOptions.serverList.lock);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"write config file fail");
     String_delete(privateKey);
     String_delete(publicKey);
     String_delete(password);
@@ -6397,7 +6396,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
   error = Device_openDeviceList(&deviceListHandle);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot open device list: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot open device list");
     return;
   }
 
@@ -6409,7 +6408,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     error = Device_readDeviceList(&deviceListHandle,deviceName);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device list: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device list");
       Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
@@ -6419,7 +6418,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
     error = Device_getInfo(&deviceInfo,deviceName);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info");
       Device_closeDeviceList(&deviceListHandle);
       String_delete(deviceName);
       return;
@@ -6526,7 +6525,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
       error = File_openRootList(&rootListHandle);
       if (error != ERROR_NONE)
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open root list fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open root list fail");
         return;
       }
 
@@ -6667,7 +6666,6 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
 
       // read file info
       error = File_getInfo(&fileInfo,name);
-
       if (error == ERROR_NONE)
       {
         switch (fileInfo.type)
@@ -6763,7 +6761,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
       }
       else
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"read file info fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S'",name);
       }
     }
   }
@@ -6876,7 +6874,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
                                     );
       if (error != ERROR_NONE)
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open directory fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open directory fail '%S'",directory);
         String_delete(directory);
         return;
       }
@@ -6986,16 +6984,16 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
           else
           {
             ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                "get file info fail: %s",
-                                Error_getText(error)
+                                "get file info fail for '%S'",
+                                name
                                );
           }
         }
         else
         {
           ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                              "read directory entry file: %s",
-                              Error_getText(error)
+                              "read directory entry fail for '%S'",
+                              name
                              );
         }
       }
@@ -7239,7 +7237,7 @@ UNUSED_VARIABLE(value);
           if (error != ERROR_NONE)
           {
             String_delete(noBackupFileName);
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot create .nobackup file");
             Job_listUnlock();
             String_delete(value);
             String_delete(attribute);
@@ -7256,7 +7254,7 @@ UNUSED_VARIABLE(value);
         error = File_getAttributes(&fileAttributes,name);
         if (error != ERROR_NONE)
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S'",name);
           Job_listUnlock();
           String_delete(value);
           String_delete(attribute);
@@ -7268,7 +7266,7 @@ UNUSED_VARIABLE(value);
         error = File_setAttributes(fileAttributes,name);
         if (error != ERROR_NONE)
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S'",name);
           Job_listUnlock();
           String_delete(value);
           String_delete(attribute);
@@ -7421,7 +7419,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
         error = File_getAttributes(&fileAttributes,name);
         if (error != ERROR_NONE)
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S'",name);
           Job_listUnlock();
           String_delete(attribute);
           String_delete(name);
@@ -7434,7 +7432,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
           error = File_setAttributes(fileAttributes,name);
           if (error != ERROR_NONE)
           {
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S'",name);
             Job_listUnlock();
             String_delete(attribute);
             String_delete(name);
@@ -8402,7 +8400,7 @@ LOCAL void serverCommand_jobNew(ClientInfo *clientInfo, IndexHandle *indexHandle
       if (error != ERROR_NONE)
       {
         String_delete(fileName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_CREATE_JOB,"%s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_CREATE_JOB,"%S",name);
         Job_listUnlock();
         String_delete(master);
         String_delete(name);
@@ -8536,7 +8534,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     if (error != ERROR_NONE)
     {
       String_delete(fileName);
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_CREATE_JOB,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_CREATE_JOB,"%S",name);
       Job_listUnlock();
       String_delete(name);
       return;
@@ -8642,7 +8640,7 @@ LOCAL void serverCommand_jobRename(ClientInfo *clientInfo, IndexHandle *indexHan
     error = File_rename(jobNode->fileName,fileName,NULL);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_RENAME_JOB,"%s",jobUUID,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_RENAME_JOB,"%S",jobUUID);
       Job_listUnlock();
       String_delete(newName);
       return;
@@ -8720,7 +8718,7 @@ LOCAL void serverCommand_jobDelete(ClientInfo *clientInfo, IndexHandle *indexHan
       error = File_delete(jobNode->fileName,FALSE);
       if (error != ERROR_NONE)
       {
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DELETE_JOB,"%s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DELETE_JOB,"%S",jobNode->fileName);
         Job_listUnlock();
         return;
       }
@@ -12549,7 +12547,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   error = Storage_parseName(&storageSpecifier,storageName);
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%S",storageName);
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
@@ -12572,7 +12570,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                       );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%S",storageName);
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
@@ -12589,7 +12587,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   if (error != ERROR_NONE)
   {
     Storage_doneSpecifier(&storageSpecifier);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%S",storageName);
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(storageName);
     return;
@@ -12650,7 +12648,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                          );
             if (error != ERROR_NONE)
             {
-              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S'",storageName);
               String_delete(deltaSourceName);
               String_delete(fileName);
               break;
@@ -12716,7 +12714,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                           );
             if (error != ERROR_NONE)
             {
-              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S'",storageName);
               String_delete(deltaSourceName);
               String_delete(imageName);
               break;
@@ -12770,7 +12768,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                               );
             if (error != ERROR_NONE)
             {
-              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S'",storageName);
               String_delete(directoryName);
               break;
             }
@@ -12815,7 +12813,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                          );
             if (error != ERROR_NONE)
             {
-              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S'",storageName);
               String_delete(name);
               String_delete(linkName);
               break;
@@ -12872,7 +12870,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                              );
             if (error != ERROR_NONE)
             {
-              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S'",storageName);
               String_delete(deltaSourceName);
               StringList_done(&fileNameList);
               break;
@@ -12925,7 +12923,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                             );
             if (error != ERROR_NONE)
             {
-              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+              ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S'",storageName);
               String_delete(name);
               break;
             }
@@ -12956,7 +12954,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
           error = Archive_skipNextEntry(&archiveHandle);
           if (error != ERROR_NONE)
           {
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S': %s",storageName,Error_getText(error));
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read content of storage '%S'",storageName);
             break;
           }
           break;
@@ -12970,7 +12968,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
     }
     else
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read next entry of storage '%S': %s",storageName,Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot read next entry of storage '%S'",storageName);
       break;
     }
   }
@@ -13040,8 +13038,8 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                 );
   if (error != ERROR_NONE)
   {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: '%S'",storageName);
     String_delete(storageName);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
@@ -13306,7 +13304,7 @@ LOCAL void serverCommand_storageListInfo(ClientInfo *clientInfo, IndexHandle *in
                                 );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get storages info from index database fail");
     return;
   }
 
@@ -13363,7 +13361,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
   if (error != ERROR_NONE)
   {
     String_delete(entryName);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: '%S'",entryName);
     return;
   }
   while (   !isCommandAborted(clientInfo,id)
@@ -13643,7 +13641,7 @@ LOCAL void serverCommand_entryListInfo(ClientInfo *clientInfo, IndexHandle *inde
                               );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get entries info from index database fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get entries info from index database fail");
     return;
   }
 
@@ -13782,7 +13780,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
   }
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
     return;
   }
 
@@ -13792,7 +13790,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     error = deleteUUID(indexHandle,jobUUID);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
       return;
     }
   }
@@ -13803,7 +13801,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     error = deleteEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
       return;
     }
   }
@@ -13814,7 +13812,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     error = deleteStorage(indexHandle,storageId);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
       return;
     }
   }
@@ -14337,7 +14335,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     StringList_done(&storageNameList);
     String_delete(entryName);
     String_delete(storageName);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
     return;
   }
 
@@ -14377,7 +14375,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
   }
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
@@ -14563,7 +14561,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(lastErrorMessage);
     List_done(&uuidList,(ListNodeFreeFunction)freeUUIDNode,NULL);
 
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init uuid list fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init uuid list fail");
 
     String_delete(name);
     return;
@@ -14774,7 +14772,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                 );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init entity list fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init entity list fail");
     String_delete(lastErrorMessage);
     String_delete(jobName);
     String_delete(name);
@@ -15042,7 +15040,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                 );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init storage list fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init storage list fail");
     String_delete(printableStorageName);
     String_delete(errorMessage);
     String_delete(storageName);
@@ -15410,7 +15408,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list entries fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list entries fail");
     String_delete(destinationName);
     String_delete(entryName);
     String_delete(storageName);
@@ -15576,7 +15574,7 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
                                 );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init history list fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init history list fail");
     String_delete(errorMessage);
     String_delete(hostName);
     String_delete(jobName);
@@ -15978,7 +15976,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
   }
 
   // free resources
@@ -16082,7 +16080,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail");
         return;
       }
     }
@@ -16101,7 +16099,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"cannot create entity for %S",toJobUUID);
         return;
       }
 
@@ -16118,7 +16116,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail");
         return;
       }
 
@@ -16153,7 +16151,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail");
         return;
       }
     }
@@ -16172,7 +16170,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail");
         return;
       }
     }
@@ -16196,7 +16194,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail");
         return;
       }
     }
@@ -16215,7 +16213,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"cannot create entity for %S: %s",toJobUUID,Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"cannot create entity for %S",toJobUUID);
         return;
       }
 
@@ -16232,7 +16230,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail: %s",Error_getText(error));
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"assign storage fail");
         return;
       }
 
@@ -16356,7 +16354,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail");
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -16416,7 +16414,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail");
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -16476,7 +16474,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail");
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -16541,7 +16539,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail");
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -16601,7 +16599,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                   );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail");
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -16649,7 +16647,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                           );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"set storage state fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"set storage state fail");
       Array_done(&storageIdArray);
       String_delete(storageName);
       String_delete(name);
@@ -16764,7 +16762,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
                                   );
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail: %s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init list storage fail");
       String_delete(printableStorageName);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
@@ -16818,7 +16816,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         }
         else
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
           Index_doneList(&indexQueryHandle);
           return;
         }
@@ -16844,7 +16842,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     error = Index_deleteUUID(indexHandle,uuidId);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
       return;
     }
 
@@ -16861,7 +16859,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     error = Index_deleteEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
       return;
     }
 
@@ -16878,7 +16876,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     error = Index_deleteStorage(indexHandle,storageId);
     if (error != ERROR_NONE)
     {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"%s",Error_getText(error));
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
       return;
     }
 
@@ -17043,7 +17041,7 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
                                 );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get storages info from index database fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get storages info from index database fail");
     String_delete(name);
     return;
   }
@@ -17138,7 +17136,7 @@ LOCAL void serverCommand_indexEntriesInfo(ClientInfo *clientInfo, IndexHandle *i
                               );
   if (error != ERROR_NONE)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get entries info index database fail: %s",Error_getText(error));
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get entries info index database fail");
     String_delete(name);
     return;
   }
