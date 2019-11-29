@@ -1588,7 +1588,7 @@ LOCAL void jobThreadCode(void)
       case JOB_TYPE_CREATE:
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Start job '%s'%s %s%s%s%s",
+                   "Start job '%s'%s %s%s%s",
                    String_cString(jobName),
                    !String_isEmpty(s) ? String_cString(s) : "",
                    Archive_archiveTypeToString(archiveType),
@@ -1599,7 +1599,7 @@ LOCAL void jobThreadCode(void)
       case JOB_TYPE_RESTORE:
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Start restore%s%s%s%s",
+                   "Start restore%s%s%s",
                    !String_isEmpty(s) ? String_cString(s) : "",
                    !String_isEmpty(byName) ? " by " : "",
                    String_cString(byName)
