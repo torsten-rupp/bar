@@ -1467,7 +1467,7 @@ INLINE bool File_hasAttributeNoCompress(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
 
-  #ifdef HAVE_FS_COMPR_FL
+  #ifdef HAVE_FS_NOCOMP_FL
     return (fileInfo->attributes & FILE_ATTRIBUTE_NO_COMPRESS) != 0;
   #else
     UNUSED_VARIABLE(fileInfo);
@@ -1483,7 +1483,7 @@ INLINE bool File_hasAttributeNoDump(const FileInfo *fileInfo)
 {
   assert(fileInfo != NULL);
 
-  #ifdef HAVE_FS_COMPR_FL
+  #ifdef HAVE_FS_NODUMP_FL
     return (fileInfo->attributes & FILE_ATTRIBUTE_NO_DUMP) != 0;
   #else
     UNUSED_VARIABLE(fileInfo);
