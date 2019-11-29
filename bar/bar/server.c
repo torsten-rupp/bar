@@ -7254,7 +7254,7 @@ UNUSED_VARIABLE(value);
         error = File_getAttributes(&fileAttributes,name);
         if (error != ERROR_NONE)
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S'",name);
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file attributes fail for '%S'",name);
           Job_listUnlock();
           String_delete(value);
           String_delete(attribute);
@@ -7419,7 +7419,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
         error = File_getAttributes(&fileAttributes,name);
         if (error != ERROR_NONE)
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S'",name);
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file attributes fail for '%S'",name);
           Job_listUnlock();
           String_delete(attribute);
           String_delete(name);
