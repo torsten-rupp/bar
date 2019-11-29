@@ -2121,6 +2121,7 @@ Errors File_write(FileHandle *fileHandle,
   if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
   {
+//TODO: add file name?    return ERRORX_(IO,errno,"%s: %E",String_cString(fileHandle->name),errno);
     return ERRORX_(IO,errno,"%E",errno);
   }
 
