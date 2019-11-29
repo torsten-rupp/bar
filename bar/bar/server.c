@@ -712,7 +712,11 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
       stringFormat(buffer,bufferSize,"'batch'");
       break;
     case SERVER_IO_TYPE_NETWORK:
-      stringFormat(buffer,bufferSize,"%s:%d",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
+      stringFormat(buffer,bufferSize,"'%s:%d'",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
+      if (clientInfo->authorizationState == AUTHORIZATION_STATE_MASTER)
+      {
+        stringAppend(buffer,bufferSize," master");
+      }
       break;
     #ifndef NDEBUG
       default:
@@ -1318,7 +1322,7 @@ LOCAL void restoreUpdateStatusInfo(const StatusInfo *statusInfo,
 
 /***********************************************************************\
 * Name   : delayThread
-* Purpose: delay thread
+* Purpose: delay thread and check quit flag
 * Input  : sleepTime - sleep time [s]
 *          trigger   - trigger semaphore (can be NULL)
 * Output : -
@@ -1588,9 +1592,8 @@ LOCAL void jobThreadCode(void)
                    String_cString(jobName),
                    !String_isEmpty(s) ? String_cString(s) : "",
                    Archive_archiveTypeToString(archiveType),
-                   !String_isEmpty(byName) ? " by '" : "",
-                   String_cString(byName),
-                   !String_isEmpty(byName) ? "'" : ""
+                   !String_isEmpty(byName) ? " by " : "",
+                   String_cString(byName)
                   );
         break;
       case JOB_TYPE_RESTORE:
@@ -1598,9 +1601,8 @@ LOCAL void jobThreadCode(void)
                    LOG_TYPE_ALWAYS,
                    "Start restore%s%s%s%s",
                    !String_isEmpty(s) ? String_cString(s) : "",
-                   !String_isEmpty(byName) ? " by '" : "",
-                   String_cString(byName),
-                   !String_isEmpty(byName) ? "'" : ""
+                   !String_isEmpty(byName) ? " by " : "",
+                   String_cString(byName)
                   );
         break;
     }
@@ -4873,7 +4875,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                       : ERROR_INVALID_PASSWORD;
             logMessage(NULL,  // logHandle,
                        LOG_TYPE_ALWAYS,
-                       "Authorization of client %s fail (error: %s)",
+                       "Authorization of %s fail (error: %s)",
                        getClientInfo(clientInfo,s,sizeof(s)),
                        Error_getText(error)
                       );
@@ -14183,7 +14185,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   StringList         storageNameList;
   EntryList          includeEntryList;
   IndexQueryHandle   indexQueryHandle;
-  String             byName;
+  char               byName[256];
   RestoreCommandInfo restoreCommandInfo;
   Errors             error;
 
@@ -14345,12 +14347,11 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
 
   // restore
-  byName = String_format(String_new(),"%s:%u",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
+  getClientInfo(clientInfo,byName,sizeof(byName));
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started restore%s%s: %d archives/%d entries",
-             !String_isEmpty(byName) ? " by " : "",
-             String_cString(byName),
+             "Start restore by %s: %d archives/%d entries",
+             byName,
              List_count(&storageNameList),
              List_count(&includeEntryList)
             );
@@ -14384,11 +14385,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   }
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Done restore%s%s",
-             !String_isEmpty(byName) ? " by " : "",
-             String_cString(byName)
+             "Done restore for %s",
+             byName
             );
-  String_delete(byName);
 
   // free resources
   EntryList_done(&includeEntryList);
@@ -18895,7 +18894,7 @@ Errors Server_run(ServerModes       mode,
               if (clientWaitRestTime > 0)
               {
                 printInfo(1,
-                          "Connected client %s (delayed %us)\n",
+                          "Connected %s (delayed %us)\n",
                           getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
                           clientWaitRestTime
                          );
@@ -18903,7 +18902,7 @@ Errors Server_run(ServerModes       mode,
               else
               {
                 printInfo(1,
-                          "Connected client %s\n",
+                          "Connected %s\n",
                           getClientInfo(&clientNode->clientInfo,s,sizeof(s))
                          );
               }
@@ -18977,7 +18976,7 @@ Errors Server_run(ServerModes       mode,
             if (clientWaitRestTime > 0)
             {
               printInfo(1,
-                        "Connected client %s (TLS/SSL, delayed %us)\n",
+                        "Connected %s (TLS/SSL, delayed %us)\n",
                         getClientInfo(&clientNode->clientInfo,s,sizeof(s)),
                         clientWaitRestTime
                        );
@@ -18985,7 +18984,7 @@ Errors Server_run(ServerModes       mode,
             else
             {
               printInfo(1,
-                        "Connected client %s (TLS/SSL)\n",
+                        "Connected %s (TLS/SSL)\n",
                         getClientInfo(&clientNode->clientInfo,s,sizeof(s))
                        );
             }
@@ -19051,7 +19050,7 @@ Errors Server_run(ServerModes       mode,
 
                   if (serverMode == SERVER_MODE_MASTER)
                   {
-                    printInfo(1,"Disconnected client %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
+                    printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
                   }
 
                   // done client and free resources
@@ -19082,7 +19081,7 @@ Errors Server_run(ServerModes       mode,
 
                 if (serverMode == SERVER_MODE_MASTER)
                 {
-                  printInfo(1,"Disconnected client %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
+                  printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
                 }
 
                 // done client and free resources
@@ -19112,7 +19111,7 @@ Errors Server_run(ServerModes       mode,
 
               if (serverMode == SERVER_MODE_MASTER)
               {
-                printInfo(1,"Disconnected client %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
+                printInfo(1,"Disconnected %s\n",getClientInfo(&disconnectClientNode->clientInfo,s,sizeof(s)));
               }
 
               // done client and free resources
