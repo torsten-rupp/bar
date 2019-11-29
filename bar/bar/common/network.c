@@ -1940,6 +1940,8 @@ Errors Network_accept(SocketHandle             *socketHandle,
                        );
         if (error != ERROR_NONE)
         {
+          shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
+          close(socketHandle->handle);
           return error;
         }
 
@@ -1948,6 +1950,9 @@ Errors Network_accept(SocketHandle             *socketHandle,
         UNUSED_VARIABLE(socketHandle);
         UNUSED_VARIABLE(serverSocketHandle);
         UNUSED_VARIABLE(socketFlags);
+
+        shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
+        close(socketHandle->handle);
 
         return ERROR_FUNCTION_NOT_SUPPORTED;
       #endif /* HAVE_GNU_TLS */
