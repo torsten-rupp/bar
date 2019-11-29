@@ -1553,6 +1553,10 @@ LOCAL void jobThreadCode(void)
 
     // get info string
     String_clear(s);
+    if (Job_isRemote(jobNode))
+    {
+      String_appendFormat(s," on '%S'",jobNode->job.slaveHost.name);
+    }
     if (storageFlags.noStorage || storageFlags.dryRun)
     {
       String_appendCString(s," (");
@@ -1580,21 +1584,23 @@ LOCAL void jobThreadCode(void)
       case JOB_TYPE_CREATE:
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Started job '%s'%s %s%s%s",
+                   "Start job '%s'%s %s%s%s%s",
                    String_cString(jobName),
                    !String_isEmpty(s) ? String_cString(s) : "",
                    Archive_archiveTypeToString(archiveType),
-                   !String_isEmpty(byName) ? " by " : "",
-                   String_cString(byName)
+                   !String_isEmpty(byName) ? " by '" : "",
+                   String_cString(byName),
+                   !String_isEmpty(byName) ? "'" : ""
                   );
         break;
       case JOB_TYPE_RESTORE:
         logMessage(&logHandle,
                    LOG_TYPE_ALWAYS,
-                   "Started restore%s%s%s",
+                   "Start restore%s%s%s%s",
                    !String_isEmpty(s) ? String_cString(s) : "",
-                   !String_isEmpty(byName) ? " by " : "",
-                   String_cString(byName)
+                   !String_isEmpty(byName) ? " by '" : "",
+                   String_cString(byName),
+                   !String_isEmpty(byName) ? "'" : ""
                   );
         break;
     }
@@ -1820,7 +1826,6 @@ NULL,//                                                        scheduleTitle,
       }
       else
       {
-fprintf(stderr,"%s, %d: sklave\n",__FILE__,__LINE__);
         // slave job -> send to slave and run on slave machine
         if (jobNode->runningInfo.error == ERROR_NONE)
         {
