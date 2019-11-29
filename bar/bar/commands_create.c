@@ -2853,7 +2853,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
           continue;
         }
 
-        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_hasAttributeNoDump(&fileInfo))
+        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
         {
           switch (fileInfo.type)
           {
@@ -3017,7 +3017,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     {
                       if (!isInExcludedList(createInfo->excludePatternList,fileName))
                       {
-                        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag && !File_hasAttributeNoDump(&fileInfo))
+                        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
                         {
                           switch (fileInfo.type)
                           {
