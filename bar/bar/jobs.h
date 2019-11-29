@@ -294,6 +294,12 @@ extern JobList   jobList;
 
 /****************************** Macros *********************************/
 
+#ifndef NDEBUG
+  #define Job_listLock(...)        __Job_listLock       (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Job_listUnlock(...)      __Job_listUnlock     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Job_listWaitModifed(...) __Job_listWaitModifed(__FILE__,__LINE__, ## __VA_ARGS__)
+#endif /* not NDEBUG */
+
 /***********************************************************************\
 * Name   : JOB_LIST_LOCKED_DO
 * Purpose: execute block with job list locked
@@ -619,17 +625,37 @@ void Job_done(Job *job);
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 INLINE bool Job_listLock(SemaphoreLockTypes semaphoreLockType,
                          long               timeout
                         );
+#else /* not NDEBUG */
+INLINE bool __Job_listLock(const char         *__fileName__,
+                           ulong              __lineNb__,
+                           SemaphoreLockTypes semaphoreLockType,
+                           long               timeout
+                          );
+#endif /* NDEBUG */
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+#ifdef NDEBUG
 INLINE bool Job_listLock(SemaphoreLockTypes semaphoreLockType,
                          long               timeout
                         )
+#else /* not NDEBUG */
+INLINE bool __Job_listLock(const char         *__fileName__,
+                           ulong              __lineNb__,
+                           SemaphoreLockTypes semaphoreLockType,
+                           long               timeout
+                          )
+#endif /* NDEBUG */
 {
   bool locked;
 
-  locked = Semaphore_lock(&jobList.lock,semaphoreLockType,timeout);
+  #ifndef NDEBUG
+    locked = __Semaphore_lock(__fileName__,__lineNb__,&jobList.lock,semaphoreLockType,timeout);
+  #else /* not NDEBUG */
+    locked = Semaphore_lock(&jobList.lock,semaphoreLockType,timeout);
+  #endif /* NDEBUG */
 
   #ifndef NDEBUG
     if (locked)
@@ -654,9 +680,21 @@ INLINE bool Job_listLock(SemaphoreLockTypes semaphoreLockType,
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 INLINE void Job_listUnlock(void);
+#else /* not NDEBUG */
+INLINE void __Job_listUnlock(const char *__fileName__,
+                             ulong      __lineNb__
+                            );
+#endif /* NDEBUG */
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+#ifdef NDEBUG
 INLINE void Job_listUnlock(void)
+#else /* not NDEBUG */
+INLINE void __Job_listUnlock(const char *__fileName__,
+                             ulong      __lineNb__
+                            )
+#endif /* NDEBUG */
 {
   #ifndef NDEBUG
     uint64 dt;
@@ -679,7 +717,11 @@ INLINE void Job_listUnlock(void)
     }
   #endif /* NDEBUG */
 
-  Semaphore_unlock(&jobList.lock);
+  #ifndef NDEBUG
+    __Semaphore_unlock(__fileName__,__lineNb__,&jobList.lock);
+  #else /* not NDEBUG */
+    Semaphore_unlock(&jobList.lock);
+  #endif /* NDEBUG */
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
@@ -745,11 +787,29 @@ INLINE void Job_listSignalModifed(void)
 * Notes  : -
 \***********************************************************************/
 
+#ifdef NDEBUG
 INLINE void Job_listWaitModifed(long timeout);
+#else /* not NDEBUG */
+INLINE void __Job_listWaitModifed(const char *__fileName__,
+                                  ulong      __lineNb__,
+                                  long timeout
+                                 );
+#endif /* NDEBUG */
 #if defined(NDEBUG) || defined(__JOBS_IMPLEMENTATION__)
+#ifdef NDEBUG
 INLINE void Job_listWaitModifed(long timeout)
+#else /* not NDEBUG */
+INLINE void __Job_listWaitModifed(const char *__fileName__,
+                                  ulong      __lineNb__,
+                                  long timeout
+                                 )
+#endif /* NDEBUG */
 {
-  Semaphore_waitModified(&jobList.lock,timeout);
+  #ifndef NDEBUG
+    __Semaphore_waitModified(__fileName__,__lineNb__,&jobList.lock,timeout);
+  #else /* not NDEBUG */
+    Semaphore_waitModified(&jobList.lock,timeout);
+  #endif /* NDEBUG */
 }
 #endif /* NDEBUG || __JOBS_IMPLEMENTATION__ */
 
