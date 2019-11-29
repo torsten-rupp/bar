@@ -7085,6 +7085,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
         Job_listUnlock();
+        String_delete(attribute);
         String_delete(name);
         return;
       }
@@ -7223,6 +7224,8 @@ UNUSED_VARIABLE(value);
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
         Job_listUnlock();
+        String_delete(value);
+        String_delete(attribute);
         String_delete(name);
         return;
       }
@@ -7266,6 +7269,7 @@ UNUSED_VARIABLE(value);
         if (!File_isDirectory(name))
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+          Job_listUnlock();
           String_delete(value);
           String_delete(attribute);
           String_delete(name);
@@ -7281,6 +7285,7 @@ UNUSED_VARIABLE(value);
           {
             String_delete(noBackupFileName);
             ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot create .nobackup file: %s",Error_getText(error));
+            Job_listUnlock();
             String_delete(value);
             String_delete(attribute);
             String_delete(name);
@@ -7297,6 +7302,7 @@ UNUSED_VARIABLE(value);
         if (error != ERROR_NONE)
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+          Job_listUnlock();
           String_delete(value);
           String_delete(attribute);
           String_delete(name);
@@ -7308,6 +7314,7 @@ UNUSED_VARIABLE(value);
         if (error != ERROR_NONE)
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+          Job_listUnlock();
           String_delete(value);
           String_delete(attribute);
           String_delete(name);
@@ -7386,6 +7393,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
         Job_listUnlock();
+        String_delete(attribute);
         String_delete(name);
         return;
       }
@@ -7428,6 +7436,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
         if (!File_isDirectory(name))
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
+          Job_listUnlock();
           String_delete(attribute);
           String_delete(name);
           return;
@@ -7442,6 +7451,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
           {
             String_delete(noBackupFileName);
             ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
+            Job_listUnlock();
             String_delete(attribute);
             String_delete(name);
             return;
@@ -7457,6 +7467,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
         if (error != ERROR_NONE)
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get file info fail for '%S': %s",name,Error_getText(error));
+          Job_listUnlock();
           String_delete(attribute);
           String_delete(name);
           return;
@@ -7469,6 +7480,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
           if (error != ERROR_NONE)
           {
             ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set attribute no-dump fail for '%S': %s",name,Error_getText(error));
+            Job_listUnlock();
             String_delete(attribute);
             String_delete(name);
             return;
@@ -7642,9 +7654,11 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  String name;
-  String script;
-  Errors error;
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  String        name;
+  String        script;
+  const JobNode *jobNode;
+  Errors        error;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -7668,21 +7682,70 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
-  // execute script
-  error = Misc_executeScript(String_cString(script),
-                             CALLBACK__INLINE(void,(ConstString line, void *userData),
-                             {
-                               UNUSED_VARIABLE(userData);
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    // find job
+    if (!String_isEmpty(jobUUID))
+    {
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        String_delete(script);
+        String_delete(name);
+        return;
+      }
+    }
+    else
+    {
+      jobNode = NULL;
+    }
 
-                               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
-                             },NULL),
-                             CALLBACK__INLINE(void,(ConstString line, void *userData),
-                             {
-                               UNUSED_VARIABLE(userData);
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
+    {
+      // remote file list
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
 
-                               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
-                             },NULL)
-                            );
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,TRUE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "TEST_SCRIPT name=%'S script=%'S",
+                                           name,
+                                           script
+                                          );
+        }
+      }
+    }
+    else
+    {
+      // execute script
+      error = Misc_executeScript(String_cString(script),
+                                 CALLBACK__INLINE(void,(ConstString line, void *userData),
+                                 {
+                                   UNUSED_VARIABLE(userData);
+
+                                   ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
+                                 },NULL),
+                                 CALLBACK__INLINE(void,(ConstString line, void *userData),
+                                 {
+                                   UNUSED_VARIABLE(userData);
+
+                                   ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
+                                 },NULL)
+                                );
+    }
+  }
   if (error == ERROR_NONE)
   {
     logMessage(NULL,  // logHandle,
