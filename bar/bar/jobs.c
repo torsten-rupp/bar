@@ -129,10 +129,6 @@ LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userD
 LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
-LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
 LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -2137,114 +2133,6 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
     return FALSE;
   }
   (*(uint*)variable) = n;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMinKeep
-* Purpose: config value option call back for deprecated min-keep
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedScheduleMinKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  uint n;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringToUInt(value,&n))
-  {
-    return FALSE;
-  }
-  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
-  ((ScheduleNode*)variable)->minKeep                   = n;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMaxKeep
-* Purpose: config value option call back for deprecated max-keep
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedScheduleMaxKeep(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  uint n;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringToUInt(value,&n))
-  {
-    return FALSE;
-  }
-  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
-  ((ScheduleNode*)variable)->maxKeep                   = n;
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedScheduleMaxAge
-* Purpose: config value option call back for deprecated max-age
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedScheduleMaxAge(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  uint n;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  if (!stringToUInt(value,&n))
-  {
-    return FALSE;
-  }
-  ((ScheduleNode*)variable)->deprecatedPersistenceFlag = TRUE;
-  ((ScheduleNode*)variable)->maxAge                    = n;
 
   return TRUE;
 }
