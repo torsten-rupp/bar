@@ -715,7 +715,7 @@ LOCAL const char *getClientInfo(ClientInfo *clientInfo, char *buffer, uint buffe
       stringFormat(buffer,bufferSize,"'%s:%d'",String_cString(clientInfo->io.network.name),clientInfo->io.network.port);
       if (clientInfo->authorizationState == AUTHORIZATION_STATE_MASTER)
       {
-        stringAppend(buffer,bufferSize," master");
+        stringAppend(buffer,bufferSize," (master)");
       }
       break;
     #ifndef NDEBUG
