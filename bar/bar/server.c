@@ -7036,8 +7036,6 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
   String         attribute;
   const JobNode  *jobNode;
   Errors         error;
-  bool           noBackupExists;
-  bool           noDumpAtrribute;
   FileInfo       fileInfo;
 
   assert(clientInfo != NULL);
@@ -7112,14 +7110,12 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
       if      (String_equalsCString(attribute,"NOBACKUP"))
       {
         // .nobackup
-        noBackupExists = hasNoBackup(name);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",noBackupExists);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",hasNoBackup(name));
       }
       else if (String_equalsCString(attribute,"NODUMP"))
       {
         // nodump attribute
-        noDumpAtrribute = hasNoDumpAttribute(name);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",noDumpAtrribute);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%y",hasNoDumpAttribute(name));
       }
       else
       {
@@ -7238,19 +7234,9 @@ UNUSED_VARIABLE(value);
       // set attribute
       if      (String_equalsCString(attribute,"NOBACKUP"))
       {
-        if (!File_isDirectory(name))
+        if (!hasNoBackup(name))
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
-          Job_listUnlock();
-          String_delete(value);
-          String_delete(attribute);
-          String_delete(name);
-          return;
-        }
-
-        noBackupFileName = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
-        if (!File_exists(noBackupFileName))
-        {
+          noBackupFileName = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
           error = File_touch(noBackupFileName);
           if (error != ERROR_NONE)
           {
@@ -7262,8 +7248,8 @@ UNUSED_VARIABLE(value);
             String_delete(name);
             return;
           }
+          String_delete(noBackupFileName);
         }
-        String_delete(noBackupFileName);
 
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
       }
@@ -7330,7 +7316,8 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
   String         attribute;
   const JobNode  *jobNode;
   Errors         error;
-  String         noBackupFileName;
+  String         noBackupFileName1,noBackupFileName2;
+  Errors         tmpError;
   FileAttributes fileAttributes;
 
   assert(clientInfo != NULL);
@@ -7404,30 +7391,30 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
       // clear attribute
       if      (String_equalsCString(attribute,"NOBACKUP"))
       {
-        if (!File_isDirectory(name))
+        if (hasNoBackup(name))
         {
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NOT_A_DIRECTORY,"not a directory '%S'",name);
-          Job_listUnlock();
-          String_delete(attribute);
-          String_delete(name);
-          return;
-        }
+          noBackupFileName1 = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
+          noBackupFileName2 = File_appendFileNameCString(File_setFileName(String_new(),name),".NOBACKUP");
 
-        noBackupFileName = File_appendFileNameCString(File_setFileName(String_new(),name),".nobackup");
-        if (File_exists(noBackupFileName))
-        {
-          error = File_delete(noBackupFileName,FALSE);
+          error = ERROR_NONE;
+          tmpError = File_delete(noBackupFileName1,FALSE);
+          if (tmpError != ERROR_NONE) error = tmpError;
+          tmpError = File_delete(noBackupFileName2,FALSE);
+          if (tmpError != ERROR_NONE) error = tmpError;
           if (error != ERROR_NONE)
           {
-            String_delete(noBackupFileName);
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"Cannot delete .nobackup file: %s",Error_getText(error));
+            String_delete(noBackupFileName2);
+            String_delete(noBackupFileName1);
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot delete .nobackup file");
             Job_listUnlock();
             String_delete(attribute);
             String_delete(name);
             return;
           }
+
+          String_delete(noBackupFileName2);
+          String_delete(noBackupFileName1);
         }
-        String_delete(noBackupFileName);
 
         ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
       }
