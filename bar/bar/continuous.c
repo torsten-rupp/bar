@@ -1270,6 +1270,7 @@ LOCAL Errors markEntryStored(DatabaseHandle *databaseHandle,
 LOCAL void continuousThreadCode(void)
 {
 #if   defined(PLATFORM_LINUX)
+  #define TIMEOUT     250L
   #define MAX_ENTRIES 128
   #define BUFFER_SIZE (MAX_ENTRIES*(sizeof(struct inotify_event)+NAME_MAX+1))
 
@@ -1316,7 +1317,7 @@ LOCAL void continuousThreadCode(void)
     do
     {
       // wait for event or timeout
-      if ((Misc_waitHandle(inotifyHandle,&signalMask,HANDLE_EVENT_INPUT,250L) & HANDLE_EVENT_INPUT) != 0)
+      if ((Misc_waitHandle(inotifyHandle,&signalMask,HANDLE_EVENT_INPUT,TIMEOUT) & HANDLE_EVENT_INPUT) != 0)
       {
         n = read(inotifyHandle,buffer,BUFFER_SIZE);
       }
