@@ -2083,7 +2083,7 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
   #ifdef HAVE_GCRYPT
     if ((modulus != NULL) && (exponent != NULL))
     {
-      // create public key
+      // get n, e
       gcryptError = gcry_mpi_scan(&nToken,GCRYMPI_FMT_HEX,(char*)String_cString(modulus),0,NULL);
       if (gcryptError != 0)
       {
@@ -2092,17 +2092,26 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
       gcryptError = gcry_mpi_scan(&eToken,GCRYMPI_FMT_HEX,(char*)String_cString(exponent),0,NULL);
       if (gcryptError != 0)
       {
+        gcry_mpi_release(nToken);
         return FALSE;
       }
+
+      // create public key
       gcryptError = gcry_sexp_build(&key,NULL,"(public-key (rsa (n %M) (e %M)))",nToken,eToken);
       if (gcryptError != 0)
       {
 //fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,cryptKey->dataLength,gcryptError,gpg_strerror(gcryptError));
+        gcry_mpi_release(eToken);
+        gcry_mpi_release(nToken);
         return FALSE;
       }
       if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
       cryptKey->key = key;
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); gcry_sexp_dump(cryptKey->key);
+
+      // free resources
+      gcry_mpi_release(eToken);
+      gcry_mpi_release(nToken);
     }
 
     return TRUE;
