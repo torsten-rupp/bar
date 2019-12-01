@@ -108,7 +108,9 @@ import org.eclipse.swt.events.PaintEvent;
 class WidgetVariable<T>
 {
 //debug only
-//public static long xxx = 0;
+//public static long debugHashCode = 0;
+//if (WidgetVariable.debugHashCode == widget.hashCode())
+//Dprintf.dprintf("modified");
   private final String   name;
   private final Class    type;
   private final String[] values;     // possible values or null
