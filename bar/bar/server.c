@@ -5036,7 +5036,6 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not in debug mode");
   }
-fprintf(stderr,"%s, %d: quitFlag=%d\n",__FILE__,__LINE__,quitFlag);
 }
 
 /***********************************************************************\
