@@ -2176,6 +2176,30 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
 
 LOCAL void indexThreadCode(void)
 {
+  /***********************************************************************\
+  * Name   : delayThread
+  * Purpose: delay thread and check quit flag
+  * Input  : sleepTime - sleep time [s]
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void delayThread(uint sleepTime);
+  void delayThread(uint sleepTime)
+  {
+    uint n;
+
+    n = 0;
+    while (   !quitFlag
+           && (n < sleepTime)
+          )
+    {
+      Misc_udelay(10LL*US_PER_SECOND);
+      n += 10;
+    }
+  }
+
   IndexHandle         indexHandle;
   String              absoluteFileName;
   String              directoryName;
@@ -2342,7 +2366,7 @@ LOCAL void indexThreadCode(void)
               {
                 doneFlag = TRUE;
 
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2354,7 +2378,7 @@ LOCAL void indexThreadCode(void)
                   assert(!doneFlag || !Database_exists(&indexHandle.databaseHandle,"fileEntries","id","WHERE storageId=%lld",databaseId));
 //fprintf(stderr,"%s, %d: databaseId=%lld fileEntries done=%d deletedCounter=%llu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
                 }
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2365,7 +2389,7 @@ LOCAL void indexThreadCode(void)
                                         );
 //fprintf(stderr,"%s, %d: databaseId=%lld done=%d deletedCounter=%llu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
                 }
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2377,7 +2401,7 @@ LOCAL void indexThreadCode(void)
                   assert(!doneFlag || !Database_exists(&indexHandle.databaseHandle,"directoryEntries","id","WHERE storageId=%lld",databaseId));
 //fprintf(stderr,"%s, %d: databaseId=%lld directoryEntries done=%d deletedCounter=%llu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
                 }
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2389,7 +2413,7 @@ LOCAL void indexThreadCode(void)
                   assert(!doneFlag || !Database_exists(&indexHandle.databaseHandle,"linkEntries","id","WHERE storageId=%lld",databaseId));
 //fprintf(stderr,"%s, %d: databaseId=%lld linkEntries done=%d deletedCounter=%llu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
                 }
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2401,7 +2425,7 @@ LOCAL void indexThreadCode(void)
                   assert(!doneFlag || !Database_exists(&indexHandle.databaseHandle,"hardlinkEntries","id","WHERE storageId=%lld",databaseId));
 //fprintf(stderr,"%s, %d: databaseId=%lld hardlinkEntries done=%d deletedCounter=%llu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
                 }
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2413,7 +2437,7 @@ LOCAL void indexThreadCode(void)
                   assert(!doneFlag || !Database_exists(&indexHandle.databaseHandle,"specialEntries","id","WHERE storageId=%lld",databaseId));
 //fprintf(stderr,"%s, %d: databaseId=%lld specialEntries done=%d deletedCounter=%llu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
                 }
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2425,7 +2449,7 @@ LOCAL void indexThreadCode(void)
                   assert(!doneFlag || !Database_exists(&indexHandle.databaseHandle,"entriesNewest","id","WHERE storageId=%lld",databaseId));
 //fprintf(stderr,"%s, %d: databaseId=%lld entriesNewest done=%d deletedCounter=%llu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
                 }
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
 //Database_debugEnable(&indexHandle.databaseHandle,true);
                   error = purgeFromIndex(&indexHandle,
@@ -2438,7 +2462,7 @@ LOCAL void indexThreadCode(void)
 //Database_debugEnable(&indexHandle.databaseHandle,false);
 //fprintf(stderr,"%s, %d: databaseId=%lld entries done=%d deletedCounter=%llu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
                 }
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2451,7 +2475,7 @@ LOCAL void indexThreadCode(void)
                 }
 
                 assert(doneFlag || (deletedCounter > 0));
-                if ((error == ERROR_NONE) && doneFlag)
+                if ((error == ERROR_NONE) && doneFlag && !quitFlag)
                 {
                   error = purgeFromIndex(&indexHandle,
                                          &doneFlag,
@@ -2466,7 +2490,7 @@ LOCAL void indexThreadCode(void)
                 (void)Index_endTransaction(&indexHandle);
               }
 
-              if ((error == ERROR_NONE) && doneFlag)
+              if ((error == ERROR_NONE) && doneFlag && !quitFlag)
               {
                 // done
                 if (!String_isEmpty(storageName))
@@ -2483,16 +2507,16 @@ LOCAL void indexThreadCode(void)
               else
               {
                 // sleep a short time
-                Misc_udelay(5LL*US_PER_SECOND);
+                delayThread(5LL);
               }
             }
             else
             {
               // sleep a short time
-              Misc_udelay(5LL*US_PER_SECOND);
+              delayThread(5LL);
             }
           }
-          while ((error == ERROR_NONE) && !doneFlag);
+          while ((error == ERROR_NONE) && !doneFlag && !quitFlag);
         }
         if ((indexUseCount > 0) || quitFlag)
         {
@@ -4232,7 +4256,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                         if (totalStorageSize            != NULL) StringMap_getUInt64(resultMap,"totalStorageSize",           totalStorageSize,           0LL );
                                         if (totalEntryCount             != NULL) StringMap_getULong (resultMap,"totalEntryCount",            totalEntryCount,            0L  );
                                         if (totalEntrySize              != NULL) StringMap_getUInt64(resultMap,"totalEntrySize",             totalEntrySize,             0LL );
-                                        
+
                                         return ERROR_NONE;
                                       }
                                       else
@@ -5207,7 +5231,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                       Errors error;
 
                                       assert(resultMap != NULL);
-                                      
+
                                       UNUSED_VARIABLE(userData);
 
                                       error = ERROR_NONE;
@@ -5219,7 +5243,7 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                                           error = ERROR_EXPECTED_PARAMETER;
                                         }
                                       }
-                                      
+
                                       return error;
                                     },NULL),
                                     "INDEX_NEW_HISTORY jobUUID=%S scheduleUUID=%s hostName=%'S userName=%'S archiveType=%s createdDateTime=%llu errorMessage=%'s duration=%llu totalEntryCount=%lu totalEntrySize=%llu skippedEntryCount=%lu skippedEntrySize=%llu errorEntryCount=%lu errorEntrySize=%llu",
@@ -5574,7 +5598,7 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                                     CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
-                                      
+
                                       UNUSED_VARIABLE(userData);
 
                                       if (StringMap_getInt64(resultMap,"uuidId",uuidIndexId,INDEX_ID_NONE))
@@ -5991,7 +6015,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                                     CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
-                                      
+
                                       UNUSED_VARIABLE(userData);
 
                                       if (StringMap_getInt64 (resultMap,"entityId",entityIndexId,INDEX_ID_NONE))
@@ -7167,7 +7191,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                     CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
                                     {
                                       assert(resultMap != NULL);
-                                      
+
                                       UNUSED_VARIABLE(userData);
 
                                       if (StringMap_getInt64 (resultMap,"storageId",storageIndexId,INDEX_ID_NONE))

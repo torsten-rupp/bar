@@ -1341,10 +1341,10 @@ LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
     {
       while (   !quitFlag
              && (n < sleepTime)
-             && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
+             && !Semaphore_waitModified(&indexThreadTrigger,5*MS_PER_SECOND)
             )
       {
-        n += 10;
+        n += 5;
       }
     }
   }
@@ -1354,8 +1354,8 @@ LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
            && (n < sleepTime)
           )
     {
-      Misc_udelay(10LL*US_PER_SECOND);
-      n += 10;
+      Misc_udelay(5LL*US_PER_SECOND);
+      n += 5;
     }
   }
 }
@@ -2244,6 +2244,8 @@ LOCAL void pairingThreadCode(void)
     {
       case SERVER_MODE_MASTER:
         // try pairing all slaves
+        anyOfflineFlag  = FALSE;
+        anyUnpairedFlag = FALSE;
         JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           // disconnect disconnected slaves
@@ -5034,6 +5036,7 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not in debug mode");
   }
+fprintf(stderr,"%s, %d: quitFlag=%d\n",__FILE__,__LINE__,quitFlag);
 }
 
 /***********************************************************************\
