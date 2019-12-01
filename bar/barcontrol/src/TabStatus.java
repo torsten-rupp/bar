@@ -2605,7 +2605,6 @@ public class TabStatus
    */
   private void update()
   {
-Dprintf.dprintf("");
     try
     {
       updateStatus();

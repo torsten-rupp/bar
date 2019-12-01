@@ -2114,96 +2114,94 @@ public class TabJobs
   private Button       widgetPersistenceTreeAdd,widgetPersistenceTreeEdit,widgetPersistenceTreeRemove;
 
   // BAR variables
-  private WidgetVariable  slaveHostName           = new WidgetVariable<String> ("slave-host-name","");
-  private WidgetVariable  slaveHostPort           = new WidgetVariable<Integer>("slave-host-port",0);
-  private WidgetVariable  slaveHostForceTLS       = new WidgetVariable<Boolean>("slave-host-force-ssl",false);
-  private WidgetVariable  includeFileCommand      = new WidgetVariable<String> ("include-file-command","");
-  private WidgetVariable  includeImageCommand     = new WidgetVariable<String> ("include-image-command","");
-  private WidgetVariable  excludeCommand          = new WidgetVariable<String> ("exclude-command","");
-  private WidgetVariable  archiveName             = new WidgetVariable<String> ("archive-name","");
-  private WidgetVariable  archiveType             = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
-  private WidgetVariable  archivePartSizeFlag     = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  archivePartSize         = new WidgetVariable<Long>   ("archive-part-size",0L);
-  private WidgetVariable  deltaCompressAlgorithm  = new WidgetVariable<String> ("delta-compress-algorithm",
-                                                                                new String[]{"none",
-                                                                                             "xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"
-                                                                                            },
-                                                                                "none"
-                                                                               );
-  private WidgetVariable  deltaSource             = new WidgetVariable<String> ("delta-source","");
-  private WidgetVariable  byteCompressAlgorithm   = new WidgetVariable<String> ("byte-compress-algorithm",
-                                                                                new String[]{"none",
-                                                                                             "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
-                                                                                             "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
-                                                                                             "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
-                                                                                             "lzo1","lzo2","lzo3","lzo4","lzo5",
-                                                                                             "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
-                                                                                             "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
-                                                                                            },
-                                                                                "none"
-                                                                               );
-  private WidgetVariable  byteCompressAlgorithmType  = new WidgetVariable<String> (new String[]{"none","zip","bzip","lzma","lzo","lz4-","zstd",},
-                                                                                   "none"
-                                                                                  );
-  private WidgetVariable  byteCompressAlgorithmLevel = new WidgetVariable<String> ();
-  private WidgetVariable  compressMinSize         = new WidgetVariable<Long>   ("compress-min-size",0L);
-  private WidgetVariable  cryptAlgorithm          = new WidgetVariable<String> ("crypt-algorithm",
-                                                                                new String[]{"none",
-                                                                                             "3DES",
-                                                                                             "CAST5",
-                                                                                             "BLOWFISH",
-                                                                                             "AES128","AES192","AES256",
-                                                                                             "TWOFISH128","TWOFISH256",
-                                                                                             "SERPENT128","SERPENT192","SERPENT256",
-                                                                                             "CAMELLIA128","CAMELLIA192","CAMELLIA256"
-                                                                                            },
-                                                                                "none"
-                                                                               );
-  private WidgetVariable  cryptType               = new WidgetVariable<String> ("crypt-type",new String[]{"none","symmetric","asymmetric"},"none");
-  private WidgetVariable  cryptPublicKeyFileName  = new WidgetVariable<String> ("crypt-public-key","");
-  private WidgetVariable  cryptPasswordMode       = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
-  private WidgetVariable  cryptPassword           = new WidgetVariable<String> ("crypt-password","");
-  private WidgetVariable  incrementalListFileName = new WidgetVariable<String> ("incremental-list-file","");
-  private WidgetVariable  storageOnMaster         = new WidgetVariable<Boolean>("storage-on-master",true);
-  private WidgetVariable  storageType             = new WidgetVariable<String> ("storage-type",
-                                                                                new String[]{"filesystem",
-                                                                                             "ftp",
-                                                                                             "scp",
-                                                                                             "sftp",
-                                                                                             "webdav",
-                                                                                             "webdavs",
-                                                                                             "cd",
-                                                                                             "dvd",
-                                                                                             "bd",
-                                                                                             "device"
-                                                                                            },
-                                                                                "filesystem"
-                                                                               );
-  private WidgetVariable  storageHostName         = new WidgetVariable<String> ("");
-  private WidgetVariable  storageHostPort         = new WidgetVariable<Integer>("",0);
-  private WidgetVariable  storageLoginName        = new WidgetVariable<String> ("","");
-  private WidgetVariable  storageLoginPassword    = new WidgetVariable<String> ("","");
-  private WidgetVariable  storageDeviceName       = new WidgetVariable<String> ("","");
-  private WidgetVariable  storageFileName         = new WidgetVariable<String> ("","");
-  private WidgetVariable  archiveFileMode         = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","overwrite","append"},"stop");
-  private WidgetVariable  sshPublicKeyFileName    = new WidgetVariable<String> ("ssh-public-key","");
-  private WidgetVariable  sshPrivateKeyFileName   = new WidgetVariable<String> ("ssh-private-key","");
-  private WidgetVariable  maxBandWidthFlag        = new WidgetVariable<Boolean>(false);
-  private WidgetVariable  maxBandWidth            = new WidgetVariable<Long>   ("max-band-width",0L);
-  private WidgetVariable  volumeSize              = new WidgetVariable<Long>   ("volume-size",0L);
-  private WidgetVariable  ecc                     = new WidgetVariable<Boolean>("ecc",false);
-  private WidgetVariable  blank                   = new WidgetVariable<Boolean>("blank",false);
-  private WidgetVariable  waitFirstVolume         = new WidgetVariable<Boolean>("wait-first-volume",false);
-  private WidgetVariable  skipUnreadable          = new WidgetVariable<Boolean>("skip-unreadable",false);
-  private WidgetVariable  noStopOnAttributeError  = new WidgetVariable<Boolean>("no-stop-on-attribute-error",false);
-  private WidgetVariable  rawImages               = new WidgetVariable<Boolean>("raw-images",false);
-  private WidgetVariable  overwriteFiles          = new WidgetVariable<Boolean>("overwrite-files",false);
-  private WidgetVariable  preCommand              = new WidgetVariable<String> ("pre-command","");
-  private WidgetVariable  postCommand             = new WidgetVariable<String> ("post-command","");
-  private WidgetVariable  slavePreCommand         = new WidgetVariable<String> ("slave-pre-command","");
-  private WidgetVariable  slavePostCommand        = new WidgetVariable<String> ("slave-post-command","");
-  private WidgetVariable  maxStorageSize          = new WidgetVariable<Long>   ("max-storage-size",0L);
-  private WidgetVariable  comment                 = new WidgetVariable<String> ("comment","");
+  private WidgetVariable  slaveHostName             = new WidgetVariable<String> ("slave-host-name","");
+  private WidgetVariable  slaveHostPort             = new WidgetVariable<Integer>("slave-host-port",0);
+  private WidgetVariable  slaveHostForceTLS         = new WidgetVariable<Boolean>("slave-host-force-ssl",false);
+  private WidgetVariable  includeFileCommand        = new WidgetVariable<String> ("include-file-command","");
+  private WidgetVariable  includeImageCommand       = new WidgetVariable<String> ("include-image-command","");
+  private WidgetVariable  excludeCommand            = new WidgetVariable<String> ("exclude-command","");
+  private WidgetVariable  archiveName               = new WidgetVariable<String> ("archive-name","");
+  private WidgetVariable  archiveType               = new WidgetVariable<String> ("archive-type",new String[]{"normal","full","incremental","differential","continuous"},"normal");
+  private WidgetVariable  archivePartSizeFlag       = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  archivePartSize           = new WidgetVariable<Long>   ("archive-part-size",0L);
+  private WidgetVariable  deltaCompressAlgorithm    = new WidgetVariable<String> ("delta-compress-algorithm",
+                                                                                  new String[]{"none",
+                                                                                               "xdelta1","xdelta2","xdelta3","xdelta4","xdelta5","xdelta6","xdelta7","xdelta8","xdelta9"
+                                                                                              },
+                                                                                  "none"
+                                                                                 );
+  private WidgetVariable  deltaSource               = new WidgetVariable<String> ("delta-source","");
+  private WidgetVariable  byteCompressAlgorithmType = new WidgetVariable<String> (new String[]{"none","zip","bzip","lzma","lzo","lz4-","zstd",},
+                                                                                  "none"
+                                                                                 );
+  private WidgetVariable  byteCompressAlgorithm     = new WidgetVariable<String> (new String[]{"none",
+                                                                                               "zip0","zip1","zip2","zip3","zip4","zip5","zip6","zip7","zip8","zip9",
+                                                                                               "bzip1","bzip2","bzip3","bzip4","bzip5","bzip6","bzip7","bzip8","bzip9",
+                                                                                               "lzma1","lzma2","lzma3","lzma4","lzma5","lzma6","lzma7","lzma8","lzma9",
+                                                                                               "lzo1","lzo2","lzo3","lzo4","lzo5",
+                                                                                               "lz4-0","lz4-1","lz4-2","lz4-3","lz4-4","lz4-5","lz4-6","lz4-7","lz4-8","lz4-9","lz4-10","lz4-11","lz4-12","lz4-13","lz4-14","lz4-15","lz4-16",
+                                                                                               "zstd0", "zstd1", "zstd2", "zstd3", "zstd4", "zstd5", "zstd6", "zstd7", "zstd8", "zstd9", "zstd10", "zstd11", "zstd12", "zstd13", "zstd14", "zstd15", "zstd16", "zstd17", "zstd18", "zstd19"
+                                                                                              },
+                                                                                  "none"
+                                                                                 );
+  private WidgetVariable  compressMinSize           = new WidgetVariable<Long>   ("compress-min-size",0L);
+  private WidgetVariable  cryptAlgorithm            = new WidgetVariable<String> ("crypt-algorithm",
+                                                                                  new String[]{"none",
+                                                                                               "3DES",
+                                                                                               "CAST5",
+                                                                                               "BLOWFISH",
+                                                                                               "AES128","AES192","AES256",
+                                                                                               "TWOFISH128","TWOFISH256",
+                                                                                               "SERPENT128","SERPENT192","SERPENT256",
+                                                                                               "CAMELLIA128","CAMELLIA192","CAMELLIA256"
+                                                                                              },
+                                                                                  "none"
+                                                                                 );
+  private WidgetVariable  cryptType                 = new WidgetVariable<String> ("crypt-type",new String[]{"none","symmetric","asymmetric"},"none");
+  private WidgetVariable  cryptPublicKeyFileName    = new WidgetVariable<String> ("crypt-public-key","");
+  private WidgetVariable  cryptPasswordMode         = new WidgetVariable<String> ("crypt-password-mode",new String[]{"default","ask","config"},"default");
+  private WidgetVariable  cryptPassword             = new WidgetVariable<String> ("crypt-password","");
+  private WidgetVariable  incrementalListFileName   = new WidgetVariable<String> ("incremental-list-file","");
+  private WidgetVariable  storageOnMaster           = new WidgetVariable<Boolean>("storage-on-master",true);
+  private WidgetVariable  storageType               = new WidgetVariable<String> ("storage-type",
+                                                                                  new String[]{"filesystem",
+                                                                                               "ftp",
+                                                                                               "scp",
+                                                                                               "sftp",
+                                                                                               "webdav",
+                                                                                               "webdavs",
+                                                                                               "cd",
+                                                                                               "dvd",
+                                                                                               "bd",
+                                                                                               "device"
+                                                                                              },
+                                                                                  "filesystem"
+                                                                                 );
+  private WidgetVariable  storageHostName           = new WidgetVariable<String> ("");
+  private WidgetVariable  storageHostPort           = new WidgetVariable<Integer>("",0);
+  private WidgetVariable  storageLoginName          = new WidgetVariable<String> ("","");
+  private WidgetVariable  storageLoginPassword      = new WidgetVariable<String> ("","");
+  private WidgetVariable  storageDeviceName         = new WidgetVariable<String> ("","");
+  private WidgetVariable  storageFileName           = new WidgetVariable<String> ("","");
+  private WidgetVariable  archiveFileMode           = new WidgetVariable<String> ("archive-file-mode",new String[]{"stop","overwrite","append"},"stop");
+  private WidgetVariable  sshPublicKeyFileName      = new WidgetVariable<String> ("ssh-public-key","");
+  private WidgetVariable  sshPrivateKeyFileName     = new WidgetVariable<String> ("ssh-private-key","");
+  private WidgetVariable  maxBandWidthFlag          = new WidgetVariable<Boolean>(false);
+  private WidgetVariable  maxBandWidth              = new WidgetVariable<Long>   ("max-band-width",0L);
+  private WidgetVariable  volumeSize                = new WidgetVariable<Long>   ("volume-size",0L);
+  private WidgetVariable  ecc                       = new WidgetVariable<Boolean>("ecc",false);
+  private WidgetVariable  blank                     = new WidgetVariable<Boolean>("blank",false);
+  private WidgetVariable  waitFirstVolume           = new WidgetVariable<Boolean>("wait-first-volume",false);
+  private WidgetVariable  skipUnreadable            = new WidgetVariable<Boolean>("skip-unreadable",false);
+  private WidgetVariable  noStopOnAttributeError    = new WidgetVariable<Boolean>("no-stop-on-attribute-error",false);
+  private WidgetVariable  rawImages                 = new WidgetVariable<Boolean>("raw-images",false);
+  private WidgetVariable  overwriteFiles            = new WidgetVariable<Boolean>("overwrite-files",false);
+  private WidgetVariable  preCommand                = new WidgetVariable<String> ("pre-command","");
+  private WidgetVariable  postCommand               = new WidgetVariable<String> ("post-command","");
+  private WidgetVariable  slavePreCommand           = new WidgetVariable<String> ("slave-pre-command","");
+  private WidgetVariable  slavePostCommand          = new WidgetVariable<String> ("slave-post-command","");
+  private WidgetVariable  maxStorageSize            = new WidgetVariable<Long>   ("max-storage-size",0L);
+  private WidgetVariable  comment                   = new WidgetVariable<String> ("comment","");
 
   // variables
   private DirectoryInfoThread           directoryInfoThread;
@@ -4670,8 +4668,10 @@ public class TabJobs
           label = Widgets.newLabel(composite,BARControl.tr("Byte")+":");
           Widgets.layout(label,0,1,TableLayoutData.NONE);
 
+/*
           combo = Widgets.newOptionMenu(composite);
           combo.setToolTipText(BARControl.tr("Byte compression method to use."));
+          combo.setVisibleItemCount(20);
           Widgets.setComboItems(combo,
                                 new String[]{" ",     "none",
                                              "zip0",  "zip0",
@@ -4771,16 +4771,55 @@ public class TabJobs
             }
           });
           Widgets.addModifyListener(new WidgetModifyListener(combo,byteCompressAlgorithm));
-
-// ---
+*/
           widgetByteCompressAlgorithmType = Widgets.newOptionMenu(composite);
           widgetByteCompressAlgorithmType.setToolTipText(BARControl.tr("Byte compression method to use."));
-          widgetByteCompressAlgorithmType.setItems(new String[]{" ","zip","bzip","lzma","lzo","lz4","zstd"});
-          Widgets.layout(widgetByteCompressAlgorithmType,0,3,TableLayoutData.W);
+          Widgets.setComboItems(widgetByteCompressAlgorithmType,new String[]{" ",   "none",
+                                                                             "zip", "zip",
+                                                                             "bzip","bzip",
+                                                                             "lzma","lzma",
+                                                                             "lzo", "lzo",
+                                                                             "lz4", "lz4",
+                                                                             "zstd","zstd"
+                                                                            }
+          );
+          Widgets.layout(widgetByteCompressAlgorithmType,0,2,TableLayoutData.W);
+          widgetByteCompressAlgorithmType.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              Combo  widget = (Combo)selectionEvent.widget;
+              String string = Widgets.getSelectedComboItem(widget);
+
+              try
+              {
+                if      (string.equals("none")) byteCompressAlgorithm.set("none" );
+                else if (string.equals("zip" )) byteCompressAlgorithm.set("zip0" );
+                else if (string.equals("bzip")) byteCompressAlgorithm.set("bzip1");
+                else if (string.equals("lzma")) byteCompressAlgorithm.set("lzma1");
+                else if (string.equals("lzo" )) byteCompressAlgorithm.set("lzo1" );
+                else if (string.equals("lz4" )) byteCompressAlgorithm.set("lz4-0");
+                else if (string.equals("zstd")) byteCompressAlgorithm.set("zstd0");
+                BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetByteCompressAlgorithmType,byteCompressAlgorithmType));
 
           widgetByteCompressAlgorithmLevel = Widgets.newOptionMenu(composite);
-          widgetByteCompressAlgorithmLevel.setToolTipText(BARControl.tr("Byte compression method to use."));
-          Widgets.layout(widgetByteCompressAlgorithmLevel,0,4,TableLayoutData.W,0,0,0,0,50,SWT.DEFAULT);
+          widgetByteCompressAlgorithmLevel.setEnabled(true);
+          widgetByteCompressAlgorithmLevel.setToolTipText(BARControl.tr("Byte compression level to use."));
+          Widgets.setComboItems(widgetByteCompressAlgorithmLevel,new String[]{" ","none"});
+          Widgets.layout(widgetByteCompressAlgorithmLevel,0,3,TableLayoutData.W);
           widgetByteCompressAlgorithmLevel.addSelectionListener(new SelectionListener()
           {
             @Override
@@ -4804,18 +4843,13 @@ public class TabJobs
               }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(widgetByteCompressAlgorithmLevel,byteCompressAlgorithmType));
-          widgetByteCompressAlgorithmType.addSelectionListener(new SelectionListener()
+          widgetByteCompressAlgorithmType.addModifyListener(new ModifyListener()
           {
             @Override
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            public void modifyText(ModifyEvent modifyEvent)
             {
-            }
-            @Override
-            public void widgetSelected(SelectionEvent selectionEvent)
-            {
-              Combo  widget = (Combo)selectionEvent.widget;
-              String string = widget.getText();
+              Combo  widget = (Combo)modifyEvent.widget;
+              String string = Widgets.getSelectedComboItem(widget);
 
               String  byteCompressAlgorithms[];
               boolean byteCompressAlgrithmLevelEnabledFlag;
@@ -4825,7 +4859,7 @@ public class TabJobs
                                                      };
                 byteCompressAlgrithmLevelEnabledFlag = false;
               }
-              else if (string.equals("zip"))
+              else if (string.startsWith("zip"))
               {
                 byteCompressAlgorithms = new String[]{"0",  "zip0",
                                                       "1",  "zip1",
@@ -4840,7 +4874,7 @@ public class TabJobs
                                                      };
                 byteCompressAlgrithmLevelEnabledFlag = true;
               }
-              else if (string.equals("bzip"))
+              else if (string.startsWith("bzip"))
               {
                 byteCompressAlgorithms = new String[]{"1", "bzip1",
                                                       "2", "bzip2",
@@ -4854,7 +4888,7 @@ public class TabJobs
                                                      };
                 byteCompressAlgrithmLevelEnabledFlag = true;
               }
-              else if (string.equals("lzma"))
+              else if (string.startsWith("lzma"))
               {
                 byteCompressAlgorithms = new String[]{"1", "lzma1",
                                                       "2", "lzma2",
@@ -4868,7 +4902,7 @@ public class TabJobs
                                                      };
                 byteCompressAlgrithmLevelEnabledFlag = true;
               }
-              else if (string.equals("lzo"))
+              else if (string.startsWith("lzo"))
               {
                 byteCompressAlgorithms = new String[]{"1",  "lzo1",
                                                       "2",  "lzo2",
@@ -4878,7 +4912,7 @@ public class TabJobs
                                                      };
                 byteCompressAlgrithmLevelEnabledFlag = true;
               }
-              else if (string.equals("lz4"))
+              else if (string.startsWith("lz4"))
               {
                 byteCompressAlgorithms = new String[]{"0", "lz4-0",
                                                       "1", "lz4-1",
@@ -4900,7 +4934,7 @@ public class TabJobs
                                                      };
                 byteCompressAlgrithmLevelEnabledFlag = true;
               }
-              else if (string.equals("zstd"))
+              else if (string.startsWith("zstd"))
               {
                 byteCompressAlgorithms = new String[]{"0", "zstd0",
                                                       "1", "zstd1",
@@ -4931,25 +4965,13 @@ public class TabJobs
                                                      };
                 byteCompressAlgrithmLevelEnabledFlag = false;
               }
+
+              widgetByteCompressAlgorithmLevel.setEnabled(byteCompressAlgrithmLevelEnabledFlag);
               Widgets.setComboItems(widgetByteCompressAlgorithmLevel,byteCompressAlgorithms);
               Widgets.setSelectedComboItem(widgetByteCompressAlgorithmLevel,0);
-              widgetByteCompressAlgorithmLevel.setEnabled(byteCompressAlgrithmLevelEnabledFlag);
-
-              string = Widgets.getSelectedComboItem(widgetByteCompressAlgorithmLevel);
-              try
-              {
-                byteCompressAlgorithm.set(string);
-                BARServer.setJobOption(selectedJobData.uuid,"compress-algorithm",deltaCompressAlgorithm.getString()+"+"+byteCompressAlgorithm.getString());
-              }
-              catch (Exception exception)
-              {
-                // ignored
-              }
             }
           });
-          Widgets.addModifyListener(new WidgetModifyListener(widgetByteCompressAlgorithmLevel,byteCompressAlgorithmLevel));
-// ---
-
+          Widgets.addModifyListener(new WidgetModifyListener(widgetByteCompressAlgorithmLevel,byteCompressAlgorithm));
         }
 
         // xdelta source
@@ -10517,14 +10539,11 @@ TODO: implement delete entity
         archivePartSize.set(Units.parseByteSize(BARServer.getStringJobOption(jobData.uuid,"archive-part-size"),0));
         archivePartSizeFlag.set(archivePartSize.getLong() > 0);
 
-String s[] = parseCompressAlgorithm(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"));
-Dprintf.dprintf("s=%s:%s:%s",s[0],s[1],s[2]);
-byteCompressAlgorithmType.set(s[1]);
-byteCompressAlgorithmLevel.set(s[1]);
-
-        String[] compressAlgorithms = StringUtils.splitArray(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"),"+");
-        deltaCompressAlgorithm.set((compressAlgorithms.length >= 1) ? compressAlgorithms[0] : "");
-        byteCompressAlgorithm.set((compressAlgorithms.length >= 2) ? compressAlgorithms[1] : "");
+        String compressAlgorithms[] = parseCompressAlgorithm(BARServer.getStringJobOption(jobData.uuid,"compress-algorithm"));
+//Dprintf.dprintf("compressAlgorithms=%s:%s:%s",compressAlgorithms[0],compressAlgorithms[1],compressAlgorithms[2]);
+        deltaCompressAlgorithm.set(compressAlgorithms[0]);
+        byteCompressAlgorithmType.set(compressAlgorithms[1]);
+        byteCompressAlgorithm.set(compressAlgorithms[2]);
         cryptAlgorithm.set(BARServer.getStringJobOption(jobData.uuid,"crypt-algorithm"));
         cryptType.set(BARServer.getStringJobOption(jobData.uuid,"crypt-type"));
         BARServer.getJobOption(jobData.uuid,cryptPublicKeyFileName);
@@ -11095,68 +11114,44 @@ throw new Error("NYI");
 
   //-----------------------------------------------------------------------
 
+  /** parse compress algorithm string
+   * @return [deltaCompressAlgorithm,byteCompressAlgorithmType,byteCompressAlgorithm]
+   */
   private String[] parseCompressAlgorithm(String string)
   {
-    final String BYTE_COMPRESS_PATTERN = "(none|zip|bzip|lzma|lzo|lz4-|zstd){([0-9+]){0,1}";
+    final String COMPRESS_ALGORITHM_PATTERN = "^(none|zip|bzip|lzma|lzo|lz4|zstd)(-{0,1}[0-9]+){0,1}$";
 
     try
     {
-Dprintf.dprintf("");
-    String[] compressAlgorithms = StringUtils.splitArray(string,"+");
-    if      (compressAlgorithms.length >= 2)
-    {
-      String  type,level;
-      Matcher matcher;
+      String[] compressAlgorithms = StringUtils.splitArray(string,"+");
 
-Dprintf.dprintf("%s",compressAlgorithms[1]);
-      if ((matcher = Pattern.compile("^(none|zip|bzip|lzma|lzo|lz4-|zstd)([0-9]+){0,1}$").matcher(compressAlgorithms[1])).matches())
+      Matcher matcher;
+      String  byteCompressAlgorithmType;
+      if ((matcher = Pattern.compile(COMPRESS_ALGORITHM_PATTERN).matcher(compressAlgorithms[1])).matches())
       {
-Dprintf.dprintf("");
-        type  = matcher.group(1);
-        level = matcher.group(2);
+        byteCompressAlgorithmType  = matcher.group(1);
       }
       else
       {
-        type  = "";
-        level = "";
+        byteCompressAlgorithmType  = "";
       }
 
-Dprintf.dprintf("");
-      return new String[]{compressAlgorithms[0],type,level};
-    }
-    else if (compressAlgorithms.length >= 1)
-    {
-      String  type,level;
-      Matcher matcher;
-
-Dprintf.dprintf("%s",compressAlgorithms[0]);
-      if ((matcher = Pattern.compile("^(none|zip|bzip|lzma|lzo|lz4-|zstd)([0-9]+){0,1}$").matcher(compressAlgorithms[0])).matches())
+      if      (compressAlgorithms.length >= 2)
       {
-Dprintf.dprintf("");
-        type  = matcher.group(1);
-        level = matcher.group(2);
+        return new String[]{compressAlgorithms[0],byteCompressAlgorithmType,compressAlgorithms[1]};
+      }
+      else if (compressAlgorithms.length >= 1)
+      {
+        return new String[]{"",byteCompressAlgorithmType,compressAlgorithms[0]};
       }
       else
       {
-        type  = "";
-        level = "";
+        return new String[]{"","",""};
       }
-
-Dprintf.dprintf("");
-      return new String[]{"",type,level};
-    }
-    else
-    {
-Dprintf.dprintf("");
-      return new String[]{"","",""};
-    }
     }
     catch (PatternSyntaxException e)
     {
-Dprintf.dprintf("e=%s",e);
-//e.printStackt
-System.exit(1);
-return null;
+      return new String[]{"","",""};
     }
   }
 
