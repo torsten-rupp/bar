@@ -11845,18 +11845,21 @@ throw new Error("NYI");
    */
   private void updateDeviceImages()
   {
-    for (TableItem tableItem : widgetDeviceTable.getItems())
+    if (!widgetDeviceTable.disposed())
     {
-      DeviceData deviceData = (DeviceData)tableItem.getData();
+      for (TableItem tableItem : widgetDeviceTable.getItems())
+      {
+        DeviceData deviceData = (DeviceData)tableItem.getData();
 
-      Image image;
-      if      (includeHashMap.containsKey(deviceData.name) && !excludeHashSet.contains(deviceData.name))
-        image = IMAGE_DEVICE_INCLUDED;
-      else if (excludeHashSet.contains(deviceData.name))
-        image = IMAGE_DEVICE;
-      else
-        image = IMAGE_DEVICE;
-      tableItem.setImage(image);
+        Image image;
+        if      (includeHashMap.containsKey(deviceData.name) && !excludeHashSet.contains(deviceData.name))
+          image = IMAGE_DEVICE_INCLUDED;
+        else if (excludeHashSet.contains(deviceData.name))
+          image = IMAGE_DEVICE;
+        else
+          image = IMAGE_DEVICE;
+        tableItem.setImage(image);
+      }
     }
   }
 
