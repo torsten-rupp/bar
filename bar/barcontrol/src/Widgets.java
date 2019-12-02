@@ -4923,7 +4923,6 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     {
       combo.setText((String)getField(data,field));
     }
-    combo.setData(new ArrayList<Object>());
 
     combo.addSelectionListener(new SelectionListener()
     {
@@ -5080,10 +5079,9 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       {
         public void run()
         {
-          ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
+          ArrayList<Object> dataArray = new ArrayList<Object>();
 
           combo.removeAll();
-          dataArray.clear();
           for (int i = 0; i < items.length/2; i++)
           {
             String text = (String)items[i*2+0];
@@ -5092,6 +5090,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             combo.add(text);
             dataArray.add(data);
           }
+          combo.setData(dataArray);
         }
       });
     }
@@ -5475,15 +5474,15 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   public static <T> T[] getComboItems(Combo combo, Class clazz)
   {
     ArrayList<Object> dataArray = (ArrayList<Object>)combo.getData();
-    assert((dataArray == null) || dataArray.size() == combo.getItemCount());
+    assert(dataArray.size() == combo.getItemCount());
 
-    T[] array = (T[])Array.newInstance(clazz,dataArray.size());
+    T[] comboItems = (T[])Array.newInstance(clazz,dataArray.size());
     for (int i = 0; i < dataArray.size(); i++)
     {
-      array[i] = (T)dataArray.get(i);
+      comboItems[i] = (T)dataArray.get(i);
     }
 
-    return array;
+    return comboItems;
   }
 
   /** set selected combo item

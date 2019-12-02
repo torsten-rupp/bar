@@ -2294,6 +2294,7 @@ public class TabJobs
 
       widgetJobList = Widgets.newOptionMenu(composite);
       widgetJobList.setToolTipText(BARControl.tr("Existing job entries."));
+      Widgets.setOptionMenuItems(widgetJobList,new Object[]{});
       Widgets.layout(widgetJobList,0,1,TableLayoutData.WE);
       widgetJobList.addSelectionListener(new SelectionListener()
       {
