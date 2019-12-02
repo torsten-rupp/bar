@@ -604,6 +604,7 @@ SOCKET_TYPE_PLAIN,
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
+    Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return error;
   }
@@ -615,6 +616,7 @@ SOCKET_TYPE_PLAIN,
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
+    Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return ERROR_INVALID_RESPONSE;
   }
@@ -626,6 +628,7 @@ SOCKET_TYPE_PLAIN,
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
+    Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return ERROR_INVALID_RESPONSE;
   }
@@ -639,6 +642,7 @@ SOCKET_TYPE_PLAIN,
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
+    Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return ERRORX_(EXPECTED_PARAMETER,0,"id");
   }
@@ -650,6 +654,7 @@ SOCKET_TYPE_PLAIN,
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
+    Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return ERRORX_(EXPECTED_PARAMETER,0,"encryptTypes");
   }
@@ -673,6 +678,7 @@ SOCKET_TYPE_PLAIN,
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
+    Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return ERROR_INVALID_RESPONSE;
   }
@@ -697,6 +703,7 @@ SOCKET_TYPE_PLAIN,
     String_delete(id);
     StringMap_delete(argumentMap);
     String_delete(line);
+    Network_disconnect(&serverIO->network.socketHandle);
     doneIO(serverIO);
     return ERROR_INVALID_KEY;
   }
