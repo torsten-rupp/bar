@@ -169,6 +169,9 @@
 /* gettext() available */
 #undef HAVE_GETTEXT
 
+/* get_current_dir_name() available */
+#undef HAVE_GET_CURRENT_DIR_NAME
+
 /* GNU TLS installed */
 #undef HAVE_GNU_TLS
 
