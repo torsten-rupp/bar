@@ -2087,7 +2087,7 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
       #if   defined(HAVE_GETDATE_R)
         tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
       #elif defined(HAVE_GETDATE)
-        tm = getdate(text);      
+        tm = getdate(text);
       #else
 #ifndef WERROR
 #warning implement strptime
@@ -2107,7 +2107,7 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
       }
       else
       {
-        #ifdef HAVE_STRPTIME      
+        #ifdef HAVE_STRPTIME
           s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
         #else
 #ifndef WERROR
@@ -4003,6 +4003,21 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
                           );
 
   return error;
+}
+
+Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
+                                const char     *directoryName
+                               )
+{
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+
+  return Database_execute(databaseHandle,
+                          CALLBACK_(NULL,NULL),  // databaseRowFunction
+                          NULL,  // changedRowCount
+                          "PRAGMA temp_store_directory='%s';",
+                          directoryName
+                         );
 }
 
 Errors Database_compare(DatabaseHandle *databaseHandleReference,

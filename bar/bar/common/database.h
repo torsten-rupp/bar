@@ -751,6 +751,20 @@ Errors Database_setEnabledForeignKeys(DatabaseHandle *databaseHandle,
                                      );
 
 /***********************************************************************\
+* Name   : Database_setTmpDirectory
+* Purpose: set directory for temporary files
+* Input  : databaseHandle - database handle
+*          directoryName  - directory name
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_setTmpDirectory(DatabaseHandle *databaseHandle,
+                                const char     *directoryName
+                               );
+
+/***********************************************************************\
 * Name   : Database_compare
 * Purpose: compare database structure
 * Input  : databaseHandleReference - reference database handle
