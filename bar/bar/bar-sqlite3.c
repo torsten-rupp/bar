@@ -131,7 +131,7 @@ LOCAL void printUsage(const char *programName)
   printf("          -f|--no-foreign-keys      - disable foreign key constraints\n");
   printf("          --force                   - force operation\n");
   printf("          --pipe                    - read data from stdin and pipe into database (use ? as variable)\n");
-  printf("          --tmp-directory           - temporary files directory (default: current directory)\n");
+  printf("          --tmp-directory           - temporary files directory\n");
   printf("          -v|--verbose              - verbose output\n");
   printf("          -h|--help                 - print this help\n");
 }
