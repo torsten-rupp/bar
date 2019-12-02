@@ -4166,9 +4166,8 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                        TOTAL(storage.totalEntrySize) \
                                 FROM uuids \
                                   LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                                  LEFT JOIN storage ON storage.entityId=entities.id \
-                                WHERE     %S \
-                                      AND (storage.state ISNULL OR (storage.deletedFlag=0)) \
+                                  LEFT JOIN storage ON storage.entityId=entities.id AND (storage.deletedFlag=0) \
+                                WHERE %S \
                                 GROUP BY uuids.id \
                                ",
                                ARCHIVE_TYPE_NORMAL,
@@ -4331,10 +4330,9 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                                      TOTAL(storage.totalEntryCount), \
                                      TOTAL(storage.totalEntrySize) \
                               FROM entities \
-                                LEFT JOIN storage ON storage.entityId=entities.id \
+                                LEFT JOIN storage ON storage.entityId=entities.id AND (storage.deletedFlag=0) \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE     %S \
-                                    AND (storage.state ISNULL OR (storage.deletedFlag=0)) \
+                              WHERE %S \
                               GROUP BY entities.id \
                               LIMIT 0,1 \
                              ",
@@ -5364,9 +5362,8 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
                                      TOTAL(storage.totalEntrySize) \
                               FROM uuids \
                                 LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                                LEFT JOIN storage ON storage.entityId=entities.id \
-                              WHERE     %S \
-                                    AND storage.deletedFlag=0 \
+                                LEFT JOIN storage ON storage.entityId=entities.id AND storage.deletedFlag=0 \
+                              WHERE %S \
                              ",
                              filterString
                             );
@@ -5470,9 +5467,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                                     TOTAL(storage.totalEntrySize) \
                              FROM uuids \
                                LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
-                               LEFT JOIN storage ON storage.entityId=entities.id \
-                             WHERE     %S \
-                                   AND storage.deletedFlag=0 \
+                               LEFT JOIN storage ON storage.entityId=entities.id AND storage.deletedFlag=0 \
+                             WHERE %S \
                              GROUP BY uuids.id \
                              LIMIT %llu,%llu \
                             ",
@@ -5830,9 +5826,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                     entities.lockedCount \
                              FROM entities \
                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                               LEFT JOIN storage ON storage.entityId=entities.id \
-                             WHERE     %S \
-                                   AND storage.deletedFlag=0 \
+                               LEFT JOIN storage ON storage.entityId=entities.id AND storage.deletedFlag=0 \
+                             WHERE %S \
                              GROUP BY entities.id \
                              %S \
                              LIMIT %llu,%llu \
