@@ -2438,12 +2438,14 @@ if (false) {
           Widgets.layout(button,0,0,TableLayoutData.W,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Dialogs.close(dialog,true);
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
 
@@ -2451,12 +2453,14 @@ if (false) {
           Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
             public void widgetSelected(SelectionEvent selectionEvent)
             {
               Dialogs.close(dialog,false);
-            }
-            public void widgetDefaultSelected(SelectionEvent selectionEvent)
-            {
             }
           });
         }
@@ -2690,11 +2694,11 @@ if (false) {
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
           @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          public void widgetSelected(SelectionEvent selectionEvent)
           {
             tabStatus.jobPause(10*60);
           }
@@ -2710,7 +2714,6 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             tabStatus.jobPause(60*60);
           }
         });
@@ -2725,7 +2728,6 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
             tabStatus.jobPause(120*60);
           }
         });
