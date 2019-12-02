@@ -87,6 +87,7 @@ LOCAL bool       headerPrintedFlag     = FALSE;
 LOCAL bool       foreignKeysFlag       = TRUE;
 LOCAL bool       forceFlag             = TRUE;
 LOCAL bool       pipeFlag              = FALSE;
+LOCAL const char *tmpDirectory         = NULL;
 LOCAL bool       verboseFlag           = FALSE;
 LOCAL const char *jobUUID              = NULL;
 
@@ -130,6 +131,7 @@ LOCAL void printUsage(const char *programName)
   printf("          -f|--no-foreign-keys      - disable foreign key constraints\n");
   printf("          --force                   - force operation\n");
   printf("          --pipe                    - read data from stdin and pipe into database (use ? as variable)\n");
+  printf("          --tmp-directory           - temporary files directory (default: current directory)\n");
   printf("          -v|--verbose              - verbose output\n");
   printf("          -h|--help                 - print this help\n");
 }
@@ -3857,6 +3859,7 @@ int main(int argc, const char *argv[])
 
   uint            i,n;
   const char      *databaseFileName;
+  String          path;
   String          commands;
   char            line[MAX_LINE_LENGTH];
   Errors          error;
@@ -3876,78 +3879,108 @@ int main(int argc, const char *argv[])
     if      (stringEquals(argv[i],"--info"))
     {
       infoFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--check"))
     {
       checkFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--create"))
     {
       createFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--create-triggers"))
     {
       createTriggersFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--create-newest"))
     {
       createNewestFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--create-indizes"))
     {
       createIndizesFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--create-aggregates"))
     {
       createAggregatesFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--clean"))
     {
       cleanFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--purge"))
     {
       purgeDeletedFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--vacuum"))
     {
       vacuumFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"-s") || stringEquals(argv[i],"--storages"))
     {
       showStoragesFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"-e") || stringEquals(argv[i],"--entries"))
     {
       showEntriesFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"--entries-newest"))
     {
       showEntriesNewestFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"-n") || stringEquals(argv[i],"--names"))
     {
       showNamesFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"-H") || stringEquals(argv[i],"--header"))
     {
       showHeaderFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"-f") || stringEquals(argv[i],"--no-foreign-keys"))
     {
       foreignKeysFlag = FALSE;
+      i++;
     }
     else if (stringEquals(argv[i],"--force"))
     {
       forceFlag = FALSE;
+      i++;
     }
     else if (stringEquals(argv[i],"--pipe"))
     {
       pipeFlag = TRUE;
+      i++;
+    }
+    else if (stringEquals(argv[i],"--tmp-directory"))
+    {
+      if ((i+1) >= (uint)argc)
+      {
+        fprintf(stderr,"ERROR: expected path name for option --tmp-directory!\n");
+        String_delete(commands);
+        exit(EXITCODE_INVALID_ARGUMENT);
+      }
+      tmpDirectory = argv[i+1];
+      i += 2;
     }
     else if (stringEquals(argv[i],"-v") || stringEquals(argv[i],"--verbose"))
     {
       verboseFlag = TRUE;
+      i++;
     }
     else if (stringEquals(argv[i],"-h") || stringEquals(argv[i],"--help"))
     {
@@ -3956,6 +3989,7 @@ int main(int argc, const char *argv[])
     }
     else if (stringEquals(argv[i],"--"))
     {
+      i++;
       break;
     }
     else if (stringStartsWith(argv[i],"-"))
@@ -3971,14 +4005,15 @@ int main(int argc, const char *argv[])
         case 0:
           databaseFileName = argv[i];
           n++;
+          i++;
           break;
         default:
           String_appendCString(commands,argv[i]);
           jobUUID = argv[i];
+          i++;
           break;
       }
     }
-    i++;
   }
   while (i < (uint)argc)
   {
@@ -3987,13 +4022,14 @@ int main(int argc, const char *argv[])
       case 0:
         databaseFileName = argv[i];
         n++;
+        i++;
         break;
       default:
         String_appendCString(commands,argv[i]);
         jobUUID = argv[i];
+        i++;
         break;
     }
-    i++;
   }
 
   // check arguments
@@ -4026,6 +4062,25 @@ int main(int argc, const char *argv[])
   }
   if (error != ERROR_NONE)
   {
+    String_delete(commands);
+    exit(EXITCODE_FAIL);
+  }
+
+  // set temporary directory
+  if (tmpDirectory != NULL)
+  {
+    error = Database_setTmpDirectory(&databaseHandle,tmpDirectory);
+  }
+  else
+  {
+    path = File_getDirectoryNameCString(String_new(),databaseFileName);
+    if (String_isEmpty(path)) File_getCurrentDirectory(path);
+    error = Database_setTmpDirectory(&databaseHandle,String_cString(path));
+    String_delete(path);
+  }
+  if (error != ERROR_NONE)
+  {
+    closeDatabase(&databaseHandle);
     String_delete(commands);
     exit(EXITCODE_FAIL);
   }
