@@ -2248,7 +2248,7 @@ LOCAL void pairingThreadCode(void)
         anyUnpairedFlag = FALSE;
         JOB_SLAVE_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
-          // disconnect disconnected slaves
+          // disconnect shutdown slaves
           JOB_SLAVE_LIST_ITERATE(slaveNode)
           {
             if (Connector_isShutdown(&slaveNode->connectorInfo))
@@ -2742,31 +2742,29 @@ LOCAL void pauseThreadCode(void)
           pauseFlags.restore     = FALSE;
           pauseFlags.indexUpdate = FALSE;
 
-          // suspend all slaves (if master)
+          // continue all slaves
           if (serverMode == SERVER_MODE_MASTER)
           {
-            error = ERROR_NONE;
-            JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
+            JOB_SLAVE_LIST_ITERATE(slaveNode)
             {
               if (Connector_isAuthorized(&slaveNode->connectorInfo))
               {
-      fprintf(stderr,"%s, %d: cont clave %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
                 error = Connector_executeCommand(&slaveNode->connectorInfo,
                                                  1,
                                                  10*MS_PER_SECOND,
                                                  CALLBACK_(NULL,NULL),
                                                  "CONTINUE"
                                                 );
-              }
-              if (error != ERROR_NONE)
-              {
-                logMessage(NULL,  // logHandle,
-                           LOG_TYPE_WARNING,
-                           "Continue slave '%s:%u' fail (error: %s)",
-                           String_cString(slaveNode->name),
-                           slaveNode->port,
-                           Error_getText(error)
-                          );
+                if (error != ERROR_NONE)
+                {
+                  logMessage(NULL,  // logHandle,
+                             LOG_TYPE_WARNING,
+                             "Continue slave '%s:%u' fail (error: %s)",
+                             String_cString(slaveNode->name),
+                             slaveNode->port,
+                             Error_getText(error)
+                            );
+                }
               }
             }
           }
@@ -6274,12 +6272,10 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     // suspend all slaves
     if (serverMode == SERVER_MODE_MASTER)
     {
-      error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
       {
         if (Connector_isAuthorized(&slaveNode->connectorInfo))
         {
-fprintf(stderr,"%s, %d: suspend clave %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
           error = Connector_executeCommand(&slaveNode->connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
@@ -6287,12 +6283,12 @@ fprintf(stderr,"%s, %d: suspend clave %s\n",__FILE__,__LINE__,String_cString(sla
                                            "SUSPEND modeMask=%S",
                                            modeMask
                                           );
-        }
-        if (error != ERROR_NONE)
-        {
-          Semaphore_unlock(&serverStateLock);
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-          return;
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&serverStateLock);
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+            return;
+          }
         }
       }
     }
@@ -6308,7 +6304,7 @@ fprintf(stderr,"%s, %d: suspend clave %s\n",__FILE__,__LINE__,String_cString(sla
     if (pauseFlags.indexUpdate) String_joinCString(modeMask,"indexUpdate",',');
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Pause server by %s for %dmin: %s",
+               "Pause by %s for %dmin: %s",
                getClientInfo(clientInfo,s,sizeof(s)),
                pauseTime/60,
                String_cString(modeMask)
@@ -6393,12 +6389,10 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     // suspend all slaves
     if (serverMode == SERVER_MODE_MASTER)
     {
-      error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
       {
         if (Connector_isAuthorized(&slaveNode->connectorInfo))
         {
-fprintf(stderr,"%s, %d: suspend clave %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
           error = Connector_executeCommand(&slaveNode->connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
@@ -6406,12 +6400,12 @@ fprintf(stderr,"%s, %d: suspend clave %s\n",__FILE__,__LINE__,String_cString(sla
                                            "SUSPEND modeMask=%S",
                                            modeMask
                                           );
-        }
-        if (error != ERROR_NONE)
-        {
-          Semaphore_unlock(&serverStateLock);
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-          return;
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&serverStateLock);
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+            return;
+          }
         }
       }
     }
@@ -6422,7 +6416,7 @@ fprintf(stderr,"%s, %d: suspend clave %s\n",__FILE__,__LINE__,String_cString(sla
     // log info
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Suspended server by %s",
+               "Suspended by %s",
                getClientInfo(clientInfo,s,sizeof(s))
               );
   }
@@ -6470,24 +6464,22 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     // set running state on slaves
     if (serverMode == SERVER_MODE_MASTER)
     {
-      error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
       {
         if (Connector_isAuthorized(&slaveNode->connectorInfo))
         {
-fprintf(stderr,"%s, %d: comns clave %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
           error = Connector_executeCommand(&slaveNode->connectorInfo,
                                            1,
                                            10*MS_PER_SECOND,
                                            CALLBACK_(NULL,NULL),
                                            "CONTINUE"
                                           );
-        }
-        if (error != ERROR_NONE)
-        {
-          Semaphore_unlock(&serverStateLock);
-          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-          return;
+          if (error != ERROR_NONE)
+          {
+            Semaphore_unlock(&serverStateLock);
+            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+            return;
+          }
         }
       }
     }
@@ -6498,7 +6490,7 @@ fprintf(stderr,"%s, %d: comns clave %s\n",__FILE__,__LINE__,String_cString(slave
     // log info
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
-               "Continued server by %s",
+               "Continued by %s",
                getClientInfo(clientInfo,s,sizeof(s))
               );
   }
