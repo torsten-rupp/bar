@@ -2724,6 +2724,9 @@ LOCAL void schedulerThreadCode(void)
 
 LOCAL void pauseThreadCode(void)
 {
+  SlaveNode *slaveNode;
+  Errors    error;
+
   while (!quitFlag)
   {
     // decrement pause time, continue
@@ -2733,11 +2736,43 @@ LOCAL void pauseThreadCode(void)
       {
         if (Misc_getCurrentDateTime() > pauseEndDateTime)
         {
-          serverState            = SERVER_STATE_RUNNING;
+          // clear pause flags
           pauseFlags.create      = FALSE;
           pauseFlags.storage     = FALSE;
           pauseFlags.restore     = FALSE;
           pauseFlags.indexUpdate = FALSE;
+
+          // suspend all slaves (if master)
+          if (serverMode == SERVER_MODE_MASTER)
+          {
+            error = ERROR_NONE;
+            JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
+            {
+              if (Connector_isAuthorized(&slaveNode->connectorInfo))
+              {
+      fprintf(stderr,"%s, %d: cont clave %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
+                error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                                 1,
+                                                 10*MS_PER_SECOND,
+                                                 CALLBACK_(NULL,NULL),
+                                                 "CONTINUE"
+                                                );
+              }
+              if (error != ERROR_NONE)
+              {
+                logMessage(NULL,  // logHandle,
+                           LOG_TYPE_WARNING,
+                           "Continue slave '%s:%u' fail (error: %s)",
+                           String_cString(slaveNode->name),
+                           slaveNode->port,
+                           Error_getText(error)
+                          );
+              }
+            }
+          }
+
+          // set running state
+          serverState = SERVER_STATE_RUNNING;
         }
       }
     }
@@ -6167,6 +6202,8 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   String          modeMask;
   StringTokenizer stringTokenizer;
   ConstString     token;
+  SlaveNode       *slaveNode;
+  Errors          error;
   char            s[256];
 
   assert(clientInfo != NULL);
@@ -6191,7 +6228,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
   // set pause time
   SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    serverState = SERVER_STATE_PAUSE;
+    // set pause flags
     if (modeMask == NULL)
     {
       pauseFlags.create      = TRUE;
@@ -6230,8 +6267,40 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
       }
       String_doneTokenizer(&stringTokenizer);
     }
+
+    // get pause end time
     pauseEndDateTime = Misc_getCurrentDateTime()+(uint64)pauseTime;
 
+    // suspend all slaves
+    if (serverMode == SERVER_MODE_MASTER)
+    {
+      error = ERROR_NONE;
+      JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
+      {
+        if (Connector_isAuthorized(&slaveNode->connectorInfo))
+        {
+fprintf(stderr,"%s, %d: suspend clave %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
+          error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_(NULL,NULL),
+                                           "SUSPEND modeMask=%S",
+                                           modeMask
+                                          );
+        }
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&serverStateLock);
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+          return;
+        }
+      }
+    }
+
+    // set pause state
+    serverState = SERVER_STATE_PAUSE;
+
+    // log info
     String_clear(modeMask);
     if (pauseFlags.create     ) String_joinCString(modeMask,"create",',');
     if (pauseFlags.storage    ) String_joinCString(modeMask,"storage",',');
@@ -6271,6 +6340,8 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
   String          modeMask;
   StringTokenizer stringTokenizer;
   ConstString     token;
+  SlaveNode       *slaveNode;
+  Errors          error;
   char            s[256];
 
   assert(clientInfo != NULL);
@@ -6286,7 +6357,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
   // set suspend
   SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    serverState = SERVER_STATE_SUSPENDED;
+    // set pause flags
     if (String_isEmpty(modeMask))
     {
       pauseFlags.create      = TRUE;
@@ -6318,6 +6389,37 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
       }
       String_doneTokenizer(&stringTokenizer);
     }
+
+    // suspend all slaves
+    if (serverMode == SERVER_MODE_MASTER)
+    {
+      error = ERROR_NONE;
+      JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
+      {
+        if (Connector_isAuthorized(&slaveNode->connectorInfo))
+        {
+fprintf(stderr,"%s, %d: suspend clave %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
+          error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_(NULL,NULL),
+                                           "SUSPEND modeMask=%S",
+                                           modeMask
+                                          );
+        }
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&serverStateLock);
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+          return;
+        }
+      }
+    }
+
+    // set suspend state
+    serverState = SERVER_STATE_SUSPENDED;
+
+    // log info
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Suspended server by %s",
@@ -6346,7 +6448,9 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  char s[256];
+  SlaveNode *slaveNode;
+  Errors    error;
+  char      s[256];
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -6357,11 +6461,41 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
   // clear pause/suspend
   SEMAPHORE_LOCKED_DO(&serverStateLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    serverState            = SERVER_STATE_RUNNING;
+    // clear pause flags
     pauseFlags.create      = FALSE;
     pauseFlags.storage     = FALSE;
     pauseFlags.restore     = FALSE;
     pauseFlags.indexUpdate = FALSE;
+
+    // set running state on slaves
+    if (serverMode == SERVER_MODE_MASTER)
+    {
+      error = ERROR_NONE;
+      JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
+      {
+        if (Connector_isAuthorized(&slaveNode->connectorInfo))
+        {
+fprintf(stderr,"%s, %d: comns clave %s\n",__FILE__,__LINE__,String_cString(slaveNode->name));
+          error = Connector_executeCommand(&slaveNode->connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_(NULL,NULL),
+                                           "CONTINUE"
+                                          );
+        }
+        if (error != ERROR_NONE)
+        {
+          Semaphore_unlock(&serverStateLock);
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+          return;
+        }
+      }
+    }
+
+    // set running state
+    serverState            = SERVER_STATE_RUNNING;
+
+    // log info
     logMessage(NULL,  // logHandle,
                LOG_TYPE_ALWAYS,
                "Continued server by %s",
