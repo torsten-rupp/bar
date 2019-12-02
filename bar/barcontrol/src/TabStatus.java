@@ -610,9 +610,11 @@ public class TabStatus
     });
     SelectionListener jobListColumnSelectionListener = new SelectionListener()
     {
+      @Override
       public void widgetDefaultSelected(SelectionEvent selectionEvent)
       {
       }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         TableColumn       tableColumn       = (TableColumn)selectionEvent.widget;

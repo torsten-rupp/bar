@@ -2494,10 +2494,12 @@ image.dispose();
         final Control nextControl = controls.get(i+1);
         SelectionListener selectionListener = new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
             Widgets.setFocus(nextControl);
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
           }
@@ -3333,13 +3335,15 @@ does not work on Windows? Even cursor keys trigger traversal event?
     if (text != null) button.setText(text);
     button.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
         setField(data,field,widget.getSelection());
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -3464,6 +3468,11 @@ does not work on Windows? Even cursor keys trigger traversal event?
     button.setImage(imageOff);
     button.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
@@ -3482,9 +3491,6 @@ does not work on Windows? Even cursor keys trigger traversal event?
           widget.setSelection(false);
           setField(data,field,false);
         }
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -3542,13 +3548,15 @@ does not work on Windows? Even cursor keys trigger traversal event?
     button.setText(text);
     button.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Button widget = (Button)selectionEvent.widget;
         setField(data,field,value);
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
     button.setSelection((getField(data,field) == value));
@@ -3620,13 +3628,15 @@ does not work on Windows? Even cursor keys trigger traversal event?
 
     text.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Text widget = (Text)selectionEvent.widget;
         setField(data,field,widget.getText());
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
     text.addModifyListener(new ModifyListener()
@@ -3792,13 +3802,15 @@ does not work on Windows? Even cursor keys trigger traversal event?
 
     styledText.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         StyledText widget = (StyledText)selectionEvent.widget;
         setField(data,field,widget.getText());
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
     styledText.addModifyListener(new ModifyListener()
@@ -3920,13 +3932,15 @@ does not work on Windows? Even cursor keys trigger traversal event?
 
     dateTime.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         DateTime widget = (DateTime)selectionEvent.widget;
         setField(data,field,getDate(widget));
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
     dateTime.addFocusListener(new FocusListener()
@@ -4052,13 +4066,15 @@ e composite widget
 
     dateTime.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         DateTime widget = (DateTime)selectionEvent.widget;
         setField(data,field,getTime(widget));
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
     dateTime.addFocusListener(new FocusListener()
@@ -4926,13 +4942,15 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
     combo.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Combo widget = (Combo)selectionEvent.widget;
         setField(data,field,widget.getSelection());
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -5627,13 +5645,15 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
     combo.addSelectionListener(new SelectionListener()
     {
+      @Override
+      public void widgetDefaultSelected(SelectionEvent selectionEvent)
+      {
+      }
+      @Override
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         Combo widget = (Combo)selectionEvent.widget;
         setField(data,field,widget.getText());
-      }
-      public void widgetDefaultSelected(SelectionEvent selectionEvent)
-      {
       }
     });
 
@@ -6304,18 +6324,25 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    */
   final public static SelectionListener DEFAULT_TABLE_SELECTION_LISTENER_STRING = new SelectionListener()
   {
+    @Override
+    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+    {
+    }
+    @Override
     public void widgetSelected(SelectionEvent selectionEvent)
     {
       TableColumn tableColumn = (TableColumn)selectionEvent.widget;
       Table       table       = tableColumn.getParent();
       Widgets.sortTableColumn(table,tableColumn,String.CASE_INSENSITIVE_ORDER);
     }
-    public void widgetDefaultSelected(SelectionEvent selectionEvent)
-    {
-    }
   };
   final public static SelectionListener DEFAULT_TABLE_SELECTION_LISTENER_INT = new SelectionListener()
   {
+    @Override
+    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+    {
+    }
+    @Override
     public void widgetSelected(SelectionEvent selectionEvent)
     {
       TableColumn tableColumn = (TableColumn)selectionEvent.widget;
@@ -6328,12 +6355,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
         }
       });
     }
-    public void widgetDefaultSelected(SelectionEvent selectionEvent)
-    {
-    }
   };
   final public static SelectionListener DEFAULT_TABLE_SELECTION_LISTENER_LONG = new SelectionListener()
   {
+    @Override
+    public void widgetDefaultSelected(SelectionEvent selectionEvent)
+    {
+    }
+    @Override
     public void widgetSelected(SelectionEvent selectionEvent)
     {
       TableColumn tableColumn = (TableColumn)selectionEvent.widget;
@@ -6345,9 +6374,6 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           return i1.compareTo(i2);
         }
       });
-    }
-    public void widgetDefaultSelected(SelectionEvent selectionEvent)
-    {
     }
   };
 
@@ -11282,13 +11308,15 @@ Dprintf.dprintf("");
       {
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             setField(data,field,value);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
         menuItem.setSelection(getField(data,field) == value);
@@ -11507,13 +11535,15 @@ Dprintf.dprintf("");
       {
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem widget = (MenuItem)selectionEvent.widget;
             setField(data,field,value);
-          }
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
         menuItem.setSelection((getField(data,field) == value));

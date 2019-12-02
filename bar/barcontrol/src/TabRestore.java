@@ -5061,9 +5061,11 @@ Dprintf.dprintf("");
       Widgets.layout(widgetStorageTree,1,0,TableLayoutData.NSWE);
       SelectionListener storageTreeColumnSelectionListener = new SelectionListener()
       {
+        @Override
         public void widgetDefaultSelected(SelectionEvent selectionEvent)
         {
         }
+        @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TreeColumn          treeColumn          = (TreeColumn)selectionEvent.widget;
@@ -5807,13 +5809,13 @@ Dprintf.dprintf("");
         menuItem.addSelectionListener(new SelectionListener()
         {
           @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             removeAllWithErrorStorageIndex();
-          }
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
           }
         });
 
@@ -7459,9 +7461,11 @@ Dprintf.dprintf("");
 
         menuItem.addSelectionListener(new SelectionListener()
         {
+          @Override
           public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
           }
+          @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             MenuItem     widget       = (MenuItem)selectionEvent.widget;
