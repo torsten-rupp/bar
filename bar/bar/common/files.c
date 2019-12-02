@@ -4750,6 +4750,42 @@ Errors File_changeDirectory(ConstString pathName)
   return File_changeDirectoryCString(String_cString(pathName));
 }
 
+String File_getCurrentDirectory(String pathName)
+{
+  #ifdef HAVE_GET_CURRENT_DIR_NAME
+    const char *currentDirectory;
+  #else
+    const char currentDirectory[MAX_PATH];
+  #endif
+
+  assert(pathName != NULL);
+
+  #ifdef HAVE_GET_CURRENT_DIR_NAME
+    currentDirectory = get_current_dir_name();
+    if (currentDirectory != NULL)
+    {
+      String_setBuffer(pathName,currentDirectory,strlen(currentDirectory));
+      free(currentDirectory);
+    }
+    else
+    {
+      String_clear(pathName);
+    }
+  #else
+    getcurrentDirectory = getwd(currentDirectory);
+    if (currentDirectory != NULL)
+    {
+      String_setBuffer(pathName,currentDirectory,strlen(currentDirectory));
+    }
+    else
+    {
+      String_clear(pathName);
+    }
+  #endif
+
+  return pathName;
+}
+
 Errors File_changeDirectoryCString(const char *pathName)
 {
   #if   defined(PLATFORM_LINUX)

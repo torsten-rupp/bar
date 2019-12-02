@@ -1656,6 +1656,17 @@ Errors File_changeDirectory(ConstString pathName);
 Errors File_changeDirectoryCString(const char *pathName);
 
 /***********************************************************************\
+* Name   : File_getCurrentDirectory
+* Purpose: get current directory
+* Input  : -
+* Output : -
+* Return : current path name
+* Notes  : -
+\***********************************************************************/
+
+String File_getCurrentDirectory(String pathName);
+
+/***********************************************************************\
 * Name   : File_readLink
 * Purpose: read link
 * Input  : linkName - link name
