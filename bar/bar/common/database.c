@@ -2060,9 +2060,10 @@ LOCAL String formatSQLString(String     sqlString,
 
 LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv[])
 {
-  const char *text,*format;
-  uint64     timestamp;
-  char       *s;
+  const char    *text,*format;
+  long long int n;
+  uint64        timestamp;
+  char          *s;
   #ifdef HAVE_GETDATE_R
     struct tm tmBuffer;
   #endif /* HAVE_GETDATE_R */
@@ -2081,9 +2082,15 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
   // convert to Unix timestamp
   if (text != NULL)
   {
-    timestamp = strtol(text,&s,10);
-    if (!stringIsEmpty(s))
+    // try convert number value
+    n = strtoll(text,&s,10);
+    if (stringIsEmpty(s))
     {
+      timestamp = (uint64)n;
+    }
+    else
+    {
+      // try convert string value
       #if   defined(HAVE_GETDATE_R)
         tm = (getdate_r(text,&tmBuffer) == 0) ? &tmBuffer : NULL;
       #elif defined(HAVE_GETDATE)
