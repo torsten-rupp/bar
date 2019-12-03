@@ -356,7 +356,7 @@ typedef struct ScheduleNode
   bool               noStorage;                               // TRUE to skip storage, only create incremental data
   bool               enabled;                                 // TRUE iff enabled
 
-  // run info
+  // running info
   uint64             lastExecutedDateTime;                    // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
 
   // cached statistics info
