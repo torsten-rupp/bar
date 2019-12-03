@@ -510,6 +510,29 @@ void Semaphore_setEnd(Semaphore *semaphore);
 
 #ifndef NDEBUG
 /***********************************************************************\
+* Name   : Semaphore_debugDump
+* Purpose: print debug info
+* Input  : semaphore - semaphore
+*          handle    - output file handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Semaphore_debugDump(const Semaphore *semaphore, FILE *handle);
+
+/***********************************************************************\
+* Name   : Semaphore_debugDumpInfo
+* Purpose: print debug info
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Semaphore_debugDumpInfo(FILE *handle);
+
+/***********************************************************************\
 * Name   : Semaphore_debugPrintInfo
 * Purpose: print debug info
 * Input  : -

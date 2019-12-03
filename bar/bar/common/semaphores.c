@@ -52,9 +52,9 @@
 
   const char *SEMAPHORE_LOCK_TYPE_NAMES[] =
   {
-    [SEMAPHORE_LOCK_TYPE_NONE]       = "NONE",
-    [SEMAPHORE_LOCK_TYPE_READ]       = "READ",
-    [SEMAPHORE_LOCK_TYPE_READ_WRITE] = "READ/WRITE"
+    [SEMAPHORE_LOCK_TYPE_NONE]       = "-",
+    [SEMAPHORE_LOCK_TYPE_READ]       = "R",
+    [SEMAPHORE_LOCK_TYPE_READ_WRITE] = "RW"
   };
 #endif /* not NDEBUG */
 
@@ -2351,98 +2351,120 @@ void Semaphore_setEnd(Semaphore *semaphore)
 }
 
 #ifndef NDEBUG
-void Semaphore_debugPrintInfo(void)
+void Semaphore_debugDump(const Semaphore *semaphore, FILE *handle)
 {
-  const Semaphore *semaphore;
-  char            s[64+1];
-  uint            i;
+  char s[64+1];
+  uint i;
+
+  assert(semaphore != NULL);
+  assert(handle != NULL);
 
   pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
 
   pthread_mutex_lock(&debugConsoleLock);
   {
-    fprintf(stderr,"Semaphore debug info:\n");
+    stringFormat(s,sizeof(s),"'%s'",semaphore->debug.name);  // Note: format extra to get name_long -> 'name_ instead of 'name'
+    fprintf(handle,"  %-64s 0x%016"PRIxPTR" (%s, line %lu): pending R %3u/RW %3u",s,(uintptr_t)semaphore,semaphore->debug.fileName,semaphore->debug.lineNb,semaphore->readRequestCount,semaphore->readWriteRequestCount);
+    #if !defined(NDEBUG) && defined(DEBUG_SHOW_LAST_INFO)
+      fprintf(handle,"\n");
+      debugPrintSemaphoreState("last readRequest",         "    ",&semaphore->debug.lastReadRequest     );
+      debugPrintSemaphoreState("last lastReadLock",        "    ",&semaphore->debug.lastReadLock        );
+      debugPrintSemaphoreState("last lastReadUnlock",      "    ",&semaphore->debug.lastReadUnlock      );
+      debugPrintSemaphoreState("last lastReadWriteRequest","    ",&semaphore->debug.lastReadWriteRequest);
+      debugPrintSemaphoreState("last lastReadWriteWakeup", "    ",&semaphore->debug.lastReadWriteWakeup );
+      debugPrintSemaphoreState("last lastReadWriteLock",   "    ",&semaphore->debug.lastReadWriteLock   );
+      debugPrintSemaphoreState("last lastReadWriteUnlock", "    ",&semaphore->debug.lastReadWriteUnlock );
+    #endif /* !DEBUG && DEBUG_SHOW_LAST_INFO */
+    switch (semaphore->lockType)
+    {
+      case SEMAPHORE_LOCK_TYPE_NONE:
+        fprintf(handle,"\n");
+        break;
+      case SEMAPHORE_LOCK_TYPE_READ:
+        fprintf(handle,", locked %s (%d)\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ],semaphore->readLockCount);
+        for (i = 0; i < semaphore->debug.lockedByCount; i++)
+        {
+          fprintf(handle,
+                  "    by thread '%s' (%s) at %s, line %lu\n",
+                  Thread_getName(semaphore->debug.lockedBy[i].threadId),
+                  Thread_getIdString(semaphore->debug.lockedBy[i].threadId),
+                  semaphore->debug.lockedBy[i].fileName,
+                  semaphore->debug.lockedBy[i].lineNb
+                 );
+        }
+        for (i = 0; i < semaphore->debug.pendingByCount; i++)
+        {
+          fprintf(handle,
+                  "    pending thread '%s' (%s) %s at %s, line %lu\n",
+                  Thread_getName(semaphore->debug.lockedBy[i].threadId),
+                  Thread_getIdString(semaphore->debug.pendingBy[i].threadId),
+                  SEMAPHORE_LOCK_TYPE_NAMES[semaphore->debug.pendingBy[i].lockType],
+                  semaphore->debug.pendingBy[i].fileName,
+                  semaphore->debug.pendingBy[i].lineNb
+                 );
+        }
+        break;
+      case SEMAPHORE_LOCK_TYPE_READ_WRITE:
+        fprintf(handle,", locked %s (%d)\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ_WRITE],semaphore->readWriteLockCount);
+        for (i = 0; i < semaphore->debug.lockedByCount; i++)
+        {
+          fprintf(handle,
+                  "    by thread '%s' (%s) at %s, line %lu\n",
+                  Thread_getName(semaphore->debug.lockedBy[i].threadId),
+                  Thread_getIdString(semaphore->debug.lockedBy[i].threadId),
+                  semaphore->debug.lockedBy[i].fileName,
+                  semaphore->debug.lockedBy[i].lineNb
+                 );
+        }
+        for (i = 0; i < semaphore->debug.pendingByCount; i++)
+        {
+          fprintf(handle,
+                  "    pending thread '%s' (%s) %s at %s, line %lu\n",
+                  Thread_getName(semaphore->debug.lockedBy[i].threadId),
+                  Thread_getIdString(semaphore->debug.pendingBy[i].threadId),
+                  SEMAPHORE_LOCK_TYPE_NAMES[semaphore->debug.pendingBy[i].lockType],
+                  semaphore->debug.pendingBy[i].fileName,
+                  semaphore->debug.pendingBy[i].lineNb
+                 );
+        }
+        break;
+      #ifndef NDEBUG
+        default:
+          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          break; /* not reached */
+      #endif /* NDEBUG */
+    }
+  }
+  pthread_mutex_unlock(&debugConsoleLock);
+}
+
+void Semaphore_debugDumpInfo(FILE *handle)
+{
+  const Semaphore *semaphore;
+
+  assert(handle != NULL);
+
+  pthread_once(&debugSemaphoreInitFlag,debugSemaphoreInit);
+
+  pthread_mutex_lock(&debugConsoleLock);
+  {
+    fprintf(handle,"Semaphore debug info:\n");
     pthread_mutex_lock(&debugSemaphoreLock);
     {
       LIST_ITERATE(&debugSemaphoreList,semaphore)
       {
-        stringFormat(s,sizeof(s),"'%s'",semaphore->debug.name);  // Note: format extra to get name_long -> 'name_ instead of 'name'
-        fprintf(stderr,"  %-64s 0x%016"PRIxPTR" (%s, line %lu): pending R %3u/RW %3u",s,(uintptr_t)semaphore,semaphore->debug.fileName,semaphore->debug.lineNb,semaphore->readRequestCount,semaphore->readWriteRequestCount);
-        #if !defined(NDEBUG) && defined(DEBUG_SHOW_LAST_INFO)
-          fprintf(stderr,"\n");
-          debugPrintSemaphoreState("last readRequest",         "    ",&semaphore->debug.lastReadRequest     );
-          debugPrintSemaphoreState("last lastReadLock",        "    ",&semaphore->debug.lastReadLock        );
-          debugPrintSemaphoreState("last lastReadUnlock",      "    ",&semaphore->debug.lastReadUnlock      );
-          debugPrintSemaphoreState("last lastReadWriteRequest","    ",&semaphore->debug.lastReadWriteRequest);
-          debugPrintSemaphoreState("last lastReadWriteWakeup", "    ",&semaphore->debug.lastReadWriteWakeup );
-          debugPrintSemaphoreState("last lastReadWriteLock",   "    ",&semaphore->debug.lastReadWriteLock   );
-          debugPrintSemaphoreState("last lastReadWriteUnlock", "    ",&semaphore->debug.lastReadWriteUnlock );
-        #endif /* !DEBUG && DEBUG_SHOW_LAST_INFO */
-        switch (semaphore->lockType)
-        {
-          case SEMAPHORE_LOCK_TYPE_NONE:
-            fprintf(stderr,"\n");
-            break;
-          case SEMAPHORE_LOCK_TYPE_READ:
-            fprintf(stderr," locked %s (%d)\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ],semaphore->readLockCount);
-            for (i = 0; i < semaphore->debug.lockedByCount; i++)
-            {
-              fprintf(stderr,
-                      "    by thread '%s' (%s) at %s, line %lu\n",
-                      Thread_getName(semaphore->debug.lockedBy[i].threadId),
-                      Thread_getIdString(semaphore->debug.lockedBy[i].threadId),
-                      semaphore->debug.lockedBy[i].fileName,
-                      semaphore->debug.lockedBy[i].lineNb
-                     );
-            }
-            for (i = 0; i < semaphore->debug.pendingByCount; i++)
-            {
-              fprintf(stderr,
-                      "    pending thread '%s' (%s) %s at %s, line %lu\n",
-                      Thread_getName(semaphore->debug.lockedBy[i].threadId),
-                      Thread_getIdString(semaphore->debug.pendingBy[i].threadId),
-                      SEMAPHORE_LOCK_TYPE_NAMES[semaphore->debug.pendingBy[i].lockType],
-                      semaphore->debug.pendingBy[i].fileName,
-                      semaphore->debug.pendingBy[i].lineNb
-                     );
-            }
-            break;
-          case SEMAPHORE_LOCK_TYPE_READ_WRITE:
-            fprintf(stderr," locked %s (%d)\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ_WRITE],semaphore->readWriteLockCount);
-            for (i = 0; i < semaphore->debug.lockedByCount; i++)
-            {
-              fprintf(stderr,
-                      "    by thread '%s' (%s) at %s, line %lu\n",
-                      Thread_getName(semaphore->debug.lockedBy[i].threadId),
-                      Thread_getIdString(semaphore->debug.lockedBy[i].threadId),
-                      semaphore->debug.lockedBy[i].fileName,
-                      semaphore->debug.lockedBy[i].lineNb
-                     );
-            }
-            for (i = 0; i < semaphore->debug.pendingByCount; i++)
-            {
-              fprintf(stderr,
-                      "    pending thread '%s' (%s) %s at %s, line %lu\n",
-                      Thread_getName(semaphore->debug.lockedBy[i].threadId),
-                      Thread_getIdString(semaphore->debug.pendingBy[i].threadId),
-                      SEMAPHORE_LOCK_TYPE_NAMES[semaphore->debug.pendingBy[i].lockType],
-                      semaphore->debug.pendingBy[i].fileName,
-                      semaphore->debug.pendingBy[i].lineNb
-                     );
-            }
-            break;
-          #ifndef NDEBUG
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break; /* not reached */
-          #endif /* NDEBUG */
-        }
+        Semaphore_debugDump(semaphore,handle);
       }
     }
     pthread_mutex_unlock(&debugSemaphoreLock);
-    fprintf(stderr,"\n");
+    fprintf(handle,"\n");
   }
   pthread_mutex_unlock(&debugConsoleLock);
+}
+
+void Semaphore_debugPrintInfo(void)
+{
+  Semaphore_debugDumpInfo(stderr);
 }
 #endif /* not NDEBUG */
 
