@@ -11845,7 +11845,7 @@ throw new Error("NYI");
    */
   private void updateDeviceImages()
   {
-    if (!widgetDeviceTable.disposed())
+    if (!widgetDeviceTable.isDisposed())
     {
       for (TableItem tableItem : widgetDeviceTable.getItems())
       {
