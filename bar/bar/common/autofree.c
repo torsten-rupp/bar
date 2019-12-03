@@ -286,7 +286,7 @@ void AutoFree_freeAll(AutoFreeList *autoFreeList)
 }
 
 #ifndef NDEBUG
-void AutoFree_dumpInfo(AutoFreeList *autoFreeList, FILE *handle)
+void AutoFree_debugDumpInfo(AutoFreeList *autoFreeList, FILE *handle)
 {
   AutoFreeNode *autoFreeNode;
 
@@ -304,9 +304,9 @@ void AutoFree_dumpInfo(AutoFreeList *autoFreeList, FILE *handle)
   pthread_mutex_unlock(&autoFreeList->lock);
 }
 
-void AutoFree_printInfo(AutoFreeList *autoFreeList)
+void AutoFree_debugPrintInfo(AutoFreeList *autoFreeList)
 {
-  AutoFree_dumpInfo(autoFreeList,stderr);
+  AutoFree_debugDumpInfo(autoFreeList,stderr);
 }
 #endif /* not NDEBUG */
 

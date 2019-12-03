@@ -243,20 +243,20 @@ void AutoFree_free(AutoFreeList *autoFreeList,
 void AutoFree_freeAll(AutoFreeList *autoFreeList);
 
 #ifndef NDEBUG
-
 /***********************************************************************\
-* Name   : AutoFree_dumpInfo
+* Name   : AutoFree_debugDumpInfo
 * Purpose: dump auto-free list
 * Input  : autoFreeList - auto-free list
+*          handle       - output file handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void AutoFree_dumpInfo(AutoFreeList *autoFreeList, FILE *handle);
+void AutoFree_debugDumpInfo(AutoFreeList *autoFreeList, FILE *handle);
 
 /***********************************************************************\
-* Name   : AutoFree_printInfo
+* Name   : AutoFree_debugPrintInfo
 * Purpose: print info for auto-free list
 * Input  : autoFreeList - auto-free list
 * Output : -
@@ -264,8 +264,7 @@ void AutoFree_dumpInfo(AutoFreeList *autoFreeList, FILE *handle);
 * Notes  : -
 \***********************************************************************/
 
-void AutoFree_printInfo(AutoFreeList *autoFreeList);
-
+void AutoFree_debugPrintInfo(AutoFreeList *autoFreeList);
 #endif /* not NDEBUG */
 
 #ifdef __cplusplus
