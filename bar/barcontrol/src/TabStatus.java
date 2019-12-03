@@ -193,7 +193,22 @@ class JobData
    * @param lastExecutedDateTime last executed date/time [s]
    * @param estimatedRestTime estimated rest time [s]
    */
-  JobData(String uuid, String master, String name, States state, String slaveHostName, SlaveStates slaveState, ArchiveTypes archiveType, long archivePartSize, String deltaCompressAlgorithm, String byteCompressAlgorithm, String cryptAlgorithm, String cryptType, String cryptPasswordMode, long lastExecutedDateTime, long estimatedRestTime)
+  JobData(String       uuid,
+          String       master,
+          String       name,
+          States       state,
+          String       slaveHostName,
+          SlaveStates  slaveState,
+          ArchiveTypes archiveType,
+          long         archivePartSize,
+          String       deltaCompressAlgorithm,
+          String       byteCompressAlgorithm,
+          String       cryptAlgorithm,
+          String       cryptType,
+          String       cryptPasswordMode,
+          long         lastExecutedDateTime,
+          long         estimatedRestTime
+         )
   {
     this.uuid                   = uuid;
     this.master                 = master;
@@ -649,7 +664,7 @@ public class TabStatus
     tableColumn = Widgets.addTableColumn(widgetJobTable,1,BARControl.tr("State"),         SWT.LEFT,  90,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
-    tableColumn = Widgets.addTableColumn(widgetJobTable,2,BARControl.tr("Slave"),          SWT.LEFT, 130,true );
+    tableColumn = Widgets.addTableColumn(widgetJobTable,2,BARControl.tr("Slave"),         SWT.LEFT, 130,true );
     tableColumn.setToolTipText(BARControl.tr("Click to sort for host."));
     tableColumn.addSelectionListener(jobListColumnSelectionListener);
     tableColumn = Widgets.addTableColumn(widgetJobTable,3,BARControl.tr("Type"),          SWT.LEFT,  90,true );
