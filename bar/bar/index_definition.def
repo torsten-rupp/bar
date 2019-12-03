@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS storage(
   totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
 );
 CREATE INDEX ON storage (entityId,name,created,state);
+//TODO: add?
 //CREATE INDEX ON storage (hostName);
 CREATE INDEX ON storage (name,totalEntryCount,created,state);
 CREATE INDEX ON storage (created,name,totalEntryCount,state);
