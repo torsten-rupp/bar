@@ -210,11 +210,12 @@ typedef struct JobNode
   String              volumeMessage;                    // load volume message
   bool                volumeUnloadFlag;                 // TRUE to unload volume
 
-  String              lastErrorMessage;
-
   // running info
   struct
   {
+    uint64            lastExecutedDateTime;             // last execution date/time (timestamp; read from file <jobs directory>/.<jobname>)
+    String            lastErrorMessage;
+
     PerformanceFilter entriesPerSecondFilter;
     PerformanceFilter bytesPerSecondFilter;
     PerformanceFilter storageBytesPerSecondFilter;
@@ -1284,17 +1285,6 @@ Errors Job_write(JobNode *jobNode);
 \***********************************************************************/
 
 void Job_writeModifiedAll(void);
-
-/***********************************************************************\
-* Name   : Job_getLastExecutedDateTime
-* Purpose: get last executed date/time of job
-* Input  : jobNode - job node
-* Output : -
-* Return : last executed date/time (timestamp)
-* Notes  : -
-\***********************************************************************/
-
-uint64 Job_getLastExecutedDateTime(const JobNode *jobNode);
 
 /***********************************************************************\
 * Name   : Job_setModified

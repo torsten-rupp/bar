@@ -283,7 +283,6 @@ LOCAL void freeScheduleNode(ScheduleNode *scheduleNode, void *userData)
 
   UNUSED_VARIABLE(userData);
 
-//  String_delete(scheduleNode->lastErrorMessage);
   String_delete(scheduleNode->customText);
   String_delete(scheduleNode->parentUUID);
   String_delete(scheduleNode->uuid);
@@ -2279,9 +2278,7 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
   Misc_performanceFilterDone(&jobNode->runningInfo.bytesPerSecondFilter       );
   Misc_performanceFilterDone(&jobNode->runningInfo.entriesPerSecondFilter     );
 
-  doneStatusInfo(&jobNode->statusInfo);
-
-  String_delete(jobNode->lastErrorMessage);
+  String_delete(jobNode->runningInfo.lastErrorMessage);
 
   String_delete(jobNode->volumeMessage);
 
@@ -2289,6 +2286,8 @@ LOCAL void freeJobNode(JobNode *jobNode, void *userData)
 
   String_delete(jobNode->scheduleCustomText);
   String_delete(jobNode->scheduleUUID);
+
+  doneStatusInfo(&jobNode->statusInfo);
 
   String_delete(jobNode->byName);
 
@@ -2431,58 +2430,60 @@ JobNode *Job_new(JobTypes    jobType,
   {
     Misc_getUUID(jobNode->job.uuid);
   }
-  jobNode->name                         = String_duplicate(name);
-  jobNode->jobType                      = jobType;
-  jobNode->modifiedFlag                 = FALSE;
+  jobNode->name                             = String_duplicate(name);
+  jobNode->jobType                          = jobType;
 
-  jobNode->lastScheduleCheckDateTime    = 0LL;
+  jobNode->modifiedFlag                     = FALSE;
 
-  jobNode->fileName                     = String_duplicate(fileName);
-  jobNode->fileModified                 = 0LL;
+  jobNode->lastScheduleCheckDateTime        = 0LL;
 
-  jobNode->masterIO                     = NULL;
+  jobNode->fileName                         = String_duplicate(fileName);
+  jobNode->fileModified                     = 0LL;
 
-  jobNode->jobState                     = JOB_STATE_NONE;
-  jobNode->slaveState                   = SLAVE_STATE_OFFLINE;
+  jobNode->masterIO                         = NULL;
 
-  jobNode->scheduleUUID                 = String_new();
-  jobNode->scheduleCustomText           = String_new();
-  jobNode->archiveType                  = ARCHIVE_TYPE_NORMAL;
-  jobNode->storageFlags                 = STORAGE_FLAGS_NONE;
-  jobNode->byName                       = String_new();
-
-  jobNode->requestedAbortFlag           = FALSE;
-  jobNode->abortedByInfo                = String_new();
-  jobNode->requestedVolumeNumber        = 0;
-  jobNode->volumeNumber                 = 0;
-  jobNode->volumeMessage                = String_new();
-  jobNode->volumeUnloadFlag             = FALSE;
+  jobNode->jobState                         = JOB_STATE_NONE;
+  jobNode->slaveState                       = SLAVE_STATE_OFFLINE;
 
   initStatusInfo(&jobNode->statusInfo);
+
+  jobNode->scheduleUUID                     = String_new();
+  jobNode->scheduleCustomText               = String_new();
+  jobNode->archiveType                      = ARCHIVE_TYPE_NORMAL;
+  jobNode->storageFlags                     = STORAGE_FLAGS_NONE;
+  jobNode->byName                           = String_new();
+
+  jobNode->requestedAbortFlag               = FALSE;
+  jobNode->abortedByInfo                    = String_new();
+  jobNode->requestedVolumeNumber            = 0;
+  jobNode->volumeNumber                     = 0;
+  jobNode->volumeMessage                    = String_new();
+  jobNode->volumeUnloadFlag                 = FALSE;
+
+  jobNode->runningInfo.lastExecutedDateTime = 0LL;
+  jobNode->runningInfo.lastErrorMessage     = String_new();
 
   Misc_performanceFilterInit(&jobNode->runningInfo.entriesPerSecondFilter,     10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&jobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-  jobNode->lastErrorMessage             = String_new();
-
   Job_resetRunningInfo(jobNode);
 
-  jobNode->executionCount.normal        = 0L;
-  jobNode->executionCount.full          = 0L;
-  jobNode->executionCount.incremental   = 0L;
-  jobNode->executionCount.differential  = 0L;
-  jobNode->executionCount.continuous    = 0L;
-  jobNode->averageDuration.normal       = 0LL;
-  jobNode->averageDuration.full         = 0LL;
-  jobNode->averageDuration.incremental  = 0LL;
-  jobNode->averageDuration.differential = 0LL;
-  jobNode->averageDuration.continuous   = 0LL;
-  jobNode->totalEntityCount             = 0L;
-  jobNode->totalStorageCount            = 0L;
-  jobNode->totalStorageSize             = 0L;
-  jobNode->totalEntryCount              = 0L;
-  jobNode->totalEntrySize               = 0L;
+  jobNode->executionCount.normal            = 0L;
+  jobNode->executionCount.full              = 0L;
+  jobNode->executionCount.incremental       = 0L;
+  jobNode->executionCount.differential      = 0L;
+  jobNode->executionCount.continuous        = 0L;
+  jobNode->averageDuration.normal           = 0LL;
+  jobNode->averageDuration.full             = 0LL;
+  jobNode->averageDuration.incremental      = 0LL;
+  jobNode->averageDuration.differential     = 0LL;
+  jobNode->averageDuration.continuous       = 0LL;
+  jobNode->totalEntityCount                 = 0L;
+  jobNode->totalStorageCount                = 0L;
+  jobNode->totalStorageSize                 = 0L;
+  jobNode->totalEntryCount                  = 0L;
+  jobNode->totalEntrySize                   = 0L;
 
   return jobNode;
 }
@@ -2502,59 +2503,61 @@ JobNode *Job_copy(const JobNode *jobNode,
 
   // init job node
   Job_initDuplicate(&newJobNode->job,&jobNode->job);
-  newJobNode->name                         = File_getBaseName(String_new(),fileName);
-  newJobNode->jobType                      = jobNode->jobType;
+  newJobNode->name                             = File_getBaseName(String_new(),fileName);
+  newJobNode->jobType                          = jobNode->jobType;
 
-  newJobNode->lastScheduleCheckDateTime    = 0LL;
+  newJobNode->modifiedFlag                     = TRUE;
 
-  newJobNode->fileName                     = String_duplicate(fileName);
-  newJobNode->fileModified                 = 0LL;
+  newJobNode->lastScheduleCheckDateTime        = 0LL;
 
-  newJobNode->masterIO                     = NULL;
+  newJobNode->fileName                         = String_duplicate(fileName);
+  newJobNode->fileModified                     = 0LL;
 
-  newJobNode->jobState                     = JOB_STATE_NONE;
-  newJobNode->slaveState                   = SLAVE_STATE_OFFLINE;
+  newJobNode->masterIO                         = NULL;
 
-  newJobNode->scheduleUUID                 = String_new();
-  newJobNode->scheduleCustomText           = String_new();
-  newJobNode->archiveType                  = ARCHIVE_TYPE_NORMAL;
-  newJobNode->storageFlags                 = STORAGE_FLAGS_NONE;
-  newJobNode->byName                       = String_new();
-
-  newJobNode->requestedAbortFlag           = FALSE;
-  newJobNode->abortedByInfo                = String_new();
-  newJobNode->requestedVolumeNumber        = 0;
-  newJobNode->volumeNumber                 = 0;
-  newJobNode->volumeMessage                = String_new();
-  newJobNode->volumeUnloadFlag             = FALSE;
-
-  newJobNode->modifiedFlag                 = TRUE;
+  newJobNode->jobState                         = JOB_STATE_NONE;
+  newJobNode->slaveState                       = SLAVE_STATE_OFFLINE;
 
   initStatusInfo(&newJobNode->statusInfo);
+
+  newJobNode->scheduleUUID                     = String_new();
+  newJobNode->scheduleCustomText               = String_new();
+  newJobNode->archiveType                      = ARCHIVE_TYPE_NORMAL;
+  newJobNode->storageFlags                     = STORAGE_FLAGS_NONE;
+  newJobNode->byName                           = String_new();
+
+  newJobNode->requestedAbortFlag               = FALSE;
+  newJobNode->abortedByInfo                    = String_new();
+  newJobNode->requestedVolumeNumber            = 0;
+  newJobNode->volumeNumber                     = 0;
+  newJobNode->volumeMessage                    = String_new();
+  newJobNode->volumeUnloadFlag                 = FALSE;
+
+  newJobNode->runningInfo.lastExecutedDateTime = 0LL;
+  newJobNode->runningInfo.lastErrorMessage     = String_new();
 
   Misc_performanceFilterInit(&newJobNode->runningInfo.entriesPerSecondFilter,     10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.bytesPerSecondFilter,       10*60);
   Misc_performanceFilterInit(&newJobNode->runningInfo.storageBytesPerSecondFilter,10*60);
 
-  newJobNode->lastErrorMessage             = String_new();
 
   Job_resetRunningInfo(newJobNode);
 
-  newJobNode->executionCount.normal        = 0L;
-  newJobNode->executionCount.full          = 0L;
-  newJobNode->executionCount.incremental   = 0L;
-  newJobNode->executionCount.differential  = 0L;
-  newJobNode->executionCount.continuous    = 0L;
-  newJobNode->averageDuration.normal       = 0LL;
-  newJobNode->averageDuration.full         = 0LL;
-  newJobNode->averageDuration.incremental  = 0LL;
-  newJobNode->averageDuration.differential = 0LL;
-  newJobNode->averageDuration.continuous   = 0LL;
-  newJobNode->totalEntityCount             = 0L;
-  newJobNode->totalStorageCount            = 0L;
-  newJobNode->totalStorageSize             = 0L;
-  newJobNode->totalEntryCount              = 0L;
-  newJobNode->totalEntrySize               = 0L;
+  newJobNode->executionCount.normal            = 0L;
+  newJobNode->executionCount.full              = 0L;
+  newJobNode->executionCount.incremental       = 0L;
+  newJobNode->executionCount.differential      = 0L;
+  newJobNode->executionCount.continuous        = 0L;
+  newJobNode->averageDuration.normal           = 0LL;
+  newJobNode->averageDuration.full             = 0LL;
+  newJobNode->averageDuration.incremental      = 0LL;
+  newJobNode->averageDuration.differential     = 0LL;
+  newJobNode->averageDuration.continuous       = 0LL;
+  newJobNode->totalEntityCount                 = 0L;
+  newJobNode->totalStorageCount                = 0L;
+  newJobNode->totalStorageSize                 = 0L;
+  newJobNode->totalEntryCount                  = 0L;
+  newJobNode->totalEntrySize                   = 0L;
 
   return newJobNode;
 }
@@ -2764,6 +2767,13 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
   assert(jobNode != NULL);
   assert(Semaphore_isLocked(&jobList.lock));
 
+  // init variables
+  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
+  {
+    scheduleNode->lastExecutedDateTime = 0LL;
+  }
+  jobNode->runningInfo.lastExecutedDateTime = 0LL;
+
   // get filename
   fileName = String_new();
   File_splitFileName(jobNode->fileName,&pathName,&baseName);
@@ -2785,14 +2795,10 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
     line = String_new();
 
     // read file
-    LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-    {
-      scheduleNode->lastExecutedDateTime = 0LL;
-    }
     if (File_getLine(&fileHandle,line,NULL,NULL))
     {
       // first line: <last execution time stamp> or <last execution time stamp>+<type>
-      if      (String_parse(line,STRING_BEGIN,"%lld %64s",NULL,&n,s))
+      if      (String_parse(line,STRING_BEGIN,"%"PRIu64" %64s",NULL,&n,s))
       {
         if (Archive_parseType(s,&archiveType,NULL))
         {
@@ -2804,19 +2810,21 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
             }
           }
         }
+        if (n > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n;
       }
-      else if (String_parse(line,STRING_BEGIN,"%lld",NULL,&n))
+      else if (String_parse(line,STRING_BEGIN,"%"PRIu64,NULL,&n))
       {
         LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
         {
           scheduleNode->lastExecutedDateTime = n;
         }
+        if (n > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n;
       }
 
       // other lines: <last execution time stamp>+<type>
       while (File_getLine(&fileHandle,line,NULL,NULL))
       {
-        if (String_parse(line,STRING_BEGIN,"%lld %64s",NULL,&n,s))
+        if (String_parse(line,STRING_BEGIN,"%"PRIu64" %64s",NULL,&n,s))
         {
           if (Archive_parseType(s,&archiveType,NULL))
           {
@@ -2828,10 +2836,11 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
               }
             }
           }
+          if (n > jobNode->runningInfo.lastExecutedDateTime) jobNode->runningInfo.lastExecutedDateTime = n;
         }
       }
     }
-    jobNode->lastScheduleCheckDateTime = Job_getLastExecutedDateTime(jobNode);
+    jobNode->lastScheduleCheckDateTime = jobNode->runningInfo.lastExecutedDateTime;
 
     String_delete(line);
 
@@ -2885,10 +2894,6 @@ Errors Job_readScheduleInfo(JobNode *jobNode)
     }
   }
 
-//TODO: remove
-  // update "forever"-nodes
-//  insertForeverPersistenceNodes(&jobNode->job.persistenceList);
-
   // free resources
   String_delete(fileName);
 
@@ -2934,7 +2939,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
     }
 
     // write file: last execution time stamp
-    error = File_printLine(&fileHandle,"%lld",executeEndDateTime);
+    error = File_printLine(&fileHandle,"%"PRIu64,executeEndDateTime);
     if (error != ERROR_NONE)
     {
       File_close(&fileHandle);
@@ -2958,7 +2963,7 @@ Errors Job_writeScheduleInfo(JobNode *jobNode, ArchiveTypes archiveType, uint64 
       // write <last execution time stamp>+<type>
       if (lastExecutedDateTime > 0LL)
       {
-        error = File_printLine(&fileHandle,"%lld %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType));
+        error = File_printLine(&fileHandle,"%"PRIu64" %s",lastExecutedDateTime,Archive_archiveTypeToString(archiveType));
         if (error != ERROR_NONE)
         {
           File_close(&fileHandle);
@@ -3319,8 +3324,6 @@ Errors Job_rereadAll(ConstString jobsDirectory)
                            );
           assert(jobNode != NULL);
           List_append(&jobList,jobNode);
-//TODO: remove
-STRING_CHECK_VALID(jobNode->lastErrorMessage);
 
           // notify about changes
           Job_listChanged();
@@ -3574,26 +3577,6 @@ void Job_writeModifiedAll(void)
       }
     }
   }
-}
-
-uint64 Job_getLastExecutedDateTime(const JobNode *jobNode)
-{
-  uint64             lastExecutedDateTime;
-  const ScheduleNode *scheduleNode;
-
-  assert(jobNode != NULL);
-  assert(Semaphore_isLocked(&jobList.lock));
-
-  lastExecutedDateTime = 0LL;
-  LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
-  {
-    if (scheduleNode->lastExecutedDateTime > lastExecutedDateTime)
-    {
-      lastExecutedDateTime = scheduleNode->lastExecutedDateTime;
-    }
-  }
-
-  return lastExecutedDateTime;
 }
 
 void Job_trigger(JobNode      *jobNode,
