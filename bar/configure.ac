@@ -4047,7 +4047,7 @@ AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() availa
 AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
 AC_CHECK_FUNCTION(usleep,     [HAVE_USLEEP=1; AC_DEFINE(HAVE_USLEEP,1,[usleep() available])])
 AC_CHECK_FUNCTION(nanosleep,  AC_DEFINE(HAVE_NANOSLEEP,  1,[nanosleep() available]))
-AC_CHECK_FUNCTION(timemg,     AC_DEFINE(HAVE_TIMEGM,     1,[timegm() available]))
+AC_CHECK_FUNCTION(timegm,     AC_DEFINE(HAVE_TIMEGM,     1,[timegm() available]))
 AC_CHECK_FUNCTION(strptime,   AC_DEFINE(HAVE_STRPTIME,   1,[strptime() available]))
 
 AC_CHECK_FUNCTION(pipe,   AC_DEFINE(HAVE_PIPE,   1,[pipe() available]))
