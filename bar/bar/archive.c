@@ -3745,6 +3745,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           error = writeFileChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
+            Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
         }
@@ -4344,6 +4345,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           error = writeImageChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
+            Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
         }
@@ -4979,6 +4981,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           error = writeHardLinkChunks(archiveEntryInfo);
           if (error != ERROR_NONE)
           {
+            Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
         }
@@ -7575,10 +7578,8 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   if (!archiveHandle->storageFlags.dryRun)
   {
-    // lock archive
+    // lock archive (Note: directory entries are created with permanent lock)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
-//TODO: required?
-assert(Semaphore_isOwned(&archiveHandle->lock));
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
@@ -7808,7 +7809,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   if (!archiveHandle->storageFlags.dryRun)
   {
-    // lock archive
+    // lock archive (Note: link entries are created with permanent lock)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
@@ -8489,7 +8490,7 @@ assert(Semaphore_isOwned(&archiveHandle->lock));
 
   if (!archiveHandle->storageFlags.dryRun)
   {
-    // lock archive
+    // lock archive (Note: special entries are created with permanent lock)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
