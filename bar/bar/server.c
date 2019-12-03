@@ -8179,8 +8179,8 @@ LOCAL void serverCommand_jobList(ClientInfo *clientInfo, IndexHandle *indexHandl
                           Crypt_algorithmToString(jobNode->job.options.cryptAlgorithms[0],"unknown"),
                           (jobNode->job.options.cryptAlgorithms[0] != CRYPT_ALGORITHM_NONE) ? Crypt_typeToString(jobNode->job.options.cryptType) : "none",
                           ConfigValue_selectToString(CONFIG_VALUE_PASSWORD_MODES,jobNode->job.options.cryptPasswordMode,NULL),
-                          Job_getLastExecutedDateTime(jobNode),
-                          jobNode->lastErrorMessage,
+                          jobNode->runningInfo.lastExecutedDateTime,
+                          jobNode->runningInfo.lastErrorMessage,
                           jobNode->runningInfo.estimatedRestTime
                          );
     }
@@ -8251,8 +8251,8 @@ LOCAL void serverCommand_jobInfo(ClientInfo *clientInfo, IndexHandle *indexHandl
     // format and send result
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
                         "lastExecutedDateTime=%"PRIu64" lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%"PRIu64" averageDurationFull=%"PRIu64" averageDurationIncremental=%"PRIu64" averageDurationDifferential=%"PRIu64" averageDurationContinuous=%"PRIu64" totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64,
-                        Job_getLastExecutedDateTime(jobNode),
-                        jobNode->lastErrorMessage,
+                        jobNode->runningInfo.lastExecutedDateTime,
+                        jobNode->runningInfo.lastErrorMessage,
                         jobNode->executionCount.normal,
                         jobNode->executionCount.full,
                         jobNode->executionCount.incremental,
@@ -18820,23 +18820,23 @@ Errors Server_run(ServerModes       mode,
                        jobNode->job.uuid,
                        NULL  // scheduleUUID
                       );
-//TODO: remove      jobNode->lastExecutedDateTime         = jobAggregateInfo.lastExecutedDateTime;
-      String_set(jobNode->lastErrorMessage,jobAggregateInfo.lastErrorMessage);
-      jobNode->executionCount.normal        = jobAggregateInfo.executionCount.normal;
-      jobNode->executionCount.full          = jobAggregateInfo.executionCount.full;
-      jobNode->executionCount.incremental   = jobAggregateInfo.executionCount.incremental;
-      jobNode->executionCount.differential  = jobAggregateInfo.executionCount.differential;
-      jobNode->executionCount.continuous    = jobAggregateInfo.executionCount.continuous;
-      jobNode->averageDuration.normal       = jobAggregateInfo.averageDuration.normal;
-      jobNode->averageDuration.full         = jobAggregateInfo.averageDuration.full;
-      jobNode->averageDuration.incremental  = jobAggregateInfo.averageDuration.incremental;
-      jobNode->averageDuration.differential = jobAggregateInfo.averageDuration.differential;
-      jobNode->averageDuration.continuous   = jobAggregateInfo.averageDuration.continuous;
-      jobNode->totalEntityCount             = jobAggregateInfo.totalEntityCount;
-      jobNode->totalStorageCount            = jobAggregateInfo.totalStorageCount;
-      jobNode->totalStorageSize             = jobAggregateInfo.totalStorageSize;
-      jobNode->totalEntryCount              = jobAggregateInfo.totalEntryCount;
-      jobNode->totalEntrySize               = jobAggregateInfo.totalEntrySize;
+      jobNode->runningInfo.lastExecutedDateTime = jobAggregateInfo.lastExecutedDateTime;
+      String_set(jobNode->runningInfo.lastErrorMessage,jobAggregateInfo.lastErrorMessage);
+      jobNode->executionCount.normal            = jobAggregateInfo.executionCount.normal;
+      jobNode->executionCount.full              = jobAggregateInfo.executionCount.full;
+      jobNode->executionCount.incremental       = jobAggregateInfo.executionCount.incremental;
+      jobNode->executionCount.differential      = jobAggregateInfo.executionCount.differential;
+      jobNode->executionCount.continuous        = jobAggregateInfo.executionCount.continuous;
+      jobNode->averageDuration.normal           = jobAggregateInfo.averageDuration.normal;
+      jobNode->averageDuration.full             = jobAggregateInfo.averageDuration.full;
+      jobNode->averageDuration.incremental      = jobAggregateInfo.averageDuration.incremental;
+      jobNode->averageDuration.differential     = jobAggregateInfo.averageDuration.differential;
+      jobNode->averageDuration.continuous       = jobAggregateInfo.averageDuration.continuous;
+      jobNode->totalEntityCount                 = jobAggregateInfo.totalEntityCount;
+      jobNode->totalStorageCount                = jobAggregateInfo.totalStorageCount;
+      jobNode->totalStorageSize                 = jobAggregateInfo.totalStorageSize;
+      jobNode->totalEntryCount                  = jobAggregateInfo.totalEntryCount;
+      jobNode->totalEntrySize                   = jobAggregateInfo.totalEntrySize;
 
       LIST_ITERATE(&jobNode->job.options.scheduleList,scheduleNode)
       {
