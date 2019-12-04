@@ -17187,7 +17187,8 @@ LOCAL void serverCommand_indexStoragesInfo(ClientInfo *clientInfo, IndexHandle *
 
 /***********************************************************************\
 * Name   : serverCommand_indexEntriesInfo
-* Purpose: get index database entries info
+* Purpose: get index database entries info of currently selected index
+*          entries
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
