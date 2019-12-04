@@ -4724,7 +4724,6 @@ Errors updateConfig(void)
     String_delete(configFileName);
     return ERROR_NO_WRITABLE_CONFIG;
   }
-fprintf(stderr,"%s, %d: x=%s\n",__FILE__,__LINE__,String_cString(configFileName));
 
   // read config file lines
   error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
@@ -10901,8 +10900,6 @@ exit(1);
     return error;
   }
 
-#warning remove
-#if 0
   // run
   error = ERROR_NONE;
   if      (daemonFlag)
@@ -10921,9 +10918,7 @@ exit(1);
   {
     error = runInteractive(argc,argv);
   }
-#else
-    (void)updateConfig();
-#endif
+
   // delete temporary directory
   File_delete(tmpDirectory,TRUE);
 
