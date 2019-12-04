@@ -309,6 +309,7 @@ LOCAL_INLINE void listInsert(void *list,
         );
   assert(node != NULL);
 
+  // insert into list
   if      (nextNode != NULL)
   {
     // insert in middle of list
@@ -340,12 +341,12 @@ LOCAL_INLINE void listInsert(void *list,
     ((List*)list)->tail  = node;
     ((List*)list)->count = 1;
   }
-
   assert(   ((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL))
          || ((((List*)list)->count == 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL) && (((List*)list)->head == ((List*)list)->tail))
          || ((((List*)list)->count > 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
 
+  // add reference to list
   #ifndef NDEBUG
     pthread_once(&debugListInitFlag,debugListInit);
 
@@ -386,17 +387,18 @@ LOCAL_INLINE void listRemove(void *list,
   assert(((List*)list)->count > 0);
   assert(node != NULL);
 
+  // remove from list
   if (((Node*)node)->prev != NULL) ((Node*)node)->prev->next = ((Node*)node)->next;
   if (((Node*)node)->next != NULL) ((Node*)node)->next->prev = ((Node*)node)->prev;
   if ((Node*)node == ((List*)list)->head) ((List*)list)->head = ((Node*)node)->next;
   if ((Node*)node == ((List*)list)->tail) ((List*)list)->tail = ((Node*)node)->prev;
   ((List*)list)->count--;
-
   assert(   ((((List*)list)->count == 0) && (((List*)list)->head == NULL) && (((List*)list)->tail == NULL))
          || ((((List*)list)->count == 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL) && (((List*)list)->head == ((List*)list)->tail))
          || ((((List*)list)->count > 1) && (((List*)list)->head != NULL) && (((List*)list)->tail != NULL))
         );
 
+  // remove reference to list
   #ifndef NDEBUG
     pthread_once(&debugListInitFlag,debugListInit);
 
