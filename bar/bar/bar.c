@@ -1193,6 +1193,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_DEPRECATED        ("remote-host-port",                 NULL,-1,                                                       NULL,NULL,"slave-host-port",TRUE),
   CONFIG_VALUE_DEPRECATED        ("remote-host-force-ssl",            NULL,-1,                                                       NULL,NULL,"slave-host-force-tls",TRUE),
   CONFIG_VALUE_DEPRECATED        ("slave-host-force-ssl",             NULL,-1,                                                       NULL,NULL,"slave-host-force-tls",TRUE),
+  // Note: archive-file-mode=overwrite
+  CONFIG_VALUE_DEPRECATED        ("overwrite-archive-files",          &globalOptions.archiveFileMode,-1,                             configValueParseDeprecatedArchiveFileModeOverwrite,NULL,"archive-file-mode",TRUE),
   // Note: restore-entry-mode=overwrite
   CONFIG_VALUE_DEPRECATED        ("overwrite-files",                  &globalOptions.restoreEntryMode,-1,                            configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entry-mode=overwrite",TRUE),
   CONFIG_VALUE_DEPRECATED        ("mount-device",                     &globalOptions.mountList,-1,                                   configValueParseDeprecatedMountDevice,NULL,"mount",TRUE),
@@ -1200,7 +1202,6 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_DEPRECATED        ("stop-on-error",                    &globalOptions.noStopOnErrorFlag,-1,                           configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error",TRUE),
 
   // ignored
-  CONFIG_VALUE_IGNORE            ("overwrite-archive-files",                                                                         "archive-file-mode",TRUE),
 );
 
 /*---------------------------------------------------------------------*/

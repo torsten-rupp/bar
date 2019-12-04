@@ -130,7 +130,8 @@ LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userD
 // handle deprecated configuration values
 LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
@@ -238,14 +239,15 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueParseDeprecatedRemotePort,NULL,"slave-host-port",TRUE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
+  // Note: archive-file-mode=overwrite
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-archive-files",   JobNode,job.options.archiveFileMode,             configValueParseDeprecatedArchiveFileModeOverwrite,NULL,"archive-file-mode",TRUE),
   // Note: restore-entry-mode=overwrite
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entry-mode=overwrite",TRUE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueParseDeprecatedMountDevice,NULL,"mount",TRUE),
   CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error",TRUE),
 
   // ignored
   CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
-  CONFIG_VALUE_IGNORE             ("overwrite-archive-files",                                                    "archive-file-mode",TRUE),
 );
 
 /***************************** Variables *******************************/
@@ -2138,7 +2140,7 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
 }
 
 /***********************************************************************\
-* Name   : configValueParseDeprecatedOverwriteFiles
+* Name   : configValueParseDeprecatedArchiveFileModeOverwrite
 * Purpose: config value option call back for deprecated overwrite-files
 * Input  : userData              - user data
 *          variable              - config variable
@@ -2151,7 +2153,37 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueParseDeprecatedRestoreEntryModeOverwrite
+* Purpose: config value option call back for deprecated overwrite-files
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   assert(variable != NULL);
   assert(value != NULL);
