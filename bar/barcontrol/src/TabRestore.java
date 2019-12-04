@@ -3076,8 +3076,56 @@ Dprintf.dprintf("");
     EntryTypes   entryType;
     String       name;
     long         dateTime;
-    long         size;              // file/directory size
+    long         size;              // file/image/directory size
+    long         fragmentOffset;
+    long         fragmentSize;
     boolean      checked;           // true iff check mark set
+
+    /** create entry index data
+     * @param indexId index id
+     * @param jobName job name
+     * @param archiveType archive type
+     * @param hostName host name
+     * @param storageName storage archive name
+     * @param storageDateTime archive date/time (timestamp)
+     * @param entryType entry type
+     * @param name entry name
+     * @param dateTime date/time (timestamp)
+     * @param size size [bytes]
+     * @param fragmentOffset fragment offset [0..n-1]
+     * @param fragmentSize fragment size [bytes]
+     */
+    EntryIndexData(long         indexId,
+                   String       jobName,
+                   ArchiveTypes archiveType,
+                   String       hostName,
+                   String       storageName,
+                   long         storageDateTime,
+                   EntryTypes   entryType,
+                   String       name,
+                   long         dateTime,
+                   long         size,
+                   long         fragmentOffset,
+                   long         fragmentSize
+                  )
+    {
+      super(indexId);
+
+      assert ((indexId & 0x0000000F) >= 4) && ((indexId & 0x0000000F) <= 10): indexId;
+
+      this.jobName         = jobName;
+      this.archiveType     = archiveType;
+      this.hostName        = hostName;
+      this.storageName     = storageName;
+      this.storageDateTime = storageDateTime;
+      this.entryType       = entryType;
+      this.name            = name;
+      this.dateTime        = dateTime;
+      this.size            = size;
+      this.fragmentOffset  = fragmentOffset;
+      this.fragmentSize    = fragmentSize;
+      this.checked         = false;
+    }
 
     /** create entry index data
      * @param indexId index id
@@ -3103,24 +3151,11 @@ Dprintf.dprintf("");
                    long         size
                   )
     {
-      super(indexId);
-
-      assert ((indexId & 0x0000000F) >= 4) && ((indexId & 0x0000000F) <= 10): indexId;
-
-      this.jobName         = jobName;
-      this.archiveType     = archiveType;
-      this.hostName        = hostName;
-      this.storageName     = storageName;
-      this.storageDateTime = storageDateTime;
-      this.entryType       = entryType;
-      this.name            = name;
-      this.dateTime        = dateTime;
-      this.size            = size;
-      this.checked         = false;
+      this(indexId,jobName,archiveType,hostName,storageName,storageDateTime,entryType,name,dateTime,size,0L,0L);
     }
 
     /** create entry data
-     * @param entryId entry id
+     * @param indexId entry id
      * @param jobName job name
      * @param archiveType archive type
      * @param hostName host name
@@ -3130,9 +3165,9 @@ Dprintf.dprintf("");
      * @param name entry name
      * @param dateTime date/time (timestamp)
      */
-    EntryIndexData(long entryId, String jobName, ArchiveTypes archiveType, String hostName, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
+    EntryIndexData(long indexId, String jobName, ArchiveTypes archiveType, String hostName, String storageName, long storageDateTime, EntryTypes entryType, String name, long dateTime)
     {
-      this(entryId,jobName,archiveType,hostName,storageName,storageDateTime,entryType,name,dateTime,0L);
+      this(indexId,jobName,archiveType,hostName,storageName,storageDateTime,entryType,name,dateTime,0L);
     }
 
     /** get total size
@@ -3217,7 +3252,8 @@ Dprintf.dprintf("");
       NAME,
       TYPE,
       SIZE,
-      DATE
+      DATE,
+      FRAGMENT
     };
 
     private SortModes sortMode;
@@ -3233,7 +3269,9 @@ Dprintf.dprintf("");
       else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TYPE;
       else if (table.getColumn(3) == sortColumn) sortMode = SortModes.SIZE;
       else if (table.getColumn(4) == sortColumn) sortMode = SortModes.DATE;
+      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.FRAGMENT;
       else                                       sortMode = SortModes.NAME;
+Dprintf.dprintf("sortMode=%s",sortMode);
     }
 
     /** create entry data comparator
@@ -3270,6 +3308,10 @@ Dprintf.dprintf("");
             if      (entryIndexData1.dateTime < entryIndexData2.dateTime) return -1;
             else if (entryIndexData1.dateTime > entryIndexData2.dateTime) return  1;
             else                                                          return  0;
+          case FRAGMENT:
+            if      (entryIndexData1.fragmentOffset < entryIndexData2.fragmentOffset) return -1;
+            else if (entryIndexData1.fragmentOffset > entryIndexData2.fragmentOffset) return  1;
+            else                                                                      return  0;
           default:
             return 0;
         }
@@ -3829,7 +3871,9 @@ Dprintf.dprintf("");
                                                                                                                 EntryTypes.FILE,
                                                                                                                 fileName,
                                                                                                                 dateTime,
-                                                                                                                size
+                                                                                                                size,
+                                                                                                                fragmentOffset,
+                                                                                                                fragmentSize
                                                                                                                )
                                                                                             );
                                                                     }
@@ -3838,6 +3882,8 @@ Dprintf.dprintf("");
                                                                     {
                                                                       String imageName   = valueMap.getString("name"       );
                                                                       long   size        = valueMap.getLong  ("size"       );
+//TODO: implemente blockSize
+                                                                      int    blockSize   = 1;
                                                                       long   blockOffset = valueMap.getLong  ("blockOffset");
                                                                       long   blockCount  = valueMap.getLong  ("blockCount" );
 
@@ -3851,7 +3897,9 @@ Dprintf.dprintf("");
                                                                                                                 EntryTypes.IMAGE,
                                                                                                                 imageName,
                                                                                                                 0L,
-                                                                                                                size
+                                                                                                                size,
+                                                                                                                blockOffset*blockSize,
+                                                                                                                blockCount*blockSize
                                                                                                                )
                                                                                             );
                                                                     }
@@ -3915,7 +3963,9 @@ Dprintf.dprintf("");
                                                                                                                 EntryTypes.HARDLINK,
                                                                                                                 fileName,
                                                                                                                 dateTime,
-                                                                                                                size
+                                                                                                                size,
+                                                                                                                fragmentOffset,
+                                                                                                                fragmentSize
                                                                                                                )
                                                                                             );
                                                                     }
@@ -3986,7 +4036,8 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
+                                              String.format("%d..%d",entryIndexData.fragmentOffset,entryIndexData.fragmentOffset+((entryIndexData.fragmentSize > 0) ? entryIndexData.fragmentSize-1 : 0))
                                              );
                       break;
                     case IMAGE:
@@ -3996,7 +4047,8 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
+                                              String.format("%d..%d",entryIndexData.fragmentOffset,entryIndexData.fragmentOffset+((entryIndexData.fragmentSize > 0) ? entryIndexData.fragmentSize-1 : 0))
                                              );
                       break;
                     case DIRECTORY:
@@ -4006,7 +4058,8 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
+                                              ""
                                              );
                       break;
                     case LINK:
@@ -4016,7 +4069,8 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               "",
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
+                                              ""
                                              );
                       break;
                     case HARDLINK:
@@ -4026,7 +4080,8 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
+                                              String.format("%d..%d",entryIndexData.fragmentOffset,entryIndexData.fragmentOffset+((entryIndexData.fragmentSize > 0) ? entryIndexData.fragmentSize-1 : 0))
                                              );
                       break;
                     case SPECIAL:
@@ -4036,7 +4091,8 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
+                                              ""
                                              );
                       break;
                   }
@@ -6286,6 +6342,9 @@ Dprintf.dprintf("");
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       tableColumn = Widgets.addTableColumn(widgetEntryTable,4,BARControl.tr("Date/Time"),SWT.LEFT, 140,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for date."));
+      tableColumn.addSelectionListener(entryListColumnSelectionListener);
+      tableColumn = Widgets.addTableColumn(widgetEntryTable,5,BARControl.tr("Fragment"), SWT.LEFT, 140,true);
+      tableColumn.setToolTipText(BARControl.tr("Click to sort for fragment."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       widgetEntryTable.addListener(SWT.SetData,new Listener()
       {
