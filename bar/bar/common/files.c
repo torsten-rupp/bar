@@ -4755,7 +4755,7 @@ String File_getCurrentDirectory(String pathName)
   #ifdef HAVE_GET_CURRENT_DIR_NAME
     char *currentDirectory;
   #else
-    const char currentDirectory[MAX_PATH];
+    char currentDirectory[PATH_MAX];
   #endif
 
   assert(pathName != NULL);
@@ -4772,8 +4772,7 @@ String File_getCurrentDirectory(String pathName)
       String_clear(pathName);
     }
   #else
-    getcurrentDirectory = getwd(currentDirectory);
-    if (currentDirectory != NULL)
+    if (getcwd(currentDirectory,sizeof(currentDirectory)) != NULL)
     {
       String_setBuffer(pathName,currentDirectory,strlen(currentDirectory));
     }
