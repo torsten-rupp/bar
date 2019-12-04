@@ -4864,7 +4864,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
                    "Authorization of client %s fail - invalid password",
                    getClientInfo(clientInfo,s,sizeof(s))
                   );
-        error = ERROR_INVALID_PASSWORD;
+        error = ERROR_INVALID_PASSWORD_;
       }
     }
     else
@@ -4907,7 +4907,7 @@ LOCAL void serverCommand_authorize(ClientInfo *clientInfo, IndexHandle *indexHan
           {
             error = ((serverMode == SERVER_MODE_SLAVE) && String_isEmpty(globalOptions.masterInfo.name))
                       ? ERROR_NOT_PAIRED
-                      : ERROR_INVALID_PASSWORD;
+                      : ERROR_INVALID_PASSWORD_;
             logMessage(NULL,  // logHandle,
                        LOG_TYPE_ALWAYS,
                        "Authorization of %s fail (error: %s)",

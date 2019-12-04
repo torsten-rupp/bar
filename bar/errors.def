@@ -33,7 +33,8 @@ ERROR DAEMON_FAIL                      TR("run as daemon fail")
 ERROR IPC                              TR("inter-process communication fail")
 ERROR INIT_PASSWORD                    TR("initialize password fail")
 ERROR NO_PASSWORD                      TR("no password given")
-ERROR INVALID_PASSWORD                 TR("invalid password")
+// Note: because of name clash with Windows include use INVALID_PASSWORD_ instead of INVALID_PASSWORD
+ERROR INVALID_PASSWORD_                TR("invalid password")
 ERROR PROCESS                          TR("process data fail")
 
 // --- patterns ---------------------------------------------------------
