@@ -125,13 +125,14 @@ LOCAL void configValueFormatInitPersistenceMaxAge(void **formatUserData, void *u
 LOCAL void configValueFormatDonePersistenceMaxAge(void **formatUserData, void *userData);
 LOCAL bool configValueFormatPersistenceMaxAge(void **formatUserData, void *userData, String line);
 
+// handle shortcuts
+
 // handle deprecated configuration values
 LOCAL bool configValueParseDeprecatedRemoteHost(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
+LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
@@ -233,14 +234,14 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING      ("comment",                   JobNode,job.options.comment                      ),
 
   // deprecated
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueParseDeprecatedRemoteHost,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueParseDeprecatedRemotePort,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueParseDeprecatedMountDevice,NULL,NULL,FALSE),
-  // Note: shortcut for --restore-entry-mode=overwrite
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-name",          JobNode,job.slaveHost.name,                      configValueParseDeprecatedRemoteHost,NULL,"slave-host-name",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-port",          JobNode,job.slaveHost.port,                      configValueParseDeprecatedRemotePort,NULL,"slave-host-port",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("remote-host-force-ssl",     JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("slave-host-force-ssl",      JobNode,job.slaveHost.forceTLS,                  ConfigValue_parseDeprecatedBoolean,NULL,"slave-host-force-tls",TRUE),
+  // Note: restore-entry-mode=overwrite
   CONFIG_STRUCT_VALUE_DEPRECATED  ("overwrite-files",           JobNode,job.options.restoreEntryMode,            configValueParseDeprecatedOverwriteFiles,NULL,NULL,FALSE),
-  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,NULL,FALSE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("mount-device",              JobNode,job.options.mountList,                   configValueParseDeprecatedMountDevice,NULL,"mount",TRUE),
+  CONFIG_STRUCT_VALUE_DEPRECATED  ("stop-on-error",             JobNode,job.options.noStopOnErrorFlag,           configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error",TRUE),
 
   // ignored
   CONFIG_VALUE_IGNORE             ("schedule",                                                                   NULL,TRUE),
@@ -2137,6 +2138,36 @@ bool configValueParseDeprecatedRemotePort(void *userData, void *variable, const 
 }
 
 /***********************************************************************\
+* Name   : configValueParseDeprecatedOverwriteFiles
+* Purpose: config value option call back for deprecated overwrite-files
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(value);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_OVERWRITE;
+
+  return TRUE;
+}
+
+/***********************************************************************\
 * Name   : configValueParseDeprecatedMountDevice
 * Purpose: config value option call back for deprecated mount-device
 * Input  : userData              - user data
@@ -2183,7 +2214,7 @@ LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    List_append(&((JobNode*)variable)->job.options.mountList,mountNode);
+    List_append((MountList*)variable,mountNode);
   }
 
   // free resources
@@ -2216,42 +2247,18 @@ LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable,
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((JobNode*)variable)->job.options.noStopOnErrorFlag = !(   (value == NULL)
-                                                         || stringEquals(value,"1")
-                                                         || stringEqualsIgnoreCase(value,"true")
-                                                         || stringEqualsIgnoreCase(value,"on")
-                                                         || stringEqualsIgnoreCase(value,"yes")
-                                                        );
-
-  return TRUE;
-}
-
-/***********************************************************************\
-* Name   : configValueParseDeprecatedOverwriteFiles
-* Purpose: config value option call back for deprecated overwrite-files
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored in variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool configValueParseDeprecatedOverwriteFiles(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-  UNUSED_VARIABLE(value);
-  UNUSED_VARIABLE(errorMessage);
-  UNUSED_VARIABLE(errorMessageSize);
-
-  ((JobNode*)variable)->job.options.restoreEntryMode = RESTORE_ENTRY_MODE_OVERWRITE;
+  if (value != NULL)
+  {
+    (*(bool*)variable) = !(   (stringEqualsIgnoreCase(value,"1") == 0)
+                           || (stringEqualsIgnoreCase(value,"true") == 0)
+                           || (stringEqualsIgnoreCase(value,"on") == 0)
+                           || (stringEqualsIgnoreCase(value,"yes") == 0)
+                          );
+  }
+  else
+  {
+    (*(bool*)variable) = FALSE;
+  }
 
   return TRUE;
 }
@@ -3051,13 +3058,13 @@ bool Job_read(JobNode *jobNode)
                             {
                               UNUSED_VARIABLE(userData);
 
-                              printError("%s in %s, line %ld: '%s' - skipped",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                              printError("%s in %s, line %ld: '%s'",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                             }),NULL,
                             LAMBDA(void,(const char *warningMessage, void *userData),
                             {
                               UNUSED_VARIABLE(userData);
 
-                              printWarning("%s in %s, line %ld: '%s' - skipped",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                              printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                             }),NULL,
                             scheduleNode
                            );
@@ -3142,13 +3149,13 @@ bool Job_read(JobNode *jobNode)
                               {
                                 UNUSED_VARIABLE(userData);
 
-                                printError("%s in %s, line %ld: '%s' - skipped",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                                printError("%s in %s, line %ld: '%s'",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                               }),NULL,
                               LAMBDA(void,(const char *warningMessage, void *userData),
                               {
                                 UNUSED_VARIABLE(userData);
 
-                                printWarning("%s in %s, line %ld: '%s' - skipped",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                                printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                               }),NULL,
                               persistenceNode
                              );
@@ -3223,13 +3230,13 @@ bool Job_read(JobNode *jobNode)
                         {
                           UNUSED_VARIABLE(userData);
 
-                          printError("%s in %s, line %ld: '%s' - skipped",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                          printError("%s in %s, line %ld: '%s'",errorMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                         }),NULL,
                         LAMBDA(void,(const char *warningMessage, void *userData),
                         {
                           UNUSED_VARIABLE(userData);
 
-                          printWarning("%s in %s, line %ld: '%s' - skipped",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
+                          printWarning("%s in %s, line %ld: '%s'",warningMessage,String_cString(jobNode->fileName),lineNb,String_cString(line));
                         }),NULL,
                         jobNode
                        );

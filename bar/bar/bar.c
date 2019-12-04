@@ -774,12 +774,11 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
-LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+// handle deprecated configuration values
 LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
-
-// handle deprecated configuration values
+LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 const ConfigValueUnit CONFIG_VALUE_BYTES_UNITS[] = CONFIG_VALUE_UNIT_ARRAY
 (
@@ -1194,13 +1193,14 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_DEPRECATED        ("remote-host-port",                 NULL,-1,                                                       NULL,NULL,"slave-host-port",TRUE),
   CONFIG_VALUE_DEPRECATED        ("remote-host-force-ssl",            NULL,-1,                                                       NULL,NULL,"slave-host-force-tls",TRUE),
   CONFIG_VALUE_DEPRECATED        ("slave-host-force-ssl",             NULL,-1,                                                       NULL,NULL,"slave-host-force-tls",TRUE),
-  CONFIG_VALUE_DEPRECATED        ("mount-device",                     &globalOptions.mountList,-1,                                   configValueParseDeprecatedMountDevice,NULL,NULL,TRUE),
+  // Note: restore-entry-mode=overwrite
+  CONFIG_VALUE_DEPRECATED        ("overwrite-files",                  &globalOptions.restoreEntryMode,-1,                            configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entry-mode=overwrite",TRUE),
+  CONFIG_VALUE_DEPRECATED        ("mount-device",                     &globalOptions.mountList,-1,                                   configValueParseDeprecatedMountDevice,NULL,"mount",TRUE),
   CONFIG_VALUE_DEPRECATED        ("schedule",                         NULL,-1,                                                       NULL,NULL,NULL,TRUE),
-  // Note: new --archive-file-mode=overwrite
-  CONFIG_VALUE_DEPRECATED        ("overwrite-archive-files",          &globalOptions,-1,                                             configValueParseDeprecatedArchiveFileModeOverwrite,NULL,"archive-file-mode=overwrite",TRUE),
-  // Note: new --restore-entry-mode=overwrite
-  CONFIG_VALUE_DEPRECATED        ("overwrite-files",                  &globalOptions,-1,                                             configValueParseDeprecatedRestoreEntryModeOverwrite,NULL,"restore-entry-mode=overwrite",TRUE),
-  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                    &globalOptions,-1,                                             configValueParseDeprecatedStopOnError,NULL,NULL,TRUE),
+  CONFIG_VALUE_DEPRECATED        ("stop-on-error",                    &globalOptions.noStopOnErrorFlag,-1,                           configValueParseDeprecatedStopOnError,NULL,"no-stop-on-error",TRUE),
+
+  // ignored
+  CONFIG_VALUE_IGNORE            ("overwrite-archive-files",                                                                         "archive-file-mode",TRUE),
 );
 
 /*---------------------------------------------------------------------*/
@@ -3709,12 +3709,18 @@ LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable,
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((JobOptions*)variable)->noStopOnErrorFlag = !(   (value == NULL)
-                                                 || stringEquals(value,"1")
-                                                 || stringEqualsIgnoreCase(value,"true")
-                                                 || stringEqualsIgnoreCase(value,"on")
-                                                 || stringEqualsIgnoreCase(value,"yes")
-                                                );
+  if (value != NULL)
+  {
+    (*(bool*)variable) = !(   (stringEqualsIgnoreCase(value,"1") == 0)
+                           || (stringEqualsIgnoreCase(value,"true") == 0)
+                           || (stringEqualsIgnoreCase(value,"on") == 0)
+                           || (stringEqualsIgnoreCase(value,"yes") == 0)
+                          );
+  }
+  else
+  {
+    (*(bool*)variable) = FALSE;
+  }
 
   return TRUE;
 }
@@ -3744,7 +3750,7 @@ LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, vo
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((JobOptions*)variable)->archiveFileMode = ARCHIVE_FILE_MODE_OVERWRITE;
+  (*(ArchiveFileModes*)variable) = ARCHIVE_FILE_MODE_OVERWRITE;
 
   return TRUE;
 }
@@ -3774,7 +3780,7 @@ LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, v
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  ((JobOptions*)variable)->restoreEntryMode = RESTORE_ENTRY_MODE_OVERWRITE;
+  (*(RestoreEntryModes*)variable) = RESTORE_ENTRY_MODE_OVERWRITE;
 
   return TRUE;
 }
@@ -4718,6 +4724,7 @@ Errors updateConfig(void)
     String_delete(configFileName);
     return ERROR_NO_WRITABLE_CONFIG;
   }
+fprintf(stderr,"%s, %d: x=%s\n",__FILE__,__LINE__,String_cString(configFileName));
 
   // read config file lines
   error = ConfigValue_readConfigFileLines(configFileName,&configLinesList);
@@ -10894,6 +10901,8 @@ exit(1);
     return error;
   }
 
+#warning remove
+#if 0
   // run
   error = ERROR_NONE;
   if      (daemonFlag)
@@ -10912,7 +10921,9 @@ exit(1);
   {
     error = runInteractive(argc,argv);
   }
-
+#else
+    (void)updateConfig();
+#endif
   // delete temporary directory
   File_delete(tmpDirectory,TRUE);
 
