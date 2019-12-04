@@ -1799,26 +1799,33 @@ bool ConfigValue_parseDeprecatedBoolean(void *userData, void *variable, const ch
   UNUSED_VARIABLE(userData);
   UNUSED_VARIABLE(name);
 
-  if      (   stringEqualsIgnoreCase(value,"1")
-           || stringEqualsIgnoreCase(value,"true")
-           || stringEqualsIgnoreCase(value,"on")
-           || stringEqualsIgnoreCase(value,"yes")
-          )
+  if (value != NULL)
   {
-    (*(bool*)variable) = TRUE;
-  }
-  else if (   stringEqualsIgnoreCase(value,"0")
-           || stringEqualsIgnoreCase(value,"false")
-           || stringEqualsIgnoreCase(value,"off")
-           || stringEqualsIgnoreCase(value,"no")
-          )
-  {
-    (*(bool*)variable) = FALSE;
+    if      (   stringEqualsIgnoreCase(value,"1")
+             || stringEqualsIgnoreCase(value,"true")
+             || stringEqualsIgnoreCase(value,"on")
+             || stringEqualsIgnoreCase(value,"yes")
+            )
+    {
+      (*(bool*)variable) = TRUE;
+    }
+    else if (   stringEqualsIgnoreCase(value,"0")
+             || stringEqualsIgnoreCase(value,"false")
+             || stringEqualsIgnoreCase(value,"off")
+             || stringEqualsIgnoreCase(value,"no")
+            )
+    {
+      (*(bool*)variable) = FALSE;
+    }
+    else
+    {
+      stringFormat(errorMessage,errorMessageSize,"expected boolean value: yes|no");
+      return FALSE;
+    }
   }
   else
   {
-    stringFormat(errorMessage,errorMessageSize,"expected boolean value: yes|no");
-    return FALSE;
+    (*(bool*)variable) = FALSE;
   }
 
   return TRUE;
@@ -1836,20 +1843,27 @@ bool ConfigValue_parseDeprecatedString(void *userData, void *variable, const cha
   UNUSED_VARIABLE(errorMessage);
   UNUSED_VARIABLE(errorMessageSize);
 
-  // unquote/unescape
-  string = String_newCString(value);
-  String_unquote(string,STRING_QUOTES);
-  String_unescape(string,
-                  STRING_ESCAPE_CHARACTER,
-                  STRING_ESCAPE_CHARACTERS_MAP_TO,
-                  STRING_ESCAPE_CHARACTERS_MAP_FROM,
-                  STRING_ESCAPE_CHARACTER_MAP_LENGTH
-                );
+  if (value != NULL)
+  {
+    // unquote/unescape
+    string = String_newCString(value);
+    String_unquote(string,STRING_QUOTES);
+    String_unescape(string,
+                    STRING_ESCAPE_CHARACTER,
+                    STRING_ESCAPE_CHARACTERS_MAP_TO,
+                    STRING_ESCAPE_CHARACTERS_MAP_FROM,
+                    STRING_ESCAPE_CHARACTER_MAP_LENGTH
+                  );
 
-  String_set(*((String*)variable),string);
+    String_set(*((String*)variable),string);
 
-  // free resources
-  String_delete(string);
+    // free resources
+    String_delete(string);
+  }
+  else
+  {
+    String_clear(*((String*)variable));
+  }
 
   return TRUE;
 }
