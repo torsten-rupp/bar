@@ -3651,7 +3651,7 @@ bool File_existsCString(const char *fileName)
 
   assert(fileName != NULL);
 
-  return (LSTAT(!stringIsEmpty(fileName) ? fileName : "",&fileStat) == 0);
+  return !stringIsEmpty(fileName) && (LSTAT(fileName,&fileStat) == 0);
 }
 
 bool File_isFile(ConstString fileName)
@@ -4753,7 +4753,7 @@ Errors File_changeDirectory(ConstString pathName)
 String File_getCurrentDirectory(String pathName)
 {
   #ifdef HAVE_GET_CURRENT_DIR_NAME
-    const char *currentDirectory;
+    char *currentDirectory;
   #else
     const char currentDirectory[MAX_PATH];
   #endif
