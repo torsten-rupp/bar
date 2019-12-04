@@ -445,7 +445,11 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define MISC_SIGNAL_MASK_CLEAR(signalMaks) sigemptyset(&signalMask);
+#ifdef HAVE_SIGSET_T
+  #define MISC_SIGNAL_MASK_CLEAR(signalMaks) sigemptyset(&signalMask)
+#else /* not HAVE_SIGSET_T */
+  #define MISC_SIGNAL_MASK_CLEAR(signalMaks) memClear(&signalMask,sizeof(signalMask))
+#endif  /* HAVE_SIGSET_T */
 
 /***********************************************************************\
 * Name   : MISC_SIGNAL_MASK_SET
@@ -457,7 +461,11 @@ typedef struct
 * Notes  : -
 \***********************************************************************/
 
-#define MISC_SIGNAL_MASK_SET(signalMaks,signal) sigaddset(&signalMask,signal);
+#ifdef HAVE_SIGSET_T
+  #define MISC_SIGNAL_MASK_SET(signalMaks,signal) sigaddset(&signalMask,signal)
+#else /* not HAVE_SIGSET_T */
+  #define MISC_SIGNAL_MASK_SET(signalMaks,signal) do {} while (0)
+#endif  /* HAVE_SIGSET_T */
 
 /***********************************************************************\
 * Name   : MISC_HANDLES_ITERATE
