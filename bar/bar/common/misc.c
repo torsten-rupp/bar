@@ -910,11 +910,11 @@ uint64 Misc_parseDateTime(const char *string)
      DATE_TIME_FORMAT_DEFAULT
   };
 
-  #ifdef HAVE_GETDATE_R
+  #if defined(HAVE_GETDATE_R) || defined(HAVE_STRPTIME)
     struct tm tmBuffer;
   #endif /* HAVE_GETDATE_R */
   struct tm  *tm;
-  uint       z;
+  uint       i;
   const char *s;
   uint64     dateTime;
   #if   defined(PLATFORM_LINUX)
@@ -924,7 +924,7 @@ uint64 Misc_parseDateTime(const char *string)
   assert(string != NULL);
 
   #if   defined(HAVE_GETDATE_R)
-    memClear(&tmBuffer,sizeof(struct tm));
+    memClear(&tmBuffer,sizeof(tmBuffer));
     tm = (getdate_r(string,&tmBuffer) == 0) ? &tmBuffer : NULL;
   #elif defined(HAVE_GETDATE)
     tm = getdate(string);
@@ -938,25 +938,24 @@ uint64 Misc_parseDateTime(const char *string)
 
   if (tm == NULL)
   {
-    memClear(&tmBuffer,sizeof(struct tm));
-    z = 0;
-    while ((z < SIZE_OF_ARRAY(DATE_TIME_FORMATS)) && (tm == NULL))
-    {
-      #ifdef HAVE_STRPTIME
-        s = (const char*)strptime(string,DATE_TIME_FORMATS[z],&tmBuffer);
-      #else
+    #ifdef HAVE_STRPTIME
+      memClear(&tmBuffer,sizeof(tmBuffer));
+      i = 0;
+      while ((i < SIZE_OF_ARRAY(DATE_TIME_FORMATS)) && (tm == NULL))
+      {
+        s = (const char*)strptime(string,DATE_TIME_FORMATS[i],&tmBuffer);
+        if ((s != NULL) && ((*s) == '\0'))
+        {
+          tm = &tmBuffer;
+        }
+        i++;
+      }
+    #else
 #ifndef WERROR
 #warning implement strptime
 #endif
 //TODO: use http://cvsweb.netbsd.org/bsdweb.cgi/src/lib/libc/time/strptime.c?rev=HEAD
-        s = NULL;
-      #endif
-      if ((s != NULL) && ((*s) == '\0'))
-      {
-        tm = &tmBuffer;
-      }
-      z++;
-    }
+    #endif
   }
 
   if (tm != NULL)
@@ -1648,6 +1647,7 @@ void Misc_waitReset(WaitHandle *waitHandle)
 void Misc_waitAdd(WaitHandle *waitHandle, int handle, uint events)
 {
   assert(waitHandle != NULL);
+  assert(handle >= 0);
 
   #if   defined(PLATFORM_LINUX)
     assert(waitHandle->pollfds != NULL);
@@ -1680,7 +1680,7 @@ void Misc_waitAdd(WaitHandle *waitHandle, int handle, uint events)
       if ((events & HANDLE_EVENT_INPUT ) != 0) FD_SET(handle,&waitHandle->readfds);
       if ((events & HANDLE_EVENT_OUTPUT) != 0) FD_SET(handle,&waitHandle->writefds);
       if ((events & HANDLE_EVENT_ERROR ) != 0) FD_SET(handle,&waitHandle->exceptionfds);
-      waitHandle->handleCount = MAX(handle,waitHandle->handleCount);
+      waitHandle->handleCount = MAX((uint)handle,waitHandle->handleCount);
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
   waitHandle->handleCount++;
