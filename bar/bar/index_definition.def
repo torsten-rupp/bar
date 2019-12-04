@@ -173,12 +173,14 @@ CREATE TABLE IF NOT EXISTS entries(
   archiveOffset   INTEGER,
 
   // updated by triggers
-  size            INTEGER DEFAULT 0   // file/image/hardlink size. Note: redundancy for faster access
+  size            INTEGER DEFAULT 0,  // file/image/hardlink size. Note: redundancy for faster access
+  fragmentOffset  INTEGER DEFAULT 0
 );
 CREATE INDEX ON entries (storageId,type,name);
 CREATE INDEX ON entries (name,size,type,timeLastChanged);
 CREATE INDEX ON entries (type,name,size,timeLastChanged);
 CREATE INDEX ON entries (size,name,type,timeLastChanged);
+CREATE INDEX ON entries (fragmentOffset,name,type,timeLastChanged);
 CREATE INDEX ON entries (timeLastChanged,name,size,type);
 
 // newest entries (updated by triggers)
@@ -195,6 +197,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   permission      INTEGER DEFAULT 0,       // Note: redundancy for faster access
 
   size            INTEGER DEFAULT 0,       // file/image/hardlink size. Note: redundancy for faster access
+  fragmentOffset  INTEGER DEFAULT 0,
 
   CONSTRAINT newest UNIQUE (name)
 );
@@ -203,6 +206,7 @@ CREATE INDEX ON entriesNewest (name,size,type,timeLastChanged);
 CREATE INDEX ON entriesNewest (type,entryId,name,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (type,name,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (size,name,type,timeLastChanged);
+CREATE INDEX ON entriesNewest (fragmentOffset,name,type,timeLastChanged);
 CREATE INDEX ON entriesNewest (timeLastChanged,name,size,type);
 CREATE INDEX ON entriesNewest (storageId,type,entryId,name,size,timeLastChanged);
 
@@ -259,7 +263,8 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
          userId,
          groupId,
          permission,
-         size
+         size,
+         fragmentOffset
         )
       VALUES
         (
@@ -271,7 +276,8 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
          NEW.userId,
          NEW.groupId,
          NEW.permission,
-         NEW.size
+         NEW.size,
+         NEW.fragmentOffset
         );
 
     // update if entry is newer
@@ -283,7 +289,8 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
           userId         =NEW.userId,
           groupId        =NEW.groupId,
           permission     =NEW.permission,
-          size           =NEW.size
+          size           =NEW.size,
+          fragmentOffset =NEW.fragmentOffset
       WHERE     entryId!=NEW.id
             AND name=NEW.name
             AND NEW.timeLastChanged>timeLastChanged;
@@ -294,8 +301,8 @@ CREATE TRIGGER BEFORE DELETE ON entries
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.id;
     INSERT OR IGNORE INTO entriesNewest
-        (entryId,storageId,name,type,size,timeLastChanged)
-      SELECT id,storageId,name,type,size,MAX(timeLastChanged)
+        (entryId,storageId,name,type,size,fragmentOffset,timeLastChanged)
+      SELECT id,storageId,name,type,size,fragmentOffset,MAX(timeLastChanged)
         FROM entries
         WHERE     id!=OLD.id
               AND name=OLD.name

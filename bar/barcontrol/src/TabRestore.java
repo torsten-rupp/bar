@@ -3791,6 +3791,7 @@ Dprintf.dprintf("sortMode=%s",sortMode);
                 case 2:  sortMode[0] = "TYPE";         break;
                 case 3:  sortMode[0] = "SIZE";         break;
                 case 4:  sortMode[0] = "LAST_CHANGED"; break;
+                case 5:  sortMode[0] = "FRAGMENT";     break;
                 default: sortMode[0] = "NAME";         break;
               }
 
@@ -3835,7 +3836,7 @@ Dprintf.dprintf("sortMode=%s",sortMode);
                                                                                 sortMode[0],
                                                                                 ordering[0]
                                                                                ),
-                                                            2,  // debugLevel
+0,//                                                            2,  // debugLevel
                                                             new Command.ResultHandler()
                                                             {
                                                               @Override
