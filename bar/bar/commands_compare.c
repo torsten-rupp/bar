@@ -627,7 +627,7 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     }
 
     // get device info
-    error = Device_getInfo(&deviceInfo,deviceName);
+    error = Device_getInfo(&deviceInfo,deviceName,TRUE);
     if (error != ERROR_NONE)
     {
       (void)Archive_closeEntry(&archiveEntryInfo);

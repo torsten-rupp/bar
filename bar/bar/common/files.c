@@ -3880,7 +3880,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
     fileInfo->attributes  = 0LL;
 
     // try to detect block device size
-    if (Device_getInfoCString(&deviceInfo,fileName) == ERROR_NONE)
+    if (Device_getInfoCString(&deviceInfo,fileName,TRUE) == ERROR_NONE)
     {
       fileInfo->size = deviceInfo.size;
     }

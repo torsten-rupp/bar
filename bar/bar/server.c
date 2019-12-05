@@ -6549,8 +6549,8 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
       return;
     }
 
-    // get device info
-    error = Device_getInfo(&deviceInfo,deviceName);
+    // try get device info
+    error = Device_getInfo(&deviceInfo,deviceName,FALSE);
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info");
@@ -6671,7 +6671,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
         error = File_readRootList(&rootListHandle,name);
         if (error == ERROR_NONE)
         {
-          error = Device_getInfo(&deviceInfo,name);
+          error = Device_getInfo(&deviceInfo,name,FALSE);
           if (error == ERROR_NONE)
           {
             size = deviceInfo.size;
