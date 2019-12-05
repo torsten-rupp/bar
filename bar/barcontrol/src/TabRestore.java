@@ -3243,6 +3243,7 @@ Dprintf.dprintf("");
 
   /** entry data comparator
    */
+//TODO: obsolete
   static class EntryIndexDataComparator implements Comparator<EntryIndexData>
   {
     // sort modes
@@ -3271,7 +3272,6 @@ Dprintf.dprintf("");
       else if (table.getColumn(4) == sortColumn) sortMode = SortModes.DATE;
       else if (table.getColumn(5) == sortColumn) sortMode = SortModes.FRAGMENT;
       else                                       sortMode = SortModes.NAME;
-Dprintf.dprintf("sortMode=%s",sortMode);
     }
 
     /** create entry data comparator
@@ -6311,8 +6311,9 @@ Dprintf.dprintf("sortMode=%s",sortMode);
         @Override
         public void widgetSelected(SelectionEvent selectionEvent)
         {
-          TableColumn              tableColumn              = (TableColumn)selectionEvent.widget;
-          EntryIndexDataComparator entryIndexDataComparator = new EntryIndexDataComparator(widgetEntryTable,tableColumn);
+          TableColumn tableColumn = (TableColumn)selectionEvent.widget;
+          Table       table       = tableColumn.getParent();
+
           synchronized(widgetEntryTable)
           {
             {
@@ -6320,7 +6321,8 @@ Dprintf.dprintf("sortMode=%s",sortMode);
             }
             try
             {
-              Widgets.sortTableColumn(widgetEntryTable,tableColumn,entryIndexDataComparator);
+              Widgets.setSortTableColumn(table,tableColumn);
+              Widgets.refreshVirtualTable(table);
             }
             finally
             {
@@ -9088,134 +9090,6 @@ Dprintf.dprintf("sortMode=%s",sortMode);
     }
 
     return entryIndexDataArray.toArray(new EntryIndexData[entryIndexDataArray.size()]);
-  }
-
-  /** find index for insert of item in sorted entry data list
-   * @param entryIndexData data of tree item
-   * @return index in table
-   */
-  private int findEntryListIndex(EntryIndexData entryIndexData)
-  {
-    TableItem                tableItems[]             = widgetEntryTable.getItems();
-    EntryIndexDataComparator entryIndexDataComparator = new EntryIndexDataComparator(widgetEntryTable);
-
-    int index = 0;
-    while (   (index < tableItems.length)
-           && (entryIndexDataComparator.compare(entryIndexData,(EntryIndexData)tableItems[index].getData()) > 0)
-          )
-    {
-      index++;
-    }
-
-    return index;
-  }
-
-  /** refresh entry list display
-   */
-  private void refreshEntryList()
-  {
-// ??? statt findFileListIndex
-    EntryIndexDataComparator entryIndexDataComparator = new EntryIndexDataComparator(widgetEntryTable);
-
-    // update
-Dprintf.dprintf("");
-    widgetEntryTable.removeAll();
-/*
-    synchronized(entryIndexDataMap)
-    {
-      for (WeakReference<EntryIndexData> entryIndexDataR : entryIndexDataMap.values())
-      {
-        EntryIndexData entryIndexData = entryIndexDataR.get();
-        switch (entryIndexData.entryType)
-        {
-          case FILE:
-            Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryIndexData),
-                                    (Object)entryIndexData,
-                                    entryIndexData.storageName,
-                                    entryIndexData.name,
-                                    entryIndexData.type.toString(),
-                                    Units.formatByteSize(entryIndexData.size),
-                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                   );
-            break;
-          case IMAGE:
-            Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryIndexData),
-                                    (Object)entryIndexData,
-                                    entryIndexData.storageName,
-                                    entryIndexData.name,
-                                    entryIndexData.type.toString(),
-                                    Units.formatByteSize(entryIndexData.size),
-                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                   );
-            break;
-          case DIRECTORY:
-            Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryIndexData),
-                                    (Object)entryIndexData,
-                                    entryIndexData.storageName,
-                                    entryIndexData.name,
-                                    entryIndexData.type.toString(),
-                                    (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
-                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                   );
-            break;
-          case LINK:
-            Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryIndexData),
-                                    (Object)entryIndexData,
-                                    entryIndexData.storageName,
-                                    entryIndexData.name,
-                                    entryIndexData.type.toString(),
-                                    "",
-                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                   );
-            break;
-          case SPECIAL:
-            Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryIndexData),
-                                    (Object)entryIndexData,
-                                    entryIndexData.storageName,
-                                    entryIndexData.name,
-                                    entryIndexData.type.toString(),
-                                    Units.formatByteSize(entryIndexData.size),
-                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                   );
-            break;
-          case DEVICE:
-            Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryIndexData),
-                                    (Object)entryIndexData,
-                                    entryIndexData.storageName,
-                                    entryIndexData.name,
-                                    entryIndexData.type.toString(),
-                                    Units.formatByteSize(entryIndexData.size),
-                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                   );
-            break;
-          case SOCKET:
-            Widgets.insertTableItem(widgetEntryTable,
-                                    findEntryListIndex(entryIndexData),
-                                    (Object)entryIndexData,
-                                    entryIndexData.storageName,
-                                    entryIndexData.name,
-                                    entryIndexData.type.toString(),
-                                    "",
-                                    SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
-                                   );
-            break;
-        }
-
-        Widgets.setTableItemChecked(widgetEntryTable,
-                                    (Object)entryIndexData,
-                                    entryIndexData.isChecked()
-                                   );
-      }
-    }
-*/
-    // trigger update entries
-    checkedEntryEvent.trigger();
   }
 
   /** restore archives/entries
