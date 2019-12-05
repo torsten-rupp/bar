@@ -134,6 +134,7 @@ LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, vo
 LOCAL bool configValueParseDeprecatedRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedMountDevice(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 LOCAL bool configValueParseDeprecatedStopOnError(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL uint deprecatedScheduleMinKeep;
 
 const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 (
@@ -221,7 +222,8 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
     CONFIG_STRUCT_VALUE_BOOLEAN   ("enabled",                   ScheduleNode,enabled                             ),
 
     // deprecated
-    CONFIG_VALUE_IGNORE           ("min-keep",                                                                   NULL,TRUE),
+    CONFIG_VALUE_DEPRECATED       ("min-keep",                  &deprecatedScheduleMinKeep,-1,                   ConfigValue_parseDeprecatedInteger,NULL,NULL,TRUE),
+//    CONFIG_VALUE_IGNORE           ("min-keep",                                                                   NULL,TRUE),
     CONFIG_VALUE_IGNORE           ("max-keep",                                                                   NULL,TRUE),
     CONFIG_VALUE_IGNORE           ("max-age",                                                                    NULL,TRUE),
   CONFIG_VALUE_END_SECTION(),
@@ -3155,6 +3157,9 @@ bool Job_read(JobNode *jobNode)
         // duplicate -> discard
         deleteScheduleNode(scheduleNode);
       }
+
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxx %d\n",__FILE__,__LINE__,deprecatedScheduleMinKeep);
+
     }
     else if (String_parse(line,STRING_BEGIN,"[persistence %S]",NULL,s))
     {
