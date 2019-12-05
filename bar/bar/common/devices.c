@@ -720,17 +720,19 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
 }
 
 Errors Device_getInfo(DeviceInfo  *deviceInfo,
-                      ConstString deviceName
+                      ConstString deviceName,
+                      bool        sizesFlag
                      )
 {
   assert(deviceInfo != NULL);
   assert(deviceName != NULL);
 
-  return Device_getInfoCString(deviceInfo,String_cString(deviceName));
+  return Device_getInfoCString(deviceInfo,String_cString(deviceName),sizesFlag);
 }
 
 Errors Device_getInfoCString(DeviceInfo *deviceInfo,
-                             const char *deviceName
+                             const char *deviceName,
+                             bool        sizesFlag
                             )
 {
   FileStat fileStat;
@@ -755,48 +757,59 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
   deviceInfo->type        = DEVICE_TYPE_UNKNOWN;
   deviceInfo->size        = 0LL;
   deviceInfo->blockSize   = 0L;
+//TODO: NYI
 //  deviceInfo->freeBlocks  = 0LL;
 //  deviceInfo->totalBlocks = 0LL;
   deviceInfo->mounted     = FALSE;
 
   // get device meta data
-  if (LSTAT(deviceName,&fileStat) == 0)
+  if (LSTAT(deviceName,&fileStat) != 0)
   {
-    deviceInfo->timeLastAccess  = fileStat.st_atime;
-    deviceInfo->timeModified    = fileStat.st_mtime;
-    deviceInfo->timeLastChanged = fileStat.st_ctime;
-    deviceInfo->userId          = fileStat.st_uid;
-    deviceInfo->groupId         = fileStat.st_gid;
-    deviceInfo->permission      = (DevicePermission)fileStat.st_mode;
-    #ifdef HAVE_MAJOR
-      deviceInfo->major         = major(fileStat.st_rdev);
-    #else
-      deviceInfo->major         = 0;
-    #endif
-    #ifdef HAVE_MINOR
-      deviceInfo->minor         = minor(fileStat.st_rdev);
-    #else
-      deviceInfo->minor         = 0;
-    #endif
-    deviceInfo->id              = (uint64)fileStat.st_ino;
-
-    if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
-    else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
+    return ERRORX_(IO,errno,"%E",errno);
   }
+  deviceInfo->timeLastAccess  = fileStat.st_atime;
+  deviceInfo->timeModified    = fileStat.st_mtime;
+  deviceInfo->timeLastChanged = fileStat.st_ctime;
+  deviceInfo->userId          = fileStat.st_uid;
+  deviceInfo->groupId         = fileStat.st_gid;
+  deviceInfo->permission      = (DevicePermission)fileStat.st_mode;
+  #ifdef HAVE_MAJOR
+    deviceInfo->major         = major(fileStat.st_rdev);
+  #else
+    deviceInfo->major         = 0;
+  #endif
+  #ifdef HAVE_MINOR
+    deviceInfo->minor         = minor(fileStat.st_rdev);
+  #else
+    deviceInfo->minor         = 0;
+  #endif
+  deviceInfo->id              = (uint64)fileStat.st_ino;
+
+  if      (S_ISCHR(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_CHARACTER;
+  else if (S_ISBLK(fileStat.st_mode)) deviceInfo->type = DEVICE_TYPE_BLOCK;
 
   if (deviceInfo->type == DEVICE_TYPE_BLOCK)
   {
-    // try to get block size, total size
+    // get block size, total size
     handle = open(deviceName,O_RDONLY);
-    if (handle != -1)
+    if      (handle != -1)
     {
-      #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
-        if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
-      #endif
-      #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
-        if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
-      #endif
-      close(handle);
+    #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+      if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+    #endif
+    #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+      if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+    #endif
+    close(handle);
+    }
+    else if (!sizesFlag)
+    {
+      deviceInfo->blockSize = 0;
+      deviceInfo->size      = 0LL;
+    }
+    else
+    {
+      return ERRORX_(IO,errno,"%E",errno);
     }
   }
 
