@@ -1186,6 +1186,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
 * Input  : entryMsgQueue - entry message queue
 *          entryType     - entry type
 *          name          - name (will be copied!)
+*          size          - device size [bytes]
 * Output : -
 * Return : -
 * Notes  : -
@@ -2353,7 +2354,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                           if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                           {
                             // get device info
-                            error = Device_getInfo(&deviceInfo,name);
+                            error = Device_getInfo(&deviceInfo,name,FALSE);
                             if (error != ERROR_NONE)
                             {
                               continue;
@@ -2363,7 +2364,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                             STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                             {
                               createInfo->statusInfo.total.count++;
-                              createInfo->statusInfo.total.size += fileInfo.size;
+                              createInfo->statusInfo.total.size += deviceInfo.size;
                             }
                           }
                         }
@@ -2852,6 +2853,9 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         {
           continue;
         }
+
+        // increment number of possible found entries
+        n++;
 
         if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
         {
@@ -3471,7 +3475,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
                           {
                             // get device info
-                            error = Device_getInfo(&deviceInfo,name);
+                            error = Device_getInfo(&deviceInfo,name,TRUE);
                             if (error != ERROR_NONE)
                             {
                               printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
@@ -3489,14 +3493,12 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
 
                               continue;
                             }
-                            UNUSED_VARIABLE(deviceInfo);
 
                             // add to entry list
-//TODO:fileInfo or deviceInfo?
                             appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                      ENTRY_TYPE_IMAGE,
                                                      name,
-                                                     fileInfo.size
+                                                     deviceInfo.size
                                                     );
                           }
                         }
@@ -3543,9 +3545,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
             createInfo->statusInfo.skipped.size += fileInfo.size;
           }
         }
-
-        // increment number of possible found files
-        n++;
 
         // free resources
       }
@@ -5566,7 +5565,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
         logMessage(createInfo->logHandle,
                    LOG_TYPE_ENTRY_ACCESS_DENIED,
-                   "Open file failed '%s' (error: %s)",
+                   "Access file failed '%s' (error: %s)",
                    String_cString(fileName),
                    Error_getText(error)
                   );
@@ -5762,7 +5761,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   printInfo(1,"Add image     '%s'...",String_cString(deviceName));
 
   // get device info
-  error = Device_getInfo(&deviceInfo,deviceName);
+  error = Device_getInfo(&deviceInfo,deviceName,TRUE);
   if (error != ERROR_NONE)
   {
     if (createInfo->jobOptions->skipUnreadableFlag)
@@ -5808,7 +5807,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   if (deviceInfo.blockSize <= 0)
   {
     printInfo(1,"FAIL\n");
-    printError("Cannot get device block size for '%s'",
+    printError("Invalid device block size for '%s'",
                String_cString(deviceName)
               );
     return ERROR_INVALID_DEVICE_BLOCK_SIZE;
@@ -6013,15 +6012,42 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     }
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL\n");
-      printError("Cannot store image entry (error: %s)!",
-                 Error_getText(error)
-                );
-      (void)Archive_closeEntry(&archiveEntryInfo);
-      if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
-      Device_close(&deviceHandle);
-      fragmentDone(createInfo,deviceName);
-      return error;
+      if (createInfo->jobOptions->skipUnreadableFlag)
+      {
+        printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
+        logMessage(createInfo->logHandle,
+                   LOG_TYPE_ENTRY_ACCESS_DENIED,
+                   "Access device failed '%s' (error: %s)",
+                   String_cString(deviceName),
+                   Error_getText(error)
+                  );
+
+        STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
+        {
+          createInfo->statusInfo.error.count++;
+          createInfo->statusInfo.error.size += fragmentSize;
+        }
+
+        (void)Archive_closeEntry(&archiveEntryInfo);
+        if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+        Device_close(&deviceHandle);
+        fragmentDone(createInfo,deviceName);
+
+        return ERROR_NONE;
+      }
+      else
+      {
+        printInfo(1,"FAIL\n");
+        printError("Cannot store image entry (error: %s)!",
+                   Error_getText(error)
+                  );
+        (void)Archive_closeEntry(&archiveEntryInfo);
+        if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
+        Device_close(&deviceHandle);
+        fragmentDone(createInfo,deviceName);
+
+        return error;
+      }
     }
     printInfo(2,"    \b\b\b\b");
 
