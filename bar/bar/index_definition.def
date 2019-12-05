@@ -344,7 +344,8 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
   BEGIN
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
-      SET size=NEW.size
+      SET size=NEW.size,
+          fragmentOffset=NEW.fragmentOffset
       WHERE id=NEW.entryId;
   END;
 
@@ -367,7 +368,8 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
   BEGIN
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
-      SET size=NEW.size
+      SET size=NEW.size,
+          fragmentOffset=NEW.blockOffset*NEW.blockCount
       WHERE id=NEW.entryId;
   END;
 
@@ -433,7 +435,8 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
   BEGIN
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
-      SET size=NEW.size
+      SET size=NEW.size,
+          fragmentOffset=NEW.fragmentOffset
       WHERE id=NEW.entryId;
   END;
 
