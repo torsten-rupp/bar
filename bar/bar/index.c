@@ -130,7 +130,7 @@ LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
   [INDEX_ENTRY_SORT_MODE_NAME        ] = "entries.name",
   [INDEX_ENTRY_SORT_MODE_TYPE        ] = "entries.type",
   [INDEX_ENTRY_SORT_MODE_SIZE        ] = "entries.size",
-  [INDEX_ENTRY_SORT_MODE_FRAGMENT    ] = "entries.fragmentSize",
+  [INDEX_ENTRY_SORT_MODE_FRAGMENT    ] = "entries.fragmentOffset",
   [INDEX_ENTRY_SORT_MODE_LAST_CHANGED] = "entries.timeLastChanged"
 };
 LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
@@ -141,7 +141,7 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
   [INDEX_ENTRY_SORT_MODE_NAME        ] = "entriesNewest.name",
   [INDEX_ENTRY_SORT_MODE_TYPE        ] = "entriesNewest.type",
   [INDEX_ENTRY_SORT_MODE_SIZE        ] = "entriesNewest.size",
-  [INDEX_ENTRY_SORT_MODE_FRAGMENT    ] = "entriesNewest.fragmentSize",
+  [INDEX_ENTRY_SORT_MODE_FRAGMENT    ] = "entriesNewest.fragmentOffset",
   [INDEX_ENTRY_SORT_MODE_LAST_CHANGED] = "entriesNewest.timeLastChanged"
 };
 
