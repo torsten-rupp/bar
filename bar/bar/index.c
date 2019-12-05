@@ -9128,13 +9128,15 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         uint32            *userId,
                         uint32            *groupId,
                         uint32            *permission,
-                        uint64            *fragmentOrBlockOffset,
-                        uint64            *fragmentSizeOrBlockCount
+                        uint64            *fragmentOffset,
+                        uint64            *fragmentSize
                        )
 {
   IndexTypes indexType;
   DatabaseId uuidDatabaseId,entityDatabaseId,entryDatabaseId,storageDatabaseId;
   int64      fragmentOffset_,fragmentSize_;
+  int        fileSystemType_;
+  int        blockSize_;
   int64      blockOffset_,blockCount_;
 
   assert(indexQueryHandle != NULL);
@@ -9147,7 +9149,7 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %llu %S %S %S %u %llu %S %llu %llu %u %S %llu %d %d %d %llu %llu %llu %llu %llu %d %llu %llu %llu %llu %S %llu",
+                           "%lld %S %llu %S %S %S %u %llu %S %llu %llu %u %S %llu %d %d %d %llu %llu %llu %llu %llu %u %u %llu %llu %llu %S %llu",
                            &uuidDatabaseId,
                            jobUUID,
                            &entityDatabaseId,
@@ -9170,8 +9172,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                            &fragmentOffset_,
                            &fragmentSize_,
                            NULL,  // imageSize,
-                           fileSystemType,
-                           NULL,  // imageEntryBlockSize,
+                           &fileSystemType_,
+                           &blockSize_,
                            &blockOffset_,
                            &blockCount_,
                            NULL,  // &directorySize,
@@ -9184,6 +9186,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   }
   assert(fragmentOffset_ >= 0LL);
   assert(fragmentSize_ >= 0LL);
+  assert(fileSystemType_ >= 0);
+  assert(blockSize_ >= 0);
   assert(blockOffset_ >= 0LL);
   assert(blockCount_ >= 0LL);
 //TODO: may happen
@@ -9191,22 +9195,23 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
   if (entityIndexId  != NULL) (*entityIndexId ) = INDEX_ID_(INDEX_TYPE_ENTITY, entityDatabaseId );
   if (storageIndexId != NULL) (*storageIndexId) = INDEX_ID_(INDEX_TYPE_STORAGE,storageDatabaseId);
   if (entryIndexId   != NULL) (*entryIndexId  ) = INDEX_ID_(indexType,         entryDatabaseId  );
-  if (fragmentOrBlockOffset != NULL)
+  if (fileSystemType != NULL) (*fileSystemType) = (FileSystemTypes)fileSystemType_;
+  if (fragmentOffset != NULL)
   {
     switch (indexType)
     {
-      case INDEX_TYPE_FILE:  (*fragmentOrBlockOffset) = fragmentOffset_; break;
-      case INDEX_TYPE_IMAGE: (*fragmentOrBlockOffset) = blockOffset_;    break;
-      default:               (*fragmentOrBlockOffset) = 0LL;             break;
+      case INDEX_TYPE_FILE:  (*fragmentOffset) = (uint64)fragmentOffset_;                 break;
+      case INDEX_TYPE_IMAGE: (*fragmentOffset) = (uint64)blockOffset_*(uint64)blockSize_; break;
+      default:               (*fragmentOffset) = 0LL;                                     break;
     }
   }
-  if (fragmentSizeOrBlockCount != NULL)
+  if (fragmentSize != NULL)
   {
     switch (indexType)
     {
-      case INDEX_TYPE_FILE:  (*fragmentSizeOrBlockCount) = fragmentSize_; break;
-      case INDEX_TYPE_IMAGE: (*fragmentSizeOrBlockCount) = blockCount_;   break;
-      default:               (*fragmentSizeOrBlockCount) = 0LL;           break;
+      case INDEX_TYPE_FILE:  (*fragmentSize) = (uint64)fragmentSize_;                  break;
+      case INDEX_TYPE_IMAGE: (*fragmentSize) = (uint64)blockCount_*(uint64)blockSize_; break;
+      default:               (*fragmentSize) = 0LL;                                    break;
     }
   }
 
@@ -9653,6 +9658,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                                     UNIXTIMESTAMP(storage.created), \
                                     entries.name, \
                                     imageEntries.fileSystemType, \
+                                    imageEntries.blockSize, \
                                     entries.size, \
                                     imageEntries.blockOffset, \
                                     imageEntries.blockCount \
@@ -9692,12 +9698,15 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                         uint64           *storageDateTime,
                         String           imageName,
                         FileSystemTypes  *fileSystemType,
+                        uint             *blockSize,
                         uint64           *size,
                         uint64           *blockOffset,
                         uint64           *blockCount
                        )
 {
   DatabaseId databaseId;
+  int        fileSystemType_;
+  int        blockSize_;
   int64      blockOffset_,blockCount_;
 
   assert(indexQueryHandle != NULL);
@@ -9710,12 +9719,13 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%lld %S %llu %S %u %llu %llu %llu",
+                           "%lld %S %llu %S %u %u %llu %llu %llu",
                            &databaseId,
                            storageName,
                            storageDateTime,
                            imageName,
-                           fileSystemType,
+                           &fileSystemType_,
+                           &blockSize_,
                            size,
                            &blockOffset_,
                            &blockCount_
@@ -9724,11 +9734,15 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   {
     return FALSE;
   }
+  assert(fileSystemType_ >= 0);
+  assert(blockSize_ >= 0);
   assert(blockOffset_ >= 0LL);
   assert(blockCount_ >= 0LL);
   if (indexId != NULL) (*indexId) = INDEX_ID_IMAGE(databaseId);
-  if (blockOffset != NULL) (*blockOffset) = (blockOffset_ >= 0LL) ? blockOffset_ : 0LL;
-  if (blockCount != NULL) (*blockCount) = (blockCount_ >= 0LL) ? blockCount_ : 0LL;
+  if (fileSystemType != NULL) (*fileSystemType) = (FileSystemTypes)fileSystemType_;
+  if (blockSize      != NULL) (*blockSize     ) = (blockSize_ >= 0) ? (uint)blockSize_ : 0LL;
+  if (blockOffset    != NULL) (*blockOffset   ) = (blockOffset_ >= 0LL) ? (uint64)blockOffset_ : 0LL;
+  if (blockCount     != NULL) (*blockCount    ) = (blockCount_ >= 0LL) ? (uint64)blockCount_ : 0LL;
 
   return TRUE;
 }

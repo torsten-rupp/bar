@@ -1807,29 +1807,29 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 * Name   : Index_getNextEntry
 * Purpose: get next entry
 * Input  : indexQueryHandle - index query handle
-* Output : uuidIndexId              - index id of UUID (can be NULL)
-*          jobUUID                  - job UUID (can be NULL)
-*          entityIndexId            - index id of entry
-*          scheduleUUID             - schedule UUID (can be NULL)
-*          userName                 - user name (can be NULL)
-*          hostName                 - host name (can be NULL)
-*          archiveType              - archive type (can be NULL)
-*          storageIndexId           - index id of storage (can be NULL)
-*          storageName              - storage name (can be NULL)
-*          storageDateTime          - storage date/time stamp [s]
-*          entryIndexId             - index id of entry
-*          entryName                - entry name
-*          destinationName          - destination name (for link entries)
-*          fileSystemType           - file system type (for image
-*                                     entries)
-*          size                     - file/image/hardlink size [bytes]
-*                                     or directory size [bytes]
-*          timeModified             - modified date/time stamp [s]
-*          userId                   - user id
-*          groupId                  - group id
-*          permission               - permission flags
-*          fragmentOrBlockOffset    - fragment offset [bytes]/[blocks]
-*          fragmentSizeOrBlockCount - fragment size [bytes]/[blocks]
+* Output : uuidIndexId     - index id of UUID (can be NULL)
+*          jobUUID         - job UUID (can be NULL)
+*          entityIndexId   - index id of entry
+*          scheduleUUID    - schedule UUID (can be NULL)
+*          userName        - user name (can be NULL)
+*          hostName        - host name (can be NULL)
+*          archiveType     - archive type (can be NULL)
+*          storageIndexId  - index id of storage (can be NULL)
+*          storageName     - storage name (can be NULL)
+*          storageDateTime - storage date/time stamp [s]
+*          entryIndexId    - index id of entry
+*          entryName       - entry name
+*          destinationName - destination name (for link entries)
+*          fileSystemType  - file system type (for image
+*                            entries)
+*          size            - file/image/hardlink size [bytes]
+*                            or directory size [bytes]
+*          timeModified    - modified date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+*          fragmentOffset  - fragment offset [bytes]
+*          fragmentSize    - fragment size [bytes]
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
@@ -1855,8 +1855,8 @@ bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
                         uint32            *userId,
                         uint32            *groupId,
                         uint32            *permission,
-                        uint64            *fragmentOrBlockOffset,
-                        uint64            *fragmentSizeOrBlockCount
+                        uint64            *fragmentOffset,
+                        uint64            *fragmentSize
                        );
 
 /***********************************************************************\
@@ -1976,6 +1976,7 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 * Output : indexId      - index id
 *          storageName  - storage name
 *          imageName    - image name
+*          blockSize    - block size [bytes]
 *          size         - size [bytes]
 *          blockOffset  - block offset [blocks]
 *          blockCount   - number of blocks
@@ -1989,6 +1990,7 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                         uint64           *storageDateTime,
                         String           imageName,
                         FileSystemTypes  *fileSystemType,
+                        uint             *blockSize,
                         uint64           *size,
                         uint64           *blockOffset,
                         uint64           *blockCount

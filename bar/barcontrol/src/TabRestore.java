@@ -3881,12 +3881,10 @@ Dprintf.dprintf("");
                                                                     break;
                                                                   case IMAGE:
                                                                     {
-                                                                      String imageName   = valueMap.getString("name"       );
-                                                                      long   size        = valueMap.getLong  ("size"       );
-//TODO: implemente blockSize
-                                                                      int    blockSize   = 1;
-                                                                      long   blockOffset = valueMap.getLong  ("blockOffset");
-                                                                      long   blockCount  = valueMap.getLong  ("blockCount" );
+                                                                      String imageName      = valueMap.getString("name"       );
+                                                                      long   size           = valueMap.getLong  ("size"       );
+                                                                      long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
+                                                                      long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
 
                                                                       // add entry data index
                                                                       entryIndexDataList.add(new EntryIndexData(entryId,
@@ -3899,8 +3897,8 @@ Dprintf.dprintf("");
                                                                                                                 imageName,
                                                                                                                 0L,
                                                                                                                 size,
-                                                                                                                blockOffset*blockSize,
-                                                                                                                blockCount*blockSize
+                                                                                                                fragmentOffset,
+                                                                                                                fragmentSize
                                                                                                                )
                                                                                             );
                                                                     }

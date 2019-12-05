@@ -12639,7 +12639,7 @@ LOCAL void serverCommand_volumeUnload(ClientInfo *clientInfo, IndexHandle *index
 *
 *            fileType=IMAGE name=<name> size=<n [bytes]> archiveSize=<n [bytes]> deltaCompressAlgorithm=<n> \
 *            byteCompressAlgorithm=<n> cryptAlgorithm=<n> cryptType=<n> deltaSourceName=<name> \
-*            deltaSourceSize=<n [bytes]> blockSize=<n [bytes]> blockOffset=<n> blockCount=<n>
+*            deltaSourceSize=<n [bytes]> blockSize=<n [bytes]> fragmentOffset=<n> fragmentSize=<n>
 *
 *            fileType=DIRECTORY name=<name> dateTime=<time stamp> cryptAlgorithm=<n> cryptType=<n>
 *
@@ -12828,7 +12828,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
             FileSystemTypes    fileSystemType;
             String             deltaSourceName;
             uint64             deltaSourceSize;
-            uint64             blockOffset,blockCount;
+            uint64             fragmentOffset,fragmentSize;
 
             // open archive file
             imageName       = String_new();
@@ -12844,8 +12844,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                            &fileSystemType,
                                            deltaSourceName,
                                            &deltaSourceSize,
-                                           &blockOffset,
-                                           &blockCount
+                                           &fragmentOffset,
+                                           &fragmentSize
                                           );
             if (error != ERROR_NONE)
             {
@@ -12861,7 +12861,7 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                )
             {
               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                                  "fileType=IMAGE name=%'S size=%"PRIu64" archiveSize=%"PRIu64" deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%"PRIu64" fileSystemType=%s blockSize=%u blockOffset=%"PRIu64" blockCount=%"PRIu64"",
+                                  "fileType=IMAGE name=%'S size=%"PRIu64" archiveSize=%"PRIu64" deltaCompressAlgorithm=%d byteCompressAlgorithm=%d cryptAlgorithm=%d cryptType=%d deltaSourceName=%'S deltaSourceSize=%"PRIu64" fileSystemType=%s blockSize=%u fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"",
                                   imageName,
                                   deviceInfo.size,
                                   archiveEntryInfo.image.chunkImageData.info.size,
@@ -12873,8 +12873,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
                                   deltaSourceSize,
                                   FileSystem_fileSystemTypeToString(fileSystemType,NULL),
                                   deviceInfo.blockSize,
-                                  blockOffset,
-                                  blockCount
+                                  fragmentOffset,
+                                  fragmentSize
                                  );
             }
 
@@ -13520,8 +13520,8 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                                NULL,  // userId
                                NULL,  // groupId
                                NULL,  // permission
-                               NULL,  // fragmentOrBlockOffset
-                               NULL  // fragmentSizeOrBlockCount
+                               NULL,  // fragmentOffset
+                               NULL  // fragmentSize
                               )
         )
   {
@@ -14439,8 +14439,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                      NULL,  // userId
                                      NULL,  // groupId
                                      NULL,  // permission
-                                     NULL,  // fragmentOrBlockOffset
-                                     NULL // fragmentSizeOrBlockCount
+                                     NULL,  // fragmentOffset
+                                     NULL // fragmentSize
                                     )
               )
         {
@@ -15291,7 +15291,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 *            hostName=<name> \
 +            storageName=<name> storageDateTime=<time stamp> \
 +            entryId=<n> entryType=IMAGE name=<name> size=<n [bztes]> dateTime=<time stamp> \
-*            blockOffset=<n [bytes]> blockCount=<n>
+*            fragmentOffset=<n [bytes]> fragmentSize=<n [bytes]>
 *
 *            jobName=<name> \
 +            archiveType=<type> \
@@ -15346,11 +15346,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                          ); \
     } \
     while (0)
-  #define SEND_IMAGE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,name,fileSystemType,size,blockOffset,blockCount) \
+  #define SEND_IMAGE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,name,fileSystemType,size,fragmentOffset,fragmentSize) \
     do \
     { \
       ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE, \
-                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=IMAGE name=%'S fileSystemType=%s size=%"PRIu64" blockOffset=%"PRIu64" blockCount=%"PRIu64"", \
+                          "jobName=%'S archiveType=%s hostName=%'S storageName=%'S storageDateTime=%"PRIu64" entryId=%"PRIindexId" entryType=IMAGE name=%'S fileSystemType=%s size=%"PRIu64" fragmentOffset=%"PRIu64" fragmentSize=%"PRIu64"", \
                           jobName, \
                           Archive_archiveTypeToString(archiveType), \
                           hostName, \
@@ -15360,8 +15360,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                           name, \
                           FileSystem_fileSystemTypeToString(fileSystemType,NULL), \
                           size, \
-                          blockOffset, \
-                          blockCount \
+                          fragmentOffset, \
+                          fragmentSize \
                          ); \
     } \
     while (0)
@@ -15472,7 +15472,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   uint64                timeModified;
   uint                  userId,groupId;
   uint                  permission;
-  uint64                fragmentOrBlockOffset,fragmentSizeOrBlockCount;
+  uint64                fragmentOffset,fragmentSize;
   const JobNode         *jobNode;
 
   assert(clientInfo != NULL);
@@ -15570,8 +15570,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                &userId,
                                &groupId,
                                &permission,
-                               &fragmentOrBlockOffset,
-                               &fragmentSizeOrBlockCount
+                               &fragmentOffset,
+                               &fragmentSize
                               )
         )
   {
@@ -15598,10 +15598,10 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     switch (Index_getType(entryId))
     {
       case INDEX_TYPE_FILE:
-        SEND_FILE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_FILE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
         break;
       case INDEX_TYPE_IMAGE:
-        SEND_IMAGE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,fileSystemType,size,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_IMAGE_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,fileSystemType,size,fragmentOffset,fragmentSize);
         break;
       case INDEX_TYPE_DIRECTORY:
         SEND_DIRECTORY_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission);
@@ -15610,7 +15610,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
         SEND_LINK_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,destinationName,timeModified,userId,groupId,permission);
         break;
       case INDEX_TYPE_HARDLINK:
-        SEND_HARDLINK_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOrBlockOffset,fragmentSizeOrBlockCount);
+        SEND_HARDLINK_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,size,timeModified,userId,groupId,permission,fragmentOffset,fragmentSize);
         break;
       case INDEX_TYPE_SPECIAL:
         SEND_SPECIAL_ENTRY(jobName,archiveType,hostName,storageName,storageDateTime,entryId,entryName,timeModified,userId,groupId,permission);
