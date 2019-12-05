@@ -3522,7 +3522,6 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   bool                       inTransit;
   uint                       totalEntityCount;
   uint64                     totalEntitySize;
-//  const PersistenceNode      *persistenceNode;
 
   // init variables
   expiredJobName = String_new();
@@ -11411,7 +11410,6 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
-  persistenceId = ID_NONE;
     jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
