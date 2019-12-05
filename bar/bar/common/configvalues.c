@@ -374,12 +374,12 @@ LOCAL bool getIntegerValue(int                   *value,
   assert(string != NULL);
 
   // split number, unit
-  i = strlen(string);
+  i = stringLength(string);
   if (i > 0)
   {
     while ((i > 1) && !isdigit(string[i-1])) { i--; }
-    j = MIN(i,               sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
-    j = MIN(strlen(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
+    j = MIN(i,                     sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
+    j = MIN(stringLength(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
   }
   else
   {
@@ -461,12 +461,12 @@ LOCAL bool getInteger64Value(int64                 *value,
   assert(string != NULL);
 
   // split number, unit
-  i = strlen(string);
+  i = stringLength(string);
   if (i > 0)
   {
     while ((i > 1) && !isdigit(string[i-1])) { i--; }
-    j = MIN(i,               sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
-    j = MIN(strlen(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
+    j = MIN(i,                     sizeof(number  )-1); strncpy(number,  &string[0],j); number  [j] = '\0';
+    j = MIN(stringLength(string)-i,sizeof(unitName)-1); strncpy(unitName,&string[i],j); unitName[j] = '\0';
   }
   else
   {
@@ -695,12 +695,12 @@ LOCAL bool processValue(const ConfigValue    *configValue,
         double                data;
 
         // split number, unit
-        i = strlen(value);
+        i = stringLength(value);
         if (i > 0)
         {
           while ((i > 1) && !isdigit(value[i-1])) { i--; }
-          j = MIN(i,              sizeof(number  )-1); strncpy(number,  &value[0],j);number  [j] = '\0';
-          j = MIN(strlen(value)-i,sizeof(unitName)-1); strncpy(unitName,&value[i],j);unitName[j] = '\0';
+          j = MIN(i,                    sizeof(number  )-1); strncpy(number,  &value[0],j);number  [j] = '\0';
+          j = MIN(stringLength(value)-i,sizeof(unitName)-1); strncpy(unitName,&value[i],j);unitName[j] = '\0';
         }
         else
         {
@@ -1216,7 +1216,51 @@ LOCAL bool processValue(const ConfigValue    *configValue,
       }
       break;
     case CONFIG_VALUE_TYPE_IGNORE:
-      // nothing to do
+      if (configValue->ignoreValue.warningFlag)
+      {
+        if (sectionName != NULL)
+        {
+          if (configValue->deprecatedValue.newName != NULL)
+          {
+            reportMessage(warningReportFunction,
+                          warningReportUserData,
+                          "Configuration value '%s' in section '%s' is ignored. Use '%s' instead",
+                          configValue->name,
+                          sectionName,
+                          configValue->deprecatedValue.newName
+                         );
+          }
+          else
+          {
+            reportMessage(warningReportFunction,
+                          warningReportUserData,
+                          "Configuration value '%s' in section '%s' is ignored",
+                          configValue->name,
+                          sectionName
+                         );
+          }
+        }
+        else
+        {
+          if (configValue->deprecatedValue.newName != NULL)
+          {
+            reportMessage(warningReportFunction,
+                          warningReportUserData,
+                          "Configuration value '%s' is ignored. Use '%s' instead",
+                          configValue->name,
+                          configValue->deprecatedValue.newName
+                         );
+          }
+          else
+          {
+            reportMessage(warningReportFunction,
+                          warningReportUserData,
+                          "Configuration value '%s' is ignored",
+                          configValue->name
+                         );
+          }
+        }
+      }
       break;
     case CONFIG_VALUE_TYPE_DEPRECATED:
       // store value
@@ -1236,7 +1280,7 @@ LOCAL bool processValue(const ConfigValue    *configValue,
                                                    )
                )
             {
-              if (strlen(errorMessage) > 0)
+              if (!stringIsEmpty(errorMessage))
               {
                 reportMessage(errorReportFunction,
                               errorReportUserData,
@@ -1827,6 +1871,48 @@ bool ConfigValue_parseDeprecatedBoolean(void *userData, void *variable, const ch
   {
     (*(bool*)variable) = FALSE;
   }
+
+  return TRUE;
+}
+
+bool ConfigValue_parseDeprecatedInteger(void       *userData,
+                                        void       *variable,
+                                        const char *name,
+                                        const char *value,
+                                        char       errorMessage[],
+                                        uint       errorMessageSize
+                                       )
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(int*)variable) = strtol(value,NULL,0);
+
+  return TRUE;
+}
+
+bool ConfigValue_parseDeprecatedInteger64(void       *userData,
+                                          void       *variable,
+                                          const char *name,
+                                          const char *value,
+                                          char       errorMessage[],
+                                          uint       errorMessageSize
+                                         )
+{
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  (*(int64*)variable) = strtoll(value,NULL,0);
 
   return TRUE;
 }
