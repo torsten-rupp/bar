@@ -728,6 +728,10 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
         }
         uuidNode->cleanFlag = FALSE;
       }
+      if (notifyInfo == NULL)
+      {
+        continue;
+      }
 
       // scan sub-directories
       if (fileInfo.type == FILE_TYPE_DIRECTORY)
