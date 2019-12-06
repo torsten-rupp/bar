@@ -3892,7 +3892,7 @@ LOCAL void indexThreadCode(void)
                                            INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
                                            NULL,  // uuidIndexId
                                            NULL,  // jobUUID
-                                           NULL,  // entityIndexId
+                                           NULL,  // entityId,
                                            NULL,  // scheduleUUID
                                            &storageId,
                                            storageName,
