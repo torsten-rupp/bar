@@ -318,9 +318,9 @@ extern JobList   jobList;
 \***********************************************************************/
 
 #define JOB_LIST_LOCKED_DO(semaphoreLockType,timeout) \
-  for (SemaphoreLock semaphoreLock = Job_listLock(semaphoreLockType,timeout); \
-       semaphoreLock; \
-       Job_listUnlock(), semaphoreLock = FALSE \
+  for (SemaphoreLock __semaphoreLock ## __COUNTER__ = Job_listLock(semaphoreLockType,timeout); \
+       __semaphoreLock ## __COUNTER__; \
+       Job_listUnlock(), __semaphoreLock ## __COUNTER__ = FALSE \
       )
 
 /***********************************************************************\
@@ -442,9 +442,9 @@ extern JobList   jobList;
 \***********************************************************************/
 
 #define JOB_SLAVE_LIST_LOCKED_DO(semaphoreLockType,timeout) \
-  for (SemaphoreLock semaphoreLock = Semaphore_lock(&slaveList.lock,semaphoreLockType,timeout); \
-       semaphoreLock; \
-       Semaphore_unlock(&slaveList.lock), semaphoreLock = FALSE \
+  for (SemaphoreLock __semaphoreLock ## __COUNTER__ = Semaphore_lock(&slaveList.lock,semaphoreLockType,timeout); \
+       __semaphoreLock ## __COUNTER__; \
+       Semaphore_unlock(&slaveList.lock), __semaphoreLock ## __COUNTER__ = FALSE \
       )
 
 /***********************************************************************\
