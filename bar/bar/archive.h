@@ -1690,6 +1690,8 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 * Name   : Archive_addToIndex
 * Purpose: add storage index
 * Input  : indexHandle - index handle
+*          entityId    - entity id
+*          hostName    - host name
 *          storageInfo - storage info
 *          indexMode   - index mode
 *          logHandle   - log handle (can be NULL)
@@ -1702,6 +1704,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 \***********************************************************************/
 
 Errors Archive_addToIndex(IndexHandle *indexHandle,
+                          IndexId     entityId,
                           ConstString hostName,
                           StorageInfo *storageInfo,
                           IndexModes  indexMode,
