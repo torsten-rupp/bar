@@ -171,9 +171,9 @@ typedef enum
 \***********************************************************************/
 
 #define SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType,timeout) \
-  for (SemaphoreLock semaphoreLock = Semaphore_lock(semaphore,semaphoreLockType,timeout); \
-       semaphoreLock; \
-       Semaphore_unlock(semaphore), semaphoreLock = FALSE \
+  for (SemaphoreLock __semaphoreLock ## __COUNTER__ = Semaphore_lock(semaphore,semaphoreLockType,timeout); \
+       __semaphoreLock ## __COUNTER__; \
+       Semaphore_unlock(semaphore), __semaphoreLock ## __COUNTER__ = FALSE \
       )
 
 #ifndef NDEBUG
