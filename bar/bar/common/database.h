@@ -202,17 +202,17 @@ typedef struct DatabaseNode
   uint                        openCount;
 
   DatabaseLockTypes           type;
-volatile  uint                        pendingReadCount;
-volatile  uint                        readCount;
+  uint                        pendingReadCount;
+  uint                        readCount;
   pthread_cond_t              readTrigger;
 
-volatile  uint                        pendingReadWriteCount;
-volatile  uint                        readWriteCount;
+  uint                        pendingReadWriteCount;
+  uint                        readWriteCount;
   pthread_cond_t              readWriteTrigger;
   ThreadId                    readWriteLockedBy;
 
-volatile  uint                        pendingTransactionCount;
-volatile  uint                        transactionCount;
+  uint                        pendingTransactionCount;
+  uint                        transactionCount;
   pthread_cond_t              transactionTrigger;
 
   DatabaseBusyHandlerList     busyHandlerList;
@@ -405,6 +405,30 @@ typedef bool(*DatabasePauseCallbackFunction)(void *userData);
 /***************************** Variables *******************************/
 
 /****************************** Macros *********************************/
+
+/***********************************************************************\
+* Name   : DATABASE_LOCKED_DO
+* Purpose: execute block with database locked
+* Input  : databaseHandle    - database handle
+*          semaphoreLockType - lock type; see SemaphoreLockTypes
+*          timeout           - timeout [ms] or NO_WAIT, WAIT_FOREVER
+* Output : -
+* Return : -
+* Notes  : usage:
+*            SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType,timeout)
+*            {
+*              ...
+*            }
+*
+*          semaphore must be unlocked manually if 'break'  or
+*          'return' is used!
+\***********************************************************************/
+
+#define DATABASE_LOCKED_DO(databaseHandle,lockType,timeout) \
+  for (bool __databaseLock ## __COUNTER__ = Database_lock(databaseHandle,lockType,timeout); \
+       __databaseLock ## __COUNTER__; \
+       Database_unlock(databaseHandle,lockType), __databaseLock ## __COUNTER__ = FALSE \
+      )
 
 #define DATABASE_TRANSFER_OPERATION_COPY(fromName,toName,type) DATABASE_TRANSFER_OPERATION_COPY,fromName,toName,type
 #define DATABASE_TRANSFER_OPERATION_SET(toName,type,value)     DATABASE_TRANSFER_OPERATION_SET, toName,  value, type
@@ -625,13 +649,14 @@ void Database_yield(DatabaseHandle *databaseHandle,
 
 /***********************************************************************\
 * Name   : Database_lock
-* Purpose: lock database exclusive for this handle
+* Purpose: lock database exclusive
 * Input  : databaseHandle - database handle
 *          lockType       - lock type; see DATABASE_LOCK_TYPE_...
 *          timeout        - timeout [ms[ or WAIT_FOREVER
 * Output : -
 * Return : TRUE iff locked
-* Notes  : -
+* Notes  : lock is aquired for all database handles sharing the same
+*          database file
 \***********************************************************************/
 
 #ifdef NDEBUG
