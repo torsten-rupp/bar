@@ -1780,6 +1780,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          sortMode         - sort mode; see IndexStorageSortModes
 *          ordering         - ordering
 *          newestOnly       - TRUE for newest entries only
+*          fragmentsFlag    - TRUE to list all fragments
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -1799,6 +1800,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              IndexEntrySortModes sortMode,
                              DatabaseOrdering    ordering,
                              bool                newestOnly,
+                             bool                fragmentsFlag,
                              uint64              offset,
                              uint64              limit
                             );

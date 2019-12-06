@@ -2127,6 +2127,7 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 INDEX_ENTRY_SORT_MODE_NONE,
                                 DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly
+                                TRUE, // fragmentsFlag
                                 0LL,  // offset
                                 INDEX_UNLIMITED
                                );
@@ -8012,6 +8013,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   String_delete(filterIdsString);
 
+fprintf(stderr,"%s, %d: %d %d\n",__FILE__,__LINE__,String_isEmpty(ftsName),String_isEmpty(entryIdsString));
   error = ERROR_NONE;
   if      (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
   {
@@ -8432,6 +8434,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       }
       else
       {
+fprintf(stderr,"%s, %d: XXXXXXXXXXXXXXXXXX\n",__FILE__,__LINE__);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(entries.id), \
@@ -8443,6 +8446,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     %S \
                                         AND storage.deletedFlag=0 \
+GROUP BY entries.name \
                                  ",
                                  filterString
                                 );
@@ -8548,6 +8552,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              IndexEntrySortModes sortMode,
                              DatabaseOrdering    ordering,
                              bool                newestOnly,
+                             bool                fragmentsFlag,
                              uint64              offset,
                              uint64              limit
                             )
@@ -8806,6 +8811,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                    LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                                    LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                                  WHERE %S \
+GROUP BY entries.name \
                                  %S \
                                  LIMIT %llu,%llu; \
                                 ",
@@ -9067,6 +9073,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                                    LEFT JOIN linkEntries ON linkEntries.entryId=entries.id \
                                    LEFT JOIN hardlinkEntries ON hardlinkEntries.entryId=entries.id \
                                  WHERE %S \
+GROUP BY entries.name \
                                  %S \
                                  LIMIT %llu,%llu; \
                                 ",

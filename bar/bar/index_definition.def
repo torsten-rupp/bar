@@ -461,6 +461,15 @@ CREATE TRIGGER AFTER INSERT ON specialEntries
       WHERE id=NEW.entryId;
   END;
 
+// --- fragments -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS fragments(
+  id              INTEGER PRIMARY KEY,
+  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  offset          INTEGER,
+  size            INTEGER
+);
+CREATE INDEX ON fragments (entryId,offset);
+
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
   id                INTEGER PRIMARY KEY,

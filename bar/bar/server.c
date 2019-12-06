@@ -13488,6 +13488,7 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                                 INDEX_ENTRY_SORT_MODE_NONE,
                                 DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly,
+TRUE,//fragments
                                 0,
                                 INDEX_UNLIMITED
                                );
@@ -14411,6 +14412,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     INDEX_ENTRY_SORT_MODE_NONE,
                                     DATABASE_ORDERING_NONE,
                                     FALSE,  // newestOnly,
+TRUE,//fragments
                                     0,
                                     INDEX_UNLIMITED
                                    );
@@ -15533,6 +15535,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                 sortMode,
                                 ordering,
                                 newestOnly,
+TRUE,//fragments
                                 offset,
                                 limit
                                );

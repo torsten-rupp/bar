@@ -3237,7 +3237,7 @@ Dprintf.dprintf("");
     @Override
     public String toString()
     {
-      return "Entry {hostName="+hostName+", storageName="+storageName+", name="+name+", entryType="+entryType+", dateTime="+dateTime+", size="+size+", checked="+checked+"}";
+      return "Entry {"+id+", hostName="+hostName+", storageName="+storageName+", name="+name+", entryType="+entryType+", dateTime="+dateTime+", size="+size+", checked="+checked+"}";
     }
   };
 
@@ -4838,6 +4838,21 @@ Dprintf.dprintf("");
       Widgets.layout(widgetEntryTableToolTip,0,0,TableLayoutData.NSWE);
 
       row = 0;
+
+      if (Settings.debugLevel > 0)
+      {
+        assert ((entryIndexData.id & 0x0000000F) >= 5) && ((entryIndexData.id & 0x0000000F) <= 10) : entryIndexData;
+
+        label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Entry id")+":");
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetEntryTableToolTip,Long.toString(entryIndexData.id >> 4));
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+      }
 
       label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Job")+":");
       label.setForeground(COLOR_FOREGROUND);
