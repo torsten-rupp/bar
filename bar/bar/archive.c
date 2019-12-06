@@ -1580,6 +1580,9 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
 
   error = ERROR_NONE;
 
+#warning REMOVE
+maxIndexEntries=0;
+
   // init variables
   List_init(&archiveIndexList);
 
@@ -5663,7 +5666,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   assert(storageInfo != NULL);
   assert(storageInfo->jobOptions != NULL);
   assert(archiveStoreFunction != NULL);
-//  assert((indexHandle == NULL) || (entityId == INDEX_ID_NONE) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
+  assert((entityId == INDEX_ID_NONE) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
 
 //TODO:
 UNUSED_VARIABLE(storageInfo);
@@ -14629,6 +14632,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 }
 
 Errors Archive_addToIndex(IndexHandle *indexHandle,
+                          IndexId     entityId,
                           ConstString hostName,
                           StorageInfo *storageInfo,
                           IndexModes  indexMode,
@@ -14648,7 +14652,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   // create new storage index
   printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
   error = Index_newStorage(indexHandle,
-                           INDEX_ID_NONE, // entityId
+                           entityId,
                            hostName,
                            NULL,  // userName,
                            printableStorageName,
