@@ -1655,7 +1655,7 @@ Errors __File_openCString(const char *__fileName__,
   Errors  error;
   #ifdef HAVE_O_NOATIME
   #else /* not HAVE_O_NOATIME */
-    struct stat stat;
+    struct stat fileStat;
   #endif /* HAVE_O_NOATIME */
   String  directoryName;
 
@@ -1760,7 +1760,7 @@ Errors __File_openCString(const char *__fileName__,
           // store atime
           if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
           {
-            if (fstat(fileDescriptor,&stat) == 0)
+            if (fstat(fileDescriptor,&statBuffer) == 0)
             {
               fileHandle->atime.tv_sec  = stat.st_atime;
               #ifdef HAVE_STAT_ATIM_TV_NSEC
@@ -2668,7 +2668,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
     #ifdef HAVE_O_NOATIME
       int    handle;
     #else /* not HAVE_O_NOATIME */
-      struct stat stat;
+      struct stat fileStat;
     #endif /* HAVE_O_NOATIME */
   #endif /* defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY) */
 
@@ -3772,7 +3772,7 @@ bool File_isNetworkFileSystemCString(const char *fileName)
 {
   bool isNetworkFileSystem;
   #if   defined(PLATFORM_LINUX)
-    struct statfs buffer;
+    struct statfs fileSystemStat;
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
@@ -3781,12 +3781,12 @@ bool File_isNetworkFileSystemCString(const char *fileName)
   isNetworkFileSystem = FALSE;
 
   #if   defined(PLATFORM_LINUX)
-    if (statfs(fileName,&buffer) == 0)
+    if (statfs(fileName,&fileSystemStat) == 0)
     {
-      isNetworkFileSystem =    (buffer.f_type == AFS_SUPER_MAGIC)
-                            || (buffer.f_type == CODA_SUPER_MAGIC)
-                            || (buffer.f_type == NFS_SUPER_MAGIC)
-                            || (buffer.f_type == SMB_SUPER_MAGIC);
+      isNetworkFileSystem =    (fileSystemStat.f_type == AFS_SUPER_MAGIC)
+                            || (fileSystemStat.f_type == CODA_SUPER_MAGIC)
+                            || (fileSystemStat.f_type == NFS_SUPER_MAGIC)
+                            || (fileSystemStat.f_type == SMB_SUPER_MAGIC);
     }
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
@@ -3996,7 +3996,7 @@ Errors File_getAttributesCString(FileAttributes *fileAttributes,
     Errors error;
   #endif /* FS_IOC_GETFLAGS */
   #ifndef HAVE_O_NOATIME
-    struct stat stat;
+    struct stat fileStat;
     bool   atimeFlag;
     struct timespec atime;
   #endif /* not HAVE_O_NOATIME */
@@ -4098,7 +4098,7 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
   #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
     #ifndef HAVE_O_NOATIME
 //TODO: remove
-//      struct stat     stat;
+//      struct stat     fileStat;
 //      bool            atimeFlag;
 //      struct timespec atime;
     #endif /* not HAVE_O_NOATIME */
