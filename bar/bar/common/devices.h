@@ -50,6 +50,7 @@ typedef struct
 {
   FILE *file;
   char line[256];
+  char deviceName[256];
   bool readFlag;
 } DeviceListHandle;
 

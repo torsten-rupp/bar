@@ -619,7 +619,9 @@ void Device_closeDeviceList(DeviceListHandle *deviceListHandle)
 
 bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
 {
-  uint i,j;
+  uint        i,j;
+  struct stat fileStat;
+  char        buffer[256];
 
   assert(deviceListHandle != NULL);
   assert(deviceListHandle->file != NULL);
@@ -631,27 +633,37 @@ bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
   {
     // skip leading spaces
     i = 0;
-    while ((i < sizeof(deviceListHandle->line)) && isspace(deviceListHandle->line[i]))
+    while ((deviceListHandle->line[i] != '\0') && isspace(deviceListHandle->line[i]))
     {
       i++;
-    }
-    j = 0;
-    while ((i < sizeof(deviceListHandle->line)) && (deviceListHandle->line[i] != '\0'))
-    {
-      deviceListHandle->line[j] = deviceListHandle->line[i];
-      i++;
-      j++;
     }
 
     // skip trailing spaces
-    while ((j > 0) && isspace(deviceListHandle->line[j-1]))
+    j = i;
+    while (deviceListHandle->line[j] != '\0')
+    {
+      j++;
+    }
+    while ((j > i) && isspace(deviceListHandle->line[j-1]))
     {
       j--;
     }
     deviceListHandle->line[j] = '\0';
 
-    // if line is not empty set read flag
-    if (j > 0) deviceListHandle->readFlag = TRUE;
+    if (j > i)
+    {
+      // parse and get device name
+      if (String_scanCString(&deviceListHandle->line[i],"%* %* %* %256s %*",buffer))
+      {
+        stringSet(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),"/dev/");
+        stringAppend(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),buffer);
+        if (stat(deviceListHandle->deviceName,&fileStat) == 0)
+        {
+          // mark entry available
+          deviceListHandle->readFlag = TRUE;
+        }
+      }
+    }
   }
 
   return !deviceListHandle->readFlag;
@@ -661,8 +673,9 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
                              String           deviceName
                             )
 {
-  uint i,j;
-  char buffer[256];
+  uint        i,j;
+  struct stat fileStat;
+  char        buffer[256];
 
   assert(deviceListHandle != NULL);
   assert(deviceListHandle->file != NULL);
@@ -675,38 +688,43 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
   {
     // skip leading spaces
     i = 0;
-    while ((i < sizeof(deviceListHandle->line)) && isspace(deviceListHandle->line[i]))
+    while ((deviceListHandle->line[i] != '\0') && isspace(deviceListHandle->line[i]))
     {
       i++;
-    }
-    j = 0;
-    while ((i < sizeof(deviceListHandle->line)) && (deviceListHandle->line[i] != '\0'))
-    {
-      deviceListHandle->line[j] = deviceListHandle->line[i];
-      i++;
-      j++;
     }
 
     // skip trailing spaces
-    while ((j > 0) && isspace(deviceListHandle->line[j-1]))
+    j = i;
+    while (deviceListHandle->line[j] != '\0')
+    {
+      j++;
+    }
+    while ((j > i) && isspace(deviceListHandle->line[j-1]))
     {
       j--;
     }
     deviceListHandle->line[j] = '\0';
 
     // if line is not empty set read flag
-    if (j > 0) deviceListHandle->readFlag = TRUE;
+    if (j > i)
+    {
+      // parse and get device name
+      if (String_scanCString(&deviceListHandle->line[i],"%* %* %* %256s %*",buffer))
+      {
+        stringSet(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),"/dev/");
+        stringAppend(deviceListHandle->deviceName,sizeof(deviceListHandle->deviceName),buffer);
+        if (stat(deviceListHandle->deviceName,&fileStat) == 0)
+        {
+          // mark entry available
+          deviceListHandle->readFlag = TRUE;
+        }
+      }
+    }
   }
 
   if (deviceListHandle->readFlag)
   {
-    // parse and get device name
-    if (!String_scanCString(deviceListHandle->line,"%* %* %* %256s %*",buffer))
-    {
-      return ERRORX_(IO,0,"invalid format");
-    }
-    String_setCString(deviceName,"/dev");
-    File_appendFileNameCString(deviceName,buffer);
+    String_setCString(deviceName,deviceListHandle->deviceName);
 
     // mark entry read
     deviceListHandle->readFlag = FALSE;
