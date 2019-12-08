@@ -174,7 +174,8 @@ CREATE TABLE IF NOT EXISTS entries(
 
   // updated by triggers
   size            INTEGER DEFAULT 0,  // file/image/hardlink size. Note: redundancy for faster access
-  fragmentOffset  INTEGER DEFAULT 0
+  fragmentOffset  INTEGER DEFAULT 0,
+  fragmentSize    INTEGER DEFAULT 0
 );
 CREATE INDEX ON entries (storageId,type,name);
 CREATE INDEX ON entries (name,size,type,timeLastChanged);
@@ -198,6 +199,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
 
   size            INTEGER DEFAULT 0,       // file/image/hardlink size. Note: redundancy for faster access
   fragmentOffset  INTEGER DEFAULT 0,
+  fragmentSize    INTEGER DEFAULT 0,
 
   CONSTRAINT newest UNIQUE (name)
 );
@@ -264,7 +266,8 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
          groupId,
          permission,
          size,
-         fragmentOffset
+         fragmentOffset,
+         fragmentSize
         )
       VALUES
         (
@@ -277,7 +280,8 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
          NEW.groupId,
          NEW.permission,
          NEW.size,
-         NEW.fragmentOffset
+         NEW.fragmentOffset,
+         NEW.fragmentSize
         );
 
     // update if entry is newer
@@ -290,7 +294,8 @@ CREATE TRIGGER AFTER UPDATE OF size ON entries
           groupId        =NEW.groupId,
           permission     =NEW.permission,
           size           =NEW.size,
-          fragmentOffset =NEW.fragmentOffset
+          fragmentOffset =NEW.fragmentOffset,
+          fragmentSize   =NEW.fragmentSize
       WHERE     entryId!=NEW.id
             AND name=NEW.name
             AND NEW.timeLastChanged>timeLastChanged;
@@ -345,7 +350,8 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
       SET size=NEW.size,
-          fragmentOffset=NEW.fragmentOffset
+          fragmentOffset=NEW.fragmentOffset,
+          fragmentSize=NEW.fragmentSize
       WHERE id=NEW.entryId;
   END;
 
@@ -369,7 +375,8 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
       SET size=NEW.size,
-          fragmentOffset=NEW.blockOffset*NEW.blockCount
+          fragmentOffset=NEW.blockOffset*NEW.blockSize,
+          fragmentSize=NEW.blockCount*NEW.blockSize
       WHERE id=NEW.entryId;
   END;
 
@@ -436,7 +443,8 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
       SET size=NEW.size,
-          fragmentOffset=NEW.fragmentOffset
+          fragmentOffset=NEW.fragmentOffset,
+          fragmentSize=NEW.fragmentSize
       WHERE id=NEW.entryId;
   END;
 
@@ -460,15 +468,6 @@ CREATE TRIGGER AFTER INSERT ON specialEntries
       SET size=0
       WHERE id=NEW.entryId;
   END;
-
-// --- fragments -------------------------------------------------------
-CREATE TABLE IF NOT EXISTS fragments(
-  id              INTEGER PRIMARY KEY,
-  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  offset          INTEGER,
-  size            INTEGER
-);
-CREATE INDEX ON fragments (entryId,offset);
 
 // --- history ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS history(
