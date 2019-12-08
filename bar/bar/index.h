@@ -641,7 +641,7 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 * Input  : indexHandle      - index handle
 *          findJobUUID      - unique job UUID to find
 *          findScheduleUUID - unique schedule UUID to find (can be NULL)
-* Output : uuidIndexId                 - index id of UUID entry (can be
+* Output : uuidId                      - index id of UUID entry (can be
 *                                        NULL)
 *          lastExecutedDateTime        - last executed date/time stamp
 *                                        [s] (can be NULL)
@@ -685,7 +685,7 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 bool Index_findUUID(IndexHandle  *indexHandle,
                     ConstString  findJobUUID,
                     ConstString  findScheduleUUID,
-                    IndexId      *uuidIndexId,
+                    IndexId      *uuidId,
                     uint64       *lastExecutedDateTime,
                     String       lastErrorMessage,
                     ulong        *executionCountNormal,
@@ -709,7 +709,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 * Name   : Index_findEntity
 * Purpose: find entity info
 * Input  : indexHandle         - index handle
-*          findEntityIndexId   - index id of entity to find (can be
+*          findEntityId        - index id of entity to find (can be
 *                                INDEX_ID_NONE)
 *          findJobUUID         - unique job UUID to find (can be NULL)
 *          findScheduleUUID    - unique schedule UUID to find (can be
@@ -720,8 +720,8 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 *          findCreatedDateTime - create date/time to find (can be 0)
 * Output : jobUUID          - unique job UUID (can be NULL)
 *          scheduleUUID     - unique schedule UUID (can be NULL)
-*          uuidIndexId      - index id of UUID entry (can be NULL)
-*          entityIndexId    - index id of entity entry (can be NULL)
+*          uuidId           - index id of UUID entry (can be NULL)
+*          entityId         - index id of entity entry (can be NULL)
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          lastErrorMessage - last error message (can be NULL)
@@ -732,7 +732,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 bool Index_findEntity(IndexHandle  *indexHandle,
-                      IndexId      findEntityIndexId,
+                      IndexId      findEntityId,
                       ConstString  findJobUUID,
                       ConstString  findScheduleUUID,
                       ConstString  findHostName,
@@ -740,8 +740,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                       uint64       findCreatedDateTime,
                       String       jobUUID,
                       String       scheduleUUID,
-                      IndexId      *uuidIndexId,
-                      IndexId      *entityIndexId,
+                      IndexId      *uuidId,
+                      IndexId      *entityId,
                       ArchiveTypes *archiveType,
                       uint64       *createdDateTime,
                       String       lastErrorMessage,
@@ -752,12 +752,12 @@ bool Index_findEntity(IndexHandle  *indexHandle,
 /***********************************************************************\
 * Name   : Index_findStorageById
 * Purpose: find info by storage id
-* Input  : indexHandle - index handle
-*          findStorageIndexId  - index id of storage to find
+* Input  : indexHandle   - index handle
+*          findStorageId - index id of storage to find
 * Output : jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
-*          uuidIndexId         - index id of UUID entry (can be NULL)
-*          entityIndexId       - index id of entity entry (can be NULL)
+*          uuidId              - index id of UUID entry (can be NULL)
+*          entityId            - index id of entity entry (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
@@ -773,11 +773,11 @@ bool Index_findEntity(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 bool Index_findStorageById(IndexHandle *indexHandle,
-                           IndexId     findStorageIndexId,
+                           IndexId     findStorageId,
                            String      jobUUID,
                            String      scheduleUUID,
-                           IndexId     *uuidIndexId,
-                           IndexId     *entityIndexId,
+                           IndexId     *uuidId,
+                           IndexId     *entityId,
                            String      storageName,
                            uint64      *createdDateTime,
                            uint64      *size,
@@ -795,11 +795,11 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 * Input  : indexHandle          - index handle
 *          findStorageSpecifier - storage specifier to find
 *          findArchiveName      - archive name to find (can be NULL)
-* Output : uuidIndexId         - index id of UUID entry (can be NULL)
-*          entityIndexId       - index id of entity (can be NULL)
+* Output : uuidId              - index id of UUID entry (can be NULL)
+*          entityId            - index id of entity (can be NULL)
 *          jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
-*          entityIndexId       - index id of entity entry (can be NULL)
+*          entityId             - index id of entity entry (can be NULL)
 *          storageId           - index id of storage entry (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
@@ -817,8 +817,8 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 bool Index_findStorageByName(IndexHandle            *indexHandle,
                              const StorageSpecifier *findStorageSpecifier,
                              ConstString            findArchiveName,
-                             IndexId                *uuidIndexId,
-                             IndexId                *entityIndexId,
+                             IndexId                *uuidId,
+                             IndexId                *entityId,
                              String                 jobUUID,
                              String                 scheduleUUID,
                              IndexId                *storageId,
@@ -837,11 +837,11 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 * Purpose: find storage info by state
 * Input  : indexHandle       - index handle
 *          findIndexStateSet - index state set to find
-* Output : uuidIndexId         - index id of UUID entry (can be NULL)
+* Output : uuidId              - index id of UUID entry (can be NULL)
 *          jobUUID             - unique job UUID (can be NULL)
 *          scheduleUUID        - unique schedule UUID (can be NULL)
-*          entityIndexId       - index id of entity (can be NULL)
-*          storageIndexId      - index id of storage (can be NULL)
+*          entityId            - index id of entity (can be NULL)
+*          storageId           - index id of storage (can be NULL)
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
@@ -858,11 +858,11 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 
 bool Index_findStorageByState(IndexHandle   *indexHandle,
                               IndexStateSet findIndexStateSet,
-                              IndexId       *uuidIndexId,
+                              IndexId       *uuidId,
                               String        jobUUID,
-                              IndexId       *entityIndexId,
+                              IndexId       *entityId,
                               String        scheduleUUID,
-                              IndexId       *storageIndexId,
+                              IndexId       *storageId,
                               String        storageName,
                               uint64        *createdDateTime,
                               uint64        *size,
@@ -876,8 +876,8 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
 /***********************************************************************\
 * Name   : Index_getState
 * Purpose: get index state
-* Input  : indexHandle    - index handle
-*          storageIndexId - index id of storage
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
 * Output : indexState          - index state; see IndexStates
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
 *                                be NULL)
@@ -887,7 +887,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
 \***********************************************************************/
 
 Errors Index_getState(IndexHandle  *indexHandle,
-                      IndexId      storageIndexId,
+                      IndexId      storageId,
                       IndexStates  *indexState,
                       uint64       *lastCheckedDateTime,
                       String       errorMessage
@@ -897,7 +897,7 @@ Errors Index_getState(IndexHandle  *indexHandle,
 * Name   : Index_setState
 * Purpose: set storage index state
 * Input  : indexHandle         - index handle
-*          storageIndexId      - index id of storage
+*          storageId           - index id of storage
 *          indexState          - index state; see IndexStates
 *          lastCheckedDateTime - last checked date/time stamp [s] (can
 *                                be 0LL)
@@ -909,7 +909,7 @@ Errors Index_getState(IndexHandle  *indexHandle,
 \***********************************************************************/
 
 Errors Index_setState(IndexHandle *indexHandle,
-                      IndexId     storageIndexId,
+                      IndexId     storageId,
                       IndexStates indexState,
                       uint64      lastCheckedDateTime,
                       const char  *errorMessage,
@@ -937,7 +937,7 @@ long Index_countState(IndexHandle *indexHandle,
 * Purpose: list history
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          uuidIndexId      - index id of UUID entry (can be NULL)
+*          uuidId           - index id of UUID entry (can be NULL)
 *          jobUUID          - unique job UUID (can be NULL)
 *          ordering         - ordering
 *          offset           - offset or 0
@@ -950,7 +950,7 @@ long Index_countState(IndexHandle *indexHandle,
 
 Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
-                             IndexId          uuidIndexId,
+                             IndexId          uuidId,
                              ConstString      jobUUID,
                              DatabaseOrdering ordering,
                              uint64           offset,
@@ -961,8 +961,8 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextHistory
 * Purpose: get next history entry
 * Input  : IndexQueryHandle - index query handle
-* Output : historyIndexId    - index id of history entry (can be NULL)
-*          uuidIndexId       - UUID index id (can be NULL)
+* Output : historyId         - index id of history entry (can be NULL)
+*          uuidId            - UUID index id (can be NULL)
 *          jobUUID           - unique job UUID (can be NULL)
 *          scheduleUUID      - unique schedule UUID (can be NULL)
 *          userName          - user name (can be NULL)
@@ -983,8 +983,8 @@ Errors Index_initListHistory(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
-                          IndexId          *historyIndexId,
-                          IndexId          *uuidIndexId,
+                          IndexId          *historyId,
+                          IndexId          *uuidId,
                           String           jobUUID,
                           String           scheduleUUID,
 //TODO: entityId?
@@ -1020,7 +1020,7 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 *          skippedEntrySize  - size of skipped entries [bytes]
 *          errorEntryCount   - number of error entries
 *          errorEntrySize    - size of error entries [bytes]
-* Output : historyIndexId - index id of new history entry (can be NULL)
+* Output : historyId - index id of new history entry (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1041,20 +1041,20 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
                         uint64       skippedEntrySize,
                         ulong        errorEntryCount,
                         uint64       errorEntrySize,
-                        IndexId      *historyIndexId
+                        IndexId      *historyId
                        );
 
 /***********************************************************************\
 * Name   : Index_deleteHistory
 * Purpose: delete history entry
 * Input  : indexQueryHandle - index query handle
-*          historyIndexId   - index id of history entry
+*          historyId        - index id of history entry
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteHistory(IndexHandle *indexHandle,
-                           IndexId     historyIndexId
+                           IndexId     historyId
                           );
 
 // ---------------------------------------------------------------------
@@ -1064,7 +1064,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 * Purpose: get UUIDs infos
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          uuidIndexId      - index id of UUID entry or INDEX_ID_ANY
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
 *          jobUUID          - unique job UUID or NULL
 *          scheduleUUID     - unique schedule UUID or NULL
 *          name             - name pattern (glob, can be NULL)
@@ -1077,7 +1077,7 @@ Errors Index_deleteHistory(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
-                           IndexId       uuidIndexId,
+                           IndexId       uuidId,
 //TODO: remove?
                            ConstString   jobUUID,
                            ConstString   scheduleUUID,
@@ -1092,14 +1092,14 @@ Errors Index_getUUIDsInfos(IndexHandle   *indexHandle,
 * Name   : Index_updateUUIDInfos
 * Purpose: update UUID infos (aggregated values)
 * Input  : indexHandle - index handle
-*          uuidIndexId - index of UUID entry
+*          uuidId      - index of UUID entry
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_updateUUIDInfos(IndexHandle *indexHandle,
-                             IndexId     uuidIndexId
+                             IndexId     uuidId
                             );
 
 /***********************************************************************\
@@ -1160,14 +1160,14 @@ bool Index_getNextUUID(IndexQueryHandle *indexQueryHandle,
 * Purpose: create new UUID index
 * Input  : indexHandle  - index handle
 *          jobUUID      - unique job UUID (can be NULL)
-* Output : uuidIndexId - index id of new UUID entry (can be NULL)
+* Output : uuidId - index id of new UUID entry (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_newUUID(IndexHandle *indexHandle,
                      ConstString jobUUID,
-                     IndexId     *uuidIndexId
+                     IndexId     *uuidId
                     );
 
 /***********************************************************************\
@@ -1175,26 +1175,26 @@ Errors Index_newUUID(IndexHandle *indexHandle,
 * Purpose: delete job UUID index including all attached index entries
 *          (entities, entries)
 * Input  : indexQueryHandle - index query handle
-*          uuidIndexId      - index id of UUID entry
+*          uuidId           - index id of UUID entry
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteUUID(IndexHandle *indexHandle,
-                        IndexId     uuidIndexId
+                        IndexId     uuidId
                        );
 
 /***********************************************************************\
 * Name   : Index_isEmptyUUID
 * Purpose: check if UUID entry is empty (no entities)
 * Input  : indexQueryHandle - index query handle
-*          uuidIndexId      - index id of UUID entry
+*          uuidId           - index id of UUID entry
 * Return : TRUE iff empty
 * Notes  : -
 \***********************************************************************/
 
 bool Index_isEmptyUUID(IndexHandle *indexHandle,
-                       IndexId     uuidIndexId
+                       IndexId     uuidId
                       );
 
 // ---------------------------------------------------------------------
@@ -1204,8 +1204,8 @@ bool Index_isEmptyUUID(IndexHandle *indexHandle,
 * Purpose: get entities infos
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          uuidIndexId      - index id of UUID entry or INDEX_ID_ANY
-*          entityIndexId    - index id of entity entry id or INDEX_ID_ANY
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
+*          entityId         - index id of entity entry id or INDEX_ID_ANY
 *          jobUUID          - unique job UUID or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
@@ -1218,8 +1218,8 @@ bool Index_isEmptyUUID(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
-                              IndexId       uuidIndexId,
-                              IndexId       entityIndexId,
+                              IndexId       uuidId,
+                              IndexId       entityId,
 //TODO: remove?
                               ConstString   jobUUID,
                               const IndexId indexIds[],
@@ -1233,15 +1233,15 @@ Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
 /***********************************************************************\
 * Name   : Index_updateEntityInfos
 * Purpose: update storages info (aggregated values)
-* Input  : indexHandle   - index handle
-*          entityIndexId - index id of entity
+* Input  : indexHandle - index handle
+*          entityId    - index id of entity
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_updateEntityInfos(IndexHandle *indexHandle,
-                               IndexId     entityIndexId
+                               IndexId     entityId
                               );
 
 /***********************************************************************\
@@ -1249,7 +1249,7 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
 * Purpose: list entity entries and aggregated data of storage
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          uuidIndexId      - index id of UUID entry
+*          uuidId           - index id of UUID entry
 *          jobUUID          - unique job UUID (can be NULL)
 *          archiveType      - archive type or ARCHIVE_TYPE_ANY
 *          scheduleUUID     - unique schedule UUID (can be NULL)
@@ -1267,7 +1267,7 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
 
 Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                               IndexHandle      *indexHandle,
-                              IndexId          uuidIndexId,
+                              IndexId          uuidId,
 //TODO: remove?
                               ConstString      jobUUID,
                               ConstString      scheduleUUID,
@@ -1287,7 +1287,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
 * Output : indexUUIDId      - index id of UUID (can be NULL)
 *          jobUUID          - unique job UUID (can be NULL)
 *          scheduleUUID     - unique schedule UUID (can be NULL)
-*          entityIndexId    - index id of entity
+*          entityId         - index id of entity
 *          archiveType      - archive type (can be NULL)
 *          createdDateTime  - created date/time stamp [s] (can be NULL)
 *          lastErrorMessage - last storage error message (can be NULL)
@@ -1305,7 +1305,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
                          IndexId          *indexUUIDId,
                          String           jobUUID,
                          String           scheduleUUID,
-                         IndexId          *entityIndexId,
+                         IndexId          *entityId,
                          ArchiveTypes     *archiveType,
                          uint64           *createdDateTime,
                          String           lastErrorMessage,
@@ -1325,7 +1325,7 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 *          archiveType     - archive type
 *          createdDateTime - created date/time stamp or 0
 *          locked          - TRUE for locked entity
-* Output : entityIndexId - index id of new entity index
+* Output : entityId - index id of new entity index
 * Return : ERROR_NONE or error code
 * Notes  : entity have to be unlocked!
 \***********************************************************************/
@@ -1338,27 +1338,27 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
                        ArchiveTypes archiveType,
                        uint64       createdDateTime,
                        bool         locked,
-                       IndexId      *entityIndexId
+                       IndexId      *entityId
                       );
 
 /***********************************************************************\
 * Name   : Index_deleteEntity
 * Purpose: delete entity index including all attached entries
 * Input  : indexQueryHandle - index query handle
-*          entityIndexId    - index id of entity
+*          entityId         - index id of entity
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteEntity(IndexHandle *indexHandle,
-                          IndexId     entityIndexId
+                          IndexId     entityId
                          );
 
 /***********************************************************************\
 * Name   : Index_updateEntity
 * Purpose: update storage index
 * Input  : indexHandle     - index handle
-*          entityIndexId    - index id of entity
+*          entityId        - index id of entity
 *          jobUUID         - unique job UUID (can be NULL)
 *          scheduleUUID    - unique schedule UUID (can be NULL)
 *          hostName        - host name (can be NULL)
@@ -1370,7 +1370,7 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_updateEntity(IndexHandle  *indexHandle,
-                          IndexId      entityIndexId,
+                          IndexId      entityId,
                           ConstString  jobUUID,
                           ConstString  scheduleUUID,
                           ConstString  hostName,
@@ -1382,39 +1382,39 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
 * Name   : Index_lockEntity
 * Purpose: lock entity index
 * Input  : indexQueryHandle - index query handle
-*          entityIndexId    - index id of entity
+*          entityId         - index id of entity
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_lockEntity(IndexHandle *indexHandle,
-                        IndexId     entityIndexId
+                        IndexId     entityId
                        );
 
 /***********************************************************************\
 * Name   : Index_unlockEntity
 * Purpose: unlock entity index
 * Input  : indexQueryHandle - index query handle
-*          entityIndexId    - index id of entity
+*          entityId         - index id of entity
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_unlockEntity(IndexHandle *indexHandle,
-                          IndexId     entityIndexId
+                          IndexId     entityId
                          );
 
 /***********************************************************************\
 * Name   : Index_isEmptyEntity
 * Purpose: check if entity entry is empty (no storages)
 * Input  : indexQueryHandle - index query handle
-*          entityIndexId    - index id of entity
+*          entityId         - index id of entity
 * Return : TRUE iff empty
 * Notes  : -
 \***********************************************************************/
 
 bool Index_isEmptyEntity(IndexHandle *indexHandle,
-                         IndexId     entityIndexId
+                         IndexId     entityId
                         );
 
 // ---------------------------------------------------------------------
@@ -1424,8 +1424,8 @@ bool Index_isEmptyEntity(IndexHandle *indexHandle,
 * Purpose: get storages info
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          uuidIndexId      - index id of UUID entry or INDEX_ID_ANY
-*          entityIndexId    - index id of entity entry id or INDEX_ID_ANY
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
+*          entityId         - index id of entity entry id or INDEX_ID_ANY
 *          jobUUID          - unique job UUID or NULL
 *          scheduleUUID     - unique schedule UUID or NULL
 *          indexIds         - index ids or NULL
@@ -1443,8 +1443,8 @@ bool Index_isEmptyEntity(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
-                              IndexId       uuidIndexId,
-                              IndexId       entityIndexId,
+                              IndexId       uuidId,
+                              IndexId       entityId,
                               ConstString   jobUUID,
                               ConstString   scheduleUUID,
                               const IndexId indexIds[],
@@ -1461,15 +1461,15 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
 /***********************************************************************\
 * Name   : Index_updateStorageInfos
 * Purpose: update storages info (aggregated values)
-* Input  : indexHandle    - index handle
-*          storageIndexId - index id of storage
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_updateStorageInfos(IndexHandle *indexHandle,
-                                IndexId     storageIndexId
+                                IndexId     storageId
                                );
 
 /***********************************************************************\
@@ -1477,8 +1477,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 * Purpose: list storage entries
 * Input  : IndexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          uuidIndexId      - index id of UUID entry or INDEX_ID_ANY
-*          entityIndexId    - index id of entity entry id or INDEX_ID_ANY
+*          uuidId           - index id of UUID entry or INDEX_ID_ANY
+*          entityId         - index id of entity entry id or INDEX_ID_ANY
 *          jobUUID          - unique job UUID or NULL
 *          scheduleUUID     - unique schedule UUID or NULL
 *          indexIds         - index ids or NULL
@@ -1500,8 +1500,8 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 
 Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               IndexHandle           *indexHandle,
-                              IndexId               uuidIndexId,
-                              IndexId               entityIndexId,
+                              IndexId               uuidId,
+                              IndexId               entityId,
                               ConstString           jobUUID,
                               ConstString           scheduleUUID,
                               const IndexId         indexIds[],
@@ -1521,13 +1521,13 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 * Name   : Index_getNextStorage
 * Purpose: get next index storage entry
 * Input  : IndexQueryHandle    - index query handle
-* Output : uuidIndexId         - index id of UUID (can be NULL)
+* Output : uuidId              - index id of UUID (can be NULL)
 *          jobUUID             - job UUID (can be NULL)
-*          entityIndexId       - index id of entity (can be NULL)
+*          entityId            - index id of entity (can be NULL)
 *          scheduleUUID        - schedule UUID (can be NULL)
 *          hostName            - host name (can be NULL)
 *          archiveType         - archive type (can be NULL)
-*          storageIndexId      - index id of storage
+*          storage             - index id of storage
 *          storageName         - storage name (can be NULL)
 *          createdDateTime     - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
@@ -1545,13 +1545,13 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
-                          IndexId          *uuidIndexId,
+                          IndexId          *uuidId,
                           String           jobUUID,
-                          IndexId          *entityIndexId,
+                          IndexId          *entityId,
                           String           scheduleUUID,
                           String           hostName,
                           ArchiveTypes     *archiveType,
-                          IndexId          *storageIndexId,
+                          IndexId          *storageId,
                           String           storageName,
                           uint64           *createdDateTime,
                           uint64           *size,
@@ -1569,7 +1569,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_newStorage
 * Purpose: create new storage index
 * Input  : indexHandle     - index handle
-*          entityIndexId   - index id of entity
+*          entityId        - index id of entity
 *          userName        - user name (can be NULL)
 *          hostName        - host name (can be NULL)
 *          storageName     - storage name (can be NULL)
@@ -1577,13 +1577,13 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 *          size            - size [bytes]
 *          indexState      - index state
 *          indexMode       - index mode
-* Output : storageIndexId - index id of new storage
+* Output : storageId - index id of new storage
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_newStorage(IndexHandle *indexHandle,
-                        IndexId     entityIndexId,
+                        IndexId     entityId,
                         ConstString userName,
                         ConstString hostName,
                         ConstString storageName,
@@ -1591,14 +1591,14 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                         uint64      size,
                         IndexStates indexState,
                         IndexModes  indexMode,
-                        IndexId     *storageIndexId
+                        IndexId     *storageId
                        );
 
 /***********************************************************************\
 * Name   : Index_updateStorage
 * Purpose: update storage index
 * Input  : indexHandle     - index handle
-*          storageIndexId  - index id of storage
+*          storageId       - index id of storage
 *          userName        - user name (can be NULL)
 *          storageName     - storage name (can be NULL)
 *          createdDateTime - create date/time
@@ -1610,7 +1610,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_updateStorage(IndexHandle  *indexHandle,
-                           IndexId      storageIndexId,
+                           IndexId      storageId,
                            ConstString  userName,
                            ConstString  storageName,
                            uint64       createdDateTime,
@@ -1623,53 +1623,53 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
 * Purpose: delete storage index including all entries for attached files,
 *          image, directories, link, hard link, special entries
 * Input  : indexQueryHandle - index query handle
-*          storageIndexId     - index id of storage
+*          storageId        - index id of storage
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_deleteStorage(IndexHandle *indexHandle,
-                           IndexId     storageIndexId
+                           IndexId     storageId
                           );
 
 /***********************************************************************\
 * Name   : Index_isDeletedStorage
 * Purpose: check if storage entry is deleted
 * Input  : indexQueryHandle - index query handle
-*          storageIndexId   - index id of storage
+*          storageId        - index id of storage
 * Return : TRUE iff deleted
 * Notes  : -
 \***********************************************************************/
 
 bool Index_isDeletedStorage(IndexHandle *indexHandle,
-                            IndexId     storageIndexId
+                            IndexId     storageId
                            );
 
 /***********************************************************************\
 * Name   : Index_isEmptyStorage
 * Purpose: check if storage entry is empty (no entries)
 * Input  : indexQueryHandle - index query handle
-*          storageIndexId   - index id of storage
+*          storageId        - index id of storage
 * Return : TRUE iff empty
 * Notes  : -
 \***********************************************************************/
 
 bool Index_isEmptyStorage(IndexHandle *indexHandle,
-                          IndexId     storageIndexId
+                          IndexId     storageId
                          );
 
 /***********************************************************************\
 * Name   : Index_clearStorage
 * Purpose: clear index storage content
-* Input  : indexHandle    - index handle
-*          storageIndexId - index id of storage
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_clearStorage(IndexHandle *indexHandle,
-                          IndexId    storageIndexId
+                          IndexId    storageId
                          );
 
 /***********************************************************************\
@@ -1677,9 +1677,9 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 * Purpose: get storage index name/entries/size
 * Input  : indexHandle - index handle
 *          storageId   - index id of storage index
-* Output:  uuidIndexId         - index if of uuid
+* Output:  uuidId              - index if of uuid
 *          jobUUID             - job UUID (can be NULL)
-*          entityIndexId       - index id of entity (can be NULL)
+*          entityId            - index id of entity (can be NULL)
 *          scheduleUUID        - schedule UUID (can be NULL)
 *          archiveType         - archive type (can be NULL)
 *          storageName         - storage name (can be NULL)
@@ -1697,9 +1697,9 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
 
 Errors Index_getStorage(IndexHandle  *indexHandle,
                         IndexId      storageId,
-                        IndexId      *uuidIndexId,
+                        IndexId      *uuidId,
                         String       jobUUID,
-                        IndexId      *entityIndexId,
+                        IndexId      *entityId,
                         String       scheduleUUID,
                         ArchiveTypes archiveType,
                         String       storageName,
@@ -1716,17 +1716,17 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
 /***********************************************************************\
 * Name   : Index_storageUpdate
 * Purpose: update storage index name/size
-* Input  : indexHandle    - index handle
-*          storageIndexId - index id of storage
-*          storageName    - storage name (can be NULL)
-*          storageSize    - storage size [bytes] (can be 0)
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
+*          storageName - storage name (can be NULL)
+*          storageSize - storage size [bytes] (can be 0)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_storageUpdate(IndexHandle *indexHandle,
-                           IndexId     storageIndexId,
+                           IndexId     storageId,
                            ConstString storageName,
                            uint64      storageSize
                           );
@@ -1745,6 +1745,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
+*          fragmentsFlag    - TRUE to get distinct fragment info
 * Output : totalEntryCount       - total entry count (can be NULL)
 *          totalEntrySize        - total size [bytes] (can be NULL)
 *          totalEntryContentSize - total size including directory
@@ -1761,6 +1762,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             IndexTypeSet  indexTypeSet,
                             ConstString   name,
                             bool          newestOnly,
+                            bool          fragmentsFlag,
                             ulong         *totalEntryCount,
                             uint64        *totalEntrySize,
                             uint64        *totalEntryContentSize
@@ -1809,17 +1811,113 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 * Name   : Index_getNextEntry
 * Purpose: get next entry
 * Input  : indexQueryHandle - index query handle
-* Output : uuidIndexId     - index id of UUID (can be NULL)
+* Output : uuidId          - index id of UUID (can be NULL)
 *          jobUUID         - job UUID (can be NULL)
-*          entityIndexId   - index id of entry
+*          entityId        - index id of entry
 *          scheduleUUID    - schedule UUID (can be NULL)
 *          userName        - user name (can be NULL)
 *          hostName        - host name (can be NULL)
 *          archiveType     - archive type (can be NULL)
-*          storageIndexId  - index id of storage (can be NULL)
+*          storageId       - index id of storage (can be NULL)
 *          storageName     - storage name (can be NULL)
 *          storageDateTime - storage date/time stamp [s]
-*          entryIndexId    - index id of entry
+*          entryId         - index id of entry
+*          entryName       - entry name
+*          destinationName - destination name (for link entries)
+*          fileSystemType  - file system type (for image
+*                            entries)
+*          size            - file/image/hardlink size [bytes]
+*                            or directory size [bytes]
+*          timeModified    - modified date/time stamp [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
+*          fragmentCount   - fragment count
+*          fragmentOffset  - fragment offset [bytes]
+*          fragmentSize    - fragment size [bytes]
+* Return : TRUE if entry read, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
+                        IndexId           *uuidId,
+                        String            jobUUID,
+                        IndexId           *entityId,
+                        String            scheduleUUID,
+                        String            userName,
+                        String            hostName,
+                        ArchiveTypes      *archiveType,
+                        IndexId           *storageId,
+                        String            storageName,
+                        uint64            *storageDateTime,
+                        IndexId           *entryId,
+                        String            entryName,
+                        String            destinationName,
+                        FileSystemTypes   *fileSystemType,
+                        uint64            *size,
+//TODO: use timeLastChanged
+                        uint64            *timeModified,
+                        uint32            *userId,
+                        uint32            *groupId,
+                        uint32            *permission,
+                        ulong             *fragmentCount,
+                        uint64            *fragmentOffset,
+                        uint64            *fragmentSize
+                       );
+
+/***********************************************************************\
+* Name   : Index_deleteEntry
+* Purpose: delete entry
+* Input  : indexHandle - index handle
+*          entryId     - index id of entry
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_deleteEntry(IndexHandle *indexHandle,
+                         IndexId     entryId
+                        );
+
+/***********************************************************************\
+* Name   : Index_initListEntryFragments
+* Purpose: list fragments of entry
+* Input  : indexQueryHandle - index query handle variable
+*          indexHandle      - index handle
+*          entryId          - entry id
+*          sortMode         - sort mode; see IndexStorageSortModes
+*          ordering         - ordering
+*          offset           - offset or 0
+*          limit            - numer of entries to list or
+*                             INDEX_UNLIMITED
+* Output : indexQueryHandle - index query handle
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Index_initListEntryFragments(IndexQueryHandle    *indexQueryHandle,
+                                    IndexHandle         *indexHandle,
+                                    IndexId             entryId,
+                                    IndexEntrySortModes sortMode,
+                                    DatabaseOrdering    ordering,
+                                    uint64              offset,
+                                    uint64              limit
+                                   );
+
+/***********************************************************************\
+* Name   : Index_getNextEntryFrament
+* Purpose: get next fragment of entry
+* Input  : indexQueryHandle - index query handle
+* Output : uuidId          - index id of UUID (can be NULL)
+*          jobUUID         - job UUID (can be NULL)
+*          entityId        - index id of entry
+*          scheduleUUID    - schedule UUID (can be NULL)
+*          userName        - user name (can be NULL)
+*          hostName        - host name (can be NULL)
+*          archiveType     - archive type (can be NULL)
+*          storageId       - index id of storage (can be NULL)
+*          storageName     - storage name (can be NULL)
+*          storageDateTime - storage date/time stamp [s]
+*          entryId         - index id of entry
 *          entryName       - entry name
 *          destinationName - destination name (for link entries)
 *          fileSystemType  - file system type (for image
@@ -1836,43 +1934,30 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextEntry(IndexQueryHandle  *indexQueryHandle,
-                        IndexId           *uuidIndexId,
-                        String            jobUUID,
-                        IndexId           *entityIndexIdId,
-                        String            scheduleUUID,
-                        String            userName,
-                        String            hostName,
-                        ArchiveTypes      *archiveType,
-                        IndexId           *storageIndexIdId,
-                        String            storageName,
-                        uint64            *storageDateTime,
-                        IndexId           *entryIndexId,
-                        String            entryName,
-                        String            destinationName,
-                        FileSystemTypes   *fileSystemType,
-                        uint64            *size,
+bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
+                                IndexId           *uuidId,
+                                String            jobUUID,
+                                IndexId           *entityId,
+                                String            scheduleUUID,
+                                String            userName,
+                                String            hostName,
+                                ArchiveTypes      *archiveType,
+                                IndexId           *storageId,
+                                String            storageName,
+                                uint64            *storageDateTime,
+                                IndexId           *entryId,
+                                String            entryName,
+                                String            destinationName,
+                                FileSystemTypes   *fileSystemType,
+                                uint64            *size,
 //TODO: use timeLastChanged
-                        uint64            *timeModified,
-                        uint32            *userId,
-                        uint32            *groupId,
-                        uint32            *permission,
-                        uint64            *fragmentOffset,
-                        uint64            *fragmentSize
-                       );
-
-/***********************************************************************\
-* Name   : Index_deleteEntry
-* Purpose: delete entry
-* Input  : indexHandle  - index handle
-*          entryIndexId - index id of entry
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_deleteEntry(IndexHandle *indexHandle,
-                         IndexId     entryIndexId
-                        );
+                                uint64            *timeModified,
+                                uint32            *userId,
+                                uint32            *groupId,
+                                uint32            *permission,
+                                uint64            *fragmentOffset,
+                                uint64            *fragmentSize
+                               );
 
 // ---------------------------------------------------------------------
 
@@ -2299,7 +2384,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 * Name   : Index_addFile
 * Purpose: add file entry
 * Input  : indexHandle     - index handle
-*          storageIndexId  - index id of storage
+*          storageId       - index id of storage
 *          name            - file name
 *          size            - size [bytes]
 *          timeLastAccess  - last access date/time stamp [s]
@@ -2316,7 +2401,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 \***********************************************************************/
 
 Errors Index_addFile(IndexHandle *indexHandle,
-                     IndexId     storageIndexId,
+                     IndexId     storageId,
                      ConstString name,
                      uint64      size,
                      uint64      timeLastAccess,
@@ -2333,7 +2418,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 * Name   : Index_addImage
 * Purpose: add image entry
 * Input  : indexHandle    - index handle
-*          storageIndexId - index id of storage
+*          storageId      - index id of storage
 *          name           - image name
 *          fileSystemType - file system type
 *          size           - size [bytes]
@@ -2346,7 +2431,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addImage(IndexHandle     *indexHandle,
-                      IndexId         storageIndexId,
+                      IndexId         storageId,
                       ConstString     name,
                       FileSystemTypes fileSystemType,
                       int64           size,
@@ -2359,7 +2444,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 * Name   : Index_addDirectory
 * Purpose: add directory entry
 * Input  : indexHandle     - index handle
-*          storageIndexId  - index id of storage
+*          storageId       - index id of storage
 *          name            - directory name
 *          timeLastAccess  - last access date/time stamp [s]
 *          timeModified    - modified date/time stamp [s]
@@ -2373,7 +2458,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 \***********************************************************************/
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
-                          IndexId     storageIndexId,
+                          IndexId     storageId,
                           String      name,
                           uint64      timeLastAccess,
                           uint64      timeModified,
@@ -2387,7 +2472,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 * Name   : Index_addLink
 * Purpose: add link entry
 * Input  : indexHandle     - index handle
-*          storageIndexId  - index id of storage
+*          storageId       - index id of storage
 *          linkName        - link name
 *          destinationName - destination name
 *          timeLastAccess  - last access date/time stamp [s]
@@ -2402,7 +2487,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addLink(IndexHandle *indexHandle,
-                     IndexId     storageIndexId,
+                     IndexId     storageId,
                      ConstString linkName,
                      ConstString destinationName,
                      uint64      timeLastAccess,
@@ -2417,7 +2502,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 * Name   : Index_addHardlink
 * Purpose: add hard link entry
 * Input  : indexHandle     - index handle
-*          storageIndexId  - index id of storage
+*          storageId       - index id of storage
 *          name            - hardlink name
 *          size            - size [bytes]
 *          timeLastAccess  - last access date/time stamp [s]
@@ -2434,7 +2519,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addHardlink(IndexHandle *indexHandle,
-                         IndexId     storageIndexId,
+                         IndexId     storageId,
                          ConstString name,
                          uint64      size,
                          uint64      timeLastAccess,
@@ -2451,7 +2536,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 * Name   : Index_addSpecial
 * Purpose: add special entry
 * Input  : indexHandle     - index handle
-*          storageIndexId  - index id of storage
+*          storageId       - index id of storage
 *          name            - name
 *          specialType     - special type; see FileSpecialTypes
 *          timeLastAccess  - last access date/time stamp [s]
@@ -2467,7 +2552,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
-                        IndexId          storageIndexId,
+                        IndexId          storageId,
                         ConstString      name,
                         FileSpecialTypes specialType,
                         uint64           timeLastAccess,
@@ -2483,16 +2568,16 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 /***********************************************************************\
 * Name   : Index_assignTo
 * Purpose: assign job/entity/storage to other entity/storage
-* Input  : indexHandle      - index handle
-*          jobUUID          - job UUID (can be NULL)
-*          entityIndexId    - index id of entity index (can be
-*                             INDEX_ID_NONE)
-*          storageIndexId   - index id of storage index (can be
-*                             INDEX_ID_NONE)
-*          toJobUUID        - to job UUID (can be NULL)
-*          toEntityIndexId  - to entity id (can be INDEX_ID_NONE)
-*          toArchiveType    - to archive type (can be ARCHIVE_TYPE_NONE)
-*          toStorageIndexId - to storage id (can be INDEX_ID_NONE)
+* Input  : indexHandle   - index handle
+*          jobUUID       - job UUID (can be NULL)
+*          entityId      - index id of entity index (can be
+*                          INDEX_ID_NONE)
+*          storageId     - index id of storage index (can be
+*                          INDEX_ID_NONE)
+*          toJobUUID     - to job UUID (can be NULL)
+*          toEntityId    - to entity id (can be INDEX_ID_NONE)
+*          toArchiveType - to archive type (can be ARCHIVE_TYPE_NONE)
+*          toStorageId   - to storage id (can be INDEX_ID_NONE)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -2501,54 +2586,54 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
 Errors Index_assignTo(IndexHandle  *indexHandle,
 //TODO: uuidId?
                       ConstString  jobUUID,
-                      IndexId      entityIndexId,
-                      IndexId      storageIndexId,
+                      IndexId      entityId,
+                      IndexId      storageId,
                       ConstString  toJobUUID,
-                      IndexId      toEntityIndexId,
+                      IndexId      toEntityId,
                       ArchiveTypes toArchiveType,
-                      IndexId      toStorageIndexId
+                      IndexId      toStorageId
                      );
 
 /***********************************************************************\
 * Name   : Index_pruneUUID
 * Purpose: delete uuid from index if not used anymore (empty)
 * Input  : indexHandle - index handle
-*          uuidIndexId - index id of UUID
+*          uuidId      - index id of UUID
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_pruneUUID(IndexHandle *indexHandle,
-                       IndexId     uuidIndexId
+                       IndexId     uuidId
                       );
 
 /***********************************************************************\
 * Name   : Index_pruneEntity
 * Purpose: delete entity from index if not used anymore (empty)
-* Input  : indexHandle   - index handle
-*          entityIndexId - index id of entity
+* Input  : indexHandle - index handle
+*          entityId    - index id of entity
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_pruneEntity(IndexHandle *indexHandle,
-                         IndexId     entityIndexId
+                         IndexId     entityId
                         );
 
 /***********************************************************************\
 * Name   : Index_pruneStorage
 * Purpose: delete storage from index if not used anymore (empty)
-* Input  : indexHandle    - index handle
-*          storageIndexId - index id of storage
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_pruneStorage(IndexHandle *indexHandle,
-                          IndexId     storageIndexId
+                          IndexId     storageId
                          );
 
 /***********************************************************************\
@@ -2587,7 +2672,7 @@ Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextSkippedEntry
 * Purpose: get next skipped entry
 * Input  : indexQueryHandle - index query handle
-* Output : uuidIndexId     - index id of UUID
+* Output : uuidId          - index id of UUID
 *          jobUUID         - job UUID (can be NULL)
 *          entityId        - index id of entity (can be NULL)
 *          scheduleUUID    - schedule UUID (can be NULL)
@@ -2602,7 +2687,7 @@ Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextSkippedEntry(IndexQueryHandle *indexQueryHandle,
-                               IndexId          *uuidIndexId,
+                               IndexId          *uuidId,
                                String           jobUUID,
                                IndexId          *entityId,
                                String           scheduleUUID,
@@ -2617,16 +2702,16 @@ bool Index_getNextSkippedEntry(IndexQueryHandle *indexQueryHandle,
 /***********************************************************************\
 * Name   : Index_addFile
 * Purpose: add file entry
-* Input  : indexHandle    - index handle
-*          storageIndexId - index id of storage
-*          entryName      - name
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
+*          entryName   - name
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors Index_addSkippedEntry(IndexHandle *indexHandle,
-                             IndexId     storageIndexId,
+                             IndexId     storageId,
                              IndexTypes  type,
                              ConstString entryName
                             );

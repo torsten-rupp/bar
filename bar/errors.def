@@ -486,7 +486,7 @@ ERROR DELETE_FILE
   }
 
 ERROR OPEN_DIRECTORY
-  stringSet(errorText,sizeof(errorText),TR("open directoryXXX"));
+  stringSet(errorText,sizeof(errorText),TR("open directory"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);

@@ -1698,24 +1698,25 @@ maxIndexEntries=0;
                                     );
             break;
           case ARCHIVE_ENTRY_TYPE_META:
-            // check if entity exists, create new if needed
-            if (!Index_findEntity(archiveHandle->indexHandle,
-                                  INDEX_ID_NONE,  // findEntityIndexId
-                                  archiveIndexNode->meta.jobUUID,
-                                  archiveIndexNode->meta.scheduleUUID,
-                                  archiveIndexNode->meta.hostName,
-                                  archiveIndexNode->meta.archiveType,
-                                  0LL,  // findCreatedDateTime
-                                  NULL,  // jobUUID,
-                                  NULL,  // scheduleUUID,
-                                  NULL,  // uuidIndexId,
-                                  &entityId,
-                                  NULL,  // archiveType,
-                                  NULL,  // createdDateTime,
-                                  NULL,  // lastErrorMessage,
-                                  NULL,  // totalEntryCount,
-                                  NULL  // totalEntrySize
-                                 )
+            // check if entity with given schedule exists, otherwise create new entity
+            if (   String_isEmpty(archiveIndexNode->meta.scheduleUUID)
+                || !Index_findEntity(archiveHandle->indexHandle,
+                                     INDEX_ID_NONE,  // findEntityIndexId
+                                     archiveIndexNode->meta.jobUUID,
+                                     archiveIndexNode->meta.scheduleUUID,
+                                     archiveIndexNode->meta.hostName,
+                                     archiveIndexNode->meta.archiveType,
+                                     0LL,  // findCreatedDateTime
+                                     NULL,  // jobUUID,
+                                     NULL,  // scheduleUUID,
+                                     NULL,  // uuidIndexId,
+                                     &entityId,
+                                     NULL,  // archiveType,
+                                     NULL,  // createdDateTime,
+                                     NULL,  // lastErrorMessage,
+                                     NULL,  // totalEntryCount,
+                                     NULL  // totalEntrySize
+                                    )
                )
             {
               error = Index_newEntity(archiveHandle->indexHandle,
@@ -1734,12 +1735,12 @@ maxIndexEntries=0;
             {
               error = Index_assignTo(archiveHandle->indexHandle,
                                      NULL,  // jobUUID,
-                                     INDEX_ID_NONE,  // entityIndexId,
+                                     INDEX_ID_NONE,  // entityId,
                                      archiveIndexNode->storageId,
                                      NULL,  // toJobUUID,
                                      entityId,
                                      ARCHIVE_TYPE_NONE,  // toArchiveType,
-                                     INDEX_ID_NONE  // toStorageIndexId
+                                     INDEX_ID_NONE  // toStorageId
                                     );
             }
 
@@ -2969,7 +2970,7 @@ if (error != ERROR_NONE)
 fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
 exit(1);
 }
-#endif
+#endif // 0
 
     // init signature chunk
     error = Chunk_init(&chunkSignature.info,
@@ -15322,8 +15323,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
     // get total time last changed/entries/size
     if (totalTimeLastChanged != NULL) (*totalTimeLastChanged) = timeLastChanged;
-    if (totalEntries != NULL) (*totalEntries) = Archive_getEntries(&archiveHandle);
-    if (totalSize != NULL) (*totalSize) = Archive_getSize(&archiveHandle);
+    if (totalEntries         != NULL) (*totalEntries        ) = Archive_getEntries(&archiveHandle);
+    if (totalSize            != NULL) (*totalSize           ) = Archive_getSize(&archiveHandle);
   }
 
   // close archive

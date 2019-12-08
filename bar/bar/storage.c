@@ -1707,7 +1707,9 @@ String Storage_getPrintableName(String                 string,
 
   // init protocol specific values
   error = ERROR_UNKNOWN;
-  if (   jobOptions->storageOnMaster
+  if (   (   (jobOptions == NULL)
+          || (jobOptions->storageOnMaster)
+         )
       && (masterIO != NULL)
      )
   {
@@ -1793,7 +1795,6 @@ String Storage_getPrintableName(String                 string,
 
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
-  assert(storageInfo->jobOptions != NULL);
 
   #ifdef NDEBUG
     DEBUG_REMOVE_RESOURCE_TRACE(storageInfo,StorageInfo);
@@ -1802,7 +1803,9 @@ String Storage_getPrintableName(String                 string,
   #endif /* NDEBUG */
 
   error = ERROR_UNKNOWN;
-  if (   storageInfo->jobOptions->storageOnMaster
+  if (   (   (storageInfo->jobOptions == NULL)
+          || storageInfo->jobOptions->storageOnMaster
+         )
       && (storageInfo->masterIO != NULL)
      )
   {

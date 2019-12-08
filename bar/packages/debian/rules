@@ -1,4 +1,5 @@
 #!/usr/bin/make -f
+
 # See debhelper(7) (uncomment to enable)
 # output every command that modifies files on the build system.
 export DH_VERBOSE = 1
@@ -37,19 +38,23 @@ clean:
 # ---------------------------------------------------------------------
 
 build-stamp:
+	@echo --- bar -----------------------------------------------------------------
+	pwd
+	echo packageName=$(packageName)
 	#Note: debhelper >= 10
 	#dh_update_autotools_config
 	dh_autoreconf
 	#Note: debhelper >= 10
 	#dh_auto_configure
 	./download-third-party-packages.sh \
+          --clean
+	./download-third-party-packages.sh \
           --no-verbose \
           $(ADDITIONAL_DOWNLOAD_FLAGS)
 	./configure \
           --enable-extern-check \
           --disable-crashdump \
---disable-bfd \
---disable-epm \
+          --disable-epm \
           $(ADDITIONAL_CONFIGURE_FLAGS)
 	#dh_auto_build
 	make -C bar -j8 all
@@ -59,96 +64,87 @@ build-stamp:
 
 .PHONY: build-bar
 build-bar: build-stamp
-	echo --- bar -----------------------------------------------------------------
 
-.PHONY: bar
-bar: build-bar
-	echo --- install-bar: build -----------------------------------------------------------------
+$(packageName): build-bar
+	@echo --- install-bar: build -----------------------------------------------------------------
+	pwd
+	echo packageName=$(packageName)
 	dh_testdir
 	dh_testroot
 	dh_prep
-	dh_installdirs -p$@
+	dh_installdirs -p$(packageName)
 	# Add here commands to install the package
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
-#	make \
-#          DESTDIR=${PWD}/debian/bar DIST=1 SYSTEM=Debian SYSTEM_INIT=systemd \
-#          install_bar install_scripts
 	make \
-          DESTDIR=${PWD}/debian/bar DIST=1 SYSTEM_INIT=systemd \
+          DESTDIR=${PWD}/debian/$(packageName) DIST=1 SYSTEM_INIT=systemd \
           install_bar install_scripts
 	#           install_scripts install_man
 	# --- end custom part for installing
-	dh_installdocs -p$@
-	dh_installchangelogs -p$@
-	dh_installman -p$@
-	dh_perl -p$@
-	dh_link -p$@
+	dh_installdocs -p$(packageName)
+	dh_installchangelogs -p$(packageName)
+	dh_installman -p$(packageName)
+	dh_perl -p$(packageName)
+	dh_link -p$(packageName)
 	#Note: debhelper >= 10
-	#dh_strip_nondeterminism -p$@
-	dh_compress -p$@
-	dh_fixperms -p$@
+	#dh_strip_nondeterminism -p$(packageName)
+	dh_compress -p$(packageName)
+	dh_fixperms -p$(packageName)
 	#Note: debhelper >= 10
-	#dh_missing -p$@
-	dh_strip -p$@
-	dh_makeshlibs -p$@
-	dh_shlibdeps -p$@
-	dh_installdeb -p$@
-	dh_gencontrol -p$@
-	dh_md5sums -p$@
-	dh_builddeb -p$@
+	#dh_missing -p$(packageName)
+	dh_strip -p$(packageName)
+	dh_makeshlibs -p$(packageName)
+	dh_shlibdeps -p$(packageName)
+	dh_installdeb -p$(packageName)
+	dh_gencontrol -p$(packageName)
+	dh_md5sums -p$(packageName)
+	dh_builddeb -p$(packageName)
 
 # ----------------------------------------------------------------------
 
 .PHONY: build-bar-gui
 build-bar-gui: build-stamp
-	echo --- bar-gui -----------------------------------------------------------------
 
-bar-gui: build-bar-gui
-	echo --- install-bar-gui: build -----------------------------------------------------------------
+$(packageName)-gui: build-bar-gui
+	@echo --- install-bar-gui: build -----------------------------------------------------------------
 	dh_testdir
 	dh_testroot
 	dh_prep
-	dh_installdirs -p$@
+	dh_installdirs -p$(packageName)-gui
 	# Add here commands to install the package
 	# The DESTDIR Has To Be Exactly  /usr/src/packages/BUILD/debian/<nameOfPackage>
-#	make \
-#          DESTDIR=${PWD}/debian/bar-gui DIST=1 SYSTEM=Debian SYSTEM_INIT=systemd \
-#          install_barcontrol
 	make \
-          DESTDIR=${PWD}/debian/bar-gui DIST=1 SYSTEM_INIT=systemd \
+          DESTDIR=${PWD}/debian/$(packageName)-gui DIST=1 SYSTEM_INIT=systemd \
           install_barcontrol
 	# --- end custom part for installing
-	dh_installdocs -p$@
-	dh_installchangelogs -p$@
-	dh_installman -p$@
-	dh_perl -p$@
-	dh_link -p$@
+	dh_installdocs -p$(packageName)-gui
+	dh_installchangelogs -p$(packageName)-gui
+	dh_installman -p$(packageName)-gui
+	dh_perl -p$(packageName)-gui
+	dh_link -p$(packageName)-gui
 	#Note: debhelper >= 10
-	#dh_strip_nondeterminism -p$@
-	dh_compress -p$@
-	dh_fixperms -p$@
+	#dh_strip_nondeterminism -p$(packageName)-gui
+	dh_compress -p$(packageName)-gui
+	dh_fixperms -p$(packageName)-gui
 	#Note: debhelper >= 10
-	#dh_missing -p$@
-	dh_strip -p$@
-	dh_makeshlibs -p$@
-	dh_shlibdeps -p$@
-	dh_installdeb -p$@
-	dh_gencontrol -p$@
-	dh_md5sums -p$@
-	dh_builddeb -p$@
+	#dh_missing -p$(packageName)-gui
+	dh_strip -p$(packageName)-gui
+	dh_makeshlibs -p$(packageName)-gui
+	dh_shlibdeps -p$(packageName)-gui
+	dh_installdeb -p$(packageName)-gui
+	dh_gencontrol -p$(packageName)-gui
+	dh_md5sums -p$(packageName)-gui
+	dh_builddeb -p$(packageName)-gui
 
 # ----------------------------------------------------------------------
 
 .PHONY: binary
-binary: bar bar-gui
+binary: $(packageName) $(packageName)-gui
 
 .PHONY: binary-indep
-binary-indep: bar-gui
+binary-indep: $(packageName)-gui
 
 %:
-	echo XXX $@
 	dh $@
-
 
 # dh_make generated override targets
 # This is example for Cmake (See https://bugs.debian.org/641051 )

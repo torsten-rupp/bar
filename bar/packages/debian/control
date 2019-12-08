@@ -8,7 +8,7 @@ Homepage: http://www.kigen.de/projects/bar/index.html
 #Vcs-Git: https://anonscm.debian.org/git/collab-maint/bar.git
 #Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/bar.git
 
-Package: bar
+Package: backup-archiver
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Archiver program for compressed and encrypted archives.
@@ -42,7 +42,7 @@ Description: Archiver program for compressed and encrypted archives.
  .
  This package contain the command line tools.
 
-Package: bar-gui
+Package: backup-archiver-gui
 Architecture: all
 Depends: ${misc:Depends}, java-common
 Description: GUI front end for bar

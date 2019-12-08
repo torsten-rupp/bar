@@ -4586,7 +4586,6 @@ if (false) {
 
                                          System.out.println(String.format("%-32s %-12s %-20s %-12s %14d %-25s %-14s %-10s %-8s %-19s %12d",
                                                                           name,
-//                                                                          (serverState[0] == BARServer.States.RUNNING) ? state.toString() : serverState[0],
                                                                           (serverState[0] == BARServer.States.RUNNING)
                                                                             ? JobData.formatStateText(state,slaveHostName,slaveState)
                                                                             : BARControl.tr("suspended"),
@@ -5039,7 +5038,7 @@ if (false) {
                                      1  // debug level
                                     );
 
-            final ArrayList<Long> indexIds = new ArrayList<Long>();
+            final ArrayList<Long> storageIds = new ArrayList<Long>();
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S offset=%ld",
                                                          "*",
                                                          "*",
@@ -5057,20 +5056,26 @@ if (false) {
                                          long   storageId   = valueMap.getLong  ("storageId");
                                          String storageName = valueMap.getString("name"     );
 
-                                         indexIds.add(storageId);
+                                         storageIds.add(storageId);
                                        }
                                      }
                                     );
-            if (indexIds.isEmpty())
+            if (storageIds.isEmpty())
             {
               throw new BARException(BARException.ARCHIVE_NOT_FOUND,Settings.restoreStorageName);
             }
 
-            BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%s",
-                                                         StringUtils.join(indexIds,',')
-                                                        ),
-                                     1  // debugLevel
-                                    );
+            int i = 0;
+            while (i < storageIds.size())
+            {
+              int n = storageIds.size()-i; if (n > 1024) n = 1024;
+              BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageIds=%s",
+                                                           StringUtils.join(storageIds,i,n,',')
+                                                          ),
+                                       1  // debugLevel
+                                      );
+              i += n;
+            }
           }
           catch (Exception exception)
           {

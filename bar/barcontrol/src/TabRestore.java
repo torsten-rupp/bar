@@ -6876,7 +6876,7 @@ Dprintf.dprintf("");
       {
         if (checked)
         {
-          BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%ld",
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageIds=%ld",
                                                        indexId
                                                       ),
                                    2  // debugLevel
@@ -6884,7 +6884,7 @@ Dprintf.dprintf("");
         }
         else
         {
-          BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE indexIds=%ld",
+          BARServer.executeCommand(StringParser.format("STORAGE_LIST_REMOVE storageIds=%ld",
                                                        indexId
                                                       ),
                                    2  // debugLevel
@@ -6917,9 +6917,9 @@ Dprintf.dprintf("");
   }
 
   /** set selected index entries
-   * @param indexIdSet index id set
+   * @param storageIdSet storage id set
    */
-  private void setStorageList(IndexIdSet indexIdSet)
+  private void setStorageList(IndexIdSet storageIdSet)
   {
     StringBuilder buffer = new StringBuilder();
 
@@ -6933,38 +6933,29 @@ Dprintf.dprintf("");
     }
 
     // set list
-    Long indexIds[] = indexIdSet.toArray(new Long[indexIdSet.size()]);
+    Long storageIds[] = storageIdSet.toArray(new Long[storageIdSet.size()]);
     int i = 0;
-    do
+    while (i < storageIds.length)
     {
-      buffer.setLength(0);
-      while ((i < indexIds.length) && (buffer.length() < 1024))
+      int n = storageIds.length-i; if (n > 1024) n = 1024;
+      try
       {
-        if (buffer.length() > 0) buffer.append(',');
-        buffer.append(indexIds[i].toString());
-        i++;
+        BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageIds=%s",
+                                                     StringUtils.join(storageIds,i,n,',')
+                                                    ),
+                                 1  // debugLevel
+                                );
       }
-      if (buffer.length() > 0)
+      catch (Exception exception)
       {
-        try
-        {
-          BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD indexIds=%s",
-                                                       buffer.toString()
-                                                      ),
-                                   2  // debugLevel
-                                  );
-        }
-        catch (Exception exception)
-        {
-          throw new CommunicationError(exception);
-        }
+        throw new CommunicationError(exception);
       }
+      i += n;
     }
-    while (i < indexIds.length);
 
-    for (Long indexId : indexIds)
+    for (Long storageId : storageIdSet)
     {
-      checkedIndexIdSet.set(indexId,true);
+      checkedIndexIdSet.set(storageId,true);
     }
   }
 
@@ -8923,8 +8914,6 @@ Dprintf.dprintf("");
    */
   private void setEntryList(IndexIdSet entryIdSet)
   {
-    StringBuilder buffer = new StringBuilder();
-
     // clear list
     try
     {
@@ -8940,32 +8929,23 @@ Dprintf.dprintf("");
     // set list
     Long entryIds[] = entryIdSet.toArray(new Long[entryIdSet.size()]);
     int i = 0;
-    do
+    while (i < entryIds.length)
     {
-      buffer.setLength(0);
-      while ((i < entryIds.length) && (buffer.length() < 1024))
+      int n = entryIds.length-i; if (n > 1024) n = 1024;
+      try
       {
-        if (buffer.length() > 0) buffer.append(',');
-        buffer.append(entryIds[i].toString());
-        i++;
+        BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryIds=%s",
+                                                     StringUtils.join(entryIds,i,n,',')
+                                                    ),
+                                 1  // debugLevel
+                                );
       }
-      if (buffer.length() > 0)
+      catch (Exception exception)
       {
-        try
-        {
-          BARServer.executeCommand(StringParser.format("ENTRY_LIST_ADD entryIds=%s",
-                                                       buffer.toString()
-                                                      ),
-                                   1  // debugLevel
-                                  );
-        }
-        catch (Exception exception)
-        {
-          throw new CommunicationError(exception);
-        }
+        throw new CommunicationError(exception);
       }
+      i += n;
     }
-    while (i < entryIds.length);
 
     for (Long entryId : entryIds)
     {
@@ -9413,7 +9393,7 @@ Dprintf.dprintf("");
               try
               {
                 // get total number entries, size
-                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO fragments=yes"),
+                BARServer.executeCommand(StringParser.format("STORAGE_LIST_INFO"),
                                          1,  // debugLevel
                                          valueMap
                                         );
