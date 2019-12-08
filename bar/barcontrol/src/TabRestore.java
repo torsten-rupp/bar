@@ -3077,6 +3077,7 @@ Dprintf.dprintf("");
     String       name;
     long         dateTime;
     long         size;              // file/image/directory size
+    int          fragmentCount;
     long         fragmentOffset;
     long         fragmentSize;
     boolean      checked;           // true iff check mark set
@@ -3092,6 +3093,7 @@ Dprintf.dprintf("");
      * @param name entry name
      * @param dateTime date/time (timestamp)
      * @param size size [bytes]
+     * @param fragmentCount fragment count
      * @param fragmentOffset fragment offset [0..n-1]
      * @param fragmentSize fragment size [bytes]
      */
@@ -3105,6 +3107,7 @@ Dprintf.dprintf("");
                    String       name,
                    long         dateTime,
                    long         size,
+                   int          fragmentCount,
                    long         fragmentOffset,
                    long         fragmentSize
                   )
@@ -3122,6 +3125,7 @@ Dprintf.dprintf("");
       this.name            = name;
       this.dateTime        = dateTime;
       this.size            = size;
+      this.fragmentCount   = fragmentCount;
       this.fragmentOffset  = fragmentOffset;
       this.fragmentSize    = fragmentSize;
       this.checked         = false;
@@ -3151,7 +3155,7 @@ Dprintf.dprintf("");
                    long         size
                   )
     {
-      this(indexId,jobName,archiveType,hostName,storageName,storageDateTime,entryType,name,dateTime,size,0L,0L);
+      this(indexId,jobName,archiveType,hostName,storageName,storageDateTime,entryType,name,dateTime,size,0,0L,0L);
     }
 
     /** create entry data
@@ -3253,8 +3257,7 @@ Dprintf.dprintf("");
       NAME,
       TYPE,
       SIZE,
-      DATE,
-      FRAGMENT
+      DATE
     };
 
     private SortModes sortMode;
@@ -3270,7 +3273,6 @@ Dprintf.dprintf("");
       else if (table.getColumn(2) == sortColumn) sortMode = SortModes.TYPE;
       else if (table.getColumn(3) == sortColumn) sortMode = SortModes.SIZE;
       else if (table.getColumn(4) == sortColumn) sortMode = SortModes.DATE;
-      else if (table.getColumn(5) == sortColumn) sortMode = SortModes.FRAGMENT;
       else                                       sortMode = SortModes.NAME;
     }
 
@@ -3308,10 +3310,6 @@ Dprintf.dprintf("");
             if      (entryIndexData1.dateTime < entryIndexData2.dateTime) return -1;
             else if (entryIndexData1.dateTime > entryIndexData2.dateTime) return  1;
             else                                                          return  0;
-          case FRAGMENT:
-            if      (entryIndexData1.fragmentOffset < entryIndexData2.fragmentOffset) return -1;
-            else if (entryIndexData1.fragmentOffset > entryIndexData2.fragmentOffset) return  1;
-            else                                                                      return  0;
           default:
             return 0;
         }
@@ -3859,6 +3857,7 @@ Dprintf.dprintf("");
                                                                       String fileName       = valueMap.getString("name"          );
                                                                       long   dateTime       = valueMap.getLong  ("dateTime"      );
                                                                       long   size           = valueMap.getLong  ("size"          );
+                                                                      int    fragmentCount  = valueMap.getInt   ("fragmentCount" );
                                                                       long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
                                                                       long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
 
@@ -3873,6 +3872,7 @@ Dprintf.dprintf("");
                                                                                                                 fileName,
                                                                                                                 dateTime,
                                                                                                                 size,
+                                                                                                                fragmentCount,
                                                                                                                 fragmentOffset,
                                                                                                                 fragmentSize
                                                                                                                )
@@ -3881,8 +3881,9 @@ Dprintf.dprintf("");
                                                                     break;
                                                                   case IMAGE:
                                                                     {
-                                                                      String imageName      = valueMap.getString("name"       );
-                                                                      long   size           = valueMap.getLong  ("size"       );
+                                                                      String imageName      = valueMap.getString("name"          );
+                                                                      long   size           = valueMap.getLong  ("size"          );
+                                                                      int    fragmentCount  = valueMap.getInt   ("fragmentCount" );
                                                                       long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
                                                                       long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
 
@@ -3897,6 +3898,7 @@ Dprintf.dprintf("");
                                                                                                                 imageName,
                                                                                                                 0L,
                                                                                                                 size,
+                                                                                                                fragmentCount,
                                                                                                                 fragmentOffset,
                                                                                                                 fragmentSize
                                                                                                                )
@@ -3949,6 +3951,7 @@ Dprintf.dprintf("");
                                                                       String fileName       = valueMap.getString("name"          );
                                                                       long   dateTime       = valueMap.getLong  ("dateTime"      );
                                                                       long   size           = valueMap.getLong  ("size"          );
+                                                                      int    fragmentCount  = valueMap.getInt   ("fragmentCount" );
                                                                       long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
                                                                       long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
 
@@ -3963,6 +3966,7 @@ Dprintf.dprintf("");
                                                                                                                 fileName,
                                                                                                                 dateTime,
                                                                                                                 size,
+                                                                                                                fragmentCount,
                                                                                                                 fragmentOffset,
                                                                                                                 fragmentSize
                                                                                                                )
@@ -4035,8 +4039,7 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
-                                              String.format("%d..%d",entryIndexData.fragmentOffset,entryIndexData.fragmentOffset+((entryIndexData.fragmentSize > 0) ? entryIndexData.fragmentSize-1 : 0))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                              );
                       break;
                     case IMAGE:
@@ -4046,8 +4049,7 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
-                                              String.format("%d..%d",entryIndexData.fragmentOffset,entryIndexData.fragmentOffset+((entryIndexData.fragmentSize > 0) ? entryIndexData.fragmentSize-1 : 0))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                              );
                       break;
                     case DIRECTORY:
@@ -4057,8 +4059,7 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               (entryIndexData.size > 0L) ? Units.formatByteSize(entryIndexData.size) : "",
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
-                                              ""
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                              );
                       break;
                     case LINK:
@@ -4068,8 +4069,7 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               "",
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
-                                              ""
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                              );
                       break;
                     case HARDLINK:
@@ -4079,8 +4079,7 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
-                                              String.format("%d..%d",entryIndexData.fragmentOffset,entryIndexData.fragmentOffset+((entryIndexData.fragmentSize > 0) ? entryIndexData.fragmentSize-1 : 0))
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                              );
                       break;
                     case SPECIAL:
@@ -4090,8 +4089,7 @@ Dprintf.dprintf("");
                                               entryIndexData.name,
                                               entryIndexData.entryType.getText(),
                                               Units.formatByteSize(entryIndexData.size),
-                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L)),
-                                              ""
+                                              SIMPLE_DATE_FORMAT.format(new Date(entryIndexData.dateTime*1000L))
                                              );
                       break;
                   }
@@ -4948,6 +4946,16 @@ Dprintf.dprintf("");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
+      label = Widgets.newLabel(widgetEntryTableToolTip,BARControl.tr("Fragments")+":");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetEntryTableToolTip,(entryIndexData.fragmentCount > 0) ? String.format("%d",entryIndexData.fragmentCount) : "-");
+      label.setForeground(COLOR_FOREGROUND);
+      label.setBackground(COLOR_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
       Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
       widgetEntryTableToolTip.setBounds(x,y,size.x,size.y);
       widgetEntryTableToolTip.setVisible(true);
@@ -5027,7 +5035,7 @@ Dprintf.dprintf("");
     COLOR_INFO_FOREGROUND    = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
     COLOR_WARNING_FOREGROUND = display.getSystemColor(SWT.COLOR_RED);
     COLOR_INFO_BACKGROUND    = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
-    COLOR_NO_JOB_INFO        = new Color(null,0xFF,0x50,0xA0);
+    COLOR_NO_JOB_INFO        = new Color(null,0xFF,0xC0,0xA0);
 
     // get images
     IMAGE_DIRECTORY  = Widgets.loadImage(display,"directory.png");
@@ -6358,9 +6366,6 @@ Dprintf.dprintf("");
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       tableColumn = Widgets.addTableColumn(widgetEntryTable,4,BARControl.tr("Date/Time"),SWT.LEFT, 140,true);
       tableColumn.setToolTipText(BARControl.tr("Click to sort for date."));
-      tableColumn.addSelectionListener(entryListColumnSelectionListener);
-      tableColumn = Widgets.addTableColumn(widgetEntryTable,5,BARControl.tr("Fragment"), SWT.LEFT, 140,true);
-      tableColumn.setToolTipText(BARControl.tr("Click to sort for fragment."));
       tableColumn.addSelectionListener(entryListColumnSelectionListener);
       widgetEntryTable.addListener(SWT.SetData,new Listener()
       {
@@ -9147,7 +9152,7 @@ Dprintf.dprintf("");
       case ARCHIVES: title = BARControl.tr("Restore archives"); break;
       case ENTRIES:  title = BARControl.tr("Restore entries");  break;
     }
-    final Shell dialog = Dialogs.openModal(shell,title,600,400,new double[]{1.0,0.0},1.0);
+    final Shell dialog = Dialogs.openModal(shell,title,800,400,new double[]{1.0,0.0},1.0);
 
     final WidgetEvent selectRestoreToEvent = new WidgetEvent();
 
@@ -9176,15 +9181,16 @@ Dprintf.dprintf("");
       switch (restoreType)
       {
         case ARCHIVES:
-          Widgets.addTableColumn(widgetRestoreTable,0,BARControl.tr("Name"   ),SWT.LEFT, 430,true);
+          Widgets.addTableColumn(widgetRestoreTable,0,BARControl.tr("Name"   ),SWT.LEFT, 530,true);
           Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Entries"),SWT.RIGHT, 80,true);
           Widgets.addTableColumn(widgetRestoreTable,2,BARControl.tr("Size"   ),SWT.RIGHT, 60,true);
           break;
         case ENTRIES:
-          Widgets.addTableColumn(widgetRestoreTable,0,BARControl.tr("Name"     ),SWT.LEFT, 290,true);
+          Widgets.addTableColumn(widgetRestoreTable,0,BARControl.tr("Name"     ),SWT.LEFT, 360,true);
           Widgets.addTableColumn(widgetRestoreTable,1,BARControl.tr("Type"     ),SWT.LEFT, 100,true);
           Widgets.addTableColumn(widgetRestoreTable,2,BARControl.tr("Size"     ),SWT.RIGHT, 60,true);
-          Widgets.addTableColumn(widgetRestoreTable,3,BARControl.tr("Date/Time"),SWT.LEFT, 140,true);
+          Widgets.addTableColumn(widgetRestoreTable,3,BARControl.tr("Date/Time"),SWT.LEFT, 180,true);
+          Widgets.addTableColumn(widgetRestoreTable,3,BARControl.tr("Fragments"),SWT.LEFT,  80,true);
           break;
       }
 
@@ -9407,7 +9413,7 @@ Dprintf.dprintf("");
               try
               {
                 // get total number entries, size
-                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO fragments=yes"),
                                          1,  // debugLevel
                                          valueMap
                                         );
@@ -9474,7 +9480,7 @@ Dprintf.dprintf("");
               try
               {
                 // get total number entries, size
-                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO"),
+                BARServer.executeCommand(StringParser.format("ENTRY_LIST_INFO fragments=no"),
                                          1,  // debugLevel
                                          valueMap
                                         );
@@ -9501,18 +9507,21 @@ Dprintf.dprintf("");
                 });
 
                 // get entries
-                BARServer.executeCommand(StringParser.format("ENTRY_LIST"),
+                BARServer.executeCommand(StringParser.format("ENTRY_LIST fragments=no"),
                                          1,  // debugLevel
                                          new Command.ResultHandler()
                                          {
                                            @Override
                                            public void handle(int i, ValueMap valueMap)
                                            {
-                                             final long       entryId  = valueMap.getLong  ("entryId" );
-                                             final String     name     = valueMap.getString("name"    );
-                                             final EntryTypes type     = valueMap.getEnum  ("type",EntryTypes.class);
-                                             final long       size     = valueMap.getLong  ("size"    );
-                                             final long       dateTime = valueMap.getLong  ("dateTime");
+                                             final long       entryId        = valueMap.getLong  ("entryId"              );
+                                             final String     name           = valueMap.getString("name"                 );
+                                             final EntryTypes type           = valueMap.getEnum  ("type",EntryTypes.class);
+                                             final long       size           = valueMap.getLong  ("size"                 );
+                                             final long       dateTime       = valueMap.getLong  ("dateTime"             );
+                                             final long       fragmentCount  = valueMap.getLong  ("fragmentCount"        );
+                                             final long       fragmentOffset = valueMap.getLong  ("fragmentOffset"       );
+                                             final long       fragmentSize   = valueMap.getLong  ("fragmentSize"         );
 
                                              display.syncExec(new Runnable()
                                              {
@@ -9525,7 +9534,8 @@ Dprintf.dprintf("");
                                                                          name,
                                                                          type.getText(),
                                                                          type.hasSize() ? Units.formatByteSize(size) : "",
-                                                                         SIMPLE_DATE_FORMAT.format(new Date(dateTime*1000))
+                                                                         SIMPLE_DATE_FORMAT.format(new Date(dateTime*1000)),
+                                                                         String.format("%d",fragmentCount)
                                                                         );
                                                   }
                                                }
