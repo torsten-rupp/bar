@@ -8205,7 +8205,12 @@ Dprintf.dprintf("");
     // add storage files
     if ((storagePath != null) && !storagePath.isEmpty())
     {
-      final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Add indizes"),500,200,null,BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+      final BusyDialog busyDialog = new BusyDialog(shell,
+                                                   BARControl.tr("Add indizes"),
+                                                   500,200,
+                                                   (String)null,
+                                                   BusyDialog.PROGRESS_BAR0|BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE
+                                                  );
 
       Background.run(new BackgroundRunnable(busyDialog,storagePath)
       {
@@ -8216,7 +8221,7 @@ Dprintf.dprintf("");
 
           try
           {
-            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S",
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB progressSteps=1000",
                                                          new File(storagePath,"*").getPath()
                                                         ),
                          0,  // debugLevel
@@ -8225,12 +8230,21 @@ Dprintf.dprintf("");
                            @Override
                            public void handle(int i, ValueMap valueMap)
                            {
-                             long   storageId = valueMap.getLong  ("storageId");
-                             String name      = valueMap.getString("name"     );
+                             long   storageId  = valueMap.getLong  ("storageId", 0L);
+                             String name       = valueMap.getString("name",      "");
+                             long   doneCount  = valueMap.getLong  ("doneCount", 0L);
+                             long   totalCount = valueMap.getLong  ("totalCount",0L);
 
-                             n[0]++;
-                             busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
-                             busyDialog.updateList(name);
+                             if      ((storageId != 0) && (!name.isEmpty()))
+                             {
+                               n[0]++;
+                               busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
+                               busyDialog.updateList(name);
+                             }
+                             else if (totalCount > 0)
+                             {
+                               busyDialog.updateProgressBar(0,((double)doneCount*100.0)/(double)totalCount);
+                             }
                            }
                          },
                          new BusyIndicator()

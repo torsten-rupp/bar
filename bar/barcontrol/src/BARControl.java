@@ -4620,10 +4620,27 @@ if (false) {
           // add index for storage
           try
           {
-            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB",
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB progressSteps=1000",
                                                          Settings.indexDatabaseAddStorageName
                                                         ),
-                                     1  // debug level
+                                     1,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         long   storageId  = valueMap.getLong  ("storageId", 0L);
+                                         String name       = valueMap.getString("name",      "");
+                                         long   doneCount  = valueMap.getLong  ("doneCount", 0L);
+                                         long   totalCount = valueMap.getLong  ("totalCount",0L);
+
+                                         if      ((storageId != 0) && (!name.isEmpty()))
+                                         {
+                                           System.out.println(String.format("%s",name));
+                                         }
+                                       }
+                                     }
                                     );
           }
           catch (Exception exception)
