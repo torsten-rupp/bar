@@ -3067,10 +3067,8 @@ NULL, // masterSocketHandle
               break;
             case ARCHIVE_ENTRY_TYPE_META:
               {
-                String       name;
-                String       hostName;
-                String       jobUUID;
-                String       scheduleUUID;
+                String       hostName,userName;
+                String       jobUUID,scheduleUUID;
                 ArchiveTypes archiveType;
                 uint64       createdDateTime;
                 String       comment;
@@ -3078,15 +3076,15 @@ NULL, // masterSocketHandle
                 if (globalOptions.metaInfoFlag && !globalOptions.groupFlag)
                 {
                   // read archive file
-                  name         = String_new();
                   hostName     = String_new();
+                  userName     = String_new();
                   jobUUID      = String_new();
                   scheduleUUID = String_new();
                   comment      = String_new();
                   error = Archive_readMetaEntry(&archiveEntryInfo,
                                                 &archiveHandle,
-                                                name,
                                                 hostName,
+                                                userName,
                                                 jobUUID,
                                                 scheduleUUID,
                                                 &archiveType,
@@ -3106,7 +3104,7 @@ NULL, // masterSocketHandle
                     String_delete(scheduleUUID);
                     String_delete(jobUUID);
                     String_delete(hostName);
-                    String_delete(name);
+                    String_delete(hostName);
                     break;
                   }
 
@@ -3114,7 +3112,7 @@ NULL, // masterSocketHandle
                   if (!printedMetaInfoFlag)
                   {
                     printMetaInfo(hostName,
-                                  name,
+                                  userName,
                                   jobUUID,
                                   scheduleUUID,
                                   archiveType,
@@ -3137,8 +3135,8 @@ NULL, // masterSocketHandle
                   String_delete(comment);
                   String_delete(scheduleUUID);
                   String_delete(jobUUID);
+                  String_delete(userName);
                   String_delete(hostName);
-                  String_delete(name);
                 }
                 else
                 {

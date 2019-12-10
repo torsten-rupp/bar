@@ -5607,8 +5607,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                         ConstString             scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
-                        const Password          *password,
+                        uint64                  createdDateTime,
                         bool                    createMeta,
+                        const Password          *password,
                         StorageFlags            storageFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
@@ -5635,8 +5636,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
                           ConstString             scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
-                          const Password          *password,
+                          uint64                  createdDateTime,
                           bool                    createMeta,
+                          const Password          *password,
                           StorageFlags            storageFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
@@ -5686,6 +5688,7 @@ UNUSED_VARIABLE(storageInfo);
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = archiveType;
+  archiveHandle->createdDateTime         = createdDateTime;
   archiveHandle->createMeta              = createMeta;
   archiveHandle->storageFlags            = storageFlags;
 
@@ -5957,6 +5960,7 @@ UNUSED_VARIABLE(storageInfo);
 
   archiveHandle->deltaSourceList         = deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
+  archiveHandle->createdDateTime         = 0LL;
   archiveHandle->createMeta              = FALSE;
   archiveHandle->storageFlags            = STORAGE_FLAGS_NONE;
 
@@ -6102,6 +6106,7 @@ UNUSED_VARIABLE(storageInfo);
 
   archiveHandle->deltaSourceList         = fromArchiveHandle->deltaSourceList;
   archiveHandle->archiveType             = ARCHIVE_TYPE_NONE;
+  archiveHandle->createdDateTime         = 0LL;
   archiveHandle->createMeta              = FALSE;
   archiveHandle->storageFlags            = STORAGE_FLAGS_NONE;
 

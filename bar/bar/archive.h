@@ -235,6 +235,7 @@ typedef struct
 
   DeltaSourceList          *deltaSourceList;                           // list with delta sources
   ArchiveTypes             archiveType;
+  uint64                   createdDateTime;
   bool                     createMeta;                                 // TRUE to create meta chunks
   StorageFlags             storageFlags;                               // storage flags
 
@@ -640,6 +641,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 *          scheduleUUID            - unique schedule id or NULL
 *          deltaSourceList         - delta source list or NULL
 *          archiveType             - archive type
+*          createdDateTime         - date/time created [s]
 *          password                - password
 *          createMeta              - TRUE to create meta-chunks
 *          storageFlags            - storage flags
@@ -671,8 +673,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                         ConstString             scheduleUUID,
                         DeltaSourceList         *deltaSourceList,
                         ArchiveTypes            archiveType,
-                        const Password          *password,
+                        uint64                  createdDateTime,
                         bool                    createMeta,
+                        const Password          *password,
                         StorageFlags            storageFlags,
                         ArchiveInitFunction     archiveInitFunction,
                         void                    *archiveInitUserData,
@@ -699,8 +702,9 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           ConstString             scheduleUUID,
                           DeltaSourceList         *deltaSourceList,
                           ArchiveTypes            archiveType,
-                          const Password          *password,
+                          uint64                  createdDateTime,
                           bool                    createMeta,
+                          const Password          *password,
                           StorageFlags            storageFlags,
                           ArchiveInitFunction     archiveInitFunction,
                           void                    *archiveInitUserData,
@@ -1483,8 +1487,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 * Purpose: read meta info from archive
 * Input  : archiveEntryInfo - archive file entry info
 *          archiveHandle    - archive handle
-* Output : userName        - user name (can be NULL)
-*          hostName        - host name (can be NULL)
+* Output : hostName        - host name (can be NULL)
+*          userName        - user name (can be NULL)
 *          jobUUID         - job UUID (can be NULL)
 *          scheduleUUID    - schedule UUID (can be NULL)
 *          archiveType     - archive type (can be NULL)
@@ -1497,8 +1501,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
 #ifdef NDEBUG
   Errors Archive_readMetaEntry(ArchiveEntryInfo *archiveEntryInfo,
                                ArchiveHandle    *archiveHandle,
-                               String           userName,
                                String           hostName,
+                               String           userName,
                                String           jobUUID,
                                String           scheduleUUID,
                                ArchiveTypes     *archiveType,
@@ -1510,8 +1514,8 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle);
                                  ulong            __lineNb__,
                                  ArchiveEntryInfo *archiveEntryInfo,
                                  ArchiveHandle    *archiveHandle,
-                                 String           userName,
                                  String           hostName,
+                                 String           userName,
                                  String           jobUUID,
                                  String           scheduleUUID,
                                  ArchiveTypes     *archiveType,
