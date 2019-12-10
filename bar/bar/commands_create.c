@@ -94,13 +94,13 @@ typedef struct
   IndexHandle                 *indexHandle;
   ConstString                 jobUUID;                              // unique job id to store or NULL
   ConstString                 scheduleUUID;                         // unique schedule id to store or NULL
+  ConstString                 scheduleTitle;                        // schedule title or NULL
+  ConstString                 scheduleCustomText;                   // schedule custom text or NULL
   const EntryList             *includeEntryList;                    // list of included entries
   const PatternList           *excludePatternList;                  // list of exclude patterns
   JobOptions                  *jobOptions;
   ArchiveTypes                archiveType;                          // archive type to create
-  ConstString                 scheduleTitle;                        // schedule title or NULL
-  ConstString                 scheduleCustomText;                   // schedule custom text or NULL
-  uint64                      startDateTime;                        // date/time of start [s]
+  uint64                      createdDateTime;                      // date/time of created [s]
   StorageFlags                storageFlags;                         // storage flags; see STORAGE_FLAGS_...
 
   LogHandle                   *logHandle;                           // log handle
@@ -245,16 +245,17 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Name   : initCreateInfo
 * Purpose: initialize create info
 * Input  : createInfo                 - create info variable
-*          storageSpecifier           - storage specifier structure
+*          indexHandle                - index handle
 *          jobUUID                    - unique job id to store or NULL
 *          scheduleUUID               - unique schedule id to store or NULL
+*          scheduleTitle              - schedule title
+*          scheduleCustomText         - schedule custome text or NULL
 *          includeEntryList           - include entry list
 *          excludePatternList         - exclude pattern list
 *          jobOptions                 - job options
 *          archiveType                - archive type; see ArchiveTypes
 *                                       (normal/full/incremental)
-*          storageNameCustomText      - storage name custome text or NULL
-*          startDateTime              - date/time of start [s]
+*          createdDateTime            - date/time of created [s]
 *          storageFlags               - storage flags; see STORAGE_FLAGS_...
 *          isPauseCreateFunction      - is pause check callback (can
 *                                       be NULL)
@@ -274,13 +275,13 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
                           IndexHandle        *indexHandle,
                           ConstString        jobUUID,
                           ConstString        scheduleUUID,
+                          ConstString        scheduleTitle,
+                          ConstString        scheduleCustomText,
                           const EntryList    *includeEntryList,
                           const PatternList  *excludePatternList,
                           JobOptions         *jobOptions,
                           ArchiveTypes       archiveType,
-                          ConstString        scheduleTitle,
-                          ConstString        scheduleCustomText,
-                          uint64             startDateTime,
+                          uint64             createdDateTime,
                           StorageFlags       storageFlags,
                           IsPauseFunction    isPauseCreateFunction,
                           void               *isPauseCreateUserData,
@@ -300,7 +301,7 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
   createInfo->jobOptions                           = jobOptions;
   createInfo->scheduleTitle                        = scheduleTitle;
   createInfo->scheduleCustomText                   = scheduleCustomText;
-  createInfo->startDateTime                        = startDateTime;
+  createInfo->createdDateTime                      = createdDateTime;
   createInfo->storageFlags                         = storageFlags;
 
   createInfo->logHandle                            = logHandle;
@@ -3728,7 +3729,7 @@ LOCAL uint64 archiveGetSize(StorageInfo *storageInfo,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
-                                createInfo->startDateTime,
+                                createInfo->createdDateTime,
                                 partNumber
                                );
   if (error != ERROR_NONE)
@@ -3814,7 +3815,7 @@ LOCAL Errors archiveStore(StorageInfo  *storageInfo,
                                 createInfo->archiveType,
                                 createInfo->scheduleTitle,
                                 createInfo->scheduleCustomText,
-                                createInfo->startDateTime,
+                                createInfo->createdDateTime,
                                 partNumber
                                );
   if (error != ERROR_NONE)
@@ -4510,7 +4511,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // pre-process
     if (!Storage_isAborted(&createInfo->storageInfo))
     {
-      error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->startDateTime,TRUE);
+      error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process storage (error: %s)!",
@@ -4560,7 +4561,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
 
       // pre-process
-      error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startDateTime,FALSE);
+      error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->createdDateTime,FALSE);
       if (error != ERROR_NONE)
       {
         printError("Cannot pre-process file '%s' (error: %s)!",
@@ -5017,7 +5018,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // post-process
-      error = Storage_postProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->startDateTime,FALSE);
+      error = Storage_postProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->createdDateTime,FALSE);
       if (error != ERROR_NONE)
       {
         printError("Cannot post-process storage file '%s' (error: %s)!",
@@ -5086,7 +5087,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     // post-processing
     if (!Storage_isAborted(&createInfo->storageInfo))
     {
-      error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->startDateTime,TRUE);
+      error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
       if (error != ERROR_NONE)
       {
         printError("Cannot post-process storage (error: %s)!",
@@ -5114,7 +5115,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                     createInfo->archiveType,
                                     createInfo->scheduleTitle,
                                     createInfo->scheduleCustomText,
-                                    createInfo->startDateTime,
+                                    createInfo->createdDateTime,
                                     ARCHIVE_PART_NUMBER_NONE
                                    );
       if (error == ERROR_NONE)
@@ -7420,16 +7421,16 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 /*---------------------------------------------------------------------*/
 
 Errors Command_create(ServerIO                     *masterIO,
-                      ArchiveTypes                 archiveType,
                       ConstString                  jobUUID,
                       ConstString                  scheduleUUID,
                       ConstString                  storageName,
+                      ConstString                  scheduleTitle,
+                      ConstString                  scheduleCustomText,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
                       JobOptions                   *jobOptions,
-                      ConstString                  scheduleTitle,
-                      ConstString                  scheduleCustomText,
-                      uint64                       startDateTime,
+                      ArchiveTypes                 archiveType,
+                      uint64                       createdDateTime,
                       StorageFlags                 storageFlags,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,
@@ -7512,13 +7513,13 @@ Errors Command_create(ServerIO                     *masterIO,
                  indexHandle,
                  jobUUID,
                  scheduleUUID,
+                 scheduleTitle,
+                 scheduleCustomText,
                  includeEntryList,
                  excludePatternList,
                  jobOptions,
                  archiveType,
-                 scheduleTitle,
-                 scheduleCustomText,
-                 startDateTime,
+                 createdDateTime,
                  storageFlags,
                  CALLBACK_(isPauseCreateFunction,isPauseCreateUserData),
                  CALLBACK_(statusInfoFunction,statusInfoUserData),

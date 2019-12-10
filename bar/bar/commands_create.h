@@ -56,14 +56,14 @@
 *          jobUUID                      - unique job id to store or NULL
 *          scheduleUUID                 - unique schedule id to store or
 *                                         NULL
+*          scheduleTitle                - schedule title
+*          scheduleCustomText           - schedule custome text or NULL
 *          storageName                  - storage name
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
 *          jobOptions                   - job options
 *          entityId                     - entityId or INDEX_ID_NONE
-*          scheduleTitle                - schedule title
-*          scheduleCustomText           - schedule custome text or NULL
-*          startDateTime                - date/time of start [s]
+*          createdDateTime              - date/time of created [s]
 *          storageFlags                 - storage flags
 *          getNamePasswordFunction      - get password callback (can
 *                                         be NULL)
@@ -92,16 +92,16 @@
 \***********************************************************************/
 
 Errors Command_create(ServerIO                     *masterIO,
-                      ArchiveTypes                 archiveType,
                       ConstString                  jobUUID,
                       ConstString                  scheduleUUID,
+                      ConstString                  scheduleTitle,
+                      ConstString                  scheduleCustomText,
                       ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
                       JobOptions                   *jobOptions,
-                      ConstString                  scheduleTitle,
-                      ConstString                  scheduleCustomText,
-                      uint64                       startDateTime,
+                      ArchiveTypes                 archiveType,
+                      uint64                       createdDateTime,
                       StorageFlags                 storageFlags,
                       GetNamePasswordFunction      getNamePasswordFunction,
                       void                         *getNamePasswordUserData,

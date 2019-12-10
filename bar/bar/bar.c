@@ -10352,17 +10352,17 @@ LOCAL Errors runJob(void)
   // create archive
   Job_initOptions(&jobOptions);
   error = Command_create(NULL, // masterIO
-                         globalOptions.archiveType,
                          NULL, // job UUID
                          NULL, // schedule UUID
+                         NULL, // scheduleTitle
+                         NULL, // scheduleCustomText
                          storageName,
                          &includeEntryList,
                          &excludePatternList,
 //                         &compressExcludePatternList,
 //                         &deltaSourceList,
                          &jobOptions,
-                         NULL, // scheduleTitle
-                         NULL, // scheduleCustomText
+                         globalOptions.archiveType,
                          Misc_getCurrentDateTime(),
                          storageFlags,
                          CALLBACK_(getCryptPasswordFromConsole,NULL),
@@ -10515,17 +10515,18 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
         {
           // create archive
           error = Command_create(NULL, // masterIO
-                                 globalOptions.archiveType,
                                  NULL, // job UUID
                                  NULL, // schedule UUID
+                                 NULL, // scheduleTitle
+                                 NULL, // scheduleCustomText
                                  storageName,
                                  &includeEntryList,
                                  &excludePatternList,
+//TODO
 //                                 &compressExcludePatternList,
 //                                 &deltaSourceList,
                                  &jobOptions,
-                                 NULL, // scheduleTitle
-                                 NULL, // scheduleCustomText
+                                 globalOptions.archiveType,
                                  Misc_getCurrentDateTime(),
                                  storageFlags,
                                  CALLBACK_(getCryptPasswordFromConsole,NULL),

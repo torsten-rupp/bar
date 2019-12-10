@@ -1767,16 +1767,16 @@ LOCAL void jobThreadCode(void)
               case JOB_TYPE_CREATE:
                 // create archive
                 jobNode->runningInfo.error = Command_create(jobNode->masterIO,
-                                                            archiveType,
                                                             jobUUID,
                                                             scheduleUUID,
+//TODO:
+NULL,//                                                        scheduleTitle,
+                                                            scheduleCustomText,
                                                             storageName,
                                                             &includeEntryList,
                                                             &excludePatternList,
                                                             &jobOptions,
-//TODO:
-NULL,//                                                        scheduleTitle,
-                                                            scheduleCustomText,
+                                                            archiveType,
                                                             startDateTime,
                                                             storageFlags,
                                                             CALLBACK_(getCryptPasswordFromConfig,jobNode),

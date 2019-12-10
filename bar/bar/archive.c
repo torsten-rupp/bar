@@ -1580,9 +1580,6 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
 
   error = ERROR_NONE;
 
-#warning REMOVE
-maxIndexEntries=0;
-
   // init variables
   List_init(&archiveIndexList);
 
