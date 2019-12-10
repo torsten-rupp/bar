@@ -329,6 +329,8 @@ typedef struct
   ulong  blockSize;                   // size of block [bytes]
   uint64 freeBytes;
   uint64 totalBytes;
+  ulong  freeFiles;
+  ulong  totalFiles;
   uint   maxFileNameLength;
 } FileSystemInfo;
 

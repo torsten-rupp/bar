@@ -4924,6 +4924,8 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
     fileSystemInfo->blockSize         = fileSystemStat.f_bsize;
     fileSystemInfo->freeBytes         = (uint64)fileSystemStat.f_bavail*(uint64)fileSystemStat.f_bsize;
     fileSystemInfo->totalBytes        = (uint64)fileSystemStat.f_blocks*(uint64)fileSystemStat.f_frsize;
+    fileSystemInfo->freeFiles         = (uint64)fileSystemStat.f_ffree;
+    fileSystemInfo->totalFiles        = (uint64)fileSystemStat.f_files;
     fileSystemInfo->maxFileNameLength = (uint64)fileSystemStat.f_namemax;
   #else /* not HAVE_STATVFS */
     UNUSED_VARIABLE(fileSystemInfo);
