@@ -466,6 +466,7 @@ public class TabStatus
     {
       try
       {
+        int i = 0;
         for (;;)
         {
           // sleep a short time
@@ -474,7 +475,12 @@ public class TabStatus
           // update
           try
           {
-            tabStatus.update();
+            // update status, running job info
+            tabStatus.updateStatus();
+            tabStatus.updateJobInfo();
+
+            // update job list
+            if (i == 0) tabStatus.updateJobList();
           }
           catch (org.eclipse.swt.SWTException exception)
           {
@@ -485,6 +491,8 @@ public class TabStatus
               System.exit(ExitCodes.FAIL);
             }
           }
+
+          i = (i+1)%10;
         }
       }
       catch (Throwable throwable)
@@ -2624,8 +2632,9 @@ public class TabStatus
   {
     try
     {
-      updateStatus();
       updateJobList();
+
+      updateStatus();
       updateJobInfo();
     }
     catch (Throwable throwable)
