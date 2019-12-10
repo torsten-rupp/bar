@@ -9266,7 +9266,7 @@ Errors addStorageNameListFromCommand(StringList *storageNameList, const char *te
 
   // execute script and collect output
   error = Misc_executeScript(String_cString(script),
-                             CALLBACK__INLINE(void,(ConstString line, void *userData),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
@@ -9357,7 +9357,7 @@ Errors addIncludeListFromCommand(EntryTypes entryType, EntryList *entryList, con
 
   // execute script and collect output
   error = Misc_executeScript(String_cString(script),
-                             CALLBACK__INLINE(void,(ConstString line, void *userData),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
@@ -9449,7 +9449,7 @@ Errors addExcludeListFromCommand(PatternList *patternList, const char *template)
 
   // execute script and collect output
   error = Misc_executeScript(String_cString(script),
-                             CALLBACK__INLINE(void,(ConstString line, void *userData),
+                             CALLBACK_INLINE(void,(ConstString line, void *userData),
                              {
                                UNUSED_VARIABLE(userData);
 
