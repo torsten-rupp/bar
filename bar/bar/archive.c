@@ -1696,24 +1696,23 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle, uint maxIndexEn
             break;
           case ARCHIVE_ENTRY_TYPE_META:
             // check if entity with given schedule exists, otherwise create new entity
-            if (   String_isEmpty(archiveIndexNode->meta.scheduleUUID)
-                || !Index_findEntity(archiveHandle->indexHandle,
-                                     INDEX_ID_NONE,  // findEntityIndexId
-                                     archiveIndexNode->meta.jobUUID,
-                                     archiveIndexNode->meta.scheduleUUID,
-                                     archiveIndexNode->meta.hostName,
-                                     archiveIndexNode->meta.archiveType,
-                                     0LL,  // findCreatedDateTime
-                                     NULL,  // jobUUID,
-                                     NULL,  // scheduleUUID,
-                                     NULL,  // uuidIndexId,
-                                     &entityId,
-                                     NULL,  // archiveType,
-                                     NULL,  // createdDateTime,
-                                     NULL,  // lastErrorMessage,
-                                     NULL,  // totalEntryCount,
-                                     NULL  // totalEntrySize
-                                    )
+            if (!Index_findEntity(archiveHandle->indexHandle,
+                                  INDEX_ID_NONE,  // findEntityIndexId
+                                  archiveIndexNode->meta.jobUUID,
+                                  archiveIndexNode->meta.scheduleUUID,
+                                  archiveIndexNode->meta.hostName,
+                                  archiveIndexNode->meta.archiveType,
+                                  archiveIndexNode->meta.createdDateTime,
+                                  NULL,  // jobUUID,
+                                  NULL,  // scheduleUUID,
+                                  NULL,  // uuidIndexId,
+                                  &entityId,
+                                  NULL,  // archiveType,
+                                  NULL,  // createdDateTime,
+                                  NULL,  // lastErrorMessage,
+                                  NULL,  // totalEntryCount,
+                                  NULL  // totalEntrySize
+                                 )
                )
             {
               error = Index_newEntity(archiveHandle->indexHandle,
@@ -14692,7 +14691,6 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-//TODO: improve speed: read n entries, then transction with add
 Errors Archive_updateIndex(IndexHandle       *indexHandle,
                            IndexId           storageId,
                            StorageInfo       *storageInfo,
@@ -15189,7 +15187,9 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     }
 
     // flush index
-    error = flushArchiveIndexList(&archiveHandle,0);
+//TODO: revert
+//    error = flushArchiveIndexList(&archiveHandle,1000);
+    error = flushArchiveIndexList(&archiveHandle,MAX_INDEX_LIST);
     if (error != ERROR_NONE)
     {
       break;
