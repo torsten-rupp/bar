@@ -3940,40 +3940,58 @@ NULL, // masterIO
   return ERROR_NONE;
 }
 
-Errors Storage_forAll(ConstString     storagePatternString,
-                      StorageFunction storageFunction,
-                      void            *storageUserData
+Errors Storage_forAll(ConstString             storagePatternString,
+                      StorageFunction         storageFunction,
+                      void                    *storageUserData,
+                      StorageProgressFunction storageProgressFunction,
+                      void                    *storageProgressUserData
                      )
 {
   StorageSpecifier           storageSpecifier;
   JobOptions                 jobOptions;
   StringList                 directoryList;
-  String                     archiveName;
+  String                     name;
+  FileSystemInfo             fileSystemInfo;
+  ulong                      totalCount;
   Errors                     error;
   StorageDirectoryListHandle storageDirectoryListHandle;
+  ulong                      doneCount;
   FileInfo                   fileInfo;
 
   assert(storagePatternString != NULL);
   assert(storageFunction != NULL);
 
+  // init variables
   Storage_initSpecifier(&storageSpecifier);
   Job_initOptions(&jobOptions);
   StringList_init(&directoryList);
-  archiveName = String_new();
+  name = String_new();
 
+  // scan directories
   error = Storage_parseName(&storageSpecifier,storagePatternString);
   if (error == ERROR_NONE)
   {
+    // get file system info (if possible)
+    if (File_getFileSystemInfo(&fileSystemInfo,storageSpecifier.archiveName) == ERROR_NONE)
+    {
+      totalCount = fileSystemInfo.totalFiles;
+    }
+    else
+    {
+      totalCount = 0L;
+    }
+
     // read directory and scan all sub-directories
     StringList_append(&directoryList,storageSpecifier.archiveName);
+    doneCount = 0L;
     while (!StringList_isEmpty(&directoryList))
     {
-      StringList_removeLast(&directoryList,archiveName);
+      StringList_removeLast(&directoryList,name);
 
       // open directory
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
-                                        archiveName,
+                                        name,
                                         &jobOptions,
                                         SERVER_CONNECTION_PRIORITY_LOW
                                        );
@@ -3986,7 +4004,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
               )
         {
           // read next directory entry
-          error = Storage_readDirectoryList(&storageDirectoryListHandle,archiveName,&fileInfo);
+          error = Storage_readDirectoryList(&storageDirectoryListHandle,name,&fileInfo);
           if (error != ERROR_NONE)
           {
             continue;
@@ -3995,17 +4013,30 @@ Errors Storage_forAll(ConstString     storagePatternString,
           // check if sub-directory
           if (fileInfo.type == FILE_TYPE_DIRECTORY)
           {
-            StringList_append(&directoryList,archiveName);
+            StringList_append(&directoryList,name);
           }
 
-          // match pattern and call callback
-          if (   ((storageSpecifier.archivePatternString == NULL) && String_equals(storageSpecifier.archiveName,archiveName))
-              || ((storageSpecifier.archivePatternString != NULL) && Pattern_match(&storageSpecifier.archivePattern,archiveName,PATTERN_MATCH_MODE_EXACT))
+          // match pattern and call storage callback
+          if (   (storageFunction != NULL)
+              && (   ((storageSpecifier.archivePatternString == NULL) && String_equals(storageSpecifier.archiveName,name))
+                  || ((storageSpecifier.archivePatternString != NULL) && Pattern_match(&storageSpecifier.archivePattern,name,PATTERN_MATCH_MODE_EXACT))
+                 )
              )
           {
             // callback
-            error = storageFunction(Storage_getName(NULL,&storageSpecifier,archiveName),&fileInfo,storageUserData);
+            error = storageFunction(Storage_getName(NULL,&storageSpecifier,name),
+                                    &fileInfo,
+                                    storageUserData
+                                   );
           }
+
+          // call progress callback
+          if (storageProgressFunction != NULL)
+          {
+            storageProgressFunction(doneCount,totalCount,storageProgressUserData);
+          }
+
+          doneCount++;
         }
 
         // close directory
@@ -4015,7 +4046,7 @@ Errors Storage_forAll(ConstString     storagePatternString,
   }
 
   // free resources
-  String_delete(archiveName);
+  String_delete(name);
   StringList_done(&directoryList);
   Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&storageSpecifier);

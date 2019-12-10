@@ -642,6 +642,8 @@ typedef struct
 * Purpose: storage call back
 * Input  : storageName - storage name
 *          fileInfo    - file info
+*          doneCount   - done count
+*          totalCount  - total count
 *          userData    - user data
 * Output : -
 * Return : ERROR_NONE or error code
@@ -652,6 +654,22 @@ typedef Errors(*StorageFunction)(ConstString    storageName,
                                  const FileInfo *fileInfo,
                                  void           *userData
                                 );
+
+/***********************************************************************\
+* Name   : StorageProgressFunction
+* Purpose: storage progress call back
+* Input  : doneCount  - done count
+*          totalCount - total count
+*          userData   - user data
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*StorageProgressFunction)(ulong doneCount,
+                                       ulong totalCount,
+                                       void  *userData
+                                      );
 
 /***************************** Variables *******************************/
 
@@ -1685,17 +1703,23 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
 /***********************************************************************\
 * Name   : Storage_forAll
 * Purpose: execute callback for all storage files
-* Input  : storagePattern - storage pattern
-*          storageFunction - storage callback function
-*          storageUserData - storage callback user data
+* Input  : storagePatternString    - storage pattern string
+*          storageFunction         - storage callback function (can be
+*                                    NULL)
+*          storageUserData         - storage callback user data
+*          storageProgressFunction - storage progress callback function
+*                                    (can be NULL)
+*          storageProgressUserData - storage progress callback user data
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_forAll(ConstString     storagePattern,
-                      StorageFunction storageFunction,
-                      void            *storageUserData
+Errors Storage_forAll(ConstString             storagePatternString,
+                      StorageFunction         storageFunction,
+                      void                    *storageUserData,
+                      StorageProgressFunction storageProgressFunction,
+                      void                    *storageProgressUserData
                      );
 
 #ifdef __cplusplus
