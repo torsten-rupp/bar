@@ -13370,7 +13370,6 @@ LOCAL void serverCommand_storageListRemove(ClientInfo *clientInfo, IndexHandle *
   }
 
   // remove from id array
-fprintf(stderr,"%s, %d: serverCommand_storageListRemove %s\n",__FILE__,__LINE__,String_cString(storageIds));
   String_initTokenizer(&stringTokenizer,storageIds,STRING_BEGIN,",",NULL,TRUE);
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
