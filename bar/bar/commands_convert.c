@@ -2077,9 +2077,10 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                          NULL,  // scheduleUUID,
 //TODO
                          NULL,  // deltaSourceList,
-                         ARCHIVE_TYPE_NONE,
-                         &globalOptions.cryptNewPassword,
+                         sourceArchiveHandle.archiveType,
+                         Misc_getCurrentDateTime(),
                          FALSE,  // createMeta
+                         &globalOptions.cryptNewPassword,
                          STORAGE_FLAGS_NONE,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction

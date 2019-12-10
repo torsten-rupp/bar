@@ -50,9 +50,6 @@
 * Name   : Command_create
 * Purpose: create archive
 * Input  : masterIO                     - master i/o or NULL
-*          archiveType                  - archive type; see
-*                                         ArchiveTypes (normal/full/
-*                                         incremental)
 *          jobUUID                      - unique job id to store or NULL
 *          scheduleUUID                 - unique schedule id to store or
 *                                         NULL
@@ -62,7 +59,9 @@
 *          includeEntryList             - include entry list
 *          excludePatternList           - exclude pattern list
 *          jobOptions                   - job options
-*          entityId                     - entityId or INDEX_ID_NONE
+*          archiveType                  - archive type; see
+*                                         ArchiveTypes (normal/full/
+*                                         incremental)
 *          createdDateTime              - date/time of created [s]
 *          storageFlags                 - storage flags
 *          getNamePasswordFunction      - get password callback (can

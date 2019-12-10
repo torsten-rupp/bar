@@ -7423,9 +7423,9 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 Errors Command_create(ServerIO                     *masterIO,
                       ConstString                  jobUUID,
                       ConstString                  scheduleUUID,
-                      ConstString                  storageName,
                       ConstString                  scheduleTitle,
                       ConstString                  scheduleCustomText,
+                      ConstString                  storageName,
                       const EntryList              *includeEntryList,
                       const PatternList            *excludePatternList,
                       JobOptions                   *jobOptions,
@@ -7723,7 +7723,7 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   // create new archive
-   error = Archive_create(&createInfo.archiveHandle,
+  error = Archive_create(&createInfo.archiveHandle,
                          NULL,  // hostName
                          &createInfo.storageInfo,
                          NULL,  // archiveName
@@ -7733,8 +7733,9 @@ Errors Command_create(ServerIO                     *masterIO,
                          scheduleUUID,
                          &createInfo.jobOptions->deltaSourceList,
                          archiveType,
-                         NULL,  // cryptPassword
+                         createdDateTime,
                          TRUE,  // createMeta
+                         NULL,  // cryptPassword
                          storageFlags,
                          CALLBACK_(NULL,NULL),  // archiveInitFunction
                          CALLBACK_(NULL,NULL),  // archiveDoneFunction
