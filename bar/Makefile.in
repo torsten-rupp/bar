@@ -468,6 +468,7 @@ install_barcontrol:
 
 # install script files
 # move to post-install script
+#TODO: remove
 install_scriptsold: \
   $(SCRIPTS)
 	if test "$(SYSTEM_INIT)" = "systemd" -o -d /lib/systemd; then \
@@ -793,15 +794,6 @@ clean_debian_dist:
 	$(RMF) $(DISTRIBUTION_NAME).orig.tar.gz
 
 # create Debian distribution
-#TODO
-xxx$(DISTRIBUTION_NAME_ORIG).tar.gz: \
-  $(DISTRIBUTION_NAME).tar.bz2
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig
-	($(CD) tmp/$(DISTRIBUTION_NAME).orig; $(TAR) --strip-components=1 -xjf ../../$(DISTRIBUTION_NAME).tar.bz2)
-	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME).orig/extern
-	($(CD) tmp; $(TAR) czf ../$@ $(DISTRIBUTION_NAME).orig)
-	$(RMRF) tmp/$(DISTRIBUTION_NAME).orig
-
 $(DISTRIBUTION_NAME).orig.tar.gz: \
   $(DISTRIBUTION_NAME).tar.bz2 \
   download-third-party-packages.sh
