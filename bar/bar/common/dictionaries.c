@@ -1279,7 +1279,7 @@ void Dictionary_debugDump(Dictionary *dictionary)
   assert(dictionary != NULL);
 
   Dictionary_iterate(dictionary,
-                     CALLBACK__INLINE(bool,(const void *keyData,
+                     CALLBACK_INLINE(bool,(const void *keyData,
                                            ulong      keyLength,
                                            void       *data,
                                            ulong      length,

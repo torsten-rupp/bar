@@ -452,7 +452,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
   })
 
 /***********************************************************************\
-* Name   : CALLBACK__INLINE
+* Name   : CALLBACK_INLINE
 * Purpose: define an inline call-back function (anonymouse function)
 * Input  : functionReturnType - call-back function signature
 *          functionSignature  - call-back function signature
@@ -467,7 +467,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 *                            );
 \***********************************************************************/
 
-#define CALLBACK__INLINE(functionReturnType,functionSignature,functionBody,functionUserData) \
+#define CALLBACK_INLINE(functionReturnType,functionSignature,functionBody,functionUserData) \
   ({ \
     auto functionReturnType __closure__ functionSignature; \
     functionReturnType __closure__ functionSignature functionBody \

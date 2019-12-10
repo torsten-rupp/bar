@@ -140,7 +140,7 @@ typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *
 #define STRINGLIST_FIND_FIRST(list,variable,condition) \
   List_findFirst(list,\
                  LIST_FIND_FORWARD,\
-                 (ListNodeEqualsFunction)CALLBACK__INLINE(bool,\
+                 (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
                                                          (const StringNode *stringNode, void *userData), \
                                                          { \
                                                            String variable = stringNode->string; \
@@ -155,7 +155,7 @@ typedef bool(*StringListNodeEqualsFunction)(const StringNode *stringNode, void *
 #define STRINGLIST_FIND_LAST(list,variable,condition) \
   List_findFirst(list,\
                  LIST_FIND_BACKWARD,\
-                 (ListNodeEqualsFunction)CALLBACK__INLINE(bool,\
+                 (ListNodeEqualsFunction)CALLBACK_INLINE(bool,\
                                                          (const StringNode *stringNode, void *userData), \
                                                          { \
                                                            String variable = stringNode->string; \

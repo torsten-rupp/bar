@@ -474,7 +474,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   {
     stringClear(name);
     error = Database_execute(databaseHandle,
-                             CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                              {
                                assert(count == 1);
                                assert(values != NULL);
@@ -561,7 +561,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     stringClear(name);
     error = Database_execute(databaseHandle,
-                             CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                              {
                                assert(count == 1);
                                assert(values != NULL);
@@ -601,7 +601,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     stringClear(name);
     error = Database_execute(databaseHandle,
-                             CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                              {
                                assert(count == 1);
                                assert(values != NULL);
@@ -802,7 +802,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
   totalEntriesCount       = 0L;
   totalEntriesNewestCount = 0L;
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values != NULL);
@@ -826,7 +826,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values != NULL);
@@ -874,7 +874,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
 
   // insert newest
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              bool       existsFlag;
                              uint64     entryId;
@@ -918,7 +918,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              // check if exists
                              existsFlag = FALSE;
                              error = Database_execute(databaseHandle,
-                                                      CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                                                      CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                                       {
                                                         assert(count == 1);
                                                         assert(values != NULL);
@@ -1075,7 +1075,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 
   totalCount = 0L;
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values != NULL);
@@ -1103,7 +1103,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 
   n = 0L;
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 entryId;
                              uint64 fragmentOffset;
@@ -1160,7 +1160,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
   }
   error = sqlite3_exec(databaseHandle,
                        "SELECT entryId,blockSize,blockOffset,blockCount FROM imageEntries",
-                       CALLBACK__INLINE(Errors,(void *userData, int count, char *values[], char *columns[]),
+                       CALLBACK_INLINE(Errors,(void *userData, int count, char *values[], char *columns[]),
                        {
                          uint64 entryId;
                          ulong  blockSize;
@@ -1219,7 +1219,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
   }
   error = sqlite3_exec(databaseHandle,
                        "SELECT entryId,fragmentOffset,fragmentSize FROM hardlinkEntries",
-                     CALLBACK__INLINE(int,(void *userData, int count, char *values[], char *columns[]),
+                     CALLBACK_INLINE(int,(void *userData, int count, char *values[], char *columns[]),
                        {
                          uint64 entryId;
                          uint64 fragmentOffset;
@@ -1274,7 +1274,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 entryId;
                              uint64 offset;
@@ -1338,7 +1338,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
   // get total count
   totalCount = 0L;
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values != NULL);
@@ -1389,7 +1389,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 
   // update directory content size/count aggegated data: files
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1462,7 +1462,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1534,7 +1534,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 
   // update directory content size/count aggegated data: directories
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1597,7 +1597,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1662,7 +1662,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 
   // update directory content size/count aggegated data: links
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1726,7 +1726,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1792,7 +1792,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 
   // update directory content size/count aggegated data: hardlinks
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1862,7 +1862,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1934,7 +1934,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 
   // update directory content size/count aggegated data: special
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -1997,7 +1997,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
                              String name;
@@ -2068,7 +2068,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
   // get total count
   totalCount = 0L;
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values != NULL);
@@ -2096,7 +2096,7 @@ LOCAL void createAggregates(DatabaseHandle *databaseHandle)
 
   // update storage total count/size aggregates
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              uint64 storageId;
 
@@ -2345,7 +2345,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
 
   // clean-up *Entries without entry
   (void)Database_execute(databaseHandle,
-                         CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64  databaseId;
                            Errors error;
@@ -2383,7 +2383,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          "
                         );
   (void)Database_execute(databaseHandle,
-                         CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64  databaseId;
                            Errors error;
@@ -2421,7 +2421,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          "
                         );
   (void)Database_execute(databaseHandle,
-                         CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64  databaseId;
                            Errors error;
@@ -2459,7 +2459,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          "
                         );
   (void)Database_execute(databaseHandle,
-                         CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64  databaseId;
                            Errors error;
@@ -2497,7 +2497,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          "
                         );
   (void)Database_execute(databaseHandle,
-                         CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64  databaseId;
                            Errors error;
@@ -2535,7 +2535,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          "
                         );
         (void)Database_execute(databaseHandle,
-                         CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64  databaseId;
                            Errors error;
@@ -2599,7 +2599,7 @@ LOCAL void cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
   // get storage entry
   n = 0L;
   (void)Database_execute(databaseHandle,
-                         CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64      databaseId;
                            const char *storageName;
@@ -2616,7 +2616,7 @@ LOCAL void cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
                            storageName = values[1];
 
                            (void)Database_execute(databaseHandle,
-                                                  CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                                                  CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                                   {
                                                     int64 duplicateDatabaseId;
 
@@ -2689,7 +2689,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
   // get storage entry
   n = 0L;
   (void)Database_execute(databaseHandle,
-                         CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                         CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64 databaseId;
 
@@ -2705,7 +2705,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 
                            if (verboseFlag) { fprintf(stderr,"  %ld...",databaseId); }
                            (void)Database_execute(databaseHandle,
-                                                  CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                                                  CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                                   {
                                                     int64 purgeDatabaseId;
 
@@ -2896,7 +2896,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
   // show meta data
   printf("Meta:\n");
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[],uint count,void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[],uint count,void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -2922,7 +2922,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
   // show number of storages
   printf("Storages:\n");
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -2945,7 +2945,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -2967,7 +2967,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -2989,7 +2989,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -3014,7 +3014,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
   // show number of entries, newest entries
   printf("Entries:\n");
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -3037,7 +3037,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -3060,7 +3060,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -3083,7 +3083,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -3105,7 +3105,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -3127,7 +3127,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -3150,7 +3150,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -3175,7 +3175,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
   // show number of newest entries
   printf("Newest entries:\n");
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -3198,7 +3198,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -3221,7 +3221,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -3244,7 +3244,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -3266,7 +3266,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -3288,7 +3288,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 2);
                              assert(values[0] != NULL);
@@ -3311,7 +3311,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
   error = Database_execute(databaseHandle,
-                           CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              assert(count == 1);
                              assert(values[0] != NULL);
@@ -3709,7 +3709,7 @@ int main(int argc, const char *argv[])
     char   format[256];
 
     Database_execute(&databaseHandle,
-                     CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 2);
                        assert(values != NULL);
@@ -3737,7 +3737,7 @@ int main(int argc, const char *argv[])
     stringFormat(format,sizeof(format),"%%-%ds %%-%ds %%64s %%-10s\n",maxIdLength,maxStorageNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_execute(&databaseHandle,
-                     CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        uint       archiveType;
                        const char *s;
@@ -3779,7 +3779,7 @@ int main(int argc, const char *argv[])
     char   format[256];
 
     Database_execute(&databaseHandle,
-                     CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 3);
                        assert(values != NULL);
@@ -3809,7 +3809,7 @@ int main(int argc, const char *argv[])
     stringFormat(format,sizeof(format),"%%%ds %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_execute(&databaseHandle,
-                     CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 3);
                        assert(values != NULL);
@@ -3842,7 +3842,7 @@ int main(int argc, const char *argv[])
     char   format[256];
 
     Database_execute(&databaseHandle,
-                     CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 3);
                        assert(values != NULL);
@@ -3872,7 +3872,7 @@ int main(int argc, const char *argv[])
     stringFormat(format,sizeof(format),"%%%ds %%-%ds %%-s\n",maxIdLength,maxEntryNameLength);
     UNUSED_VARIABLE(maxStorageNameLength);
     Database_execute(&databaseHandle,
-                     CALLBACK__INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                     CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                      {
                        assert(count == 3);
                        assert(values != NULL);
