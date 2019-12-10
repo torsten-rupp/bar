@@ -5122,7 +5122,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         // delete all matching storage files which are unknown
         (void)Storage_forAll(pattern,
-                             CALLBACK__INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                             CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                              {
                                StorageSpecifier storageSpecifier;
                                Errors           error;
@@ -5147,7 +5147,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                Storage_doneSpecifier(&storageSpecifier);
 
                                return error;
-                             },NULL)
+                             },NULL),
+                             CALLBACK_(NULL,NULL)
                             );
       }
       String_delete(pattern);
