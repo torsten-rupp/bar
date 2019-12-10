@@ -1801,8 +1801,8 @@ NULL,//                                                        scheduleTitle,
                                                              CALLBACK_(restoreUpdateStatusInfo,jobNode),
                                                              CALLBACK_(NULL,NULL),  // restoreHandleError
                                                              CALLBACK_(getCryptPasswordFromConfig,jobNode),
-                                                             CALLBACK__INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
-                                                             CALLBACK__INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
+                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return pauseFlags.restore; },NULL),
+                                                             CALLBACK_INLINE(bool,(void *userData),{ UNUSED_VARIABLE(userData); return jobNode->requestedAbortFlag; },NULL),
                                                              &logHandle
                                                             );
                 StringList_done(&storageNameList);
@@ -4122,6 +4122,8 @@ LOCAL void autoIndexThreadCode(void)
   printableStorageName = String_new();
   storageName          = String_new();
 
+#warning TODO remove
+#if 0
   // open index (Note: timeout is not important; auto-index should not block)
   indexHandle = NULL;
   if (Index_isAvailable())
@@ -4197,7 +4199,7 @@ LOCAL void autoIndexThreadCode(void)
                           );
                 File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
                 (void)Storage_forAll(pattern,
-                                     CALLBACK__INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                                     CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                      {
                                        Errors error;
 
@@ -4297,7 +4299,8 @@ LOCAL void autoIndexThreadCode(void)
                                        }
 
                                        return error;
-                                     },NULL)
+                                     },NULL),
+                                     CALLBACK_(NULL,NULL)
                                     );
               }
             }
@@ -4414,6 +4417,7 @@ LOCAL void autoIndexThreadCode(void)
   String_delete(baseName);
   Storage_doneSpecifier(&storageSpecifier);
   StringList_done(&storageDirectoryList);
+#endif
 }
 
 /*---------------------------------------------------------------------*/
@@ -7823,13 +7827,13 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
     {
       // execute script
       error = Misc_executeScript(String_cString(script),
-                                 CALLBACK__INLINE(void,(ConstString line, void *userData),
+                                 CALLBACK_INLINE(void,(ConstString line, void *userData),
                                  {
                                    UNUSED_VARIABLE(userData);
 
                                    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"line=%'S",line);
                                  },NULL),
-                                 CALLBACK__INLINE(void,(ConstString line, void *userData),
+                                 CALLBACK_INLINE(void,(ConstString line, void *userData),
                                  {
                                    UNUSED_VARIABLE(userData);
 
@@ -14586,7 +14590,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                           CALLBACK_(restoreHandleError,&restoreCommandInfo),
                           CALLBACK_(getNamePassword,&restoreCommandInfo),
                           CALLBACK_(NULL,NULL),  // isPause callback
-                          CALLBACK__INLINE(bool,(void *userData),
+                          CALLBACK_INLINE(bool,(void *userData),
                           {
                             UNUSED_VARIABLE(userData);
                             return isCommandAborted(clientInfo,id);
@@ -16357,6 +16361,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 *            pattern=<text>
 *            [patternType=<type>]
 *            [forceRefresh=yes|no]
+*            [progressSteps=<n>]
 *          Result:
 *            storageId=<id>
 \***********************************************************************/
@@ -16366,6 +16371,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   String           pattern;
   PatternTypes     patternType;
   bool             forceRefresh;
+  int              progressSteps;
   StorageSpecifier storageSpecifier;
   StorageInfo      storageInfo;
   String           printableStorageName;
@@ -16375,7 +16381,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get pattern type, pattern, force refresh
+  // get pattern type, pattern, force refresh, progress steps
   pattern = String_new();
   if (!StringMap_getString(argumentMap,"pattern",pattern,NULL))
   {
@@ -16385,6 +16391,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   }
   StringMap_getEnum(argumentMap,"patternType",&patternType,(StringMapParseEnumFunction)Pattern_parsePatternType,PATTERN_TYPE_GLOB);
   StringMap_getBool(argumentMap,"forceRefresh",&forceRefresh,FALSE);
+  StringMap_getInt(argumentMap,"progressSteps",&progressSteps,1000);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -16496,7 +16503,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   if (error != ERROR_NONE)
   {
     error = Storage_forAll(pattern,
-                           CALLBACK__INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
+                           CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                            {
                              String printableStorageName;
 
@@ -16581,6 +16588,17 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                              }
 
                              return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
+                           },NULL),
+                           CALLBACK_INLINE(void,(ulong doneCount, ulong totalCount, void *userData),
+                           {
+                             static ulong lastProgressDoneCount = 0L;
+                             UNUSED_VARIABLE(userData);
+
+                             if (doneCount >= (lastProgressDoneCount+(ulong)progressSteps))
+                             {
+                               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"doneCount=%lu totalCount=%lu",doneCount,totalCount);
+                               lastProgressDoneCount = doneCount;
+                             }
                            },NULL)
                           );
   }
@@ -17820,7 +17838,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  Array_debugPrintInfo(CALLBACK__INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  Array_debugPrintInfo(CALLBACK_INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                        {
                                          UNUSED_VARIABLE(array);
                                          UNUSED_VARIABLE(fileName);
@@ -17834,7 +17852,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                        NULL
                                       )
                       );
-  String_debugPrintInfo(CALLBACK__INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  String_debugPrintInfo(CALLBACK_INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                         {
                                           UNUSED_VARIABLE(string);
                                           UNUSED_VARIABLE(fileName);
@@ -17849,7 +17867,7 @@ LOCAL void serverCommand_debugPrintMemoryInfo(ClientInfo *clientInfo, IndexHandl
                                        ),
                                        DUMP_INFO_TYPE_ALLOCATED|DUMP_INFO_TYPE_HISTOGRAM
                        );
-  File_debugPrintInfo(CALLBACK__INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+  File_debugPrintInfo(CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                       {
                                         UNUSED_VARIABLE(fileHandle);
                                         UNUSED_VARIABLE(fileName);
@@ -17899,7 +17917,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
 
   // Note: no abort because debug functions may hold a lock while dumping information
   Array_debugDumpInfo(handle,
-                      CALLBACK__INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                      CALLBACK_INLINE(bool,(const Array *array, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                       {
                                         UNUSED_VARIABLE(array);
                                         UNUSED_VARIABLE(fileName);
@@ -17914,7 +17932,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                      )
                      );
   String_debugDumpInfo(handle,
-                       CALLBACK__INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                       CALLBACK_INLINE(bool,(ConstString string, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                        {
                                          UNUSED_VARIABLE(string);
                                          UNUSED_VARIABLE(fileName);
@@ -17930,7 +17948,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                       DUMP_INFO_TYPE_HISTOGRAM
                      );
   File_debugDumpInfo(handle,
-                     CALLBACK__INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                     CALLBACK_INLINE(bool,(const FileHandle *fileHandle, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                      {
                                        UNUSED_VARIABLE(fileHandle);
                                        UNUSED_VARIABLE(fileName);
@@ -17945,7 +17963,7 @@ LOCAL void serverCommand_debugDumpMemoryInfo(ClientInfo *clientInfo, IndexHandle
                                     )
                     );
   debugResourceDumpInfo(handle,
-                        CALLBACK__INLINE(bool,(const char *variableName, const void *resource, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
+                        CALLBACK_INLINE(bool,(const char *variableName, const void *resource, const char *fileName, ulong lineNb, ulong n, ulong count, void *userData),
                                         {
                                           UNUSED_VARIABLE(variableName);
                                           UNUSED_VARIABLE(resource);
