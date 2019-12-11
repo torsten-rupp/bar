@@ -1011,10 +1011,11 @@ LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
 /***********************************************************************\
 * Name   : appendFileToEntryList
 * Purpose: append file to entry list
-* Input  : entryMsgQueue - entry message queue
-*          entryType     - entry type
-*          name          - name (will be copied!)
-*          size          - file size [bytes]
+* Input  : entryMsgQueue    - entry message queue
+*          entryType        - entry type
+*          name             - name (will be copied!)
+*          size             - file size [bytes]
+*          maxFragmentSize  - max. fragment size or 0
 * Output : -
 * Return : -
 * Notes  : -
@@ -1023,7 +1024,8 @@ LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
 LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
                                  EntryTypes  entryType,
                                  ConstString name,
-                                 uint64      size
+                                 uint64      size,
+                                 uint64      maxFragmentSize
                                 )
 {
   uint     fragmentCount;
@@ -1034,16 +1036,16 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
 
-  fragmentCount  = (globalOptions.fragmentSize > 0LL)
-                     ? 1+size/globalOptions.fragmentSize
+  fragmentCount  = (maxFragmentSize > 0LL)
+                     ? 1+size/maxFragmentSize
                      : 1;
   fragmentNumber = 0;
   fragmentOffset = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                     ? globalOptions.fragmentSize
+    fragmentSize = ((maxFragmentSize > 0LL) && ((size-fragmentOffset) > maxFragmentSize))
+                     ? maxFragmentSize
                      : size-fragmentOffset;
 
     // init
@@ -1149,10 +1151,11 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
 /***********************************************************************\
 * Name   : appendHardLinkToEntryList
 * Purpose: append hard link to entry list
-* Input  : entryMsgQueue - entry message queue
-*          entryType     - entry type
-*          nameList      - name list
-*          size          - file size [bytes]
+* Input  : entryMsgQueue   - entry message queue
+*          entryType       - entry type
+*          nameList        - name list
+*          size            - file size [bytes]
+*          maxFragmentSize - max. fragment size or 0
 * Output : -
 * Return : -
 * Notes  : -
@@ -1161,7 +1164,8 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
 LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
                                      EntryTypes entryType,
                                      StringList *nameList,
-                                     uint64     size
+                                     uint64     size,
+                                     uint64     maxFragmentSize
                                     )
 {
   uint     fragmentCount;
@@ -1173,16 +1177,16 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   assert(nameList != NULL);
   assert(!StringList_isEmpty(nameList));
 
-  fragmentCount     = (globalOptions.fragmentSize > 0LL)
-                        ? 1+size/globalOptions.fragmentSize
+  fragmentCount     = (maxFragmentSize > 0LL)
+                        ? 1+size/maxFragmentSize
                         : 1;
   fragmentNumber    = 0;
   fragmentOffset    = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                     ? globalOptions.fragmentSize
+    fragmentSize = ((maxFragmentSize > 0LL) && ((size-fragmentOffset) > maxFragmentSize))
+                     ? maxFragmentSize
                      : size-fragmentOffset;
 
     // init
@@ -1212,10 +1216,11 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
 /***********************************************************************\
 * Name   : appendSpecialToEntryList
 * Purpose: append special to entry list
-* Input  : entryMsgQueue - entry message queue
-*          entryType     - entry type
-*          name          - name (will be copied!)
-*          size          - device size [bytes]
+* Input  : entryMsgQueue    - entry message queue
+*          entryType        - entry type
+*          name             - name (will be copied!)
+*          size             - device size [bytes]
+*          maxFragmentSize  - max. fragment size or 0
 * Output : -
 * Return : -
 * Notes  : -
@@ -1224,7 +1229,8 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
 LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
                                     EntryTypes  entryType,
                                     ConstString name,
-                                    uint64      size
+                                    uint64      size,
+                                    uint64      maxFragmentSize
                                    )
 {
   uint     fragmentCount;
@@ -1235,16 +1241,16 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
 
-  fragmentCount  = (globalOptions.fragmentSize > 0LL)
-                     ? 1+size/globalOptions.fragmentSize
+  fragmentCount  = (maxFragmentSize > 0LL)
+                     ? 1+size/maxFragmentSize
                      : 1;
   fragmentNumber = 0;
   fragmentOffset = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((globalOptions.fragmentSize > 0LL) && ((size-fragmentOffset) > globalOptions.fragmentSize))
-                     ? globalOptions.fragmentSize
+    fragmentSize = ((maxFragmentSize > 0LL) && ((size-fragmentOffset) > maxFragmentSize))
+                     ? maxFragmentSize
                      : size-fragmentOffset;
 
     // init
@@ -2597,7 +2603,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     appendFileToEntryList(&createInfo->entryMsgQueue,
                                           ENTRY_TYPE_FILE,
                                           name,
-                                          fileInfo.size
+                                          fileInfo.size,
+                                          !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                          );
                   }
                   else
@@ -2701,7 +2708,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                                                   ENTRY_TYPE_FILE,
                                                   &data.hardLinkInfo->nameList,
-                                                  data.hardLinkInfo->size
+                                                  data.hardLinkInfo->size,
+                                                  !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                  );
 
                         // clear entry
@@ -2780,7 +2788,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                            ENTRY_TYPE_FILE,
                                            name,
-                                           0LL  // size
+                                           0LL,  // size
+                                           !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                           );
                 }
               }
@@ -2915,7 +2924,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           appendFileToEntryList(&createInfo->entryMsgQueue,
                                                 ENTRY_TYPE_FILE,
                                                 name,
-                                                fileInfo.size
+                                                fileInfo.size,
+                                                !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                );
                         }
                         break;
@@ -3075,7 +3085,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendFileToEntryList(&createInfo->entryMsgQueue,
                                                             ENTRY_TYPE_FILE,
                                                             fileName,
-                                                            fileInfo.size
+                                                            fileInfo.size,
+                                                            !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                            );
                                     }
                                     break;
@@ -3163,7 +3174,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                             appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                                                                       ENTRY_TYPE_FILE,
                                                                       &data.hardLinkInfo->nameList,
-                                                                      data.hardLinkInfo->size
+                                                                      data.hardLinkInfo->size,
+                                                                      !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                                      );
 
                                             // clear entry
@@ -3235,7 +3247,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                ENTRY_TYPE_FILE,
                                                                fileName,
-                                                               0LL  // size
+                                                               0LL,  // size
+                                                               !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                               );
                                     }
                                     break;
@@ -3246,7 +3259,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                ENTRY_TYPE_IMAGE,
                                                                fileName,
-                                                               fileInfo.size
+                                                               fileInfo.size,
+                                                               !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                               );
                                     }
                                     break;
@@ -3406,7 +3420,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                               appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                                                         ENTRY_TYPE_FILE,
                                                         &data.hardLinkInfo->nameList,
-                                                        data.hardLinkInfo->size
+                                                        data.hardLinkInfo->size,
+                                                        !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                        );
 
                               // clear entry
@@ -3493,7 +3508,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                    ENTRY_TYPE_FILE,
                                                    name,
-                                                   0LL  // size
+                                                   0LL,  // size
+                                                   !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                   );
                         }
                         break;
@@ -3527,7 +3543,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                      ENTRY_TYPE_IMAGE,
                                                      name,
-                                                     deviceInfo.size
+                                                     deviceInfo.size,
+                                                     !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                     );
                           }
                         }
@@ -3624,7 +3641,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                               ENTRY_TYPE_FILE,
                               &data.hardLinkInfo->nameList,
-                              data.hardLinkInfo->size
+                              data.hardLinkInfo->size,
+                              !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                              );
   }
   Dictionary_doneIterator(&dictionaryIterator);
@@ -5452,10 +5470,10 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   // init fragment
   fragmentInit(createInfo,fileName,fileInfo.size,fragmentCount);
 
-  offset = 0LL;
-  size   = 0LL;
   if (!createInfo->storageFlags.noStorage)
   {
+    offset       = 0LL;
+    size         = 0LL;
     archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
@@ -5701,6 +5719,15 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   }
   else
   {
+    STATUS_INFO_UPDATE(createInfo,fileName,&fragmentNode)
+    {
+      if (fragmentNode != NULL)
+      {
+        // add fragment
+        FragmentList_addRange(fragmentNode,0,fileInfo.size);
+      }
+    }
+
     printInfo(1,"OK (%llu bytes, not stored)\n",
               fragmentSize
              );
@@ -5894,10 +5921,10 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   // init fragment
   fragmentInit(createInfo,deviceName,deviceInfo.size,fragmentCount);
 
-  blockOffset = 0LL;
-  blockCount  = 0LL;
   if (!createInfo->storageFlags.noStorage)
   {
+    blockOffset  = 0LL;
+    blockCount   = 0LL;
     archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
@@ -6162,6 +6189,15 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   }
   else
   {
+    STATUS_INFO_UPDATE(createInfo,deviceName,&fragmentNode)
+    {
+      if (fragmentNode != NULL)
+      {
+        // add fragment
+        FragmentList_addRange(fragmentNode,0,deviceInfo.size);
+      }
+    }
+
     printInfo(1,"OK (%s, %llu bytes, not stored)\n",
               fileSystemFlag ? FileSystem_fileSystemTypeToString(fileSystemHandle.type,NULL) : "raw",
               fragmentSize
@@ -7011,6 +7047,15 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
   else
   {
+    STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),&fragmentNode)
+    {
+      if (fragmentNode != NULL)
+      {
+        // add fragment
+        FragmentList_addRange(fragmentNode,0,fileInfo.size);
+      }
+    }
+
     printInfo(1,"OK (%llu bytes, not stored)\n",
               fragmentSize
              );
