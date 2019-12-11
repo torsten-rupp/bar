@@ -2744,7 +2744,18 @@ const char *Job_getStateText(JobStates jobState, StorageFlags storageFlags)
       stateText = "WAITING";
       break;
     case JOB_STATE_RUNNING:
-      stateText = storageFlags.dryRun ? "DRY_RUNNING" : "RUNNING";
+      if      (storageFlags.noStorage)
+      {
+        stateText = "NO_STORAGE";
+      }
+      else if (storageFlags.dryRun)
+      {
+        stateText = "DRY_RUNNING";
+      }
+      else
+      {
+        stateText = "RUNNING";
+      }
       break;
     case JOB_STATE_REQUEST_FTP_PASSWORD:
       stateText = "REQUEST_FTP_PASSWORD";

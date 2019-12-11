@@ -70,6 +70,7 @@ class JobData
     NONE,
     WAITING,
     RUNNING,
+    NO_STORAGE,
     DRY_RUNNING,
     REQUEST_FTP_PASSWORD,
     REQUEST_SSH_PASSWORD,
@@ -86,14 +87,13 @@ class JobData
      */
     public String getText()
     {
-      StringBuilder buffer = new StringBuilder();
-
       switch (this)
       {
         case NONE:                    return "";
         case WAITING:                 return BARControl.tr("waiting");
         case RUNNING:                 return BARControl.tr("running");
-        case DRY_RUNNING:             return BARControl.tr("dry Run");
+        case NO_STORAGE:              return BARControl.tr("running (no storage)");
+        case DRY_RUNNING:             return BARControl.tr("dry run");
         case REQUEST_FTP_PASSWORD:    return BARControl.tr("request FTP password");
         case REQUEST_SSH_PASSWORD:    return BARControl.tr("request SSH password");
         case REQUEST_WEBDAV_PASSWORD: return BARControl.tr("request webDAV password");
@@ -155,7 +155,6 @@ class JobData
 
     return buffer.toString();
   }
-
 
   String       uuid;
   String       master;
@@ -892,6 +891,7 @@ public class TabStatus
           {
             MenuItem menuItem = (MenuItem)widget;
             menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.NO_STORAGE )
                                 && (jobData.state != JobData.States.DRY_RUNNING)
                                 && (jobData.state != JobData.States.WAITING    )
                                );
@@ -912,7 +912,7 @@ public class TabStatus
           {
             if (selectedJobData != null)
             {
-              jobStart(ArchiveTypes.NORMAL,false);
+              jobStart(ArchiveTypes.NORMAL,false,false);
             }
           }
         });
@@ -923,6 +923,7 @@ public class TabStatus
           {
             MenuItem menuItem = (MenuItem)widget;
             menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.NO_STORAGE )
                                 && (jobData.state != JobData.States.DRY_RUNNING)
                                 && (jobData.state != JobData.States.WAITING    )
                                );
@@ -941,7 +942,7 @@ public class TabStatus
           {
             if (selectedJobData != null)
             {
-              jobStart(ArchiveTypes.FULL,false);
+              jobStart(ArchiveTypes.FULL,false,false);
             }
           }
         });
@@ -952,6 +953,7 @@ public class TabStatus
           {
             MenuItem menuItem = (MenuItem)widget;
             menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.NO_STORAGE )
                                 && (jobData.state != JobData.States.DRY_RUNNING)
                                 && (jobData.state != JobData.States.WAITING    )
                                );
@@ -970,7 +972,7 @@ public class TabStatus
           {
             if (selectedJobData != null)
             {
-              jobStart(ArchiveTypes.INCREMENTAL,false);
+              jobStart(ArchiveTypes.INCREMENTAL,false,false);
             }
           }
         });
@@ -981,6 +983,7 @@ public class TabStatus
           {
             MenuItem menuItem = (MenuItem)widget;
             menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.NO_STORAGE )
                                 && (jobData.state != JobData.States.DRY_RUNNING)
                                 && (jobData.state != JobData.States.WAITING    )
                                );
@@ -999,7 +1002,7 @@ public class TabStatus
           {
             if (selectedJobData != null)
             {
-              jobStart(ArchiveTypes.DIFFERENTIAL,false);
+              jobStart(ArchiveTypes.DIFFERENTIAL,false,false);
             }
           }
         });
@@ -1010,6 +1013,37 @@ public class TabStatus
           {
             MenuItem menuItem = (MenuItem)widget;
             menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.NO_STORAGE )
+                                && (jobData.state != JobData.States.DRY_RUNNING)
+                                && (jobData.state != JobData.States.WAITING    )
+                               );
+          }
+        });
+
+        menuItem = Widgets.addMenuItem(subMenu,BARControl.tr("no storage"),BARServer.isMaster());
+        menuItem.addSelectionListener(new SelectionListener()
+        {
+          @Override
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
+          {
+          }
+          @Override
+          public void widgetSelected(SelectionEvent selectionEvent)
+          {
+            if (selectedJobData != null)
+            {
+              jobStart(ArchiveTypes.FULL,true,false);
+            }
+          }
+        });
+        addUpdateJobStateListener(new UpdateJobStateListener(menuItem)
+        {
+          @Override
+          public void handle(Widget widget, JobData jobData)
+          {
+            MenuItem menuItem = (MenuItem)widget;
+            menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.NO_STORAGE )
                                 && (jobData.state != JobData.States.DRY_RUNNING)
                                 && (jobData.state != JobData.States.WAITING    )
                                );
@@ -1028,7 +1062,7 @@ public class TabStatus
           {
             if (selectedJobData != null)
             {
-              jobStart(ArchiveTypes.NORMAL,true);
+              jobStart(ArchiveTypes.NORMAL,false,true);
             }
           }
         });
@@ -1039,6 +1073,7 @@ public class TabStatus
           {
             MenuItem menuItem = (MenuItem)widget;
             menuItem.setEnabled(   (jobData.state != JobData.States.RUNNING    )
+                                && (jobData.state != JobData.States.NO_STORAGE )
                                 && (jobData.state != JobData.States.DRY_RUNNING)
                                 && (jobData.state != JobData.States.WAITING    )
                                );
@@ -1070,6 +1105,7 @@ public class TabStatus
           MenuItem menuItem = (MenuItem)widget;
           menuItem.setEnabled(   (jobData.state == JobData.States.WAITING       )
                               || (jobData.state == JobData.States.RUNNING       )
+                              || (jobData.state != JobData.States.NO_STORAGE    )
                               || (jobData.state == JobData.States.DRY_RUNNING   )
                               || (jobData.state == JobData.States.REQUEST_VOLUME)
                              );
@@ -1849,6 +1885,7 @@ public class TabStatus
           Button button = (Button)widget;
           button.setEnabled(   (jobData.state == JobData.States.WAITING       )
                             || (jobData.state == JobData.States.RUNNING       )
+                            || (jobData.state != JobData.States.NO_STORAGE    )
                             || (jobData.state == JobData.States.DRY_RUNNING   )
                             || (jobData.state == JobData.States.REQUEST_VOLUME)
                            );
@@ -2123,6 +2160,7 @@ public class TabStatus
                 switch (jobData.state)
                 {
                   case RUNNING:
+                  case NO_STORAGE:
                   case DRY_RUNNING:
                     tableItem.setBackground(COLOR_RUNNING);
                     break;
@@ -2546,6 +2584,7 @@ public class TabStatus
                 message.set("");
                 break;
               case RUNNING:
+              case NO_STORAGE:
               case DRY_RUNNING:
                 break;
               case REQUEST_FTP_PASSWORD:
@@ -2646,9 +2685,10 @@ public class TabStatus
   /** start selected job
    * @param archiveType archive type
    * @param password password or null
+   * @param noStorageFlag true for no storage
    * @param dryRunFlag true for dry-run
    */
-  private void jobStart(ArchiveTypes archiveType, String password, boolean dryRunFlag)
+  private void jobStart(ArchiveTypes archiveType, String password, boolean noStorageFlag, boolean dryRunFlag)
   {
     if (selectedJobData != null)
     {
@@ -2680,23 +2720,14 @@ public class TabStatus
       // start
       try
       {
-        if (dryRunFlag)
-        {
-          BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=normal dryRun=yes",
-                                                       selectedJobData.uuid
-                                                      ),
-                                   0  // debugLevel
-                                  );
-        }
-        else
-        {
-          BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s dryRun=no",
-                                                       selectedJobData.uuid,
-                                                       archiveType.toString()
-                                                      ),
-                                   0  // debugLevel
-                                  );
-        }
+        BARServer.executeCommand(StringParser.format("JOB_START jobUUID=%s archiveType=%s noStorage=%y dryRun=%y",
+                                                     selectedJobData.uuid,
+                                                     archiveType.toString(),
+                                                     noStorageFlag,
+                                                     dryRunFlag
+                                                    ),
+                                 0  // debugLevel
+                                );
       }
       catch (Exception exception)
       {
@@ -2713,9 +2744,10 @@ public class TabStatus
 
   /** start selected job
    * @param archiveType archive type
+   * @param noStorageFlag true for no storage
    * @param dryRunFlag true for dry-run
    */
-  private void jobStart(ArchiveTypes archiveType, boolean dryRunFlag)
+  private void jobStart(ArchiveTypes archiveType, boolean noStorageFlag, boolean dryRunFlag)
   {
     if (selectedJobData != null)
     {
@@ -2742,7 +2774,7 @@ public class TabStatus
       }
 
       // start
-      jobStart(archiveType,password,dryRunFlag);
+      jobStart(archiveType,password,noStorageFlag,dryRunFlag);
     }
   }
 
@@ -2753,7 +2785,7 @@ public class TabStatus
     if (selectedJobData != null)
     {
       ArchiveTypes archiveType;
-      boolean      dryRunFlag;
+      boolean      noStorageFlag,dryRunFlag;
 
       // get archive type
       archiveType = ArchiveTypes.NORMAL;
@@ -2765,6 +2797,7 @@ public class TabStatus
                                           BARControl.tr("Full"),
                                           BARControl.tr("Incremental"),
                                           Settings.hasExpertRole() ? BARControl.tr("Differential") : null,
+                                          Settings.hasExpertRole() ? BARControl.tr("No storage") : null,
                                           Settings.hasExpertRole() ? BARControl.tr("Dry-run") : null,
                                           BARControl.tr("Cancel")
                                          },
@@ -2772,22 +2805,24 @@ public class TabStatus
                                           BARControl.tr("Store all files and create incremental data file."),
                                           BARControl.tr("Store changed files since last incremental or full storage and update incremental data file."),
                                           BARControl.tr("Store changed files since last full storage."),
+                                          BARControl.tr("Collect all files and create incremental info data (bid-files) only."),
                                           BARControl.tr("Collect and process all files, but do not create archives.")
                                          },
                              4
                             )
              )
       {
-        case 0: archiveType = ArchiveTypes.NORMAL;       dryRunFlag = false; break;
-        case 1: archiveType = ArchiveTypes.FULL;         dryRunFlag = false; break;
-        case 2: archiveType = ArchiveTypes.INCREMENTAL;  dryRunFlag = false; break;
-        case 3: archiveType = ArchiveTypes.DIFFERENTIAL; dryRunFlag = false; break;
-        case 4: archiveType = ArchiveTypes.NORMAL;       dryRunFlag = true;  break;
+        case 0: archiveType = ArchiveTypes.NORMAL;       noStorageFlag = false; dryRunFlag = false; break;
+        case 1: archiveType = ArchiveTypes.FULL;         noStorageFlag = false; dryRunFlag = false; break;
+        case 2: archiveType = ArchiveTypes.INCREMENTAL;  noStorageFlag = false; dryRunFlag = false; break;
+        case 3: archiveType = ArchiveTypes.DIFFERENTIAL; noStorageFlag = false; dryRunFlag = false; break;
+        case 4: archiveType = ArchiveTypes.FULL;         noStorageFlag = true;  dryRunFlag = false; break;
+        case 5: archiveType = ArchiveTypes.NORMAL;       noStorageFlag = false; dryRunFlag = true;  break;
         default: return;
       }
 
       // start
-      jobStart(archiveType,dryRunFlag);
+      jobStart(archiveType,noStorageFlag,dryRunFlag);
     }
   }
 
