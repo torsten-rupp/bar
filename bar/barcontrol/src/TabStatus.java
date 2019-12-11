@@ -1105,7 +1105,7 @@ public class TabStatus
           MenuItem menuItem = (MenuItem)widget;
           menuItem.setEnabled(   (jobData.state == JobData.States.WAITING       )
                               || (jobData.state == JobData.States.RUNNING       )
-                              || (jobData.state != JobData.States.NO_STORAGE    )
+                              || (jobData.state == JobData.States.NO_STORAGE    )
                               || (jobData.state == JobData.States.DRY_RUNNING   )
                               || (jobData.state == JobData.States.REQUEST_VOLUME)
                              );
@@ -1885,7 +1885,7 @@ public class TabStatus
           Button button = (Button)widget;
           button.setEnabled(   (jobData.state == JobData.States.WAITING       )
                             || (jobData.state == JobData.States.RUNNING       )
-                            || (jobData.state != JobData.States.NO_STORAGE    )
+                            || (jobData.state == JobData.States.NO_STORAGE    )
                             || (jobData.state == JobData.States.DRY_RUNNING   )
                             || (jobData.state == JobData.States.REQUEST_VOLUME)
                            );
