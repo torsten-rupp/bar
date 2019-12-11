@@ -2483,7 +2483,9 @@ Connector_isConnected(&slaveNode->connectorInfo)
       {
         JOB_SLAVE_LIST_ITERATE(slaveNode)
         {
-          if (Connector_isConnected(&slaveNode->connectorInfo))
+          if (   Connector_isConnected(&slaveNode->connectorInfo)
+              || Connector_isShutdown(&slaveNode->connectorInfo)
+             )
           {
             Connector_disconnect(&slaveNode->connectorInfo);
           }
@@ -4409,6 +4411,7 @@ LOCAL void autoIndexThreadCode(void)
                 "Index database not available - disabled auto-index"
                );
   }
+#endif
 
   // free resources
   String_delete(storageName);
@@ -4417,7 +4420,6 @@ LOCAL void autoIndexThreadCode(void)
   String_delete(baseName);
   Storage_doneSpecifier(&storageSpecifier);
   StringList_done(&storageDirectoryList);
-#endif
 }
 
 /*---------------------------------------------------------------------*/
@@ -5057,6 +5059,8 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
 
 LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  JobNode *jobNode;
+
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
   assert(argumentMap != NULL);
@@ -5072,6 +5076,18 @@ LOCAL void serverCommand_quit(ClientInfo *clientInfo, IndexHandle *indexHandle, 
   else
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_FUNCTION_NOT_SUPPORTED,"not in debug mode");
+  }
+
+  // abort all jobs
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
+  {
+    JOB_LIST_ITERATE(jobNode)
+    {
+      if (Job_isActive(jobNode->jobState))
+      {
+        Job_abort(jobNode);
+      }
+    }
   }
 }
 
