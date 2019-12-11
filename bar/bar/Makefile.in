@@ -136,60 +136,61 @@ DUMP_SYMS              = @DUMP_SYMS@
 
 #---------------------------------- commands----------------------------------
 
-ATTR           = @ATTR@
-BC             = bc
-BZIP2          = bzip2
-CAT            = cat
-CD             = cd
-CHATTR         = chattr
-CHMOD          = chmod
-CP             = cp
-CUT            = cut
-DD             = dd
-DDD            = ddd
-DIFF           = diff
-ECHO           = echo
-ECHO_NO_LF     = echo -n
-FIND           = find
-GDB            = gdb
-GREP           = grep
-GETFATTR       = @GETFATTR@
-INSTALL        = @INSTALL@
-KILL           = kill
-KILLALL        = killall
-LN             = ln
-LS             = ls
-MKDIR          = mkdir
-MKFIFO         = mkfifo
-MKTEMP         = mktemp
-NETCAT         = netcat
-PERL           = @PERL@
-READLINK       = readlink
-RMDIR          = rmdir
-RMF            = rm -f
-RMRF           = rm -rf
-SCP            = scp
-SED            = sed
-SETFATTR       = @SETFATTR@
-SLEEP          = sleep
-SSH            = ssh
-SSHPASS        = sshpass
-SORT           = sort
-STAT           = stat
-SUDO           = sudo
-TAIL           = tail
-TAR            = tar
-TIME           = @TIME@
-TIMEOUT        = timeout
-TOUCH          = touch
-ULIMIT         = ulimit
-XARGS          = xargs
+ATTR            = @ATTR@
+BC              = bc
+BZIP2           = bzip2
+CAT             = cat
+CD              = cd
+CHATTR          = chattr
+CHMOD           = chmod
+CP              = cp
+CUT             = cut
+DD              = dd
+DDD             = ddd
+DIFF            = diff
+ECHO            = echo
+ECHO_NO_LF      = echo -n
+FIND            = find
+GDB             = gdb
+GREP            = grep
+GETFATTR        = @GETFATTR@
+INSTALL         = @INSTALL@
+KILL            = kill
+KILLALL         = killall
+LN              = ln
+LS              = ls
+MKDIR           = mkdir
+MKFIFO          = mkfifo
+MKTEMP          = mktemp
+NETCAT          = netcat
+PERL            = @PERL@
+READLINK        = readlink
+RMDIR           = rmdir
+RMF             = rm -f
+RMRF            = rm -rf
+SCP             = scp
+SED             = sed
+SETFATTR        = @SETFATTR@
+SLEEP           = sleep
+SSH             = ssh
+SSHPASS         = sshpass
+SORT            = sort
+STAT            = stat
+SUDO            = sudo
+TAIL            = tail
+TAR             = tar
+TIME            = @TIME@
+TIMEOUT         = timeout
+TOUCH           = touch
+ULIMIT          = ulimit
+XARGS           = xargs
 
-LCOV           = @LCOV@
-GENHTML        = @GENHTML@
+LCOV            = @LCOV@
+GENHTML         = @GENHTML@
 
-VALGRIND       = valgrind
-VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
+VALGRIND        = valgrind
+VALGRIND_FLAGS  = --gen-suppressions=no --track-origins=yes  --track-fds=yes --suppressions=$(BASE_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
+CALLGRIND_FLAGS = -v
 
 #------------------------ specific variables/settings ------------------------
 
@@ -332,7 +333,7 @@ gprof/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h 
 
 valgrind/%.o: $(SOURCE_DIR)/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(INSTALL) -d $(@D)
-	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_DEBUG),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
+	$(CC) $(CC_FLAGS) $(CC_FLAGS_VALGRIND) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/$*.c -o valgrind/$*.o
 
 common/%.o: $(SOURCE_DIR)/common/%.c | errors.h archive_format.h archive_format_const.h index_definition.h
 	$(CC) $(CC_FLAGS) $(CC_FLAGS_OPTIMIZE) $(CC_FLAGS_OPTIMIZE_RELEASE) -DOS="$(OS)" -DARCHITECTURE="$(ARCHITECTURE)" -DVERSION_MAJOR="$(VERSION_MAJOR)" -DVERSION_MINOR="$(VERSION_MINOR)" -DVERSION_REPOSITORY="$(VERSION_REPOSITORY)" $(foreach z,$(CC_DEFINES) $(CC_DEFINES_RELEASE),-D$z) $(CC_WARN_FLAGS) $(foreach z,$(CC_INCLUDES),-I$z) -c $(SOURCE_DIR)/common/$*.c -o common/$*.o
@@ -443,13 +444,13 @@ COMMON_SOURCES           = common/arrays.c \
                            common/strings.c \
                            common/threads.c \
 
-BAR_SOURCES_FILTER       = $(if @HAVE_BFD@,,stacktraces.c) \
+BAR_SOURCES_FILTER       = $(if @HAVE_BFD@,,common/stacktraces.c) \
 
 BAR_HEADERS              = $(patsubst %.c,  %.h,$(filter %.c,  $(BAR_SOURCES))) \
                            $(patsubst %.cpp,%.h,$(filter %.cpp,$(BAR_SOURCES))) \
                            bar_global.h \
 
-COMMON_SOURCES_FILTER    = $(if @HAVE_BREAKPAD@,,minidump.cpp) \
+COMMON_SOURCES_FILTER    = $(if @HAVE_BREAKPAD@,,common/minidump.cpp) \
 
 COMMON_HEADERS           = $(patsubst %.c,  %.h,$(filter %.c,  $(COMMON_SOURCES))) \
                            $(patsubst %.cpp,%.h,$(filter %.cpp,$(COMMON_SOURCES))) \
@@ -625,7 +626,7 @@ clean: \
 	$(RMF) $(BAR_MINIDUMP_OBJECTS)
 	$(RMF) $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(RMF) /tmp/bar.cfg /tmp/bar-slave.cfg /tmp/bar.log /tmp/bar-slave.log /tmp/pairing
-	$(RMF) bar-gcov.info
+	$(RMF) bar-gcov.info gmon.out
 	$(RMF) $(TARGETS)
 
 distclean: \
@@ -664,7 +665,9 @@ help:
 	@$(ECHO) "  rundevgdb                                 run development server with GDB"
 	@$(ECHO) "  rundevddd                                 run development server with DDD"
 	@$(ECHO) "  rundevgcov                                run development server with gcov"
+	@$(ECHO) "  rundevgprof                               run development server with gprof"
 	@$(ECHO) "  rundevvalgrind                            run development server with valgrind"
+	@$(ECHO) "  rundevcallgrind                           run development server with callgrind"
 	@$(ECHO) "  rundev_slave                              run development server slave"
 	@$(ECHO) "  rundevd_slave                             run development server slave (debug version)"
 	@$(ECHO) "  rundevgdb_slave                           run development server slave with GDB"
@@ -1128,7 +1131,7 @@ run_jp runserver_jp: bar@EXEEXT@
           $(OPTIONS)
 
 
-.PHONY: rundev rundevd rundevd1 rundevd2 rundevgdb rundevddd rundevvalgrind rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
+.PHONY: rundev rundevd rundevd1 rundevd2 rundevgdb rundevddd rundevvalgrind rundevcallgrind rundevgcov rundevgprof rundev_en rundev_de rundev_jp rundev_ssl runserver runserver_ssl rundev_test
 .PHONY: rundev_slave rundevd_slave rundevgdb_slave rundevddd_slave
 rundev: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
@@ -1200,7 +1203,35 @@ rundevddd: bar-debug@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --log-file=/tmp/bar.log --log=all \
           $(OPTIONS)
 
-rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+rundevgcov: bar-gcov@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	./bar-gcov@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=39909 --server-tls-port=39910 \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all --server-debug \
+          $(OPTIONS)
+
+rundevgprof: bar-gprof@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+	$(INSTALL) -d jobs
+	./bar-gprof@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+          --server-mode=master \
+          --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
+          --jobs-directory=jobs \
+          --incremental-data-directory=/tmp \
+          --server-port=39909 --server-tls-port=39910 \
+          --server-ca-file=../bar-ca.pem --server-cert-file=../bar-server-cert.pem --server-key-file=../bar-server-key.pem \
+          --unmount-command='$(SUDO) /bin/umount %directory' \
+          --verbose=0 \
+          --log-file=/tmp/bar.log --log=all --server-debug \
+          $(OPTIONS)
+
+rundevvalgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
 	$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full ./bar-valgrind@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
@@ -1214,9 +1245,9 @@ rundevvalgrind: bar-valgrind /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem .
           --log-file=/tmp/bar.log --log=all --server-debug \
           $(OPTIONS)
 
-rundevgcov: bar-gcov /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
+rundevcallgrind: bar-valgrind@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../bar-server-key.pem
 	$(INSTALL) -d jobs
-	./bar-gcov@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
+	$(VALGRIND) --tool=callgrind $(CALLGRIND_FLAGS) ./bar-valgrind@EXEEXT@ --daemon -D --no-default-config --config=/tmp/bar.cfg \
           --server-mode=master \
           --continuous-database=bar-continuous.db --index-database=bar-index.db --index-database-keep-time=365days \
           --jobs-directory=jobs \
@@ -1825,6 +1856,7 @@ memcheck8: \
 	$(ECHO) '1 UNKNOWN' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
 	$(ECHO) '1 QUIT' | $(NETCAT) $(TEST_HOST) $(TEST_SERVER_PORT)
 
+#valgrind --tool=callgrind ./bar@EXEEXT@ -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
 #valgrind --tool=cachegrind ./bar@EXEEXT@ -c test2.bar -o -z xdelta9 --delta-source=test1.bar bar
 
 # ----------------------------------------------------------------------------
