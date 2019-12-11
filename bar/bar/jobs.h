@@ -269,6 +269,7 @@ typedef struct
   #endif /* NDEBUG */
 } JobList;
 
+//TODO: move to connector.h?
 // slave list
 typedef struct SlaveNode
 {
