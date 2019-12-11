@@ -3717,28 +3717,10 @@ int String_compare(ConstString           string1,
   return result;
 }
 
-bool String_equals(ConstString string1, ConstString string2)
-{
-  bool equalFlag;
-
-  if ((string1 != NULL) && (string2 != NULL))
-  {
-    STRING_CHECK_VALID(string1);
-    STRING_CHECK_VALID(string2);
-
-    equalFlag = String_equalsBuffer(string1,string2->data,string2->length);
-  }
-  else
-  {
-    equalFlag = ((string1 == NULL) && (string2 == NULL));
-  }
-
-  return equalFlag;
-}
-
 bool String_equalsCString(ConstString string, const char *s)
 {
-  bool equalFlag;
+  size_t n;
+  bool   equalFlag;
 
   STRING_CHECK_VALID(string);
 
@@ -3748,7 +3730,15 @@ bool String_equalsCString(ConstString string, const char *s)
 
     if (s != NULL)
     {
-      equalFlag = String_equalsBuffer(string,s,strlen(s));
+      n = strlen(s);
+      if (string->length == (ulong)n)
+      {
+        equalFlag = (memcmp(string->data,s,string->length) == 0);
+      }
+      else
+      {
+        equalFlag = FALSE;
+      }
     }
     else
     {
@@ -3797,13 +3787,7 @@ bool String_equalsBuffer(ConstString string, const char *buffer, ulong bufferLen
 
     if (string->length == bufferLength)
     {
-      equalFlag = TRUE;
-      i         = 0L;
-      while (equalFlag && (i < string->length))
-      {
-        equalFlag = (string->data[i] == buffer[i]);
-        i++;
-      }
+      equalFlag = (memcmp(string->data,buffer,string->length) == 0);
     }
     else
     {

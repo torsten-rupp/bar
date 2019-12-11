@@ -765,7 +765,34 @@ int String_compare(ConstString           string1,
 * Notes  : -
 \***********************************************************************/
 
-bool String_equals(ConstString string1, ConstString string2);
+INLINE bool String_equals(ConstString string1, ConstString string2);
+#if defined(NDEBUG) || defined(__STRINGS_IMPLEMENTATION__)
+bool String_equals(ConstString string1, ConstString string2)
+{
+  bool equalFlag;
+
+  if ((string1 != NULL) && (string2 != NULL))
+  {
+    STRING_CHECK_VALID(string1);
+    STRING_CHECK_VALID(string2);
+
+    if (string1->length == string2->length)
+    {
+      equalFlag = (memcmp(string1->data,string2->data,string1->length) == 0);
+    }
+    else
+    {
+      equalFlag = FALSE;
+    }
+  }
+  else
+  {
+    equalFlag = ((string1 == NULL) && (string2 == NULL));
+  }
+
+  return equalFlag;
+}
+#endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 bool String_equalsCString(ConstString string, const char *s);
 bool String_equalsChar(ConstString string, char ch);
 bool String_equalsBuffer(ConstString string, const char *buffer, ulong bufferLength);
