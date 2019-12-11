@@ -295,17 +295,6 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
   LIST_DELETE_NODE(fragmentNode);
 }
 
-FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name)
-{
-  FragmentNode *fragmentNode;
-
-  assert(fragmentList != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
-  assert(name != NULL);
-
-  return LIST_FIND(fragmentList,fragmentNode,String_equals(fragmentNode->name,name));
-}
-
 void FragmentList_clearRanges(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);

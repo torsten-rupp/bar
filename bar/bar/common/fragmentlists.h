@@ -275,7 +275,19 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
 * Notes  : -
 \***********************************************************************/
 
-FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name);
+INLINE FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name);
+#if defined(NDEBUG) || defined(__FRAGMENTLISTS_IMPLEMENTATION__)
+INLINE FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name)
+{
+  FragmentNode *fragmentNode;
+
+  assert(fragmentList != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
+  assert(name != NULL);
+
+  return LIST_FIND(fragmentList,fragmentNode,String_equals(fragmentNode->name,name));
+}
+#endif /* NDEBUG || __FRAGMENTLISTS_IMPLEMENTATION__ */
 
 /***********************************************************************\
 * Name   : FragmentList_clearRanges
