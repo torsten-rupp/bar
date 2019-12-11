@@ -130,6 +130,9 @@ typedef struct
   IsPauseFunction             isPauseCreateFunction;                // pause create check callback (can be NULL)
   void                        *isPauseCreateUserData;               // user data for pause create check
 
+  IsAbortedFunction           isAbortedFunction;                    // abort create check callback (can be NULL)
+  void                        *isAbortedUserData;                   // user data for abort create check
+
   FragmentList                statusInfoFragmentList;               // status info fragment list
 
   StatusInfoFunction          statusInfoFunction;                   // status info callback
@@ -265,6 +268,9 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 *                                       (can be NULL)
 *          statusInfoUserData         - user data for status info
 *                                       function
+*          isAbortedFunction          - is abort check callback (can be
+*                                       NULL)
+*          isAbortedUserData          - user data for is aborted check
 *          logHandle                  - log handle (can be NULL)
 * Output : createInfo - initialized create info variable
 * Return : -
@@ -287,6 +293,8 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
                           void               *isPauseCreateUserData,
                           StatusInfoFunction statusInfoFunction,
                           void               *statusInfoUserData,
+                          IsAbortedFunction  isAbortedFunction,
+                          void               *isAbortedUserData,
                           LogHandle          *logHandle
                          )
 {
@@ -325,6 +333,10 @@ LOCAL void initCreateInfo(CreateInfo         *createInfo,
 
   createInfo->isPauseCreateFunction                = isPauseCreateFunction;
   createInfo->isPauseCreateUserData                = isPauseCreateUserData;
+
+  createInfo->isAbortedFunction                    = isAbortedFunction;
+  createInfo->isAbortedUserData                    = isAbortedUserData;
+
   initStatusInfo(&createInfo->statusInfo);
 
   // get archive type
@@ -393,6 +405,22 @@ LOCAL void doneCreateInfo(CreateInfo *createInfo)
 }
 
 /***********************************************************************\
+* Name   : isAborted
+* Purpose: check if aborted
+* Input  : createInfo - create info
+* Output : -
+* Return : TRUE iff aborted
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isAborted(const CreateInfo *createInfo)
+{
+  assert(createInfo != NULL);
+
+  return (createInfo->isAbortedFunction != NULL) && createInfo->isAbortedFunction(createInfo->isAbortedUserData);
+}
+
+/***********************************************************************\
 * Name   : pauseCreate
 * Purpose: pause create
 * Input  : createInfo - create info
@@ -406,7 +434,7 @@ LOCAL void pauseCreate(const CreateInfo *createInfo)
   assert(createInfo != NULL);
 
   while (   ((createInfo->isPauseCreateFunction != NULL) && createInfo->isPauseCreateFunction(createInfo->isPauseCreateUserData))
-         && !Storage_isAborted(&createInfo->storageInfo)
+         && !isAborted(createInfo)
         )
   {
     Misc_udelay(500LL*US_PER_MS);
@@ -490,7 +518,7 @@ LOCAL Errors readIncrementalList(const CreateInfo *createInfo,
   }
 
   // read entries
-  while (!File_eof(&fileHandle) && !Storage_isAborted(&createInfo->storageInfo))
+  while (!File_eof(&fileHandle) && !isAborted(createInfo))
   {
     // read entry
     incrementalListInfo.state = INCREMENTAL_FILE_STATE_UNKNOWN;
@@ -634,7 +662,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
                                &data,
                                &length
                               )
-         && !Storage_isAborted(&createInfo->storageInfo)
+         && !isAborted(createInfo)
         )
   {
     assert(keyData != NULL);
@@ -666,7 +694,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   }
 
   // rename files
-  if (!Storage_isAborted(&createInfo->storageInfo))
+  if (!isAborted(createInfo))
   {
     error = File_rename(tmpFileName,fileName,NULL);
     if (error != ERROR_NONE)
@@ -977,7 +1005,7 @@ LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
     createInfo->statusInfo.volume.progress  = storageStatusInfo->volumeProgress;
   }
 
-  return !Storage_isAborted(&createInfo->storageInfo);
+  return !isAborted(createInfo);
 }
 
 /***********************************************************************\
@@ -1833,7 +1861,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
     // process include entries
     includeEntryNode = createInfo->includeEntryList->head;
     while (   (createInfo->failError == ERROR_NONE)
-           && !Storage_isAborted(&createInfo->storageInfo)
+           && !isAborted(createInfo)
            && (includeEntryNode != NULL)
           )
     {
@@ -1862,7 +1890,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
       // find files
       StringList_append(&nameList,basePath);
       while (   (createInfo->failError == ERROR_NONE)
-             && !Storage_isAborted(&createInfo->storageInfo)
+             && !isAborted(createInfo)
              && !StringList_isEmpty(&nameList)
             )
       {
@@ -1962,7 +1990,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                   {
                     // read directory contents
                     while (   (createInfo->failError == ERROR_NONE)
-                           && !Storage_isAborted(&createInfo->storageInfo)
+                           && !isAborted(createInfo)
                            && !File_endOfDirectoryList(&directoryListHandle)
                           )
                     {
@@ -2505,7 +2533,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     {
       // process entries from continous database
       while (   (createInfo->failError == ERROR_NONE)
-             && !Storage_isAborted(&createInfo->storageInfo)
+             && !isAborted(createInfo)
              && Continuous_getEntry(&continuousDatabaseHandle,
                                     createInfo->jobUUID,
                                     createInfo->scheduleUUID,
@@ -2804,7 +2832,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     // process include entries
     includeEntryNode = createInfo->includeEntryList->head;
     while (   (createInfo->failError == ERROR_NONE)
-           && !Storage_isAborted(&createInfo->storageInfo)
+           && !isAborted(createInfo)
            && (includeEntryNode != NULL)
           )
     {
@@ -2836,7 +2864,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
       n = 0;
       StringList_append(&nameList,basePath);
       while (   (createInfo->failError == ERROR_NONE)
-             && !Storage_isAborted(&createInfo->storageInfo)
+             && !isAborted(createInfo)
              && !StringList_isEmpty(&nameList)
             )
       {
@@ -2970,7 +2998,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                 {
                   // read directory content
                   while (   (createInfo->failError == ERROR_NONE)
-                         && !Storage_isAborted(&createInfo->storageInfo)
+                         && !isAborted(createInfo)
                          && !File_endOfDirectoryList(&directoryListHandle)
                         )
                   {
@@ -3680,7 +3708,7 @@ LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
       while (   (createInfo->storage.count > 2)                           // more than 2 archives are waiting
              && (createInfo->storage.bytes > globalOptions.maxTmpSize)    // temporary space limit exceeded
              && (createInfo->failError == ERROR_NONE)
-             && !Storage_isAborted(&createInfo->storageInfo)
+             && !isAborted(createInfo)
             )
       {
         Semaphore_waitModified(&createInfo->storageInfoLock,30*1000);
@@ -4509,7 +4537,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     Storage_pause(&createInfo->storageInfo);
 
     // pre-process
-    if (!Storage_isAborted(&createInfo->storageInfo))
+    if (!isAborted(createInfo))
     {
       error = Storage_preProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
       if (error != ERROR_NONE)
@@ -4526,14 +4554,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
   // store archives
   while (   (createInfo->failError == ERROR_NONE)
-         && !Storage_isAborted(&createInfo->storageInfo)
+         && !isAborted(createInfo)
         )
   {
     autoFreeSavePoint = AutoFree_save(&autoFreeList);
 
     // pause, check abort
     Storage_pause(&createInfo->storageInfo);
-    if (Storage_isAborted(&createInfo->storageInfo))
+    if (isAborted(createInfo))
     {
       break;
     }
@@ -4554,7 +4582,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     if (   (createInfo->failError == ERROR_NONE)
         && !createInfo->storageFlags.dryRun
-        && !Storage_isAborted(&createInfo->storageInfo)
+        && !isAborted(createInfo)
        )
     {
       // get printable storage name
@@ -4651,7 +4679,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         // pause, check abort
         Storage_pause(&createInfo->storageInfo);
-        if (Storage_isAborted(&createInfo->storageInfo))
+        if (isAborted(createInfo))
         {
           break;
         }
@@ -4696,7 +4724,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         // pause, check abort
         Storage_pause(&createInfo->storageInfo);
-        if (Storage_isAborted(&createInfo->storageInfo))
+        if (isAborted(createInfo))
         {
           Storage_close(&storageHandle);
           break;
@@ -4727,7 +4755,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         // pause, check abort
         Storage_pause(&createInfo->storageInfo);
-        if (Storage_isAborted(&createInfo->storageInfo))
+        if (isAborted(createInfo))
         {
           Storage_close(&storageHandle);
           break;
@@ -4742,7 +4770,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         Storage_close(&storageHandle);
       }
       while (   (createInfo->failError == ERROR_NONE)                            // no eror
-             && !Storage_isAborted(&createInfo->storageInfo)                     // not aborted
+             && !isAborted(createInfo)                                           // not aborted
              && ((error != ERROR_NONE) && (Error_getErrno(error) != ENOSPC))     // some error and not "no space left"
              && (retryCount < MAX_RETRIES)                                       // still some retry left
             );
@@ -4759,7 +4787,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
 
       // check if aborted
-      if (Storage_isAborted(&createInfo->storageInfo))
+      if (isAborted(createInfo))
       {
         printInfo(1,"ABORTED\n");
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
@@ -4994,7 +5022,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         {
           error = Index_setState(createInfo->indexHandle,
                                  storageId,
-                                 ((createInfo->failError == ERROR_NONE) && !Storage_isAborted(&createInfo->storageInfo))
+                                 ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
                                    ? INDEX_STATE_OK
                                    : INDEX_STATE_ERROR,
                                  Misc_getCurrentDateTime(),
@@ -5085,7 +5113,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
     Storage_pause(&createInfo->storageInfo);
 
     // post-processing
-    if (!Storage_isAborted(&createInfo->storageInfo))
+    if (!isAborted(createInfo))
     {
       error = Storage_postProcess(&createInfo->storageInfo,NULL,createInfo->createdDateTime,TRUE);
       if (error != ERROR_NONE)
@@ -5101,7 +5129,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 //TODO: required?
   // delete old storage files if no database
   if (   (createInfo->failError == ERROR_NONE)
-      && !Storage_isAborted(&createInfo->storageInfo)
+      && !isAborted(createInfo)
       && (createInfo->indexHandle == NULL)
      )
   {
@@ -5480,7 +5508,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       size   = fragmentSize;
       error  = ERROR_NONE;
       while (   (createInfo->failError == ERROR_NONE)
-             && !Storage_isAborted(&createInfo->storageInfo)
+             && !isAborted(createInfo)
              && (error == ERROR_NONE)
              && (size > 0LL)
             )
@@ -5550,7 +5578,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
         // wait for temporary file space
         waitForTemporaryFileSpace(createInfo);
       }
-      if (Storage_isAborted(&createInfo->storageInfo))
+      if (isAborted(createInfo))
       {
         printInfo(1,"ABORTED\n");
         (void)Archive_closeEntry(&archiveEntryInfo);
@@ -5918,7 +5946,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
     blockCount  = (fragmentSize+(uint64)deviceInfo.blockSize-1)/(uint64)deviceInfo.blockSize;
     error       = ERROR_NONE;
     while (   (createInfo->failError == ERROR_NONE)
-           && !Storage_isAborted(&createInfo->storageInfo)
+           && !isAborted(createInfo)
            && (error == ERROR_NONE)
            && (blockCount > 0LL)
           )
@@ -6003,7 +6031,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       // wait for temporary file space
       waitForTemporaryFileSpace(createInfo);
     }
-    if (Storage_isAborted(&createInfo->storageInfo))
+    if (isAborted(createInfo))
     {
       printInfo(1,"ABORTED\n");
       (void)Archive_closeEntry(&archiveEntryInfo);
@@ -6816,7 +6844,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       size   = fragmentSize;
       error  = ERROR_NONE;
       while (   (createInfo->failError == ERROR_NONE)
-             && !Storage_isAborted(&createInfo->storageInfo)
+             && !isAborted(createInfo)
              && (error == ERROR_NONE)
              && (size > 0LL)
             )
@@ -6887,7 +6915,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
         // wait for temporary file space
         waitForTemporaryFileSpace(createInfo);
       }
-      if (Storage_isAborted(&createInfo->storageInfo))
+      if (isAborted(createInfo))
       {
         printInfo(1,"ABORTED\n");
         (void)Archive_closeEntry(&archiveEntryInfo);
@@ -7233,7 +7261,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
 
   // store entries
   while (   (createInfo->failError == ERROR_NONE)
-         && !Storage_isAborted(&createInfo->storageInfo)
+         && !isAborted(createInfo)
          && MsgQueue_get(&createInfo->entryMsgQueue,&entryMsg,NULL,sizeof(entryMsg),WAIT_FOREVER)
         )
   {
@@ -7410,7 +7438,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
   }
 
   // on an error or abort terminated the entry queue
-  if (Storage_isAborted(&createInfo->storageInfo) || (createInfo->failError != ERROR_NONE))
+  if (isAborted(createInfo) || (createInfo->failError != ERROR_NONE))
   {
     MsgQueue_setEndOfMsg(&createInfo->entryMsgQueue);
   }
@@ -7524,6 +7552,7 @@ Errors Command_create(ServerIO                     *masterIO,
                  storageFlags,
                  CALLBACK_(isPauseCreateFunction,isPauseCreateUserData),
                  CALLBACK_(statusInfoFunction,statusInfoUserData),
+                 CALLBACK_(isAbortedFunction,isAbortedUserData),
                  logHandle
                 );
   AUTOFREE_ADD(&autoFreeList,&createInfo,{ doneCreateInfo(&createInfo); });
@@ -7870,7 +7899,7 @@ Errors Command_create(ServerIO                     *masterIO,
   // write incremental list
   if (   (createInfo.failError == ERROR_NONE)
       && !createInfo.storageFlags.dryRun
-      && !Storage_isAborted(&createInfo.storageInfo)
+      && !isAborted(&createInfo)
       && createInfo.storeIncrementalFileInfoFlag
      )
   {
@@ -7973,7 +8002,7 @@ Errors Command_create(ServerIO                     *masterIO,
   }
 
   // get error code
-  if (!Storage_isAborted(&createInfo.storageInfo))
+  if (!isAborted(&createInfo))
   {
     error = createInfo.failError;
   }
