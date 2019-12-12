@@ -3103,7 +3103,7 @@ NULL, // masterSocketHandle
                     String_delete(comment);
                     String_delete(scheduleUUID);
                     String_delete(jobUUID);
-                    String_delete(hostName);
+                    String_delete(userName);
                     String_delete(hostName);
                     break;
                   }
