@@ -201,7 +201,7 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
   {
     case CURLM_OK:
       // OK/timeout
-      error = (fdCount > 0) ? ERROR_NONE : ERROR_NETWORK_TIMEOUT;
+      error = (fdCount > 0) ? ERROR_NONE : ERROR_NETWORK_TIMEOUT_RECEIVE;
       break;
     default:
       // error

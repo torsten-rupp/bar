@@ -76,7 +76,8 @@ ERROR NETWORK_SEND
 
 ERROR NETWORK_RECEIVE                  TR("receiving data fail")
 ERROR NETWORK_EXECUTE_FAIL             TR("execute command fail")
-ERROR NETWORK_TIMEOUT                  TR("timeout receive/send data")
+ERROR NETWORK_TIMEOUT_SEND             TR("timeout send data")
+ERROR NETWORK_TIMEOUT_RECEIVE          TR("timeout receive data")
 ERROR NO_RESPONSE                      TR("no response from remote program")
 ERROR INVALID_RESPONSE                 TR("invalid response from remote program")
 

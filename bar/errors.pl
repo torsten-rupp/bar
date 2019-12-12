@@ -1337,11 +1337,11 @@ while ($line=<STDIN>)
     my $name=$1;
     my $text=$2;
     $errorNumber++;
-#    writeHFile("#line $lineNb \"errors.def\"");
+    writeHFile("#line $lineNb \"errors.def\"");
     writeHFile("  $PREFIX$name = $errorNumber,");
 
     writeCFile("    case $PREFIX$name:");
-#    writeCFile("#line $lineNb \"errors.def\"");
+    writeCFile("#line $lineNb \"errors.def\"");
     writeCFile("      stringSet(errorText,sizeof(errorText),\"$text\");");
     writeCFile("      break;");
 
@@ -1359,12 +1359,12 @@ while ($line=<STDIN>)
     my $name    =$1;
     my $function=$2;
     $errorNumber++;
-#    writeHFile("#line $lineNb \"errors.def\"");
+    writeHFile("#line $lineNb \"errors.def\"");
     writeHFile("  $PREFIX$name = $errorNumber,");
 
 
     writeCFile("    case $PREFIX$name:");
-#    writeCFile("#line $lineNb \"errors.def\"");
+    writeCFile("#line $lineNb \"errors.def\"");
     writeCFile("      stringSet(errorText,sizeof(errorText),$function);");
     writeCFile("      break;");
 
@@ -1381,7 +1381,7 @@ while ($line=<STDIN>)
     # error <name>
     my $name=$1;
     $errorNumber++;
-#    writeHFile("#line $lineNb \"errors.def\"");
+    writeHFile("#line $lineNb \"errors.def\"");
     writeHFile("  $PREFIX$name = $errorNumber,");
     writeJava1("  public final static int $name = $errorNumber;");
     push(@names,$name);
@@ -1392,14 +1392,14 @@ while ($line=<STDIN>)
   {
     # include "file"
     my $file=$1;
-#    writeCFileHeader("#line $lineNb \"errors.def\"");
+    writeCFileHeader("#line $lineNb \"errors.def\"");
     writeCFileHeader("#include \"$file\"");
   }
   elsif ($line =~ /^INCLUDE\s+<(.*)>\s*$/)
   {
     # include <file>
     my $file=$1;
-#    writeCFileHeader("#line $lineNb \"errors.def\"");
+    writeCFileHeader("#line $lineNb \"errors.def\"");
     writeCFileHeader("#include <$file>");
   }
   elsif ($line =~ /^IMPORT\s+(.*)\s*$/)
@@ -1412,7 +1412,7 @@ while ($line=<STDIN>)
   {
     # none <text>
     my $text=$1;
-#    writeCFile("#line $lineNb \"errors.def\"");
+    writeCFile("#line $lineNb \"errors.def\"");
     writeCFile("    case ".$PREFIX."NONE: stringSet(errorText,sizeof(errorText),\"$text\"); break;");
   }
   elsif ($line =~ /^DEFAULT\s+"(.*)"\s*$/)
@@ -1422,7 +1422,7 @@ while ($line=<STDIN>)
   elsif ($line =~ /^\s*#/)
   {
     # C preprocessor
-#    writeCFileHeader("#line $lineNb \"errors.def\"");
+    writeCFileHeader("#line $lineNb \"errors.def\"");
     writeCFileHeader("$line");
   }
   else
@@ -1436,7 +1436,7 @@ while ($line=<STDIN>)
 
     foreach my $s (@names)
     {
-#      writeCFile("#line $lineNb \"errors.def\"");
+      writeCFile("#line $lineNb \"errors.def\"");
       writeCFile("    case $PREFIX$s:");
       writeJava2("      case $s:");
     }
