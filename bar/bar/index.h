@@ -1488,6 +1488,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 *          userName         - user name (can be NULL)
 *          hostName         - host name (can be NULL)
 *          name             - name (can be NULL)
+*          fragmentsFlag    - TRUE to list all fragments
 *          sortMode         - sort mode; see IndexStorageSortModes
 *          ordering         - ordering
 *          offset           - offset or 0
@@ -1779,10 +1780,10 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          entryIdCount     - entry id count or 0
 *          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
 *          name             - name pattern (glob, can be NULL)
+*          fragmentsFlag    - TRUE to list all fragments
+*          newestOnly       - TRUE for newest entries only
 *          sortMode         - sort mode; see IndexStorageSortModes
 *          ordering         - ordering
-*          newestOnly       - TRUE for newest entries only
-*          fragmentsFlag    - TRUE to list all fragments
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -1799,10 +1800,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              uint                entryIdCount,
                              IndexTypeSet        indexTypeSet,
                              ConstString         name,
-                             IndexEntrySortModes sortMode,
-                             DatabaseOrdering    ordering,
                              bool                newestOnly,
                              bool                fragmentsFlag,
+                             IndexEntrySortModes sortMode,
+                             DatabaseOrdering    ordering,
                              uint64              offset,
                              uint64              limit
                             );

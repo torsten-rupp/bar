@@ -2769,10 +2769,10 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
                                 0,  // entryIdCount
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL,  // entryPattern,
-                                INDEX_ENTRY_SORT_MODE_NONE,
-                                DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly
                                 TRUE, // fragmentsFlag
+                                INDEX_ENTRY_SORT_MODE_NONE,
+                                DATABASE_ORDERING_NONE,
                                 0LL,  // offset
                                 INDEX_UNLIMITED
                                );
@@ -8977,10 +8977,10 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              uint                entryIdCount,
                              IndexTypeSet        indexTypeSet,
                              ConstString         name,
-                             IndexEntrySortModes sortMode,
-                             DatabaseOrdering    ordering,
                              bool                newestOnly,
                              bool                fragmentsFlag,
+                             IndexEntrySortModes sortMode,
+                             DatabaseOrdering    ordering,
                              uint64              offset,
                              uint64              limit
                             )
