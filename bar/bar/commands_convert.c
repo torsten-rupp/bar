@@ -52,6 +52,7 @@ typedef struct
   StorageInfo             storageInfo;
   ConstString             jobUUID;
   const JobOptions        *jobOptions;
+  uint64                  createdDateTime;
   GetNamePasswordFunction getNamePasswordFunction;
   void                    *getNamePasswordUserData;
   LogHandle               *logHandle;                         // log handle
@@ -152,6 +153,7 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
                            ConstString             jobUUID,
                            const JobOptions        *jobOptions,
+                           uint64                  createdDateTime,
                            GetNamePasswordFunction getNamePasswordFunction,
                            void                    *getNamePasswordUserData,
                            LogHandle               *logHandle
@@ -162,6 +164,7 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
   // init variables
   convertInfo->jobUUID                 = jobUUID;
   convertInfo->jobOptions              = jobOptions;
+  convertInfo->createdDateTime         = createdDateTime;
   convertInfo->getNamePasswordFunction = getNamePasswordFunction;
   convertInfo->getNamePasswordUserData = getNamePasswordUserData;
   convertInfo->logHandle               = logHandle;
@@ -1589,8 +1592,9 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 * Purpose: convert a meta entry in archive
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
-*          newJobUUID               - new job UUID
-*          newJobOptions            - new job options
+*          newJobUUID               - new job UUID or NULL
+*          newJobOptions            - new job options or NULL
+*          newCreatedDateTime       - new created date/time or 0
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1599,7 +1603,8 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
                               ConstString      newJobUUID,
-                              const JobOptions *newJobOptions
+                              const JobOptions *newJobOptions,
+                              uint64           newCreatedDateTime
                              )
 {
   String           hostName;
@@ -1646,6 +1651,7 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
 
   // set new UUID, comment
   if (!String_isEmpty(newJobUUID)) String_set(jobUUID,newJobUUID);
+  if (newCreatedDateTime != 0LL) createdDateTime = newCreatedDateTime;
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMMENT)) String_set(comment,newJobOptions->comment);
 
   // create new meta entry
@@ -1832,7 +1838,8 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
         error = convertMetaEntry(&sourceArchiveHandle,
                                  &convertInfo->destinationArchiveHandle,
                                  convertInfo->jobUUID,
-                                 convertInfo->jobOptions
+                                 convertInfo->jobOptions,
+                                 convertInfo->createdDateTime
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
@@ -1882,6 +1889,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                             ConstString             archiveName,
                             ConstString             jobUUID,
                             JobOptions              *jobOptions,
+                            uint64                  createdDateTime,
                             GetNamePasswordFunction getNamePasswordFunction,
                             void                    *getNamePasswordUserData,
                             LogHandle               *logHandle
@@ -1931,6 +1939,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
   initConvertInfo(&convertInfo,
                   jobUUID,
                   jobOptions,
+                  createdDateTime,
                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                   logHandle
                  );
@@ -2228,8 +2237,9 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
 /*---------------------------------------------------------------------*/
 
 Errors Command_convert(const StringList        *storageNameList,
-                       ConstString             jobUUID,
-                       JobOptions              *jobOptions,
+                       ConstString             newJobUUID,
+                       JobOptions              *newJobOptions,
+                       uint64                  newCreatedDateTime,
                        GetNamePasswordFunction getNamePasswordFunction,
                        void                    *getNamePasswordUserData,
                        LogHandle               *logHandle
@@ -2246,7 +2256,7 @@ Errors Command_convert(const StringList        *storageNameList,
   FileInfo                   fileInfo;
 
   assert(storageNameList != NULL);
-  assert(jobOptions != NULL);
+  assert(newJobOptions != NULL);
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
@@ -2277,8 +2287,9 @@ Errors Command_convert(const StringList        *storageNameList,
         // convert archive content
         error = convertArchive(&storageSpecifier,
                                NULL,
-                               jobUUID,
-                               jobOptions,
+                               newJobUUID,
+                               newJobOptions,
+                               newCreatedDateTime,
                                CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                logHandle
                               );
@@ -2290,7 +2301,7 @@ Errors Command_convert(const StringList        *storageNameList,
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
                                         &storageSpecifier,
                                         NULL,  // pathName
-                                        jobOptions,
+                                        newJobOptions,
                                         SERVER_CONNECTION_PRIORITY_HIGH
                                        );
       if (error == ERROR_NONE)
@@ -2322,8 +2333,9 @@ Errors Command_convert(const StringList        *storageNameList,
           {
             error = convertArchive(&storageSpecifier,
                                    fileName,
-                                   jobUUID,
-                                   jobOptions,
+                                   newJobUUID,
+                                   newJobOptions,
+                                   newCreatedDateTime,
                                    CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                    logHandle
                                   );

@@ -42,8 +42,9 @@
 * Name   : Commands_convert
 * Purpose: convert archive and file system content
 * Input  : archiveFileNameList     - list with archive files
-*          jobUUID                 - new job UUID
-*          jobOptions              - new job options
+*          newJobUUID              - new job UUID or NULL
+*          newJobOptions           - new job options
+*          newCreatedDateTime      - new created date/time or 0
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password call back
 *          logHandle               - log handle (can be NULL)
@@ -53,8 +54,9 @@
 \***********************************************************************/
 
 Errors Command_convert(const StringList        *archiveFileNameList,
-                       ConstString             jobUUID,
-                       JobOptions              *jobOptions,
+                       ConstString             newJobUUID,
+                       JobOptions              *newJobOptions,
+                       uint64                  newCreatedDateTime,
                        GetNamePasswordFunction getNamePasswordFunction,
                        void                    *getNamePasswordUserData,
                        LogHandle               *logHandle

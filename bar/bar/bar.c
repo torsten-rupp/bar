@@ -10655,6 +10655,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             error = Command_convert(&storageNameList,
                                     jobUUID,
                                     &jobOptions,
+                                    Misc_getCurrentDateTime(),
                                     CALLBACK_(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
                                    );
