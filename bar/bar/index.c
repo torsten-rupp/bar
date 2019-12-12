@@ -7116,19 +7116,19 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
                                )
 {
   Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
   ulong               totalFileCount;
+  double              totalFileSize_;
   uint64              totalFileSize;
   ulong               totalImageCount;
+  double              totalImageSize_;
   uint64              totalImageSize;
   ulong               totalDirectoryCount;
   ulong               totalLinkCount;
   ulong               totalHardlinkCount;
+  double              totalHardlinkSize_;
   uint64              totalHardlinkSize;
   ulong               totalSpecialCount;
-  DatabaseQueryHandle databaseQueryHandle;
-  double              totalFileSize_;
-  double              totalImageSize_;
-  double              totalHardlinkSize_;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -7139,9 +7139,10 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
               indexHandle,
     {
       // get file aggregate data
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
-  //TODO: use entries.size?
+//TODO: use entries.size?
                                "SELECT COUNT(entries.id), \
                                        TOTAL(fileEntries.fragmentSize) \
                                 FROM entries \
@@ -7168,7 +7169,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       // get image aggregate data
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
-  //TODO: use entries.size?
+//TODO: use entries.size?
                                "SELECT COUNT(entries.id),\
                                        TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                                 FROM entries \
@@ -7239,7 +7240,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       // get hardlink aggregate data
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
-  //TODO: use entries.size?
+//TODO: use entries.size?
                                "SELECT COUNT(entries.id), \
                                        TOTAL(hardlinkEntries.fragmentSize) \
                                 FROM entries \
@@ -7327,7 +7328,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       // get newest file aggregate data
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
-  //TODO: use entriesNewest.size?
+//TODO: use entriesNewest.size?
                                "SELECT COUNT(entriesNewest.id), \
                                        TOTAL(fileEntries.fragmentSize) \
                                 FROM entriesNewest \
@@ -7354,7 +7355,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       // get newest image aggregate data
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
-  //TODO: use entriesNewest.size?
+//TODO: use entriesNewest.size?
                                "SELECT COUNT(entriesNewest.id), \
                                        TOTAL(imageEntries.blockSize*imageEntries.blockCount) \
                                 FROM entriesNewest \
@@ -7425,7 +7426,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
       // get newest hardlink aggregate data
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
-  //TODO: use entriesNewest.size?
+//TODO: use entriesNewest.size?
                                "SELECT COUNT(entriesNewest.id), \
                                        TOTAL(hardlinkEntries.fragmentSize) \
                                 FROM entriesNewest \
