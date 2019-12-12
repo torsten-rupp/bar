@@ -3775,8 +3775,7 @@ bool String_equalsChar(ConstString string, char ch)
 
 bool String_equalsBuffer(ConstString string, const char *buffer, ulong bufferLength)
 {
-  bool  equalFlag;
-  ulong i;
+  bool equalFlag;
 
   assert(string != NULL);
   assert(buffer != NULL);
