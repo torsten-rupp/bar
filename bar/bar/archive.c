@@ -14723,6 +14723,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
   uint64             createdDateTime;
+  ulong              entries;
+  uint64             size;
 
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
@@ -15246,6 +15248,13 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String_delete(imageName);
   String_delete(fileName);
 
+  // get number of entries, size
+  entries = Archive_getEntries(&archiveHandle);
+  size    = Archive_getSize(&archiveHandle);
+
+  // close archive
+  Archive_close(&archiveHandle);
+
   if     (abortedFlag)
   {
     printInfo(4,"Aborted create index for '%s'\n",String_cString(printableStorageName));
@@ -15291,7 +15300,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
       error = Index_storageUpdate(indexHandle,
                                   storageId,
                                   printableStorageName,
-                                  Archive_getSize(&archiveHandle)
+                                  size
                                  );
     }
 
@@ -15322,15 +15331,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 //TODO
 //    Index_updateEntityInfos();
 //    Index_updateUUIDInfos();
-
-    // get total time last changed/entries/size
-    if (totalTimeLastChanged != NULL) (*totalTimeLastChanged) = timeLastChanged;
-    if (totalEntries         != NULL) (*totalEntries        ) = Archive_getEntries(&archiveHandle);
-    if (totalSize            != NULL) (*totalSize           ) = Archive_getSize(&archiveHandle);
   }
 
-  // close archive
-  Archive_close(&archiveHandle);
+  // get total time last changed/entries/size
+  if (totalTimeLastChanged != NULL) (*totalTimeLastChanged) = timeLastChanged;
+  if (totalEntries         != NULL) (*totalEntries        ) = entries;
+  if (totalSize            != NULL) (*totalSize           ) = size;
 
   // free resources
   String_delete(printableStorageName);
