@@ -883,8 +883,6 @@ update_docker:
 	$(DOCKER) pull i386/debian:10
 	$(DOCKER) pull debian:10
 	#
-	$(DOCKER) pull ubuntu:14.04
-	$(DOCKER) pull ubuntu:16.04
 	$(DOCKER) pull ubuntu:17.10
 	$(DOCKER) pull ubuntu:18.04
 	$(DOCKER) pull ubuntu:19.04
