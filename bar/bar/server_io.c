@@ -1706,6 +1706,16 @@ Errors ServerIO_vexecuteCommand(ServerIO                      *serverIO,
   while ((error == ERROR_NONE) && !completedFlag);
   StringMap_delete(resultMap);
 
+  #ifndef NDEBUG
+    if (error != ERROR_NONE)
+    {
+      if (globalOptions.serverDebugLevel >= 1)
+      {
+        fprintf(stderr,"DEBUG: execute command %s fail: %s\n",format,Error_getText(error));
+      }
+    }
+  #endif /* not DEBUG */
+
   return error;
 }
 
@@ -1937,7 +1947,7 @@ Errors ServerIO_waitResults(ServerIO   *serverIO,
   }
   else if (resultNode == NULL)
   {
-    return ERROR_NETWORK_TIMEOUT;
+    return ERROR_NETWORK_TIMEOUT_RECEIVE;
   }
 
   // get and parse result
