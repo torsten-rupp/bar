@@ -4124,8 +4124,6 @@ LOCAL void autoIndexThreadCode(void)
   printableStorageName = String_new();
   storageName          = String_new();
 
-#warning TODO remove
-#if 0
   // open index (Note: timeout is not important; auto-index should not block)
   indexHandle = NULL;
   if (Index_isAvailable())
@@ -4411,7 +4409,6 @@ LOCAL void autoIndexThreadCode(void)
                 "Index database not available - disabled auto-index"
                );
   }
-#endif
 
   // free resources
   String_delete(storageName);
@@ -13532,10 +13529,10 @@ LOCAL void serverCommand_entryList(ClientInfo *clientInfo, IndexHandle *indexHan
                                 Array_length(&clientInfo->entryIdArray),
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL, // name
-                                INDEX_ENTRY_SORT_MODE_NONE,
-                                DATABASE_ORDERING_NONE,
                                 FALSE,  // newestOnly,
                                 fragmentsFlag,
+                                INDEX_ENTRY_SORT_MODE_NONE,
+                                DATABASE_ORDERING_NONE,
                                 0,
                                 INDEX_UNLIMITED
                                );
@@ -14517,10 +14514,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     Array_length(&clientInfo->entryIdArray),
                                     INDEX_TYPE_SET_ANY_ENTRY,
                                     NULL, // name
-                                    INDEX_ENTRY_SORT_MODE_NONE,
-                                    DATABASE_ORDERING_NONE,
                                     FALSE,  // newestOnly,
                                     TRUE,  //fragments
+                                    INDEX_ENTRY_SORT_MODE_NONE,
+                                    DATABASE_ORDERING_NONE,
                                     0,
                                     INDEX_UNLIMITED
                                    );
@@ -15645,10 +15642,10 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                 0,  // entryIdCount
                                 indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
                                 name,
-                                sortMode,
-                                ordering,
                                 newestOnly,
                                 FALSE,  //fragments
+                                sortMode,
+                                ordering,
                                 offset,
                                 limit
                                );
@@ -16028,10 +16025,10 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                 0,  // entryIdCount
                                 indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
                                 name,
-                                sortMode,
-                                ordering,
                                 newestOnly,
                                 FALSE,  //fragments
+                                sortMode,
+                                ordering,
                                 offset,
                                 limit
                                );
