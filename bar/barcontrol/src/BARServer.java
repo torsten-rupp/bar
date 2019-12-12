@@ -2528,7 +2528,7 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
     removeCommand(command);
 
     // set error timeout
-    command.setError(BARException.NETWORK_TIMEOUT,"timeout");
+    command.setError(BARException.NETWORK_TIMEOUT_RECEIVE,"timeout");
     command.resultList.clear();
     command.setAborted();
   }
