@@ -760,7 +760,7 @@ endif
 install: \
   $(TARGETS) \
   $(if $(findstring $(ENABLE_GUI),yes),$(if $(findstring $(PLATFORM),LINUX),barcontrol-linux.jar barcontrol-linux_64.jar) \
-                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol.exe) barcontrol-windows.jar barcontrol/barcontrol-windows_64.jar) \
+                                       $(if $(findstring $(PLATFORM),WINDOWS),$(if $(LAUNCH4J),barcontrol.exe) barcontrol-windows.jar barcontrol-windows_64.jar) \
                                        $(if $(findstring $(PLATFORM),SOLARIS),barcontrol-solaris.jar) \
                                        $(if $(findstring $(PLATFORM),MAC_OSX),barcontrol-macosx.jar barcontrol-macosx_64.jar) \
   )
@@ -773,9 +773,8 @@ ifeq ($(PLATFORM),LINUX)
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
 ifeq ($(PLATFORM),WINDOWS)
-	$(INSTALL) $(if $(LAUNCH4J),barcontrol.exe,\
-                                    barcontrol.cmd barcontrol-windows.jar \
-                                    barcontrol.cmd barcontrol-windows_64.jar \
+	$(INSTALL) $(if $(LAUNCH4J),barcontrol.exe, \
+                                    barcontrol.cmd barcontrol-windows.jar barcontrol-windows_64.jar \
                     ) \
                    "$(DESTDIR)$(INSTALL_BIN_DIR)"
 endif
