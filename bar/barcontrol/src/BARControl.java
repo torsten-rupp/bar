@@ -4596,7 +4596,7 @@ if (false) {
                                                                           cryptAlgorithm,
                                                                           cryptType,
                                                                           cryptPasswordMode,
-                                                                          DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)),
+                                                                          (lastExecutedDateTime > 0) ? DATE_FORMAT.format(new Date(lastExecutedDateTime*1000)) : "",
                                                                           estimatedRestTime
                                                                          )
                                                            );
