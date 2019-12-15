@@ -2282,6 +2282,7 @@ public class TabStatus
     {
       try
       {
+//TODO: sort
         // get schedule list
         BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%s",
                                                      selectedJobData.uuid
@@ -2303,7 +2304,9 @@ public class TabStatus
                                      {
                                        public void run()
                                        {
-                                         MenuItem menuItem = Widgets.addMenuItem(menuTriggerJob,String.format("%s %s %s %s",date,weekDays,time,archiveType));
+                                         MenuItem menuItem = Widgets.addMenuItem(menuTriggerJob,
+                                                                                 String.format("%s %s %s %s",date,weekDays,time,archiveType)
+                                                                                );
                                          menuItem.addSelectionListener(new SelectionListener()
                                          {
                                            @Override

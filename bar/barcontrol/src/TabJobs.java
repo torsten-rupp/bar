@@ -11280,10 +11280,13 @@ throw new Error("NYI");
   private void closeAllFileTree()
   {
     // close all directories and remove sub-directory items (all except root)
-    for (TreeItem treeItem : widgetFileTree.getItems())
+    if (!widgetFileTree.isDisposed())
     {
-      treeItem.removeAll();
-      new TreeItem(treeItem,SWT.NONE);
+      for (TreeItem treeItem : widgetFileTree.getItems())
+      {
+        treeItem.removeAll();
+        new TreeItem(treeItem,SWT.NONE);
+      }
     }
 
     // clear directory info requests
@@ -11837,7 +11840,10 @@ throw new Error("NYI");
     }
     catch (Exception exception)
     {
-      Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",exception.getMessage()));
+      if (!shell.isDisposed())
+      {
+        Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",exception.getMessage()));
+      }
     }
   }
 

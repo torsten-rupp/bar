@@ -19,6 +19,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -6981,161 +6982,164 @@ Dprintf.dprintf("");
 
     ValueMap valueMap = new ValueMap();
 
-    switch (widgetStorageTabFolder.getSelectionIndex())
+    if (!widgetStorageTabFolder.isDisposed())
     {
-      case 0:
-        // tree view
-        {
-          // check/uncheck all entries
-          IndexIdSet indexIdSet = new IndexIdSet();
-          for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
+      switch (widgetStorageTabFolder.getSelectionIndex())
+      {
+        case 0:
+          // tree view
           {
-            UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
-
-            uuidTreeItem.setChecked(checked);
-            checkedIndexIdSet.set(uuidIndexData.id,checked);
-
-            if (uuidTreeItem.getExpanded())
+            // check/uncheck all entries
+            IndexIdSet indexIdSet = new IndexIdSet();
+            for (TreeItem uuidTreeItem : widgetStorageTree.getItems())
             {
-              for (TreeItem entityTreeItem : uuidTreeItem.getItems())
+              UUIDIndexData uuidIndexData = (UUIDIndexData)uuidTreeItem.getData();
+
+              uuidTreeItem.setChecked(checked);
+              checkedIndexIdSet.set(uuidIndexData.id,checked);
+
+              if (uuidTreeItem.getExpanded())
               {
-                EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
-
-                entityTreeItem.setChecked(checked);
-                checkedIndexIdSet.set(entityIndexData.id,checked);
-
-                if (entityTreeItem.getExpanded())
+                for (TreeItem entityTreeItem : uuidTreeItem.getItems())
                 {
-                  for (TreeItem storageTreeItem : entityTreeItem.getItems())
-                  {
-                    StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+                  EntityIndexData entityIndexData = (EntityIndexData)entityTreeItem.getData();
 
-                    storageTreeItem.setChecked(checked);
-                    indexIdSet.set(storageIndexData.id,checked);
+                  entityTreeItem.setChecked(checked);
+                  checkedIndexIdSet.set(entityIndexData.id,checked);
+
+                  if (entityTreeItem.getExpanded())
+                  {
+                    for (TreeItem storageTreeItem : entityTreeItem.getItems())
+                    {
+                      StorageIndexData storageIndexData = (StorageIndexData)storageTreeItem.getData();
+
+                      storageTreeItem.setChecked(checked);
+                      indexIdSet.set(storageIndexData.id,checked);
+                    }
                   }
                 }
               }
             }
+            setStorageList(indexIdSet);
           }
-          setStorageList(indexIdSet);
-        }
-        break;
-      case 1:
-        // table view
-        {
-          final int     storageCount[] = {0};
-          final boolean doit[]         = {false};
-
-          if (checked)
+          break;
+        case 1:
+          // table view
           {
-            try
-            {
-              storageCount[0] = BARServer.getInt(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S",
-                                                                     updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                                     updateStorageTreeTableThread.getStorageName()
-                                                                    ),
-                                                 1,  // debugLevel
-                                                 "storageCount"
-                                                );
-              if (storageCount[0] > MAX_CONFIRM_ENTRIES)
-              {
-                display.syncExec(new Runnable()
-                {
-                  public void run()
-                  {
-                    doit[0] = Dialogs.confirm(shell,
-                                              Dialogs.booleanFieldUpdater(Settings.class,"showEntriesMarkInfo"),
-                                              BARControl.tr("There are {0} entries. Really mark all entries?",
-                                                            storageCount[0]
-                                                           ),
-                                              true
-                                             );
-                  }
-                });
-              }
-              else
-              {
-                doit[0] = true;
-              }
-            }
-            catch (Exception exception)
-            {
-              if (Settings.debugLevel > 0)
-              {
-                BARControl.internalError(exception);
-              }
-            }
-          }
-          else
-          {
-            doit[0] = true;
-          }
+            final int     storageCount[] = {0};
+            final boolean doit[]         = {false};
 
-          if (checked)
-          {
-            if (doit[0])
+            if (checked)
             {
-              // check/uncheck all entries
-              clearStorageList();
-
-              final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
               try
               {
-                final IndexIdSet indexIdSet = new IndexIdSet();
-                final int        n[]        = new int[]{0};
-                busyDialog.setMaximum(storageCount[0]);
-
-                BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=%s indexModeSet=* name=%'S",
-                                                             updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
-                                                             updateStorageTreeTableThread.getStorageName()
-                                                            ),
-                                         2,  // debugLevel
-                                         new Command.ResultHandler()
-                                         {
-                                           @Override
-                                           public void handle(int i, ValueMap valueMap)
-                                           {
-                                             long storageId = valueMap.getLong("storageId");
-
-                                             indexIdSet.set(storageId,checked);
-
-                                             n[0]++;
-                                             busyDialog.updateProgressBar(n[0]);
-
-                                             if (busyDialog.isAborted())
-                                             {
-                                               abort();
-                                             }
-                                           }
-                                         }
-                                        );
-
-                setStorageList(indexIdSet);
-
-                busyDialog.close();
-              }
-              catch (BARException exception)
-              {
-                busyDialog.close();
-                if (exception.code != BARException.ABORTED)
+                storageCount[0] = BARServer.getInt(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S",
+                                                                       updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                                       updateStorageTreeTableThread.getStorageName()
+                                                                      ),
+                                                   1,  // debugLevel
+                                                   "storageCount"
+                                                  );
+                if (storageCount[0] > MAX_CONFIRM_ENTRIES)
                 {
-                  Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getMessage()));
+                  display.syncExec(new Runnable()
+                  {
+                    public void run()
+                    {
+                      doit[0] = Dialogs.confirm(shell,
+                                                Dialogs.booleanFieldUpdater(Settings.class,"showEntriesMarkInfo"),
+                                                BARControl.tr("There are {0} entries. Really mark all entries?",
+                                                              storageCount[0]
+                                                             ),
+                                                true
+                                               );
+                    }
+                  });
+                }
+                else
+                {
+                  doit[0] = true;
                 }
               }
               catch (Exception exception)
               {
-                busyDialog.close();
-                Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getMessage()));
+                if (Settings.debugLevel > 0)
+                {
+                  BARControl.internalError(exception);
+                }
               }
             }
+            else
+            {
+              doit[0] = true;
+            }
+
+            if (checked)
+            {
+              if (doit[0])
+              {
+                // check/uncheck all entries
+                clearStorageList();
+
+                final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
+                try
+                {
+                  final IndexIdSet indexIdSet = new IndexIdSet();
+                  final int        n[]        = new int[]{0};
+                  busyDialog.setMaximum(storageCount[0]);
+
+                  BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=%s indexModeSet=* name=%'S",
+                                                               updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
+                                                               updateStorageTreeTableThread.getStorageName()
+                                                              ),
+                                           2,  // debugLevel
+                                           new Command.ResultHandler()
+                                           {
+                                             @Override
+                                             public void handle(int i, ValueMap valueMap)
+                                             {
+                                               long storageId = valueMap.getLong("storageId");
+
+                                               indexIdSet.set(storageId,checked);
+
+                                               n[0]++;
+                                               busyDialog.updateProgressBar(n[0]);
+
+                                               if (busyDialog.isAborted())
+                                               {
+                                                 abort();
+                                               }
+                                             }
+                                           }
+                                          );
+
+                  setStorageList(indexIdSet);
+
+                  busyDialog.close();
+                }
+                catch (BARException exception)
+                {
+                  busyDialog.close();
+                  if (exception.code != BARException.ABORTED)
+                  {
+                    Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getMessage()));
+                  }
+                }
+                catch (Exception exception)
+                {
+                  busyDialog.close();
+                  Dialogs.error(shell,BARControl.tr("Cannot mark all storages!\n\n(error: {0})",exception.getMessage()));
+                }
+              }
+            }
+            else
+            {
+              // clear all checked ids
+              clearStorageList();
+            }
           }
-          else
-          {
-            // clear all checked ids
-            clearStorageList();
-          }
-        }
-        break;
+          break;
+      }
     }
   }
 
@@ -7562,12 +7566,43 @@ Dprintf.dprintf("");
    */
   private void assignStorages(HashSet<IndexData> indexDataHashSet, String toJobUUID, String toScheduleUUID, ArchiveTypes archiveType)
   {
+    final SimpleDateFormat DATE_FORMATS[] = {new SimpleDateFormat("yyyy-MM-dd")};
+
+
     if (!indexDataHashSet.isEmpty())
     {
       Long dateTime = new Long(0);
       if (archiveType != ArchiveTypes.UNKNOWN)
       {
-        dateTime = Dialogs.date(shell,BARControl.tr("Assign entity date"),(String)null,BARControl.tr("Assign"));
+        // guess a date
+        for (IndexData indexData : indexDataHashSet)
+        {
+          String archiveNameParts[] = StringUtils.splitArray(indexData.getName(),BARServer.fileSeparator);
+          for (String archiveNamePart : archiveNameParts)
+          {
+            for (SimpleDateFormat dateFormat : DATE_FORMATS)
+            {
+              try
+              {
+                Date date = dateFormat.parse(archiveNamePart);
+                if (date != null)
+                {
+                  dateTime = date.getTime()/1000;
+                }
+              }
+              catch (ParseException exception)
+              {
+                // ignored
+              }
+              if (dateTime != 0) break;
+            }
+            if (dateTime != 0) break;
+          }
+          if (dateTime != 0) break;
+        }
+
+        // get date
+        dateTime = Dialogs.date(shell,BARControl.tr("Assign entity date"),(String)null,dateTime,BARControl.tr("Assign"));
         if (dateTime == null)
         {
           return;
