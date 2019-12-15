@@ -142,12 +142,16 @@ cd $packageName-$version
 --disable-epm \
   ;
 make
+make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
-wine-stable '/media/wine/drive_c/Program Files/Inno Setup 5/ISCC.exe'
+wine-stable '/media/wine/drive_c/Program Files/Inno Setup 5/ISCC.exe' \
+  /O$BASE_PATH \
+  /F$setupName \
+  bar.iss
 
 # get result
-cp -f /tmp/bar_[0-9]*.exe     $BASE_PATH/$setupName
-chown $userGroup $BASE_PATH/$setupName
+#cp -f /tmp/bar-setup-[0-9]*.exe $BASE_PATH/$setupName
+#chown $userGroup $BASE_PATH/$setupName
 
 md5sum $BASE_PATH/$setupName
 

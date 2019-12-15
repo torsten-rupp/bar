@@ -158,7 +158,8 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK_(getPauseCallback(),NULL),
+                                                            CALLBACK_(getCopyPauseCallback(),NULL),
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -213,7 +214,8 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK_(getPauseCallback(),NULL),
+                                                            CALLBACK_(getCopyPauseCallback(),NULL),
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -274,7 +276,8 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK_(getPauseCallback(),NULL),
+                                                            CALLBACK_(getCopyPauseCallback(),NULL),
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -323,7 +326,8 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK_(getPauseCallback(),NULL),
+                                                            CALLBACK_(getCopyPauseCallback(),NULL),
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -377,7 +381,8 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK_(getPauseCallback(),NULL),
+                                                            CALLBACK_(getCopyPauseCallback(),NULL),
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -432,7 +437,8 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                       Database_getTableColumnListUInt(fromColumnList,"minor",0LL)
                                                                                      );
                                                             },NULL),
-                                                            CALLBACK_(getPauseCallback(),NULL),
+                                                            CALLBACK_(getCopyPauseCallback(),NULL),
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -442,7 +448,8 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                return ERROR_NONE;
                              },NULL),
-                             CALLBACK_(getPauseCallback(),NULL),
+                             CALLBACK_(getCopyPauseCallback(),NULL),
+                             CALLBACK_(NULL,NULL),  // progress
                              NULL  // filter
                             );
 

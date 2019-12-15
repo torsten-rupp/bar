@@ -189,6 +189,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // progress
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -244,6 +245,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // progress
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -305,6 +307,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // progress
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -354,6 +357,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // progress
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -409,6 +413,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // progress
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -464,6 +469,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                                                   );
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(NULL,NULL),  // progress
                                                                                          "WHERE storageId=%lld",
                                                                                          fromStorageId
                                                                                         );
@@ -471,7 +477,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                                             return error;
                                                           },NULL),
-                                                          CALLBACK_(getPauseCallback(),NULL),
+                                                          CALLBACK_(getCopyPauseCallback(),NULL),
+                                                          CALLBACK_(NULL,NULL),  // progress
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -496,7 +503,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                return ERROR_NONE;
                              },NULL),
-                             CALLBACK_(getPauseCallback(),NULL),
+                             CALLBACK_(getCopyPauseCallback(),NULL),
+                             CALLBACK_(NULL,NULL),  // progress
                              NULL  // filter
                             );
   if (error != ERROR_NONE)
@@ -635,6 +643,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -690,6 +699,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -751,6 +761,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -800,6 +811,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -855,6 +867,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -910,6 +923,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                                                                      );
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
+                                                            CALLBACK_(NULL,NULL),  // progress
                                                             "WHERE storageId=%lld",
                                                             fromStorageId
                                                            );
@@ -931,7 +945,8 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
 
                                return error;
                              },NULL),
-                             CALLBACK_(getPauseCallback(),NULL),
+                             CALLBACK_(getCopyPauseCallback(),NULL),
+                             CALLBACK_(NULL,NULL),  // progress
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)

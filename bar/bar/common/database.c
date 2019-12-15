@@ -56,6 +56,8 @@
 #define _DATABASE_DEBUG_COPY_TABLE
 
 /***************************** Constants *******************************/
+#define MAX_INTERRUPT_COPY_TABLE_COUNT 128
+
 #define MAX_FORCE_CHECKPOINT_TIME (10LL*60LL*1000LL) // timeout for force execution of a checkpoint [ms]
 //#define CHECKPOINT_MODE           SQLITE_CHECKPOINT_RESTART
 #define CHECKPOINT_MODE           SQLITE_CHECKPOINT_TRUNCATE
@@ -3940,10 +3942,18 @@ bool Database_isLockPending(DatabaseHandle     *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->databaseNode != NULL);
 
-//TODO: still not implemented
-UNUSED_VARIABLE(lockType);
-
-  pendingFlag = (databaseHandle->databaseNode->pendingReadCount > 0);
+  switch (lockType)
+  {
+    case DATABASE_LOCK_TYPE_READ:
+      pendingFlag = (databaseHandle->databaseNode->pendingReadCount > 0);
+      break;
+    case DATABASE_LOCK_TYPE_READ_WRITE:
+      pendingFlag = (databaseHandle->databaseNode->pendingReadWriteCount > 0);
+      break;
+    default:
+      pendingFlag = FALSE;
+      break;
+  }
 
 #if 0
 if (pendingFlag)
@@ -4130,19 +4140,21 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
   return error;
 }
 
-Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
-                          DatabaseHandle                *toDatabaseHandle,
-                          const char                    *fromTableName,
-                          const char                    *toTableName,
-                          bool                          transactionFlag,
-                          uint64                        *duration,
-                          DatabaseCopyTableFunction     preCopyTableFunction,
-                          void                          *preCopyTableUserData,
-                          DatabaseCopyTableFunction     postCopyTableFunction,
-                          void                          *postCopyTableUserData,
-                          DatabasePauseCallbackFunction pauseCallbackFunction,
-                          void                          *pauseCallbackUserData,
-                          const char                    *fromAdditional,
+Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHandle,
+                          DatabaseHandle                       *toDatabaseHandle,
+                          const char                           *fromTableName,
+                          const char                           *toTableName,
+                          bool                                 transactionFlag,
+                          uint64                               *duration,
+                          DatabaseCopyTableFunction            preCopyTableFunction,
+                          void                                 *preCopyTableUserData,
+                          DatabaseCopyTableFunction            postCopyTableFunction,
+                          void                                 *postCopyTableUserData,
+                          DatabaseCopyPauseCallbackFunction    copyPauseCallbackFunction,
+                          void                                 *copyPauseCallbackUserData,
+                          DatabaseCopyProgressCallbackFunction copyProgressCallbackFunction,
+                          void                                 *copyProgressCallbackUserData,
+                          const char                           *fromAdditional,
                           ...
                          )
 {
@@ -4163,6 +4175,7 @@ Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
     while (0)
 
   Errors             error;
+  uint               n;
   uint64             t;
   DatabaseColumnList fromColumnList,toColumnList;
   DatabaseColumnNode *columnNode;
@@ -4311,6 +4324,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     #endif /* not NDEBUG */
 
     // copy rows
+    n = 0;
     while ((sqliteResult = sqliteStep(fromDatabaseHandle->handle,fromStatementHandle,fromDatabaseHandle->timeout)) == SQLITE_ROW)
     {
       #ifdef DATABASE_DEBUG_COPY_TABLE
@@ -4582,8 +4596,16 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
         }
       }
 
+      n++;
+
+      // progress
+      if (copyProgressCallbackFunction != NULL)
+      {
+        copyProgressCallbackFunction(copyProgressCallbackUserData);
+      }
+
       // pause
-      if ((pauseCallbackFunction != NULL) && pauseCallbackFunction(pauseCallbackUserData))
+      if ((copyPauseCallbackFunction != NULL) && copyPauseCallbackFunction(copyPauseCallbackUserData))
       {
         // end transaction
         if (transactionFlag)
@@ -4599,6 +4621,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
         END_TIMER();
 
         // wait
+fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
         BLOCK_DO({ end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
                    end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
                  },
@@ -4610,8 +4633,9 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
           {
             Misc_udelay(10LL*US_PER_SECOND);
           }
-          while (pauseCallbackFunction(pauseCallbackUserData));
+          while (copyPauseCallbackFunction(copyPauseCallbackUserData));
         });
+fprintf(stderr,"%s, %d: pause end\n",__FILE__,__LINE__);
 
         START_TIMER();
 
@@ -4625,6 +4649,47 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
             return error;
           }
         }
+      }
+
+      // interrupt copy
+      if (n > MAX_INTERRUPT_COPY_TABLE_COUNT)
+      {
+        if (   Database_isLockPending(toDatabaseHandle,DATABASE_LOCK_TYPE_READ)
+            || Database_isLockPending(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE)
+           )
+        {
+//Database_debugPrintInfo();
+          // end transaction
+          if (transactionFlag)
+          {
+            error = Database_endTransaction(toDatabaseHandle);
+            if (error != ERROR_NONE)
+            {
+              sqlite3_finalize(fromStatementHandle);
+              return error;
+            }
+          }
+
+fprintf(stderr,"%s, %d: interrupt\n",__FILE__,__LINE__);
+          END_TIMER();
+
+          Thread_yield();
+
+          START_TIMER();
+
+          // begin transaction
+          if (transactionFlag)
+          {
+            error = Database_beginTransaction(toDatabaseHandle,DATABASE_TRANSACTION_TYPE_DEFERRED,WAIT_FOREVER);
+            if (error != ERROR_NONE)
+            {
+              sqlite3_finalize(fromStatementHandle);
+              return error;
+            }
+          }
+        }
+
+        n = 0;
       }
     }  // while
 

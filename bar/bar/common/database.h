@@ -392,15 +392,26 @@ typedef Errors(*DatabaseCopyTableFunction)(const DatabaseColumnList *fromColumnL
                                           );
 
 /***********************************************************************\
-* Name   : DatabasePauseCallbackFunction
-* Purpose: call back to check for pausing
+* Name   : DatabaseCopyPauseCallbackFunction
+* Purpose: call back to check for pausing table copy
 * Input  : userData - user data
 * Output : -
 * Return : TRUE iff pause
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*DatabasePauseCallbackFunction)(void *userData);
+typedef bool(*DatabaseCopyPauseCallbackFunction)(void *userData);
+
+/***********************************************************************\
+* Name   : DatabaseCopyProgressCallbackFunction
+* Purpose: call back to report progress of table copy
+* Input  : userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 
 /***************************** Variables *******************************/
 
@@ -806,39 +817,45 @@ Errors Database_compare(DatabaseHandle *databaseHandleReference,
 /***********************************************************************\
 * Name   : Database_copyTable
 * Purpose: copy table content
-* Input  : fromDatabaseHandle    - from-database handle
-*          toDatabaseHandle      - fo-database handle
-*          fromTableName         - from-table name
-*          toTableName           - to-table name
-*          transactionFlag       - copy with transaction
-*          duration              - duration variable or NULL
-*          preCopyTableFunction  - pre-copy call-back function
-*          preCopyTableUserData  - user data for pre-copy call-back
-*          postCopyTableFunction - pre-copy call-back function
-*          postCopyTableUserData - user data for post-copy call-back
-*          pauseCallbackFunction - pause call-back
-*          pauseCallbackUserData - user data for pause call-back
-*          fromAdditional        - additional SQL condition
-*          ...                   - optional arguments for additional
-*                                  SQL condition
+* Input  : fromDatabaseHandle           - from-database handle
+*          toDatabaseHandle             - fo-database handle
+*          fromTableName                - from-table name
+*          toTableName                  - to-table name
+*          transactionFlag              - copy with transaction
+*          duration                     - duration variable or NULL
+*          preCopyTableFunction         - pre-copy call-back function
+*          preCopyTableUserData         - user data for pre-copy
+*                                         call-back
+*          postCopyTableFunction        - pre-copy call-back function
+*          postCopyTableUserData        - user data for post-copy
+*                                         call-back
+*          copyPauseCallbackFunction    - pause call-back
+*          copyPauseCallbackUserData    - user data for pause call-back
+*          copyProgressCallbackFunction - pause call-back
+*          copyProgressCallbackUserData - user data for pause call-back
+*          fromAdditional               - additional SQL condition
+*          ...                          - optional arguments for
+*                                         additional SQL condition
 * Output : duration - duration [ms]
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_copyTable(DatabaseHandle                *fromDatabaseHandle,
-                          DatabaseHandle                *toDatabaseHandle,
-                          const char                    *fromTableName,
-                          const char                    *toTableName,
-                          bool                          transactionFlag,
-                          uint64                        *duration,
-                          DatabaseCopyTableFunction     preCopyTableFunction,
-                          void                          *preCopyTableUserData,
-                          DatabaseCopyTableFunction     postCopyTableFunction,
-                          void                          *postCopyTableUserData,
-                          DatabasePauseCallbackFunction pauseCallbackFunction,
-                          void                          *pauseCallbackUserData,
-                          const char                    *fromAdditional,
+Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHandle,
+                          DatabaseHandle                       *toDatabaseHandle,
+                          const char                           *fromTableName,
+                          const char                           *toTableName,
+                          bool                                 transactionFlag,
+                          uint64                               *duration,
+                          DatabaseCopyTableFunction            preCopyTableFunction,
+                          void                                 *preCopyTableUserData,
+                          DatabaseCopyTableFunction            postCopyTableFunction,
+                          void                                 *postCopyTableUserData,
+                          DatabaseCopyPauseCallbackFunction    copyPauseCallbackFunction,
+                          void                                 *copyPauseCallbackUserData,
+                          DatabaseCopyProgressCallbackFunction copyProgressCallbackFunction,
+                          void                                 *copyProgressCallbackUserData,
+                          const char                           *fromAdditional,
                           ...
                          );
 

@@ -597,7 +597,7 @@ TARGETS                  = bar@EXEEXT@ \
                            bar-valgrind@EXEEXT@ \
                            $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                            $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
-                           bar-keygen \
+                           bar-keygen@SHELLEXT@ \
                            bar-sqlite3@EXEEXT@ \
                            destroyer@EXEEXT@ \
                            $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
@@ -2226,6 +2226,11 @@ install: \
 	$(INSTALL) -m 644 bar-debug@EXEEXT@.sym "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-keygen@SHELLEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
 	$(INSTALL) bar-sqlite3@EXEEXT@ "$(DESTDIR)$(INSTALL_BIN_DIR)"
+ifeq ($(PLATFORM),WINDOWS)
+	$(INSTALL) /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libgcc_s_sjlj-1.dll "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) /usr/lib/gcc/i686-w64-mingw32/7.3-win32/libstdc++-6.dll "$(DESTDIR)$(INSTALL_BIN_DIR)"
+	$(INSTALL) /usr/i686-w64-mingw32/lib/libwinpthread-1.dll "$(DESTDIR)$(INSTALL_BIN_DIR)"
+endif
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_CONFIG_DIR)"
 	if test ! -f "$(DESTDIR)$(INSTALL_CONFIG_DIR)/bar.cfg"; then \
           $(INSTALL) -m 600 bar.cfg "$(DESTDIR)$(INSTALL_CONFIG_DIR)"; \

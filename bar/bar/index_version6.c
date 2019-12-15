@@ -58,8 +58,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                 )
 {
   Errors  error;
-  int64   entityCount,storageCount;
-  uint    step,maxSteps;
+  int64   entityCount,storageCount,entriesCount;
   uint64  duration;
   IndexId entityId;
 
@@ -82,11 +81,12 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                            NULL,  // duration
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
-                           CALLBACK_(getPauseCallback(),NULL),
+                           CALLBACK_(getCopyPauseCallback(),NULL),
+                           CALLBACK_(NULL,NULL),  // progress
                            NULL  // filter
                           );
 
-  // get max. steps
+  // get max. steps (entities+storages+entries)
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entityCount,
                                 "entities",
@@ -101,22 +101,33 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                 &storageCount,
                                 "storage",
                                 "COUNT(id)",
-                                "WHERE entityId IS NULL"
+                                "WHERE id!=0"
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
-  maxSteps = entityCount+storageCount;
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &entriesCount,
+                                "entries",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
-              "%lld entities/%lld storages to import",
+              "%lld entities/%lld storages/%lld entries to import",
               entityCount,
-              storageCount
+              storageCount,
+              entriesCount
              );
 
   // transfer entities with storages and entries
+  initImportProgress(entityCount+storageCount+entriesCount);
   duration = 0LL;
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
@@ -236,6 +247,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      },NULL),
                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                      CALLBACK_(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(importProgress,NULL),  // progress
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -261,6 +273,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      },NULL),
                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                      CALLBACK_(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(importProgress,NULL),  // progress
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -286,6 +299,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      },NULL),
                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                      CALLBACK_(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(importProgress,NULL),  // progress
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -311,6 +325,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      },NULL),
                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                      CALLBACK_(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(importProgress,NULL),  // progress
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -336,6 +351,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      },NULL),
                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                      CALLBACK_(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(importProgress,NULL),  // progress
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -352,6 +368,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                                                      CALLBACK_(NULL,NULL),  // pre-copy
                                                                                                                      CALLBACK_(NULL,NULL),  // post-copy
                                                                                                                      CALLBACK_(NULL,NULL),  // pause
+                                                                                                                     CALLBACK_(importProgress,NULL),  // progress
                                                                                                                      "WHERE entryId=%lld",
                                                                                                                      fromEntryId
                                                                                                                     );
@@ -360,11 +377,13 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                         return error;
                                                                                       },NULL),
                                                                                       CALLBACK_(NULL,NULL),  // pause
+                                                                                      CALLBACK_(NULL,NULL),  // progress
                                                                                       "WHERE storageId=%lld",
                                                                                       fromStorageId
                                                                                      );
                                                           },NULL),
-                                                          CALLBACK_(getPauseCallback(),NULL),
+                                                          CALLBACK_(getCopyPauseCallback(),NULL),
+                                                          CALLBACK_(importProgress,NULL),  // progress
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
@@ -377,20 +396,21 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported entity #%"PRIi64": '%s' (%3d%%, %llus)",
+                                           "Imported entity #%"PRIi64": '%s' (%llus)",
                                            toEntityId,
                                            Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
-                                           (step*100)/maxSteps,
                                            (t1-t0)/US_PER_SECOND
                                           );
 
                                return ERROR_NONE;
                              },NULL),
-                             CALLBACK_(getPauseCallback(),NULL),
+                             CALLBACK_(getCopyPauseCallback(),NULL),
+                             CALLBACK_(importProgress,NULL),  // progress
                              "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
   {
+    doneImportProgress();
     return error;
   }
 
@@ -531,6 +551,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(importProgress,NULL),  // progress
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -556,6 +577,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(importProgress,NULL),  // progress
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -581,6 +603,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(importProgress,NULL),  // progress
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -606,6 +629,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(importProgress,NULL),  // progress
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -631,6 +655,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(importProgress,NULL),  // progress
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -647,6 +672,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          CALLBACK_(NULL,NULL),  // pre-copy
                                                                                          CALLBACK_(NULL,NULL),  // post-copy
                                                                                          CALLBACK_(NULL,NULL),  // pause
+                                                                                         CALLBACK_(importProgress,NULL),  // progress
                                                                                          "WHERE entryId=%lld",
                                                                                          fromEntryId
                                                                                         );
@@ -655,6 +681,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                             return error;
                                                           },NULL),
                                                           CALLBACK_(NULL,NULL),  // pause
+                                                          CALLBACK_(NULL,NULL),  // progress
                                                           "WHERE storageId=%lld",
                                                           fromStorageId
                                                          );
@@ -664,24 +691,24 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported storage #"PRIi64": '%s' (%3d%%, %llus)",
+                                           "Imported storage #"PRIi64": '%s' (%llus)",
                                            toStorageId,
                                            Database_getTableColumnListCString(fromColumnList,"name",""),
-                                           (step*100)/maxSteps,
                                            (t1-t0)/US_PER_SECOND
                                           );
-
-                               step++;
 
                                return error;
                              },NULL),
                              CALLBACK_(NULL,NULL),
+                             CALLBACK_(importProgress,NULL),  // progress
                              "WHERE entityId IS NULL"
                             );
   if (error != ERROR_NONE)
   {
+    doneImportProgress();
     return error;
   }
+  doneImportProgress();
 
   return ERROR_NONE;
 }
