@@ -1714,6 +1714,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     {
                       createInfo->statusInfo.total.count++;
                       createInfo->statusInfo.total.size += fileInfo.size;
+fprintf(stderr,"%s, %d: total %lu %llu\n",__FILE__,__LINE__,createInfo->statusInfo.total.count,createInfo->statusInfo.total.size);
                     }
                   }
                 }
@@ -1903,9 +1904,9 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         FileInfo fileInfo;
 
         // pause
-        Storage_pause(&createInfo->storageInfo);
+        pauseCreate(createInfo);
 
-        // get next file/directory to process
+        // get next entry to process
         StringList_removeLast(&nameList,name);
 
         // read file info
@@ -1989,246 +1990,246 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         break; /* not reached */
                     }
                   }
+                }
 
-                  // open directory contents
-                  error = File_openDirectoryList(&directoryListHandle,name);
-                  if (error == ERROR_NONE)
+                // open directory contents
+                error = File_openDirectoryList(&directoryListHandle,name);
+                if (error == ERROR_NONE)
+                {
+                  // read directory contents
+                  while (   (createInfo->failError == ERROR_NONE)
+                         && !isAborted(createInfo)
+                         && !File_endOfDirectoryList(&directoryListHandle)
+                        )
                   {
-                    // read directory contents
-                    while (   (createInfo->failError == ERROR_NONE)
-                           && !isAborted(createInfo)
-                           && !File_endOfDirectoryList(&directoryListHandle)
-                          )
+                    // pause
+                    pauseCreate(createInfo);
+
+                    // read next directory entry
+                    error = File_readDirectoryList(&directoryListHandle,fileName);
+                    if (error != ERROR_NONE)
                     {
-                      // pause
-                      pauseCreate(createInfo);
+                      continue;
+                    }
 
-                      // read next directory entry
-                      error = File_readDirectoryList(&directoryListHandle,fileName);
-                      if (error != ERROR_NONE)
-                      {
-                        continue;
-                      }
+                    // read file info
+                    error = File_getInfo(&fileInfo,fileName);
+                    if (error != ERROR_NONE)
+                    {
+                      continue;
+                    }
 
-                      // read file info
-                      error = File_getInfo(&fileInfo,fileName);
-                      if (error != ERROR_NONE)
+                    if (isIncluded(includeEntryNode,fileName))
+                    {
+                      if (!isInExcludedList(createInfo->excludePatternList,fileName))
                       {
-                        continue;
-                      }
-
-                      if (isIncluded(includeEntryNode,fileName))
-                      {
-                        if (!isInExcludedList(createInfo->excludePatternList,fileName))
+                        if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
                         {
-                          if (createInfo->jobOptions->ignoreNoDumpAttributeFlag || !File_hasAttributeNoDump(&fileInfo))
+                          switch (fileInfo.type)
                           {
-                            switch (fileInfo.type)
-                            {
-                              case FILE_TYPE_FILE:
-                                if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
-                                {
-                                  // add to known names history
-                                  Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
+                            case FILE_TYPE_FILE:
+                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                              {
+                                // add to known names history
+                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
-                                  switch (includeEntryNode->type)
-                                  {
-                                    case ENTRY_TYPE_FILE:
-                                      if (   !createInfo->partialFlag
-                                          || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                          )
+                                switch (includeEntryNode->type)
+                                {
+                                  case ENTRY_TYPE_FILE:
+                                    if (   !createInfo->partialFlag
+                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                        )
+                                    {
+                                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                       {
-                                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
-                                        {
-                                          createInfo->statusInfo.total.count++;
-                                          createInfo->statusInfo.total.size += fileInfo.size;
-                                        }
+                                        createInfo->statusInfo.total.count++;
+                                        createInfo->statusInfo.total.size += fileInfo.size;
                                       }
-                                      break;
-                                    case ENTRY_TYPE_IMAGE:
-                                      // nothing to do
-                                      break;
-                                    default:
-                                      #ifndef NDEBUG
-                                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                      #endif /* NDEBUG */
-                                      break; /* not reached */
-                                  }
+                                    }
+                                    break;
+                                  case ENTRY_TYPE_IMAGE:
+                                    // nothing to do
+                                    break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
                                 }
-                                break;
-                              case FILE_TYPE_DIRECTORY:
-                                // add to name list
-                                StringList_append(&nameList,fileName);
-                                break;
-                              case FILE_TYPE_LINK:
-                                if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
-                                {
-                                  // add to known names history
-                                  Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
+                              }
+                              break;
+                            case FILE_TYPE_DIRECTORY:
+                              // add to name list
+                              StringList_append(&nameList,fileName);
+                              break;
+                            case FILE_TYPE_LINK:
+                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                              {
+                                // add to known names history
+                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
 
-                                  switch (includeEntryNode->type)
-                                  {
-                                    case ENTRY_TYPE_FILE:
-                                      if (   !createInfo->partialFlag
-                                          || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                         )
+                                switch (includeEntryNode->type)
+                                {
+                                  case ENTRY_TYPE_FILE:
+                                    if (   !createInfo->partialFlag
+                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                       )
+                                    {
+                                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                       {
-                                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
-                                        {
-                                          createInfo->statusInfo.total.count++;
-                                        }
+                                        createInfo->statusInfo.total.count++;
                                       }
-                                      break;
-                                    case ENTRY_TYPE_IMAGE:
-                                      // nothing to do
-                                      break;
-                                    default:
-                                      #ifndef NDEBUG
-                                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                      #endif /* NDEBUG */
-                                      break; /* not reached */
-                                  }
+                                    }
+                                    break;
+                                  case ENTRY_TYPE_IMAGE:
+                                    // nothing to do
+                                    break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
                                 }
-                                break;
-                              case FILE_TYPE_HARDLINK:
-                                if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                              }
+                              break;
+                            case FILE_TYPE_HARDLINK:
+                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                              {
+                                // add to known names history
+                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
+
+                                switch (includeEntryNode->type)
                                 {
-                                  // add to known names history
-                                  Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
+                                  case ENTRY_TYPE_FILE:
+                                    {
+                                      union { void *value; HardLinkInfo *hardLinkInfo; } data;
+                                      HardLinkInfo                                       hardLinkInfo;
 
-                                  switch (includeEntryNode->type)
-                                  {
-                                    case ENTRY_TYPE_FILE:
-                                      {
-                                        union { void *value; HardLinkInfo *hardLinkInfo; } data;
-                                        HardLinkInfo                                       hardLinkInfo;
-
-                                        if (  !createInfo->partialFlag
-                                            || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
-                                            )
-                                        {
-                                          if (Dictionary_find(&hardLinksDictionary,
-                                                              &fileInfo.id,
-                                                              sizeof(fileInfo.id),
-                                                              &data.value,
-                                                              NULL
-                                                             )
-                                              )
-                                          {
-                                            // append name to hard link name list
-                                            StringList_append(&data.hardLinkInfo->nameList,fileName);
-
-                                            if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
-                                            {
-                                              // found last hardlink -> clear entry
-                                              Dictionary_remove(&hardLinksDictionary,
-                                                                &fileInfo.id,
-                                                                sizeof(fileInfo.id)
-                                                               );
-                                            }
-                                          }
-                                          else
-                                          {
-                                            // create hard link name list
-                                            if (createInfo->partialFlag && isPrintInfo(2))
-                                            {
-                                              printIncrementalInfo(&createInfo->namesDictionary,
-                                                                    fileName,
-                                                                    &fileInfo.cast
-                                                                  );
-                                            }
-
-                                            hardLinkInfo.count = fileInfo.linkCount;
-                                            StringList_init(&hardLinkInfo.nameList);
-                                            StringList_append(&hardLinkInfo.nameList,fileName);
-                                            hardLinkInfo.size  = fileInfo.size;
-
-                                            if (!Dictionary_add(&hardLinksDictionary,
-                                                                &fileInfo.id,
-                                                                sizeof(fileInfo.id),
-                                                                &hardLinkInfo,
-                                                                sizeof(hardLinkInfo)
-                                                               )
-                                                )
-                                            {
-                                              HALT_INSUFFICIENT_MEMORY();
-                                            }
-
-                                            // update status
-                                            STATUS_INFO_UPDATE(createInfo,fileName,NULL)
-                                            {
-                                              createInfo->statusInfo.total.count++;
-                                              createInfo->statusInfo.total.size += fileInfo.size;
-                                            }
-                                          }
-                                        }
-                                      }
-                                      break;
-                                    case ENTRY_TYPE_IMAGE:
-                                      // nothing to do
-                                      break;
-                                    default:
-                                      #ifndef NDEBUG
-                                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                      #endif /* NDEBUG */
-                                      break; /* not reached */
-                                  }
-                                }
-                                break;
-                              case FILE_TYPE_SPECIAL:
-                                if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
-                                {
-                                  // add to known names history
-                                  Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
-
-                                  switch (includeEntryNode->type)
-                                  {
-                                    case ENTRY_TYPE_FILE:
                                       if (  !createInfo->partialFlag
                                           || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
                                           )
                                       {
-                                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                                        if (Dictionary_find(&hardLinksDictionary,
+                                                            &fileInfo.id,
+                                                            sizeof(fileInfo.id),
+                                                            &data.value,
+                                                            NULL
+                                                           )
+                                            )
                                         {
-                                          createInfo->statusInfo.total.count++;
-                                          if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
-                                              && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
-                                             )
+                                          // append name to hard link name list
+                                          StringList_append(&data.hardLinkInfo->nameList,fileName);
+
+                                          if (StringList_count(&data.hardLinkInfo->nameList) >= data.hardLinkInfo->count)
                                           {
+                                            // found last hardlink -> clear entry
+                                            Dictionary_remove(&hardLinksDictionary,
+                                                              &fileInfo.id,
+                                                              sizeof(fileInfo.id)
+                                                             );
+                                          }
+                                        }
+                                        else
+                                        {
+                                          // create hard link name list
+                                          if (createInfo->partialFlag && isPrintInfo(2))
+                                          {
+                                            printIncrementalInfo(&createInfo->namesDictionary,
+                                                                  fileName,
+                                                                  &fileInfo.cast
+                                                                );
+                                          }
+
+                                          hardLinkInfo.count = fileInfo.linkCount;
+                                          StringList_init(&hardLinkInfo.nameList);
+                                          StringList_append(&hardLinkInfo.nameList,fileName);
+                                          hardLinkInfo.size  = fileInfo.size;
+
+                                          if (!Dictionary_add(&hardLinksDictionary,
+                                                              &fileInfo.id,
+                                                              sizeof(fileInfo.id),
+                                                              &hardLinkInfo,
+                                                              sizeof(hardLinkInfo)
+                                                             )
+                                              )
+                                          {
+                                            HALT_INSUFFICIENT_MEMORY();
+                                          }
+
+                                          // update status
+                                          STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                                          {
+                                            createInfo->statusInfo.total.count++;
                                             createInfo->statusInfo.total.size += fileInfo.size;
                                           }
                                         }
                                       }
-                                      break;
-                                    case ENTRY_TYPE_IMAGE:
-                                      if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                    }
+                                    break;
+                                  case ENTRY_TYPE_IMAGE:
+                                    // nothing to do
+                                    break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
+                                }
+                              }
+                              break;
+                            case FILE_TYPE_SPECIAL:
+                              if (!Dictionary_contains(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName)))
+                              {
+                                // add to known names history
+                                Dictionary_add(&duplicateNamesDictionary,String_cString(fileName),String_length(fileName),NULL,0);
+
+                                switch (includeEntryNode->type)
+                                {
+                                  case ENTRY_TYPE_FILE:
+                                    if (  !createInfo->partialFlag
+                                        || isFileChanged(&createInfo->namesDictionary,fileName,&fileInfo)
+                                        )
+                                    {
+                                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
                                       {
-                                        STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                                        createInfo->statusInfo.total.count++;
+                                        if (   (includeEntryNode->type == ENTRY_TYPE_IMAGE)
+                                            && (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                           )
                                         {
-                                          createInfo->statusInfo.total.count++;
                                           createInfo->statusInfo.total.size += fileInfo.size;
                                         }
                                       }
-                                      break;
-                                    default:
-                                      #ifndef NDEBUG
-                                        HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-                                      #endif /* NDEBUG */
-                                      break; /* not reached */
-                                  }
+                                    }
+                                    break;
+                                  case ENTRY_TYPE_IMAGE:
+                                    if (fileInfo.specialType == FILE_SPECIAL_TYPE_BLOCK_DEVICE)
+                                    {
+                                      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                                      {
+                                        createInfo->statusInfo.total.count++;
+                                        createInfo->statusInfo.total.size += fileInfo.size;
+                                      }
+                                    }
+                                    break;
+                                  default:
+                                    #ifndef NDEBUG
+                                      HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                                    #endif /* NDEBUG */
+                                    break; /* not reached */
                                 }
-                                break;
-                              default:
-                                break;
-                            }
+                              }
+                              break;
+                            default:
+                              break;
                           }
                         }
                       }
                     }
-
-                    // close directory
-                    File_closeDirectoryList(&directoryListHandle);
                   }
+
+                  // close directory
+                  File_closeDirectoryList(&directoryListHandle);
                 }
               }
               break;
