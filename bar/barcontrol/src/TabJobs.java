@@ -259,8 +259,8 @@ public class TabJobs
           case SPECIAL:
             switch (specialType)
             {
-              case CHARACTER_DEVICE: image = IMAGE_FILE;      break;
-              case BLOCK_DEVICE:     image = IMAGE_FILE;      break;
+              case DEVICE_CHARACTER: image = IMAGE_FILE;      break;
+              case DEVICE_BLOCK:     image = IMAGE_FILE;      break;
               case FIFO:             image = IMAGE_FILE;      break;
               case SOCKET:           image = IMAGE_FILE;      break;
               case OTHER:            image = IMAGE_FILE;      break;
@@ -11573,9 +11573,9 @@ throw new Error("NYI");
 
                                          switch (specialType)
                                          {
-                                           case CHARACTER_DEVICE:
+                                           case DEVICE_CHARACTER:
                                              // create file tree data
-                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.CHARACTER_DEVICE,dateTime,name,false,noDumpFlag);
+                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.DEVICE_CHARACTER,dateTime,name,false,noDumpFlag);
 
                                              // insert entry
                                              if (!treeItem.isDisposed())
@@ -11598,9 +11598,9 @@ throw new Error("NYI");
                                                });
                                              }
                                              break;
-                                           case BLOCK_DEVICE:
+                                           case DEVICE_BLOCK:
                                              // create file tree data
-                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.BLOCK_DEVICE,size,dateTime,name,false,noDumpFlag);
+                                             fileTreeData = new FileTreeData(name,BARServer.SpecialTypes.DEVICE_BLOCK,size,dateTime,name,false,noDumpFlag);
 
                                              // insert entry
                                              if (!treeItem.isDisposed())
@@ -11759,8 +11759,8 @@ throw new Error("NYI");
         case SPECIAL:
           switch (fileTreeData.specialType)
           {
-            case CHARACTER_DEVICE: image = IMAGE_FILE;      break;
-            case BLOCK_DEVICE:     image = IMAGE_FILE;      break;
+            case DEVICE_CHARACTER: image = IMAGE_FILE;      break;
+            case DEVICE_BLOCK:     image = IMAGE_FILE;      break;
             case FIFO:             image = IMAGE_FILE;      break;
             case SOCKET:           image = IMAGE_FILE;      break;
             case OTHER:            image = IMAGE_FILE;      break;

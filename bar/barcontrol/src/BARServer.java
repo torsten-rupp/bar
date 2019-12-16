@@ -1519,8 +1519,8 @@ public class BARServer
   {
     NONE,
 
-    CHARACTER_DEVICE,
-    BLOCK_DEVICE,
+    DEVICE_CHARACTER,
+    DEVICE_BLOCK,
     FIFO,
     SOCKET,
     OTHER
