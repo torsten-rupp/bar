@@ -282,7 +282,7 @@ LOCAL DatabaseList databaseList;
 #endif /* not NDEBUG */
 
 #ifdef DATABASE_LOCK_PER_INSTANCE
-  #define DATABASE_HANDLE_DO(databaseHandle,block) \
+  #define DATABASE_HANDLE_LOCKED_DO(databaseHandle,block) \
     do \
     { \
       int __result; \
@@ -302,7 +302,7 @@ LOCAL DatabaseList databaseList;
       UNUSED_VARIABLE(__result); \
     } \
     while (0)
-  #define DATABASE_HANDLE_DOX(result,databaseHandle,block) \
+  #define DATABASE_HANDLE_LOCKED_DOX(result,databaseHandle,block) \
     do \
     { \
       int __result; \
@@ -331,7 +331,7 @@ LOCAL DatabaseList databaseList;
       TRUE
   #endif /* PLATFORM_... */
 #else /* not DATABASE_LOCK_PER_INSTANCE */
-  #define DATABASE_HANDLE_DO(databaseHandle,block) \
+  #define DATABASE_HANDLE_LOCKED_DO(databaseHandle,block) \
     do \
     { \
       int __result; \
@@ -359,7 +359,7 @@ LOCAL DatabaseList databaseList;
       UNUSED_VARIABLE(__result); \
     } \
     while (0)
-  #define DATABASE_HANDLE_DOX(result,databaseHandle,block) \
+  #define DATABASE_HANDLE_LOCKED_DOX(result,databaseHandle,block) \
     do \
     { \
       int __result; \
@@ -3564,8 +3564,8 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
     case DATABASE_LOCK_TYPE_NONE:
       break;
     case DATABASE_LOCK_TYPE_READ:
-      DATABASE_HANDLE_DOX(lockedFlag,
-                          databaseHandle,
+      DATABASE_HANDLE_LOCKED_DOX(lockedFlag,
+                                 databaseHandle,
       {
 #if 0
         assertx(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle) || ((databaseHandle->databaseNode->pendingReadCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount == 0)),
@@ -3654,8 +3654,8 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
       });
       break;
     case DATABASE_LOCK_TYPE_READ_WRITE:
-      DATABASE_HANDLE_DOX(lockedFlag,
-                          databaseHandle,
+      DATABASE_HANDLE_LOCKED_DOX(lockedFlag,
+                                 databaseHandle,
       {
 #if 0
         assertx(isReadLock(databaseHandle) || isReadWriteLock(databaseHandle) || ((databaseHandle->databaseNode->pendingReadCount == 0) && (databaseHandle->databaseNode->pendingReadWriteCount == 0)),
@@ -3799,7 +3799,7 @@ void Database_interrupt(DatabaseHandle *databaseHandle)
     case DATABASE_LOCK_TYPE_NONE:
       break;
     case DATABASE_LOCK_TYPE_READ:
-      DATABASE_HANDLE_DO(databaseHandle,
+      DATABASE_HANDLE_LOCKED_DO(databaseHandle,
       {
         #ifndef NDEBUG
           databaseHandle->debug.locked.threadId = THREAD_ID_NONE;
@@ -3856,13 +3856,13 @@ fprintf(stderr,"%s, %d: %x trigger R %p %llu %d\n",__FILE__,__LINE__,Thread_getC
 #endif
         if (databaseHandle->databaseNode->readCount == 0)
         {
+          triggerUnlockReadWrite(databaseHandle,DATABASE_LOCK_TYPE_READ);
+          triggerUnlockRead(databaseHandle,DATABASE_LOCK_TYPE_READ);
         }
-        triggerUnlockReadWrite(databaseHandle,DATABASE_LOCK_TYPE_READ);
-        triggerUnlockRead(databaseHandle,DATABASE_LOCK_TYPE_READ);
       });
       break;
     case DATABASE_LOCK_TYPE_READ_WRITE:
-      DATABASE_HANDLE_DO(databaseHandle,
+      DATABASE_HANDLE_LOCKED_DO(databaseHandle,
       {
         assert(isReadWriteLock(databaseHandle));
         assert(!Thread_equalThreads(databaseHandle->databaseNode->readWriteLockedBy,THREAD_ID_NONE));
@@ -3924,9 +3924,9 @@ fprintf(stderr,"%s, %d: %x trigger RW %p %llu %d\n",__FILE__,__LINE__,Thread_get
 #endif
         if (databaseHandle->databaseNode->readWriteCount == 0)
         {
+          triggerUnlockReadWrite(databaseHandle,DATABASE_LOCK_TYPE_READ);
+          triggerUnlockRead(databaseHandle,DATABASE_LOCK_TYPE_READ);
         }
-        triggerUnlockReadWrite(databaseHandle,DATABASE_LOCK_TYPE_READ);
-        triggerUnlockRead(databaseHandle,DATABASE_LOCK_TYPE_READ);
       });
       break;
   }
@@ -5496,10 +5496,9 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
     #ifdef DATABASE_USE_ATOMIC_INCREMENT
     #else /* not DATABASE_USE_ATOMIC_INCREMENT */
     #endif /* DATABASE_USE_ATOMIC_INCREMENT */
-    DATABASE_HANDLE_DO(databaseHandle,
+    DATABASE_HANDLE_LOCKED_DO(databaseHandle,
     {
       assert(databaseHandle->databaseNode->transactionCount == 0);
-//      ATOMIC_INCREMENT(databaseHandle->databaseNode->transactionCount);
       databaseHandle->databaseNode->transactionCount++;
     });
 
@@ -5559,18 +5558,16 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
     // decrement transaction count
-    DATABASE_HANDLE_DO(databaseHandle,
+    DATABASE_HANDLE_LOCKED_DO(databaseHandle,
     {
       assert(databaseHandle->databaseNode->transactionCount > 0);
       #ifdef DATABASE_USE_ATOMIC_INCREMENT
       #else /* not DATABASE_USE_ATOMIC_INCREMENT */
       #endif /* DATABASE_USE_ATOMIC_INCREMENT */
-//      ATOMIC_DECREMENT(databaseHandle->databaseNode->transactionCount);
       databaseHandle->databaseNode->transactionCount--;
       if (databaseHandle->databaseNode->transactionCount == 0)
       {
         triggerUnlockTransaction(databaseHandle);
-
 #if 0
         if      (databaseHandle->databaseNode->pendingReadCount > 0)
         {
@@ -5671,19 +5668,17 @@ Errors Database_removeColumn(DatabaseHandle *databaseHandle,
   #endif /* not NDEBUG */
 
   #ifdef DATABASE_SUPPORT_TRANSACTIONS
-    DATABASE_HANDLE_DO(databaseHandle,
+    DATABASE_HANDLE_LOCKED_DO(databaseHandle,
     {
       assert(databaseHandle->databaseNode->transactionCount > 0);
       #ifdef DATABASE_USE_ATOMIC_INCREMENT
       #else /* not DATABASE_USE_ATOMIC_INCREMENT */
       #endif /* DATABASE_USE_ATOMIC_INCREMENT */
-//      ATOMIC_DECREMENT(databaseHandle->databaseNode->transactionCount);
       databaseHandle->databaseNode->transactionCount--;
       if (databaseHandle->databaseNode->transactionCount == 0)
       {
 //fprintf(stderr,"%s, %d: trigger transaction %p %d %p\n",__FILE__,__LINE__,databaseHandle->databaseNode,databaseHandle->databaseNode->transactionCount,&databaseHandle->databaseNode->transactionTrigger);
         triggerUnlockTransaction(databaseHandle);
-
 #if 0
         if      (databaseHandle->databaseNode->pendingReadCount > 0)
         {
