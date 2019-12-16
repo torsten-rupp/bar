@@ -2731,6 +2731,7 @@ public class TabStatus
                                                     ),
                                  0  // debugLevel
                                 );
+        updateJobList();
       }
       catch (Exception exception)
       {
@@ -2853,6 +2854,7 @@ public class TabStatus
             {
               public void run()
               {
+                updateJobList();
                 busyDialog.close();
               }
             });
