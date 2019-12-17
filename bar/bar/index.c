@@ -1412,7 +1412,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
               LOG_TYPE_INDEX,
               "INDEX",
               "Import index database '%s' (version %d)",
-              String_cString(oldDatabaseFileName)
+              String_cString(oldDatabaseFileName),
               indexVersion
              );
   switch (indexVersion)
