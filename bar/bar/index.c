@@ -638,7 +638,7 @@ LOCAL void importProgress(void *userData)
      )
   {
     elapsedTime       = now-importStartTimestamp;
-    estimatedRestTime = (uint)((elapsedTime*100LL)/(uint64)progress-elapsedTime);
+    estimatedRestTime = (uint)((elapsedTime*1000LL)/(uint64)progress-elapsedTime);
 
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
