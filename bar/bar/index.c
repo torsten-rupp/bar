@@ -644,7 +644,7 @@ LOCAL void importProgress(void *userData)
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Imported %0.1f%%, estimated rest time %umin:%02us",
-                (float)progress/1000,
+                ((float)progress)/1000.0,
                 (estimatedRestTime/US_PER_SECOND)/60,
                 (estimatedRestTime/US_PER_SECOND)%60
                );
