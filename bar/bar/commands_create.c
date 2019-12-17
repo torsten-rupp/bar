@@ -1714,7 +1714,6 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                     {
                       createInfo->statusInfo.total.count++;
                       createInfo->statusInfo.total.size += fileInfo.size;
-fprintf(stderr,"%s, %d: total %lu %llu\n",__FILE__,__LINE__,createInfo->statusInfo.total.count,createInfo->statusInfo.total.size);
                     }
                   }
                 }
