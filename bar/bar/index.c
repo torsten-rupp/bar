@@ -623,8 +623,8 @@ LOCAL void importProgress(void *userData)
   uint   progress;
   uint   importLastProgress;
   uint64 now;
-  uint64 elapsedTime;
-  uint   estimatedRestTime;
+  uint64 elapsedTime,importTotalTime;
+  uint64 estimatedRestTime;
 
   UNUSED_VARIABLE(userData);
 
@@ -638,15 +638,16 @@ LOCAL void importProgress(void *userData)
      )
   {
     elapsedTime       = now-importStartTimestamp;
-    estimatedRestTime = (uint)((elapsedTime*1000LL)/(uint64)progress-elapsedTime);
+    importTotalTime   = (elapsedTime*importMaxSteps)/importSteps;
+    estimatedRestTime = importTotalTime-elapsedTime;
 
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Imported %0.1f%%, estimated rest time %umin:%02us",
                 (float)progress/10.0,
-                (estimatedRestTime/US_PER_SECOND)/60,
-                (estimatedRestTime/US_PER_SECOND)%60
+                (uint)((estimatedRestTime/US_PER_SECOND)/60LL),
+                (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
                );
     importLastProgressSum       += progress;
     importLastProgressCount     += 1;
