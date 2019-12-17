@@ -176,6 +176,10 @@ LOCAL Semaphore                  indexThreadTrigger;
 LOCAL Thread                     indexThread;    // upgrad/clean-up thread
 LOCAL bool                       quitFlag;
 
+LOCAL uint64                     importSteps,importMaxSteps;
+LOCAL uint                       importLastProgress;
+LOCAL uint64                     importStartTimestamp;
+
 #ifndef NDEBUG
   void const *indexBusyStackTrace[32];
   uint       indexBusyStackTraceSize;
@@ -571,10 +575,6 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
                         );
 }
 
-LOCAL uint64 importSteps,importMaxSteps;
-LOCAL uint   importLastProgress;
-LOCAL uint64 importStartTimestamp;
-
 /***********************************************************************\
 * Name   : initImportProgress
 * Purpose: init import progress
@@ -889,7 +889,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                                                                          }
                                                                                          if (error == ERROR_NONE)
                                                                                          {
- //fprintf(stderr,"%s, %d: copy i\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy i\n",__FILE__,__LINE__);
                                                                                            error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                       &newIndexHandle->databaseHandle,
                                                                                                                       "imageEntries",
@@ -915,7 +915,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                                                                          }
                                                                                          if (error == ERROR_NONE)
                                                                                          {
- //fprintf(stderr,"%s, %d: copy d\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy d\n",__FILE__,__LINE__);
                                                                                            error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                       &newIndexHandle->databaseHandle,
                                                                                                                       "directoryEntries",
@@ -941,7 +941,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                                                                          }
                                                                                          if (error == ERROR_NONE)
                                                                                          {
- //fprintf(stderr,"%s, %d: copy l\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy l\n",__FILE__,__LINE__);
                                                                                            error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                       &newIndexHandle->databaseHandle,
                                                                                                                       "linkEntries",
@@ -967,7 +967,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                                                                          }
                                                                                          if (error == ERROR_NONE)
                                                                                          {
- //fprintf(stderr,"%s, %d: copy h\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy h\n",__FILE__,__LINE__);
                                                                                            error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                       &newIndexHandle->databaseHandle,
                                                                                                                       "hardlinkEntries",
@@ -993,7 +993,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                                                                          }
                                                                                          if (error == ERROR_NONE)
                                                                                          {
- //fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: copy s\n",__FILE__,__LINE__);
                                                                                            error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                       &newIndexHandle->databaseHandle,
                                                                                                                       "specialEntries",
