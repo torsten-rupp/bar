@@ -176,9 +176,10 @@ LOCAL Semaphore                  indexThreadTrigger;
 LOCAL Thread                     indexThread;    // upgrad/clean-up thread
 LOCAL bool                       quitFlag;
 
+LOCAL uint64                     importStartTimestamp;
 LOCAL uint64                     importSteps,importMaxSteps;
 LOCAL uint                       importLastProgress;  // last progress [1/1000]
-LOCAL uint64                     importStartTimestamp;
+LOCAL uint64                     importLastProgressTimestamp;
 
 #ifndef NDEBUG
   void const *indexBusyStackTrace[32];
@@ -586,10 +587,11 @@ LOCAL void fixBrokenIds(IndexHandle *indexHandle, const char *tableName)
 
 LOCAL void initImportProgress(uint64 maxSteps)
 {
-  importSteps          = 0;
-  importMaxSteps       = maxSteps;
-  importLastProgress   = 0;
-  importStartTimestamp = Misc_getTimestamp();
+  importStartTimestamp        = Misc_getTimestamp();
+  importSteps                 = 0;
+  importMaxSteps              = maxSteps;
+  importLastProgress          = 0;
+  importLastProgressTimestamp = 0LL;
 }
 
 /***********************************************************************\
@@ -608,7 +610,7 @@ LOCAL void doneImportProgress(void)
 /***********************************************************************\
 * Name   : importProgress
 * Purpose: log import progress
-* Input  : progress - progress (0..100%)
+* Input  : userData - user data (not used)
 * Output : -
 * Return : -
 * Notes  : increment step counter for each call!
@@ -617,6 +619,7 @@ LOCAL void doneImportProgress(void)
 LOCAL void importProgress(void *userData)
 {
   uint   progress;
+  uint64 now;
   uint64 elapsedTime;
   uint   estimatedRestTime;
 
@@ -625,9 +628,12 @@ LOCAL void importProgress(void *userData)
   importSteps++;
 
   progress = (importSteps*1000)/importMaxSteps;
-  if (progress > importLastProgress)
+  now      = Misc_getTimestamp();
+  if (   (progress > importLastProgress)
+      && (now > (importLastProgressTimestamp+30*US_PER_SECOND))
+     )
   {
-    elapsedTime       = Misc_getTimestamp()-importStartTimestamp;
+    elapsedTime       = now-importStartTimestamp;
     estimatedRestTime = (uint)((elapsedTime*100LL)/(uint64)progress-elapsedTime);
 
     plogMessage(NULL,  // logHandle
@@ -638,7 +644,8 @@ LOCAL void importProgress(void *userData)
                 (estimatedRestTime/US_PER_SECOND)/60,
                 (estimatedRestTime/US_PER_SECOND)%60
                );
-    importLastProgress = progress;
+    importLastProgress          = progress;
+    importLastProgressTimestamp = now;
   }
 }
 
