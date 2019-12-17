@@ -6289,6 +6289,7 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
     // suspend all slaves
     if (serverMode == SERVER_MODE_MASTER)
     {
+      error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
       {
         if (Connector_isAuthorized(&slaveNode->connectorInfo))
@@ -6300,13 +6301,13 @@ LOCAL void serverCommand_pause(ClientInfo *clientInfo, IndexHandle *indexHandle,
                                            "SUSPEND modeMask=%S",
                                            modeMask
                                           );
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&serverStateLock);
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-            return;
-          }
         }
+      }
+      if (error != ERROR_NONE)
+      {
+        Semaphore_unlock(&serverStateLock);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+        return;
       }
     }
 
@@ -6406,6 +6407,7 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
     // suspend all slaves
     if (serverMode == SERVER_MODE_MASTER)
     {
+      error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
       {
         if (Connector_isAuthorized(&slaveNode->connectorInfo))
@@ -6417,13 +6419,13 @@ LOCAL void serverCommand_suspend(ClientInfo *clientInfo, IndexHandle *indexHandl
                                            "SUSPEND modeMask=%S",
                                            modeMask
                                           );
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&serverStateLock);
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-            return;
-          }
         }
+      }
+      if (error != ERROR_NONE)
+      {
+        Semaphore_unlock(&serverStateLock);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+        return;
       }
     }
 
@@ -6481,6 +6483,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
     // set running state on slaves
     if (serverMode == SERVER_MODE_MASTER)
     {
+      error = ERROR_NONE;
       JOB_SLAVE_LIST_ITERATEX(slaveNode,error == ERROR_NONE)
       {
         if (Connector_isAuthorized(&slaveNode->connectorInfo))
@@ -6491,13 +6494,13 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
                                            CALLBACK_(NULL,NULL),
                                            "CONTINUE"
                                           );
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&serverStateLock);
-            ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-            return;
-          }
         }
+      }
+      if (error != ERROR_NONE)
+      {
+        Semaphore_unlock(&serverStateLock);
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+        return;
       }
     }
 
