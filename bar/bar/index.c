@@ -644,7 +644,7 @@ LOCAL void importProgress(void *userData)
                 LOG_TYPE_INDEX,
                 "INDEX",
                 "Imported %0.1f%%, estimated rest time %umin:%02us",
-                ((float)progress)/1000.0,
+                (float)progress/10.0,
                 (estimatedRestTime/US_PER_SECOND)/60,
                 (estimatedRestTime/US_PER_SECOND)%60
                );
@@ -1408,6 +1408,13 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   }
 
   // upgrade index structure
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Import index database '%s' (version %d)",
+              String_cString(oldDatabaseFileName)
+              indexVersion
+             );
   switch (indexVersion)
   {
     case 1:
