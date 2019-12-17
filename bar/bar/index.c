@@ -178,7 +178,8 @@ LOCAL bool                       quitFlag;
 
 LOCAL uint64                     importStartTimestamp;
 LOCAL uint64                     importSteps,importMaxSteps;
-LOCAL uint                       importLastProgress;  // last progress [1/1000]
+LOCAL ulong                      importLastProgressSum;  // last progress sum [1/1000]
+LOCAL uint                       importLastProgressCount;
 LOCAL uint64                     importLastProgressTimestamp;
 
 #ifndef NDEBUG
@@ -590,7 +591,8 @@ LOCAL void initImportProgress(uint64 maxSteps)
   importStartTimestamp        = Misc_getTimestamp();
   importSteps                 = 0;
   importMaxSteps              = maxSteps;
-  importLastProgress          = 0;
+  importLastProgressSum       = 0L;
+  importLastProgressCount     = 0;
   importLastProgressTimestamp = 0LL;
 }
 
@@ -619,6 +621,7 @@ LOCAL void doneImportProgress(void)
 LOCAL void importProgress(void *userData)
 {
   uint   progress;
+  uint   importLastProgress;
   uint64 now;
   uint64 elapsedTime;
   uint   estimatedRestTime;
@@ -627,8 +630,9 @@ LOCAL void importProgress(void *userData)
 
   importSteps++;
 
-  progress = (importSteps*1000)/importMaxSteps;
-  now      = Misc_getTimestamp();
+  progress           = (importSteps*1000)/importMaxSteps;
+  importLastProgress = (importLastProgressCount > 0) ? (uint)(importLastProgressSum/(ulong)importLastProgressCount) : 0;
+  now                = Misc_getTimestamp();
   if (   (progress > importLastProgress)
       && (now > (importLastProgressTimestamp+30*US_PER_SECOND))
      )
@@ -644,7 +648,8 @@ LOCAL void importProgress(void *userData)
                 (estimatedRestTime/US_PER_SECOND)/60,
                 (estimatedRestTime/US_PER_SECOND)%60
                );
-    importLastProgress          = progress;
+    importLastProgressSum       += progress;
+    importLastProgressCount     += 1;
     importLastProgressTimestamp = now;
   }
 }
