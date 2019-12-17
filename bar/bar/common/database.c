@@ -4329,7 +4329,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
     {
       #ifdef DATABASE_DEBUG_COPY_TABLE
         rowCount++;
-//if ((rowCount % 1000) == 0) fprintf(stderr,"%s, %d: rowCount=%lu\n",__FILE__,__LINE__,rowCount);
       #endif /* DATABASE_DEBUG_COPY_TABLE */
 
       // reset to data
@@ -4346,7 +4345,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
         {
           case DATABASE_TYPE_PRIMARY_KEY:
             columnNode->value.id = sqlite3_column_int64(fromStatementHandle,i);
-//fprintf(stderr,"%s, %d: DATABASE_TYPE_PRIMARY_KEY %d %s: %lld\n",__FILE__,__LINE__,n,columnNode->name,columnNode->value.id);
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
             {
@@ -4356,7 +4354,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
             break;
           case DATABASE_TYPE_INT64:
             String_setCString(columnNode->value.i,(const char*)sqlite3_column_text(fromStatementHandle,i));
-//fprintf(stderr,"%s, %d: DATABASE_TYPE_INT64 %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
             {
@@ -4366,7 +4363,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
             break;
           case DATABASE_TYPE_DOUBLE:
             String_setCString(columnNode->value.d,(const char*)sqlite3_column_text(fromStatementHandle,i));
-//fprintf(stderr,"%s, %d: DATABASE_TYPE_DOUBLE %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
             {
@@ -4376,7 +4372,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
             break;
           case DATABASE_TYPE_DATETIME:
             String_setCString(columnNode->value.i,(const char*)sqlite3_column_text(fromStatementHandle,i));
-//fprintf(stderr,"%s, %d: DATABASE_TYPE_DATETIME %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
             {
@@ -4386,7 +4381,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
             break;
           case DATABASE_TYPE_TEXT:
             String_setCString(columnNode->value.text,(const char*)sqlite3_column_text(fromStatementHandle,i));
-//fprintf(stderr,"%s, %d: DATABASE_TYPE_TEXT %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
             toColumnNode = findTableColumnNode(&toColumnList,columnNode->name);
             if (toColumnNode != NULL)
             {
@@ -4507,7 +4501,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               // can not be set
               break;
             case DATABASE_TYPE_INT64:
-//fprintf(stderr,"%s, %d: DATABASE_TYPE_INT64 %d %s: %s %d\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.i),sqlite3_column_type(fromStatementHandle,n));
               sqlite3_bind_text(toStatementHandle,i,String_cString(columnNode->value.i),-1,NULL);
               i++;
               break;
@@ -4520,7 +4513,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               i++;
               break;
             case DATABASE_TYPE_TEXT:
-//fprintf(stderr,"%s, %d: DATABASE_TYPE_TEXT %d %s: %s\n",__FILE__,__LINE__,n,columnNode->name,String_cString(columnNode->value.text));
               sqlite3_bind_text(toStatementHandle,i,String_cString(columnNode->value.text),-1,NULL);
               i++;
               break;
@@ -4540,7 +4532,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
       // insert row
       if (sqliteStep(toDatabaseHandle->handle,toStatementHandle,toDatabaseHandle->timeout) != SQLITE_DONE)
       {
-//fprintf(stderr,"%s, %d: 4 %s %s\n",__FILE__,__LINE__,sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         error = ERRORX_(DATABASE,sqlite3_errcode(toDatabaseHandle->handle),"%s: %s",sqlite3_errmsg(toDatabaseHandle->handle),String_cString(sqlInsertString));
         sqlite3_finalize(toStatementHandle);
         sqlite3_finalize(fromStatementHandle);
@@ -4621,7 +4612,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
         END_TIMER();
 
         // wait
-fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
         BLOCK_DO({ end(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE);
                    end(fromDatabaseHandle,DATABASE_LOCK_TYPE_READ);
                  },
@@ -4635,7 +4625,6 @@ fprintf(stderr,"%s, %d: pause\n",__FILE__,__LINE__);
           }
           while (copyPauseCallbackFunction(copyPauseCallbackUserData));
         });
-fprintf(stderr,"%s, %d: pause end\n",__FILE__,__LINE__);
 
         START_TIMER();
 
@@ -4658,7 +4647,6 @@ fprintf(stderr,"%s, %d: pause end\n",__FILE__,__LINE__);
             || Database_isLockPending(toDatabaseHandle,DATABASE_LOCK_TYPE_READ_WRITE)
            )
         {
-//Database_debugPrintInfo();
           // end transaction
           if (transactionFlag)
           {
@@ -4670,7 +4658,6 @@ fprintf(stderr,"%s, %d: pause end\n",__FILE__,__LINE__);
             }
           }
 
-fprintf(stderr,"%s, %d: interrupt\n",__FILE__,__LINE__);
           END_TIMER();
 
           Thread_yield();
