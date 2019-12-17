@@ -19509,7 +19509,6 @@ Errors Server_run(ServerModes       mode,
 
     // wait for connect, disconnect, command, or result
     (void)Misc_waitHandles(&waitHandle,&signalMask,waitTimeout);
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
     MISC_HANDLES_ITERATE(&waitHandle,handle,events)
     {

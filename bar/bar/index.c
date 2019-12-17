@@ -177,7 +177,7 @@ LOCAL Thread                     indexThread;    // upgrad/clean-up thread
 LOCAL bool                       quitFlag;
 
 LOCAL uint64                     importSteps,importMaxSteps;
-LOCAL uint                       importLastProgress;
+LOCAL uint                       importLastProgress;  // last progress [1/1000]
 LOCAL uint64                     importStartTimestamp;
 
 #ifndef NDEBUG
@@ -624,8 +624,7 @@ LOCAL void importProgress(void *userData)
 
   importSteps++;
 
-  progress = (importSteps*100)/importMaxSteps;
-//fprintf(stderr,"%s, %d: progress %d %lld %lld\n",__FILE__,__LINE__,progress,importSteps,importMaxSteps);
+  progress = (importSteps*1000)/importMaxSteps;
   if (progress > importLastProgress)
   {
     elapsedTime       = Misc_getTimestamp()-importStartTimestamp;
@@ -634,8 +633,8 @@ LOCAL void importProgress(void *userData)
     plogMessage(NULL,  // logHandle
                 LOG_TYPE_INDEX,
                 "INDEX",
-                "Imported %3d%%, estimated rest time %umin:%02us",
-                progress,
+                "Imported %0.1f%%, estimated rest time %umin:%02us",
+                (float)progress/1000,
                 (estimatedRestTime/US_PER_SECOND)/60,
                 (estimatedRestTime/US_PER_SECOND)%60
                );
@@ -7279,7 +7278,6 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
               indexHandle,
     {
       // get file aggregate data
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
 //TODO: use entries.size?
@@ -9724,7 +9722,6 @@ Errors Index_initListEntryFragments(IndexQueryHandle    *indexQueryHandle,
   }
 
   // init variables
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
   entryName    = String_new();
   orderString  = String_new();
   string       = String_new();
