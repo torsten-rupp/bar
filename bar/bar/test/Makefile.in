@@ -4063,7 +4063,6 @@ test_index_operations: \
 	# create device
 	@$(call functionInfo,test index opertations)
 	@$(call functionVerifyParameter,TEST_BAR)
-	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	# bar-sqlite3 operations
 	@$(call functionCleanTestFiles)
