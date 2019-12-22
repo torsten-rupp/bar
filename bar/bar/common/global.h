@@ -1238,8 +1238,8 @@ typedef byte* BitSet;
     { \
       if (!(condition)) \
       { \
-        fprintf(stderr, "%s:%d: %s: Assertion '%s' failed.\n",__FILE__,__LINE__,__FUNCTION__,__ASSERTX_STRING1(condition)); \
-        fprintf(stderr, "  " format "\n" , ## __VA_ARGS__); \
+        fprintf(stderr, "%s:%d: %s: Assertion '%s' failed: ",__FILE__,__LINE__,__FUNCTION__,__ASSERTX_STRING1(condition)); \
+        fprintf(stderr, format "\n" , ## __VA_ARGS__); \
         abort(); \
       } \
     } \
