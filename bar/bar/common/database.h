@@ -1176,7 +1176,7 @@ Errors Database_vgetId(DatabaseHandle *databaseHandle,
 *                             REGEXP(pattern,case-flag,text)
 * Output : values - database ids array
 * Return : ERROR_NONE or error code
-* Notes  : -
+* Notes  : values are added to array!
 \***********************************************************************/
 
 Errors Database_getIds(DatabaseHandle *databaseHandle,

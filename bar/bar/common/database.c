@@ -6103,11 +6103,11 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
     ulong              *ul;
     long long          *ll;
     unsigned long long *ull;
-    float              *f;  
-    double             *d;  
-    char               *ch; 
-    char               *s;  
-    void               **p; 
+    float              *f;
+    double             *d;
+    char               *ch;
+    char               *s;
+    void               **p;
     String string;
   }       value;
 
@@ -6674,9 +6674,6 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
   assert(databaseHandle->handle != NULL);
   assert(values != NULL);
   assert(tableName != NULL);
-
-  // init variables
-  Array_clear(values);
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
