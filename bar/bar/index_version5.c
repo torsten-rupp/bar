@@ -114,7 +114,7 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
-                                                          "storage",
+                                                          "storages",
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer storage

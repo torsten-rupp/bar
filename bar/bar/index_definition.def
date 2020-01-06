@@ -8,7 +8,7 @@
      ^
      |<- entity
      |     ^
-     |     |<----------------------------- storage   
+     |     |<----------------------------- storages
      |     |                                 ^
      |     |<- entry                         |
      |     |     ^                           |
@@ -35,9 +35,9 @@
      |     |     |                           |
      |     |     |<- specialEntry -----------|
      |     |...
-     |     |     
-     |     |<- skippedEntry  
-     |     |...   
+     |     |
+     |     |<- skippedEntry
+     |     |...
      |...
 
 */
@@ -147,10 +147,11 @@ CREATE TRIGGER AFTER INSERT ON entities
       (jobUUID) VALUES (NEW.jobUUID);
   END;
 
-// --- storage ---------------------------------------------------------
-CREATE TABLE IF NOT EXISTS storage(
+// --- storages --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS storages(
   id                        INTEGER PRIMARY KEY,
 
+//TODO: obsolete?
   entityId                  INTEGER REFERENCES entities(id) ON DELETE CASCADE,
   name                      TEXT NOT NULL,
   created                   INTEGER,
@@ -193,17 +194,17 @@ CREATE TABLE IF NOT EXISTS storage(
   totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
   totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
 );
-CREATE INDEX ON storage (entityId,name,created,state);
+CREATE INDEX ON storages (entityId,name,created,state);
 //TODO: add?
-//CREATE INDEX ON storage (hostName);
-CREATE INDEX ON storage (name,totalEntryCount,created,state);
-CREATE INDEX ON storage (created,name,totalEntryCount,state);
-CREATE INDEX ON storage (userName);
-CREATE INDEX ON storage (state,name,totalEntryCount,created);
-CREATE INDEX ON storage (deletedFlag);
+//CREATE INDEX ON storages (hostName);
+CREATE INDEX ON storages (name,totalEntryCount,created,state);
+CREATE INDEX ON storages (created,name,totalEntryCount,state);
+CREATE INDEX ON storages (userName);
+CREATE INDEX ON storages (state,name,totalEntryCount,created);
+CREATE INDEX ON storages (deletedFlag);
 
 // full-text-search
-CREATE VIRTUAL TABLE FTS_storage USING FTS5(
+CREATE VIRTUAL TABLE FTS_storages USING FTS5(
   storageId,
   name,
 
@@ -212,20 +213,20 @@ CREATE VIRTUAL TABLE FTS_storage USING FTS5(
 );
 
 // insert/delete/update triggeres
-CREATE TRIGGER AFTER INSERT ON storage
+CREATE TRIGGER AFTER INSERT ON storages
   BEGIN
-// insert into log values('trigger storage: INSERT size='||NEW.size);
-    INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
+// insert into log values('trigger storages: INSERT size='||NEW.size);
+    INSERT INTO FTS_storages VALUES (NEW.id,NEW.name);
   END;
-CREATE TRIGGER BEFORE DELETE ON storage
+CREATE TRIGGER BEFORE DELETE ON storages
   BEGIN
-    DELETE FROM FTS_storage WHERE storageId MATCH OLD.id;
+    DELETE FROM FTS_storages WHERE storageId MATCH OLD.id;
   END;
 
-CREATE TRIGGER AFTER UPDATE OF name ON storage
+CREATE TRIGGER AFTER UPDATE OF name ON storages
   BEGIN
-    DELETE FROM FTS_storage WHERE storageId MATCH OLD.id;
-    INSERT INTO FTS_storage VALUES (NEW.id,NEW.name);
+    DELETE FROM FTS_storages WHERE storageId MATCH OLD.id;
+    INSERT INTO FTS_storages VALUES (NEW.id,NEW.name);
   END;
 
 // --- entries ---------------------------------------------------------
@@ -326,14 +327,6 @@ CREATE TRIGGER AFTER INSERT ON entries
 
 CREATE TRIGGER AFTER UPDATE OF entityId ON entries
   BEGIN
-    // update entityId in *Entries
-    UPDATE fileEntries      SET entityId=NEW.entityId WHERE entryId=NEW.id;
-    UPDATE imageEntries     SET entityId=NEW.entityId WHERE entryId=NEW.id;
-    UPDATE directoryEntries SET entityId=NEW.entityId WHERE entryId=NEW.id;
-    UPDATE linkEntries      SET entityId=NEW.entityId WHERE entryId=NEW.id;
-    UPDATE hardlinkEntries  SET entityId=NEW.entityId WHERE entryId=NEW.id;
-    UPDATE specialEntries   SET entityId=NEW.entityId WHERE entryId=NEW.id;
-
     // update newest entries
     UPDATE entriesNewest
       SET entityId=NEW.entityId
@@ -386,7 +379,7 @@ CREATE TRIGGER BEFORE DELETE ON entries
 CREATE TABLE IF NOT EXISTS entryFragments(
   id        INTEGER PRIMARY KEY,
   entryId   INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
+  storageId INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
   offset    INTEGER,
   size      INTEGER
 );
@@ -399,7 +392,7 @@ CREATE INDEX ON entryFragments (storageId);
 // --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
   id       INTEGER PRIMARY KEY,
-  entityId INTEGER NOT NULL REFERENCES storage(id),
+  entityId INTEGER NOT NULL REFERENCES storages(id),
   name     TEXT NOT NULL,
   type     INTEGER
 );
@@ -463,7 +456,7 @@ CREATE TABLE IF NOT EXISTS directoryEntries(
   id                    INTEGER PRIMARY KEY,
 
   entryId               INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId             INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
+  storageId             INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
 
   // Note: redundancy for faster access
   name                  TEXT,
@@ -494,7 +487,7 @@ CREATE TABLE IF NOT EXISTS linkEntries(
   id              INTEGER PRIMARY KEY,
 
   entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
+  storageId       INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
   destinationName TEXT,
 
   CONSTRAINT linkEntries UNIQUE (entryId)
@@ -535,7 +528,7 @@ CREATE TABLE IF NOT EXISTS specialEntries(
   id              INTEGER PRIMARY KEY,
 
   entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
+  storageId       INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
   specialType     INTEGER,
   major           INTEGER,
   minor           INTEGER,

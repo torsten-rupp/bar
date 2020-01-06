@@ -861,7 +861,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              }
 #if 0
 String s = String_new();
-error = Database_getString(databaseHandle,s,"entries","entities.jobUUID","left join storage on storage.id=entries.storageId left join entities on entities.id=storage.entityId where entries.id=%d",entryId);
+error = Database_getString(databaseHandle,s,"entries","entities.jobUUID","left join storages on storages.id=entries.storageId left join entities on entities.id=storages.entityId where entries.id=%d",entryId);
 fprintf(stderr,"%s, %d: %lu name=%s size=%lu timeLastChanged=%lu job=%s existsFlag=%d error=%s\n",__FILE__,__LINE__,entryId,name,size,timeLastChanged,String_cString(s),existsFlag,Error_getText(error));
 //exit(1);
 String_delete(s);
@@ -1757,9 +1757,9 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   String     entityIdsString;
   ulong      i;
   DatabaseId entityId;
-  Errors     error;      
-  ulong      totalCount; 
-  ulong      n;          
+  Errors     error;
+  ulong      totalCount;
+  ulong      n;
 
   entityIdsString = String_new();
   ARRAY_ITERATE(&entityIdArray,i,entityId)
@@ -2072,7 +2072,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
     fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  
+
   // free resources
   String_delete(entityIdsString);
 }
@@ -2091,9 +2091,9 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   String     storageIdsString;
   ulong      i;
   DatabaseId storageId;
-  Errors     error;      
-  ulong      totalCount; 
-  ulong      n;          
+  Errors     error;
+  ulong      totalCount;
+  ulong      n;
 
   storageIdsString = String_new();
   ARRAY_ITERATE(&storageIdArray,i,storageId)
@@ -2136,7 +2136,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT COUNT(id) \
-                            FROM storage \
+                            FROM storages \
                             WHERE     (%d OR id IN (%S)) \
                                   AND deletedFlag!=1 \
                            ",
@@ -2171,7 +2171,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                              error = Database_execute(databaseHandle,
                                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                       NULL,  // changedRowCount
-                                                      "UPDATE storage \
+                                                      "UPDATE storages \
                                                        SET totalFileCount     =(SELECT COUNT(entries.id) \
                                                                                 FROM entries \
                                                                                   LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
@@ -2252,7 +2252,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                              error = Database_execute(databaseHandle,
                                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                       NULL,  // changedRowCount
-                                                      "UPDATE storage \
+                                                      "UPDATE storages \
                                                        SET totalEntryCount= totalFileCount \
                                                                            +totalImageCount \
                                                                            +totalDirectoryCount \
@@ -2277,7 +2277,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                              error = Database_execute(databaseHandle,
                                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                       NULL,  // changedRowCount
-                                                      "UPDATE storage \
+                                                      "UPDATE storages \
                                                        SET totalFileCountNewest     =(SELECT COUNT(entriesNewest.id) \
                                                                                       FROM entriesNewest \
                                                                                         LEFT JOIN entryFragments   ON entryFragments.entryId  =entriesNewest.entryId \
@@ -2358,7 +2358,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                              error = Database_execute(databaseHandle,
                                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                       NULL,  // changedRowCount
-                                                      "UPDATE storage \
+                                                      "UPDATE storages \
                                                        SET totalEntryCountNewest= totalFileCountNewest \
                                                                                  +totalImageCountNewest \
                                                                                  +totalDirectoryCountNewest \
@@ -2386,7 +2386,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT id \
-                            FROM storage \
+                            FROM storages \
                             WHERE     (%d OR id IN (%S)) \
                                   AND deletedFlag!=1 \
                            ",
@@ -2446,55 +2446,55 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount
                          "DELETE FROM fileEntries \
-                            LEFT JOIN storage ON storage.id=fileEntries.storageId \
-                          WHERE storage.name IS NULL OR storage.name=''; \
+                            LEFT JOIN storages ON storages.id=fileEntries.storageId \
+                          WHERE storages.name IS NULL OR storages.name=''; \
                          "
                         );
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount
                          "DELETE FROM imageEntries \
-                            LEFT JOIN storage ON storage.id=imageEntries.storageId \
-                          WHERE storage.name IS NULL OR storage.name=''; \
+                            LEFT JOIN storages ON storages.id=imageEntries.storageId \
+                          WHERE storages.name IS NULL OR storages.name=''; \
                          "
                         );
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount,
                          "DELETE FROM directoryEntries \
-                            LEFT JOIN storage ON storage.id=directoryEntries.storageId \
-                          WHERE storage.name IS NULL OR storage.name=''; \
+                            LEFT JOIN storages ON storages.id=directoryEntries.storageId \
+                          WHERE storages.name IS NULL OR storages.name=''; \
                          "
                         );
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount,
                          "DELETE FROM linkEntries \
-                            LEFT JOIN storage ON storage.id=linkEntries.storageId \
-                          WHERE storage.name IS NULL OR storage.name=''; \
+                            LEFT JOIN storages ON storages.id=linkEntries.storageId \
+                          WHERE storages.name IS NULL OR storages.name=''; \
                          "
                         );
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount,
                          "DELETE FROM hardlinkEntries \
-                            LEFT JOIN storage ON storage.id=hardlinkEntries.storageId \
-                          WHERE storage.name IS NULL OR storage.name=''; \
+                            LEFT JOIN storages ON storages.id=hardlinkEntries.storageId \
+                          WHERE storages.name IS NULL OR storages.name=''; \
                          "
                         );
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount,
                          "DELETE FROM specialEntries \
-                            LEFT JOIN storage ON storage.id=specialEntries.storageId \
-                          WHERE storage.name IS NULL OR storage.name=''; \
+                            LEFT JOIN storages ON storages.id=specialEntries.storageId \
+                          WHERE storages.name IS NULL OR storages.name=''; \
                          "
                         );
 
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          NULL,  // changedRowCount,
-                         "DELETE FROM storage \
+                         "DELETE FROM storages \
                           WHERE name IS NULL OR name=''; \
                          "
                         );
@@ -2789,7 +2789,7 @@ LOCAL void cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
                                                     (void)Database_execute(databaseHandle,
                                                                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                            NULL,  // changedRowCount,
-                                                                           "DELETE FROM storage \
+                                                                           "DELETE FROM storages \
                                                                             WHERE id=%lld \
                                                                            ",
                                                                            duplicateDatabaseId
@@ -2801,7 +2801,7 @@ LOCAL void cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
                                                   },NULL),
                                                   NULL,  // changedRowCount
                                                   "SELECT id \
-                                                   FROM storage \
+                                                   FROM storages \
                                                    WHERE id!=%lld AND name='%s' \
                                                   ",
                                                   databaseId,
@@ -2812,8 +2812,8 @@ LOCAL void cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
                          },NULL),
                          NULL,  // changedRowCount
                          "SELECT id,name \
-                          FROM storage \
-                          WHERE deletedFlag=0 \
+                          FROM storages \
+                          WHERE deletedFlag!=1 \
                          "
                         );
 
@@ -2879,7 +2879,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                                     (void)Database_execute(databaseHandle,
                                                                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                                            NULL,  // changedRowCount,
-                                                                           "DELETE FROM storage \
+                                                                           "DELETE FROM storages \
                                                                             WHERE id=%lld \
                                                                            ",
                                                                            purgeDatabaseId
@@ -2891,7 +2891,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                                   },NULL),
                                                   NULL,  // changedRowCount
                                                   "SELECT id \
-                                                   FROM storage \
+                                                   FROM storages \
                                                    WHERE id!=%lld \
                                                   ",
                                                   databaseId
@@ -2903,7 +2903,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                          },NULL),
                          NULL,  // changedRowCount
                          "SELECT id \
-                          FROM storage \
+                          FROM storages \
                           WHERE deletedFlag=1 \
                          "
                         );
@@ -3082,7 +3082,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
   // show number of storages
   error = Database_getInteger64(databaseHandle,
                                 &n,
-                                "storage",
+                                "storages",
                                 "COUNT(id)",
                                 "WHERE deletedFlag!=1"
                                );
@@ -3108,8 +3108,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT COUNT(id) \
-                            FROM storage \
-                            WHERE state=%d AND deletedFlag=0 \
+                            FROM storages \
+                            WHERE state=%d AND deletedFlag!=1 \
                            ",
                            INDEX_CONST_STATE_OK
                           );
@@ -3134,8 +3134,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT COUNT(id) \
-                            FROM storage \
-                            WHERE state=%d AND deletedFlag=0 \
+                            FROM storages \
+                            WHERE state=%d AND deletedFlag!=1 \
                            ",
                            INDEX_CONST_STATE_UPDATE_REQUESTED
                           );
@@ -3160,8 +3160,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT COUNT(id) \
-                            FROM storage \
-                            WHERE state=%d AND deletedFlag=0 \
+                            FROM storages \
+                            WHERE state=%d AND deletedFlag!=1 \
                            ",
                            INDEX_CONST_STATE_ERROR
                           );
@@ -3186,7 +3186,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT COUNT(id) \
-                            FROM storage \
+                            FROM storages \
                             WHERE deletedFlag=1 \
                            "
                           );
@@ -3226,8 +3226,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalEntryCount),TOTAL(totalEntrySize) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3252,8 +3252,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalFileCount),TOTAL(totalFileSize) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3278,8 +3278,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalImageCount),TOTAL(totalImageSize) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3303,8 +3303,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalDirectoryCount) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3328,8 +3328,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalLinkCount) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3354,8 +3354,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalHardlinkCount),TOTAL(totalHardlinkSize) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3379,8 +3379,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalSpecialCount) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3419,8 +3419,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalEntryCountNewest),TOTAL(totalEntrySizeNewest) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3445,8 +3445,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalFileCountNewest),TOTAL(totalFileSizeNewest) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3471,8 +3471,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalImageCountNewest),TOTAL(totalImageSizeNewest) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3496,8 +3496,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalDirectoryCountNewest) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3521,8 +3521,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalLinkCountNewest) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3547,8 +3547,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalHardlinkCountNewest),TOTAL(totalHardlinkSizeNewest) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3572,8 +3572,8 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                            },NULL),
                            NULL,  // changedRowCount
                            "SELECT TOTAL(totalSpecialCountNewest) \
-                            FROM storage \
-                            WHERE deletedFlag=0 \
+                            FROM storages \
+                            WHERE deletedFlag!=1 \
                            "
                           );
   if (error != ERROR_NONE)
@@ -3767,7 +3767,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              UNUSED_VARIABLE(columns);
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
-                             
+
                              entityId = (DatabaseId)atoll(values[0]);
                              type     = (uint)atoi(values[1]);
 
@@ -3802,7 +3802,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                               },NULL),
                                               NULL,  // changedRowCount
                                               "SELECT id \
-                                               FROM storage \
+                                               FROM storages \
                                                WHERE     entityId=%lld \
                                                      AND deletedFlag!=1 \
                                               ",
@@ -3855,7 +3855,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
     fprintf(stderr,"ERROR: get entity data fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  
+
   // free resources
   String_delete(entityIdsString);
 }
@@ -3903,7 +3903,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                              UNUSED_VARIABLE(columns);
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
-                             
+
                              state = (uint)atoi(values[5]);
                              mode  = (uint)atoi(values[6]);
 
@@ -3964,7 +3964,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                    totalHardlinkCountNewest, \
                                    totalHardlinkSizeNewest, \
                                    totalSpecialCountNewest \
-                            FROM storage \
+                            FROM storages \
                             WHERE     (%d OR id IN (%S)) \
                                   AND deletedFlag!=1 \
                            ",
@@ -3976,7 +3976,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
     fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  
+
   // free resources
   String_delete(storageIdsString);
 }
@@ -4019,9 +4019,9 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                              UNUSED_VARIABLE(columns);
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
-                             
+
                              entityId = (DatabaseId)atoll(values[0]);
-                             
+
                              printf("  Entitiy id: %lld\n",entityId);
                              error = Database_execute(databaseHandle,
                                                       CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
@@ -4061,7 +4061,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                           default:
                                                             break;
                                                         }
-                                                        
+
 
                                                         return ERROR_NONE;
                                                       },NULL),
@@ -4109,7 +4109,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     fprintf(stderr,"ERROR: get entity data fail: %s!\n",Error_getText(error));
     exit(1);
   }
-  
+
   // free resources
   String_delete(entityIdsString);
 }
@@ -4515,7 +4515,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                     );
                              },NULL),
                            NULL,  // changedRowCount
-                           "SELECT storageId,entryId FROM linkEntries LEFT JOIN storage ON storage.id=linkEntries.storageId"
+                           "SELECT storageId,entryId FROM linkEntries LEFT JOIN storages ON storages.id=linkEntries.storageId"
                           );
   if (error != ERROR_NONE)
   {
@@ -4552,7 +4552,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                     );
                              },NULL),
                            NULL,  // changedRowCount
-                           "SELECT storageId,entryId FROM specialEntries LEFT JOIN storage ON storage.id=specialEntries.storageId"
+                           "SELECT storageId,entryId FROM specialEntries LEFT JOIN storages ON storages.id=specialEntries.storageId"
                           );
   if (error != ERROR_NONE)
   {
@@ -4590,7 +4590,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                     );
                              },NULL),
                            NULL,  // changedRowCount
-                           "SELECT storageId,entryId FROM entryFragments LEFT JOIN storage ON storage.id=entryFragments.storageId"
+                           "SELECT storageId,entryId FROM entryFragments LEFT JOIN storages ON storages.id=entryFragments.storageId"
                           );
   if (error != ERROR_NONE)
   {
@@ -5046,7 +5046,7 @@ else if (stringEquals(argv[i],"--xxx"))
   {
     printStoragesInfo(&databaseHandle,storageIdArray);
   }
-  
+
   if (infoEntriesFlag)
   {
     printEntriesInfo(&databaseHandle,entityIdArray);
@@ -5137,8 +5137,8 @@ if (xxxFlag)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
-                     "SELECT MAX(storage.id),MAX(LENGTH(storage.name)) FROM storage \
-                        LEFT join entities on storage.entityId=entities.id \
+                     "SELECT MAX(storages.id),MAX(LENGTH(storages.name)) FROM storages \
+                        LEFT JOIN entities on storages.entityId=entities.id \
                       WHERE %d OR entities.jobUUID=%'s \
                      ",
                      jobUUID == NULL,
@@ -5174,10 +5174,10 @@ if (xxxFlag)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
-                     "SELECT storage.id,storage.name,entities.jobUUID,entities.type FROM storage \
-                        LEFT join entities on storage.entityId=entities.id \
+                     "SELECT storages.id,storages.name,entities.jobUUID,entities.type FROM storages \
+                        LEFT JOIN entities on storages.entityId=entities.id \
                       WHERE %d OR entities.jobUUID=%'s \
-                      ORDER BY storage.name ASC \
+                      ORDER BY storages.name ASC \
                      ",
                      jobUUID == NULL,
                      jobUUID
@@ -5208,9 +5208,9 @@ if (xxxFlag)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
-                     "SELECT MAX(entries.id),MAX(LENGTH(entries.name)),MAX(LENGTH(storage.name)) FROM entries \
-                        LEFT join storage ON entries.storageId=storage.id \
-                        LEFT join entities ON storage.entityId=entities.id \
+                     "SELECT MAX(entries.id),MAX(LENGTH(entries.name)),MAX(LENGTH(storages.name)) FROM entries \
+                        LEFT JOIN storages ON entries.storageId=storages.id \
+                        LEFT JOIN entities ON storages.entityId=entities.id \
                       WHERE %d OR entities.jobUUID=%'s \
                      ",
                      jobUUID == NULL,
@@ -5236,9 +5236,9 @@ if (xxxFlag)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
-                     "SELECT entries.id,entries.name,storage.name FROM entries \
-                        LEFT join storage ON entries.storageId=storage.id \
-                        LEFT join entities ON storage.entityId=entities.id \
+                     "SELECT entries.id,entries.name,storages.name FROM entries \
+                        LEFT JOIN storages ON entries.storageId=storages.id \
+                        LEFT JOIN entities ON storages.entityId=entities.id \
                       WHERE %d OR entities.jobUUID=%'s \
                       ORDER BY entries.name ASC \
                      ",
@@ -5271,9 +5271,9 @@ if (xxxFlag)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
-                     "SELECT MAX(entriesNewest.id),MAX(LENGTH(entriesNewest.name)),MAX(LENGTH(storage.name)) FROM entriesNewest \
-                        LEFT join storage ON entriesNewest.storageId=storage.id \
-                        LEFT join entities ON storage.entityId=entities.id \
+                     "SELECT MAX(entriesNewest.id),MAX(LENGTH(entriesNewest.name)),MAX(LENGTH(storages.name)) FROM entriesNewest \
+                        LEFT JOIN storages ON entriesNewest.storageId=storages.id \
+                        LEFT JOIN entities ON storages.entityId=entities.id \
                       WHERE %d OR entities.jobUUID=%'s \
                      ",
                      jobUUID == NULL,
@@ -5299,9 +5299,9 @@ if (xxxFlag)
                        return ERROR_NONE;
                      },NULL),
                      NULL,  // changedRowCount
-                     "SELECT entriesNewest.id,entriesNewest.name,storage.name FROM entriesNewest \
-                        LEFT join storage ON entriesNewest.storageId=storage.id \
-                        LEFT join entities ON storage.entityId=entities.id \
+                     "SELECT entriesNewest.id,entriesNewest.name,storages.name FROM entriesNewest \
+                        LEFT JOIN storages ON entriesNewest.storageId=storages.id \
+                        LEFT JOIN entities ON storages.entityId=entities.id \
                       WHERE %d OR entities.jobUUID=%'s \
                       ORDER BY entriesNewest.name ASC \
                      ",

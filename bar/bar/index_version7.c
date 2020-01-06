@@ -23,7 +23,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
   error = ERROR_NONE;
 
   // fix possible broken ids
-  fixBrokenIds(oldIndexHandle,"storage");
+  fixBrokenIds(oldIndexHandle,"storages");
   fixBrokenIds(oldIndexHandle,"files");
   fixBrokenIds(oldIndexHandle,"images");
   fixBrokenIds(oldIndexHandle,"directories");
@@ -145,7 +145,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
-                                                          "storage",
+                                                          "storages",
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer storage
@@ -221,7 +221,6 @@ fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
                                                             UNUSED_VARIABLE(fromColumnList);
-                                                            UNUSED_VARIABLE(toColumnList);
                                                             UNUSED_VARIABLE(userData);
 
                                                             (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
@@ -235,6 +234,7 @@ fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(
                                                             DatabaseId toEntryId;
 
                                                             UNUSED_VARIABLE(userData);
+                                                            UNUSED_VARIABLE(toColumnList);
 
                                                             fromEntryId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
                                                             assert(fromEntryId != DATABASE_ID_NONE);
@@ -273,7 +273,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(toColumnList);
                                                                                            UNUSED_VARIABLE(userData);
-                                                                                           
+
                                                                                            DIMPORT("import file fragments %ld: %"PRIi64", %"PRIi64"",toEntryId,Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL));
                                                                                            return Database_copyTable(&oldIndexHandle->databaseHandle,
                                                                                                                      &newIndexHandle->databaseHandle,
@@ -642,7 +642,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             "storage",
+                             "storages",
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer storage and create entity

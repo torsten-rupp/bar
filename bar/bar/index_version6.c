@@ -173,7 +173,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
                                                           "storage",
-                                                          "storage",
+                                                          "storages",
                                                           FALSE,  // transaction flag
                                                           &duration,
                                                           // pre: transfer storage
@@ -540,7 +540,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
                              "storage",
-                             "storage",
+                             "storages",
                              FALSE,  // transaction flag
                              &duration,
                              // pre: transfer storage and create entity
