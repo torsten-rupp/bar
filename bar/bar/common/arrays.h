@@ -513,7 +513,7 @@ void Array_debugDone(void);
 * Notes  : -
 \***********************************************************************/
 
-void Array_debugDumpInfo(FILE *handle,
+void Array_debugDumpInfo(FILE                  *handle,
                          ArrayDumpInfoFunction arrayDumpInfoFunction,
                          void                  *arrayDumpInfoUserData
                         );
