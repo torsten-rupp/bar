@@ -3561,14 +3561,14 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           expiredTotalEntryCount = 0;
           expiredTotalEntrySize  = 0LL;
           List_init(&mountList);
-          
+
           JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             // find expired/surpluse entity
             JOB_LIST_ITERATEX(jobNode,expiredEntityId == INDEX_ID_NONE)
             {
               List_init(&expirationEntityList);
-              
+
               if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationDateTime+10*S_PER_MINUTE))
                   && getJobExpirationEntityList(&expirationEntityList,
                                                 indexHandle,
@@ -13221,13 +13221,13 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
                                  NULL,  // entityIndexId
                                  NULL,  // scheduleUUID
                                  NULL,  // hostName
+                                 NULL,  // userName
+                                 NULL,  // comment
                                  NULL,  // archiveType
                                  &storageId,
                                  storageName,
                                  NULL,  // createdDateTime
                                  NULL,  // size
-                                 NULL,  // userName
-                                 NULL,  // comment
                                  NULL,  // indexState
                                  NULL,  // indexMode
                                  NULL,  // lastCheckedDateTime
