@@ -23,6 +23,7 @@ RUN apt-get -y install \
   patch \
   pkg-config \
   subversion \
+  sudo \
   tar \
   tcl \
   unzip \
@@ -39,6 +40,8 @@ RUN apt-get -y install \
   default-jdk \
   default-jre \
   make \
+  unoconv \
+  txt2man \
   ;
 
 # mount /media/home

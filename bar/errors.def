@@ -718,6 +718,34 @@ ERROR PARSE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR PARSE_DATE
+  stringSet(errorText,sizeof(errorText),TR("parsing date fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR PARSE_TIME
+  stringSet(errorText,sizeof(errorText),TR("parsing time fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR PARSE_WEEKDAYS
+  stringSet(errorText,sizeof(errorText),TR("parsing weekdays fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR PARSE_SCHEDULE
+  stringSet(errorText,sizeof(errorText),TR("parsing schedule fail"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR UNKNOWN_COMMAND
   stringSet(errorText,sizeof(errorText),TR("unknown command"));
   if (!stringIsEmpty(ERROR_DATA))
@@ -874,6 +902,13 @@ ERROR DATABASE_INDEX_NOT_FOUND         TR("index not found")
 ERROR DATABASE_INDEX_NOT_READY         TR("index still not initialized")
 ERROR DATABASE_INVALID_INDEX
   stringSet(errorText,sizeof(errorText),TR("invalid index"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR DATABASE_PARSE_ID
+  stringSet(errorText,sizeof(errorText),TR("parse index id fail"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);

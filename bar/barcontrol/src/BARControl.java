@@ -895,15 +895,17 @@ class Units
 
     String result;
 
-    if      ((n % (1024L*1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L*1024L));
-    else if (n >= (1024L*1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L*1024L));
-    else if ((n % (      1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L));
-    else if (n >= (      1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L));
-    else if ((n % (            1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L));
-    else if (n >= (            1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L));
-    else if ((n % (                  1024L)) == 0) result = String.format("%d",(long)n/(1024L));
-    else if (n >= (                  1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L));
-    else                                         result = String.format("%d",(long)n);
+    if      ((n % (1024L*1024L*1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L*1024L*1024L));
+    else if (n >= (1024L*1024L*1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L*1024L*1024L));
+    else if ((n % (      1024L*1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L*1024L));
+    else if (n >= (      1024L*1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L*1024L));
+    else if ((n % (            1024L*1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L*1024L));
+    else if (n >= (            1024L*1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L*1024L));
+    else if ((n % (                  1024L*1024L)) == 0) result = String.format("%d",(long)n/(1024L*1024L));
+    else if (n >= (                  1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L));
+    else if ((n % (                        1024L)) == 0) result = String.format("%d",(long)n/(1024L));
+    else if (n >= (                        1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L));
+    else                                               result = String.format("%d",(long)n);
 
     return result;
   }
@@ -916,11 +918,12 @@ class Units
   {
     String result;
 
-    if      (n >= 1024L*1024L*1024L*1024L) result =  BARControl.tr("TBytes");
-    else if (n >=       1024L*1024L*1024L) result =  BARControl.tr("GBytes");
-    else if (n >=             1024L*1024L) result =  BARControl.tr("MBytes");
-    else if (n >=                   1024L) result =  BARControl.tr("KBytes");
-    else                                   result =  BARControl.tr("bytes");
+    if      (n >= 1024L*1024L*1024L*1024L*1024L) result =  BARControl.tr("PBytes");
+    else if (n >=       1024L*1024L*1024L*1024L) result =  BARControl.tr("TBytes");
+    else if (n >=             1024L*1024L*1024L) result =  BARControl.tr("GBytes");
+    else if (n >=                   1024L*1024L) result =  BARControl.tr("MBytes");
+    else if (n >=                         1024L) result =  BARControl.tr("KBytes");
+    else                                         result =  BARControl.tr("bytes");
 
     return result;
   }
@@ -933,11 +936,12 @@ class Units
   {
     String result;
 
-    if      (n >= 1024L*1024L*1024L*1024L) result =  "T";
-    else if (n >=       1024L*1024L*1024L) result =  "G";
-    else if (n >=             1024L*1024L) result =  "M";
-    else if (n >=                   1024L) result =  "K";
-    else                                   result =  "";
+    if      (n >= 1024L*1024L*1024L*1024L*1024L) result =  "P";
+    else if (n >=       1024L*1024L*1024L*1024L) result =  "T";
+    else if (n >=             1024L*1024L*1024L) result =  "G";
+    else if (n >=                   1024L*1024L) result =  "M";
+    else if (n >=                         1024L) result =  "K";
+    else                                         result =  "";
 
     return result;
   }
@@ -1832,6 +1836,14 @@ public class BARControl
       }
       cause = cause.getCause();
     }
+  }
+
+  /** print error to stderr
+   * @param throwable throwable
+   */
+  public static void printError(Throwable throwable)
+  {
+    System.err.println("ERROR: "+throwable.getMessage());
   }
 
   /** print error to stderr
@@ -4380,13 +4392,13 @@ if (false) {
           }
           catch (final BARException exception)
           {
-            printError("Cannot set new master ("+exception.getMessage()+")");
+            printError("cannot set new master (%s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
           catch (Exception exception)
           {
-            printError("Cannot set new master ("+exception.getMessage()+")");
+            printError("cannot set new master (%s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }
@@ -4828,9 +4840,9 @@ if (false) {
                                             )
                               );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST indexType=* newestOnly=%y name=%'S limit=1024",
-                                                         Settings.indexDatabaseEntriesNewestOnly,
-                                                         Settings.indexDatabaseEntriesListName
+            BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=* name=%'S newestOnly=%y limit=1024",
+                                                         Settings.indexDatabaseEntriesListName,
+                                                         Settings.indexDatabaseEntriesNewestOnly
                                                         ),
                                      1,  // debug level
                                      new Command.ResultHandler()
@@ -4839,11 +4851,12 @@ if (false) {
                                        public void handle(int i, ValueMap valueMap)
                                          throws BARException
                                        {
-                                         long   entryId         = valueMap.getLong  ("entryId"        );
-                                         String storageName     = valueMap.getString("storageName"    );
-                                         long   storageDateTime = valueMap.getLong  ("storageDateTime");
+                                         long       entryId         = valueMap.getLong  ("entryId"                   );
+                                         EntryTypes entryType       = valueMap.getEnum  ("entryType",EntryTypes.class);
+                                         String     storageName     = valueMap.getString("storageName"               );
+                                         long       storageDateTime = valueMap.getLong  ("storageDateTime"           );
 
-                                         switch (valueMap.getEnum("entryType",EntryTypes.class))
+                                         switch (entryType)
                                          {
                                            case FILE:
                                              {
@@ -5051,10 +5064,6 @@ if (false) {
           // set archives to restore
           try
           {
-            BARServer.executeCommand(StringParser.format("STORAGE_LIST_CLEAR"),
-                                     1  // debug level
-                                    );
-
             final ArrayList<Long> storageIds = new ArrayList<Long>();
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s indexStateSet=%s indexModeSet=%s name=%'S offset=%ld",
                                                          "*",
@@ -5082,11 +5091,14 @@ if (false) {
               throw new BARException(BARException.ARCHIVE_NOT_FOUND,Settings.restoreStorageName);
             }
 
+            BARServer.executeCommand(StringParser.format("INDEX_LIST_CLEAR"),
+                                     1  // debug level
+                                    );
             int i = 0;
             while (i < storageIds.size())
             {
               int n = storageIds.size()-i; if (n > 1024) n = 1024;
-              BARServer.executeCommand(StringParser.format("STORAGE_LIST_ADD storageIds=%s",
+              BARServer.executeCommand(StringParser.format("INDEX_LIST_ADD storageIds=%s",
                                                            StringUtils.join(storageIds,i,n,',')
                                                           ),
                                        1  // debugLevel
@@ -5232,7 +5244,7 @@ Dprintf.dprintf("still not supported");
                                          {
                                            if (Settings.debugLevel > 0)
                                            {
-                                             System.err.println("ERROR: "+exception.getMessage());
+                                             printError(exception);
                                              System.exit(ExitCodes.FAIL);
                                            }
                                          }
@@ -5408,7 +5420,6 @@ Dprintf.dprintf("still not supported");
               }
               catch (ConnectionError error)
               {
-error.printStackTrace();
                 errorMessage = error.getMessage();
               }
               catch (CommunicationError error)
@@ -5480,14 +5491,15 @@ error.printStackTrace();
     }
     catch (org.eclipse.swt.SWTException exception)
     {
-      System.err.println("ERROR graphics: "+exception.getCause());
-      printStackTrace(exception);
-      System.err.println("Version "+VERSION);
-      System.err.println("Please report this error to "+EMAIL_ADDRESS+"."); // use MAIL_AT to avoid SPAM
+      printInternalError(exception.getCause());
     }
     catch (CommunicationError error)
     {
-      System.err.println("ERROR communication: "+error.getMessage());
+      printError("communication: %s",error.getMessage());
+      if (Settings.debugLevel > 0)
+      {
+        printStackTrace(error);
+      }
     }
     catch (AssertionError error)
     {
@@ -5499,7 +5511,7 @@ error.printStackTrace();
     }
     catch (Error error)
     {
-      System.err.println("ERROR: "+error.getMessage());
+      printError(error);
       if (Settings.debugLevel > 0)
       {
         printStackTrace(error);

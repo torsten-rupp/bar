@@ -34,6 +34,7 @@ RUN apt-get -y install \
   patch \
   pkg-config \
   subversion \
+  sudo \
   tar \
   tcl \
   unzip \

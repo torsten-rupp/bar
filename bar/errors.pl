@@ -40,24 +40,25 @@ use Getopt::Long;
 #    errno   text index  code
 #
 
-my $ERROR_CODE_MASK            = "0x000003FF";
-my $ERROR_CODE_SHIFT           = 0;
-my $ERROR_DATA_INDEX_MASK      = "0x0000FC00";
-my $ERROR_DATA_INDEX_SHIFT     = 10;
-my $ERROR_ERRNO_MASK           = "0xFFFF0000";
-my $ERROR_ERRNO_SHIFT          = 16;
+my $ERROR_CODE_MASK             = "0x000003FF";
+my $ERROR_CODE_SHIFT            = 0;
+my $ERROR_DATA_INDEX_MASK       = "0x0000FC00";
+my $ERROR_DATA_INDEX_SHIFT      = 10;
+my $ERROR_ERRNO_MASK            = "0xFFFF0000";
+my $ERROR_ERRNO_SHIFT           = 16;
 
-my $ERROR_MAX_TEXT_LENGTH      = 2048;
-my $ERROR_DATA_INDEX_MAX_COUNT = 63;
+my $ERROR_MAX_TEXT_LENGTH       = 2048;
+my $ERROR_MAX_TEXT_LENGTH_DEBUG = 4096;
+my $ERROR_DATA_INDEX_MAX_COUNT  = 63;
 
-my $PREFIX                     = "ERROR_CODE_";
+my $PREFIX                      = "ERROR_CODE_";
 
 my $cFileName,$hFileName,$javaFileName;
-my $javaClassName              = "Error";
-my $trName                     = "tr";
-my $help                       = 0;
+my $javaClassName               = "Error";
+my $trName                      = "tr";
+my $help                        = 0;
 
-my $errorNumber                = 0;
+my $errorNumber                 = 0;
 
 my @errorNames;
 my @cHeader;
@@ -564,13 +565,19 @@ sub writeC()
 
 #include \"errors.h\"
 
-// use NONE to avoid warning in strn*-functions which do not accept NULL (this case must be checked before calling strn*
+#ifdef NDEBUG
+  #define ERROR_MAX_TEXT_LENGTH $ERROR_MAX_TEXT_LENGTH
+#else
+  #define ERROR_MAX_TEXT_LENGTH $ERROR_MAX_TEXT_LENGTH_DEBUG
+#endif
+
+// use NONE to avoid warning in strn*-functions which do not accept NULL (this case must be checked before calling strn*)
 static const char *NONE = NULL;
 
 typedef struct
 {
   int  id;
-  char text[$ERROR_MAX_TEXT_LENGTH];
+  char text[ERROR_MAX_TEXT_LENGTH];
   #ifndef NDEBUG
     const char   *fileName;
     unsigned int lineNb;
@@ -810,7 +817,7 @@ int _Error_dataToIndex(const char *format, ...)
 #endif
 {
   va_list arguments;
-  char    text[$ERROR_MAX_TEXT_LENGTH];
+  char    text[ERROR_MAX_TEXT_LENGTH];
   int     index;
   int     minId;
   uint    z,i;
@@ -869,7 +876,7 @@ int _Error_dataToIndex(const char *format, ...)
   errorData[index].id = errorDataId;
   z = 0;
   i = 0;
-  while ((z < strlen(text)) && (i < $ERROR_MAX_TEXT_LENGTH-1))
+  while ((z < strlen(text)) && (i < ERROR_MAX_TEXT_LENGTH-1))
   {
     if (!iscntrl(text[z])) { errorData[index].text[i] = text[z]; i++; }
     z++;
@@ -982,7 +989,7 @@ const char *Error_getErrnoText(Errors error)
 
 const char *Error_getText(Errors error)
 {
-  static char errorText[$ERROR_MAX_TEXT_LENGTH];
+  static char errorText[ERROR_MAX_TEXT_LENGTH];
 
   stringClear(errorText);
   switch (ERROR_GET_CODE(error))

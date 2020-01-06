@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 // Name clash: import java.util.List
@@ -40,6 +41,7 @@ import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.custom.TreeEditor;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.dnd.TransferData;
@@ -6035,6 +6037,20 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
   //-----------------------------------------------------------------------
 
+  /** table item renderer
+   */
+  abstract static class TableItemRenderer
+  {
+    /** render table item
+     * @param tableItem tree item
+     * @param column column [0..n-1]
+     * @param gc graphics context
+     * @param x,y position
+     * @param width,height size
+     */
+    abstract public void render(TableItem tableItem, int column, GC gc, int x, int y, int width, int height);
+  }
+
   /** create new table widget
    * @param composite composite widget
    * @param style style
@@ -7721,20 +7737,138 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   //-----------------------------------------------------------------------
 
   final static int TREE_ITEM_FLAG_NONE   = 0;
-  final static int TREE_ITEM_FLAG_FOLDER = 1 << 0;
-  final static int TREE_ITEM_FLAG_OPEN   = 1 << 1;
+  final static int TREE_ITEM_FLAG_CHECK  = 1 << 0;
+  final static int TREE_ITEM_FLAG_FOLDER = 1 << 1;
+  final static int TREE_ITEM_FLAG_OPEN   = 1 << 2;
+
+  /** tree item renderer
+   */
+  abstract static class TreeItemRenderer
+  {
+    /** render tree item
+     * @param treeItem tree item
+     * @param column column [0..n-1]
+     * @param gc graphics context
+     * @param x,y position
+     * @param width,height size
+     * @return true iff rendered
+     */
+    abstract public boolean render(TreeItem treeItem, int column, GC gc, int x, int y, int width, int height);
+  }
 
   /** new tree widget
    * @param composite composite widget
    * @param style style
    * @return new tree widget
    */
-  public static Tree newTree(Composite composite, int style)
+  public static Tree newTree(final Composite composite, int style, final TreeItemRenderer renderer)
   {
     Tree tree = new Tree(composite,style|SWT.BORDER|SWT.H_SCROLL|SWT.V_SCROLL);
     tree.setHeaderVisible(true);
+    tree.setData(new HashMap<TreeItem,TreeEditor>());
+
+    final Color backgroundColor = tree.getBackground();
+    final Color selectedColor   = composite.getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION);
+
+    Listener paintListener = new Listener()
+    {
+      @Override
+      public void handleEvent(Event event)
+      {
+        TreeItem                     treeItem         = (TreeItem)event.item;
+        Tree                         tree             = treeItem.getParent();
+        TreeColumn                   treeColumn       = tree.getColumn(event.index);
+        HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
+        switch(event.type)
+        {
+          case SWT.MeasureItem:
+            {
+              String text       = treeItem.getText(event.index);
+              Point  size       = event.gc.textExtent(text);
+              int    fontHeight = event.gc.getFontMetrics().getHeight();
+
+//              event.width  = size.x;
+//              if ((event.index == 0) && (tree.getStyle() & SWT.CHECK) != 0) size.x += 6;
+              event.height = Math.max(event.height,fontHeight);
+            }
+            break;
+          case SWT.PaintItem: 
+            {
+              TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
+              String     text       = treeItem.getText(event.index);
+              Point      size       = event.gc.textExtent(text);
+
+              int offsetX;
+              int offsetY = (event.height-event.gc.getFontMetrics().getHeight())/2;
+
+              if ((event.index == 0) && (treeEditor != null))
+              {
+                Control control = treeEditor.getEditor();
+
+//TODO: with SWT 4.14 there is background color transparent
+                boolean selected = false;
+                for (TreeItem selectedTreeItem : tree.getSelection())
+                {
+                  if (selectedTreeItem == treeItem)
+                  {
+                    selected = true;
+                    break;
+                  }
+                }
+                control.setBackground(selected ? selectedColor : backgroundColor);
+
+                offsetX = control.getSize().x+2;
+              }
+              else
+              {
+                offsetX = ((event.index == 0) && (tree.getStyle() & SWT.CHECK) != 0) ? 6 : 0;
+              }
+
+              if (   (renderer == null)
+                  || !renderer.render(treeItem,
+                                      event.index,
+                                      event.gc,
+                                      event.x+offsetX,
+                                      event.y+offsetY,
+                                      event.width,
+                                      event.height
+                                     )
+                 )
+              {
+                int w = treeColumn.getWidth()-tree.getGridLineWidth()-4;
+                if      ((treeColumn.getStyle() & SWT.CENTER) == SWT.CENTER)
+                {
+                  event.gc.drawText(text,event.x+offsetX+(w-size.x)/2,event.y+offsetY,true);
+                }
+                else if ((treeColumn.getStyle() & SWT.RIGHT) == SWT.RIGHT)
+                {
+//Dprintf.dprintf("text=%s %d %d %d g=%d",text,offsetX,w,size.x,tree.getGridLineWidth());
+                  event.gc.drawText(text,event.x+offsetX+(w-size.x),event.y+offsetY,true);
+                }
+                else
+                {
+                  event.gc.drawText(text,event.x+offsetX,event.y+offsetY,true);
+                }
+              }
+            }
+            break;
+          case SWT.EraseItem:
+            event.detail &= ~SWT.FOREGROUND;
+            break;
+        }
+      }
+    };
+    tree.addListener(SWT.MeasureItem, paintListener);
+    tree.addListener(SWT.PaintItem, paintListener);
+    tree.addListener(SWT.EraseItem, paintListener);
 
     return tree;
+  }
+
+  public static Tree newTree(final Composite composite, int style)
+  {
+    return newTree(composite,style,(TreeItemRenderer)null);
   }
 
   /** new tree widget
@@ -7947,7 +8081,13 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return new table item
    */
-  public static TreeItem insertTreeItem(final Tree tree, final int index, final Object data, final Image image, final int flags, final Object... values)
+  public static TreeItem insertTreeItem(final Tree      tree,
+                                        final int       index,
+                                        final Object    data,
+                                        final Image     image,
+                                        final int       flags,
+                                        final Object... values
+                                       )
   {
     /** tree insert runnable
      */
@@ -7959,16 +8099,50 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       {
         if (!tree.isDisposed())
         {
+          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
           if (index >= 0)
           {
-            treeItem = new TreeItem(tree,SWT.CHECK,index);
+            treeItem = new TreeItem(tree,SWT.NONE,index);
           }
           else
           {
-            treeItem = new TreeItem(tree,SWT.CHECK);
+            treeItem = new TreeItem(tree,SWT.NONE);
           }
           treeItem.setData(data);
           treeItem.setImage(image);
+          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
+          {
+            Button checked = new Button(tree,SWT.CHECK);
+            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
+            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
+            checked.pack();
+
+            TreeEditor treeEditor = new TreeEditor(tree);
+            treeEditor.minimumWidth = checked.getSize().x;
+            treeEditor.horizontalAlignment = SWT.LEFT;
+            treeEditor.setEditor(checked,treeItem,0);
+            
+            widgetCheckedMap.put(treeItem,treeEditor);
+
+            checked.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+
+                Event treeEvent = new Event();
+                treeEvent.item   = treeItem;
+                treeEvent.detail = SWT.CHECK;
+                tree.notifyListeners(SWT.Selection,treeEvent);
+              }
+            });
+          }
           if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
           for (int i = 0; i < values.length; i++)
           {
@@ -7999,6 +8173,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 treeItem.setText(i,values[i].toString());
               }
             }
+          }
+
+          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
+             Thus force a relayout by column change
+          */
+          for (TreeEditor treeEditor : widgetCheckedMap.values())
+          {
+            treeEditor.setColumn(treeEditor.getColumn());
           }
         }
       }
@@ -8022,7 +8204,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(Tree tree, int index, Object data, int flags, Object... values)
+  public static TreeItem insertTreeItem(Tree      tree,
+                                        int       index,
+                                        Object    data,
+                                        int       flags,
+                                        Object... values
+                                       )
   {
     return insertTreeItem(tree,index,data,(Image)null,flags,values);
   }
@@ -8035,7 +8222,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return new table item
    */
-  public static <T> TreeItem insertTreeItem(final Tree tree, final Comparator<T> comparator, final T data, final int flags, final Object... values)
+  public static <T> TreeItem insertTreeItem(final Tree          tree,
+                                            final Comparator<T> comparator,
+                                            final T             data,
+                                            final int           flags,
+                                            final Object...     values
+                                           )
   {
     /** tree insert runnable
      */
@@ -8047,11 +8239,42 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
       {
         if (!tree.isDisposed())
         {
-          treeItem = new TreeItem(tree,
-                                  SWT.NONE,
-                                  getTreeItemIndex(tree,comparator,data)
-                                 );
+          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
+          treeItem = new TreeItem(tree,SWT.NONE,getTreeItemIndex(tree,comparator,data));
           treeItem.setData(data);
+          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
+          {
+            Button checked = new Button(tree,SWT.CHECK);
+            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
+            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
+            checked.pack();
+
+            TreeEditor treeEditor = new TreeEditor(tree);
+            treeEditor.minimumWidth = checked.getSize().x;
+            treeEditor.horizontalAlignment = SWT.LEFT;
+            treeEditor.setEditor(checked,treeItem,0);
+            
+            widgetCheckedMap.put(treeItem,treeEditor);
+
+            checked.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+
+                Event treeEvent = new Event();
+                treeEvent.item   = treeItem;
+                treeEvent.detail = SWT.CHECK;
+                tree.notifyListeners(SWT.Selection,treeEvent);
+              }
+            });
+          }
           if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
           for (int i = 0; i < values.length; i++)
           {
@@ -8083,6 +8306,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
               }
             }
           }
+
+          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
+             Thus force a relayout by column change
+          */
+          for (TreeEditor treeEditor : widgetCheckedMap.values())
+          {
+            treeEditor.setColumn(treeEditor.getColumn());
+          }
         }
       }
     };
@@ -8105,7 +8336,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(Tree tree, Object data, Image image, int flags, Object... values)
+  public static TreeItem addTreeItem(Tree      tree,
+                                     Object    data,
+                                     Image     image,
+                                     int       flags,
+                                     Object... values
+                                    )
   {
     return insertTreeItem(tree,-1,data,image,flags,values);
   }
@@ -8116,7 +8352,11 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(Tree tree, Object data, int flags, Object... values)
+  public static TreeItem addTreeItem(Tree      tree,   
+                                     Object    data,   
+                                     int       flags,  
+                                     Object... values
+                                    )
   {
     return insertTreeItem(tree,-1,data,flags,values);
   }
@@ -8130,19 +8370,28 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(final TreeItem parentTreeItem, final int index, final Object data, final Image image, final int flags, final Object... values)
+  public static TreeItem insertTreeItem(final TreeItem  parentTreeItem,
+                                        final int       index,
+                                        final Object    data,
+                                        final Image     image,
+                                        final int       flags,
+                                        final Object... values
+                                       )
   {
     /** tree insert runnable
      */
     class InsertRunnable implements Runnable
     {
-      TreeItem subTreeItem = null;
+      TreeItem treeItem = null;
 
       public void run()
       {
         if (!parentTreeItem.isDisposed())
         {
-          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          final Tree                   tree             = parentTreeItem.getParent();
+          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
+          if ((flags & TREE_ITEM_FLAG_OPEN) != 0)
           {
             if (!parentTreeItem.getExpanded())
             {
@@ -8151,14 +8400,46 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           }
           if (index >= 0)
           {
-            subTreeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
+            treeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
           }
           else
           {
-            subTreeItem = new TreeItem(parentTreeItem,SWT.NONE);
+            treeItem = new TreeItem(parentTreeItem,SWT.NONE);
           }
-          subTreeItem.setData(data);
-          subTreeItem.setImage(image);
+          treeItem.setData(data);
+          treeItem.setImage(image);
+          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
+          {
+            Button checked = new Button(tree,SWT.CHECK);
+            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
+            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
+            checked.pack();
+
+            TreeEditor treeEditor = new TreeEditor(tree);
+            treeEditor.minimumWidth = checked.getSize().x;
+            treeEditor.horizontalAlignment = SWT.LEFT;
+            treeEditor.setEditor(checked,treeItem,0);
+            
+            widgetCheckedMap.put(treeItem,treeEditor);
+
+            checked.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+
+                Event treeEvent = new Event();
+                treeEvent.item   = treeItem;
+                treeEvent.detail = SWT.CHECK;
+                tree.notifyListeners(SWT.Selection,treeEvent);
+              }
+            });
+          }
           if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
           {
             if (!parentTreeItem.getExpanded())
@@ -8168,7 +8449,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           }
           else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
           {
-            new TreeItem(subTreeItem,SWT.NONE);
+            new TreeItem(treeItem,SWT.NONE);
           }
           for (int i = 0; i < values.length; i++)
           {
@@ -8176,43 +8457,51 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             {
               if      (values[i] instanceof String)
               {
-                subTreeItem.setText(i,(String)values[i]);
+                treeItem.setText(i,(String)values[i]);
               }
               else if (values[i] instanceof Integer)
               {
-                subTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
               }
               else if (values[i] instanceof Long)
               {
-                subTreeItem.setText(i,Long.toString((Long)values[i]));
+                treeItem.setText(i,Long.toString((Long)values[i]));
               }
               else if (values[i] instanceof Double)
               {
-                subTreeItem.setText(i,Double.toString((Double)values[i]));
+                treeItem.setText(i,Double.toString((Double)values[i]));
               }
               else if (values[i] instanceof Image)
               {
-                subTreeItem.setImage(i,(Image)values[i]);
+                treeItem.setImage(i,(Image)values[i]);
               }
               else
               {
-                subTreeItem.setText(i,values[i].toString());
+                treeItem.setText(i,values[i].toString());
               }
             }
+          }
+
+          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
+             Thus force a relayout by column change
+          */
+          for (TreeEditor treeEditor : widgetCheckedMap.values())
+          {
+            treeEditor.setColumn(treeEditor.getColumn());
           }
         }
       }
     };
 
-    TreeItem subTreeItem = null;
+    TreeItem treeItem = null;
     if (!parentTreeItem.isDisposed())
     {
       InsertRunnable insertRunnable = new InsertRunnable();
       parentTreeItem.getDisplay().syncExec(insertRunnable);
-      subTreeItem = insertRunnable.subTreeItem;
+      treeItem = insertRunnable.treeItem;
     }
 
-    return subTreeItem;
+    return treeItem;
   }
 
   /** insert sub-tree item
@@ -8224,7 +8513,13 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return new tree item
    */
-  public static <T> TreeItem insertTreeItem(TreeItem treeItem, Comparator<T> comparator, T data, Image image, int flags, Object... values)
+  public static <T> TreeItem insertTreeItem(TreeItem      treeItem,
+                                            Comparator<T> comparator,
+                                            T             data,
+                                            Image         image,
+                                            int           flags,
+                                            Object...     values
+                                           )
   {
     return insertTreeItem(treeItem,
                           getTreeItemIndex(treeItem,comparator,data),
@@ -8243,7 +8538,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem insertTreeItem(TreeItem parentTreeItem, int index, Object data, int flags, Object... values)
+  public static TreeItem insertTreeItem(TreeItem  parentTreeItem,
+                                        int       index,
+                                        Object    data,
+                                        int       flags,
+                                        Object... values
+                                       )
   {
     return insertTreeItem(parentTreeItem,index,data,null,flags,values);
   }
@@ -8256,7 +8556,12 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param values values list
    * @return new tree item
    */
-  public static TreeItem addTreeItem(TreeItem parentTreeItem, Object data, Image image, int flags, Object... values)
+  public static TreeItem addTreeItem(TreeItem  parentTreeItem,
+                                     Object    data,
+                                     Image     image,
+                                     int       flags,
+                                     Object... values
+                                    )
   {
     return insertTreeItem(parentTreeItem,-1,data,image,flags,values);
   }
@@ -8274,930 +8579,17 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   }
 
   /** update tree item
-   * @param parentTreeItem parent tree item
-   * @param data item data
-   * @param flags flags; see TREE_ITEM_FLAG_...
-   * @param values values list
-   * @return updated or added tree item
-   */
-  public static TreeItem updateTreeItem(final TreeItem parentTreeItem, final Object data, final int flags, final Object... values)
-  {
-    /** tree update runnable
-     */
-    class UpdateRunnable implements Runnable
-    {
-      TreeItem updatedTreeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!parentTreeItem.isDisposed())
-        {
-          updateTreeItem(parentTreeItem.getItems());
-        }
-      }
-
-      /** find and update tree item
-       * @param existingTreeItems existing tree items
-       */
-      private void updateTreeItem(TreeItem existingTreeItems[])
-      {
-        for (TreeItem existingTreeItem : existingTreeItems)
-        {
-          updateTreeItem(existingTreeItem);
-          if (updatedTreeItem == null)
-          {
-            // update sub-tree item
-            updateTreeItem(existingTreeItem.getItems());
-          }
-          if (updatedTreeItem != null) break;
-        }
-      }
-
-      /** update tree item
-       * @param existingTreeItem existing tree item
-       */
-      private void updateTreeItem(TreeItem existingTreeItem)
-      {
-        try
-        {
-          if (data.equals(existingTreeItem.getData()))
-          {
-            // update
-            existingTreeItem.setData(data);
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
-              {
-                if      (values[i] instanceof String)
-                {
-                  existingTreeItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Integer)
-                {
-                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
-                }
-                else if (values[i] instanceof Long)
-                {
-                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else if (values[i] instanceof Image)
-                {
-                  existingTreeItem.setImage(i,(Image)values[i]);
-                }
-                else
-                {
-                  existingTreeItem.setText(i,values[i].toString());
-                }
-              }
-            }
-            updatedTreeItem = existingTreeItem;
-          }
-        }
-        catch (ClassCastException exception)
-        {
-          // ignored
-        }
-      }
-    }
-
-    /** tree add runnable
-     */
-    class AddRunnable implements Runnable
-    {
-      TreeItem addedTreeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!parentTreeItem.isDisposed())
-        {
-          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
-          {
-            if (!parentTreeItem.getExpanded())
-            {
-              parentTreeItem.removeAll();
-            }
-          }
-          addedTreeItem = new TreeItem(parentTreeItem,
-                                       SWT.NONE
-                                      );
-          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(addedTreeItem,SWT.NONE);
-          addedTreeItem.setData(data);
-          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
-          {
-            if (!parentTreeItem.getExpanded())
-            {
-              parentTreeItem.setExpanded(true);
-            }
-          }
-          else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
-          {
-            new TreeItem(addedTreeItem,SWT.NONE);
-          }
-          for (int i = 0; i < values.length; i++)
-          {
-            if (values[i] != null)
-            {
-              if      (values[i] instanceof String)
-              {
-                addedTreeItem.setText(i,(String)values[i]);
-              }
-              else if (values[i] instanceof Integer)
-              {
-                addedTreeItem.setText(i,Integer.toString((Integer)values[i]));
-              }
-              else if (values[i] instanceof Long)
-              {
-                addedTreeItem.setText(i,Long.toString((Long)values[i]));
-              }
-              else if (values[i] instanceof Double)
-              {
-                addedTreeItem.setText(i,Double.toString((Double)values[i]));
-              }
-              else if (values[i] instanceof Image)
-              {
-                addedTreeItem.setImage(i,(Image)values[i]);
-              }
-              else
-              {
-                addedTreeItem.setText(i,values[i].toString());
-              }
-            }
-          }
-        }
-      }
-    };
-
-    TreeItem subTreeItem = null;
-    if (!parentTreeItem.isDisposed())
-    {
-      Display display = parentTreeItem.getDisplay();
-
-      // try update existing tree item
-      UpdateRunnable updateRunnable = new UpdateRunnable();
-      display.syncExec(updateRunnable);
-      subTreeItem = updateRunnable.updatedTreeItem;
-
-      if (subTreeItem == null)
-      {
-        // add new tree item
-        AddRunnable addRunnable = new AddRunnable();
-        display.syncExec(addRunnable);
-        subTreeItem = addRunnable.addedTreeItem;
-      }
-    }
-
-    return subTreeItem;
-  }
-
-  /** update tree item
    * @param tree tree
    * @param data item data
    * @param flags flags; see TREE_ITEM_FLAG_...
    * @param values values list
    * @return updated or inserted tree item
    */
-  public static TreeItem updateTreeItem(final Tree tree, final Object data, final int flags, final Object... values)
-  {
-    /** tree update runnable
-     */
-    class UpdateRunnable implements Runnable
-    {
-      TreeItem updatedTreeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!tree.isDisposed())
-        {
-          updateTreeItem(tree.getItems());
-        }
-      }
-
-      /** find and update tree item
-       * @param existingTreeItems existing tree items
-       */
-      private void updateTreeItem(TreeItem existingTreeItems[])
-      {
-        for (TreeItem existingTreeItem : existingTreeItems)
-        {
-          updateTreeItem(existingTreeItem);
-          if (updatedTreeItem == null)
-          {
-            // update sub-tree item
-            updateTreeItem(existingTreeItem.getItems());
-          }
-          if (updatedTreeItem != null) break;
-        }
-      }
-
-      /** update tree item
-       * @param existingTreeItem existing tree item
-       */
-      private void updateTreeItem(TreeItem existingTreeItem)
-      {
-        try
-        {
-          if (data.equals(existingTreeItem.getData()))
-          {
-            // update
-            existingTreeItem.setData(data);
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
-              {
-                if      (values[i] instanceof String)
-                {
-                  existingTreeItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Integer)
-                {
-                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
-                }
-                else if (values[i] instanceof Long)
-                {
-                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else if (values[i] instanceof Image)
-                {
-                  existingTreeItem.setImage(i,(Image)values[i]);
-                }
-                else
-                {
-                  existingTreeItem.setText(i,values[i].toString());
-                }
-              }
-            }
-            updatedTreeItem = existingTreeItem;
-          }
-        }
-        catch (ClassCastException exception)
-        {
-          // ignored
-        }
-      }
-    }
-
-    /** tree add runnable
-     */
-    class AddRunnable implements Runnable
-    {
-      TreeItem addedTreeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!tree.isDisposed())
-        {
-          addedTreeItem = new TreeItem(tree,
-                                       SWT.NONE
-                                      );
-          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(addedTreeItem,SWT.NONE);
-          addedTreeItem.setData(data);
-          for (int i = 0; i < values.length; i++)
-          {
-            if (values[i] != null)
-            {
-              if      (values[i] instanceof String)
-              {
-                addedTreeItem.setText(i,(String)values[i]);
-              }
-              else if (values[i] instanceof Integer)
-              {
-                addedTreeItem.setText(i,Integer.toString((Integer)values[i]));
-              }
-              else if (values[i] instanceof Long)
-              {
-                addedTreeItem.setText(i,Long.toString((Long)values[i]));
-              }
-              else if (values[i] instanceof Double)
-              {
-                addedTreeItem.setText(i,Double.toString((Double)values[i]));
-              }
-              else if (values[i] instanceof Image)
-              {
-                addedTreeItem.setImage(i,(Image)values[i]);
-              }
-              else
-              {
-                addedTreeItem.setText(i,values[i].toString());
-              }
-            }
-          }
-        }
-      }
-    };
-
-    TreeItem treeItem = null;
-    if (!tree.isDisposed())
-    {
-      Display display = tree.getDisplay();
-
-      // try update existing tree item
-      UpdateRunnable updateRunnable = new UpdateRunnable();
-      display.syncExec(updateRunnable);
-      treeItem = updateRunnable.updatedTreeItem;
-
-      if (treeItem == null)
-      {
-        // insert new tree item
-        AddRunnable addRunnable = new AddRunnable();
-        display.syncExec(addRunnable);
-        treeItem = addRunnable.addedTreeItem;
-      }
-    }
-
-    return treeItem;
-  }
-
-  /** update or insert tree item
-   * @param tree tree widget
-   * @param comparator tree item comperator
-   * @param data item data
-   * @param flags flags; see TREE_ITEM_FLAG_...
-   * @param values values list
-   * @return updated or inserted tree item
-   */
-  public static <T> TreeItem updateTreeItem(final Tree tree, final Comparator<T> comparator, final T data, final int flags, final Object... values)
-  {
-    /** tree update runnable
-     */
-    class UpdateRunnable implements Runnable
-    {
-      TreeItem updatedTreeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!tree.isDisposed())
-        {
-          for (TreeItem existingTreeItem : tree.getItems())
-          {
-            // check if exists
-            boolean existsFlag = false;
-            try
-            {
-              if (data.equals((T)existingTreeItem.getData()))
-              {
-                existingTreeItem.setData(data);
-                for (int i = 0; i < values.length; i++)
-                {
-                  if (values[i] != null)
-                  {
-                    if      (values[i] instanceof String)
-                    {
-                      existingTreeItem.setText(i,(String)values[i]);
-                    }
-                    else if (values[i] instanceof Integer)
-                    {
-                      existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
-                    }
-                    else if (values[i] instanceof Long)
-                    {
-                      existingTreeItem.setText(i,Long.toString((Long)values[i]));
-                    }
-                    else if (values[i] instanceof Double)
-                    {
-                      existingTreeItem.setText(i,Double.toString((Double)values[i]));
-                    }
-                    else if (values[i] instanceof Image)
-                    {
-                      existingTreeItem.setImage(i,(Image)values[i]);
-                    }
-                    else
-                    {
-                      existingTreeItem.setText(i,values[i].toString());
-                    }
-                  }
-                }
-                updatedTreeItem = existingTreeItem;
-                break;
-              }
-            }
-            catch (ClassCastException exception)
-            {
-              // ignored
-            }
-          }
-        }
-      }
-    }
-
-    /** tree insert runnable
-     */
-    class InsertRunnable implements Runnable
-    {
-      TreeItem addedTreeItem = null;
-
-      /** run
-       */
-      public void run()
-      {
-        if (!tree.isDisposed())
-        {
-          addedTreeItem = new TreeItem(tree,
-                                       SWT.NONE,
-                                       getTreeItemIndex(tree,comparator,data)
-                                      );
-          addedTreeItem.setData(data);
-          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(addedTreeItem,SWT.NONE);
-          for (int i = 0; i < values.length; i++)
-          {
-            if (values[i] != null)
-            {
-              if      (values[i] instanceof String)
-              {
-                addedTreeItem.setText(i,(String)values[i]);
-              }
-              else if (values[i] instanceof Integer)
-              {
-                addedTreeItem.setText(i,Integer.toString((Integer)values[i]));
-              }
-              else if (values[i] instanceof Long)
-              {
-                addedTreeItem.setText(i,Long.toString((Long)values[i]));
-              }
-              else if (values[i] instanceof Double)
-              {
-                addedTreeItem.setText(i,Double.toString((Double)values[i]));
-              }
-              else if (values[i] instanceof Image)
-              {
-                addedTreeItem.setImage(i,(Image)values[i]);
-              }
-              else
-              {
-                addedTreeItem.setText(i,values[i].toString());
-              }
-            }
-          }
-        }
-      }
-    };
-
-    TreeItem treeItem = null;
-    if (!tree.isDisposed())
-    {
-      Display display = tree.getDisplay();
-
-      // try update existing tree item
-      UpdateRunnable updateRunnable = new UpdateRunnable();
-      display.syncExec(updateRunnable);
-      treeItem = updateRunnable.updatedTreeItem;
-
-      if (treeItem == null)
-      {
-        // insert new tree item
-        InsertRunnable insertRunnable = new InsertRunnable();
-        display.syncExec(insertRunnable);
-        treeItem = insertRunnable.addedTreeItem;
-      }
-    }
-
-    return treeItem;
-  }
-
-  /** remove tree item
-   * @param treeItem tree item
-   * @param data item data
-   * @return true iff tree item removed
-   */
-  private static boolean removeTreeItem(TreeItem treeItem, Object data)
-  {
-    if (!treeItem.isDisposed())
-    {
-      if (data.equals(treeItem.getData()))
-      {
-        treeItem.dispose();
-        return true;
-      }
-      else
-      {
-        for (TreeItem subTreeItem : treeItem.getItems())
-        {
-          if (removeTreeItem(subTreeItem,data))
-          {
-            if (treeItem.getItemCount() <= 0)
-            {
-              treeItem.setExpanded(false);
-              new TreeItem(treeItem,SWT.NONE);
-            }
-            return true;
-          }
-        }
-        return false;
-      }
-    }
-
-    return false;
-  }
-
-  /** remove tree item
-   * @param treeItem tree item
-   * @param data item data
-   */
-  public static void removeTreeItem(final Tree tree, final TreeItem treeItem, final Object data)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        /** run
-         */
-        public void run()
-        {
-          removeTreeItem(treeItem,data);
-        }
-      });
-    }
-  }
-
-  /** remove tree item
-   * @param tree tree
-   * @param data item data
-   */
-  public static void removeTreeItem(final Tree tree, final Object data)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!tree.isDisposed())
-          {
-            for (TreeItem treeItem : tree.getItems())
-            {
-              if (removeTreeItem(treeItem,data))
-              {
-                break;
-              }
-            }
-          }
-        }
-      });
-    }
-  }
-
-  /** remove tree item
-   * @param tree tree
-   * @param treeItem tree item to remove
-   */
-  public static void removeTreeItem(final Tree tree, final TreeItem treeItem)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!treeItem.isDisposed())
-          {
-            TreeItem parentTreeItem = treeItem.getParentItem();
-            treeItem.dispose();
-            if ((parentTreeItem != null) && (parentTreeItem.getItemCount() <= 0))
-            {
-              parentTreeItem.setExpanded(false);
-              new TreeItem(parentTreeItem,SWT.NONE);
-            }
-          }
-        }
-      });
-    }
-  }
-
-  /** remove tree items
-   * @param tree tree
-   * @param treeItems tree items to remove
-   */
-  public static void removeTreeItems(Tree tree, HashSet<TreeItem> treeItems)
-  {
-    for (TreeItem treeItem : treeItems)
-    {
-      removeTreeItem(tree,treeItem);
-    }
-  }
-
-  /** remove all tree items of tree item
-   * @param tree tree
-   * @treeItem tree item
-   */
-  public static void removeAllTreeItems(final Tree tree, final TreeItem treeItem)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!tree.isDisposed())
-          {
-            treeItem.removeAll();
-            new TreeItem(treeItem,SWT.NONE);
-            treeItem.setExpanded(false);
-          }
-        }
-      });
-    }
-  }
-
-  /** remove all tree items
-   * @param tree tree
-   */
-  public static void removeAllTreeItems(final Tree tree)
-  {
-    if (!tree.isDisposed())
-    {
-      tree.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!tree.isDisposed())
-          {
-            tree.removeAll();
-          }
-        }
-      });
-    }
-  }
-
-/*
-private void printItems(int i, TreeItem treeItem)
-{
-Dprintf.dprintf("%s%s: %s",StringUtils.repeat("  ",i),treeItem,treeItem.getData());
-for (TreeItem subTreeItem : treeItem.getItems()) printItems(i+1,subTreeItem);
-}
-private void printTree(Tree tree)
-{
-Dprintf.dprintf("--- tree:");
-for (TreeItem treeItem : tree.getItems()) printItems(0,treeItem);
-Dprintf.dprintf("---");
-}
-
-static int rr = 0;
-static String indent(int n)
-{
-  String s="";
-
-  while (n>0) { s=s+"  "; n--; }
-  return s;
-}
-private static void printSubTree(int n, TreeItem parentTreeItem)
-{
-  System.out.println(indent(n)+parentTreeItem+" ("+parentTreeItem.hashCode()+") count="+parentTreeItem.getItemCount()+" expanded="+parentTreeItem.getExpanded());
-  for (TreeItem treeItem : parentTreeItem.getItems())
-  {
-    printSubTree(n+1,treeItem);
-  }
-}
-private static void printTree(Tree tree)
-{
-  for (TreeItem treeItem : tree.getItems())
-  {
-    printSubTree(0,treeItem);
-  }
-}
-*/
-
-  /** get tree item from sub-tree items
-   * @param parentTreeItem parent tree item
-   * @param data tree item data
-   * @return tree item or null if not found
-   */
-  public static <T extends Comparable> TreeItem getTreeItem(TreeItem parentTreeItem, T data)
-  {
-    for (TreeItem treeItem : parentTreeItem.getItems())
-    {
-      if (data.compareTo(treeItem.getData()) == 0)
-      {
-        return treeItem;
-      }
-      if (treeItem.getExpanded())
-      {
-        treeItem = getTreeItem(treeItem,data);
-        if (treeItem != null)
-        {
-          return treeItem;
-        }
-      }
-    }
-
-    return null;
-  }
-
-
-  /** get tree item from sub-tree items
-   * @param parentTreeItem parent tree item
-   * @param data tree item data
-   * @return tree item or null if not found
-   */
-  public static TreeItem getTreeItem(TreeItem parentTreeItem, Object data)
-  {
-    for (TreeItem treeItem : parentTreeItem.getItems())
-    {
-      if (data.equals(treeItem.getData()))
-      {
-        return treeItem;
-      }
-      if (treeItem.getExpanded())
-      {
-        treeItem = getTreeItem(treeItem,data);
-        if (treeItem != null)
-        {
-          return treeItem;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /** get tree item from sub-tree items
-   * @param parentTreeItem parent tree item
-   * @param data tree item data
-   * @return tree item or null if not found
-   */
-  public static <T> TreeItem getTreeItem(TreeItem parentTreeItem, Comparator<T> comparator, T data)
-  {
-    for (TreeItem treeItem : parentTreeItem.getItems())
-    {
-      assert treeItem.getData() != null;
-      if (comparator.compare((T)treeItem.getData(),data) == 0)
-      {
-        return treeItem;
-      }
-      if (treeItem.getExpanded())
-      {
-        treeItem = getTreeItem(treeItem,comparator,data);
-        if (treeItem != null)
-        {
-          return treeItem;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /** get tree item
-   * @param tree tree
-   * @param data tree item data
-   * @return tree item or null if not found
-   */
-  public static <T extends Comparable> TreeItem getTreeItem(Tree tree, T data)
-  {
-    TreeItem subTreeItem;
-
-    for (TreeItem treeItem : tree.getItems())
-    {
-      if (data.compareTo(treeItem.getData()) == 0)
-      {
-        return treeItem;
-      }
-      if (treeItem.getExpanded())
-      {
-        subTreeItem = getTreeItem(treeItem,data);
-        if (subTreeItem != null)
-        {
-          return subTreeItem;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /** get tree item
-   * @param tree tree
-   * @param data tree item data
-   * @return tree item or null if not found
-   */
-  public static TreeItem getTreeItem(Tree tree, Object data)
-  {
-    TreeItem subTreeItem;
-
-    for (TreeItem treeItem : tree.getItems())
-    {
-      if (data.equals(treeItem.getData()))
-      {
-        return treeItem;
-      }
-      if (treeItem.getExpanded())
-      {
-        subTreeItem = getTreeItem(treeItem,data);
-        if (subTreeItem != null)
-        {
-          return subTreeItem;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /** get tree item
-   * @param tree tree
-   * @param comparator tree item comparator
-   * @return tree item or null if not found
-   */
-  public static <T> TreeItem getTreeItem(Tree tree, Comparator<T> comparator, T data)
-  {
-    TreeItem subTreeItem;
-
-    for (TreeItem treeItem : tree.getItems())
-    {
-      assert treeItem.getData() != null;
-      if (comparator.compare((T)treeItem.getData(),data) == 0)
-      {
-        return treeItem;
-      }
-      if (treeItem.getExpanded())
-      {
-        subTreeItem = getTreeItem(treeItem,comparator);
-        if (subTreeItem != null)
-        {
-          return subTreeItem;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  /** set tree item
-   * @param treeItem tree item to update
-   * @param data item data
-   * @param values values list
-   */
-  public static void setTreeItem(final TreeItem treeItem, final Object data, final Object... values)
-  {
-    if (!treeItem.isDisposed())
-    {
-      treeItem.getDisplay().syncExec(new Runnable()
-      {
-        public void run()
-        {
-          if (!treeItem.isDisposed())
-          {
-            treeItem.setData(data);
-            for (int i = 0; i < values.length; i++)
-            {
-              if (values[i] != null)
-              {
-                if      (values[i] instanceof String)
-                {
-                  treeItem.setText(i,(String)values[i]);
-                }
-                else if (values[i] instanceof Integer)
-                {
-                  treeItem.setText(i,Integer.toString((Integer)values[i]));
-                }
-                else if (values[i] instanceof Long)
-                {
-                  treeItem.setText(i,Long.toString((Long)values[i]));
-                }
-                else if (values[i] instanceof Double)
-                {
-                  treeItem.setText(i,Double.toString((Double)values[i]));
-                }
-                else if (values[i] instanceof Image)
-                {
-                  treeItem.setImage(i,(Image)values[i]);
-                }
-                else
-                {
-                  treeItem.setText(i,values[i].toString());
-                }
-              }
-            }
-          }
-        }
-      });
-    }
-  }
-
-  /** set tree item
-   * @param tree tree
-   * @param data item data
-   * @param flags flags; see TREE_ITEM_FLAG_...
-   * @param values values list
-   * @return updated or inserted tree item
-   */
-  public static TreeItem setTreeItem(final Tree tree, final Object data, final int flags, final Object... values)
+  public static TreeItem updateTreeItem(final Tree      tree,
+                                        final Object    data,
+                                        final int       flags,
+                                        final Object... values
+                                       )
   {
     /** tree set runnable
      */
@@ -9294,12 +8686,15 @@ private static void printTree(Tree tree)
     return treeItem;
   }
 
-  /** set table item color
-   * @param treeItem tree item
-   * @param foregroundColor foregound color
-   * @param backgroundColor background color
+  /** update tree item
+   * @param treeItem tree item to update
+   * @param data item data
+   * @param values values list
    */
-  public static void setTreeItemColor(final TreeItem treeItem, final Color foregroundColor, final Color backgroundColor)
+  public static void updateTreeItem(final TreeItem  treeItem,
+                                    final Object    data,
+                                    final Object... values
+                                   )
   {
     if (!treeItem.isDisposed())
     {
@@ -9309,24 +8704,1316 @@ private static void printTree(Tree tree)
         {
           if (!treeItem.isDisposed())
           {
-            treeItem.setForeground(foregroundColor);
-            treeItem.setBackground(backgroundColor);
+            treeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  treeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  treeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  treeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  treeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  treeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  treeItem.setText(i,values[i].toString());
+                }
+              }
+            }
           }
         }
       });
     }
   }
 
-  /** set table item background color
-   * @param treeItem tree item
-   * @param backgroundColor background color
+  /** update or insert tree item
+   * @param tree tree
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or inserted tree item
    */
-  public static void setTreeItemColor(TreeItem treeItem, Color backgroundColor)
+  public static TreeItem updateInsertTreeItem(final Tree      tree,
+                                              final Object    data,
+                                              final int       flags,
+                                              final Object... values
+                                             )
   {
-    setTreeItemColor(treeItem,(Color)null,backgroundColor);
+    /** tree update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          updateTreeItem(tree.getItems());
+        }
+      }
+
+      /** update tree item
+       * @param existingTreeItem existing tree item
+       */
+      private void updateTreeItem(TreeItem existingTreeItem)
+      {
+        try
+        {
+          if (data.equals(existingTreeItem.getData()))
+          {
+            // update
+            existingTreeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  existingTreeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  existingTreeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  existingTreeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+            treeItem = existingTreeItem;
+          }
+        }
+        catch (ClassCastException exception)
+        {
+          // ignored
+        }
+      }
+
+      /** find and update tree item
+       * @param existingTreeItems existing tree items
+       */
+      private void updateTreeItem(TreeItem existingTreeItems[])
+      {
+        for (TreeItem existingTreeItem : existingTreeItems)
+        {
+          updateTreeItem(existingTreeItem);
+          if (treeItem == null)
+          {
+            // update sub-tree item
+            updateTreeItem(existingTreeItem.getItems());
+          }
+          if (treeItem != null) break;
+        }
+      }
+    }
+
+    /** tree add runnable
+     */
+    class AddRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
+          treeItem = new TreeItem(tree,SWT.NONE);
+          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
+          {
+            Button checked = new Button(tree,SWT.CHECK);
+            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
+            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
+            checked.pack();
+
+            TreeEditor treeEditor = new TreeEditor(tree);
+            treeEditor.minimumWidth = checked.getSize().x;
+            treeEditor.horizontalAlignment = SWT.LEFT;
+            treeEditor.setEditor(checked,treeItem,0);
+            
+            widgetCheckedMap.put(treeItem,treeEditor);
+
+            checked.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+
+                Event treeEvent = new Event();
+                treeEvent.item   = treeItem;
+                treeEvent.detail = SWT.CHECK;
+                tree.notifyListeners(SWT.Selection,treeEvent);
+              }
+            });
+          }
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
+          treeItem.setData(data);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+
+          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
+             Thus force a relayout by column change
+          */
+          for (TreeEditor treeEditor : widgetCheckedMap.values())
+          {
+            treeEditor.setColumn(treeEditor.getColumn());
+          }
+        }
+      }
+    };
+
+    TreeItem treeItem = null;
+    if (!tree.isDisposed())
+    {
+      Display display = tree.getDisplay();
+
+      // try update existing tree item
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      display.syncExec(updateRunnable);
+      treeItem = updateRunnable.treeItem;
+
+      if (treeItem == null)
+      {
+        // insert new tree item
+        AddRunnable addRunnable = new AddRunnable();
+        display.syncExec(addRunnable);
+        treeItem = addRunnable.treeItem;
+      }
+    }
+
+    return treeItem;
   }
 
-  /** set table item color
+  /** update or insert tree item
+   * @param tree tree widget
+   * @param comparator tree item comperator
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or inserted tree item
+   */
+  public static <T> TreeItem updateInsertTreeItem(final Tree          tree,
+                                                  final Comparator<T> comparator,
+                                                  final T             data,
+                                                  final int           flags,
+                                                  final Object...     values
+                                                 )
+  {
+    /** tree update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          for (TreeItem existingTreeItem : tree.getItems())
+          {
+            // check if exists
+            if (data.equals(existingTreeItem.getData()))
+            {
+              existingTreeItem.setData(data);
+              for (int i = 0; i < values.length; i++)
+              {
+                if (values[i] != null)
+                {
+                  if      (values[i] instanceof String)
+                  {
+                    existingTreeItem.setText(i,(String)values[i]);
+                  }
+                  else if (values[i] instanceof Integer)
+                  {
+                    existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                  }
+                  else if (values[i] instanceof Long)
+                  {
+                    existingTreeItem.setText(i,Long.toString((Long)values[i]));
+                  }
+                  else if (values[i] instanceof Double)
+                  {
+                    existingTreeItem.setText(i,Double.toString((Double)values[i]));
+                  }
+                  else if (values[i] instanceof Image)
+                  {
+                    existingTreeItem.setImage(i,(Image)values[i]);
+                  }
+                  else
+                  {
+                    existingTreeItem.setText(i,values[i].toString());
+                  }
+                }
+              }               
+              treeItem = existingTreeItem;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    /** tree insert runnable
+     */
+    class InsertRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!tree.isDisposed())
+        {
+          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
+          treeItem = new TreeItem(tree,SWT.NONE,getTreeItemIndex(tree,comparator,data));
+          treeItem.setData(data);
+          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
+          {
+            Button checked = new Button(tree,SWT.CHECK);
+//TODO: remove
+//            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
+//            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_TRANSPARENT));
+            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
+            checked.pack();
+
+            TreeEditor treeEditor = new TreeEditor(tree);
+            treeEditor.minimumWidth = checked.getSize().x;
+            treeEditor.horizontalAlignment = SWT.LEFT;
+            treeEditor.setEditor(checked,treeItem,0);
+            
+            widgetCheckedMap.put(treeItem,treeEditor);
+
+            checked.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+
+                Event treeEvent = new Event();
+                treeEvent.item   = treeItem;
+                treeEvent.detail = SWT.CHECK;
+                tree.notifyListeners(SWT.Selection,treeEvent);
+              }
+            });
+          }
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+
+          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
+             Thus force a relayout by column change
+          */
+          for (TreeEditor treeEditor : widgetCheckedMap.values())
+          {
+            treeEditor.setColumn(treeEditor.getColumn());
+          }
+        }
+      }
+    };
+
+    TreeItem treeItem = null;
+    if (!tree.isDisposed())
+    {
+      Display display = tree.getDisplay();
+
+      // try update existing tree item
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      display.syncExec(updateRunnable);
+      treeItem = updateRunnable.treeItem;
+
+      if (treeItem == null)
+      {
+        // insert new tree item
+        InsertRunnable insertRunnable = new InsertRunnable();
+        display.syncExec(insertRunnable);
+        treeItem = insertRunnable.treeItem;
+      }
+    }
+
+    return treeItem;
+  }
+  
+  /** update or insert tree item
+   * @param parentTreeItem parent tree item
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or added tree item
+   */
+  public static TreeItem updateInsertTreeItem(final TreeItem  parentTreeItem,
+                                              final Object    data,
+                                              final int       flags,
+                                              final Object... values
+                                             )
+  {
+    /** tree update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!parentTreeItem.isDisposed())
+        {
+          updateTreeItem(parentTreeItem.getItems());
+        }
+      }
+
+      /** update tree item
+       * @param existingTreeItem existing tree item
+       */
+      private void updateTreeItem(TreeItem existingTreeItem)
+      {
+        try
+        {
+          if (data.equals(existingTreeItem.getData()))
+          {
+            // update
+            existingTreeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  existingTreeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  existingTreeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  existingTreeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+            treeItem = existingTreeItem;
+          }
+        }
+        catch (ClassCastException exception)
+        {
+          // ignored
+        }
+      }
+
+      /** find and update tree item
+       * @param existingTreeItems existing tree items
+       */
+      private void updateTreeItem(TreeItem existingTreeItems[])
+      {
+        for (TreeItem existingTreeItem : existingTreeItems)
+        {
+          updateTreeItem(existingTreeItem);
+          if (treeItem == null)
+          {
+            // update sub-tree item
+            updateTreeItem(existingTreeItem.getItems());
+          }
+          if (treeItem != null) break;
+        }
+      }
+    }
+
+    /** tree add runnable
+     */
+    class AddRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!parentTreeItem.isDisposed())
+        {
+          final Tree                   tree             = parentTreeItem.getParent();
+          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
+          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          {
+            if (!parentTreeItem.getExpanded())
+            {
+              parentTreeItem.removeAll();
+            }
+          }
+          treeItem = new TreeItem(parentTreeItem,SWT.NONE);
+          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
+          {
+            Button checked = new Button(tree,SWT.CHECK);
+            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
+            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
+            checked.pack();
+
+            TreeEditor treeEditor = new TreeEditor(tree);
+            treeEditor.minimumWidth = checked.getSize().x;
+            treeEditor.horizontalAlignment = SWT.LEFT;
+            treeEditor.setEditor(checked,treeItem,0);
+            
+            widgetCheckedMap.put(treeItem,treeEditor);
+
+            checked.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+
+                Event treeEvent = new Event();
+                treeEvent.item   = treeItem;
+                treeEvent.detail = SWT.CHECK;
+                tree.notifyListeners(SWT.Selection,treeEvent);
+              }
+            });
+          }
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
+          treeItem.setData(data);
+          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          {
+            if (!parentTreeItem.getExpanded())
+            {
+              parentTreeItem.setExpanded(true);
+            }
+          }
+          else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
+          {
+            new TreeItem(treeItem,SWT.NONE);
+          }
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+
+          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
+             Thus force a relayout by column change
+          */
+          for (TreeEditor treeEditor : widgetCheckedMap.values())
+          {
+            treeEditor.setColumn(treeEditor.getColumn());
+          }
+        }
+      }
+    };
+
+    TreeItem subTreeItem = null;
+    if (!parentTreeItem.isDisposed())
+    {
+      Display display = parentTreeItem.getDisplay();
+
+      // try update existing tree item
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      display.syncExec(updateRunnable);
+      subTreeItem = updateRunnable.treeItem;
+
+      if (subTreeItem == null)
+      {
+        // add new tree item
+        AddRunnable addRunnable = new AddRunnable();
+        display.syncExec(addRunnable);
+        subTreeItem = addRunnable.treeItem;
+      }
+    }
+
+    return subTreeItem;
+  }
+
+  /** update or insert tree item
+   * @param parentTreeItem parent tree item
+   * @param comparator tree item comperator
+   * @param data item data
+   * @param flags flags; see TREE_ITEM_FLAG_...
+   * @param values values list
+   * @return updated or added tree item
+   */
+  public static <T> TreeItem updateInsertTreeItem(final TreeItem      parentTreeItem,
+                                                  final Comparator<T> comparator,
+                                                  final T             data,
+                                                  final int           flags,
+                                                  final Object...     values
+                                                 )
+  {
+    /** tree update runnable
+     */
+    class UpdateRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!parentTreeItem.isDisposed())
+        {
+          updateTreeItem(parentTreeItem.getItems());
+        }
+      }
+
+      /** update tree item
+       * @param existingTreeItem existing tree item
+       */
+      private void updateTreeItem(TreeItem existingTreeItem)
+      {
+        try
+        {
+//Dprintf.dprintf("  check exists %s",existingTreeItem.getData());
+//Dprintf.dprintf("               %s",data);
+//Dprintf.dprintf("  => %s",data.equals(existingTreeItem.getData()));
+          if (data.equals(existingTreeItem.getData()))
+          {
+            // update
+            existingTreeItem.setData(data);
+            for (int i = 0; i < values.length; i++)
+            {
+              if (values[i] != null)
+              {
+                if      (values[i] instanceof String)
+                {
+                  existingTreeItem.setText(i,(String)values[i]);
+                }
+                else if (values[i] instanceof Integer)
+                {
+                  existingTreeItem.setText(i,Integer.toString((Integer)values[i]));
+                }
+                else if (values[i] instanceof Long)
+                {
+                  existingTreeItem.setText(i,Long.toString((Long)values[i]));
+                }
+                else if (values[i] instanceof Double)
+                {
+                  existingTreeItem.setText(i,Double.toString((Double)values[i]));
+                }
+                else if (values[i] instanceof Image)
+                {
+                  existingTreeItem.setImage(i,(Image)values[i]);
+                }
+                else
+                {
+                  existingTreeItem.setText(i,values[i].toString());
+                }
+              }
+            }
+            treeItem = existingTreeItem;
+          }
+        }
+        catch (ClassCastException exception)
+        {
+          // ignored
+        }
+      }
+
+      /** find and update tree item
+       * @param existingTreeItems existing tree items
+       */
+      private void updateTreeItem(TreeItem existingTreeItems[])
+      {
+//Dprintf.dprintf("compare parent %s %s: %d: %s",parentTreeItem.hashCode(),parentTreeItem.getData(),existingTreeItems.length,data);
+        for (TreeItem existingTreeItem : existingTreeItems)
+        {
+          updateTreeItem(existingTreeItem);
+          if (treeItem == null)
+          {
+            // update sub-tree item
+            updateTreeItem(existingTreeItem.getItems());
+          }
+          if (treeItem != null) break;
+        }
+      }
+    }
+
+    /** tree insert runnable
+     */
+    class InsertRunnable implements Runnable
+    {
+      TreeItem treeItem = null;
+
+      /** run
+       */
+      public void run()
+      {
+        if (!parentTreeItem.isDisposed())
+        {
+          final Tree                   tree             = parentTreeItem.getParent();
+          HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
+          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          {
+            if (!parentTreeItem.getExpanded())
+            {
+              parentTreeItem.removeAll();
+            }
+          }
+          treeItem = new TreeItem(parentTreeItem,SWT.NONE,getTreeItemIndex(parentTreeItem,comparator,data));
+          if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
+          {
+
+            Button checked = new Button(tree,SWT.CHECK);
+            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
+            Widgets.layout(checked,0,0,TableLayoutData.NSWE);
+            checked.pack();
+
+            TreeEditor treeEditor = new TreeEditor(tree);
+            treeEditor.minimumWidth = checked.getSize().x;
+            treeEditor.horizontalAlignment = SWT.LEFT;
+            treeEditor.setEditor(checked,treeItem,0);
+            
+            widgetCheckedMap.put(treeItem,treeEditor);
+
+            checked.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button widget = (Button)selectionEvent.widget;
+
+                Event treeEvent = new Event();
+                treeEvent.item   = treeItem;
+                treeEvent.detail = SWT.CHECK;
+                tree.notifyListeners(SWT.Selection,treeEvent);
+              }
+            });
+          }
+          if ((flags & TREE_ITEM_FLAG_FOLDER) != 0) new TreeItem(treeItem,SWT.NONE);
+          treeItem.setData(data);
+          if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
+          {
+            if (!parentTreeItem.getExpanded())
+            {
+              parentTreeItem.setExpanded(true);
+            }
+          }
+          else if ((flags & TREE_ITEM_FLAG_FOLDER) != 0)
+          {
+            new TreeItem(treeItem,SWT.NONE);
+          }
+          for (int i = 0; i < values.length; i++)
+          {
+            if (values[i] != null)
+            {
+              if      (values[i] instanceof String)
+              {
+                treeItem.setText(i,(String)values[i]);
+              }
+              else if (values[i] instanceof Integer)
+              {
+                treeItem.setText(i,Integer.toString((Integer)values[i]));
+              }
+              else if (values[i] instanceof Long)
+              {
+                treeItem.setText(i,Long.toString((Long)values[i]));
+              }
+              else if (values[i] instanceof Double)
+              {
+                treeItem.setText(i,Double.toString((Double)values[i]));
+              }
+              else if (values[i] instanceof Image)
+              {
+                treeItem.setImage(i,(Image)values[i]);
+              }
+              else
+              {
+                treeItem.setText(i,values[i].toString());
+              }
+            }
+          }
+
+          /* Error in redraw: editor is not relayouted on insert - bug in SWT 4.4?
+             Thus force a relayout by column change
+          */
+          for (TreeEditor treeEditor : widgetCheckedMap.values())
+          {
+            treeEditor.setColumn(treeEditor.getColumn());
+          }
+        }
+      }
+    };
+
+    TreeItem treeItem = null;
+    if (!parentTreeItem.isDisposed())
+    {
+      Display display = parentTreeItem.getDisplay();
+
+      // try update existing tree item
+      UpdateRunnable updateRunnable = new UpdateRunnable();
+      display.syncExec(updateRunnable);
+      treeItem = updateRunnable.treeItem;
+
+      if (treeItem == null)
+      {
+        // add new tree item
+        InsertRunnable insertRunnable = new InsertRunnable();
+        display.syncExec(insertRunnable);
+        treeItem = insertRunnable.treeItem;
+      }
+    }
+
+    return treeItem;
+  }
+
+
+  /** remove tree item/sub-tree item
+   * @param treeItem tree item
+   * @param data item data
+   * @return true iff tree item removed
+   */
+  private static boolean removeSubTreeItem(TreeItem treeItem, Object data)
+  {
+    if (!treeItem.isDisposed())
+    {
+      if (data.equals(treeItem.getData()))
+      {
+        HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
+
+        TreeEditor treeEditor = widgetCheckedMap.remove(treeItem);
+        if (treeEditor != null)
+        {
+          treeEditor.getEditor().dispose();
+          treeEditor.dispose();
+        }
+
+        treeItem.dispose();
+
+        return true;
+      }
+      else
+      {
+        for (TreeItem subTreeItem : treeItem.getItems())
+        {
+          if (removeSubTreeItem(subTreeItem,data))
+          {
+            if (treeItem.getItemCount() <= 0)
+            {
+              treeItem.setExpanded(false);
+              new TreeItem(treeItem,SWT.NONE);
+            }
+
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /** remove tree item
+   * @param treeItem tree item
+   * @param data item data
+   */
+  public static void removeTreeItem(final TreeItem treeItem, final Object data)
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          removeSubTreeItem(treeItem,data);
+        }
+      });
+    }
+  }
+
+  /** remove tree item
+   * @param tree tree
+   * @param data item data
+   */
+  public static void removeTreeItem(final Tree tree, final Object data)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            for (TreeItem treeItem : tree.getItems())
+            {
+              if (removeSubTreeItem(treeItem,data))
+              {
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** remove tree item
+   * @param treeItem tree item to remove
+   */
+  public static void removeTreeItem(final TreeItem treeItem)
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
+
+            for (TreeItem subTreeItem : getAllTreeItems(treeItem))
+            {
+              TreeEditor treeEditor = widgetCheckedMap.remove(subTreeItem);
+              if (treeEditor != null)
+              {
+                treeEditor.getEditor().dispose();
+                treeEditor.dispose();
+              }
+            }
+
+            TreeItem parentTreeItem = treeItem.getParentItem();
+
+            TreeEditor treeEditor = widgetCheckedMap.remove(treeItem);
+            if (treeEditor != null)
+            {
+              treeEditor.getEditor().dispose();
+              treeEditor.dispose();
+            }
+            treeItem.dispose();
+
+            if ((parentTreeItem != null) && (parentTreeItem.getItemCount() <= 0))
+            {
+              parentTreeItem.setExpanded(false);
+              new TreeItem(parentTreeItem,SWT.NONE);
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** remove tree items
+   * @param tree tree
+   * @param treeItems tree items to remove
+   */
+  public static void removeTreeItems(HashSet<TreeItem> treeItems)
+  {
+    for (TreeItem treeItem : treeItems)
+    {
+      removeTreeItem(treeItem);
+    }
+  }
+
+  /** remove all tree items of tree item
+   * @param tree tree
+   * @treeItem tree item
+   */
+  public static void removeAllTreeItems(final TreeItem treeItem)
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
+
+            for (TreeItem subTreeItem : getAllTreeItems(treeItem))
+            {
+              TreeEditor treeEditor = widgetCheckedMap.remove(subTreeItem);
+              if (treeEditor != null)
+              {
+                treeEditor.getEditor().dispose();
+                treeEditor.dispose();
+              }
+            }
+
+            treeItem.removeAll();
+            treeItem.setExpanded(false);
+            new TreeItem(treeItem,SWT.NONE);
+          }
+        }
+      });
+    }
+  }
+
+  /** remove all tree items
+   * @param tree tree
+   */
+  public static void removeAllTreeItems(final Tree tree)
+  {
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+            widgetCheckedMap.clear();
+
+            tree.removeAll();
+          }
+        }
+      });
+    }
+  }
+
+/*
+private void printItems(int i, TreeItem treeItem)
+{
+Dprintf.dprintf("%s%s: %s",StringUtils.repeat("  ",i),treeItem,treeItem.getData());
+for (TreeItem subTreeItem : treeItem.getItems()) printItems(i+1,subTreeItem);
+}
+private void printTree(Tree tree)
+{
+Dprintf.dprintf("--- tree:");
+for (TreeItem treeItem : tree.getItems()) printItems(0,treeItem);
+Dprintf.dprintf("---");
+}
+
+static int rr = 0;
+static String indent(int n)
+{
+  String s="";
+
+  while (n>0) { s=s+"  "; n--; }
+  return s;
+}
+private static void printSubTree(int n, TreeItem parentTreeItem)
+{
+  System.out.println(indent(n)+parentTreeItem+" ("+parentTreeItem.hashCode()+") count="+parentTreeItem.getItemCount()+" expanded="+parentTreeItem.getExpanded());
+  for (TreeItem treeItem : parentTreeItem.getItems())
+  {
+    printSubTree(n+1,treeItem);
+  }
+}
+private static void printTree(Tree tree)
+{
+  for (TreeItem treeItem : tree.getItems())
+  {
+    printSubTree(0,treeItem);
+  }
+}
+*/
+
+  /** get tree item
+   * @param tree tree
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  public static <T extends Comparable> TreeItem getTreeItem(Tree tree, T data)
+  {
+    TreeItem subTreeItem;
+
+    for (TreeItem treeItem : tree.getItems())
+    {
+      if (data.compareTo(treeItem.getData()) == 0)
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        subTreeItem = getTreeItem(treeItem,data);
+        if (subTreeItem != null)
+        {
+          return subTreeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** get tree item
+   * @param tree tree
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  public static TreeItem getTreeItem(Tree tree, Object data)
+  {
+    TreeItem subTreeItem;
+
+    for (TreeItem treeItem : tree.getItems())
+    {
+      if (data.equals(treeItem.getData()))
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        subTreeItem = getTreeItem(treeItem,data);
+        if (subTreeItem != null)
+        {
+          return subTreeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** get tree item
+   * @param tree tree
+   * @param comparator tree item comparator
+   * @return tree item or null if not found
+   */
+  public static <T> TreeItem getTreeItem(Tree tree, Comparator<T> comparator, T data)
+  {
+    TreeItem subTreeItem;
+
+    for (TreeItem treeItem : tree.getItems())
+    {
+      assert treeItem.getData() != null;
+      if (comparator.compare((T)treeItem.getData(),data) == 0)
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        subTreeItem = getTreeItem(treeItem,comparator);
+        if (subTreeItem != null)
+        {
+          return subTreeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** get tree item from sub-tree items
+   * @param parentTreeItem parent tree item
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  public static <T extends Comparable> TreeItem getTreeItem(TreeItem parentTreeItem, T data)
+  {
+    for (TreeItem treeItem : parentTreeItem.getItems())
+    {
+      if (data.compareTo(treeItem.getData()) == 0)
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        treeItem = getTreeItem(treeItem,data);
+        if (treeItem != null)
+        {
+          return treeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+
+  /** get tree item from sub-tree items
+   * @param parentTreeItem parent tree item
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  public static TreeItem getTreeItem(TreeItem parentTreeItem, Object data)
+  {
+    for (TreeItem treeItem : parentTreeItem.getItems())
+    {
+      if (data.equals(treeItem.getData()))
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        treeItem = getTreeItem(treeItem,data);
+        if (treeItem != null)
+        {
+          return treeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** get tree item from sub-tree items
+   * @param parentTreeItem parent tree item
+   * @param data tree item data
+   * @return tree item or null if not found
+   */
+  public static <T> TreeItem getTreeItem(TreeItem parentTreeItem, Comparator<T> comparator, T data)
+  {
+    for (TreeItem treeItem : parentTreeItem.getItems())
+    {
+      assert treeItem.getData() != null;
+      if (comparator.compare((T)treeItem.getData(),data) == 0)
+      {
+        return treeItem;
+      }
+      if (treeItem.getExpanded())
+      {
+        treeItem = getTreeItem(treeItem,comparator,data);
+        if (treeItem != null)
+        {
+          return treeItem;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /** set tree item color
    * @param tree tree
    * @param data item data
    * @param foregroundColor foregound color
@@ -9346,8 +10033,16 @@ private static void printTree(Tree tree)
             {
               if (data.equals(treeItem.getData()))
               {
+                HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)tree.getData();
+
                 treeItem.setForeground(foregroundColor);
                 treeItem.setBackground(backgroundColor);
+
+                TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
+                if (treeEditor != null)
+                {
+                  treeEditor.getEditor().setBackground(backgroundColor);
+                }
                 break;
               }
             }
@@ -9367,11 +10062,12 @@ private static void printTree(Tree tree)
     setTreeItemColor(tree,data,(Color)null,backgroundColor);
   }
 
-  /** set tree item checked
+  /** set table item color
    * @param treeItem tree item
-   * @param checked checked flag
+   * @param foregroundColor foregound color
+   * @param backgroundColor background color
    */
-  public static void setTreeItemChecked(final TreeItem treeItem, final boolean checked)
+  public static void setTreeItemColor(final TreeItem treeItem, final Color foregroundColor, final Color backgroundColor)
   {
     if (!treeItem.isDisposed())
     {
@@ -9381,11 +10077,72 @@ private static void printTree(Tree tree)
         {
           if (!treeItem.isDisposed())
           {
-            treeItem.setChecked(checked);
+            HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
+
+            treeItem.setForeground(foregroundColor);
+            treeItem.setBackground(backgroundColor);
+
+            TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
+            if (treeEditor != null)
+            {
+              treeEditor.getEditor().setBackground(backgroundColor);
+            }
           }
         }
       });
     }
+  }
+
+  /** set table item background color
+   * @param treeItem tree item
+   * @param backgroundColor background color
+   */
+  public static void setTreeItemColor(TreeItem treeItem, Color backgroundColor)
+  {
+    setTreeItemColor(treeItem,(Color)null,backgroundColor);
+  }
+
+  /** check if tree item is checked
+   * @param tree tree
+   * @param data item data
+   * @return true iff checked
+   */
+  public static boolean getTreeItemChecked(final Tree tree, final Object data)
+  {
+    final boolean checked[] = new boolean[]{false};
+
+    if (!tree.isDisposed())
+    {
+      tree.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!tree.isDisposed())
+          {
+            for (TreeItem treeItem : tree.getItems())
+            {
+              if (data.equals(treeItem.getData()))
+              {
+                HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
+
+                TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
+                if (treeEditor != null)
+                {
+                  checked[0] = ((Button)treeEditor.getEditor()).getSelection();
+                }
+                else
+                {
+                  checked[0] = treeItem.getChecked();
+                }
+                break;
+              }
+            }
+          }
+        }
+      });
+    }
+
+    return checked[0];
   }
 
   /** set tree item checked
@@ -9407,9 +10164,85 @@ private static void printTree(Tree tree)
             {
               if (data.equals(treeItem.getData()))
               {
-                treeItem.setChecked(checked);
+                HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
+
+                TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
+                if (treeEditor != null)
+                {
+                  ((Button)treeEditor.getEditor()).setSelection(checked);
+                }
+                else
+                {
+                  treeItem.setChecked(checked);
+                }
                 break;
               }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  /** check if tree item is checked
+   * @param treeItem tree item
+   * @return true iff checked
+   */
+  public static boolean getTreeItemChecked(final TreeItem treeItem)
+  {
+    final boolean checked[] = new boolean[]{false};
+
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
+            
+            TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
+            if (treeEditor != null)
+            {
+              checked[0] = ((Button)treeEditor.getEditor()).getSelection();
+            }
+            else
+            {
+              checked[0] = treeItem.getChecked();
+            }
+          }
+        }
+      });
+    }
+    
+    return checked[0];
+  }
+
+  /** set tree item checked
+   * @param treeItem tree item
+   * @param checked checked flag
+   */
+  public static void setTreeItemChecked(final TreeItem treeItem, final boolean checked)
+  {
+    if (!treeItem.isDisposed())
+    {
+      treeItem.getDisplay().syncExec(new Runnable()
+      {
+        public void run()
+        {
+          if (!treeItem.isDisposed())
+          {
+            HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
+            
+            TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
+            if (treeEditor != null)
+            {
+              ((Button)treeEditor.getEditor()).setSelection(checked);
+            }
+            else
+            {
+              treeItem.setChecked(checked);
             }
           }
         }
@@ -9430,7 +10263,8 @@ private static void printTree(Tree tree)
     if (!tree.isDisposed())
     {
       // save data
-      Object   data = treeItem.getData();
+      int      style = treeItem.getStyle();
+      Object   data  = treeItem.getData();
       String[] texts = new String[tree.getColumnCount()];
       for (int z = 0; z < tree.getColumnCount(); z++)
       {
@@ -9442,8 +10276,8 @@ private static void printTree(Tree tree)
       Image image = treeItem.getImage();
 
       // recreate item
-      if (parentTreeItem != null) newTreeItem = new TreeItem(parentTreeItem,SWT.NONE,index);
-      else                        newTreeItem = new TreeItem(tree,SWT.NONE,index);
+      if (parentTreeItem != null) newTreeItem = new TreeItem(parentTreeItem,style,index);
+      else                        newTreeItem = new TreeItem(tree,style,index);
       newTreeItem.setData(data);
       newTreeItem.setText(texts);
       newTreeItem.setForeground(foregroundColor);
@@ -9485,7 +10319,8 @@ private static void printTree(Tree tree)
     if (!tree.isDisposed())
     {
       // save data
-      Object   data = treeItem.getData();
+      int      style = treeItem.getStyle();
+      Object   data  = treeItem.getData();
       String[] texts = new String[tree.getColumnCount()];
       for (int z = 0; z < tree.getColumnCount(); z++)
       {
@@ -9495,7 +10330,7 @@ private static void printTree(Tree tree)
       Image image = treeItem.getImage();
 
       // recreate item
-      newTreeItem = new TreeItem(tree,SWT.NONE,index);
+      newTreeItem = new TreeItem(tree,style,index);
       newTreeItem.setData(data);
       newTreeItem.setText(texts);
       newTreeItem.setChecked(checked);
@@ -10999,33 +11834,36 @@ Dprintf.dprintf("");
   {
     final Menu result[] = new Menu[]{null};
 
-    menu.getDisplay().syncExec(new Runnable()
+    if (!menu.isDisposed())
     {
-      public void run()
+      menu.getDisplay().syncExec(new Runnable()
       {
-        for (MenuItem menuItem : menu.getItems())
+        public void run()
         {
-          Menu subMenu = menuItem.getMenu();
-          if (subMenu != null)
+          for (MenuItem menuItem : menu.getItems())
           {
-            if (comparator.compare((T)subMenu.getData(),data) == 0)
+            Menu subMenu = menuItem.getMenu();
+            if (subMenu != null)
             {
-              result[0] = subMenu;
-              return;
-            }
-            else
-            {
-              subMenu = getMenu(subMenu,data,comparator);
-              if (subMenu != null)
+              if (comparator.compare((T)subMenu.getData(),data) == 0)
               {
                 result[0] = subMenu;
                 return;
               }
+              else
+              {
+                subMenu = getMenu(subMenu,data,comparator);
+                if (subMenu != null)
+                {
+                  result[0] = subMenu;
+                  return;
+                }
+              }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     return result[0];
   }
@@ -11039,33 +11877,36 @@ Dprintf.dprintf("");
   {
     final Menu result[] = new Menu[]{null};
 
-    menu.getDisplay().syncExec(new Runnable()
+    if (!menu.isDisposed())
     {
-      public void run()
+      menu.getDisplay().syncExec(new Runnable()
       {
-        for (MenuItem menuItem : menu.getItems())
+        public void run()
         {
-          Menu subMenu = menuItem.getMenu();
-          if (subMenu != null)
+          for (MenuItem menuItem : menu.getItems())
           {
-            if (subMenu.getData().equals(data))
+            Menu subMenu = menuItem.getMenu();
+            if (subMenu != null)
             {
-              result[0] = subMenu;
-              return;
-            }
-            else
-            {
-              subMenu = getMenu(subMenu,data);
-              if (subMenu != null)
+              if (subMenu.getData().equals(data))
               {
                 result[0] = subMenu;
                 return;
               }
+              else
+              {
+                subMenu = getMenu(subMenu,data);
+                if (subMenu != null)
+                {
+                  result[0] = subMenu;
+                  return;
+                }
+              }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     return result[0];
   }
@@ -11706,36 +12547,39 @@ Dprintf.dprintf("");
   {
     final MenuItem result[] = new MenuItem[]{null};
 
-    menu.getDisplay().syncExec(new Runnable()
+    if (!menu.isDisposed())
     {
-      public void run()
+      menu.getDisplay().syncExec(new Runnable()
       {
-        Menu     subMenu;
-        MenuItem subMenuItem;
-
-        for (MenuItem menuItem : menu.getItems())
+        public void run()
         {
-          if (comparator.compare((T)menuItem.getData(),data) == 0)
+          Menu     subMenu;
+          MenuItem subMenuItem;
+
+          for (MenuItem menuItem : menu.getItems())
           {
-            result[0] = menuItem;
-            return;
-          }
-          else
-          {
-            subMenu = menuItem.getMenu();
-            if (subMenu != null)
+            if (comparator.compare((T)menuItem.getData(),data) == 0)
             {
-              subMenuItem = getMenuItem(subMenu,data,comparator);
-              if (subMenuItem != null)
+              result[0] = menuItem;
+              return;
+            }
+            else
+            {
+              subMenu = menuItem.getMenu();
+              if (subMenu != null)
               {
-                result[0] = subMenuItem;
-                return;
+                subMenuItem = getMenuItem(subMenu,data,comparator);
+                if (subMenuItem != null)
+                {
+                  result[0] = subMenuItem;
+                  return;
+                }
               }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     return result[0];
   }
@@ -11749,37 +12593,40 @@ Dprintf.dprintf("");
   {
     final MenuItem result[] = new MenuItem[]{null};
 
-    menu.getDisplay().syncExec(new Runnable()
+    if (!menu.isDisposed())
     {
-      public void run()
+      menu.getDisplay().syncExec(new Runnable()
       {
-        Menu     subMenu;
-        MenuItem subMenuItem;
-
-        for (MenuItem menuItem : menu.getItems())
+        public void run()
         {
+          Menu     subMenu;
+          MenuItem subMenuItem;
 
-          if ((menuItem.getData() != null) && (menuItem.getData().equals(data)))
+          for (MenuItem menuItem : menu.getItems())
           {
-            result[0] = menuItem;
-            return;
-          }
-          else
-          {
-            subMenu = menuItem.getMenu();
-            if (subMenu != null)
+
+            if ((menuItem.getData() != null) && (menuItem.getData().equals(data)))
             {
-              subMenuItem = getMenuItem(subMenu,data);
-              if (subMenuItem != null)
+              result[0] = menuItem;
+              return;
+            }
+            else
+            {
+              subMenu = menuItem.getMenu();
+              if (subMenu != null)
               {
-                result[0] = subMenuItem;
-                return;
+                subMenuItem = getMenuItem(subMenu,data);
+                if (subMenuItem != null)
+                {
+                  result[0] = subMenuItem;
+                  return;
+                }
               }
             }
           }
         }
-      }
-    });
+      });
+    }
 
     return result[0];
   }

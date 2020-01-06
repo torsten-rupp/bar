@@ -10252,7 +10252,7 @@ TODO: implement delete entity
                       )
                     {
                       deleteEntity(entityIndexData);
-                      Widgets.removeTreeItem(widgetPersistenceTree,treeItem,entityIndexData);
+                      Widgets.removeTreeItem(treeItem,entityIndexData);
                     }
                   }
                 });
@@ -15753,17 +15753,17 @@ throw new Error("NYI");
                                                                                              totalEntrySize,
                                                                                              inTransit
                                                                                             );
-                                       TreeItem treeItem = Widgets.updateTreeItem(persistenceTreeItem,
-                                                                                  entityIndexData,
-                                                                                  Widgets.TREE_ITEM_FLAG_OPEN,
-                                                                                  "",
-                                                                                  "",
-                                                                                  "",
-                                                                                  "",
-                                                                                  SIMPLE_DATE_FORMAT.format(new Date(createdDateTime*1000)),
-                                                                                  (int)((System.currentTimeMillis()/1000-createdDateTime)/(24*60*60)),
-                                                                                  Units.formatByteSize(totalSize)
-                                                                                 );
+                                       TreeItem treeItem = Widgets.updateInsertTreeItem(persistenceTreeItem,
+                                                                                        entityIndexData,
+                                                                                        Widgets.TREE_ITEM_FLAG_OPEN,
+                                                                                        "",
+                                                                                        "",
+                                                                                        "",
+                                                                                        "",
+                                                                                        SIMPLE_DATE_FORMAT.format(new Date(createdDateTime*1000)),
+                                                                                        (int)((System.currentTimeMillis()/1000-createdDateTime)/(24*60*60)),
+                                                                                        Units.formatByteSize(totalSize)
+                                                                                       );
                                        if (inTransit) Widgets.setTreeItemColor(treeItem,COLOR_IN_TRANSIT);
 
                                        removedTreeItems.remove(treeItem);
@@ -15779,15 +15779,15 @@ throw new Error("NYI");
                                                                                            maxAge
                                                                                           );
 
-                                     TreeItem treeItem = Widgets.updateTreeItem(widgetPersistenceTree,
-                                                                                persistenceDataComparator,
-                                                                                persistenceData,
-                                                                                Widgets.TREE_ITEM_FLAG_FOLDER,
-                                                                                persistenceData.archiveType.getText(),
-                                                                                Keep.format(persistenceData.minKeep),
-                                                                                Keep.format(persistenceData.maxKeep),
-                                                                                Age.format(persistenceData.maxAge)
-                                                                               );
+                                     TreeItem treeItem = Widgets.updateInsertTreeItem(widgetPersistenceTree,
+                                                                                      persistenceDataComparator,
+                                                                                      persistenceData,
+                                                                                      Widgets.TREE_ITEM_FLAG_FOLDER,
+                                                                                      persistenceData.archiveType.getText(),
+                                                                                      Keep.format(persistenceData.minKeep),
+                                                                                      Keep.format(persistenceData.maxKeep),
+                                                                                      Age.format(persistenceData.maxAge)
+                                                                                     );
                                      persistenceTreeItemMap.put(persistenceId,treeItem);
 
                                      removedTreeItems.remove(treeItem);
@@ -15800,7 +15800,7 @@ throw new Error("NYI");
     {
       // ignored
     }
-    Widgets.removeTreeItems(widgetPersistenceTree,removedTreeItems);
+    Widgets.removeTreeItems(removedTreeItems);
   }
 
   /** edit persistence data
@@ -16184,7 +16184,7 @@ throw new Error("NYI");
             {
               EntityIndexData entityIndexData = (EntityIndexData)treeItem.getData();
               deleteEntity(entityIndexData);
-              Widgets.removeTreeItem(widgetPersistenceTree,treeItem,entityIndexData);
+              Widgets.removeTreeItem(treeItem,entityIndexData);
             }
           }
         }
