@@ -2,6 +2,44 @@
 
  Note: SQLite3 require syntax "CREATE TABLE foo(" in a single line!
 
+ database structure:
+
+   job uuid
+     ^
+     |<- entity
+     |     ^
+     |     |<----------------------------- storage   
+     |     |                                 ^
+     |     |<- entry                         |
+     |     |     ^                           |
+     |     |     |<- entryNewest             |
+     |     |     |                           |
+     |     |     |<- fileEntry               |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- imageEntry              |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- directoryEntry -------->|
+     |     |     |                           |
+     |     |     |<- linkEntry ------------->|
+     |     |     |                           |
+     |     |     |<- hardlinkEntry           |
+     |     |     |     ^                     |
+     |     |     |     |<- entryFragment --->|
+     |     |     |     |...                  |
+     |     |     |                           |
+     |     |     |<- specialEntry -----------|
+     |     |...
+     |     |     
+     |     |<- skippedEntry  
+     |     |...   
+     |...
+
 */
 
 // index version
@@ -59,14 +97,45 @@ CREATE TABLE IF NOT EXISTS entities(
   jobUUID             TEXT NOT NULL,
   scheduleUUID        TEXT NOT NULL DEFAULT '',
   hostName            TEXT,
+//TODO: use
+  userName            TEXT,
   created             INTEGER,
   type                INTEGER,
   parentJobUUID       INTEGER,
   bidFlag             INTEGER DEFAULT 0,
-  lockedCount         INTEGER DEFAULT 0
+  lockedCount         INTEGER DEFAULT 0,
+  deletedFlag         INTEGER DEFAULT 0,
+
+  // Note: updated via Index_updateEntitiesInfos()
+  totalEntryCount           INTEGER DEFAULT 0,  // total number of entries
+  totalEntrySize            INTEGER DEFAULT 0,  // total size of entries [bytes]
+
+  totalFileCount            INTEGER DEFAULT 0,  // total number of file entries
+  totalFileSize             INTEGER DEFAULT 0,  // total size of file entries (sum of fragments) [bytes]
+  totalImageCount           INTEGER DEFAULT 0,  // total number of image entries
+  totalImageSize            INTEGER DEFAULT 0,  // total size of image entries (sum of fragments) [bytes]
+  totalDirectoryCount       INTEGER DEFAULT 0,  // total number of directory entries
+  totalLinkCount            INTEGER DEFAULT 0,  // total number of link entries
+  totalHardlinkCount        INTEGER DEFAULT 0,  // total number of hardlink entries
+  totalHardlinkSize         INTEGER DEFAULT 0,  // total size of hardlink entries (sum of fragments) [bytes]
+  totalSpecialCount         INTEGER DEFAULT 0,  // total number of special entries
+
+  totalEntryCountNewest     INTEGER DEFAULT 0,  // total number of newest entries
+  totalEntrySizeNewest      INTEGER DEFAULT 0,  // total size of newest entries [bytes]
+
+  totalFileCountNewest      INTEGER DEFAULT 0,  // total number of newest file entries
+  totalFileSizeNewest       INTEGER DEFAULT 0,  // total size of newest file entries (sum of fragments) [bytes]
+  totalImageCountNewest     INTEGER DEFAULT 0,  // total number of newest image entries
+  totalImageSizeNewest      INTEGER DEFAULT 0,  // total size of newest image entries (sum of fragments) [bytes]
+  totalDirectoryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
+  totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
+  totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
+  totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
+  totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
 );
 CREATE INDEX ON entities (jobUUID,created,type);
 CREATE INDEX ON entities (hostName);
+CREATE INDEX ON entities (deletedFlag);
 
 // insert default entity
 INSERT OR IGNORE INTO entities (id,jobUUID,scheduleUUID,created,type,parentJobUUID,bidFlag) VALUES ($DEFAULT_ENTITY_ID,'','',0,0,0,0);
@@ -81,10 +150,13 @@ CREATE TRIGGER AFTER INSERT ON entities
 // --- storage ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS storage(
   id                        INTEGER PRIMARY KEY,
-  entityId                  INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+
+  entityId                  INTEGER REFERENCES entities(id) ON DELETE CASCADE,
   name                      TEXT NOT NULL,
   created                   INTEGER,
   size                      INTEGER DEFAULT 0,
+//TODO: use
+  hostName                  TEXT,
 //TODO: use
   userName                  TEXT,
   comment                   TEXT,
@@ -128,6 +200,7 @@ CREATE INDEX ON storage (name,totalEntryCount,created,state);
 CREATE INDEX ON storage (created,name,totalEntryCount,state);
 CREATE INDEX ON storage (userName);
 CREATE INDEX ON storage (state,name,totalEntryCount,created);
+CREATE INDEX ON storage (deletedFlag);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_storage USING FTS5(
@@ -159,7 +232,7 @@ CREATE TRIGGER AFTER UPDATE OF name ON storage
 CREATE TABLE IF NOT EXISTS entries(
   id              INTEGER PRIMARY KEY,
 
-  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
+  entityId        INTEGER REFERENCES entities(id) ON DELETE CASCADE,
   name            TEXT NOT NULL,
   type            INTEGER,
   timeLastAccess  INTEGER,
@@ -173,44 +246,40 @@ CREATE TABLE IF NOT EXISTS entries(
   archiveOffset   INTEGER,
 
   // updated by triggers
-  size            INTEGER DEFAULT 0,  // file/image/hardlink size. Note: redundancy for faster access
-  fragmentOffset  INTEGER DEFAULT 0,
-  fragmentSize    INTEGER DEFAULT 0
+  size            INTEGER DEFAULT 0  // file/image/hardlink size. Note: redundancy for faster access
 );
-CREATE INDEX ON entries (storageId,type,name);
+CREATE INDEX ON entries (entityId,type,name);
 CREATE INDEX ON entries (name,size,type,timeLastChanged);
 CREATE INDEX ON entries (type,name,size,timeLastChanged);
 CREATE INDEX ON entries (size,name,type,timeLastChanged);
-CREATE INDEX ON entries (fragmentOffset,name,type,timeLastChanged);
 CREATE INDEX ON entries (timeLastChanged,name,size,type);
 
 // newest entries (updated by triggers)
 CREATE TABLE IF NOT EXISTS entriesNewest(
   id              INTEGER PRIMARY KEY,
+
   entryId         INTEGER REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
 
-  storageId       INTEGER DEFAULT 0,       // Note: redundancy for faster access
-  name            TEXT NOT NULL,           // Note: redundancy for faster access
-  type            INTEGER DEFAULT 0,       // Note: redundancy for faster access
-  timeLastChanged INTEGER DEFAULT 0,       // Note: redundancy for faster access
-  userId          INTEGER DEFAULT 0,       // Note: redundancy for faster access
-  groupId         INTEGER DEFAULT 0,       // Note: redundancy for faster access
-  permission      INTEGER DEFAULT 0,       // Note: redundancy for faster access
+  // Note: redundancy for faster access
+  entityId        INTEGER DEFAULT 0,
+  name            TEXT NOT NULL,
+  type            INTEGER DEFAULT 0,
+  timeLastChanged INTEGER DEFAULT 0,
+  userId          INTEGER DEFAULT 0,
+  groupId         INTEGER DEFAULT 0,
+  permission      INTEGER DEFAULT 0,
 
-  size            INTEGER DEFAULT 0,       // file/image/hardlink size. Note: redundancy for faster access
-  fragmentOffset  INTEGER DEFAULT 0,
-  fragmentSize    INTEGER DEFAULT 0,
+  size            INTEGER DEFAULT 0,       // file/image/hardlink size
 
-  CONSTRAINT newest UNIQUE (name)
+  CONSTRAINT entriesNewest UNIQUE (name)
 );
 CREATE INDEX ON entriesNewest (entryId,name,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (name,size,type,timeLastChanged);
 CREATE INDEX ON entriesNewest (type,entryId,name,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (type,name,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (size,name,type,timeLastChanged);
-CREATE INDEX ON entriesNewest (fragmentOffset,name,type,timeLastChanged);
 CREATE INDEX ON entriesNewest (timeLastChanged,name,size,type);
-CREATE INDEX ON entriesNewest (storageId,type,entryId,name,size,timeLastChanged);
+CREATE INDEX ON entriesNewest (entityId,type,entryId,name,size,timeLastChanged);
 
 // full-text-search
 CREATE VIRTUAL TABLE FTS_entries USING FTS5(
@@ -224,23 +293,50 @@ CREATE VIRTUAL TABLE FTS_entries USING FTS5(
 // insert/delete/update triggers
 CREATE TRIGGER AFTER INSERT ON entries
   BEGIN
+// insert into log values('trigger entries: INSERT ON entries='||NEW.id||' '||NEW.entityId||' '||NEW.name);
+    // insert newest if not exists
+    INSERT OR IGNORE INTO entriesNewest
+        (
+         entryId,
+         entityId,
+         type,
+         name,
+         timeLastChanged,
+         userId,
+         groupId,
+         permission,
+         size
+        )
+      VALUES
+        (
+         NEW.id,
+         NEW.entityId,
+         NEW.type,
+         NEW.name,
+         NEW.timeLastChanged,
+         NEW.userId,
+         NEW.groupId,
+         NEW.permission,
+         NEW.size
+        );
+
     // update FTS
     INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
   END;
 
-CREATE TRIGGER AFTER UPDATE OF storageId ON entries
+CREATE TRIGGER AFTER UPDATE OF entityId ON entries
   BEGIN
-    // update storageId in *Entries
-    UPDATE fileEntries      SET storageId=NEW.storageId WHERE entryId=NEW.id;
-    UPDATE imageEntries     SET storageId=NEW.storageId WHERE entryId=NEW.id;
-    UPDATE directoryEntries SET storageId=NEW.storageId WHERE entryId=NEW.id;
-    UPDATE linkEntries      SET storageId=NEW.storageId WHERE entryId=NEW.id;
-    UPDATE hardlinkEntries  SET storageId=NEW.storageId WHERE entryId=NEW.id;
-    UPDATE specialEntries   SET storageId=NEW.storageId WHERE entryId=NEW.id;
+    // update entityId in *Entries
+    UPDATE fileEntries      SET entityId=NEW.entityId WHERE entryId=NEW.id;
+    UPDATE imageEntries     SET entityId=NEW.entityId WHERE entryId=NEW.id;
+    UPDATE directoryEntries SET entityId=NEW.entityId WHERE entryId=NEW.id;
+    UPDATE linkEntries      SET entityId=NEW.entityId WHERE entryId=NEW.id;
+    UPDATE hardlinkEntries  SET entityId=NEW.entityId WHERE entryId=NEW.id;
+    UPDATE specialEntries   SET entityId=NEW.entityId WHERE entryId=NEW.id;
 
     // update newest entries
     UPDATE entriesNewest
-      SET storageId=NEW.storageId
+      SET entityId=NEW.entityId
       WHERE entryId=OLD.id;
   END;
 
@@ -251,53 +347,22 @@ CREATE TRIGGER AFTER UPDATE OF name ON entries
     INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
   END;
 
-CREATE TRIGGER AFTER UPDATE OF size ON entries
+CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON entries
   BEGIN
 // insert into log values('trigger entries: UPDATE OF size='||OLD.size||'->'||NEW.size);
-    // insert newest if not exists
-    INSERT OR IGNORE INTO entriesNewest
-        (
-         entryId,
-         storageId,
-         type,
-         name,
-         timeLastChanged,
-         userId,
-         groupId,
-         permission,
-         size,
-         fragmentOffset,
-         fragmentSize
-        )
-      VALUES
-        (
-         NEW.id,
-         NEW.storageId,
-         NEW.type,
-         NEW.name,
-         NEW.timeLastChanged,
-         NEW.userId,
-         NEW.groupId,
-         NEW.permission,
-         NEW.size,
-         NEW.fragmentOffset,
-         NEW.fragmentSize
-        );
-
     // update if entry is newer
     UPDATE entriesNewest
       SET entryId        =NEW.id,
-          storageId      =NEW.storageId,
+          entityId       =NEW.entityId,
           type           =NEW.type,
           timeLastChanged=NEW.timeLastChanged,
           userId         =NEW.userId,
           groupId        =NEW.groupId,
           permission     =NEW.permission,
-          size           =NEW.size,
-          fragmentOffset =NEW.fragmentOffset,
-          fragmentSize   =NEW.fragmentSize
+          size           =NEW.size
       WHERE     entryId!=NEW.id
             AND name=NEW.name
+            AND type=NEW.type
             AND NEW.timeLastChanged>timeLastChanged;
   END;
 
@@ -306,8 +371,8 @@ CREATE TRIGGER BEFORE DELETE ON entries
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.id;
     INSERT OR IGNORE INTO entriesNewest
-        (entryId,storageId,name,type,size,fragmentOffset,timeLastChanged)
-      SELECT id,storageId,name,type,size,fragmentOffset,MAX(timeLastChanged)
+        (entryId,entityId,name,type,size)
+      SELECT id,entityId,name,type,size,MAX(timeLastChanged)
         FROM entries
         WHERE     id!=OLD.id
               AND name=OLD.name
@@ -318,30 +383,39 @@ CREATE TRIGGER BEFORE DELETE ON entries
     DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
   END;
 
+CREATE TABLE IF NOT EXISTS entryFragments(
+  id        INTEGER PRIMARY KEY,
+  entryId   INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
+  offset    INTEGER,
+  size      INTEGER
+);
+CREATE INDEX ON entryFragments (entryId);
+CREATE INDEX ON entryFragments (storageId);
+
 // -------------------------------------------------------
 
 //TODO
 // --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
-  id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id),
-  name            TEXT NOT NULL,
-  type            INTEGER
+  id       INTEGER PRIMARY KEY,
+  entityId INTEGER NOT NULL REFERENCES storage(id),
+  name     TEXT NOT NULL,
+  type     INTEGER
 );
-CREATE INDEX ON skippedEntries (storageId,type,name);
+CREATE INDEX ON skippedEntries (entityId,type,name);
 CREATE INDEX ON skippedEntries (name);
 CREATE INDEX ON skippedEntries (type,name);
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+
   entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
-  fragmentOffset  INTEGER,
-  fragmentSize    INTEGER
+
+  CONSTRAINT fileEntries UNIQUE (entryId)
 );
-CREATE INDEX ON fileEntries (storageId);
 CREATE INDEX ON fileEntries (entryId);
 
 // insert/delete/update triggeres
@@ -349,24 +423,30 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
   BEGIN
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
-      SET size=NEW.size,
-          fragmentOffset=NEW.fragmentOffset,
-          fragmentSize=NEW.fragmentSize
+      SET size=NEW.size
       WHERE id=NEW.entryId;
   END;
+
+// insert/delete/update triggeres
+//CREATE TRIGGER AFTER INSERT ON fileEntryFragments
+//  BEGIN
+//    // update size in entry
+//    UPDATE fileEntries
+//      SET size=NEW.size
+//      WHERE id=NEW.fileEntryId;
+//  END;
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+
   entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
   fileSystemType  INTEGER,
   blockSize       INTEGER,                 // size of image block
-  blockOffset     INTEGER,                 // block offset [blocks]
-  blockCount      INTEGER                  // block count [blocks]
+
+  CONSTRAINT imageEntries UNIQUE (entryId)
 );
-CREATE INDEX ON imageEntries (storageId);
 CREATE INDEX ON imageEntries (entryId);
 
 // insert/delete/update triggeres
@@ -374,27 +454,30 @@ CREATE TRIGGER AFTER INSERT ON imageEntries
   BEGIN
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
-      SET size=NEW.size,
-          fragmentOffset=NEW.blockOffset*NEW.blockSize,
-          fragmentSize=NEW.blockCount*NEW.blockSize
+      SET size=NEW.size
       WHERE id=NEW.entryId;
   END;
 
 // --- directories -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS directoryEntries(
   id                    INTEGER PRIMARY KEY,
-  storageId             INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+
   entryId               INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  name                  TEXT,                                     // Note: redundancy for faster access of parent directories
+  storageId             INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
+
+  // Note: redundancy for faster access
+  name                  TEXT,
 
   // updated by updateDirectoryContentAggregates()
   totalEntryCount       INTEGER DEFAULT 0,  // total number of directory entries
   totalEntrySize        INTEGER DEFAULT 0,  // total size of directory entries [bytes]
   totalEntryCountNewest INTEGER DEFAULT 0,  // total number of newest directory entries
-  totalEntrySizeNewest  INTEGER DEFAULT 0   // total size of newest directory entries [bytes]
+  totalEntrySizeNewest  INTEGER DEFAULT 0,  // total size of newest directory entries [bytes]
+
+  CONSTRAINT directoryEntries UNIQUE (entryId)
 );
-CREATE INDEX ON directoryEntries (storageId,name);
 CREATE INDEX ON directoryEntries (entryId);
+CREATE INDEX ON directoryEntries (storageId,name);
 CREATE INDEX ON directoryEntries (name);
 
 // insert/delete/update triggeres
@@ -409,11 +492,13 @@ CREATE TRIGGER AFTER INSERT ON directoryEntries
 // --- links -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS linkEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+
   entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  destinationName TEXT
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
+  destinationName TEXT,
+
+  CONSTRAINT linkEntries UNIQUE (entryId)
 );
-CREATE INDEX ON linkEntries (storageId);
 CREATE INDEX ON linkEntries (entryId);
 
 // insert/delete/update triggeres
@@ -428,13 +513,12 @@ CREATE TRIGGER AFTER INSERT ON linkEntries
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+
   entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
   size            INTEGER,
-  fragmentOffset  INTEGER,
-  fragmentSize    INTEGER
+
+  CONSTRAINT hardlinkEntries UNIQUE (entryId)
 );
-CREATE INDEX ON hardlinkEntries (storageId);
 CREATE INDEX ON hardlinkEntries (entryId);
 
 // insert/delete/update triggeres
@@ -442,22 +526,22 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
   BEGIN
     // update offset/size in entry (Note: will trigger insert/update newest!)
     UPDATE entries
-      SET size=NEW.size,
-          fragmentOffset=NEW.fragmentOffset,
-          fragmentSize=NEW.fragmentSize
+      SET size=NEW.size
       WHERE id=NEW.entryId;
   END;
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
   id              INTEGER PRIMARY KEY,
-  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,  // Note: redundancy for faster access
+
   entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId       INTEGER NOT NULL REFERENCES storage(id) ON DELETE CASCADE,
   specialType     INTEGER,
   major           INTEGER,
-  minor           INTEGER
+  minor           INTEGER,
+
+  CONSTRAINT specialEntries UNIQUE (entryId)
 );
-CREATE INDEX ON specialEntries (storageId);
 CREATE INDEX ON specialEntries (entryId);
 
 // insert/delete/update triggeres

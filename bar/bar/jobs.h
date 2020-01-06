@@ -354,7 +354,7 @@ extern JobList   jobList;
 
 /***********************************************************************\
 * Name   : JOB_LIST_ITERATEX
-* Purpose: lock and iterated over list and execute block
+* Purpose: iterated over list and execute block with condition
 * Input  : variable  - iteration variable
 *          condition - additional condition
 * Output : -
@@ -1433,29 +1433,6 @@ void Job_initOptions(JobOptions *jobOptions);
 void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
 
 /***********************************************************************\
-* Name   : Job_clearOptions
-* Purpose: clear job options
-* Input  : jobOptions - job options variable
-* Output : jobOptions - cleared job options
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-//void Job_clearOptions(JobOptions *jobOptions);
-
-/***********************************************************************\
-* Name   : Job_setOptions
-* Purpose: set job options
-* Input  : jobOptions     - job options variable
-*          fromJobOptions - source job options
-* Output : jobOptions - initialized job options variable
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-//void Job_setOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
-
-/***********************************************************************\
 * Name   : doneJobOptions
 * Purpose: done job options
 * Input  : jobOptions - job options
@@ -1465,6 +1442,29 @@ void Job_duplicateOptions(JobOptions *jobOptions, const JobOptions *fromJobOptio
 \***********************************************************************/
 
 void Job_doneOptions(JobOptions *jobOptions);
+
+/***********************************************************************\
+* Name   : Job_duplicatePersistenceList
+* Purpose: duplicate persistence list
+* Input  : persistenceList     - persistence list
+*          fromPersistenceList - from persistence list
+* Output : persistenceList - persistence list
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_duplicatePersistenceList(PersistenceList *persistenceList, const PersistenceList *fromPersistenceList);
+
+/***********************************************************************\
+* Name   : Job_donePersistenceList
+* Purpose: done persistence list
+* Input  : persistenceList - persistence list
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Job_donePersistenceList(PersistenceList *persistenceList);
 
 /***********************************************************************\
 * Name   : Job_addSlave

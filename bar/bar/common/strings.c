@@ -445,7 +445,6 @@ LOCAL void printErrorConstString(const struct __String *string)
   #else /* NDEBUG */
     fprintf(stderr,"FATAL ERROR: cannot modify constant string '%s'\n",string->data);
   #endif /* not NDEBUG */
-  HALT_INTERNAL_ERROR("modify const string");
 }
 
 /***********************************************************************\
@@ -677,12 +676,12 @@ LOCAL_INLINE void ensureStringLength(struct __String *string, ulong newLength)
     case STRING_TYPE_STATIC:
       if ((newLength + 1) > string->maxLength)
       {
-        fprintf(stderr,"FATAL ERROR: exceeded static string (required length %lu, max. length %lu) - program halted\n",newLength,(ulong)string->maxLength-1);
-        abort();
+        HALT_INTERNAL_ERROR("exceeded static string (required length %lu, max. length %lu) - program halted\n",newLength,(ulong)string->maxLength);
       }
       break;
     case STRING_TYPE_CONST:
       printErrorConstString(string);
+      HALT_INTERNAL_ERROR("modify const string");
       break; // not reached
     default:
       HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();

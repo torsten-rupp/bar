@@ -14,6 +14,7 @@
 #include <config.h>  // use <...> to support separated build directory
 
 #include <stdlib.h>
+#include <inttypes.h>
 #include <assert.h>
 
 #include "common/global.h"
@@ -182,7 +183,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(NULL,NULL),  // progress
-                                                                                         "WHERE storageId=%lld",
+                                                                                         "WHERE storageId=%lld \
+                                                                                          GROUP BY storageId \
+                                                                                         ",
                                                                                          fromStorageId
                                                                                         );
                                                             }
@@ -207,38 +210,73 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
+                                                                                           IndexId fromFileId;
+                                                                                           IndexId toEntryId;
+                                                                                           Errors  error;
+
                                                                                            UNUSED_VARIABLE(userData);
 
-                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                                                                                   NULL,  // changedRowCount
-                                                                                                                   "INSERT INTO fileEntries \
-                                                                                                                      ( \
-                                                                                                                       storageId, \
-                                                                                                                       entryId, \
-                                                                                                                       size, \
-                                                                                                                       fragmentOffset, \
-                                                                                                                       fragmentSize \
-                                                                                                                      ) \
-                                                                                                                    VALUES \
-                                                                                                                      ( \
-                                                                                                                       %lld, \
-                                                                                                                       %lld, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu \
-                                                                                                                      ); \
-                                                                                                                   ",
-                                                                                                                   toStorageId,
-                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
-                                                                                                                  );
+                                                                                           fromFileId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                                                           assert(fromFileId != DATABASE_ID_NONE);
+                                                                                           toEntryId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                                                           assert(toEntryId != DATABASE_ID_NONE);
+                                                                                           DIMPORT("import entry %ld -> %ld",fromFileId,toEntryId);
+
+                                                                                           DIMPORT("import file entry %ld: %s",toEntryId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
+                                                                                           error = Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                                                                                                    NULL,  // changedRowCount
+                                                                                                                    "INSERT INTO fileEntries \
+                                                                                                                       ( \
+                                                                                                                        entryId, \
+                                                                                                                        size \
+                                                                                                                       ) \
+                                                                                                                     VALUES \
+                                                                                                                       ( \
+                                                                                                                        %lld, \
+                                                                                                                        %llu \
+                                                                                                                       ); \
+                                                                                                                    ",
+                                                                                                                    toEntryId,
+                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"size",0LL)
+                                                                                                                   );
+
+                                                                                           DIMPORT("import file fragment %ld: %"PRIi64", %"PRIi64"",toEntryId,Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL));
+                                                                                           error = Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                                                                                                    NULL,  // changedRowCount
+                                                                                                                    "INSERT INTO entryFragments \
+                                                                                                                       ( \
+                                                                                                                        entryId, \
+                                                                                                                        storageId, \
+                                                                                                                        offset, \
+                                                                                                                        size\
+                                                                                                                       ) \
+                                                                                                                     VALUES \
+                                                                                                                       ( \
+                                                                                                                        %lld, \
+                                                                                                                        %lld, \
+                                                                                                                        %llu, \
+                                                                                                                        %llu\
+                                                                                                                       ); \
+                                                                                                                    ",
+                                                                                                                    toEntryId,
+                                                                                                                    toStorageId,
+                                                                                                                    Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                                                    Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+                                                                                           
+                                                                                           return ERROR_NONE;
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(NULL,NULL),  // progress
-                                                                                         "WHERE storageId=%lld",
+                                                                                         "WHERE storageId=%lld \
+                                                                                          GROUP BY storageId \
+                                                                                         ",
                                                                                          fromStorageId
                                                                                         );
                                                             }
@@ -263,44 +301,85 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
+                                                                                           IndexId fromImageId;
+                                                                                           IndexId toEntryId;
+                                                                                           ulong   blockSize;
+                                                                                           Errors  error;
+
                                                                                            UNUSED_VARIABLE(userData);
 
-                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                                                                                   NULL,  // changedRowCount
-                                                                                                                   "INSERT INTO imageEntries \
-                                                                                                                      ( \
-                                                                                                                       storageId, \
-                                                                                                                       entryId, \
-                                                                                                                       size, \
-                                                                                                                       fileSystemType, \
-                                                                                                                       blockSize, \
-                                                                                                                       blockOffset, \
-                                                                                                                       blockCount \
-                                                                                                                      ) \
-                                                                                                                    VALUES \
-                                                                                                                      ( \
-                                                                                                                       %lld, \
-                                                                                                                       %lld, \
-                                                                                                                       %llu, \
-                                                                                                                       %d, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu \
-                                                                                                                      ); \
-                                                                                                                   ",
-                                                                                                                   toStorageId,
-                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListInt(fromColumnList,"fileSystemType",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockSize",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockOffset",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"blockCount",0LL)
-                                                                                                                  );
+                                                                                           fromImageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                                                           assert(fromImageId != DATABASE_ID_NONE);
+                                                                                           toEntryId  = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                                                           assert(toEntryId != DATABASE_ID_NONE);
+                                                                                           blockSize  = (ulong)Database_getTableColumnListInt64(fromColumnList,"blockSize",DATABASE_ID_NONE);
+                                                                                           DIMPORT("import entry %ld -> %ld",fromImageId,toEntryId);
+
+                                                                                           DIMPORT("import image entry %ld: %s",toEntryId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
+                                                                                           error = Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                                                                                                    NULL,  // changedRowCount
+                                                                                                                    "INSERT INTO imageEntries \
+                                                                                                                       ( \
+                                                                                                                        entryId, \
+                                                                                                                        size, \
+                                                                                                                        fileSystemType, \
+                                                                                                                        blockSize \
+                                                                                                                       ) \
+                                                                                                                     VALUES \
+                                                                                                                       ( \
+                                                                                                                        %lld, \
+                                                                                                                        %llu, \
+                                                                                                                        %d, \
+                                                                                                                        %lu \
+                                                                                                                       ); \
+                                                                                                                    ",
+                                                                                                                    toEntryId,
+                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
+                                                                                                                    Database_getTableColumnListInt(fromColumnList,"fileSystemType",0LL),
+                                                                                                                    blockSize
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+
+                                                                                           DIMPORT("import file fragment %ld: %"PRIi64", %"PRIi64"",toEntryId,Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL));
+                                                                                           error = Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                                                                                                    NULL,  // changedRowCount
+                                                                                                                    "INSERT INTO entryFragments \
+                                                                                                                       ( \
+                                                                                                                        entryId, \
+                                                                                                                        storageId, \
+                                                                                                                        offset, \
+                                                                                                                        size\
+                                                                                                                       ) \
+                                                                                                                     VALUES \
+                                                                                                                       ( \
+                                                                                                                        %lld, \
+                                                                                                                        %lld, \
+                                                                                                                        %llu, \
+                                                                                                                        %llu\
+                                                                                                                       ); \
+                                                                                                                    ",
+                                                                                                                    toEntryId,
+                                                                                                                    toStorageId,
+                                                                                                                    Database_getTableColumnListInt64(fromColumnList,"blockOffset",0LL)*(uint64)blockSize,
+                                                                                                                    Database_getTableColumnListInt64(fromColumnList,"blockCount",0LL)*(uint64)blockSize
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+                                                                                           
+                                                                                           return ERROR_NONE;
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(NULL,NULL),  // progress
-                                                                                         "WHERE storageId=%lld",
+                                                                                         "WHERE storageId=%lld \
+                                                                                          GROUP BY storageId \
+                                                                                         ",
                                                                                          fromStorageId
                                                                                         );
                                                             }
@@ -350,7 +429,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(NULL,NULL),  // progress
-                                                                                         "WHERE storageId=%lld",
+                                                                                         "WHERE storageId=%lld \
+                                                                                          GROUP BY storageId \
+                                                                                         ",
                                                                                          fromStorageId
                                                                                         );
                                                             }
@@ -375,38 +456,77 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
+                                                                                           IndexId fromHardlinkId;
+                                                                                           IndexId toEntryId;
+                                                                                           Errors  error;
+
                                                                                            UNUSED_VARIABLE(userData);
 
-                                                                                           return Database_execute(&newIndexHandle->databaseHandle,
-                                                                                                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                                                                                   NULL,  // changedRowCount
-                                                                                                                   "INSERT INTO hardlinkEntries \
-                                                                                                                      ( \
-                                                                                                                       storageId, \
-                                                                                                                       entryId, \
-                                                                                                                       size, \
-                                                                                                                       fragmentOffset, \
-                                                                                                                       fragmentSize \
-                                                                                                                      ) \
-                                                                                                                    VALUES \
-                                                                                                                      ( \
-                                                                                                                       %lld, \
-                                                                                                                       %lld, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu, \
-                                                                                                                       %llu \
-                                                                                                                      ); \
-                                                                                                                   ",
-                                                                                                                   toStorageId,
-                                                                                                                   Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"size",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentOffset",0LL),
-                                                                                                                   Database_getTableColumnListUInt64(fromColumnList,"fragmentSize",0LL)
-                                                                                                                  );
+                                                                                           fromHardlinkId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
+                                                                                           assert(fromHardlinkId != DATABASE_ID_NONE);
+                                                                                           toEntryId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                                                                                           assert(toEntryId != DATABASE_ID_NONE);
+                                                                                           DIMPORT("import entry %ld -> %ld",fromHardlinkId,toEntryId);
+
+                                                                                           DIMPORT("import hardlink entry %ld: %s",toEntryId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
+                                                                                           error = Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                                                                                                    NULL,  // changedRowCount
+                                                                                                                    "INSERT INTO hardlinkEntries \
+                                                                                                                       ( \
+                                                                                                                        entryId, \
+                                                                                                                        size \
+                                                                                                                       ) \
+                                                                                                                     VALUES \
+                                                                                                                       ( \
+                                                                                                                        %lld, \
+                                                                                                                        %llu \
+                                                                                                                       ); \
+                                                                                                                    ",
+                                                                                                                    toEntryId,
+                                                                                                                    Database_getTableColumnListUInt64(fromColumnList,"size",0LL)
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+
+                                                                                           DIMPORT("import hardlink fragment %ld: %"PRIi64", %"PRIi64"",toEntryId,Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL));
+                                                                                           error = Database_execute(&newIndexHandle->databaseHandle,
+                                                                                                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                                                                                                    NULL,  // changedRowCount
+                                                                                                                    "INSERT INTO entryFragments \
+                                                                                                                       ( \
+                                                                                                                        entryId, \
+                                                                                                                        storageId, \
+                                                                                                                        offset, \
+                                                                                                                        size\
+                                                                                                                       ) \
+                                                                                                                     VALUES \
+                                                                                                                       ( \
+                                                                                                                        %lld, \
+                                                                                                                        %lld, \
+                                                                                                                        %llu, \
+                                                                                                                        %llu\
+                                                                                                                       ); \
+                                                                                                                    ",
+                                                                                                                    toEntryId,
+                                                                                                                    toStorageId,
+                                                                                                                    Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
+                                                                                                                    Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
+                                                                                                                   );
+                                                                                           if (error != ERROR_NONE)
+                                                                                           {
+                                                                                             return error;
+                                                                                           }
+                                                                                           
+                                                                                           return ERROR_NONE;
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(NULL,NULL),  // progress
-                                                                                         "WHERE storageId=%lld",
+                                                                                         "WHERE storageId=%lld \
+                                                                                          GROUP BY storageId \
+                                                                                         ",
                                                                                          fromStorageId
                                                                                         );
                                                             }
@@ -462,10 +582,16 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_(NULL,NULL),  // pause
                                                                                          CALLBACK_(NULL,NULL),  // progress
-                                                                                         "WHERE storageId=%lld",
+                                                                                         "WHERE storageId=%lld \
+                                                                                          GROUP BY storageId \
+                                                                                         ",
                                                                                          fromStorageId
                                                                                         );
                                                             }
+
+//TODO                               
+#warning
+//                               Index_updateStorageInfos();
 
                                                             return error;
                                                           },NULL),
@@ -474,6 +600,10 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
+
+//TODO                               
+#warning
+//                               Index_updateEntityInfos();
 
                                t1 = Misc_getTimestamp();
                                if (error != ERROR_NONE)
@@ -558,6 +688,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                  error = Index_newEntity(newIndexHandle,
                                                          Misc_getUUID(jobUUID),
                                                          NULL,  // hostName
+                                                         NULL,  // userName
                                                          NULL,  // scheduleUUID
                                                          ARCHIVE_TYPE_FULL,
                                                          0LL,  // createdDateTime
@@ -629,7 +760,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%lld \
+                                                             GROUP BY storageId \
+                                                            ",
                                                             fromStorageId
                                                            );
                                }
@@ -685,7 +818,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%lld \
+                                                             GROUP BY storageId \
+                                                            ",
                                                             fromStorageId
                                                            );
                                }
@@ -747,7 +882,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%lld \
+                                                             GROUP BY storageId \
+                                                            ",
                                                             fromStorageId
                                                            );
                                }
@@ -797,7 +934,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%lld \
+                                                             GROUP BY storageId \
+                                                            ",
                                                             fromStorageId
                                                            );
                                }
@@ -853,7 +992,9 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%lld \
+                                                             GROUP BY storageId \
+                                                            ",
                                                             fromStorageId
                                                            );
                                }
@@ -909,10 +1050,16 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             },NULL),
                                                             CALLBACK_(NULL,NULL),  // pause
                                                             CALLBACK_(NULL,NULL),  // progress
-                                                            "WHERE storageId=%lld",
+                                                            "WHERE storageId=%lld \
+                                                             GROUP BY storageId \
+                                                            ",
                                                             fromStorageId
                                                            );
                                }
+
+//TODO                               
+#warning
+//                               Index_updateStorageInfos();
 
                                (void)Index_unlockEntity(newIndexHandle,entityId);
 

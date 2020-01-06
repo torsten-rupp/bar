@@ -4135,6 +4135,24 @@ void Job_doneOptions(JobOptions *jobOptions)
   String_delete(jobOptions->uuid);
 }
 
+void Job_duplicatePersistenceList(PersistenceList *persistenceList, const PersistenceList *fromPersistenceList)
+{
+  assert(persistenceList != NULL);
+  assert(fromPersistenceList != NULL);
+
+  List_initDuplicate(persistenceList,
+                     fromPersistenceList,
+                     NULL,  // fromListFromNode
+                     NULL,  // fromListToNode
+                     CALLBACK_((ListNodeDuplicateFunction)duplicatePersistenceNode,NULL)
+                    );
+}
+
+void Job_donePersistenceList(PersistenceList *persistenceList)
+{
+  List_done(persistenceList,CALLBACK_((ListNodeFreeFunction)freePersistenceNode,NULL));
+}
+
 SlaveNode *Job_addSlave(ConstString name, uint port)
 {
   SlaveNode *slaveNode;

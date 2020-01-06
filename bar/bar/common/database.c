@@ -1960,12 +1960,12 @@ LOCAL String vformatSQLString(String     sqlString,
 
               if      (longLongFlag)
               {
-                value.ll = va_arg(arguments,int64);
+                value.ll = va_arg(arguments,long long int);
                 String_appendFormat(sqlString,"%lld",value.ll);
               }
               else if (longFlag)
               {
-                value.l = va_arg(arguments,int64);
+                value.l = va_arg(arguments,long int);
                 String_appendFormat(sqlString,"%ld",value.l);
               }
               else
@@ -1980,12 +1980,12 @@ LOCAL String vformatSQLString(String     sqlString,
 
               if      (longLongFlag)
               {
-                value.ull = va_arg(arguments,uint64);
+                value.ull = va_arg(arguments,unsigned long long int);
                 String_appendFormat(sqlString,"%llu",value.ull);
               }
               else if (longFlag)
               {
-                value.ul = va_arg(arguments,ulong);
+                value.ul = va_arg(arguments,unsigned long);
                 String_appendFormat(sqlString,"%lu",value.ul);
               }
               else
@@ -3173,9 +3173,16 @@ void Database_doneAll(void)
   sqliteMode = SQLITE_OPEN_URI;
   switch (databaseOpenMode & DATABASE_OPEN_MASK_MODE)
   {
-    case DATABASE_OPENMODE_CREATE:    sqliteMode |= SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE; break;
-    case DATABASE_OPENMODE_READ:      sqliteMode |= SQLITE_OPEN_READONLY;                     break;
-    case DATABASE_OPENMODE_READWRITE: sqliteMode |= SQLITE_OPEN_READWRITE;                    break;
+    case DATABASE_OPENMODE_READ:
+      sqliteMode |= SQLITE_OPEN_READONLY;
+      String_appendCString(databaseFileName,"?immutable=1");
+      break;
+    case DATABASE_OPENMODE_READWRITE:
+      sqliteMode |= SQLITE_OPEN_READWRITE;
+      break;
+    case DATABASE_OPENMODE_CREATE:
+      sqliteMode |= SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE;
+      break;
   }
   if ((databaseOpenMode & DATABASE_OPEN_MASK_FLAGS) != 0)
   {
@@ -4332,7 +4339,6 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
                     );
     va_end(arguments);
   }
-  String_appendCString(sqlSelectString,";");
   DATABASE_DEBUG_SQL(fromDatabaseHandle,sqlSelectString);
 
   // select rows in from-table and copy to to-table
@@ -4408,7 +4414,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
         rowCount++;
       #endif /* DATABASE_DEBUG_COPY_TABLE */
 
-      // reset to data
+      // reset to-data
       LIST_ITERATE(&toColumnList,columnNode)
       {
         columnNode->usedFlag = FALSE;
@@ -4520,7 +4526,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
           i++;
         }
       }
-      String_appendCString(sqlInsertString,");");
+      String_appendChar(sqlInsertString,')');
 //      DATABASE_DEBUG_SQL(toDatabaseHandle,sqlInsertString);
 
       // create insert statement
@@ -4808,6 +4814,32 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
   #undef START_TIMER
 }
 
+DatabaseId Database_getTableColumnListId(const DatabaseColumnList *columnList, const char *columnName, DatabaseId defaultValue)
+{
+  DatabaseColumnNode *columnNode;
+
+  assert(columnList != NULL);
+  assert(columnName != NULL);
+
+  columnNode = findTableColumnNode(columnList,columnName);
+  if (columnNode != NULL)
+  {
+    assert((columnNode->type == DATABASE_TYPE_PRIMARY_KEY) || (columnNode->type == DATABASE_TYPE_INT64));
+    if (columnNode->type == DATABASE_TYPE_PRIMARY_KEY)
+    {
+      return columnNode->value.id;
+    }
+    else
+    {
+      return (DatabaseId)String_toInteger64(columnNode->value.i,STRING_BEGIN,NULL,NULL,0);
+    }
+  }
+  else
+  {
+    return defaultValue;
+  }
+}
+
 int Database_getTableColumnListInt(const DatabaseColumnList *columnList, const char *columnName, int defaultValue)
 {
   DatabaseColumnNode *columnNode;
@@ -5009,6 +5041,27 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   }
 }
 
+bool Database_setTableColumnListIntId(const DatabaseColumnList *columnList, const char *columnName, DatabaseId value)
+{
+  DatabaseColumnNode *columnNode;
+
+  assert(columnList != NULL);
+  assert(columnName != NULL);
+
+  columnNode = findTableColumnNode(columnList,columnName);
+  if (columnNode != NULL)
+  {
+    assert(columnNode->type == DATABASE_TYPE_INT64);
+    String_format(columnNode->value.i,"%ld",value);
+    columnNode->usedFlag = TRUE;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 value)
 {
   DatabaseColumnNode *columnNode;
@@ -5020,7 +5073,7 @@ bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, cons
   if (columnNode != NULL)
   {
     assert(columnNode->type == DATABASE_TYPE_INT64);
-    String_format(columnNode->value.i,"%lld",value);
+    String_format(columnNode->value.i,"%"PRIi64,value);
     columnNode->usedFlag = TRUE;
     return TRUE;
   }
@@ -5062,7 +5115,7 @@ bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, c
   if (columnNode != NULL)
   {
     assert(columnNode->type == DATABASE_TYPE_DATETIME);
-    String_format(columnNode->value.i,"%lld",value);
+    String_format(columnNode->value.i,"%"PRIi64,value);
     columnNode->usedFlag = TRUE;
     return TRUE;
   }
@@ -6043,18 +6096,18 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
   int     maxLength;
   union
   {
-    bool   *b;
-    int    *i;
-    uint   *ui;
-    long   *l;
-    ulong  *ul;
-    int64  *ll;
-    uint64 *ull;
-    float  *f;
-    double *d;
-    char   *ch;
-    char   *s;
-    void   **p;
+    bool               *b;
+    int                *i;
+    uint               *ui;
+    long               *l;
+    ulong              *ul;
+    long long          *ll;
+    unsigned long long *ull;
+    float              *f;  
+    double             *d;  
+    char               *ch; 
+    char               *s;  
+    void               **p; 
     String string;
   }       value;
 
@@ -6163,7 +6216,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 
             if      (longLongFlag)
             {
-              value.ll = va_arg(arguments,int64*);
+              value.ll = va_arg(arguments,long long*);
               if (value.ll != NULL)
               {
                 (*value.ll) = (int64)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);
@@ -6192,7 +6245,7 @@ bool Database_getNextRow(DatabaseQueryHandle *databaseQueryHandle,
 
             if      (longLongFlag)
             {
-              value.ull = va_arg(arguments,uint64*);
+              value.ull = va_arg(arguments,unsigned long long*);
               if (value.ull != NULL)
               {
                 (*value.ull) = (uint64)sqlite3_column_int64(databaseQueryHandle->statementHandle,column);

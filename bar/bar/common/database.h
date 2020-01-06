@@ -46,7 +46,7 @@ typedef enum
   DATABASE_OPENMODE_READWRITE,
 } DatabaseOpenModes;
 
-// additional database open flags
+// additional database open mode flags
 #define DATABASE_OPENMODE_MEMORY (1 << 16)
 #define DATABASE_OPENMODE_SHARED (1 << 17)
 
@@ -870,6 +870,7 @@ Errors Database_copyTable(DatabaseHandle                       *fromDatabaseHand
 * Notes  : -
 \***********************************************************************/
 
+DatabaseId Database_getTableColumnListId(const DatabaseColumnList *columnList, const char *columnName, DatabaseId defaultValue);
 int Database_getTableColumnListInt(const DatabaseColumnList *columnList, const char *columnName, int defaultValue);
 uint Database_getTableColumnListUInt(const DatabaseColumnList *columnList, const char *columnName, uint defaultValue);
 int64 Database_getTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 defaultValue);
@@ -891,6 +892,7 @@ void Database_getTableColumnListBlob(const DatabaseColumnList *columnList, const
 * Notes  : -
 \***********************************************************************/
 
+bool Database_setTableColumnListId(const DatabaseColumnList *columnList, const char *columnName, DatabaseId value);
 bool Database_setTableColumnListInt64(const DatabaseColumnList *columnList, const char *columnName, int64 value);
 bool Database_setTableColumnListDouble(const DatabaseColumnList *columnList, const char *columnName, double value);
 bool Database_setTableColumnListDateTime(const DatabaseColumnList *columnList, const char *columnName, uint64 value);

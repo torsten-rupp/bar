@@ -2077,6 +2077,7 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
   AUTOFREE_ADD(&autoFreeList,&convertInfo.newArchiveName,{ (void)Storage_delete(&convertInfo.storageInfo,convertInfo.newArchiveName); });
   error = Archive_create(&convertInfo.destinationArchiveHandle,
                          NULL,  // hostName
+                         NULL,  // userName
                          &convertInfo.storageInfo,
                          convertInfo.newArchiveName,
 //                         NULL,  // indexHandle,

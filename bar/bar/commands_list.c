@@ -544,8 +544,8 @@ LOCAL void printFileInfo(ConstString        storageName,
   }
   else
   {
-    File_userIdToUserName(userName,sizeof(userName),userId);
-    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+    Misc_userIdToUserName(userName,sizeof(userName),userId);
+    Misc_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
   if (globalOptions.numericPermissionsFlag)
   {
@@ -878,8 +878,8 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
   }
   else
   {
-    File_userIdToUserName(userName,sizeof(userName),userId);
-    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+    Misc_userIdToUserName(userName,sizeof(userName),userId);
+    Misc_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
   if (globalOptions.numericPermissionsFlag)
   {
@@ -986,8 +986,8 @@ LOCAL void printLinkInfo(ConstString     storageName,
   }
   else
   {
-    File_userIdToUserName(userName,sizeof(userName),userId);
-    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+    Misc_userIdToUserName(userName,sizeof(userName),userId);
+    Misc_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
   if (globalOptions.numericPermissionsFlag)
   {
@@ -1124,8 +1124,8 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
   }
   else
   {
-    File_userIdToUserName(userName,sizeof(userName),userId);
-    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+    Misc_userIdToUserName(userName,sizeof(userName),userId);
+    Misc_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
   if (globalOptions.numericPermissionsFlag)
   {
@@ -1353,8 +1353,8 @@ LOCAL void printSpecialInfo(ConstString      storageName,
   }
   else
   {
-    File_userIdToUserName(userName,sizeof(userName),userId);
-    File_groupIdToGroupName(groupName,sizeof(groupName),groupId);
+    Misc_userIdToUserName(userName,sizeof(userName),userId);
+    Misc_groupIdToGroupName(groupName,sizeof(groupName),groupId);
   }
   if (globalOptions.numericPermissionsFlag)
   {
@@ -4228,8 +4228,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
         }
         else
         {
-          File_userIdToUserName(userName,sizeof(userName),fileInfo.userId);
-          File_groupIdToGroupName(groupName,sizeof(groupName),fileInfo.groupId);
+          Misc_userIdToUserName(userName,sizeof(userName),fileInfo.userId);
+          Misc_groupIdToGroupName(groupName,sizeof(groupName),fileInfo.groupId);
         }
         if (globalOptions.numericPermissionsFlag)
         {

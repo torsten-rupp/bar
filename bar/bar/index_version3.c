@@ -95,6 +95,7 @@ LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                        Misc_getUUID(jobUUID),
                                                        NULL,  // scheduleUUID
                                                        NULL,  // hostName
+                                                       NULL,  // userName
                                                        ARCHIVE_TYPE_FULL,
                                                        0LL,  // createdDateTime
                                                        TRUE,  // locked

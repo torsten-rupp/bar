@@ -2990,22 +2990,22 @@ LOCAL bool cmdOptionParseOwner(void *userData, void *variable, const char *name,
   // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
   {
-    userId  = File_userNameToUserId(userName);
-    groupId = File_groupNameToGroupId(groupName);
+    userId  = Misc_userNameToUserId(userName);
+    groupId = Misc_groupNameToGroupId(groupName);
   }
   else if (String_scanCString(value,"%256s:",userName))
   {
-    userId  = File_userNameToUserId(userName);
+    userId  = Misc_userNameToUserId(userName);
     groupId = FILE_DEFAULT_GROUP_ID;
   }
   else if (String_scanCString(value,":%256s",groupName))
   {
     userId  = FILE_DEFAULT_USER_ID;
-    groupId = File_groupNameToGroupId(groupName);
+    groupId = Misc_groupNameToGroupId(groupName);
   }
   else if (String_scanCString(value,"%256s",userName))
   {
-    userId  = File_userNameToUserId(userName);
+    userId  = Misc_userNameToUserId(userName);
     groupId = FILE_DEFAULT_GROUP_ID;
   }
   else
@@ -7814,22 +7814,22 @@ bool configValueParseOwner(void *userData, void *variable, const char *name, con
   // parse
   if      (String_scanCString(value,"%256s:%256s",userName,groupName))
   {
-    userId  = File_userNameToUserId(userName);
-    groupId = File_groupNameToGroupId(groupName);
+    userId  = Misc_userNameToUserId(userName);
+    groupId = Misc_groupNameToGroupId(groupName);
   }
   else if (String_scanCString(value,"%256s:",userName))
   {
-    userId  = File_userNameToUserId(userName);
+    userId  = Misc_userNameToUserId(userName);
     groupId = FILE_DEFAULT_GROUP_ID;
   }
   else if (String_scanCString(value,":%256s",groupName))
   {
     userId  = FILE_DEFAULT_USER_ID;
-    groupId = File_groupNameToGroupId(groupName);
+    groupId = Misc_groupNameToGroupId(groupName);
   }
   else if (String_scanCString(value,"%256s",userName))
   {
-    userId  = File_userNameToUserId(userName);
+    userId  = Misc_userNameToUserId(userName);
     groupId = FILE_DEFAULT_GROUP_ID;
   }
   else
@@ -7872,8 +7872,8 @@ bool configValueFormatOwner(void **formatUserData, void *userData, String line)
   owner = (Owner*)(*formatUserData);
   if (owner != NULL)
   {
-    if (File_userIdToUserName  (userName, sizeof(userName), owner->userId )) return FALSE;
-    if (File_groupIdToGroupName(groupName,sizeof(groupName),owner->groupId)) return FALSE;
+    if (Misc_userIdToUserName  (userName, sizeof(userName), owner->userId )) return FALSE;
+    if (Misc_groupIdToGroupName(groupName,sizeof(groupName),owner->groupId)) return FALSE;
     String_appendFormat(line,"%s:%s",userName,groupName);
 
     (*formatUserData) = NULL;

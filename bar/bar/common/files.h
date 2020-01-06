@@ -1119,54 +1119,6 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
-* Name   : File_userNameToUserId
-* Purpose: convert user name to user id
-* Input  : name - user name
-* Output : -
-* Return : user id or FILE_DEFAULT_USER_ID if user not found
-* Notes  : -
-\***********************************************************************/
-
-uint32 File_userNameToUserId(const char *name);
-
-/***********************************************************************\
-* Name   : File_userNameToUserId
-* Purpose: convert user name to user id
-* Input  : name     - name variable
-*          nameSize - max. size of name
-*          userId   - user id
-* Output : name - user name
-* Return : user name or "NONE" if user not found
-* Notes  : -
-\***********************************************************************/
-
-const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId);
-
-/***********************************************************************\
-* Name   : File_groupNameToGroupId
-* Purpose: convert group name to group id
-* Input  : name - group name
-* Output : -
-* Return : user id or FILE_DEFAULT_GROUP_ID if group not found
-* Notes  : -
-\***********************************************************************/
-
-uint32 File_groupNameToGroupId(const char *name);
-
-/***********************************************************************\
-* Name   : File_groupNameToGroupId
-* Purpose: convert group name to group id
-* Input  : name     - name variable
-*          nameSize - max. size of name
-*          groupId  - group id
-* Output : name - group name
-* Return : group name or "NONE" if user not found
-* Notes  : -
-\***********************************************************************/
-
-const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId);
-
-/***********************************************************************\
 * Name   : File_stringToPermission
 * Purpose: convert string to file permission
 * Input  : string - string

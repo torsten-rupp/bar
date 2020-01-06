@@ -1940,6 +1940,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                           {
                             createInfo->statusInfo.total.count++;
                             createInfo->statusInfo.total.size += fileInfo.size;
+fprintf(stderr,"%s, %d: total %lu %llu\n",__FILE__,__LINE__,createInfo->statusInfo.total.count,createInfo->statusInfo.total.size);
                           }
                         }
                         break;
@@ -7531,7 +7532,7 @@ Errors Command_create(ServerIO                     *masterIO,
   StorageSpecifier storageSpecifier;
 //  String           directoryName;
   IndexId          uuidId;
-  String           hostName;
+  String           hostName,userName;
   IndexId          entityId;
   Thread           collectorSumThread;                 // files collector sum thread
   Thread           collectorThread;                    // files collector thread
@@ -7772,10 +7773,12 @@ Errors Command_create(ServerIO                     *masterIO,
 
     // create new index entity
     hostName = Network_getHostName(String_new());
+    userName = Misc_getCurrentUserName(String_new());
     error = Index_newEntity(indexHandle,
                             jobUUID,
                             scheduleUUID,
                             hostName,
+                            userName,
                             archiveType,
                             0LL, // createdDateTime
                             TRUE,  // locked
@@ -7787,6 +7790,7 @@ Errors Command_create(ServerIO                     *masterIO,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
+      String_delete(userName);
       String_delete(hostName);
       AutoFree_cleanup(&autoFreeList);
       return error;
@@ -7794,12 +7798,14 @@ Errors Command_create(ServerIO                     *masterIO,
     assert(entityId != INDEX_ID_NONE);
     DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
+    String_delete(userName);
     String_delete(hostName);
   }
 
   // create new archive
   error = Archive_create(&createInfo.archiveHandle,
                          NULL,  // hostName
+                         NULL,  // userName
                          &createInfo.storageInfo,
                          NULL,  // archiveName
                          uuidId,
@@ -7924,6 +7930,32 @@ Errors Command_create(ServerIO                     *masterIO,
   if (indexHandle != NULL)
   {
     assert(entityId != INDEX_ID_NONE);
+
+    // update entity, uuid info (aggregated values)
+    error = Index_updateEntityInfos(indexHandle,
+                                    entityId
+                                   );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create index for '%s' (error: %s)!",
+                 String_cString(printableStorageName),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+    error = Index_updateUUIDInfos(indexHandle,
+                                  uuidId
+                                 );
+    if (error != ERROR_NONE)
+    {
+      printError("Cannot create index for '%s' (error: %s)!",
+                 String_cString(printableStorageName),
+                 Error_getText(error)
+                );
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
 
     // unlock entity
     (void)Index_unlockEntity(indexHandle,entityId);

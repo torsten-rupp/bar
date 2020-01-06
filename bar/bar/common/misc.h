@@ -810,6 +810,54 @@ INLINE void Misc_mdelay(uint64 time)
 /*---------------------------------------------------------------------*/
 
 /***********************************************************************\
+* Name   : Misc_userNameToUserId
+* Purpose: convert user name to user id
+* Input  : name - user name
+* Output : -
+* Return : user id or FILE_DEFAULT_USER_ID if user not found
+* Notes  : -
+\***********************************************************************/
+
+uint32 Misc_userNameToUserId(const char *name);
+
+/***********************************************************************\
+* Name   : Misc_userNameToUserId
+* Purpose: convert user name to user id
+* Input  : name     - name variable
+*          nameSize - max. size of name
+*          userId   - user id
+* Output : name - user name
+* Return : user name or "NONE" if user not found
+* Notes  : -
+\***********************************************************************/
+
+const char *Misc_userIdToUserName(char *name, uint nameSize, uint32 userId);
+
+/***********************************************************************\
+* Name   : Misc_groupNameToGroupId
+* Purpose: convert group name to group id
+* Input  : name - group name
+* Output : -
+* Return : user id or FILE_DEFAULT_GROUP_ID if group not found
+* Notes  : -
+\***********************************************************************/
+
+uint32 Misc_groupNameToGroupId(const char *name);
+
+/***********************************************************************\
+* Name   : Misc_groupNameToGroupId
+* Purpose: convert group name to group id
+* Input  : name     - name variable
+*          nameSize - max. size of name
+*          groupId  - group id
+* Output : name - group name
+* Return : group name or "NONE" if user not found
+* Notes  : -
+\***********************************************************************/
+
+const char *Misc_groupIdToGroupName(char *name, uint nameSize, uint32 groupId);
+
+/***********************************************************************\
 * Name   : Misc_getCurrentUserName
 * Purpose: get current user name
 * Input  : string - string variable

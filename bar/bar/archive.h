@@ -108,12 +108,12 @@ typedef struct
 * Name   : ArchiveInitFunction
 * Purpose: call back before store archive file
 * Input  : storageInfo  - storage info
-*          uuidId       - index UUID id
+*          uuidId       - UUID index id
 *          jobUUID      - job UUID or NULL
 *          scheduleUUID - schedule UUID or NULL
-*          entityId     - index entity id
+*          entityId     - entity index id
 *          archiveType  - archive type
-*          storageId    - index id of storage
+*          storageId    - storage index id
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
 *          userData     - user data
@@ -137,12 +137,12 @@ typedef Errors(*ArchiveInitFunction)(StorageInfo  *storageInfo,
 * Name   : ArchiveDoneFunction
 * Purpose: call back after store archive file
 * Input  : storageInfo  - storage info
-*          uuidId       - index UUID id
+*          uuidId       - UUID index id
 *          jobUUID      - job UUID or NULL
 *          scheduleUUID - schedule UUID or NULL
-*          entityId     - index entity id
+*          entityId     - entity index id
 *          archiveType  - archive type
-*          storageId    - index id of storage
+*          storageId    - storage index id
 *          partNumber   - part number or ARCHIVE_PART_NUMBER_NONE for
 *                         single part
 *          userData     - user data
@@ -166,7 +166,7 @@ typedef Errors(*ArchiveDoneFunction)(StorageInfo  *storageInfo,
 * Name   : ArchiveGetSizeFunction
 * Purpose: call back to get size of archive file
 * Input  : storageInfo - storage info
-*          storageId   - index id of storage
+*          storageId   - storage index id
 *          partNumber  - part number or ARCHIVE_PART_NUMBER_NONE for
 *                        single part
 *          userData    - user data
@@ -185,12 +185,12 @@ typedef uint64(*ArchiveGetSizeFunction)(StorageInfo *storageInfo,
 * Name   : ArchiveStoreFunction
 * Purpose: call back to store archive
 * Input  : storageInfo          - storage info
-*          uuidId               - index UUID id
+*          uuidId               - UUID index id
 *          jobUUID              - job UUID or NULL
 *          scheduleUUID         - schedule UUID or NULL
-*          entityId             - index entity id
+*          entityId             - entity index id
 *          archiveType          - archive type
-*          storageId            - index id of storage
+*          storageId            - storage index id
 *          partNumber           - part number or ARCHIVE_PART_NUMBER_NONE
 *                                 for single part
 *          intermediateFileName - intermediate archive file name
@@ -226,9 +226,10 @@ typedef struct
 typedef struct
 {
   String                   hostName;                                   // host name or NULL
+  String                   userName;                                   // user name or NULL
   StorageInfo              *storageInfo;
-  IndexId                  uuidId;                                     // index UUID id
-  IndexId                  entityId;                                   // index entity id
+  IndexId                  uuidId;                                     // UUID index id
+  IndexId                  entityId;                                   // entity index id
 
   String                   jobUUID;
   String                   scheduleUUID;
@@ -293,7 +294,7 @@ typedef struct
 
   Semaphore                indexLock;
   IndexHandle              *indexHandle;                               // index handle or NULL (owned by opener/creator of archive)
-  IndexId                  storageId;                                  // index id of storage
+  IndexId                  storageId;                                  // storage index id
   ArchiveIndexList         archiveIndexList;
 
   uint64                   entries;                                    // number of entries
@@ -633,10 +634,11 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 * Purpose: create archive
 * Input  : archiveHandle           - archive handle
 *          hostName                - host name (can be NULL)
+*          userName                - user name (can be NULL)
 *          storageInfo             - storage info
 *          archiveName             - archive name (can be NULL)
-*          uuidId                  - index UUID id or INDEX_ID_NONE
-*          entityId                - index entity id or INDEX_ID_NONE
+*          uuidId                  - UUID index id or INDEX_ID_NONE
+*          entityId                - entity index id or INDEX_ID_NONE
 *          jobUUID                 - unique job id or NULL
 *          scheduleUUID            - unique schedule id or NULL
 *          deltaSourceList         - delta source list or NULL
@@ -665,6 +667,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
 #ifdef NDEBUG
   Errors Archive_create(ArchiveHandle           *archiveHandle,
                         ConstString             hostName,
+                        ConstString             userName,
                         StorageInfo             *storageInfo,
                         ConstString             archiveName,
                         IndexId                 uuidId,
@@ -694,6 +697,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout);
                           ulong                   __lineNb__,
                           ArchiveHandle           *archiveHandle,
                           ConstString             hostName,
+                          ConstString             userName,
                           StorageInfo             *storageInfo,
                           ConstString             archiveName,
                           IndexId                 uuidId,
@@ -1649,7 +1653,7 @@ Errors Archive_seek(ArchiveHandle *archiveHandle,
 * Input  : archiveHandle - archive handle
 * Output : -
 * Return : number of entries
-* Notes  : -
+* Notes  : only available when writing an archive
 \***********************************************************************/
 
 INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle);
@@ -1657,6 +1661,7 @@ INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle);
 INLINE uint64 Archive_getEntries(const ArchiveHandle *archiveHandle)
 {
   assert(archiveHandle != NULL);
+  assert(archiveHandle->mode == ARCHIVE_MODE_CREATE);
 
   return archiveHandle->entries;
 }
@@ -1694,15 +1699,13 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 * Name   : Archive_addToIndex
 * Purpose: add storage index
 * Input  : indexHandle - index handle
-*          entityId    - entity id
+*          entityId    - entity index id
 *          hostName    - host name
 *          storageInfo - storage info
 *          indexMode   - index mode
 *          logHandle   - log handle (can be NULL)
-* Output : totalTimeLastChanged - total last change time [s] (can be
-*                                 NULL)
-*          totalEntries         - total entries (can be NULL)
-*          totalSize            - total size [bytes] (can be NULL)
+* Output : totalEntryCount - total number of entries (can be NULL)
+*          totalSize       - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1712,8 +1715,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
                           ConstString hostName,
                           StorageInfo *storageInfo,
                           IndexModes  indexMode,
-                          uint64      *totalTimeLastChanged,
-                          uint64      *totalEntries,
+                          ulong       *totalEntryCount,
                           uint64      *totalSize,
                           LogHandle   *logHandle
                          );
@@ -1722,38 +1724,37 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
 * Name   : Archive_updateIndex
 * Purpose: update storage index
 * Input  : indexHandle       - index handle
-*          storageId         - index id of storage
+*          entityId          - entity index id or INDEX_ID_NONE
+*          storageId         - storage index id
 *          storageInfo       - storage info
 *          isPauseFunction   - is pause check callback (can be NULL)
 *          isPauseUserData   - is pause check user data
 *          isAbortedFunction - is aborted check callback (can be NULL)
 *          isAbortedUserData - is aborted check user data
-* Output : totalTimeLastChanged - total last change time [s] (can be
-*                                 NULL)
-*          totalEntries         - total entries (can be NULL)
-*          totalSize            - total size [bytes] (can be NULL)
+* Output : totalEntryCount - total number of entries (can be NULL)
+*          totalSize       - total size [bytes] (can be NULL)
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Archive_updateIndex(IndexHandle                  *indexHandle,
-                           IndexId                      storageId,
-                           StorageInfo                  *storageInfo,
-                           uint64                       *totalTimeLastChanged,
-                           uint64                       *totalEntries,
-                           uint64                       *totalSize,
-                           IsPauseFunction              isPauseFunction,
-                           void                         *isPauseUserData,
-                           IsAbortedFunction            isAbortedFunction,
-                           void                         *isAbortedUserData,
-                           LogHandle                    *logHandle
+Errors Archive_updateIndex(IndexHandle       *indexHandle,
+                           IndexId           entityId,
+                           IndexId           storageId,
+                           StorageInfo       *storageInfo,
+                           ulong             *totalEntryCount,
+                           uint64            *totalSize,
+                           IsPauseFunction   isPauseFunction,
+                           void              *isPauseUserData,
+                           IsAbortedFunction isAbortedFunction,
+                           void              *isAbortedUserData,
+                           LogHandle         *logHandle
                           );
 
 /***********************************************************************\
 * Name   : Archive_removeIndex
 * Purpose: remove storage index
 * Input  : indexHandle - index handle
-*          storageId   - index id of storage
+*          storageId   - storage index id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -

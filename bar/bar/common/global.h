@@ -281,6 +281,14 @@ typedef struct
 // Unicode codepoint (4 bytes)
 typedef uint32_t Codepoint;
 
+// string tokenizer
+typedef struct
+{
+  const char *delimiters;
+  const char *nextToken;
+  char       *p;
+} CStringTokenizer;
+
 // string iterator
 typedef struct
 {
@@ -2788,7 +2796,7 @@ static inline const char *charUTF8(Codepoint codepoint)
 }
 
 /***********************************************************************\
-* Name   : stringFind, stringFindChar
+* Name   : stringFind, stringFindChar stringFindReverseChar
 * Purpose: find string/character in string
 * Input  : s                   - string
 *          findString,findChar - string/character to find
@@ -2810,6 +2818,14 @@ static inline long stringFindChar(const char *s, char findChar)
   const char *t;
 
   t = strchr(s,findChar);
+  return (t != NULL) ? (long)(t-s) : -1L;
+}
+
+static inline long stringFindReverseChar(const char *s, char findChar)
+{
+  const char *t;
+
+  t = strrchr(s,findChar);
   return (t != NULL) ? (long)(t-s) : -1L;
 }
 
@@ -3012,6 +3028,62 @@ static inline Codepoint stringIteratorGet(CStringIterator *cStringIterator)
   stringIteratorNext(cStringIterator);
 
   return codepoint;
+}
+
+/***********************************************************************\
+* Name   : stringTokenizerInit
+* Purpose: init string tokenizer
+* Input  : cStringTokenizer - string tokenizer
+*          string           - string
+*          delimiters       - token delimiters
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+static inline void stringTokenizerInit(CStringTokenizer *cStringTokenizer, const char *string, const char *delimiters)
+{
+  assert(cStringTokenizer != NULL);
+  assert(string != NULL);
+  
+  cStringTokenizer->nextToken  = strtok_r((char*)string,delimiters,&cStringTokenizer->p);
+  cStringTokenizer->delimiters = delimiters;
+}
+
+/***********************************************************************\
+* Name   : stringTokenizerDone
+* Purpose: done string tokenizer
+* Input  : cStringTokenizer - string tokenizer
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+static inline void stringTokenizerDone(CStringTokenizer *cStringTokenizer)
+{
+  assert(cStringTokenizer != NULL);
+  
+  UNUSED_VARIABLE(cStringTokenizer);
+}
+
+/***********************************************************************\
+* Name   : stringGetNextToken
+* Purpose: get next string token
+* Input  : cStringTokenizer - string tokenizer
+* Output : token - next token
+* Return : TRUE iff next token
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringGetNextToken(CStringTokenizer *cStringTokenizer, const char **token)
+{
+  assert(cStringTokenizer != NULL);
+  assert(token != NULL);
+  
+  (*token) = cStringTokenizer->nextToken;
+  cStringTokenizer->nextToken = strtok_r(NULL,cStringTokenizer->delimiters,&cStringTokenizer->p);
+  
+  return (*token) != NULL;
 }
 
 /***********************************************************************\

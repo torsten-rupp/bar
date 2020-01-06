@@ -1185,6 +1185,7 @@ LOCAL void connectorCommand_indexNewUUID(ConnectorInfo *connectorInfo, IndexHand
 *            jobUUID=<uuid>
 *            scheduleUUID=<uuid>
 *            hostName=<name>
+*            userName=<name>
 *            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL
 *            createdDateTime=<n>
 *            locked=yes|no
@@ -1196,7 +1197,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
 {
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  String       hostName;
+  String       hostName,userName;
   ArchiveTypes archiveType;
   uint64       createdDateTime;
   bool         locked;
@@ -1207,7 +1208,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get jobUUID, scheduleUUID, archiveType, createdDateTime, locked
+  // get jobUUID, scheduleUUID, hostName, userName, archiveType, createdDateTime, locked
   if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<text>");
@@ -1224,10 +1225,18 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"hostName=<name>");
     return;
   }
+  userName = String_new();
+  if (!StringMap_getString(argumentMap,"userName",userName,NULL))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"userName=<name>");
+    String_delete(hostName);
+    return;
+  }
   if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE))
   {
-    String_delete(hostName);
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    String_delete(userName);
+    String_delete(hostName);
     return;
   }
   StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
@@ -1240,6 +1249,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
                             jobUUID,
                             scheduleUUID,
                             hostName,
+                            userName,
                             archiveType,
                             createdDateTime,
                             locked,
@@ -1247,6 +1257,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
                            );
     if (error != ERROR_NONE)
     {
+      String_delete(userName);
       String_delete(hostName);
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
       return;
@@ -1262,6 +1273,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
   }
 
   // free resources
+  String_delete(userName);
   String_delete(hostName);
 }
 
@@ -1382,6 +1394,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            entityId=<n>
 *            storageId=<n>
 *            name=<name>
 *            size=<n>
@@ -1398,7 +1411,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
 
 LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId storageId;
+  IndexId entityId,storageId;
   String  name;
   uint64  size;
   uint64  timeLastAccess;
@@ -1415,7 +1428,12 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  // get entityId, storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
@@ -1423,7 +1441,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"a not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1492,6 +1510,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   {
     // add index file entry
     error = Index_addFile(indexHandle,
+                          entityId,
                           storageId,
                           name,
                           size,
@@ -1551,7 +1570,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
 
 LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId         storageId;
+  IndexId         entityId,storageId;
   String          name;
   FileSystemTypes fileSystemType;
   uint64          size;
@@ -1564,7 +1583,12 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get storageId, name, fileSystemType, size, blockSize, blockOffset, blockCount
+  // get entityId, storageId, name, fileSystemType, size, blockSize, blockOffset, blockCount
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
@@ -1572,7 +1596,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"b not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1617,6 +1641,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   {
     // add index image entry
     error = Index_addImage(indexHandle,
+                           entityId,
                            storageId,
                            name,
                            fileSystemType,
@@ -1671,7 +1696,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
 
 LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId storageId;
+  IndexId entityId,storageId;
   String  name;
   uint64  timeLastAccess;
   uint64  timeModified;
@@ -1685,7 +1710,12 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get storageId, name, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  // get entityId, storageId, name, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
@@ -1693,7 +1723,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"c not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1744,6 +1774,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   {
     // add index directory entry
     error = Index_addDirectory(indexHandle,
+                               entityId,
                                storageId,
                                name,
                                timeLastAccess,
@@ -1798,7 +1829,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
 
 LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId storageId;
+  IndexId entityId,storageId;
   String  name;
   String  destinationName;
   uint64  timeLastAccess;
@@ -1813,7 +1844,12 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get storageId, name, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  // get entityId, storageId, name, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
@@ -1821,7 +1857,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"d not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -1886,6 +1922,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   {
     // add index link entry
     error = Index_addLink(indexHandle,
+                          entityId,
                           storageId,
                           name,
                           destinationName,
@@ -1944,7 +1981,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
 
 LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId storageId;
+  IndexId entityId,storageId;
   String  name;
   uint64  size;
   uint64  timeLastAccess;
@@ -1961,7 +1998,12 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  // get entityId, storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
@@ -1969,7 +2011,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"e not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -2038,6 +2080,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   {
     // add index hardlink entry
     error = Index_addHardlink(indexHandle,
+                              entityId,
                               storageId,
                               name,
                               size,
@@ -2096,7 +2139,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
 
 LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId          storageId;
+  IndexId          entityId,storageId;
   String           name;
   FileSpecialTypes specialType;
   uint64           timeLastAccess;
@@ -2112,7 +2155,12 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  // get entityId, storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageId=<n>");
@@ -2120,7 +2168,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"f not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   name = String_new();
@@ -2189,6 +2237,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   {
     // add index special entry
     error = Index_addSpecial(indexHandle,
+                             entityId,
                              storageId,
                              name,
                              specialType,
@@ -2409,6 +2458,183 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
 }
 
 /***********************************************************************\
+* Name   : connectorCommand_indexUUIDUpdateInfos
+* Purpose: update UUID infos
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            uuidId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexUUIDUpdateInfos(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId uuidId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get uuidId
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
+  if (Index_getType(uuidId) != INDEX_TYPE_UUID)
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not an UUID index id %llx",uuidId);
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // update entity infos
+    error = Index_updateUUIDInfos(indexHandle,
+                                  uuidId
+                                 );
+    if (error != ERROR_NONE)
+    {
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : connectorCommand_indexEntityUpdateInfos
+* Purpose: update entity infos
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexEntityUpdateInfos(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId entityId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get entityId
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
+  if (Index_getType(entityId) != INDEX_TYPE_ENTITY)
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"h not an entity index id %llx",entityId);
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // update entity infos
+    error = Index_updateEntityInfos(indexHandle,
+                                    entityId
+                                   );
+    if (error != ERROR_NONE)
+    {
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : connectorCommand_indexEntityDelete
+* Purpose: delete entity
+* Input  : connectorInfo - connector info
+*          indexHandle   - index handle
+*          id            - command id
+*          argumentMap   - command arguments
+* Output : -
+* Return : -
+* Notes  : Arguments:
+*            entityId=<n>
+*          Result:
+\***********************************************************************/
+
+LOCAL void connectorCommand_indexEntityDelete(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
+{
+  IndexId entityId;
+  Errors  error;
+
+  assert(connectorInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
+  assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
+
+  // get storageId
+  if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
+    return;
+  }
+  if (Index_getType(entityId) != INDEX_TYPE_ENTITY)
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a entity index id %llx",entityId);
+    return;
+  }
+
+  if (indexHandle != NULL)
+  {
+    // delete storage
+    error = Index_deleteEntity(indexHandle,
+                               entityId
+                              );
+    if (error != ERROR_NONE)
+    {
+      sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));
+      return;
+    }
+
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_NONE,"");
+  }
+  else
+  {
+    // send result
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+  }
+
+  // free resources
+}
+
+/***********************************************************************\
 * Name   : connectorCommand_indexStorageUpdate
 * Purpose: update storage
 * Input  : connectorInfo - connector info
@@ -2443,7 +2669,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"g not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
   storageName = String_new();
@@ -2519,7 +2745,7 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"h not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
 
@@ -2548,8 +2774,8 @@ LOCAL void connectorCommand_indexStorageUpdateInfos(ConnectorInfo *connectorInfo
 }
 
 /***********************************************************************\
-* Name   : connectorCommand_indexStorageUpdateInfos
-* Purpose: update storage infos
+* Name   : connectorCommand_indexStorageDelete
+* Purpose: delete storage
 * Input  : connectorInfo - connector info
 *          indexHandle   - index handle
 *          id            - command id
@@ -2578,7 +2804,7 @@ LOCAL void connectorCommand_indexStorageDelete(ConnectorInfo *connectorInfo, Ind
   }
   if (Index_getType(storageId) != INDEX_TYPE_STORAGE)
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"i not a storage index id %llx",storageId);
+    sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
 
@@ -2811,6 +3037,8 @@ CONNECTOR_COMMANDS[] =
   { "INDEX_PRUNE_ENTITY",        connectorCommand_indexPruneEntity        },
 
   { "INDEX_SET_STATE",           connectorCommand_indexSetState           },
+  { "INDEX_ENTITY_UPDATE_INFOS", connectorCommand_indexEntityUpdateInfos  },
+  { "INDEX_ENTITY_DELETE",       connectorCommand_indexEntityDelete       },
   { "INDEX_STORAGE_UPDATE",      connectorCommand_indexStorageUpdate      },
   { "INDEX_STORAGE_UPDATE_INFOS",connectorCommand_indexStorageUpdateInfos },
   { "INDEX_STORAGE_DELETE",      connectorCommand_indexStorageDelete      },

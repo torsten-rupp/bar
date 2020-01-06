@@ -35,12 +35,6 @@
 #ifdef HAVE_SYS_STATVFS_H
   #include <sys/statvfs.h>
 #endif
-#ifdef HAVE_PWD_H
-  #include <pwd.h>
-#endif
-#ifdef HAVE_GRP_H
-  #include <grp.h>
-#endif
 #ifdef HAVE_SYS_XATTR_H
   #include <sys/xattr.h>
 #endif
@@ -888,9 +882,30 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 
 String File_getDirectoryName(String pathName, ConstString fileName)
 {
+  long n;
+
   assert(pathName != NULL);
 
-  return File_getDirectoryNameCString(pathName,String_cString(fileName));
+//  return File_getDirectoryNameCString(pathName,String_cString(fileName));
+
+  if (fileName != NULL)
+  {
+    n = String_findLastChar(fileName,STRING_END,FILES_PATHNAME_SEPARATOR_CHAR);
+    if (n >= 0)
+    {
+      String_sub(pathName,fileName,STRING_BEGIN,n);
+    }
+    else
+    {
+      String_clear(pathName);
+    }
+  }
+  else
+  {
+    String_clear(pathName);
+  }
+
+  return pathName;
 }
 
 String File_getDirectoryNameCString(String pathName, const char *fileName)
@@ -2818,296 +2833,6 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 }
 
 /*---------------------------------------------------------------------*/
-
-uint32 File_userNameToUserId(const char *name)
-{
-  #define BUFFER_DELTA_SIZE 1024
-  #define MAX_BUFFER_SIZE   (64*1024)
-
-  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R)
-    long          bufferSize;
-    char          *buffer,*newBuffer;
-    struct passwd passwordEntry;
-    struct passwd *result;
-  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R) */
-  uint32        userId;
-
-  assert(name != NULL);
-
-  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R)
-    // allocate buffer
-    bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
-    if (bufferSize == -1L)
-    {
-      return FILE_DEFAULT_USER_ID;
-    }
-    buffer = (char*)malloc(bufferSize);
-    if (buffer == NULL)
-    {
-      return FILE_DEFAULT_USER_ID;
-    }
-
-    // get user passwd entry
-    while (getpwnam_r(name,&passwordEntry,buffer,bufferSize,&result) != 0)
-    {
-      if ((errno != ERANGE) || ((bufferSize+BUFFER_DELTA_SIZE) >= MAX_BUFFER_SIZE))
-      {
-        free(buffer);
-        return FILE_DEFAULT_USER_ID;
-      }
-      else
-      {
-        // Note: returned size may not be enough. Increase buffer size.
-        newBuffer = (char*)realloc(buffer,bufferSize+BUFFER_DELTA_SIZE);
-        if (newBuffer == NULL)
-        {
-          free(buffer);
-          return FILE_DEFAULT_USER_ID;
-        }
-        buffer     =  newBuffer;
-        bufferSize += BUFFER_DELTA_SIZE;
-      }
-    }
-
-    // get user id
-    userId = (result != NULL) ? result->pw_uid : FILE_DEFAULT_USER_ID;
-
-    // free resources
-    free(buffer);
-  #else /* not defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R) */
-    UNUSED_VARIABLE(name);
-
-    userId = FILE_DEFAULT_USER_ID;
-  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWNAM_R) */
-
-  return userId;
-
-  #undef BUFFER_DELTA_SIZE
-  #undef MAX_BUFFER_SIZE
-}
-
-const char *File_userIdToUserName(char *name, uint nameSize, uint32 userId)
-{
-  #define BUFFER_DELTA_SIZE 1024
-  #define MAX_BUFFER_SIZE   (64*1024)
-
-  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R)
-    long          bufferSize;
-    char          *buffer,*newBuffer;
-    struct passwd groupEntry;
-    struct passwd *result;
-  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
-
-  assert(name != NULL);
-  assert(nameSize > 0);
-
-  stringClear(name);
-
-  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R)
-    // allocate buffer
-    bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
-    if (bufferSize == -1L)
-    {
-      return NULL;
-    }
-    buffer = (char*)malloc(bufferSize);
-    if (buffer == NULL)
-    {
-      return NULL;
-    }
-
-    // get user passwd entry
-    while (getpwuid_r((uid_t)userId,&groupEntry,buffer,bufferSize,&result) != 0)
-    {
-      if ((errno != ERANGE) || ((bufferSize+BUFFER_DELTA_SIZE) >= MAX_BUFFER_SIZE))
-      {
-        free(buffer);
-        return NULL;
-      }
-      else
-      {
-        // Note: returned size may not be enough. Increase buffer size.
-        newBuffer = (char*)realloc(buffer,bufferSize+BUFFER_DELTA_SIZE);
-        if (newBuffer == NULL)
-        {
-          free(buffer);
-          return NULL;
-        }
-        buffer     =  newBuffer;
-        bufferSize += BUFFER_DELTA_SIZE;
-      }
-    }
-
-    // get user name
-    if (result != NULL)
-    {
-      strncpy(name,result->pw_name,nameSize);
-    }
-    else
-    {
-      strncpy(name,"NONE",nameSize);
-    }
-    name[nameSize-1] = NUL;
-
-    // free resources
-    free(buffer);
-  #else /* not defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
-    UNUSED_VARIABLE(userId);
-
-    strncpy(name,"NONE",nameSize);
-    name[nameSize-1] = NUL;
-  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
-
-  return name;
-
-  #undef BUFFER_DELTA_SIZE
-  #undef MAX_BUFFER_SIZE
-}
-
-uint32 File_groupNameToGroupId(const char *name)
-{
-  #define BUFFER_DELTA_SIZE 1024
-  #define MAX_BUFFER_SIZE   (64*1024)
-
-  #if defined(HAVE_SYSCONF) && defined(HAVE_GETGRNAM_R)
-    long         bufferSize;
-    char         *buffer,*newBuffer;
-    struct group groupEntry;
-    struct group *result;
-  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R) */
-  uint32       groupId;
-
-  assert(name != NULL);
-
-  #if defined(HAVE_SYSCONF) && defined(HAVE_GETGRNAM_R)
-    // allocate buffer
-    bufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
-    if (bufferSize == -1L)
-    {
-      return FILE_DEFAULT_GROUP_ID;
-    }
-    buffer = (char*)malloc(bufferSize);
-    if (buffer == NULL)
-    {
-      return FILE_DEFAULT_GROUP_ID;
-    }
-
-    // get user passwd entry
-    while (getgrnam_r(name,&groupEntry,buffer,bufferSize,&result) != 0)
-    {
-      if ((errno != ERANGE) || ((bufferSize+BUFFER_DELTA_SIZE) >= MAX_BUFFER_SIZE))
-      {
-        free(buffer);
-        return FILE_DEFAULT_GROUP_ID;
-      }
-      else
-      {
-        // Note: returned size may not be enough. Increase buffer size.
-        newBuffer = (char*)realloc(buffer,bufferSize+BUFFER_DELTA_SIZE);
-        if (newBuffer == NULL)
-        {
-          free(buffer);
-          return FILE_DEFAULT_GROUP_ID;
-        }
-        buffer     =  newBuffer;
-        bufferSize += BUFFER_DELTA_SIZE;
-      }
-    }
-
-    // get group id
-    groupId = (result != NULL) ? result->gr_gid : FILE_DEFAULT_GROUP_ID;
-
-    // free resources
-    free(buffer);
-  #else /* not defined(HAVE_SYSCONF) && defined(HAVE_GETGRNAM_R) */
-    UNUSED_VARIABLE(name);
-
-    groupId = FILE_DEFAULT_GROUP_ID;
-  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETGRNAM_R) */
-
-  return groupId;
-
-  #undef BUFFER_DELTA_SIZE
-  #undef MAX_BUFFER_SIZE
-}
-
-const char *File_groupIdToGroupName(char *name, uint nameSize, uint32 groupId)
-{
-  #define BUFFER_DELTA_SIZE 1024
-  #define MAX_BUFFER_SIZE   (64*1024)
-
-  #if defined(HAVE_SYSCONF) && defined(HAVE_GETPWUID_R)
-    long         bufferSize;
-    char         *buffer,*newBuffer;
-    struct group groupEntry;
-    struct group *result;
-  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R) */
-
-  assert(name != NULL);
-  assert(nameSize > 0);
-
-  stringClear(name);
-
-  #if defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R)
-    // allocate buffer
-    bufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
-    if (bufferSize == -1L)
-    {
-      return NULL;
-    }
-    buffer = (char*)malloc(bufferSize);
-    if (buffer == NULL)
-    {
-      return NULL;
-    }
-
-    // get user passwd entry
-    while (getgrgid_r((gid_t)groupId,&groupEntry,buffer,bufferSize,&result) != 0)
-    {
-      if ((errno != ERANGE) || ((bufferSize+BUFFER_DELTA_SIZE) >= MAX_BUFFER_SIZE))
-      {
-        free(buffer);
-        return NULL;
-      }
-      else
-      {
-        // Note: returned size may not be enough. Increase buffer size.
-        newBuffer = (char*)realloc(buffer,bufferSize+BUFFER_DELTA_SIZE);
-        if (newBuffer == NULL)
-        {
-          free(buffer);
-          return NULL;
-        }
-        buffer     =  newBuffer;
-        bufferSize += BUFFER_DELTA_SIZE;
-      }
-    }
-
-    // get group name
-    if (result != NULL)
-    {
-      strncpy(name,result->gr_name,nameSize);
-    }
-    else
-    {
-      strncpy(name,"NONE",nameSize);
-    }
-    name[nameSize-1] = NUL;
-
-    // free resources
-    free(buffer);
-  #else /* not defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R) */
-    UNUSED_VARIABLE(groupId);
-
-    strncpy(name,"NONE",nameSize);
-    name[nameSize-1] = NUL;
-  #endif /* defined(HAVE_SYSCONF) && defined(HAVE_GETGRGID_R) */
-
-  return name;
-
-  #undef BUFFER_DELTA_SIZE
-  #undef MAX_BUFFER_SIZE
-}
 
 FilePermission File_stringToPermission(const char *string)
 {
