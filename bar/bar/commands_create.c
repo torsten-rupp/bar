@@ -3967,13 +3967,13 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                 &oldEntityId,
                                 NULL,  // schedule UUID
                                 NULL,  // hostName
+                                NULL,  // userName
+                                NULL,  // comment
                                 NULL,  // archiveType
                                 &oldStorageId,
                                 oldStorageName,
                                 NULL,  // createdDateTime
                                 NULL,  // size
-                                NULL,  // userName
-                                NULL,  // comment
                                 NULL,  // indexState
                                 NULL,  // indexMode
                                 NULL,  // lastCheckedDateTime
@@ -4152,13 +4152,13 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                   &entityId,
                                   NULL,  // scheduleUUID,
                                   NULL,  // hostName
+                                  NULL,  // userName
+                                  NULL,  // comment
                                   NULL,  // archiveType,
                                   &storageId,
                                   storageName,
                                   &createdDateTime,
                                   &size,
-                                  NULL,  // userName
-                                  NULL,  // comment
                                   NULL,  // indexState,
                                   NULL,  // indexMode,
                                   NULL,  // lastCheckedDateTime,
@@ -4365,13 +4365,13 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                   &entityId,
                                   NULL,  // scheduleUUID,
                                   NULL,  // hostName
+                                  NULL,  // userName
+                                  NULL,  // comment
                                   NULL,  // archiveType,
                                   &storageId,
                                   storageName,
                                   &createdDateTime,
                                   &size,
-                                  NULL,  // userName
-                                  NULL,  // comment
                                   NULL,  // indexState,
                                   NULL,  // indexMode,
                                   NULL,  // lastCheckedDateTime,
@@ -4969,13 +4969,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                         &existingEntityId,  // entityId,
                                         NULL,  // schedule UUID
                                         NULL,  // hostName
+                                        NULL,  // userName
+                                        NULL,  // comment
                                         NULL,  // archiveType
                                         &existingStorageId,
                                         existingStorageName,
                                         NULL,  // createdDateTime
                                         NULL,  // size
-                                        NULL,  // userName
-                                        NULL,  // comment
                                         NULL,  // indexState,
                                         NULL,  // indexMode,
                                         NULL,  // lastCheckedDateTime,
