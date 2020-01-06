@@ -932,7 +932,7 @@ $(DISTRIBUTION_NAME).rpm: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             -e CFLAGS="-m32" \
-            -v /home/torsten/projects/bar:/media/home \
+            -v $(PWD):/media/home \
             bar-centos:6 setarch i686 -- /media/home/packages/build_rpm.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
@@ -947,7 +947,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
 	@$(call functionPrintInfo,Build RPM on CentOS 6 64bit)
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            -v /home/torsten/projects/bar:/media/home \
+            -v $(PWD):/media/home \
             bar-centos-x86_64:6 setarch x86_64 --  /media/home/packages/build_rpm.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
@@ -982,7 +982,7 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
 	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 32bit)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            -v /home/torsten/projects/bar:/media/home \
+            -v $(PWD):/media/home \
             bar-debian:8 setarch i686 -- /media/home/packages/build_deb.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
@@ -998,7 +998,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
 	@$(call functionPrintInfo,Build DEB on Debian 7 (wheezy) 64bit)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
-            -v /home/torsten/projects/bar:/media/home \
+            -v $(PWD):/media/home \
             bar-debian-x86_64:8 setarch x86_64 -- /media/home/packages/build_deb.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
@@ -1026,7 +1026,7 @@ $(DISTRIBUTION_NAME)-setup.exe: \
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             -e CFLAGS="-m32" \
-            -v /home/torsten/projects/bar:/media/home \
+            -v $(PWD):/media/home \
             -v /home/wine:/media/wine \
             bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
               $(PACKAGE_NAME) \
@@ -1058,7 +1058,7 @@ install_test_rpm: \
 # call functionInstallTestRPM,<docker image>,<architecture>,<suffix>
 functionInstallTestRPM = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
-      -v /home/torsten/projects/bar:/media/home \
+      -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_rpm.sh \
         $3
@@ -1066,7 +1066,7 @@ functionInstallTestRPM = \
 # call functionInstallTestDEB,<docker image>,<architecture>,<version>,<suffix>
 functionInstallTestDEB = \
   $(DOCKER) $(DOCKER_RUN_FLAGS) \
-      -v /home/torsten/projects/bar:/media/home \
+      -v $(PWD):/media/home \
       $1 \
       /media/home/packages/install_test_deb.sh \
         $3
