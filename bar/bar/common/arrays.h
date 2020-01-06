@@ -27,7 +27,6 @@
 
 /***************************** Datatypes *******************************/
 
-// delete array data element function
 /***********************************************************************\
 * Name   : ArrayFreeFunction
 * Purpose: free array data element
@@ -51,6 +50,9 @@ typedef void(*ArrayFreeFunction)(void *data, void *userData);
 \***********************************************************************/
 
 typedef int(*ArrayCompareFunction)(const void *data1, const void *data2, void *userData);
+
+// array iterator
+typedef ulong ArrayIterator;
 
 /***********************************************************************\
 * Name   : ArrayIterateFunction
@@ -127,9 +129,9 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 * Return : -
 * Notes  : variable will contain all indizes in array
 *          usage:
-*            ulong i;
+*            ArrayIterator arrayIterator;
 *
-*            ARRAY_ITERATE(array,i,data)
+*            ARRAY_ITERATE(array,arrayIterator,data)
 *            {
 *              ... = data
 *            }
@@ -152,9 +154,9 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 * Return : -
 * Notes  : variable will contain all indizes in array
 *          usage:
-*            ulong i;
+*            ArrayIterator arrayIterator;
 *
-*            ARRAY_ITERATEX(array,i,data,TRUE)
+*            ARRAY_ITERATEX(array,arrayIterator,data,TRUE)
 *            {
 *              ... = data
 *            }
