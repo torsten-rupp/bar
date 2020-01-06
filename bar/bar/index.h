@@ -1995,8 +1995,8 @@ bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
 * Purpose: list file entries
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
-*          storageIds       - storage ids or NULL
-*          storageIdCount   - storage id count or 0
+*          entityIds        - entity ids or NULL
+*          entityIdCount    - entity id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
 *          name             - name pattern (glob, can be NULL)
@@ -2007,8 +2007,8 @@ bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
 
 Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
-                           const IndexId    storageIds[],
-                           uint             storageIdCount,
+                           const IndexId    entityIds[],
+                           uint             entityIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
                            ConstString      name
@@ -2018,22 +2018,21 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextFile
 * Purpose: get next file entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId        - index id
-*          storageName    - storage name (can be NULL)
-*          fileName       - name
-*          size           - size [bytes]
-*          timeModified   - modified date/time stamp [s]
-*          userId         - user id
-*          groupId        - group id
-*          permission     - permission flags
+* Output : indexId         - entry index id
+*          createdDateTime - create date/time [s]
+*          fileName        - name
+*          size            - size [bytes]
+*          timeModified    - modified date/time [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
                        IndexId          *indexId,
-                       String           storageName,
-                       uint64           *storageDateTime,
+                       uint64           *createdDateTime,
                        String           fileName,
                        uint64           *size,
 //TODO: use timeLastChanged
@@ -2062,8 +2061,8 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 * Name   : Index_initListImages
 * Purpose: list image entries
 * Input  : indexHandle    - index handle
-*          storageIds     - storage ids or NULL
-*          storageIdCount - storage id count or 0
+*          entityIds      - entity ids or NULL
+*          entityIdCount  - entity id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
 *          name           - name pattern (glob, can be NULL)
@@ -2074,8 +2073,8 @@ Errors Index_deleteFile(IndexHandle *indexHandle,
 
 Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             IndexHandle      *indexHandle,
-                            const IndexId    storageIds[],
-                            uint             storageIdCount,
+                            const IndexId    entityIds[],
+                            uint             entityIdCount,
                             const IndexId    entryIds[],
                             uint             entryIdCount,
                             ConstString      name
@@ -2085,21 +2084,20 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextImage
 * Purpose: get next image entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId      - index id
-*          storageName  - storage name
-*          imageName    - image name
-*          blockSize    - block size [bytes]
-*          size         - size [bytes]
-*          blockOffset  - block offset [blocks]
-*          blockCount   - number of blocks
+* Output : indexId         - entry index id
+*          createdDateTime - create date/time [s]
+*          imageName       - image name
+*          blockSize       - block size [bytes]
+*          size            - size [bytes]
+*          blockOffset     - block offset [blocks]
+*          blockCount      - number of blocks
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
                         IndexId          *indexId,
-                        String           storageName,
-                        uint64           *storageDateTime,
+                        uint64           *createdDateTime,
                         String           imageName,
                         FileSystemTypes  *fileSystemType,
                         uint             *blockSize,
@@ -2127,8 +2125,8 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 * Name   : Index_initListDirectories
 * Purpose: list directory entries
 * Input  : indexHandle    - index handle
-*          storageIds     - storage ids or NULL
-*          storageIdCount - storage id count or 0
+*          entityIds      - entity ids or NULL
+*          entityIdCount  - entity id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
 *          name           - name pattern (glob, can be NULL)
@@ -2139,8 +2137,8 @@ Errors Index_deleteImage(IndexHandle *indexHandle,
 
 Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  IndexHandle      *indexHandle,
-                                 const IndexId    storageIds[],
-                                 uint             storageIdCount,
+                                 const IndexId    entityIds[],
+                                 uint             entityIdCount,
                                  const IndexId    entryIds[],
                                  uint             entryIdCount,
                                  ConstString      name
@@ -2150,21 +2148,20 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextDirectory
 * Purpose: get next directory entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId       - index id
-*          storageName   - storage name
-*          directoryName - directory name
-*          timeModified  - modified date/time stamp [s]
-*          userId        - user id
-*          groupId       - group id
-*          permission    - permission flags
+* Output : indexId         - entry index id
+*          createdDateTime - create date/time [s]
+*          directoryName   - directory name
+*          timeModified    - modified date/time [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
                             IndexId          *indexId,
-                            String           storageName,
-                            uint64           *storageDateTime,
+                            uint64           *createdDateTime,
                             String           directoryName,
 //TODO: use timeLastChanged
                             uint64           *timeModified,
@@ -2192,8 +2189,8 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
 * Name   : Index_initListLinks
 * Purpose: list link entries
 * Input  : indexHandle    - index handle
-*          storageIds     - storage ids or NULL
-*          storageIdCount - storage id count or 0
+*          entityIds      - entity ids or NULL
+*          entityIdCount  - entity id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
 *          name           - name pattern (glob, can be NULL)
@@ -2204,8 +2201,8 @@ Errors Index_deleteDirectory(IndexHandle *indexHandle,
 
 Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
-                           const IndexId    storageIds[],
-                           uint             storageIdCount,
+                           const IndexId    entityIds[],
+                           uint             entityIdCount,
                            const IndexId    entryIds[],
                            uint             entryIdCount,
                            ConstString      name
@@ -2215,11 +2212,11 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextLink
 * Purpose: get next link entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId         - index id
-*          storageName     - storage name
+* Output : indexId         - entry index id
+*          createdDateTime - create date/time [s]
 *          linkName        - link name
 *          destinationName - destination name
-*          timeModified    - modified date/time stamp [s]
+*          timeModified    - modified date/time [s]
 *          userId          - user id
 *          groupId         - group id
 *          permission      - permission flags
@@ -2229,8 +2226,7 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
                        IndexId          *indexId,
-                       String           storageName,
-                       uint64           *storageDateTime,
+                       uint64           *createdDateTime,
                        String           name,
                        String           destinationName,
 //TODO: use timeLastChanged
@@ -2259,8 +2255,8 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 * Name   : Index_initListHardLinks
 * Purpose: list hard link entries
 * Input  : indexHandle    - index handle
-*          storageIds     - storage ids or NULL
-*          storageIdCount - storage id count or 0
+*          entityIds      - entity ids or NULL
+*          entityIdCount  - entity id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
 *          name           - name pattern (glob, can be NULL)
@@ -2271,8 +2267,8 @@ Errors Index_deleteLink(IndexHandle *indexHandle,
 
 Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                IndexHandle      *indexHandle,
-                               const IndexId    storageIds[],
-                               uint             storageIdCount,
+                               const IndexId    entityIds[],
+                               uint             entityIdCount,
                                const IndexId    entryIds[],
                                uint             entryIdCount,
                                ConstString      name
@@ -2282,12 +2278,12 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextHardLink
 * Purpose: get next hard link entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId             - index id
-*          storageName         - storage name
+* Output : indexId             - entry index id
+*          createdDateTime     - create date/time [s]
 *          fileName            - file name
 *          destinationFileName - destination file name
 *          size                - size [bytes]
-*          timeModified        - modified date/time stamp [s]
+*          timeModified        - modified date/time [s]
 *          userId              - user id
 *          groupId             - group id
 *          permission          - permission flags
@@ -2297,8 +2293,7 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
 
 bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
                            IndexId          *indexId,
-                           String           storageName,
-                           uint64           *storageDateTime,
+                           uint64           *createdDateTime,
                            String           fileName,
                            uint64           *size,
 //TODO: use timeLastChanged
@@ -2327,8 +2322,8 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 * Name   : Index_initListSpecial
 * Purpose: list special entries
 * Input  : indexHandle    - index handle
-*          storageIds     - storage ids or NULL
-*          storageIdCount - storage id count or 0
+*          entityIds      - entity ids or NULL
+*          entityIdCount  - entity id count or 0
 *          entryIds       - entry ids or NULL
 *          entryIdCount   - entry id count or 0
 *          name           - name pattern (glob, can be NULL)
@@ -2339,8 +2334,8 @@ Errors Index_deleteHardLink(IndexHandle *indexHandle,
 
 Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
-                             const IndexId    storageIds[],
-                             uint             storageIdCount,
+                             const IndexId    entityIds[],
+                             uint             entityIdCount,
                              const IndexId    entryIds[],
                              uint             entryIdCount,
                              ConstString      name
@@ -2350,21 +2345,20 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextSpecial
 * Purpose: get next special entry
 * Input  : indexQueryHandle - index query handle
-* Output : indexId      - index id
-*          storageName  - storage name
-*          name         - name
-*          timeModified - modified date/time stamp [s]
-*          userId       - user id
-*          groupId      - group id
-*          permission   - permission flags
+* Output : indexId         - entry index id
+*          createdDateTime - create date/time [s]
+*          name            - name
+*          timeModified    - modified date/time [s]
+*          userId          - user id
+*          groupId         - group id
+*          permission      - permission flags
 * Return : TRUE if entry read, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
 bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
                           IndexId          *indexId,
-                          String           storageName,
-                          uint64           *storageDateTime,
+                          uint64           *createdDateTime,
                           String           name,
 //TODO: use timeLastChanged
                           uint64           *timeModified,
