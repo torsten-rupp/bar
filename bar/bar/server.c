@@ -3565,7 +3565,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
           {
             // find expired/surpluse entity
-            JOB_LIST_ITERATEX(jobNode,expiredEntityId == INDEX_ID_NONE)
+            JOB_LIST_ITERATEX(jobNode,INDEX_ID_IS_NONE(expiredEntityId))
             {
               List_init(&expirationEntityList);
 
@@ -3580,7 +3580,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
               {
 //LIST_ITERATE(&expirationEntityList,expirationEntityNode) { fprintf(stderr,"%s, %d: exp entity %lld: %llu %llu\n",__FILE__,__LINE__,expirationEntityNode->entityId,expirationEntityNode->createdDateTime,expirationEntityNode->totalEntrySize); }
                 // find expired entity
-                LIST_ITERATEX(&expirationEntityList,expirationEntityNode,expiredEntityId == INDEX_ID_NONE)
+                LIST_ITERATEX(&expirationEntityList,expirationEntityNode,INDEX_ID_IS_NONE(expiredEntityId))
                 {
                   totalEntityCount = 0;
                   totalEntitySize  = 0LL;
@@ -3649,7 +3649,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           } // jobList
 
           // delete expired entity
-          if (expiredEntityId != INDEX_ID_NONE)
+          if (!INDEX_ID_IS_NONE(expiredEntityId))
           {
             // mount devices
             error = mountAll(&mountList);
@@ -3691,7 +3691,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
           List_done(&mountList,(ListNodeFreeFunction)freeMountNode,NULL);
         }
         while (   !quitFlag
-               && (expiredEntityId != INDEX_ID_NONE)
+               && !INDEX_ID_IS_NONE(expiredEntityId)
               );
       }
 
@@ -14116,7 +14116,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
       }
     }
   }
-  else if (entityId != INDEX_ID_NONE)
+  else if (!INDEX_ID_IS_NONE(entityId))
   {
     if (Index_findEntity(indexHandle,
                          entityId,
@@ -14151,7 +14151,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
       error = ERROR_DATABASE_INDEX_NOT_FOUND;
     }
   }
-  else if (storageId != INDEX_ID_NONE)
+  else if (!INDEX_ID_IS_NONE(storageId))
   {
     if (Index_findStorageById(indexHandle,
                               storageId,
@@ -14202,7 +14202,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     }
   }
 
-  if (entityId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(entityId))
   {
     // delete entity
     error = deleteEntity(indexHandle,entityId);
@@ -14213,7 +14213,7 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
     }
   }
 
-  if (storageId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(storageId))
   {
     // delete storage file
     error = deleteStorage(indexHandle,storageId);
@@ -15824,7 +15824,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         )
   {
     // get job name
-    if (uuidId != prevUUIDId)
+    if (!INDEX_ID_EQUALS(uuidId,prevUUIDId))
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
@@ -16185,7 +16185,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         )
   {
     // get job name
-    if (uuidId != prevUUIDId)
+    if (!INDEX_ID_EQUALS(uuidId,prevUUIDId))
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
@@ -16833,7 +16833,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
   if (!String_isEmpty(jobUUID))
   {
     // assign all storages/entities of job
-    if      (toEntityId != INDEX_ID_NONE)
+    if      (!INDEX_ID_IS_NONE(toEntityId))
     {
       // assign all storages of all entities of job to other entity
       error = Index_assignTo(indexHandle,
@@ -16848,7 +16848,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage fail");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign job fail");
         return;
       }
     }
@@ -16885,7 +16885,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage fail");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign job fail");
         return;
       }
 
@@ -16902,10 +16902,10 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
     }
   }
 
-  if (entityId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(entityId))
   {
     // assign all storages/entity
-    if      (toEntityId != INDEX_ID_NONE)
+    if      (!INDEX_ID_IS_NONE(toEntityId))
     {
       // assign all storages of entity to other entity
       error = Index_assignTo(indexHandle,
@@ -16920,7 +16920,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage fail");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign entity fail");
         return;
       }
     }
@@ -16939,16 +16939,16 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       if (error != ERROR_NONE)
       {
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage fail");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign enttity fail");
         return;
       }
     }
   }
 
-  if (storageId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(storageId))
   {
     // assign storage
-    if      (toEntityId != INDEX_ID_NONE)
+    if      (!INDEX_ID_IS_NONE(toEntityId))
     {
       // assign storage to another entity
       error = Index_assignTo(indexHandle,
@@ -17101,7 +17101,11 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   storageName = String_new();
 
   // collect all storage ids (Note: do this to avoid infinite loop or database-busy-error when states are changed in another thread, too)
-  if ((uuidId == INDEX_ID_NONE) && (storageId == INDEX_ID_NONE) && (entityId == INDEX_ID_NONE) && String_isEmpty(jobUUID) && String_isEmpty(name))
+  if (   INDEX_ID_IS_NONE(uuidId)
+      && INDEX_ID_IS_NONE(storageId)
+      && INDEX_ID_IS_NONE(entityId)
+      && String_isEmpty(jobUUID) && String_isEmpty(name)
+     )
   {
     // refresh all storage with specific state
     error = Index_initListStorages(&indexQueryHandle,
@@ -17161,7 +17165,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     Index_doneList(&indexQueryHandle);
   }
 
-  if (uuidId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(uuidId))
   {
     // refresh all storage of uuid
     error = Index_initListStorages(&indexQueryHandle,
@@ -17221,7 +17225,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     Index_doneList(&indexQueryHandle);
   }
 
-  if (entityId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(entityId))
   {
     // refresh all storage of entity
     error = Index_initListStorages(&indexQueryHandle,
@@ -17281,7 +17285,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     Index_doneList(&indexQueryHandle);
   }
 
-  if (storageId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(storageId))
   {
     Array_append(&storageIdArray,&storageId);
   }
@@ -17501,9 +17505,9 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     return;
   }
 
-  if (   (uuidId == INDEX_ID_NONE)
-      && (storageId == INDEX_ID_NONE)
-      && (entityId == INDEX_ID_NONE)
+  if (   (INDEX_ID_IS_NONE(uuidId))
+      && (INDEX_ID_IS_NONE(storageId))
+      && (INDEX_ID_IS_NONE(entityId))
      )
   {
     // initialize variables
@@ -17606,7 +17610,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     Storage_doneSpecifier(&storageSpecifier);
   }
 
-  if (uuidId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(uuidId))
   {
     // delete UUID index
     error = Index_deleteUUID(indexHandle,uuidId);
@@ -17623,7 +17627,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     }
   }
 
-  if (entityId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(entityId))
   {
     // delete entity
     error = Index_deleteEntity(indexHandle,entityId);
@@ -17640,7 +17644,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     }
   }
 
-  if (storageId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(storageId))
   {
     // delete storage index
     error = Index_deleteStorage(indexHandle,storageId);

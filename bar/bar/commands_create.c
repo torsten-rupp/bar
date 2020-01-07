@@ -3983,7 +3983,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                )
           )
     {
-      if (   (oldStorageId != storageId)
+      if (   !INDEX_ID_EQUALS(oldStorageId,storageId)
           && (Storage_parseName(&oldStorageSpecifier,oldStorageName) == ERROR_NONE)
           && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
          )
@@ -4183,7 +4183,7 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
       Index_doneList(&indexQueryHandle);
 
 //fprintf(stderr,"%s, %d: totalStorageSize=%llu limit=%llu oldestStorageId=%llu\n",__FILE__,__LINE__,totalStorageSize,limit,oldestStorageId);
-      if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
+      if ((totalStorageSize > limit) && !INDEX_ID_IS_NONE((oldestStorageId)))
       {
         // delete oldest storage entry
         error = Storage_parseName(&storageSpecifier,oldestStorageName);
@@ -4258,7 +4258,7 @@ NULL, // masterIO
       }
     }
     while (   (totalStorageSize > limit)
-           && (oldestStorageId != INDEX_ID_NONE)
+           && !INDEX_ID_IS_NONE(oldestStorageId)
           );
   }
 
@@ -4401,7 +4401,7 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
       }
       Index_doneList(&indexQueryHandle);
 
-      if ((totalStorageSize > limit) && (oldestStorageId != INDEX_ID_NONE))
+      if ((totalStorageSize > limit) && !INDEX_ID_IS_NONE(oldestStorageId))
       {
         // delete oldest storage entry
         error = Storage_parseName(&storageSpecifier,oldestStorageName);
@@ -4476,7 +4476,7 @@ NULL, // masterIO
       }
     }
     while (   (totalStorageSize > limit)
-           && (oldestStorageId != INDEX_ID_NONE)
+           && !INDEX_ID_IS_NONE(oldestStorageId)
           );
   }
 
@@ -4594,7 +4594,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                  {
                    storageInfoDecrement(createInfo,storageMsg.fileSize);
                    File_delete(storageMsg.fileName,FALSE);
-                   if (storageMsg.storageId != INDEX_ID_NONE) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+                   if (!INDEX_ID_IS_NONE(storageMsg.storageId)) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
@@ -4824,9 +4824,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                 );
 
       // update index database and set state
-      if (storageMsg.storageId != INDEX_ID_NONE)
+      if (!INDEX_ID_IS_NONE(storageMsg.storageId))
       {
-        assert(storageMsg.entityId != INDEX_ID_NONE);
+        assert(!INDEX_ID_IS_NONE(storageMsg.entityId));
 
         // check if append and storage exists => assign to existing storage index
         if (   appendFlag
@@ -4986,7 +4986,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                   )
             {
               File_getDirectoryName(existingDirectoryName,existingStorageName);
-              if (   (storageId != existingStorageId)
+              if (   !INDEX_ID_EQUALS(storageId,existingStorageId)
                   && (Storage_parseName(&existingStorageSpecifier,existingStorageName) == ERROR_NONE)
                   && Storage_equalSpecifiers(&existingStorageSpecifier,directoryName,&existingStorageSpecifier,existingDirectoryName)
                  )
@@ -5107,7 +5107,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   while (MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),NO_WAIT))
   {
     // discard index
-    if (storageMsg.storageId != INDEX_ID_NONE) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
+    if (!INDEX_ID_IS_NONE(storageMsg.storageId)) Index_deleteStorage(createInfo->indexHandle,storageMsg.storageId);
 
     // delete temporary storage file
     error = File_delete(storageMsg.fileName,FALSE);
@@ -7795,7 +7795,7 @@ Errors Command_create(ServerIO                     *masterIO,
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
-    assert(entityId != INDEX_ID_NONE);
+    assert(!INDEX_ID_IS_NONE(entityId));
     DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
     String_delete(userName);
@@ -7929,7 +7929,7 @@ Errors Command_create(ServerIO                     *masterIO,
   // update index
   if (indexHandle != NULL)
   {
-    assert(entityId != INDEX_ID_NONE);
+    assert(!INDEX_ID_IS_NONE(entityId));
 
     // update entity, uuid info (aggregated values)
     error = Index_updateEntityInfos(indexHandle,

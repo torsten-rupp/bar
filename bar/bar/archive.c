@@ -1615,7 +1615,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
         Semaphore_unlock(&archiveHandle->indexLock);
         return error;
       }
-      
+
       // add to index
       while (!List_isEmpty(&archiveIndexList) && (error == ERROR_NONE))
       {
@@ -1808,7 +1808,7 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert((entityId == INDEX_ID_NONE) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
@@ -1866,7 +1866,7 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert((entityId == INDEX_ID_NONE) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
@@ -1922,7 +1922,7 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert((entityId == INDEX_ID_NONE) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
@@ -1981,7 +1981,7 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert((entityId == INDEX_ID_NONE) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
   assert(destinationName != NULL);
@@ -2046,7 +2046,7 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert((entityId == INDEX_ID_NONE) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
@@ -2111,7 +2111,7 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert((entityId == INDEX_ID_NONE) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
@@ -2173,7 +2173,7 @@ LOCAL Errors xxxindexAddMeta(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert((entityId == INDEX_ID_NONE) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
+  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -5659,7 +5659,7 @@ bool Archive_waitDecryptPassword(Password *password, long timeout)
   assert(storageInfo != NULL);
   assert(storageInfo->jobOptions != NULL);
   assert(archiveStoreFunction != NULL);
-  assert((entityId == INDEX_ID_NONE) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
+  assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
 
 //TODO:
 UNUSED_VARIABLE(storageInfo);
@@ -6229,7 +6229,7 @@ UNUSED_VARIABLE(storageInfo);
         {
           if (result == ERROR_NONE) result = error;
         }
-        
+
         // close archive
         error = closeArchiveFile(archiveHandle,
                                  &storageId,
@@ -14830,7 +14830,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                 );
 
   // lock entity
-  if (entityId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(entityId))
   {
     // lock
     Index_lockEntity(archiveHandle.indexHandle,entityId);
@@ -14857,7 +14857,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     Storage_doneSpecifier(&storageSpecifier);
     return error;
   }
-  
+
   // get size
   size = Archive_getSize(&archiveHandle);
 
@@ -14945,7 +14945,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // close archive file, free resources
           (void)Archive_closeEntry(&archiveEntryInfo);
-          
+
           entryCount++;
         }
         break;
@@ -15207,7 +15207,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
             break;
           }
 
-          if (entityId != INDEX_ID_NONE)
+          if (!INDEX_ID_IS_NONE(entityId))
           {
             // update entity
             error = Index_updateEntity(indexHandle,
@@ -15252,6 +15252,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                       &entityId
                                      );
             }
+fprintf(stderr,"%s, %d: entityId=%llx\n",__FILE__,__LINE__,entityId);
           }
           if (error != ERROR_NONE)
           {
@@ -15361,7 +15362,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                            );
 
   // update infos, unlock entity (if exists)
-  if (entityId != INDEX_ID_NONE)
+  if (!INDEX_ID_IS_NONE(entityId))
   {
     // update storages info (aggregated values)
     if (error == ERROR_NONE)
