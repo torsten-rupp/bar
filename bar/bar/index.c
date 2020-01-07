@@ -1726,41 +1726,33 @@ LOCAL bool isEmptyStorage(IndexHandle *indexHandle,
                           DatabaseId  storageId
                          )
 {
-  bool emptyFlag;
-
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
 
-  INDEX_DOX(emptyFlag,
-            indexHandle,
-  {
-    return    !Database_exists(&indexHandle->databaseHandle,
-                               "entryFragments",
-                                "id",
-                                "WHERE storageId=%lld",
-                                storageId
-                               )
-           && !Database_exists(&indexHandle->databaseHandle,
-                               "directoryEntries",
-                               "id",
-                               "WHERE storageId=%lld",
-                               storageId
-                              )
-           && !Database_exists(&indexHandle->databaseHandle,
-                               "linkEntries",
-                               "id",
-                               "WHERE storageId=%lld",
-                               storageId
-                              )
-           && !Database_exists(&indexHandle->databaseHandle,
-                               "specialEntries",
-                               "id",
-                               "WHERE storageId=%lld",
-                               storageId
-                              );
-  });
-
-  return emptyFlag;
+  return    !Database_exists(&indexHandle->databaseHandle,
+                             "entryFragments",
+                              "id",
+                              "WHERE storageId=%lld",
+                              storageId
+                             )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "directoryEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "linkEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "specialEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            );
 }
 
 /***********************************************************************\
@@ -2018,23 +2010,15 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                          DatabaseId  entityId
                         )
 {
-  bool emptyFlag;
-
   assert(indexHandle != NULL);
   assert(entityId != DATABASE_ID_NONE);
 
-  INDEX_DOX(emptyFlag,
-            indexHandle,
-  {
-    return !Database_exists(&indexHandle->databaseHandle,
-                            "storages",
-                            "id",
-                            "WHERE entityId=%lld",
-                            entityId
-                           );
-  });
-
-  return emptyFlag;
+  return !Database_exists(&indexHandle->databaseHandle,
+                          "storages",
+                          "id",
+                          "WHERE entityId=%lld",
+                          entityId
+                         );
 }
 
 /***********************************************************************\
@@ -2068,11 +2052,10 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(entityId != DATABASE_ID_NONE);
 
-  // prune storages of entity if not default entity
-#warning requried?
-//TODO: required?
   if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
   {
+#warning requried?
+//TODO: required?
 //TODO: race condition! change entity lock while list storages
     // get locked count
     error = Database_getInteger64(&indexHandle->databaseHandle,
@@ -2090,8 +2073,6 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
     if (lockedCount == 0LL)
     {
       Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-      INDEX_DOX(error,
-                indexHandle,
       {
         error = Database_getIds(&indexHandle->databaseHandle,
                                 &databaseIds,
@@ -2106,6 +2087,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
                                );
         if (error != ERROR_NONE)
         {
+          Array_done(&databaseIds);
           return error;
         }
 
@@ -2113,54 +2095,47 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
         {
           error = pruneStorage(indexHandle,databaseId);
         }
+      }
+      Array_done(&databaseIds);
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // prune entity if empty and not default entity
+      if (isEmptyEntity(indexHandle,entityId))
+      {
+        // get entity type, date
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT entities.jobUUID, \
+                                         UNIXTIMESTAMP(entities.created), \
+                                         entities.type, \
+                                  FROM entities \
+                                  WHERE id=%lld \
+                                 ",
+                                 entityId
+                                );
         if (error != ERROR_NONE)
         {
           return error;
         }
 
-        return ERROR_NONE;
-      });
-      Array_done(&databaseIds);
-
-      // prune entity if empty
-      if (isEmptyEntity(indexHandle,entityId))
-      {
-        // get entity type, date
-        INDEX_DOX(error,
-                  indexHandle,
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%S %llu %u",
+                                 jobUUID,
+                                 &createdDateTime,
+                                 &archiveType
+                                )
+           )
         {
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-                                   "SELECT entities.jobUUID, \
-                                           UNIXTIMESTAMP(entities.created), \
-                                           entities.type, \
-                                    FROM entities \
-                                    WHERE id=%lld \
-                                   ",
-                                   entityId
-                                  );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          String_clear(jobUUID);
+          createdDateTime = 0LL;
+          archiveType     = ARCHIVE_TYPE_NONE;
+        }
 
-          if (!Database_getNextRow(&databaseQueryHandle,
-                                   "%S %llu %u",
-                                   jobUUID,
-                                   &createdDateTime,
-                                   &archiveType
-                                  )
-             )
-          {
-            String_clear(jobUUID);
-            createdDateTime = 0LL;
-            archiveType     = ARCHIVE_TYPE_NONE;
-          }
+        Database_finalize(&databaseQueryHandle);
 
-          Database_finalize(&databaseQueryHandle);
-
-          return ERROR_NONE;
-        });
         if (error != ERROR_NONE)
         {
           String_clear(jobUUID);
@@ -2234,8 +2209,6 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle,
 
   // Note: keep default entity!
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  INDEX_DOX(error,
-            indexHandle,
   {
     error = Database_getIds(&indexHandle->databaseHandle,
                             &databaseIds,
@@ -2254,16 +2227,41 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle,
     {
       error = pruneEntity(indexHandle,doneFlag,deletedCounter,databaseId);
     }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
+  }
   Array_done(&databaseIds);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
 
   return error;
+}
+
+/***********************************************************************\
+* Name   : isEmptyUUID
+* Purpose: check if UUID if empty
+* Input  : indexHandle - index handle
+*          uuidId      - UUID database id
+* Output : -
+* Return : TRUE iff UUID is empty
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isEmptyUUID(IndexHandle *indexHandle,
+                       DatabaseId  uuidId
+                      )
+{
+  assert(indexHandle != NULL);
+  assert(uuidId != DATABASE_ID_NONE);
+
+  return !Database_exists(&indexHandle->databaseHandle,
+                          "entities",
+                          "entities.id",
+                          "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
+                          uuidId
+                         );
 }
 
 /***********************************************************************\
@@ -2294,18 +2292,14 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
 
   // prune entities of uuid
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  INDEX_DOX(error,
-            indexHandle,
   {
     error = Database_getIds(&indexHandle->databaseHandle,
                             &databaseIds,
                             "entities",
                             "entities.id",
                             "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                             WHERE     entities.id!=%lld \
-                                   AND uuids.id=%lld \
+                             WHERE uuids.id=%lld \
                             ",
-                            INDEX_DEFAULT_ENTITY_DATABASE_ID,
                             Index_getDatabaseId(uuidId)
                            );
     if (error != ERROR_NONE)
@@ -2315,23 +2309,17 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
 
     ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
     {
-      error = pruneEntity(indexHandle,
-                          doneFlag,
-                          deletedCounter,
-                          databaseId
-                         );
+      error = pruneEntity(indexHandle,doneFlag,deletedCounter,databaseId);
     }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
+  }
   Array_done(&databaseIds);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
-  // prune uuid if empty
-  if (Index_isEmptyUUID(indexHandle,uuidId))
+  // delete uuid if empty
+  if (isEmptyUUID(indexHandle,Index_getDatabaseId(uuidId)))
   {
     // purge UUID
     error = Database_execute(&indexHandle->databaseHandle,
@@ -2380,8 +2368,6 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
 
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  INDEX_DOX(error,
-            indexHandle,
   {
     error = Database_getIds(&indexHandle->databaseHandle,
                             &databaseIds,
@@ -2402,17 +2388,14 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle,
                         INDEX_ID_UUID(databaseId)
                        );
     }
-
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
+  }
   Array_done(&databaseIds);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
-  return error;
+  return ERROR_NONE;
 }
 
 #if 0
@@ -4419,11 +4402,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
       return error;
     }
     Array_append(&databaseIds,&toEntityId);
-#warning remove
-ARRAY_ITERATE(&databaseIds,arrayIterator,databaseId)
-{
-fprintf(stderr,"%s, %d: assign entity id %ld\n",__FILE__,__LINE__,databaseId);
-}
+//ARRAY_ITERATE(&databaseIds,arrayIterator,databaseId) { fprintf(stderr,"%s, %d: assign entity id %ld\n",__FILE__,__LINE__,databaseId); }
 
     return ERROR_NONE;
   });
@@ -4598,24 +4577,6 @@ LOCAL Errors assignEntityToStorage(IndexHandle *indexHandle,
     return error;
   }
 
-  // delete entity if empty and not default entity
-  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      return pruneEntity(indexHandle,
-                         NULL,  // doneFlag
-                         NULL,  // deletedCounter
-                         entityId
-                        );
-    });
-  }
-  else
-  {
-    error = ERROR_NONE;
-  }
-
   return error;
 }
 
@@ -4640,10 +4601,8 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(entityId != DATABASE_ID_NONE);
 
   // assign to entity
-fprintf(stderr,"%s, %d: toEntityId=%lld\n",__FILE__,__LINE__,toEntityId);
   if (entityId != toEntityId)
   {
     INDEX_DOX(error,
@@ -4662,11 +4621,10 @@ fprintf(stderr,"%s, %d: toEntityId=%lld\n",__FILE__,__LINE__,toEntityId);
     });
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       return error;
     }
 
-    // delete entity/storgen/uuid if empty
+    // delete entity if empty and not default entity
     error = pruneEntity(indexHandle,
                         NULL,  // doneFlag
                         NULL,  // deletedCounter
@@ -4674,7 +4632,6 @@ fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
                        );
     if (error != ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
       return error;
     }
   }
@@ -4719,7 +4676,7 @@ fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
 \***********************************************************************/
 
 LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
-                               IndexId      entityId,
+                               DatabaseId   entityId,
                                ConstString  toJobUUID,
                                ArchiveTypes toArchiveType
                               )
@@ -4727,8 +4684,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
   Errors error;
 
   assert(indexHandle != NULL);
-  assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getDatabaseId(entityId) != INDEX_DEFAULT_ENTITY_DATABASE_ID);
+  assert(entityId != DATABASE_ID_NONE);
   assert(toJobUUID != NULL);
 
   // assign to job
@@ -4745,16 +4701,9 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
                                WHERE id=%lld; \
                               ",
                               toJobUUID,
-                              Index_getDatabaseId(entityId)
+                              entityId
                              );
     });
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // delete entity/storgen/uuid if empty
-    error = Index_pruneEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
       return error;
@@ -4775,7 +4724,7 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
                                WHERE id=%lld; \
                               ",
                               toArchiveType,
-                              Index_getDatabaseId(entityId)
+                              entityId
                              );
     });
     if (error != ERROR_NONE)
@@ -5826,12 +5775,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
 
                                       UNUSED_VARIABLE(userData);
 
-#warning XXXXXXXX
-#if 0
                                       StringMap_getInt64 (resultMap,"uuidId",uuidId,INDEX_ID_NONE);
-#else
-*uuidId=INDEX_ID_NONE;
-#endif
                                       if (!INDEX_ID_IS_NONE(*uuidId))
                                       {
                                         if (lastExecutedDateTime        != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",       lastExecutedDateTime,       0LL );
@@ -6832,15 +6776,10 @@ Errors Index_newHistory(IndexHandle  *indexHandle,
 
                                       if (historyId != NULL)
                                       {
-#warning XXXXXXXX
-#if 0
                                         if (!StringMap_getInt64(resultMap,"historyId",historyId,INDEX_ID_NONE))
                                         {
                                           error = ERROR_EXPECTED_PARAMETER;
                                         }
-#else
-error=ERROR_UNKNOWN;
-#endif
                                       }
 
                                       return error;
@@ -7626,8 +7565,6 @@ Errors Index_newUUID(IndexHandle *indexHandle,
 
                                       UNUSED_VARIABLE(userData);
 
-#warning XXXXXXXX
-#if 0
                                       if (StringMap_getInt64(resultMap,"uuidId",uuidId,INDEX_ID_NONE))
                                       {
                                         return ERROR_NONE;
@@ -7636,9 +7573,6 @@ Errors Index_newUUID(IndexHandle *indexHandle,
                                       {
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
-#else
-return ERROR_UNKNOWN;
-#endif
                                     },NULL),
                                     "INDEX_NEW_UUID jobUUID=%S",
                                     jobUUID
@@ -7739,12 +7673,9 @@ bool Index_isEmptyUUID(IndexHandle *indexHandle,
   INDEX_DOX(emptyFlag,
             indexHandle,
   {
-    return !Database_exists(&indexHandle->databaseHandle,
-                            "entities",
-                            "entities.id",
-                            "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID WHERE uuids.id=%lld",
-                            Index_getDatabaseId(uuidId)
-                           );
+    return isEmptyUUID(indexHandle,
+                       Index_getDatabaseId(uuidId)
+                      );
   });
 
   return emptyFlag;
@@ -8073,8 +8004,6 @@ fprintf(stderr,"%s, %d: new entityId=%ld\n",__FILE__,__LINE__,Index_getDatabaseI
 
                                       UNUSED_VARIABLE(userData);
 
-#warning XXXXXXX
-#if 0
                                       if (StringMap_getInt64 (resultMap,"entityId",entityId,INDEX_ID_NONE))
                                       {
                                         return ERROR_NONE;
@@ -8083,9 +8012,6 @@ fprintf(stderr,"%s, %d: new entityId=%ld\n",__FILE__,__LINE__,Index_getDatabaseI
                                       {
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
-#else
-return ERROR_UNKNOWN;
-#endif
                                     },NULL),
                                     "INDEX_NEW_ENTITY jobUUID=%S scheduleUUID=%s hostName=%S archiveType=%s createdDateTime=%llu locked=%y",
                                     jobUUID,
@@ -8341,9 +8267,9 @@ bool Index_isEmptyEntity(IndexHandle *indexHandle,
   INDEX_DOX(emptyFlag,
             indexHandle,
   {
-    emptyFlag = isEmptyEntity(&indexHandle->databaseHandle,
-                              Index_getDatabaseId(entityId)
-                             );
+    return isEmptyEntity(indexHandle,
+                         Index_getDatabaseId(entityId)
+                        );
   });
 
   return emptyFlag;
@@ -8493,7 +8419,7 @@ t1=Misc_getTimestamp();
 //      assert(totalEntrySize_ >= 0.0);
       if (totalEntryCount  != NULL) (*totalEntryCount ) = (totalEntryCount_  >= 0.0) ? (ulong)totalEntryCount_   : 0L;
       if (totalEntrySize   != NULL) (*totalEntrySize  ) = (totalEntrySize_   >= 0.0) ? (uint64)totalEntrySize_   : 0LL;
-fprintf(stderr,"%s, %d: totalStorageCount=%lu totalStorageSize=%lf totalEntryCount_=%lf totalEntrySize_=%lf\n",__FILE__,__LINE__,*totalStorageCount,totalStorageSize,totalEntryCount_,totalEntrySize_);
+fprintf(stderr,"%s, %d: totalStorageCount=%lu totalStorageSize=%lf totalEntryCount_=%lf totalEntrySize_=%lf\n",__FILE__,__LINE__,*totalStorageCount,totalStorageSize_,totalEntryCount_,totalEntrySize_);
     }
     Database_finalize(&databaseQueryHandle);
 
@@ -9164,7 +9090,7 @@ bool Index_isEmptyStorage(IndexHandle *indexHandle,
 
   if (indexHandle->masterIO == NULL)
   {
-    emptyFlag = isEmptyStorage(&indexHandle->databaseHandle,
+    emptyFlag = isEmptyStorage(indexHandle,
                                Index_getDatabaseId(storageId)
                               );
   }
@@ -13480,13 +13406,13 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     {
       if      (toJobUUID != NULL)
       {
-        if (!INDEX_ID_IS_NONE(entityId))
+        if (!INDEX_ID_IS_NONE(entityId) && !INDEX_ID_IS_DEFAULT_ENTITY(entityId))
         {
           assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
 
           // assign entity to other job
           error = assignEntityToJob(indexHandle,
-                                    entityId,
+                                    Index_getDatabaseId(entityId),
                                     toJobUUID,
                                     toArchiveType
                                    );
@@ -13673,7 +13599,7 @@ Errors Index_pruneEntity(IndexHandle *indexHandle,
   assert(Index_getType(indexId) == INDEX_TYPE_ENTITY);
   assert(Index_getDatabaseId(indexId) !=  INDEX_DEFAULT_ENTITY_DATABASE_ID);
 
-  // prune storages of entity
+  // prune storages of entity if not default entity
   if (indexHandle->masterIO == NULL)
   {
     INDEX_DOX(error,
