@@ -95,20 +95,20 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                        TRUE,  // locked
                                                        &entityId
                                                       );
-                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",entityId);
+                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",Index_getDatabaseId(entityId));
 
                                return error;
                              },NULL),
                              // post: transfer files, images, directories, links, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
-                               IndexId fromStorageId;
-                               IndexId toStorageId;
+                               DatabaseId fromStorageId;
+                               DatabaseId toStorageId;
 
                                UNUSED_VARIABLE(userData);
 
-                               fromStorageId = Database_getTableColumnListInt64(fromColumnList,"id",DATABASE_ID_NONE);
-                               toStorageId   = Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE);
+                               fromStorageId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
+                               toStorageId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
 
                                if (error == ERROR_NONE)
                                {
@@ -149,7 +149,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                          ); \
                                                                                       ",
                                                                                       toStorageId,
-                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListCString(fromColumnList,"name",NULL)
                                                                                      );
                                                             },NULL),
@@ -201,7 +201,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                          ); \
                                                                                       ",
                                                                                       toStorageId,
-                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListInt64(fromColumnList,"size",0LL),
                                                                                       Database_getTableColumnListInt64(fromColumnList,"fragmentOffset",0LL),
                                                                                       Database_getTableColumnListInt64(fromColumnList,"fragmentSize",0LL)
@@ -259,7 +259,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                          ); \
                                                                                       ",
                                                                                       toStorageId,
-                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       (uint64)Database_getTableColumnListInt64(fromColumnList,"size",0LL),
                                                                                       (int)Database_getTableColumnListInt64(fromColumnList,"fileSystemType",0LL),
                                                                                       (uint64)Database_getTableColumnListInt64(fromColumnList,"blockSize",0LL),
@@ -311,7 +311,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                          ); \
                                                                                       ",
                                                                                       toStorageId,
-                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       Database_getTableColumnListCString(fromColumnList,"destinationName",NULL)
                                                                                      );
                                                             },NULL),
@@ -363,7 +363,7 @@ LOCAL Errors upgradeFromVersion1(IndexHandle *oldIndexHandle,
                                                                                          ); \
                                                                                       ",
                                                                                       toStorageId,
-                                                                                      Database_getTableColumnListInt64(toColumnList,"id",DATABASE_ID_NONE),
+                                                                                      Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),
                                                                                       (int)Database_getTableColumnListInt64(fromColumnList,"specialType",0LL),
                                                                                       (uint)Database_getTableColumnListInt64(fromColumnList,"major",0LL),
                                                                                       (uint)Database_getTableColumnListInt64(fromColumnList,"minor",0LL)

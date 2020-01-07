@@ -30,6 +30,7 @@
 #include "server_io.h"
 
 /****************** Conditional compilation switches *******************/
+//#define __INDEX_ID_TYPE_SAFE
 
 /***************************** Constants *******************************/
 // index version
@@ -38,6 +39,8 @@
 // max. limit value
 #define INDEX_UNLIMITED 9223372036854775807LL
 
+//TODO: use type safe type
+#ifndef __INDEX_ID_TYPE_SAFE
 // special index ids
 #define INDEX_ID_MASK_TYPE         0x000000000000000FLL
 #define INDEX_ID_SHIFT_TYPE        0
@@ -46,6 +49,8 @@
 
 #define INDEX_ID_NONE  0LL
 #define INDEX_ID_ANY  -1LL
+#else
+#endif
 
 #define INDEX_ID_UUID_NONE     INDEX_ID_UUID     (DATABASE_ID_NONE)
 #define INDEX_ID_ENTITY_NONE   INDEX_ID_ENTITY   (DATABASE_ID_NONE)
@@ -59,7 +64,7 @@
 #define INDEX_ID_SPECIAL_NONE  INDEX_ID_SPECIAL  (DATABASE_ID_NONE)
 #define INDEX_ID_HISTORY_NONE  INDEX_ID_HISTORY  (DATABASE_ID_NONE)
 
-#define INDEX_DEFAULT_ENTITY_ID INDEX_CONST_DEFAULT_ENTITY_ID
+#define INDEX_DEFAULT_ENTITY_DATABASE_ID INDEX_CONST_DEFAULT_ENTITY_DATABASE_ID
 
 #define PRIindexId PRIi64
 
@@ -190,7 +195,25 @@ typedef enum
 typedef ulong IndexTypeSet;
 
 // index id
+//TODO: use type safe type
+#ifndef __INDEX_ID_TYPE_SAFE
 typedef int64 IndexId;
+#else
+typedef struct
+{
+  union
+  {
+  struct
+  {
+  IndexTypes type  : 4;
+  int64      value : 60;
+  };
+  uint64 data;
+  };
+} IndexId;
+extern const IndexId INDEX_ID_NONE;
+extern const IndexId INDEX_ID_ANY;
+#endif
 
 // sort modes
 typedef enum
@@ -232,6 +255,18 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 
 /****************************** Macros *********************************/
 
+//TODO: use type safe type
+#ifndef __INDEX_ID_TYPE_SAFE
+#define INDEX_ID_EQUALS(id1,id2) ((id1) == (id2))
+#else
+//#define INDEX_IS_ID(id) (id.type != INDEX_TYPE_NONE)
+#define INDEX_ID_EQUALS(id1,id2) ((id1).data == (id2).data)
+#warning TODO: defualt entity
+#endif
+#define INDEX_ID_IS_DEFAULT_ENTITY(id) ((Index_getType(id)==INDEX_TYPE_ENTITY) && Index_getDatabaseId(id)==0)
+#define INDEX_ID_IS_NONE(id) INDEX_ID_EQUALS(id,INDEX_ID_NONE)
+#define INDEX_ID_IS_ANY(id) INDEX_ID_EQUALS(id,INDEX_ID_ANY)
+
 // create index state set value
 #define INDEX_STATE_SET(indexState) (1U << indexState)
 
@@ -239,13 +274,31 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 #define INDEX_MODE_SET(indexMode) (1U << indexMode)
 
 // get type, database id from index id
+//TODO: use type safe type
+#ifndef __INDEX_ID_TYPE_SAFE
 #define INDEX_TYPE_(indexId)        ((IndexTypes)(((indexId) & INDEX_ID_MASK_TYPE       ) >> INDEX_ID_SHIFT_TYPE       ))
 #define INDEX_DATABASE_ID_(indexId) ((DatabaseId)(((indexId) & INDEX_ID_MASK_DATABASE_ID) >> INDEX_ID_SHIFT_DATABASE_ID))
+#else
+#define INDEX_TYPE_(indexId)        (indexId.type)
+#define INDEX_DATABASE_ID_(indexId) (indexId.value)
+#endif
 
 // create index id
+//TODO: use type safe type
+#ifndef __INDEX_ID_TYPE_SAFE
 #define INDEX_ID_(indexType,databaseId) (IndexId)(  ((uint64)(indexType ) << INDEX_ID_SHIFT_TYPE       ) \
                                                   | ((uint64)(databaseId) << INDEX_ID_SHIFT_DATABASE_ID) \
                                                  )
+#else
+static inline IndexId INDEX_ID_(IndexTypes indexType, DatabaseId databaseId)
+{
+  IndexId indexId;
+
+  indexId.type  = indexType;
+  indexId.value = databaseId;
+  return indexId;
+}
+#endif
 #define INDEX_ID_UUID(databaseId)      INDEX_ID_(INDEX_TYPE_UUID     ,databaseId)
 #define INDEX_ID_ENTITY(databaseId)    INDEX_ID_(INDEX_TYPE_ENTITY   ,databaseId)
 #define INDEX_ID_STORAGE(databaseId)   INDEX_ID_(INDEX_TYPE_STORAGE  ,databaseId)

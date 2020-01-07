@@ -11,14 +11,15 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                   IndexHandle *newIndexHandle
                                  )
 {
-  Errors                                       error;
-  int64                                        entityCount,storageCount,entriesCount,entryFragmentsCount;
-  uint64                                       duration;
-  Dictionary                                   storageIdDictionary;
-  DictionaryIterator                           dictionaryIterator;
-  union { void *value; const DatabaseId *id; } keyData;
-  String                                       storageIdsString;
-  IndexId                                      toEntityId;
+  Errors                                             error;
+  int64                                              entityCount,storageCount,entriesCount,entryFragmentsCount;
+  uint64                                             duration;
+  Dictionary                                         storageIdDictionary;
+  DictionaryIterator                                 dictionaryIterator;
+  union { const void *value; const DatabaseId *id; } keyData;
+  union { void *value; DatabaseId *id; }             valueData;
+  String                                             storageIdsString;
+  IndexId                                            toEntityId;
 
   error = ERROR_NONE;
 
@@ -162,9 +163,6 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                                           // post: get from/to storage ids
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
-                                                            uint64  t0;
-                                                            uint64  t1;
-
                                                             UNUSED_VARIABLE(userData);
 
                                                             fromStorageId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
@@ -283,8 +281,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                      &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
-                                                                                                                       IndexId fromStorageId;
-                                                                                                                       IndexId toStorageId;
+                                                                                                                       DatabaseId fromStorageId;
+                                                                                                                       DatabaseId toStorageId;
 
                                                                                                                        UNUSED_VARIABLE(userData);
 
@@ -293,12 +291,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                        if (Dictionary_find(&storageIdDictionary,
                                                                                                                                            &fromStorageId,
                                                                                                                                            sizeof(DatabaseId),
-                                                                                                                                           &keyData.value,
+                                                                                                                                           &valueData.value,
                                                                                                                                            NULL
                                                                                                                                           )
                                                                                                                           )
                                                                                                                        {
-                                                                                                                         toStorageId = *keyData.id;
+                                                                                                                         toStorageId = *valueData.id;
                                                                                                                        }
                                                                                                                        else
                                                                                                                        {
@@ -357,8 +355,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                      &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
-                                                                                                                       IndexId fromStorageId;
-                                                                                                                       IndexId toStorageId;
+                                                                                                                       DatabaseId fromStorageId;
+                                                                                                                       DatabaseId toStorageId;
 
                                                                                                                        UNUSED_VARIABLE(userData);
 
@@ -367,12 +365,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                        if (Dictionary_find(&storageIdDictionary,
                                                                                                                                            &fromStorageId,
                                                                                                                                            sizeof(DatabaseId),
-                                                                                                                                           &keyData.value,
+                                                                                                                                           &valueData.value,
                                                                                                                                            NULL
                                                                                                                                           )
                                                                                                                           )
                                                                                                                        {
-                                                                                                                         toStorageId = *keyData.id;
+                                                                                                                         toStorageId = *valueData.id;
                                                                                                                        }
                                                                                                                        else
                                                                                                                        {
@@ -407,8 +405,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                          &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           IndexId fromStorageId;
-                                                                                           IndexId toStorageId;
+                                                                                           DatabaseId fromStorageId;
+                                                                                           DatabaseId toStorageId;
 
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -418,12 +416,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                            if (Dictionary_find(&storageIdDictionary,
                                                                                                                &fromStorageId,
                                                                                                                sizeof(DatabaseId),
-                                                                                                               &keyData.value,
+                                                                                                               &valueData.value,
                                                                                                                NULL
                                                                                                               )
                                                                                               )
                                                                                            {
-                                                                                             toStorageId = *keyData.id;
+                                                                                             toStorageId = *valueData.id;
                                                                                            }
                                                                                            else
                                                                                            {
@@ -452,8 +450,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                          &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           IndexId fromStorageId;
-                                                                                           IndexId toStorageId;
+                                                                                           DatabaseId fromStorageId;
+                                                                                           DatabaseId toStorageId;
 
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -463,12 +461,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                            if (Dictionary_find(&storageIdDictionary,
                                                                                                                &fromStorageId,
                                                                                                                sizeof(DatabaseId),
-                                                                                                               &keyData.value,
+                                                                                                               &valueData.value,
                                                                                                                NULL
                                                                                                               )
                                                                                               )
                                                                                            {
-                                                                                             toStorageId = *keyData.id;
+                                                                                             toStorageId = *valueData.id;
                                                                                            }
                                                                                            else
                                                                                            {
@@ -521,8 +519,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                      &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
-                                                                                                                       IndexId fromStorageId;
-                                                                                                                       IndexId toStorageId;
+                                                                                                                       DatabaseId fromStorageId;
+                                                                                                                       DatabaseId toStorageId;
 
                                                                                                                        UNUSED_VARIABLE(userData);
 
@@ -531,12 +529,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                        if (Dictionary_find(&storageIdDictionary,
                                                                                                                                            &fromStorageId,
                                                                                                                                            sizeof(DatabaseId),
-                                                                                                                                           &keyData.value,
+                                                                                                                                           &valueData.value,
                                                                                                                                            NULL
                                                                                                                                           )
                                                                                                                           )
                                                                                                                        {
-                                                                                                                         toStorageId = *keyData.id;
+                                                                                                                         toStorageId = *valueData.id;
                                                                                                                        }
                                                                                                                        else
                                                                                                                        {
@@ -571,8 +569,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                          &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           IndexId fromStorageId;
-                                                                                           IndexId toStorageId;
+                                                                                           DatabaseId fromStorageId;
+                                                                                           DatabaseId toStorageId;
 
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -582,12 +580,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                            if (Dictionary_find(&storageIdDictionary,
                                                                                                                &fromStorageId,
                                                                                                                sizeof(DatabaseId),
-                                                                                                               &keyData.value,
+                                                                                                               &valueData.value,
                                                                                                                NULL
                                                                                                               )
                                                                                               )
                                                                                            {
-                                                                                             toStorageId = *keyData.id;
+                                                                                             toStorageId = *valueData.id;
                                                                                            }
                                                                                            else
                                                                                            {
@@ -704,18 +702,18 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                          &toEntityId
                                                         );
                                }
-                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",Index_getDatabaseId(toEntityId));
 
                                return error;
                              },NULL),
                              // post: copy files, images, directories, links, special entries
                              CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                              {
-                               IndexId fromStorageId;
-                               IndexId toStorageId;
-                               uint64  t0;
-                               uint64  t1;
-                               Errors  error;
+                               DatabaseId fromStorageId;
+                               DatabaseId toStorageId;
+                               uint64     t0;
+                               uint64     t1;
+                               Errors     error;
 
                                UNUSED_VARIABLE(userData);
 
@@ -736,15 +734,15 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                             UNUSED_VARIABLE(fromColumnList);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",Index_getDatabaseId(toEntityId));
 
                                                             return ERROR_NONE;
                                                           },NULL),
                                                           CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                           {
-                                                            Errors  error;
-                                                            IndexId fromEntryId;
-                                                            IndexId toEntryId;
+                                                            Errors     error;
+                                                            DatabaseId fromEntryId;
+                                                            DatabaseId toEntryId;
 
                                                             UNUSED_VARIABLE(userData);
 
@@ -790,8 +788,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                      &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
-                                                                                                                       IndexId fromStorageId;
-                                                                                                                       IndexId toStorageId;
+                                                                                                                       DatabaseId fromStorageId;
+                                                                                                                       DatabaseId toStorageId;
 
                                                                                                                        UNUSED_VARIABLE(userData);
 
@@ -800,12 +798,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                        if (Dictionary_find(&storageIdDictionary,
                                                                                                                                            &fromStorageId,
                                                                                                                                            sizeof(DatabaseId),
-                                                                                                                                           &keyData.value,
+                                                                                                                                           &valueData.value,
                                                                                                                                            NULL
                                                                                                                                           )
                                                                                                                           )
                                                                                                                        {
-                                                                                                                         toStorageId = *keyData.id;
+                                                                                                                         toStorageId = *valueData.id;
                                                                                                                        }
                                                                                                                        else
                                                                                                                        {
@@ -864,8 +862,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                      &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
-                                                                                                                       IndexId fromStorageId;
-                                                                                                                       IndexId toStorageId;
+                                                                                                                       DatabaseId fromStorageId;
+                                                                                                                       DatabaseId toStorageId;
 
                                                                                                                        UNUSED_VARIABLE(userData);
 
@@ -874,12 +872,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                        if (Dictionary_find(&storageIdDictionary,
                                                                                                                                            &fromStorageId,
                                                                                                                                            sizeof(DatabaseId),
-                                                                                                                                           &keyData.value,
+                                                                                                                                           &valueData.value,
                                                                                                                                            NULL
                                                                                                                                           )
                                                                                                                           )
                                                                                                                        {
-                                                                                                                         toStorageId = *keyData.id;
+                                                                                                                         toStorageId = *valueData.id;
                                                                                                                        }
                                                                                                                        else
                                                                                                                        {
@@ -915,8 +913,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                          &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           IndexId fromStorageId;
-                                                                                           IndexId toStorageId;
+                                                                                           DatabaseId fromStorageId;
+                                                                                           DatabaseId toStorageId;
 
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -926,12 +924,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                            if (Dictionary_find(&storageIdDictionary,
                                                                                                                &fromStorageId,
                                                                                                                sizeof(DatabaseId),
-                                                                                                               &keyData.value,
+                                                                                                               &valueData.value,
                                                                                                                NULL
                                                                                                               )
                                                                                               )
                                                                                            {
-                                                                                             toStorageId = *keyData.id;
+                                                                                             toStorageId = *valueData.id;
                                                                                            }
                                                                                            else
                                                                                            {
@@ -961,8 +959,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                          &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           IndexId fromStorageId;
-                                                                                           IndexId toStorageId;
+                                                                                           DatabaseId fromStorageId;
+                                                                                           DatabaseId toStorageId;
 
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -972,12 +970,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                            if (Dictionary_find(&storageIdDictionary,
                                                                                                                &fromStorageId,
                                                                                                                sizeof(DatabaseId),
-                                                                                                               &keyData.value,
+                                                                                                               &valueData.value,
                                                                                                                NULL
                                                                                                               )
                                                                                               )
                                                                                            {
-                                                                                             toStorageId = *keyData.id;
+                                                                                             toStorageId = *valueData.id;
                                                                                            }
                                                                                            else
                                                                                            {
@@ -1031,8 +1029,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                      &duration,
                                                                                                                      CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                                                      {
-                                                                                                                       IndexId fromStorageId;
-                                                                                                                       IndexId toStorageId;
+                                                                                                                       DatabaseId fromStorageId;
+                                                                                                                       DatabaseId toStorageId;
 
                                                                                                                        UNUSED_VARIABLE(userData);
 
@@ -1041,12 +1039,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                                                        if (Dictionary_find(&storageIdDictionary,
                                                                                                                                            &fromStorageId,
                                                                                                                                            sizeof(DatabaseId),
-                                                                                                                                           &keyData.value,
+                                                                                                                                           &valueData.value,
                                                                                                                                            NULL
                                                                                                                                           )
                                                                                                                           )
                                                                                                                        {
-                                                                                                                         toStorageId = *keyData.id;
+                                                                                                                         toStorageId = *valueData.id;
                                                                                                                        }
                                                                                                                        else
                                                                                                                        {
@@ -1084,8 +1082,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                          &duration,
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           IndexId fromStorageId;
-                                                                                           IndexId toStorageId;
+                                                                                           DatabaseId fromStorageId;
+                                                                                           DatabaseId toStorageId;
 
                                                                                            UNUSED_VARIABLE(fromColumnList);
                                                                                            UNUSED_VARIABLE(userData);
@@ -1095,12 +1093,12 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                                                                            if (Dictionary_find(&storageIdDictionary,
                                                                                                                &fromStorageId,
                                                                                                                sizeof(DatabaseId),
-                                                                                                               &keyData.value,
+                                                                                                               &valueData.value,
                                                                                                                NULL
                                                                                                               )
                                                                                               )
                                                                                            {
-                                                                                             toStorageId = *keyData.id;
+                                                                                             toStorageId = *valueData.id;
                                                                                            }
                                                                                            else
                                                                                            {

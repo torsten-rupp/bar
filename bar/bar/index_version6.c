@@ -57,10 +57,10 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                  IndexHandle *newIndexHandle
                                 )
 {
-  Errors     error;
-  int64      entityCount,storageCount,entriesCount;
-  uint64     duration;
-  DatabaseId toEntityId;
+  Errors  error;
+  int64   entityCount,storageCount,entriesCount;
+  uint64  duration;
+  IndexId toEntityId;
 
   DIMPORT("version 6");
 
@@ -183,7 +183,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                             UNUSED_VARIABLE(toColumnList);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnListId(toColumnList,"entityId",toEntityId);
 
                                                             return ERROR_NONE;
                                                           },NULL),
@@ -213,7 +213,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                                                          UNUSED_VARIABLE(fromColumnList);
                                                                                          UNUSED_VARIABLE(userData);
 
-                                                                                         (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                                                                                         (void)Database_setTableColumnListId(toColumnList,"entityId",toEntityId);
 
                                                                                          return ERROR_NONE;
                                                                                        },NULL),
@@ -602,7 +602,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                          &toEntityId
                                                         );
                                }
-                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                               (void)Database_setTableColumnListInt64(toColumnList,"entityId",Index_getDatabaseId(toEntityId));
 
                                return error;
                              },NULL),
@@ -634,7 +634,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                                                             UNUSED_VARIABLE(fromColumnList);
                                                             UNUSED_VARIABLE(userData);
 
-                                                            (void)Database_setTableColumnListInt64(toColumnList,"entityId",toEntityId);
+                                                            (void)Database_setTableColumnListId(toColumnList,"entityId",Index_getDatabaseId(toEntityId));
 
                                                             return ERROR_NONE;
                                                           },NULL),
