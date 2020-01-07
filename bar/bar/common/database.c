@@ -5041,7 +5041,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   }
 }
 
-bool Database_setTableColumnListIntId(const DatabaseColumnList *columnList, const char *columnName, DatabaseId value)
+bool Database_setTableColumnListId(const DatabaseColumnList *columnList, const char *columnName, DatabaseId value)
 {
   DatabaseColumnNode *columnNode;
 
@@ -6737,7 +6737,10 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
     while (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       value = (DatabaseId)sqlite3_column_int64(statementHandle,0);
-      Array_append(values,&value);
+      if (!Array_contains(values,&value,CALLBACK_(NULL,NULL)))
+      {
+        Array_append(values,&value);
+      }
     }
     sqlite3_finalize(statementHandle);
 
