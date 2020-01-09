@@ -99,8 +99,9 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
              );
   DIMPORT("import %"PRIu64" entries",entityCount+storageCount+entriesCount+entryFragmentsCount);
 
-  // transfer entities with storages and entries
   initImportProgress(entityCount+storageCount+entriesCount+entryFragmentsCount);
+
+  // transfer entities with storages and entries
   duration = 0LL;
   Dictionary_init(&storageIdDictionary,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   storageIdsString = String_new();
@@ -1151,6 +1152,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     doneImportProgress();
     return error;
   }
+
   doneImportProgress();
 
   return error;

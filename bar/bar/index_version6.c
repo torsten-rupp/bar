@@ -130,8 +130,9 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
               entriesCount
              );
 
-  // transfer entities with storages and entries
   initImportProgress(entityCount+storageCount+entriesCount);
+
+  // transfer entities with storages and entries
   duration = 0LL;
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
@@ -529,7 +530,10 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
                              CALLBACK_(importProgress,NULL),  // progress
-                             "WHERE id!=0"
+#warning revert
+//                             "WHERE id!=0"
+"WHERE id=25314"
+///data/backup/bar/2020-01-04/shares-F-348.bar
                             );
   if (error != ERROR_NONE)
   {
@@ -932,6 +936,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
     doneImportProgress();
     return error;
   }
+
   doneImportProgress();
 
   return ERROR_NONE;
