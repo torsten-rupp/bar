@@ -364,8 +364,8 @@ CREATE TRIGGER BEFORE DELETE ON entries
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.id;
     INSERT OR IGNORE INTO entriesNewest
-        (entryId,entityId,name,type,size)
-      SELECT id,entityId,name,type,size,MAX(timeLastChanged)
+        (entryId,entityId,name,type,timeLastChanged,userId,groupId,permission,size)
+      SELECT id,entityId,name,type,MAX(timeLastChanged),userId,groupId,permission,size
         FROM entries
         WHERE     id!=OLD.id
               AND name=OLD.name
@@ -373,7 +373,7 @@ CREATE TRIGGER BEFORE DELETE ON entries
         LIMIT 1;
 
     // update FTS
-    DELETE FROM FTS_entries WHERE entryId MATCH OLD.id;
+    DELETE FROM FTS_entries WHERE entryId=OLD.id;
   END;
 
 CREATE TABLE IF NOT EXISTS entryFragments(
