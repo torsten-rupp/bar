@@ -15364,14 +15364,6 @@ fprintf(stderr,"%s, %d: entityId=%llx\n",__FILE__,__LINE__,entityId);
   // update infos, unlock entity (if exists)
   if (!INDEX_ID_IS_NONE(entityId))
   {
-    // update storages info (aggregated values)
-    if (error == ERROR_NONE)
-    {
-      error = Index_updateEntityInfos(indexHandle,
-                                      entityId
-                                     );
-    }
-
     // unlock
     Index_unlockEntity(archiveHandle.indexHandle,entityId);
   }
@@ -15463,6 +15455,8 @@ fprintf(stderr,"%s, %d: entityId=%llx\n",__FILE__,__LINE__,entityId);
   return error;
 
   #undef MAX_ARCHIVE_CONTENT_LIST_LENGTH
+#warning revert
+exit(22);
 }
 
 Errors Archive_removeIndex(IndexHandle *indexHandle,
