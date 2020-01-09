@@ -72,7 +72,9 @@ const char *ARCHIVE_TYPES[] =
 LOCAL bool       infoFlag                             = FALSE;  // output index database info
 LOCAL bool       infoEntitiesFlag                     = FALSE;  // output index database entities info
 LOCAL bool       infoStoragesFlag                     = FALSE;  // output index database storages info
+LOCAL bool       infoLostStoragesFlag                 = FALSE;  // output index database lost storages info
 LOCAL bool       infoEntriesFlag                      = FALSE;  // output index database entries info
+LOCAL bool       infoLostEntriesFlag                  = FALSE;  // output index database lost entries info
 LOCAL bool       checkFlag                            = FALSE;  // check database
 LOCAL bool       createFlag                           = FALSE;  // create new index database
 LOCAL bool       createIndizesFlag                    = FALSE;  // re-create indizes
@@ -3079,19 +3081,24 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
 
-  // show number of storages
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "storages",
-                                "COUNT(id)",
-                                "WHERE deletedFlag!=1"
-                               );
-  if (error != ERROR_NONE)
+  printf("Storages:");
+  if (verboseFlag)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
-    exit(1);
+    // show number of storages
+    error = Database_getInteger64(databaseHandle,
+                                  &n,
+                                  "storages",
+                                  "COUNT(id)",
+                                  "WHERE deletedFlag!=1"
+                                 );
+    if (error != ERROR_NONE)
+    {
+      fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+      exit(1);
+    }
+    printf(": %"PRIi64,n);
   }
-  printf("Storages: %"PRIi64"\n",n);
+  printf("\n");
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -3196,19 +3203,24 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
 
-  // show number of entries
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entries",
-                                "COUNT(id)",
-                                ""
-                               );
-  if (error != ERROR_NONE)
+  printf("Entries:");
+  if (verboseFlag)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
-    exit(1);
+    // show number of entries
+    error = Database_getInteger64(databaseHandle,
+                                  &n,
+                                  "entries",
+                                  "COUNT(id)",
+                                  ""
+                                 );
+    if (error != ERROR_NONE)
+    {
+      fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+      exit(1);
+    }
+    printf(" %"PRIi64,n);
   }
-  printf("Entries: %"PRIi64"\n",n);
+  printf("\n");
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -3389,19 +3401,24 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
 
-  // show number of newest entries
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entriesNewest",
-                                "COUNT(id)",
-                                ""
-                               );
-  if (error != ERROR_NONE)
+  printf("Newest entries:");
+  if (verboseFlag)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
-    exit(1);
+    // show number of newest entries
+    error = Database_getInteger64(databaseHandle,
+                                  &n,
+                                  "entriesNewest",
+                                  "COUNT(id)",
+                                  ""
+                                 );
+    if (error != ERROR_NONE)
+    {
+      fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+      exit(1);
+    }
+    printf(" %"PRIi64,n);
   }
-  printf("Newest entries: %"PRIi64"\n",n);
+  printf("\n");
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -3582,19 +3599,24 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
     exit(1);
   }
 
-  // show number of entities
-  error = Database_getInteger64(databaseHandle,
-                                &n,
-                                "entities",
-                                "COUNT(id)",
-                                "WHERE deletedFlag!=1"
-                               );
-  if (error != ERROR_NONE)
+  printf("Entities:");
+  if (verboseFlag)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
-    exit(1);
+    // show number of entities
+    error = Database_getInteger64(databaseHandle,
+                                  &n,
+                                  "entities",
+                                  "COUNT(id)",
+                                  "WHERE deletedFlag!=1"
+                                 );
+    if (error != ERROR_NONE)
+    {
+      fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+      exit(1);
+    }
+    printf(" %"PRIi64,n);
   }
-  printf("Entities: %"PRIi64"\n",n);
+  printf("\n");
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
@@ -3783,6 +3805,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              printf("    Links         : %s\n",values[10]);
                              printf("    Hardlinks     : %s, %"PRIu64"bytes\n",values[11],(uint64)atoll(values[12]));
                              printf("    Special       : %s\n",values[13]);
+                             printf("\n");
 
                              storageIdsString = String_new();
                              Database_execute(databaseHandle,
@@ -3870,7 +3893,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storageIdArray)
+LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storageIdArray, bool lostFlag)
 {
   const char *STATE_TEXT[] = {"","OK","create","update requested","update","error"};
   const char *MODE_TEXT [] = {"manual","auto"};
@@ -3904,72 +3927,78 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             state = (uint)atoi(values[5]);
-                             mode  = (uint)atoi(values[6]);
+                             state = (uint)atoi(values[6]);
+                             mode  = (uint)atoi(values[7]);
 
                              printf("  Id              : %s\n",values[ 0]);
-                             printf("    Name          : %s\n",values[ 1]);
-                             printf("    Created       : %s\n",(values[ 2] != NULL) ? values[ 2] : "");
-                             printf("    User name     : %s\n",(values[ 3] != NULL) ? values[ 3] : "");
-                             printf("    Comment       : %s\n",(values[ 4] != NULL) ? values[ 4] : "");
-                             printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : values[ 5]);
-                             printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : values[ 6]);
-                             printf("    Last checked  : %s\n",values[ 7]);
-                             printf("    Error message : %s\n",(values[ 8] != NULL) ? values[ 8] : "");
+                             printf("    Name          : %s\n",values[ 2]);
+                             printf("    Created       : %s\n",(values[ 3] != NULL) ? values[ 3] : "");
+                             printf("    User name     : %s\n",(values[ 4] != NULL) ? values[ 4] : "");
+                             printf("    Comment       : %s\n",(values[ 5] != NULL) ? values[ 5] : "");
+                             printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : values[ 6]);
+                             printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : values[ 7]);
+                             printf("    Last checked  : %s\n",values[ 8]);
+                             printf("    Error message : %s\n",(values[ 9] != NULL) ? values[ 9] : "");
                              printf("\n");
-                             printf("    Total entries : %s, %"PRIu64"bytes\n",values[ 9],(uint64)atoll(values[10]));
+                             printf("    Total entries : %s, %"PRIu64"bytes\n",values[10],(uint64)atoll(values[11]));
                              printf("\n");
-                             printf("    Files         : %s, %"PRIu64"bytes\n",values[11],(uint64)atoll(values[12]));
-                             printf("    Images        : %s, %"PRIu64"bytes\n",values[13],(uint64)atoll(values[14]));
-                             printf("    Directories   : %s\n",values[15]);
-                             printf("    Links         : %s\n",values[16]);
-                             printf("    Hardlinks     : %s, %"PRIu64"bytes\n",values[17],(uint64)atoll(values[18]));
-                             printf("    Special       : %s\n",values[19]);
+                             printf("    Files         : %s, %"PRIu64"bytes\n",values[12],(uint64)atoll(values[13]));
+                             printf("    Images        : %s, %"PRIu64"bytes\n",values[14],(uint64)atoll(values[15]));
+                             printf("    Directories   : %s\n",values[16]);
+                             printf("    Links         : %s\n",values[17]);
+                             printf("    Hardlinks     : %s, %"PRIu64"bytes\n",values[18],(uint64)atoll(values[19]));
+                             printf("    Special       : %s\n",values[20]);
+                             printf("\n");
+                             printf("    Entity id     : %s\n",values[1]);
 
                              return ERROR_NONE;
                            },NULL),
                            NULL,  // changedRowCount
-                           "SELECT id,\
-                                   name, \
-                                   created, \
-                                   userName, \
-                                   comment, \
-                                   state, \
-                                   mode, \
-                                   lastChecked, \
-                                   errorMessage, \
+                           "SELECT storages.id,\
+                                   storages.entityId, \
+                                   storages.name, \
+                                   storages.created, \
+                                   storages.userName, \
+                                   storages.comment, \
+                                   storages.state, \
+                                   storages.mode, \
+                                   storages.lastChecked, \
+                                   storages.errorMessage, \
                                    \
-                                   totalEntryCount, \
-                                   totalEntrySize, \
+                                   storages.totalEntryCount, \
+                                   storages.totalEntrySize, \
                                    \
-                                   totalFileCount, \
-                                   totalFileSize, \
-                                   totalImageCount, \
-                                   totalImageSize, \
-                                   totalDirectoryCount, \
-                                   totalLinkCount, \
-                                   totalHardlinkCount, \
-                                   totalHardlinkSize, \
-                                   totalSpecialCount, \
+                                   storages.totalFileCount, \
+                                   storages.totalFileSize, \
+                                   storages.totalImageCount, \
+                                   storages.totalImageSize, \
+                                   storages.totalDirectoryCount, \
+                                   storages.totalLinkCount, \
+                                   storages.totalHardlinkCount, \
+                                   storages.totalHardlinkSize, \
+                                   storages.totalSpecialCount, \
                                    \
-                                   totalEntryCountNewest, \
-                                   totalEntrySizeNewest, \
+                                   storages.totalEntryCountNewest, \
+                                   storages.totalEntrySizeNewest, \
                                    \
-                                   totalFileCountNewest, \
-                                   totalFileSizeNewest, \
-                                   totalImageCountNewest, \
-                                   totalImageSizeNewest, \
-                                   totalDirectoryCountNewest, \
-                                   totalLinkCountNewest, \
-                                   totalHardlinkCountNewest, \
-                                   totalHardlinkSizeNewest, \
-                                   totalSpecialCountNewest \
+                                   storages.totalFileCountNewest, \
+                                   storages.totalFileSizeNewest, \
+                                   storages.totalImageCountNewest, \
+                                   storages.totalImageSizeNewest, \
+                                   storages.totalDirectoryCountNewest, \
+                                   storages.totalLinkCountNewest, \
+                                   storages.totalHardlinkCountNewest, \
+                                   storages.totalHardlinkSizeNewest, \
+                                   storages.totalSpecialCountNewest \
                             FROM storages \
-                            WHERE     (%d OR id IN (%S)) \
-                                  AND deletedFlag!=1 \
+                            LEFT JOIN entities ON entities.id=storages.entityId \
+                            WHERE     (%d OR storages.id IN (%S)) \
+                                  AND (%d OR entities.id IS NULL) \
+                                  AND storages.deletedFlag!=1 \
                            ",
                            String_isEmpty(storageIdsString) ? 1 : 0,
-                           storageIdsString
+                           storageIdsString,
+                           !lostFlag
                           );
   if (error != ERROR_NONE)
   {
@@ -4022,7 +4051,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
 
                              entityId = (DatabaseId)atoll(values[0]);
 
-                             printf("  Entitiy id: %lld\n",entityId);
+                             printf("  Entity id : %"PRIi64"\n",entityId);
                              error = Database_execute(databaseHandle,
                                                       CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                                       {
@@ -4089,7 +4118,6 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                      );
                              if (error != ERROR_NONE)
                              {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                                return error;
                              }
 
@@ -4725,6 +4753,11 @@ int main(int argc, const char *argv[])
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
+    else if (stringStartsWith(argv[i],"--info-lost-storages"))
+    {
+      infoLostStoragesFlag = TRUE;
+      i++;
+    }
     else if (stringStartsWith(argv[i],"--info-entries"))
     {
       infoEntriesFlag = TRUE;
@@ -4737,6 +4770,11 @@ int main(int argc, const char *argv[])
         }
       }
       stringTokenizerDone(&stringTokenizer);
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--info-lost-entries"))
+    {
+      infoLostEntriesFlag = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--check"))
@@ -4991,6 +5029,13 @@ else if (stringEquals(argv[i],"--xxx"))
     String_delete(commands);
     exit(EXITCODE_FAIL);
   }
+  error = Database_setEnabledForeignKeys(&databaseHandle,foreignKeysFlag);
+  if (error != ERROR_NONE)
+  {
+    closeDatabase(&databaseHandle);
+    String_delete(commands);
+    exit(EXITCODE_FAIL);
+  }
 
   // set temporary directory
   if (tmpDirectory != NULL)
@@ -5015,7 +5060,9 @@ else if (stringEquals(argv[i],"--xxx"))
   if (   infoFlag
       || (   !infoEntitiesFlag
           && !infoStoragesFlag
+          && !infoLostStoragesFlag
           && !infoEntriesFlag
+          && !infoLostEntriesFlag
           && !checkFlag
           && !createTriggersFlag
           && !createNewestFlag
@@ -5042,11 +5089,19 @@ else if (stringEquals(argv[i],"--xxx"))
     printEntitiesInfo(&databaseHandle,entityIdArray);
   }
 
-  if (infoStoragesFlag)
+  if      (infoLostStoragesFlag)
   {
-    printStoragesInfo(&databaseHandle,storageIdArray);
+    printStoragesInfo(&databaseHandle,storageIdArray,TRUE);
+  }
+  else if (infoStoragesFlag)
+  {
+    printStoragesInfo(&databaseHandle,storageIdArray,FALSE);
   }
 
+  if (infoEntriesFlag)
+  {
+    printEntriesInfo(&databaseHandle,entityIdArray);
+  }
   if (infoEntriesFlag)
   {
     printEntriesInfo(&databaseHandle,entityIdArray);
