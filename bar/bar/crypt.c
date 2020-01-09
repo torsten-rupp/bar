@@ -2097,7 +2097,8 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
       }
 
       // create public key
-      gcryptError = gcry_sexp_build(&key,NULL,"(public-key (rsa (n %M) (e %M)))",nToken,eToken);
+//TODO: changed %M -> %m
+      gcryptError = gcry_sexp_build(&key,NULL,"(public-key (rsa (n %m) (e %m)))",nToken,eToken);
       if (gcryptError != 0)
       {
 //fprintf(stderr,"%s, %d: gcry_sexp_new cryptKey->key=%p %d %d: %s\n",__FILE__,__LINE__,cryptKey->key,cryptKey->dataLength,gcryptError,gpg_strerror(gcryptError));
@@ -2105,6 +2106,7 @@ bool Crypt_setPublicKeyModulusExponent(CryptKey    *cryptKey,
         gcry_mpi_release(nToken);
         return FALSE;
       }
+exit(123);
       if (cryptKey->key != NULL) gcry_sexp_release(cryptKey->key);
       cryptKey->key = key;
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); gcry_sexp_dump(cryptKey->key);
