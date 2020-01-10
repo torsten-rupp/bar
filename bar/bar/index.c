@@ -2108,7 +2108,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT entities.jobUUID, \
                                          UNIXTIMESTAMP(entities.created), \
-                                         entities.type, \
+                                         entities.type \
                                   FROM entities \
                                   WHERE id=%lld \
                                  ",
@@ -8390,7 +8390,9 @@ t1=Misc_getTimestamp();
       return error;
     }
 #warning
+#ifndef NDEBUG
 Database_debugPrintQueryInfo(&databaseQueryHandle);
+#endif
     if (Database_getNextRow(&databaseQueryHandle,
                             "%lu %lf %lf %lf",
                             totalStorageCount,
