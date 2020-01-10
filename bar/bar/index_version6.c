@@ -530,10 +530,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
                              CALLBACK_(importProgress,NULL),  // progress
-#warning revert
-//                             "WHERE id!=0"
-"WHERE id=25314"
-///data/backup/bar/2020-01-04/shares-F-348.bar
+                             "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
   {
