@@ -13,6 +13,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
 {
   Errors                                             error;
   int64                                              entityCount,storageCount,entriesCount,entryFragmentsCount;
+  int64                                              n;
   uint64                                             duration;
   Dictionary                                         storageIdDictionary;
   DictionaryIterator                                 dictionaryIterator;
@@ -78,6 +79,72 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
   {
     return error;
   }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &n,
+                                "fileEntries",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  entriesCount += n;
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &n,
+                                "imageEntries",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  entriesCount += n;
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &n,
+                                "directoryEntries",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  entriesCount += n;
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &n,
+                                "linkEntries",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  entriesCount += n;
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &n,
+                                "hardlinkEntries",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  entriesCount += n;
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &n,
+                                "specialEntries",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  entriesCount += n;
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entryFragmentsCount,
                                 "entryFragments",

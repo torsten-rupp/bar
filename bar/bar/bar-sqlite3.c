@@ -129,7 +129,9 @@ LOCAL void printUsage(const char *programName)
   printf("Options:  --info                                - output index database infos\n");
   printf("          --info-entities[=id,...]              - output index database entities infos\n");
   printf("          --info-storages[=id,...]              - output index database storages infos\n");
+  printf("          --info-lost-storages[=id,...]         - output index database storages infos without an entity\n");
   printf("          --info-entries[=id,...]               - output index database entries infos\n");
+  printf("          --info-lost-entries[=id,...]          - output index database entries infos without an entity\n");
   printf("          --create                              - create new index database\n");
   printf("          --create-triggers                     - re-create triggers\n");
   printf("          --create-newest                       - re-create newest data\n");

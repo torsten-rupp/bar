@@ -210,15 +210,12 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           DatabaseId fromFileId;
                                                                                            DatabaseId toEntryId;
                                                                                            Errors     error;
 
                                                                                            UNUSED_VARIABLE(userData);
 
-                                                                                           fromFileId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
-                                                                                           assert(fromFileId != DATABASE_ID_NONE);
-                                                                                           toEntryId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
+                                                                                           toEntryId = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                                                                            assert(toEntryId != DATABASE_ID_NONE);
                                                                                            DIMPORT("import entry %ld -> %ld",fromFileId,toEntryId);
 
@@ -301,15 +298,12 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           DatabaseId fromImageId;
                                                                                            DatabaseId toEntryId;
                                                                                            ulong      blockSize;
                                                                                            Errors     error;
 
                                                                                            UNUSED_VARIABLE(userData);
 
-                                                                                           fromImageId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
-                                                                                           assert(fromImageId != DATABASE_ID_NONE);
                                                                                            toEntryId  = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                                                                            assert(toEntryId != DATABASE_ID_NONE);
                                                                                            blockSize  = (ulong)Database_getTableColumnListInt64(fromColumnList,"blockSize",DATABASE_ID_NONE);
@@ -456,14 +450,11 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                          },NULL),
                                                                                          CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
                                                                                          {
-                                                                                           DatabaseId fromHardlinkId;
                                                                                            DatabaseId toEntryId;
                                                                                            Errors     error;
 
                                                                                            UNUSED_VARIABLE(userData);
 
-                                                                                           fromHardlinkId = Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE);
-                                                                                           assert(fromHardlinkId != DATABASE_ID_NONE);
                                                                                            toEntryId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                                                                            assert(toEntryId != DATABASE_ID_NONE);
                                                                                            DIMPORT("import entry %ld -> %ld",fromHardlinkId,toEntryId);

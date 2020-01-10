@@ -2759,7 +2759,8 @@ LOCAL void indexThreadCode(void)
   assert(indexDatabaseFileName != NULL);
 
   // open index
-  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_PURGE_TIMEOUT);
+//  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_PURGE_TIMEOUT);
+  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_FOREIGN_KEYS,INDEX_PURGE_TIMEOUT);
   if (error != ERROR_NONE)
   {
     plogMessage(NULL,  // logHandle
@@ -3384,8 +3385,8 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                              "UPDATE directoryEntries \
                               SET totalEntryCount=totalEntryCount+1, \
                                   totalEntrySize =totalEntrySize +%llu \
-                              WHERE storageId=%llu \
-                                AND name=%'S \
+                              WHERE     storageId=%llu \
+                                    AND name=%'S \
                              ",
                              size,
                              storageId,
@@ -3404,8 +3405,8 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                                "UPDATE directoryEntries \
                                 SET totalEntryCountNewest=totalEntryCountNewest+1, \
                                     totalEntrySizeNewest =totalEntrySizeNewest +%llu \
-                                WHERE storageId=%llu \
-                                  AND name=%'S \
+                                WHERE     storageId=%llu \
+                                      AND name=%'S \
                                ",
                                size,
                                storageId,
@@ -8388,8 +8389,8 @@ t1=Misc_getTimestamp();
     {
       return error;
     }
-//#warning
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+#warning
+Database_debugPrintQueryInfo(&databaseQueryHandle);
     if (Database_getNextRow(&databaseQueryHandle,
                             "%lu %lf %lf %lf",
                             totalStorageCount,
@@ -8859,7 +8860,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
                                       UNUSED_VARIABLE(userData);
 
-#if 0
                                       if (StringMap_getInt64(resultMap,"storageId",storageId,INDEX_ID_NONE))
                                       {
                                         return ERROR_NONE;
@@ -8868,9 +8868,6 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                       {
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
-#else
-return ERROR_UNKNOWN;
-#endif
                                     },NULL),
                                     "INDEX_NEW_STORAGE entityId=%lld hostName=%'S userName=%'S storageName=%'S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
                                     entityId,
@@ -9105,7 +9102,7 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   #endif
   ArrayIterator arrayIterator;
   DatabaseId    entryId;
-fprintf(stderr,"%s, %d: Index_clearStorage storageId=%lld\n",__FILE__,__LINE__,storageId);
+fprintf(stderr,"%s, %d: Index_clearStorage storageId=%ld\n",__FILE__,__LINE__,storageId);
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -9664,6 +9661,7 @@ fprintf(stderr,"%s, %d: totalEntryCount_=%lf totalEntryFragmentCount_=%lf totalE
       if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
       Database_finalize(&databaseQueryHandle);
 
+#warning
 #if 0
       // get entry content size
       if (newestOnly)
@@ -12592,6 +12590,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       entryId = Database_getLastRowId(&indexHandle->databaseHandle);
 
       // add directory entry
+fprintf(stderr,"%s, %d: insert direct %lld %lld: %s\n",__FILE__,__LINE__,entryId,Index_getDatabaseId(storageId),String_cString(name));
+if (Index_getDatabaseId(storageId) > 10000) { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3"); }
+
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
