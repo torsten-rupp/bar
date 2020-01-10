@@ -2013,7 +2013,7 @@ Dprintf.dprintf("");
       return storageIndexStateSet;
     }
 
-    /** trigger update of storage list
+    /** trigger update of storage tree/list
      * @param storageName new storage name
      * @param storageIndexStateSet new storage index state set
      * @param storageEntityState new storage entity state
@@ -2041,7 +2041,7 @@ Dprintf.dprintf("");
       }
     }
 
-    /** trigger update of storage list
+    /** trigger update of storage tree/list
      * @param storageName new storage name
      */
     private void triggerUpdateStorageName(String storageName)
@@ -2064,7 +2064,7 @@ Dprintf.dprintf("");
       }
     }
 
-    /** trigger update of storage list
+    /** trigger update of storage tree/list
      * @param jobUUID job UUID
      * @param storageIndexStateSet new storage index state set
      * @param storageEntityState new storage entity state
@@ -2088,7 +2088,39 @@ Dprintf.dprintf("");
       }
     }
 
-    /** trigger update of storage list item
+    /** trigger update of storage tree/list item
+     * @param index index in list to update
+     */
+    private void triggerUpdate(TreeItem treeItem)
+    {
+      synchronized(trigger)
+      {
+        int offset = (treeItem.getParent().indexOf(treeItem)/PAGE_SIZE)*PAGE_SIZE;
+        if (!this.requestUpdateOffsets.contains(offset))
+        {
+          this.requestUpdateOffsets.add(offset);
+          restart();
+        }
+      }
+    }
+
+    /** trigger update of storage tree/list item
+     * @param index index in list to update
+     */
+    private void triggerUpdate(TableItem tableItem)
+    {
+      synchronized(trigger)
+      {
+        int offset = (tableItem.getParent().indexOf(tableItem)/PAGE_SIZE)*PAGE_SIZE;
+        if (!this.requestUpdateOffsets.contains(offset))
+        {
+          this.requestUpdateOffsets.add(offset);
+          restart();
+        }
+      }
+    }
+
+    /** trigger update of storage tree/list item
      * @param index index in list to update
      */
     private void triggerUpdate(int index)
@@ -2104,7 +2136,7 @@ Dprintf.dprintf("");
       }
     }
 
-    /** trigger update of storage list
+    /** trigger update of storage tree/list
      */
     private void triggerUpdate()
     {
@@ -5164,7 +5196,7 @@ Dprintf.dprintf("");
             {
               gc.drawText("-", x+0, y, true);
             }
-            
+
             return true;
           }
           else
@@ -5620,7 +5652,7 @@ Dprintf.dprintf("");
 
                 // trigger update checked
                 checkedIndexEvent.trigger();
-                
+
                 updateStorageTreeTableThread.triggerUpdate();
               }
             }
@@ -5651,7 +5683,7 @@ Dprintf.dprintf("");
 
                 // trigger update checked
                 checkedIndexEvent.trigger();
-                
+
                 updateStorageTreeTableThread.triggerUpdate();
               }
             }
@@ -7147,7 +7179,7 @@ Dprintf.dprintf("");
           }
           break;
       }
-      
+
       updateStorageTreeTableThread.triggerUpdate();
     }
   }
@@ -7209,27 +7241,6 @@ Dprintf.dprintf("");
     }
 
     return indexDataHashSet;
-  }
-
-  /** request refresh selected storage
-   */
-  private void refreshSelectedIndexData()
-  {
-    switch (widgetStorageTabFolder.getSelectionIndex())
-    {
-      case 0:
-        // tree view
-        IndexData indexData;
-        for (TreeItem treeItem : widgetStorageTree.getSelection())
-        {
-          treeItem.clearAll(true);
-        }
-        break;
-      case 1:
-        // table view
-        widgetStorageTable.clear(widgetStorageTable.getSelectionIndices());
-        break;
-    }
   }
 
   /** update assign-to sub-menu
@@ -8080,7 +8091,23 @@ Dprintf.dprintf("");
             BARControl.resetCursor();
           }
 
-          refreshSelectedIndexData();
+          switch (widgetStorageTabFolder.getSelectionIndex())
+          {
+            case 0:
+              // tree view
+              for (TreeItem treeItem : widgetStorageTree.getSelection())
+              {
+                updateStorageTreeTableThread.triggerUpdate(treeItem);
+              }
+              break;
+            case 1:
+              // table view
+              for (TableItem tableItem : widgetStorageTable.getSelection())
+              {
+                updateStorageTreeTableThread.triggerUpdate(tableItem);
+              }
+              break;
+          }
         }
       }
     }
