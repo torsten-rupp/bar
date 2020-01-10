@@ -59,102 +59,112 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
   {
     return error;
   }
+fprintf(stderr,"%s, %d: entityCount=%"PRIi64"\n",__FILE__,__LINE__,entityCount);
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &storageCount,
-                                "storage",
+                                "storages",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: storageCount=%"PRIi64"\n",__FILE__,__LINE__,storageCount);
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entriesCount,
                                 "entries",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: entriesCount=%"PRIi64"\n",__FILE__,__LINE__,entriesCount);
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &n,
                                 "fileEntries",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: fileEntries=%"PRIi64"\n",__FILE__,__LINE__,n);
   entriesCount += n;
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &n,
                                 "imageEntries",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: imageEntries=%"PRIi64"\n",__FILE__,__LINE__,n);
   entriesCount += n;
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &n,
                                 "directoryEntries",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: directoryEntries=%"PRIi64"\n",__FILE__,__LINE__,n);
   entriesCount += n;
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &n,
                                 "linkEntries",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: linkEntries=%"PRIi64"\n",__FILE__,__LINE__,n);
   entriesCount += n;
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &n,
                                 "hardlinkEntries",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: hardlinkEntries=%"PRIi64"\n",__FILE__,__LINE__,n);
   entriesCount += n;
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &n,
                                 "specialEntries",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: specialEntries=%"PRIi64"\n",__FILE__,__LINE__,n);
   entriesCount += n;
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entryFragmentsCount,
                                 "entryFragments",
                                 "COUNT(id)",
-                                "WHERE id!=0"
+                                ""
                                );
   if (error != ERROR_NONE)
   {
     return error;
   }
+fprintf(stderr,"%s, %d: entryFragmentsCount=%"PRIi64"\n",__FILE__,__LINE__,entryFragmentsCount);
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -213,7 +223,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                t0 = Misc_getTimestamp();
                                error = Database_copyTable(&oldIndexHandle->databaseHandle,
                                                           &newIndexHandle->databaseHandle,
-                                                          "storage",
+                                                          "storages",
                                                           "storages",
                                                           FALSE,  // transaction flag
                                                           &duration,
@@ -707,7 +717,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // transfer storages and entries without entity
   error = Database_copyTable(&oldIndexHandle->databaseHandle,
                              &newIndexHandle->databaseHandle,
-                             "storage",
+                             "storages",
                              "storages",
                              FALSE,  // transaction flag
                              &duration,
