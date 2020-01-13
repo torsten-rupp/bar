@@ -5827,10 +5827,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
     return FALSE;
   }
 
-  // init variables
-  filterString = String_newCString("1");
-
   // get filters
+  filterString = String_newCString("1");
   filterAppend(filterString,!INDEX_ID_IS_NONE(findEntityId),"AND","entities.id=%lld",Index_getDatabaseId(findEntityId));
   filterAppend(filterString,!String_isEmpty(findJobUUID),"AND","entities.jobUUID=%'S",findJobUUID);
   filterAppend(filterString,!String_isEmpty(findScheduleUUID),"AND","entities.scheduleUUID=%'S",findScheduleUUID);
@@ -5855,7 +5853,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                               FROM entities \
                                 LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
                                 LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                              WHERE %S \
+                              WHERE     %S \
+                                    AND entities.deletedFlag!=1 \
                               GROUP BY entities.id \
                               LIMIT 0,1 \
                              ",
@@ -7767,7 +7766,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   getFTSString(ftsName,name);
 
   // get filters
-  string = String_new();
+  string = String_newCString("1");
   filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,!String_isEmpty(jobUUID),"AND","entities.jobUUID=%'S",jobUUID);
   filterAppend(filterString,!String_isEmpty(scheduleUUID),"AND","entities.scheduleUUID=%'S",scheduleUUID);
@@ -7801,7 +7800,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                              FROM entities \
                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                                LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
-                             WHERE %S \
+                             WHERE          %S \
+                                   entities.AND deletedFlag!=1 \
                              GROUP BY entities.id \
                              %S \
                              LIMIT %llu,%llu \
