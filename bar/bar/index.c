@@ -156,7 +156,7 @@ LOCAL const char *INDEX_ENTRY_SORT_MODE_COLUMNS[] =
   [INDEX_ENTRY_SORT_MODE_ARCHIVE     ] = "storages.name",
   [INDEX_ENTRY_SORT_MODE_NAME        ] = "entries.name",
   [INDEX_ENTRY_SORT_MODE_TYPE        ] = "entries.type",
-  [INDEX_ENTRY_SORT_MODE_SIZE        ] = "entries.size",
+  [INDEX_ENTRY_SORT_MODE_SIZE        ] = "entries.type,entries.size",
   [INDEX_ENTRY_SORT_MODE_FRAGMENT    ] = "entryFragments.offset",
   [INDEX_ENTRY_SORT_MODE_LAST_CHANGED] = "entries.timeLastChanged"
 };
@@ -167,7 +167,7 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
   [INDEX_ENTRY_SORT_MODE_ARCHIVE     ] = "storages.name",
   [INDEX_ENTRY_SORT_MODE_NAME        ] = "entriesNewest.name",
   [INDEX_ENTRY_SORT_MODE_TYPE        ] = "entriesNewest.type",
-  [INDEX_ENTRY_SORT_MODE_SIZE        ] = "entriesNewest.size",
+  [INDEX_ENTRY_SORT_MODE_SIZE        ] = "entriesNewest.type,entriesNewest.size",
   [INDEX_ENTRY_SORT_MODE_FRAGMENT    ] = "entryFragments.offset",
   [INDEX_ENTRY_SORT_MODE_LAST_CHANGED] = "entriesNewest.timeLastChanged"
 };
@@ -2375,10 +2375,10 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
     Array_done(&databaseIds);
     return error;
   }
-fprintf(stderr,"%s, %d: uuid=%lld\n",__FILE__,__LINE__,Index_getDatabaseId(uuidId));
+fprintf(stderr,"%s, %d: uuid=%ld\n",__FILE__,__LINE__,Index_getDatabaseId(uuidId));
   ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: databaseId=%lld\n",__FILE__,__LINE__,databaseId);
+fprintf(stderr,"%s, %d: databaseId=%ld\n",__FILE__,__LINE__,databaseId);
     error = pruneEntity(indexHandle,doneFlag,deletedCounter,databaseId);
   }
   if (error != ERROR_NONE)
@@ -7866,7 +7866,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   // get ordering
   appendOrdering(orderString,TRUE,"entities.created",ordering);
 
-fprintf(stderr,"%s, %d: --- Index_initListEntities\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: Index_initListEntities /////////////////////////////////////////////\n",__FILE__,__LINE__);
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
@@ -9638,7 +9638,7 @@ fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(en
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   String_delete(filterIdsString);
-fprintf(stderr,"%s, %d: entryIdCount=%d filterString=%s\n",__FILE__,__LINE__,entryIdCount,String_cString(filterString));
+fprintf(stderr,"%s, %d: entryIdCount=%ld filterString=%s\n",__FILE__,__LINE__,entryIdCount,String_cString(filterString));
 
   error = ERROR_NONE;
   if (String_isEmpty(ftsName))
@@ -10198,7 +10198,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                 ",
                                 !fragmentsFlag ? "1" : "COUNT(entriesNewest.id)",
                                 filterString,
-                                !fragmentsFlag ? "GROUP BY entities.id,entriesNewest.type,entriesNewest.name" : "",
+#warning remove                                !fragmentsFlag ? "GROUP BY entities.id,entriesNewest.type,entriesNewest.name" : "",
+"",
                                 orderString,
                                 offset,
                                 limit
@@ -10253,7 +10254,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 //TODO: avoid count() to make it faster?
                                 !fragmentsFlag ? "1" : "COUNT(entries.id)",
                                 filterString,
-                                !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : "",
+#warning remove                                !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : "",
+"",
                                 orderString,
                                 offset,
                                 limit
@@ -10329,7 +10331,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                 ",
                                 !fragmentsFlag ? "1" : "COUNT(entriesNewest.id)",
                                 filterString,
-                                !fragmentsFlag ? "GROUP BY entities.id,entriesNewest.type,entriesNewest.name" : "",
+#warning remove                                !fragmentsFlag ? "GROUP BY entities.id,entriesNewest.type,entriesNewest.name" : "",
+"",
                                 orderString,
                                 offset,
                                 limit
@@ -10388,7 +10391,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                 ",
                                 !fragmentsFlag ? "1" : "COUNT(entries.id)",
                                 filterString,
-                                !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : "",
+#warning remove                                !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : "",
+"",//
                                 orderString,
                                 offset,
                                 limit
