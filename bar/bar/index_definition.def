@@ -251,8 +251,8 @@ CREATE TABLE IF NOT EXISTS entries(
 );
 CREATE INDEX ON entries (entityId,type,name);
 CREATE INDEX ON entries (name,size,type,timeLastChanged);
-CREATE INDEX ON entries (type,name,size,timeLastChanged);
-CREATE INDEX ON entries (size,name,type,timeLastChanged);
+CREATE INDEX ON entries (type,size,name,timeLastChanged);
+CREATE INDEX ON entries (size,type,name,timeLastChanged);
 CREATE INDEX ON entries (timeLastChanged,name,size,type);
 
 // newest entries (updated by triggers)
@@ -277,8 +277,8 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
 CREATE INDEX ON entriesNewest (entryId,name,size,timeLastChanged);
 CREATE INDEX ON entriesNewest (name,size,type,timeLastChanged);
 CREATE INDEX ON entriesNewest (type,entryId,name,size,timeLastChanged);
-CREATE INDEX ON entriesNewest (type,name,size,timeLastChanged);
-CREATE INDEX ON entriesNewest (size,name,type,timeLastChanged);
+CREATE INDEX ON entriesNewest (type,size,name,timeLastChanged);
+CREATE INDEX ON entriesNewest (size,type,name,timeLastChanged);
 CREATE INDEX ON entriesNewest (timeLastChanged,name,size,type);
 CREATE INDEX ON entriesNewest (entityId,type,entryId,name,size,timeLastChanged);
 
