@@ -62,7 +62,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(IndexHandle *oldIndexHandle,
                                                 )
 {
   typedef union
-  { 
+  {
     void       *value;
     DatabaseId *id;
   } ValueData;
@@ -184,7 +184,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(IndexHandle *oldIndexHandle,
                                                  )
 {
   typedef union
-  { 
+  {
     void       *value;
     DatabaseId *id;
   } ValueData;
@@ -306,7 +306,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle
                                                     )
 {
   typedef union
-  { 
+  {
     void       *value;
     DatabaseId *id;
   } ValueData;
@@ -423,28 +423,28 @@ LOCAL Errors upgradeFromVersion7(IndexHandle *oldIndexHandle,
                                 )
 {
   typedef union
-  { 
+  {
     const void       *value;
     const DatabaseId *id;
   } KeyData;
   typedef union
-  { 
+  {
     void       *value;
     DatabaseId *id;
   } ValueData;
 
-  Errors                                             error;
-  int64                                              entityCount,storageCount,entriesCount;
-  int64                                              fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
-  int64                                              entryFragmentsCount;
-  int64                                              n;
-  uint64                                             duration;
-  Dictionary                                         storageIdDictionary;
-  DictionaryIterator                                 dictionaryIterator;
-  KeyData               keyData;
-  ValueData             valueData;
-  String                                             storageIdsString;
-  IndexId                                            toEntityId;
+  Errors             error;
+  int64              entityCount,storageCount,entriesCount;
+  int64              fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
+  int64              entryFragmentsCount;
+  int64              n;
+  uint64             duration;
+  Dictionary         storageIdDictionary;
+  DictionaryIterator dictionaryIterator;
+  KeyData            keyData;
+  ValueData          valueData;
+  String             storageIdsString;
+  IndexId            toEntityId;
 
   error = ERROR_NONE;
 
