@@ -493,6 +493,7 @@ CREATE TABLE IF NOT EXISTS linkEntries(
   CONSTRAINT linkEntries UNIQUE (entryId)
 );
 CREATE INDEX ON linkEntries (entryId);
+CREATE INDEX ON linkEntries (storageId);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON linkEntries
@@ -536,6 +537,7 @@ CREATE TABLE IF NOT EXISTS specialEntries(
   CONSTRAINT specialEntries UNIQUE (entryId)
 );
 CREATE INDEX ON specialEntries (entryId);
+CREATE INDEX ON specialEntries (storageId);
 
 // insert/delete/update triggeres
 CREATE TRIGGER AFTER INSERT ON specialEntries
