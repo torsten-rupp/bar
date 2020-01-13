@@ -3769,9 +3769,8 @@ Dprintf.dprintf("");
         // get new entries count, total entry size
         try
         {
-          // get total number of entries, total entry size
           ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO indexType=%s name=%'S newestOnly=%y fragments=no",
+          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO indexType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
                                                        entryType.toString(),
                                                        name,
                                                        newestOnly
@@ -3788,6 +3787,7 @@ Dprintf.dprintf("");
         {
           // ignored
           totalEntryCount = 0;
+          totalEntrySize  = 0;
         }
 
         // show warning if too many entries
@@ -3913,7 +3913,7 @@ Dprintf.dprintf("");
         final ArrayList<EntryIndexData> entryIndexDataList = new ArrayList<EntryIndexData>();
         try
         {
-          entryTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRY_LIST entryType=%s name=%'S newestOnly=%y fragments=no offset=%d limit=%d sortMode=%s ordering=%s",
+          entryTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRY_LIST entryType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no offset=%d limit=%d sortMode=%s ordering=%s",
                                                                                 entryType.toString(),
                                                                                 name,
                                                                                 newestOnly,
@@ -5290,7 +5290,6 @@ Dprintf.dprintf("");
         @Override
         public void handleEvent(final Event event)
         {
-Dprintf.dprintf("");
           TreeItem treeItem = widgetStorageTree.getItem(new Point(event.x,event.y));
           if ((treeItem != null) && !treeItem.isDisposed())
           {
@@ -5298,24 +5297,20 @@ Dprintf.dprintf("");
                      || (treeItem.getData() instanceof EntityIndexData)
                     )
             {
-Dprintf.dprintf("");
               // expand/collapse sub-tree
               Event treeEvent = new Event();
               treeEvent.item = treeItem;
               if (treeItem.getExpanded())
               {
-Dprintf.dprintf("");
                 widgetStorageTree.notifyListeners(SWT.Collapse,treeEvent);
               }
               else
               {
-Dprintf.dprintf("");
                 widgetStorageTree.notifyListeners(SWT.Expand,treeEvent);
               }
             }
             else if (treeItem.getData() instanceof StorageIndexData)
             {
-Dprintf.dprintf("");
               // nothing to do
             }
           }
@@ -5345,20 +5340,6 @@ Dprintf.dprintf("");
                   // set/reset UUID checked
                   boolean isChecked = Widgets.getTreeItemChecked(treeItem);
                   setStorageList(indexData.id,isChecked);
-
-                  // set/reset entities checked
-                  for (TreeItem subTreeItem : treeItem.getItems())
-                  {
-                    if (!subTreeItem.isDisposed())
-                    {
-                      Widgets.setTreeItemChecked(subTreeItem,isChecked);
-                      IndexData subIndexData = (IndexData)subTreeItem.getData();
-                      if (subIndexData != null)
-                      {
-                        setStorageList(subIndexData.id,isChecked);
-                      }
-                    }
-                  }
 
                   // trigger update checked
                   checkedIndexEvent.trigger();
@@ -8358,7 +8339,7 @@ Dprintf.dprintf("");
     }
   }
 
-  /** remove storage from index database
+  /** remove selected storages from index database
    */
   private void removeStorageIndex()
   {
@@ -9061,7 +9042,7 @@ Dprintf.dprintf("");
       try
       {
         // get total number of entries
-        totalEntryCount[0] = BARServer.getInt(StringParser.format("INDEX_ENTRY_LIST_INFO indexType=%s name=%'S newestOnly=%y fragments=no",
+        totalEntryCount[0] = BARServer.getInt(StringParser.format("INDEX_ENTRY_LIST_INFO indexType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
                                                                   updateEntryTableThread.getEntryType().toString(),
                                                                   updateEntryTableThread.getName_(),
                                                                   updateEntryTableThread.getNewestOnly()
@@ -9114,7 +9095,7 @@ Dprintf.dprintf("");
           final int        n[]        = new int[]{0};
           busyDialog.setMaximum(totalEntryCount[0]);
 
-          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=%s name=%'S newestOnly=%y fragments=no",
+          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
                                                        updateEntryTableThread.getEntryType().toString(),
                                                        updateEntryTableThread.getName_(),
                                                        updateEntryTableThread.getNewestOnly()
@@ -9486,7 +9467,7 @@ Dprintf.dprintf("");
             case ARCHIVES:
               try
               {
-                // get total number entries, size
+                // get total number entries, size to restore
                 BARServer.executeCommand(StringParser.format("INDEX_LIST_INFO"),
                                          1,  // debugLevel
                                          valueMap
@@ -9513,7 +9494,7 @@ Dprintf.dprintf("");
                   }
                 });
 
-                // get archives
+                // get archives to restore
                 BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST"),
                                          1,  // debugLevel
                                          new Command.ResultHandler()
@@ -9553,8 +9534,8 @@ Dprintf.dprintf("");
             case ENTRIES:
               try
               {
-                // get total number of entries, total entry size, total content size
-                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO name='' indexType=* newestOnly=no fragments=no"),
+                // get total number of entries, total entry size, total content size to restore
+                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO name='' indexType=* newestOnly=no selectedOnly=yes fragments=no"),
                                          1,  // debugLevel
                                          valueMap
                                         );
@@ -9580,8 +9561,8 @@ Dprintf.dprintf("");
                   }
                 });
 
-                // get entries
-                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST newestOnly=no fragments=no"),
+                // get entries to restore
+                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST newestOnly=no selectedOnly=yes fragments=no"),
                                          1,  // debugLevel
                                          new Command.ResultHandler()
                                          {
