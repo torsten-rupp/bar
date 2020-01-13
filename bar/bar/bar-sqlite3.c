@@ -649,7 +649,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
-                           "INSERT INTO FTS_storages SELECT id,name FROM storage"
+                           "INSERT INTO FTS_storages SELECT id,name FROM storages"
                           );
   if (error != ERROR_NONE)
   {
