@@ -3961,6 +3961,7 @@ LOCAL void indexThreadCode(void)
 
               // index update
               startTimestamp = Misc_getTimestamp();
+fprintf(stderr,"%s, %d: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n",__FILE__,__LINE__);
               error = Archive_updateIndex(indexHandle,
                                           entityId,
                                           storageId,
@@ -3971,6 +3972,7 @@ LOCAL void indexThreadCode(void)
                                           CALLBACK_(indexAbortCallback,NULL),
                                           NULL  // logHandle
                                          );
+fprintf(stderr,"%s, %d: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n",__FILE__,__LINE__);
               endTimestamp = Misc_getTimestamp();
 
               // stop if done, interrupted, or quit
@@ -13957,8 +13959,9 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
 * Return : -
 * Notes  : Arguments:
 *            name=<text>
-*            indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*
+*            indexType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
 *            newestOnly=yes|no
+*            selectedOnly=yes|no
 *            fragments=yes|no
 *          Result:
 *            totalEntryCount=<n>
@@ -13972,6 +13975,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   bool       indexTypeAny;
   IndexTypes indexType;
   bool       newestOnly;
+  bool       selectedOnly;
   bool       fragmentsFlag;
   Errors     error;
   ulong      totalEntryCount;
@@ -14008,6 +14012,12 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
     String_delete(name);
     return;
   }
+  if (!StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"selectedOnly=yes|no");
+    String_delete(name);
+    return;
+  }
   if (!StringMap_getBool(argumentMap,"fragments",&fragmentsFlag,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragments=yes|no");
@@ -14026,8 +14036,8 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   error = Index_getEntriesInfo(indexHandle,
                                Array_cArray(&clientInfo->indexIdArray),
                                Array_length(&clientInfo->indexIdArray),
-                               Array_cArray(&clientInfo->entryIdArray),
-                               Array_length(&clientInfo->entryIdArray),
+                               selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
+                               selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
                                indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
                                name,
                                newestOnly,
@@ -15540,9 +15550,10 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*
 *            name=<text>
+*            indexType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
 *            newestOnly=yes|no
+*            selectedOnly=yes|no
 *            fragments=yes|no
 *            [offset=<n>]
 *            [limit=<n>]
@@ -15696,10 +15707,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     } \
     while (0)
 
+  String                name;
   bool                  indexTypeAny;
   IndexTypes            indexType;
-  String                name;
   bool                  newestOnly;
+  bool                  selectedOnly;
   bool                  fragments;
   uint64                offset;
   uint64                limit;
@@ -15726,7 +15738,9 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // filter index type, name, new entries only, fragments, offset, limit
+  // filter name, index type, new entries only, fragments, offset, limit
+  name = String_new();
+  StringMap_getString(argumentMap,"name",name,NULL);
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
   {
     indexTypeAny = TRUE;
@@ -15738,13 +15752,18 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   else
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    String_delete(name);
     return;
   }
-  name = String_new();
-  StringMap_getString(argumentMap,"name",name,NULL);
   if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newestOnly=yes|no");
+    String_delete(name);
+    return;
+  }
+  if (!StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"selectedOnly=yes|no");
     String_delete(name);
     return;
   }
@@ -15777,8 +15796,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                 indexHandle,
                                 Array_cArray(&clientInfo->indexIdArray),
                                 Array_length(&clientInfo->indexIdArray),
-                                Array_cArray(&clientInfo->entryIdArray),
-                                Array_length(&clientInfo->entryIdArray),
+                                selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
+                                selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
                                 indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
                                 name,
                                 newestOnly,
@@ -17451,7 +17470,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
 * Return : -
 * Notes  : Arguments:
 *            <state>|*
-*            uuidId=<id>|0 or entityId=<id>|0 or storageId=<id>|0
+*            uuidId=<id> or entityId=<id> or storageId=<id>
 *          Result:
 \***********************************************************************/
 
@@ -17629,7 +17648,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
 
   if (!INDEX_ID_IS_NONE(entityId))
   {
-    // delete entity
+    // delete entity index
     error = Index_deleteEntity(indexHandle,entityId);
     if (error != ERROR_NONE)
     {
