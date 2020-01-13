@@ -115,10 +115,7 @@ const ChunkIO CHUNK_IO_STORAGE =
 };
 
 // max. lenght of index list to write in single transaction
-//TODO
-#warning
 #define MAX_INDEX_LIST 256
-//#define MAX_INDEX_LIST 1
 
 /***************************** Datatypes *******************************/
 
@@ -191,8 +188,6 @@ typedef struct ArchiveIndexNode
 {
   LIST_NODE_HEADER(struct ArchiveIndexNode);
 
-  IndexId           xxxentityId;
-  IndexId           xxxstorageId;
   ArchiveEntryTypes type;
   union
   {
@@ -265,16 +260,6 @@ typedef struct ArchiveIndexNode
       uint32           major;
       uint32           minor;
     } special;
-    struct
-    {
-      String       hostName;
-      String       userName;
-      String       jobUUID;
-      String       scheduleUUID;
-      ArchiveTypes archiveType;
-      uint64       createdDateTime;
-      String       comment;
-    } meta;
   };
 } ArchiveIndexNode;
 
@@ -1531,14 +1516,8 @@ LOCAL void freeArchiveIndexNode(ArchiveIndexNode *archiveIndexNode, void *userDa
     case ARCHIVE_ENTRY_TYPE_SPECIAL:
       String_delete(archiveIndexNode->special.name);
       break;
-//TODO: remove
-#warning
     case ARCHIVE_ENTRY_TYPE_META:
-      String_delete(archiveIndexNode->meta.comment);
-      String_delete(archiveIndexNode->meta.scheduleUUID);
-      String_delete(archiveIndexNode->meta.jobUUID);
-      String_delete(archiveIndexNode->meta.userName);
-      String_delete(archiveIndexNode->meta.hostName);
+      HALT_INTERNAL_ERROR("wrong archive index node type");
       break;
     default:
       #ifndef NDEBUG
@@ -1773,8 +1752,6 @@ LOCAL void addArchiveIndexNode(ArchiveHandle *archiveHandle, ArchiveIndexNode *a
 * Name   : indexAddFile
 * Purpose: add file index node
 * Input  : archiveHandle   - archive handle
-*          entityId        - entity index id or INDEX_ID_NONE
-*          storageId       - storage index id
 *          name            - name
 *          size            - size [bytes]
 *          timeLastAccess  - last access date/time stamp [s]
@@ -1791,8 +1768,6 @@ LOCAL void addArchiveIndexNode(ArchiveHandle *archiveHandle, ArchiveIndexNode *a
 \***********************************************************************/
 
 LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
-                          IndexId       entityId,
-                          IndexId       storageId,
                           ConstString   name,
                           uint64        size,
                           uint64        timeLastAccess,
@@ -1808,8 +1783,6 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -1817,8 +1790,6 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndexNode->xxxentityId             = entityId;
-  archiveIndexNode->xxxstorageId            = storageId;
   archiveIndexNode->type                 = ARCHIVE_ENTRY_TYPE_FILE;
   archiveIndexNode->file.name            = String_duplicate(name);
   archiveIndexNode->file.size            = size;
@@ -1839,8 +1810,6 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
 * Name   : indexAddImage
 * Purpose: add image index node
 * Input  : archiveHandle  - archive handle
-*          entityId        - entity index id or INDEX_ID_NONE
-*          storageId       - storage index id
 *          imageName      - image name
 *          fileSystemType - file system type
 *          size           - size [bytes]
@@ -1853,8 +1822,6 @@ LOCAL Errors indexAddFile(ArchiveHandle *archiveHandle,
 \***********************************************************************/
 
 LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
-                           IndexId         entityId,
-                           IndexId         storageId,
                            ConstString     name,
                            FileSystemTypes fileSystemType,
                            int64           size,
@@ -1866,8 +1833,6 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -1875,8 +1840,6 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndexNode->xxxentityId              = entityId;
-  archiveIndexNode->xxxstorageId             = storageId;
   archiveIndexNode->type                  = ARCHIVE_ENTRY_TYPE_IMAGE;
   archiveIndexNode->image.name            = String_duplicate(name);
   archiveIndexNode->image.fileSystemType  = fileSystemType;
@@ -1893,8 +1856,6 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
 * Name   : indexAddDirectory
 * Purpose: add directory index node
 * Input  : archiveHandle   - archive handle
-*          entityId        - entity index id or INDEX_ID_NONE
-*          storageId       - storage index id
 *          directoryName   - name
 *          timeLastAccess  - last access date/time stamp [s]
 *          timeModified    - modified date/time stamp [s]
@@ -1908,8 +1869,6 @@ LOCAL Errors indexAddImage(ArchiveHandle   *archiveHandle,
 \***********************************************************************/
 
 LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
-                               IndexId       entityId,
-                               IndexId       storageId,
                                String        name,
                                uint64        timeLastAccess,
                                uint64        timeModified,
@@ -1922,8 +1881,6 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -1931,8 +1888,6 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndexNode->xxxentityId                  = entityId;
-  archiveIndexNode->xxxstorageId                 = storageId;
   archiveIndexNode->type                      = ARCHIVE_ENTRY_TYPE_DIRECTORY;
   archiveIndexNode->directory.name            = String_duplicate(name);
   archiveIndexNode->directory.timeLastAccess  = timeLastAccess;
@@ -1950,8 +1905,6 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
 * Name   : indexAddLink
 * Purpose: add link index node
 * Input  : archiveHandle   - archive handle
-*          entityId        - entity index id or INDEX_ID_NONE
-*          storageId       - storage index id
 *          name            - link name
 *          destinationName - destination name
 *          timeLastAccess  - last access date/time stamp [s]
@@ -1966,8 +1919,6 @@ LOCAL Errors indexAddDirectory(ArchiveHandle *archiveHandle,
 \***********************************************************************/
 
 LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
-                          IndexId       entityId,
-                          IndexId       storageId,
                           ConstString   name,
                           ConstString   destinationName,
                           uint64        timeLastAccess,
@@ -1981,8 +1932,6 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
   assert(destinationName != NULL);
 
@@ -1991,8 +1940,6 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndexNode->xxxentityId             = entityId;
-  archiveIndexNode->xxxstorageId            = storageId;
   archiveIndexNode->type                 = ARCHIVE_ENTRY_TYPE_LINK;
   archiveIndexNode->link.name            = String_duplicate(name);
   archiveIndexNode->link.destinationName = String_duplicate(destinationName);
@@ -2011,8 +1958,6 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
 * Name   : indexAddHardlink
 * Purpose: add hardlink index node
 * Input  : archiveHandle   - archive handle
-*          entityId        - entity index id or INDEX_ID_NONE
-*          storageId       - storage index id
 *          name            - name
 *          size            - size [bytes]
 *          timeLastAccess  - last access date/time stamp [s]
@@ -2029,8 +1974,6 @@ LOCAL Errors indexAddLink(ArchiveHandle *archiveHandle,
 \***********************************************************************/
 
 LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
-                              IndexId       entityId,
-                              IndexId       storageId,
                               ConstString   name,
                               uint64        size,
                               uint64        timeLastAccess,
@@ -2046,8 +1989,6 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -2055,8 +1996,6 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndexNode->xxxentityId                 = entityId;
-  archiveIndexNode->xxxstorageId                = storageId;
   archiveIndexNode->type                     = ARCHIVE_ENTRY_TYPE_HARDLINK;
   archiveIndexNode->hardlink.name            = String_duplicate(name);
   archiveIndexNode->hardlink.size            = size;
@@ -2077,8 +2016,6 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
 * Name   : indexAddSpecial
 * Purpose: add special index node
 * Input  : archiveHandle   - archive handle
-*          entityId        - entity index id or INDEX_ID_NONE
-*          storageId       - storage index id
 *          name            - name
 *          specialType     - special type; see FileSpecialTypes
 *          timeLastAccess  - last access date/time stamp [s]
@@ -2094,8 +2031,6 @@ LOCAL Errors indexAddHardlink(ArchiveHandle *archiveHandle,
 \***********************************************************************/
 
 LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
-                             IndexId          entityId,
-                             IndexId          storageId,
                              ConstString      name,
                              FileSpecialTypes specialType,
                              uint64           timeLastAccess,
@@ -2111,8 +2046,6 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
   ArchiveIndexNode *archiveIndexNode;
 
   assert(archiveHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
   archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
@@ -2120,8 +2053,6 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  archiveIndexNode->xxxentityId                = entityId;
-  archiveIndexNode->xxxstorageId               = storageId;
   archiveIndexNode->type                    = ARCHIVE_ENTRY_TYPE_SPECIAL;
   archiveIndexNode->special.name            = String_duplicate(name);
   archiveIndexNode->special.specialType     = specialType;
@@ -2133,64 +2064,6 @@ LOCAL Errors indexAddSpecial(ArchiveHandle    *archiveHandle,
   archiveIndexNode->special.permission      = permission;
   archiveIndexNode->special.major           = major;
   archiveIndexNode->special.minor           = minor;
-  addArchiveIndexNode(archiveHandle,archiveIndexNode);
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : xxxindexAddMeta
-* Purpose: add meta index node
-* Input  : archiveHandle   - archive handle
-*          entityId        - entity index id or INDEX_ID_NONE
-*          storageId       - storage index id
-*          hostName        - host name
-*          userName        - user name
-*          jobUUID         - job UUID
-*          scheduleUUID    - schedule UUID
-*          archiveType     - archive type
-*          createdDateTime - created date/time
-*          comment         - comment
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-//TODO: remove
-#warning
-LOCAL Errors xxxindexAddMeta(ArchiveHandle *archiveHandle,
-                          IndexId       entityId,
-                          IndexId       storageId,
-                          ConstString   hostName,
-                          ConstString   userName,
-                          ConstString   jobUUID,
-                          ConstString   scheduleUUID,
-                          ArchiveTypes  archiveType,
-                          uint64        createdDateTime,
-                          ConstString   comment
-                         )
-{
-  ArchiveIndexNode *archiveIndexNode;
-
-  assert(archiveHandle != NULL);
-  assert(INDEX_ID_IS_NONE(entityId) || Index_getType(entityId) == INDEX_TYPE_ENTITY);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
-
-  archiveIndexNode = LIST_NEW_NODE(ArchiveIndexNode);
-  if (archiveIndexNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  archiveIndexNode->xxxentityId             = entityId;
-  archiveIndexNode->xxxstorageId            = storageId;
-  archiveIndexNode->type                 = ARCHIVE_ENTRY_TYPE_META;
-  archiveIndexNode->meta.hostName        = String_duplicate(hostName);
-  archiveIndexNode->meta.userName        = String_duplicate(userName);
-  archiveIndexNode->meta.jobUUID         = String_duplicate(jobUUID);
-  archiveIndexNode->meta.scheduleUUID    = String_duplicate(scheduleUUID);
-  archiveIndexNode->meta.archiveType     = archiveType;
-  archiveIndexNode->meta.createdDateTime = createdDateTime;
-  archiveIndexNode->meta.comment         = String_duplicate(comment);
   addArchiveIndexNode(archiveHandle,archiveIndexNode);
 
   return ERROR_NONE;
@@ -3853,8 +3726,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         {
           // add file entry
           error = indexAddFile(archiveEntryInfo->archiveHandle,
-                               archiveEntryInfo->archiveHandle->entityId,
-                               archiveEntryInfo->archiveHandle->storageId,
                                archiveEntryInfo->file.chunkFileEntry.name,
                                archiveEntryInfo->file.chunkFileEntry.size,
                                archiveEntryInfo->file.chunkFileEntry.timeLastAccess,
@@ -4466,8 +4337,6 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         {
           // add image entry
           error = indexAddImage(archiveEntryInfo->archiveHandle,
-                                archiveEntryInfo->archiveHandle->entityId,
-                                archiveEntryInfo->archiveHandle->storageId,
                                 archiveEntryInfo->image.chunkImageEntry.name,
                                 archiveEntryInfo->image.chunkImageEntry.fileSystemType,
                                 archiveEntryInfo->image.chunkImageEntry.size,
@@ -5116,8 +4985,6 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
           STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
           {
             error = indexAddHardlink(archiveEntryInfo->archiveHandle,
-                                     archiveEntryInfo->archiveHandle->entityId,
-                                     archiveEntryInfo->archiveHandle->storageId,
                                      fileName,
                                      archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
                                      archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
@@ -12800,8 +12667,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
                   error = indexAddFile(archiveEntryInfo->archiveHandle,
-                                       archiveEntryInfo->archiveHandle->entityId,
-                                       archiveEntryInfo->archiveHandle->storageId,
                                        archiveEntryInfo->file.chunkFileEntry.name,
                                        archiveEntryInfo->file.chunkFileEntry.size,
                                        archiveEntryInfo->file.chunkFileEntry.timeLastAccess,
@@ -12949,8 +12814,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
                   error = indexAddImage(archiveEntryInfo->archiveHandle,
-                                        archiveEntryInfo->archiveHandle->entityId,
-                                        archiveEntryInfo->archiveHandle->storageId,
                                         archiveEntryInfo->image.chunkImageEntry.name,
                                         archiveEntryInfo->image.chunkImageEntry.fileSystemType,
                                         archiveEntryInfo->image.chunkImageEntry.size,
@@ -13014,8 +12877,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
                   error = indexAddDirectory(archiveEntryInfo->archiveHandle,
-                                            archiveEntryInfo->archiveHandle->entityId,
-                                            archiveEntryInfo->archiveHandle->storageId,
                                             archiveEntryInfo->directory.chunkDirectoryEntry.name,
                                             archiveEntryInfo->directory.chunkDirectoryEntry.timeLastAccess,
                                             archiveEntryInfo->directory.chunkDirectoryEntry.timeModified,
@@ -13057,8 +12918,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
                   error = indexAddLink(archiveEntryInfo->archiveHandle,
-                                       archiveEntryInfo->archiveHandle->entityId,
-                                       archiveEntryInfo->archiveHandle->storageId,
                                        archiveEntryInfo->link.chunkLinkEntry.name,
                                        archiveEntryInfo->link.chunkLinkEntry.destinationName,
                                        archiveEntryInfo->link.chunkLinkEntry.timeLastAccess,
@@ -13186,8 +13045,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                   STRINGLIST_ITERATE(archiveEntryInfo->hardLink.fileNameList,stringNode,fileName)
                   {
                     error = indexAddHardlink(archiveEntryInfo->archiveHandle,
-                                             archiveEntryInfo->archiveHandle->entityId,
-                                             archiveEntryInfo->archiveHandle->storageId,
                                              fileName,
                                              archiveEntryInfo->hardLink.chunkHardLinkEntry.size,
                                              archiveEntryInfo->hardLink.chunkHardLinkEntry.timeLastAccess,
@@ -13255,8 +13112,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
                 if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
                 {
                   error = indexAddSpecial(archiveEntryInfo->archiveHandle,
-                                          archiveEntryInfo->archiveHandle->entityId,
-                                          archiveEntryInfo->archiveHandle->storageId,
                                           archiveEntryInfo->special.chunkSpecialEntry.name,
                                           archiveEntryInfo->special.chunkSpecialEntry.specialType,
                                           archiveEntryInfo->special.chunkSpecialEntry.timeLastAccess,
@@ -13294,25 +13149,6 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
 
               // unlock archive
               Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
-
-              // store in index database
-              if (error == ERROR_NONE)
-              {
-                if (archiveEntryInfo->archiveHandle->indexHandle != NULL)
-                {
-                  error = xxxindexAddMeta(archiveEntryInfo->archiveHandle,
-                                       archiveEntryInfo->archiveHandle->entityId,
-                                       archiveEntryInfo->archiveHandle->storageId,
-                                       archiveEntryInfo->meta.chunkMetaEntry.hostName,
-                                       archiveEntryInfo->meta.chunkMetaEntry.userName,
-                                       archiveEntryInfo->meta.chunkMetaEntry.jobUUID,
-                                       archiveEntryInfo->meta.chunkMetaEntry.scheduleUUID,
-                                       archiveEntryInfo->meta.chunkMetaEntry.archiveType,
-                                       archiveEntryInfo->meta.chunkMetaEntry.createdDateTime,
-                                       archiveEntryInfo->meta.chunkMetaEntry.comment
-                                      );
-                }
-              }
             }
 
             // free resources
@@ -14927,8 +14763,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // add to index database
           indexAddFile(&archiveHandle,
-                       INDEX_ID_NONE,
-                       storageId,
                        fileName,
                        fileInfo.size,
                        fileInfo.timeLastAccess,
@@ -14978,8 +14812,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // add to index database
           indexAddImage(&archiveHandle,
-                        INDEX_ID_NONE,
-                        storageId,
                         imageName,
                         fileSystemType,
                         deviceInfo.size,
@@ -15015,8 +14847,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // add to index database
           indexAddDirectory(&archiveHandle,
-                            INDEX_ID_NONE,
-                            storageId,
                             directoryName,
                             fileInfo.timeLastAccess,
                             fileInfo.timeModified,
@@ -15055,8 +14885,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // add to index database
           indexAddLink(&archiveHandle,
-                       INDEX_ID_NONE,
-                       storageId,
                        linkName,
                        destinationName,
                        fileInfo.timeLastAccess,
@@ -15107,8 +14935,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           STRINGLIST_ITERATE(&fileNameList,stringNode,name)
           {
             indexAddHardlink(&archiveHandle,
-                             INDEX_ID_NONE,
-                             storageId,
                              name,
                              fileInfo.size,
                              fileInfo.timeLastAccess,
@@ -15155,8 +14981,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // add to index database
           indexAddSpecial(&archiveHandle,
-                          INDEX_ID_NONE,
-                          storageId,
                           fileName,
                           fileInfo.type,
                           fileInfo.timeLastAccess,
@@ -15252,7 +15076,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                       &entityId
                                      );
             }
-fprintf(stderr,"%s, %d: entityId=%llx\n",__FILE__,__LINE__,entityId);
           }
           if (error != ERROR_NONE)
           {

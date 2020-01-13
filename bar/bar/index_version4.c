@@ -3,7 +3,7 @@
 * $Revision: 6281 $
 * $Date: 2016-08-28 12:43:29 +0200 (Sun, 28 Aug 2016) $
 * $Author: torsten $
-* Contents: index functions
+* Contents: index import functions
 * Systems: all
 *
 \***********************************************************************/
@@ -217,7 +217,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                                                                            toEntryId = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                                                                            assert(toEntryId != DATABASE_ID_NONE);
-                                                                                           DIMPORT("import entry %ld -> %ld",fromFileId,toEntryId);
+                                                                                           DIMPORT("import entry %ld -> %ld",Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE),toEntryId);
 
                                                                                            DIMPORT("import file entry %ld: %s",toEntryId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
                                                                                            error = Database_execute(&newIndexHandle->databaseHandle,
@@ -307,7 +307,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                            toEntryId  = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                                                                            assert(toEntryId != DATABASE_ID_NONE);
                                                                                            blockSize  = (ulong)Database_getTableColumnListInt64(fromColumnList,"blockSize",DATABASE_ID_NONE);
-                                                                                           DIMPORT("import entry %ld -> %ld",fromImageId,toEntryId);
+                                                                                           DIMPORT("import entry %ld -> %ld",Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE),toEntryId);
 
                                                                                            DIMPORT("import image entry %ld: %s",toEntryId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
                                                                                            error = Database_execute(&newIndexHandle->databaseHandle,
@@ -457,7 +457,7 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
 
                                                                                            toEntryId   = Database_getTableColumnListId(toColumnList,"id",DATABASE_ID_NONE);
                                                                                            assert(toEntryId != DATABASE_ID_NONE);
-                                                                                           DIMPORT("import entry %ld -> %ld",fromHardlinkId,toEntryId);
+                                                                                           DIMPORT("import entry %ld -> %ld",Database_getTableColumnListId(fromColumnList,"id",DATABASE_ID_NONE),toEntryId);
 
                                                                                            DIMPORT("import hardlink entry %ld: %s",toEntryId,Database_getTableColumnListCString(fromColumnList,"name",NULL));
                                                                                            error = Database_execute(&newIndexHandle->databaseHandle,
@@ -580,10 +580,6 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                                                         );
                                                             }
 
-//TODO
-#warning
-//                               Index_updateStorageInfos();
-
                                                             return error;
                                                           },NULL),
                                                           CALLBACK_(getCopyPauseCallback(),NULL),
@@ -591,10 +587,6 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                           "WHERE entityId=%lld",
                                                           fromEntityId
                                                          );
-
-//TODO
-#warning
-//                               Index_updateEntityInfos();
 
                                t1 = Misc_getTimestamp();
                                if (error != ERROR_NONE)
@@ -1047,10 +1039,6 @@ LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIn
                                                             fromStorageId
                                                            );
                                }
-
-//TODO
-#warning
-//                               Index_updateStorageInfos();
 
                                (void)Index_unlockEntity(newIndexHandle,entityId);
 

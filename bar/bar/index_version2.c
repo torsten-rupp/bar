@@ -3,7 +3,7 @@
 * $Revision: 6281 $
 * $Date: 2016-08-28 12:43:29 +0200 (Sun, 28 Aug 2016) $
 * $Author: torsten $
-* Contents: index functions
+* Contents: index import functions
 * Systems: all
 *
 \***********************************************************************/

@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <stdarg.h>
 #include <inttypes.h>
 #include <assert.h>
 
@@ -181,6 +182,10 @@ LOCAL const char *INDEX_ENTRY_NEWEST_SORT_MODE_COLUMNS[] =
 #define SERVER_IO_DEBUG_LEVEL 1
 #define SERVER_IO_TIMEOUT     (30LL*MS_PER_SECOND)
 
+#ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
+  #define IMPORT_INDEX_LOG_FILENAME "import_index.log"
+#endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
+
 /***************************** Datatypes *******************************/
 
 // index open modes
@@ -220,6 +225,10 @@ LOCAL uint64                     importLastProgressTimestamp;
   uint       indexBusyStackTraceSize;
 #endif /* not NDEBUG */
 
+#ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
+  LOCAL FILE *logImportIndexHandle;
+#endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
+
 /****************************** Macros *********************************/
 
 /***********************************************************************\
@@ -236,9 +245,7 @@ LOCAL uint64                     importLastProgressTimestamp;
   #define DIMPORT(format,...) \
     do \
     { \
-      fprintf(stderr,"DEBUG import %s, %4d: ",__FILE__,__LINE__); \
-      fprintf(stderr,format, ## __VA_ARGS__); \
-      fprintf(stderr,"\n"); \
+      logImportIndex(__FILE__,__LINE__,format, ## __VA_ARGS__); \
     } \
     while (0)
 #else /* not INDEX_DEBUG_IMPORT_OLD_DATABASE */
@@ -760,6 +767,35 @@ LOCAL void logImportProgress(const char *format, ...)
   importProgress(NULL);
 }
 
+#ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
+/***********************************************************************\
+* Name   : logImportIndex
+* Purpose: log import index
+* Input  : fileName - file name
+*          lineNb   - line number
+*          format   - format string
+*          ...      - optional arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format, ...)
+{
+  va_list arguments;
+
+  if (logImportIndexHandle != NULL)
+  {
+    va_start(arguments,format);
+    fprintf(logImportIndexHandle,"DEBUG import %s, %4lu: ",fileName,lineNb);
+    vfprintf(logImportIndexHandle,format,arguments);
+    fprintf(logImportIndexHandle,"\n");
+    va_end(arguments);
+    fflush(logImportIndexHandle);
+  }
+}
+#endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
+
 #include "index_version1.c"
 #include "index_version2.c"
 #include "index_version3.c"
@@ -767,6 +803,22 @@ LOCAL void logImportProgress(const char *format, ...)
 #include "index_version5.c"
 #include "index_version6.c"
 #include "index_version7.c"
+
+/***********************************************************************\
+* Name   : import current version
+* Purpose: upgrade and import index
+* Input  : oldIndexHandle,newIndexHandle - index handles
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
+                                  IndexHandle *newIndexHandle
+                                 )
+{
+  return upgradeFromVersion7(oldIndexHandle,newIndexHandle);
+}
 
 /***********************************************************************\
 * Name   : importIndex
@@ -2759,7 +2811,6 @@ LOCAL void indexThreadCode(void)
   assert(indexDatabaseFileName != NULL);
 
   // open index
-//  error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE,INDEX_PURGE_TIMEOUT);
   error = openIndex(&indexHandle,indexDatabaseFileName,NULL,INDEX_OPEN_MODE_READ_WRITE|INDEX_OPEN_MODE_FOREIGN_KEYS,INDEX_PURGE_TIMEOUT);
   if (error != ERROR_NONE)
   {
@@ -2796,6 +2847,11 @@ LOCAL void indexThreadCode(void)
     String_delete(directoryName);
 
     // process all *.oldNNN files
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+    #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
+      logImportIndexHandle = fopen(IMPORT_INDEX_LOG_FILENAME,"w");
+    #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
     i                   = 0;
     oldDatabaseFileName = String_new();
     oldDatabaseCount    = 0;
@@ -2815,6 +2871,7 @@ LOCAL void indexThreadCode(void)
                       "Started import old index databases"
                      );
         }
+        DIMPORT("import %s -> %s",String_cString(oldDatabaseFileName),indexDatabaseFileName);
         error = importIndex(&indexHandle,oldDatabaseFileName);
         if (error == ERROR_NONE)
         {
@@ -2833,6 +2890,12 @@ LOCAL void indexThreadCode(void)
         i++;
       }
     }
+    #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
+      if (logImportIndexHandle != NULL)
+      {
+        fclose(logImportIndexHandle);
+      }
+    #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
     if (i > 0)
     {
       plogMessage(NULL,  // logHandle
@@ -12592,8 +12655,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       entryId = Database_getLastRowId(&indexHandle->databaseHandle);
 
       // add directory entry
-fprintf(stderr,"%s, %d: insert direct %lld %lld: %s\n",__FILE__,__LINE__,entryId,Index_getDatabaseId(storageId),String_cString(name));
-if (Index_getDatabaseId(storageId) > 10000) { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3"); }
+#warning remove
+//fprintf(stderr,"%s, %d: insert direct %lld %lld: %s\n",__FILE__,__LINE__,entryId,Index_getDatabaseId(storageId),String_cString(name));
+//if (Index_getDatabaseId(storageId) > 10000) { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3"); }
 
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction

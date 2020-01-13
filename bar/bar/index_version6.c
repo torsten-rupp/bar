@@ -44,6 +44,332 @@
   extern "C" {
 #endif
 
+#if 0
+/***********************************************************************\
+* Name   : upgradeFromVersion7_importFileEntry
+* Purpose: import file entry
+* Input  : oldIndexHandle,newIndexHandle - index handles
+*          storageIdDictionary           - storage id dictionary
+*          fromEntryId,toEntry           - from/to entry id
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
+                                               IndexHandle *newIndexHandle,
+                                               Dictionary  *storageIdDictionary,
+                                               DatabaseId  fromStorageId,
+                                               DatabaseId  toStorageId
+                                              )
+{
+  typedef union
+  { 
+    void       *value;
+    DatabaseId *id;
+  } ValueData;
+
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  int64               size;
+  DatabaseId          fromStorageId;
+  ValueData           valueData;
+  DatabaseId          toStorageId;
+  int64               fragmentOffset;
+  int64               fragmentSize;
+
+  error = Database_prepare(&databaseQueryHandle,
+                          &oldIndexHandle->databaseHandle,
+                          "SELECT entries.id, \
+                                  entries.name, \
+                                  entries.type, \
+                                  entries.timeLastAccess, \
+                                  entries.timeModified, \
+                                  entries.timeLastChanged, \
+                                  entries.userId, \
+                                  entries.groupId, \
+                                  entries.permission, \
+                                  \
+                                  fileEntries.size, \
+                                  fileEntries.fragmentOffset, \
+                                  fileEntries.fragmentSize, \
+                                  \
+                                  imageEntries.size, \
+                                  imageEntries.fileSystemType, \
+                                  imageEntries.blockSize, \
+                                  imageEntries.blockOffset, \
+                                  imageEntries.blockCount, \
+                                  \
+                                  linkEntries.destinationName, \
+                                  \
+                                  hardlinkEntries.size, \
+                                  hardlinkEntries.fragmentOffset, \
+                                  hardlinkEntries.fragmentSize, \
+                                  \
+                                  specialEntries.specialType, \
+                                  specialEntries.major, \
+                                  specialEntries.minor, \
+                           FROM entries \
+                             LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
+                             LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
+                             LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                             LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
+                             LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
+                             LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
+                           WHERE entries.storageId=%lld \
+                          ",
+                          fromStorageId
+                         );
+  if (error == ERROR_NONE)
+  {
+    if (Database_getNextRow(&databaseQueryHandle,
+                            "%lld %lld %lld %lld",
+                            &size,
+                            &fromStorageId,
+                            &fragmentOffset,
+                            &fragmentSize
+       )
+    {
+      DIMPORT("import entry %ld -> %ld: %"PRIi64"",fromEntryId,toEntryId,size);
+
+      switch (type)
+      {
+        case INDEX_TYPE_FILE:
+          error = upgradeFromVersion7_importFileEntry(oldIndexHandle,
+                                                      newIndexHandle,
+                                                      &storageIdDictionary,
+                                                      fromEntryId,
+                                                      toEntryId
+                                                     );
+          break;
+        case INDEX_TYPE_IMAGE:
+          error = upgradeFromVersion7_importImageEntry(oldIndexHandle,
+                                                       newIndexHandle,
+                                                       &storageIdDictionary,
+                                                       fromEntryId,
+                                                       toEntryId
+                                                      );
+          break;
+        case INDEX_TYPE_DIRECTORY:
+          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                     &newIndexHandle->databaseHandle,
+                                     "directoryEntries",
+                                     "directoryEntries",
+                                     FALSE,  // transaction flag
+                                     &duration,
+                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                     {
+                                       DatabaseId fromStorageId;
+                                       DatabaseId toStorageId;
+
+                                       UNUSED_VARIABLE(fromColumnList);
+                                       UNUSED_VARIABLE(userData);
+
+                                       fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                       assert(fromStorageId != DATABASE_ID_NONE);
+                                       if (Dictionary_find(&storageIdDictionary,
+                                                           &fromStorageId,
+                                                           sizeof(DatabaseId),
+                                                           &valueData.value,
+                                                           NULL
+                                                          )
+                                          )
+                                       {
+                                         toStorageId = *valueData.id;
+                                       }
+                                       else
+                                       {
+                                         toStorageId = DATABASE_ID_NONE;
+                                       }
+
+                                       (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
+                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     CALLBACK_(NULL,NULL),  // post-copy
+                                     CALLBACK_(NULL,NULL),  // pause
+                                     CALLBACK_(NULL,NULL),  // progress
+                                     "WHERE entryId=%lld LIMIT 0,1",
+                                     fromEntryId
+                                    );
+          break;
+        case INDEX_TYPE_LINK:
+          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                     &newIndexHandle->databaseHandle,
+                                     "linkEntries",
+                                     "linkEntries",
+                                     FALSE,  // transaction flag
+                                     &duration,
+                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                     {
+                                       DatabaseId fromStorageId;
+                                       DatabaseId toStorageId;
+
+                                       UNUSED_VARIABLE(fromColumnList);
+                                       UNUSED_VARIABLE(userData);
+
+                                       fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                       assert(fromStorageId != DATABASE_ID_NONE);
+                                       if (Dictionary_find(&storageIdDictionary,
+                                                           &fromStorageId,
+                                                           sizeof(DatabaseId),
+                                                           &valueData.value,
+                                                           NULL
+                                                          )
+                                          )
+                                       {
+                                         toStorageId = *valueData.id;
+                                       }
+                                       else
+                                       {
+                                         toStorageId = DATABASE_ID_NONE;
+                                       }
+
+                                       (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
+                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     CALLBACK_(NULL,NULL),  // post-copy
+                                     CALLBACK_(NULL,NULL),  // pause
+                                     CALLBACK_(NULL,NULL),  // progress
+                                     "WHERE entryId=%lld LIMIT 0,1",
+                                     fromEntryId
+                                    );
+          break;
+        case INDEX_TYPE_HARDLINK:
+          error = upgradeFromVersion7_importHardlinkEntry(oldIndexHandle,
+                                                          newIndexHandle,
+                                                          &storageIdDictionary,
+                                                          fromEntryId,
+                                                          toEntryId
+                                                         );
+          break;
+        case INDEX_TYPE_SPECIAL:
+          error = Database_copyTable(&oldIndexHandle->databaseHandle,
+                                     &newIndexHandle->databaseHandle,
+                                     "specialEntries",
+                                     "specialEntries",
+                                     FALSE,  // transaction flag
+                                     &duration,
+                                     CALLBACK_INLINE(Errors,(const DatabaseColumnList *fromColumnList, const DatabaseColumnList *toColumnList, void *userData),
+                                     {
+                                       DatabaseId fromStorageId;
+                                       DatabaseId toStorageId;
+
+                                       UNUSED_VARIABLE(fromColumnList);
+                                       UNUSED_VARIABLE(userData);
+
+                                       fromStorageId = Database_getTableColumnListId(fromColumnList,"storageId",DATABASE_ID_NONE);
+                                       assert(fromStorageId != DATABASE_ID_NONE);
+                                       if (Dictionary_find(&storageIdDictionary,
+                                                           &fromStorageId,
+                                                           sizeof(DatabaseId),
+                                                           &valueData.value,
+                                                           NULL
+                                                          )
+                                          )
+                                       {
+                                         toStorageId = *valueData.id;
+                                       }
+                                       else
+                                       {
+                                         toStorageId = DATABASE_ID_NONE;
+                                       }
+
+                                       (void)Database_setTableColumnListInt64(toColumnList,"entryId",toEntryId);
+                                       (void)Database_setTableColumnListInt64(toColumnList,"storageId",toStorageId);
+
+                                       return ERROR_NONE;
+                                     },NULL),
+                                     CALLBACK_(NULL,NULL),  // post-copy
+                                     CALLBACK_(NULL,NULL),  // pause
+                                     CALLBACK_(NULL,NULL),  // progress
+                                     "WHERE entryId=%lld LIMIT 0,1",
+                                     fromEntryId
+                                    );
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* not NDEBUG */
+          break;
+      }
+
+      error = Database_execute(&newIndexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO fileEntries \
+                                  ( \
+                                   entryId, \
+                                   size \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %lld \
+                                  ); \
+                               ",
+                               toEntryId,
+                               size
+                              );
+      if (error == ERROR_NONE)
+      {
+        do
+        {
+          if (Dictionary_find(storageIdDictionary,
+                              &fromStorageId,
+                              sizeof(DatabaseId),
+                              &valueData.value,
+                              NULL
+                             )
+             )
+          {
+            toStorageId = *valueData.id;
+          }
+          else
+          {
+            toStorageId = DATABASE_ID_NONE;
+          }
+
+          DIMPORT("import file fragment %ld -> %ld: %"PRIi64", %"PRIi64"",fromEntryId,toEntryId,fragmentOffset,fragmentSize);
+          error = Database_execute(&newIndexHandle->databaseHandle,
+                                   CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                   NULL,  // changedRowCount
+                                   "INSERT INTO entryFragmentes \
+                                      ( \
+                                       entryId, \
+                                       storageId, \
+                                       offset, \
+                                       size \
+                                      ) \
+                                    VALUES \
+                                      ( \
+                                       %lld, \
+                                       %lld, \
+                                       %lld, \
+                                       %lld \
+                                      ); \
+                                   ",
+                                   toEntryId,
+                                   toStorageId,
+                                   fragmentOffset,
+                                   fragmentSize
+                                  );
+         }
+         while (   (error == ERROR_NONE)
+                && Database_getNextRow(&databaseQueryHandle,"%lld %lld %lld %lld",&size,&fromStorageId,&fragmentOffset,&fragmentSize)
+               );
+       }
+    }
+    Database_finalize(&databaseQueryHandle);
+  }
+
+  return error;
+}
+#endif
+
 /***********************************************************************\
 * Name   : upgradeFromVersion6
 * Purpose: upgrade index from version 6 to current version
@@ -59,6 +385,7 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
 {
   Errors  error;
   int64   entityCount,storageCount,entriesCount;
+  int64   fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
   uint64  duration;
   IndexId toEntityId;
 
@@ -121,6 +448,66 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
   {
     return error;
   }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &fileEntryCount,
+                                "fileEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &imageEntryCount,
+                                "imageEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &directoryEntryCount,
+                                "directoryEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &linkEntryCount,
+                                "linkEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &hardlinkEntryCount,
+                                "hardlinkEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &specialEntryCount,
+                                "specialEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -129,8 +516,26 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
               storageCount,
               entriesCount
              );
+  DIMPORT("import %"PRIu64" entities",         entityCount);
+  DIMPORT("import %"PRIu64" storages",         storageCount);
+  DIMPORT("import %"PRIu64" entries",          entriesCount);
+  DIMPORT("import %"PRIu64" file entries",     fileEntryCount);
+  DIMPORT("import %"PRIu64" image entries",    imageEntryCount);
+  DIMPORT("import %"PRIu64" directory entries",directoryEntryCount);
+  DIMPORT("import %"PRIu64" link entries",     linkEntryCount);
+  DIMPORT("import %"PRIu64" hardlink entries", hardlinkEntryCount);
+  DIMPORT("import %"PRIu64" special entries",  specialEntryCount);
 
-  initImportProgress(entityCount+storageCount+entriesCount);
+  initImportProgress(entityCount+
+                     storageCount+
+                     entriesCount+
+                     fileEntryCount+
+                     imageEntryCount+
+                     directoryEntryCount+
+                     linkEntryCount+
+                     hardlinkEntryCount+
+                     specialEntryCount
+                    );
 
   // transfer entities with storages and entries
   duration = 0LL;

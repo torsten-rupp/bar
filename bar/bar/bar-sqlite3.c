@@ -4075,17 +4075,21 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                         {
                                                           case INDEX_CONST_TYPE_FILE:
                                                             printf("      Size           : %s\n",values[3]);
-                                                            printf("      Fragment offset: %s\n",values[4]);
-                                                            printf("      Fragment size  : %s\n",values[5]);
+                                                            printf("      Fragment offset: %s\n",values[6]);
+                                                            printf("      Fragment size  : %s\n",values[7]);
                                                             break;
                                                           case INDEX_CONST_TYPE_IMAGE:
-                                                            printf("      Size           : %s\n",values[6]);
+                                                            printf("      Size           : %s\n",values[4]);
                                                             break;
                                                           case INDEX_CONST_TYPE_DIRECTORY:
                                                             break;
                                                           case INDEX_CONST_TYPE_LINK:
                                                             break;
                                                           case INDEX_CONST_TYPE_HARDLINK:
+                                                            printf("      Size           : %s\n",values[5]);
+                                                            printf("      Fragment offset: %s\n",values[6]);
+                                                            printf("      Fragment size  : %s\n",values[7]);
+                                                            break;
                                                             break;
                                                           case INDEX_CONST_TYPE_SPECIAL:
                                                             break;
@@ -4102,18 +4106,19 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                               entries.type, \
                                                               \
                                                               fileEntries.size, \
+                                                              imageEntries.size, \
+                                                              hardlinkEntries.size, \
                                                               entryFragments.offset, \
-                                                              entryFragments.size, \
-                                                              imageEntries.size \
+                                                              entryFragments.size \
                                                               \
                                                        FROM entries \
-                                                       LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                        LEFT JOIN fileEntries      ON fileEntries.entryId     =entries.id \
                                                        LEFT JOIN imageEntries     ON imageEntries.entryId    =entries.id \
                                                        LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
                                                        LEFT JOIN linkEntries      ON linkEntries.entryId     =entries.id \
                                                        LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId =entries.id \
                                                        LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id \
+                                                       LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                        WHERE     entries.entityId=%lld \
                                                       ",
                                                       entityId
