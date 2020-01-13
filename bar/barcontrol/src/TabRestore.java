@@ -3872,12 +3872,11 @@ Dprintf.dprintf("");
             {
               switch (widgetEntryTable.indexOf(tableColumn))
               {
-                case 0:  sortMode[0] = "ARCHIVE";      break;
-                case 1:  sortMode[0] = "NAME";         break;
-                case 2:  sortMode[0] = "TYPE";         break;
-                case 3:  sortMode[0] = "SIZE";         break;
-                case 4:  sortMode[0] = "LAST_CHANGED"; break;
-                case 5:  sortMode[0] = "FRAGMENT";     break;
+                case 0:  sortMode[0] = "NAME";         break;
+                case 1:  sortMode[0] = "TYPE";         break;
+                case 2:  sortMode[0] = "SIZE";         break;
+                case 3:  sortMode[0] = "LAST_CHANGED"; break;
+                case 4:  sortMode[0] = "FRAGMENT";     break;
                 default: sortMode[0] = "NAME";         break;
               }
 
@@ -5565,15 +5564,17 @@ Dprintf.dprintf("");
         public void widgetSelected(SelectionEvent selectionEvent)
         {
           TableColumn         tableColumn         = (TableColumn)selectionEvent.widget;
-          IndexDataComparator indexDataComparator = new IndexDataComparator(widgetStorageTable,tableColumn);
-          synchronized(widgetStorageTable)
+          Table               table               = tableColumn.getParent();
+          IndexDataComparator indexDataComparator = new IndexDataComparator(table,tableColumn);
+
+          synchronized(table)
           {
             {
               BARControl.waitCursor();
             }
             try
             {
-              Widgets.sortTableColumn(widgetStorageTable,tableColumn,indexDataComparator);
+              Widgets.sortTableColumn(table,tableColumn,indexDataComparator);
             }
             finally
             {
