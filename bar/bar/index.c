@@ -317,6 +317,20 @@ LOCAL uint64                     importLastProgressTimestamp;
 #endif
 
 /***********************************************************************\
+* Name   : isIndexInUse
+* Purpose: check if index is in use
+* Input  : -
+* Output : -
+* Return : TRUE iff index is in use
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE bool isIndexInUse(void)
+{
+  return indexUseCount > 0;
+}
+
+/***********************************************************************\
 * Name   : busyHandler
 * Purpose: index busy handler
 * Input  : userData - user data
@@ -1692,12 +1706,13 @@ return ERROR_NONE;
 * Name   : purge
 * Purpose: purge with delay/check if index-usage
 * Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
+*          doneFlag       - done flag variable (can be NULL)
+*          deletedCounter - deleted entries count variable (can be NULL)
 *          tableName      - table name
 *          filter         - filter string
 *          ...            - optional arguments for filter
-* Output : doneFlag - set to FALSE if delete not completely done
+* Output : doneFlag       - set to FALSE if delete not completely done
+*          deletedCounter - updated deleted entries count
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
@@ -1729,6 +1744,12 @@ LOCAL Errors purge(IndexHandle *indexHandle,
   {
     changedRowCount = 0;
 //Database_debugEnable(&indexHandle->databaseHandle,TRUE);
+fprintf(stderr,"%s, %d: xxx DELETE FROM %s \
+                              WHERE %s \
+                              LIMIT 64 \
+                             \n",
+                             __FILE__,__LINE__,tableName,
+                             String_cString(filterString));
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              &changedRowCount,
@@ -1746,7 +1767,7 @@ LOCAL Errors purge(IndexHandle *indexHandle,
     }
 //fprintf(stderr,"%s, %d: tableName=%s indexUseCount=%d changedRowCount=%d doneFlag=%d\n",__FILE__,__LINE__,tableName,indexUseCount,changedRowCount,(doneFlag != NULL) ? *doneFlag : -1);
   }
-  while (   (indexUseCount == 0)
+  while (   !isIndexInUse()
          && (error == ERROR_NONE)
          && (changedRowCount > 0)
         );
@@ -2344,7 +2365,8 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
                           "entities",
                           "entities.id",
                           "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           WHERE uuids.id=%lld \
+                           WHERE     uuids.id=%lld \
+                                 AND entities.id!=0 \
                           ",
                           Index_getDatabaseId(uuidId)
                          );
@@ -2353,8 +2375,10 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
     Array_done(&databaseIds);
     return error;
   }
+fprintf(stderr,"%s, %d: uuid=%lld\n",__FILE__,__LINE__,Index_getDatabaseId(uuidId));
   ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: databaseId=%lld\n",__FILE__,__LINE__,databaseId);
     error = pruneEntity(indexHandle,doneFlag,deletedCounter,databaseId);
   }
   if (error != ERROR_NONE)
@@ -2706,9 +2730,9 @@ LOCAL Errors rebuildNewestInfo(IndexHandle *indexHandle)
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
                                 NULL,  // indexIds
-                                0,  // indexIdCount
+                                0L,  // indexIdCount
                                 NULL,  // entryIds
-                                0,  // entryIdCount
+                                0L,  // entryIdCount
                                 INDEX_TYPE_SET_ANY_ENTRY,
                                 NULL,  // entryPattern,
                                 FALSE,  // newestOnly
@@ -2973,7 +2997,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
           deletedCounter = 0LL;
           do
           {
-            if (indexUseCount == 0)
+            if (!isIndexInUse())
             {
               // Note: do not use INDEX_DOX because of indexUseCount
               error = Index_beginTransaction(&indexHandle,WAIT_FOREVER);
@@ -3114,7 +3138,7 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
           }
           while ((error == ERROR_NONE) && !doneFlag && !quitFlag);
         }
-        if ((indexUseCount > 0) || quitFlag)
+        if (isIndexInUse() || quitFlag)
         {
           break;
         }
@@ -5653,11 +5677,11 @@ Errors Index_flush(IndexHandle *indexHandle)
 }
 
 bool Index_containsType(const IndexId indexIds[],
-                        uint          indexIdCount,
+                        ulong         indexIdCount,
                         IndexTypes    indexType
                        )
 {
-  uint i;
+  ulong i;
 
   assert(indexIds != NULL);
 
@@ -7732,7 +7756,7 @@ Errors Index_getEntitiesInfos(IndexHandle   *indexHandle,
 //TODO: remove?
                               ConstString   jobUUID,
                               const IndexId indexIds[],
-                              uint          indexIdCount,
+                              ulong         indexIdCount,
                               ConstString   name,
                               ulong         *totalStorageCount,
                               uint64        *totalStorageSize,
@@ -7842,6 +7866,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   // get ordering
   appendOrdering(orderString,TRUE,"entities.created",ordering);
 
+fprintf(stderr,"%s, %d: --- Index_initListEntities\n",__FILE__,__LINE__);
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
@@ -7864,7 +7889,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                                LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
                              WHERE          %S \
-                                   entities.AND deletedFlag!=1 \
+                                   AND entities.deletedFlag!=1 \
                              GROUP BY entities.id \
                              %S \
                              LIMIT %llu,%llu \
@@ -7877,16 +7902,17 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   });
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     doneIndexQueryHandle(indexQueryHandle);
     String_delete(orderString);
     String_delete(filterString);
     String_delete(ftsName);
     return error;
   }
-//#warning
-//#ifndef NDEBUG
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-//#endif
+#warning
+#ifndef NDEBUG
+Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+#endif
 
   // free resources
   String_delete(orderString);
@@ -8331,7 +8357,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               ConstString   jobUUID,
                               ConstString   scheduleUUID,
                               const IndexId indexIds[],
-                              uint          indexIdCount,
+                              ulong         indexIdCount,
                               IndexStateSet indexStateSet,
                               IndexModeSet  indexModeSet,
                               ConstString   name,
@@ -8345,7 +8371,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   String              ftsName;
   String              filterString;
   String              uuidIdsString,entityIdsString,storageIdsString;
-  uint                i;
+  ulong               i;
   String              filterIdsString;
   String              indexStateSetString;
   String              indexModeSetString;
@@ -8358,7 +8384,7 @@ uint64 t0,t1;
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
   assert(INDEX_ID_IS_ANY(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
-  assert((indexIdCount == 0) || (indexIds != NULL));
+  assert((indexIdCount == 0L) || (indexIds != NULL));
 
 t0=Misc_getTimestamp();
   // init variables
@@ -8612,7 +8638,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               ConstString           jobUUID,
                               ConstString           scheduleUUID,
                               const IndexId         indexIds[],
-                              uint                  indexIdCount,
+                              ulong                 indexIdCount,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
                               ConstString           hostName,
@@ -8631,13 +8657,13 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   String uuidIdsString,entityIdsString,storageIdsString;
   String filterIdsString;
   Errors error;
-  uint   i;
+  ulong  i;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
   assert(INDEX_ID_IS_ANY(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
-  assert((indexIdCount == 0) || (indexIds != NULL));
+  assert((indexIdCount == 0L) || (indexIds != NULL));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -9167,7 +9193,6 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
   #endif
   ArrayIterator arrayIterator;
   DatabaseId    entryId;
-fprintf(stderr,"%s, %d: Index_clearStorage storageId=%ld\n",__FILE__,__LINE__,storageId);
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -9179,74 +9204,63 @@ fprintf(stderr,"%s, %d: Index_clearStorage storageId=%ld\n",__FILE__,__LINE__,st
   }
 
   Array_init(&entryIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  INDEX_DOX(error,
-            indexHandle,
+  do
   {
-    do
+    doneFlag = TRUE;
+
+    // start transaction
+    error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
+    if (error != ERROR_NONE)
     {
-      doneFlag = TRUE;
+      break;
+    }
 
-      error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
-      if (error == ERROR_NONE)
+    #ifndef NDEBUG
+      deletedCounter = 0;
+    #endif
+
+    if ((error == ERROR_NONE) && doneFlag)
+    {
+      // get file/image/hardlink entry ids to check for purge
+      Array_clear(&entryIds);
+      INDEX_DOX(error,
+                indexHandle,
       {
-        #ifndef NDEBUG
-          deletedCounter = 0;
-        #endif
-
-        // get file/image/hardlink entry ids to check for purge
-        Array_clear(&entryIds);
-        if ((error == ERROR_NONE) && doneFlag)
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "entryFragments",
+                                "entryId",
+                                "WHERE storageId=%lld",
+                                Index_getDatabaseId(storageId)
+                               );
+        if (error != ERROR_NONE)
         {
-          error = Database_getIds(&indexHandle->databaseHandle,
-                                  &entryIds,
-                                  "entryFragments",
-                                  "entryId",
-                                  "WHERE storageId=%lld",
-                                  Index_getDatabaseId(storageId)
-                                 );
+          return error;
         }
 
-        // purge file/image/hardlink entry fragments
-        if ((error == ERROR_NONE) && doneFlag)
-        {
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entryFragments",
-                        "storageId=%lld",
-                        Index_getDatabaseId(storageId)
-                       );
-        }
+        return ERROR_NONE;
+      });
 
-        // purge file/image/hardlink entries
-        if ((error == ERROR_NONE) && doneFlag)
-        {
-          ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,error == ERROR_NONE)
-          {
-            error = purge(indexHandle,
-                          &doneFlag,
-                          #ifndef NDEBUG
-                            &deletedCounter,
-                          #else
-                            NULL,  // deletedCounter
-                          #endif
-                          "entries",
-                          "    id=%lld \
-                           AND (SELECT count(id) FROM entryFragments WHERE entryId=%lld)=0 \
-                          ",
-                          entryId,
-                          entryId
-                         );
-          }
-        }
-//fprintf(stderr,"%s, %d: 5 file/image/hardlink done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
+      // purge file/image/hardlink entry fragments (Note: do not use INDEX_DOX because of indexUseCount)
+      while ((error == ERROR_NONE) && !doneFlag)
+      {
+        error = purge(indexHandle,
+                      &doneFlag,
+                      #ifndef NDEBUG
+                        &deletedCounter,
+                      #else
+                        NULL,  // deletedCounter
+                      #endif
+                      "entryFragments",
+                      "storageId=%lld",
+                      Index_getDatabaseId(storageId)
+                     );
+      }
+//fprintf(stderr,"%s, %d: 1 fragments done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
 
-        // purge directory entries
-        if ((error == ERROR_NONE) && doneFlag)
+      ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,(error == ERROR_NONE) && doneFlag)
+      {
+        while ((error == ERROR_NONE) && !doneFlag)
         {
           error = purge(indexHandle,
                         &doneFlag,
@@ -9256,66 +9270,102 @@ fprintf(stderr,"%s, %d: Index_clearStorage storageId=%ld\n",__FILE__,__LINE__,st
                           NULL,  // deletedCounter
                         #endif
                         "entries",
-                        "id IN (SELECT entryId FROM directoryEntries WHERE storageId=%lld)",
-                        Index_getDatabaseId(storageId)
+                        "    id=%lld \
+                         AND (SELECT count(id) FROM entryFragments WHERE entryId=%lld)=0 \
+                        ",
+                        entryId,
+                        entryId
                        );
         }
-//fprintf(stderr,"%s, %d: 7 directory done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
-
-        // purge link entries
-        if ((error == ERROR_NONE) && doneFlag)
-        {
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entries",
-                        "id IN (SELECT entryId FROM linkEntries WHERE storageId=%lld)",
-                        Index_getDatabaseId(storageId)
-                       );
-        }
-//fprintf(stderr,"%s, %d: 8 link done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
-
-        // purge special entries
-        if ((error == ERROR_NONE) && doneFlag)
-        {
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entries",
-                        "id IN (SELECT entryId FROM specialEntries WHERE storageId=%lld)",
-                        Index_getDatabaseId(storageId)
-                       );
-        }
-//fprintf(stderr,"%s, %d: 10 special done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
-
-        error = Index_endTransaction(indexHandle);
       }
     }
-    while ((error == ERROR_NONE) && !doneFlag);
-    if (error != ERROR_NONE)
+//fprintf(stderr,"%s, %d: 2 file/image/hardlink done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
+
+    // purge directory/link/special entries
+    if ((error == ERROR_NONE) && doneFlag)
     {
-      return error;
+      // get directory/link/special entries to purge (Note: do not use INDEX_DOX because of indexUseCount)
+      Array_clear(&entryIds);
+      INDEX_DOX(error,
+                indexHandle,
+      {
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "directoryEntries",
+                                "entryId",
+                                "WHERE storageId=%lld",
+                                Index_getDatabaseId(storageId)
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "linkEntries",
+                                "entryId",
+                                "WHERE storageId=%lld",
+                                Index_getDatabaseId(storageId)
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "specialEntries",
+                                "entryId",
+                                "WHERE storageId=%lld",
+                                Index_getDatabaseId(storageId)
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        return ERROR_NONE;
+      });
+
+      // purge directory/link/special entries (Note: do not use INDEX_DOX because of indexUseCount)
+      ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,(error == ERROR_NONE) && doneFlag)
+      {
+        while ((error == ERROR_NONE) && !doneFlag)
+        {
+          error = purge(indexHandle,
+                        &doneFlag,
+                        #ifndef NDEBUG
+                          &deletedCounter,
+                        #else
+                          NULL,  // deletedCounter
+                        #endif
+                        "entries",
+                        "id=%lld \
+                        ",
+                        entryId
+                       );
+        }
+      }
+fprintf(stderr,"%s, %d: 3 directory/link/special done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
     }
 
-    // update aggregates
-    error = updateStorageAggregates(indexHandle,Index_getDatabaseId(storageId));
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    //TODO: entities
-
-    return ERROR_NONE;
-  });
+    // end transaction
+    (void)Index_endTransaction(indexHandle);
+  }
+  while ((error == ERROR_NONE) && !doneFlag);
   Array_done(&entryIds);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // update aggregates
+  error = updateStorageAggregates(indexHandle,Index_getDatabaseId(storageId));
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
 
   return error;
 }
@@ -9496,9 +9546,9 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 
 Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             const IndexId indexIds[],
-                            uint          indexIdCount,
+                            ulong         indexIdCount,
                             const IndexId entryIds[],
-                            uint          entryIdCount,
+                            ulong         entryIdCount,
                             IndexTypeSet  indexTypeSet,
                             ConstString   name,
                             bool          newestOnly,
@@ -9513,7 +9563,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   String              ftsName;
   String              uuidIdsString,entityIdsString;
   String              entryIdsString;
-  uint                i;
+  ulong               i;
   String              filterString,filterIdsString;
   String              indexTypeSetString;
   ulong               totalEntryCount_;
@@ -9523,8 +9573,8 @@ double totalEntryCount_x;
 uint64 t0,t1;
 
   assert(indexHandle != NULL);
-  assert((indexIdCount == 0) || (indexIds != NULL));
-  assert((entryIdCount == 0) || (entryIds != NULL));
+  assert((indexIdCount == 0L) || (indexIds != NULL));
+  assert((entryIdCount == 0L) || (entryIds != NULL));
 
 t0=Misc_getTimestamp();
   // init variables
@@ -9973,9 +10023,9 @@ fprintf(stderr,"%s, %d: %"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
 Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              IndexHandle         *indexHandle,
                              const IndexId       indexIds[],
-                             uint                indexIdCount,
+                             ulong               indexIdCount,
                              const IndexId       entryIds[],
-                             uint                entryIdCount,
+                             ulong               entryIdCount,
                              IndexTypeSet        indexTypeSet,
                              ConstString         name,
                              bool                newestOnly,
@@ -9991,7 +10041,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   String              entryIdsString;
 //  DatabaseQueryHandle databaseQueryHandle;
 //  DatabaseId          storageId;
-  uint                i;
+  ulong               i;
   String              filterString,filterIdsString;
   String              orderString;
   String              string;
@@ -10001,8 +10051,8 @@ uint64 t0,t1;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
-  assert((indexIdCount == 0) || (indexIds != NULL));
-  assert((entryIdCount == 0) || (entryIds != NULL));
+  assert((indexIdCount == 0L) || (indexIds != NULL));
+  assert((entryIdCount == 0L) || (entryIds != NULL));
 
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
@@ -10101,6 +10151,9 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
     {
       if (newestOnly)
       {
+#warning remove
+fragmentsFlag=FALSE;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
                                 "SELECT uuids.id, \
@@ -10126,9 +10179,9 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                         directoryEntries.totalEntrySizeNewest, \
                                         linkEntries.destinationName, \
                                         hardlinkEntries.size \
-                                 FROM uuids \
-                                   LEFT JOIN entities         ON entities.jobUUID=uuids.jobUUID \
-                                   LEFT JOIN entriesNewest    ON entriesNewest.entityId=entities.id \
+                                 FROM entriesNewest \
+                                   LEFT JOIN entities         ON entities.id=entriesNewest.entityid \
+                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
                                    LEFT JOIN fileEntries      ON fileEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN imageEntries     ON imageEntries.entryId=entriesNewest.entryId \
@@ -10137,6 +10190,7 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                    LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.id \
                                  WHERE     entriesNewest.id IS NOT NULL \
+                                       AND entities.deletedFlag!=1 \
                                        AND %S \
                                  %s \
                                  %S \
@@ -10144,7 +10198,7 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                 ",
                                 !fragmentsFlag ? "1" : "COUNT(entriesNewest.id)",
                                 filterString,
-                                fragmentsFlag ? "GROUP BY entities.id,entriesNewest.type,entriesNewest.name" : "",
+                                !fragmentsFlag ? "GROUP BY entities.id,entriesNewest.type,entriesNewest.name" : "",
                                 orderString,
                                 offset,
                                 limit
@@ -10152,6 +10206,9 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
       }
       else
       {
+#warning remove
+fragmentsFlag=FALSE;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
                                 "SELECT uuids.id, \
@@ -10177,9 +10234,9 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                         directoryEntries.totalEntrySize, \
                                         linkEntries.destinationName, \
                                         hardlinkEntries.size \
-                                 FROM uuids \
-                                   LEFT JOIN entities         ON uuids.jobUUID=uuids.jobUUID \
-                                   LEFT JOIN entries          ON entries.entityId=entities.id \
+                                 FROM entries \
+                                   LEFT JOIN entities         ON entities.id=entries.entityId \
+                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
                                    LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
                                    LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
@@ -10187,15 +10244,16 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
                                    LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                                 WHERE %S \
+                                 WHERE     entities.deletedFlag!=1 \
+                                       AND %S \
                                  %s \
                                  %S \
                                  LIMIT %llu,%llu; \
                                 ",
 //TODO: avoid count() to make it faster?
-                                fragmentsFlag ? "COUNT(entries.id)" : "1",
+                                !fragmentsFlag ? "1" : "COUNT(entries.id)",
                                 filterString,
-                                fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : "",
+                                !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : "",
                                 orderString,
                                 offset,
                                 limit
@@ -10223,6 +10281,9 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
       INDEX_DOX(error,
                 indexHandle,
       {
+#warning remove
+fragmentsFlag=FALSE;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
                                 "SELECT uuids.id, \
@@ -10250,6 +10311,8 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                         hardlinkEntries.size \
                                  FROM FTS_entries \
                                    LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
+                                   LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
+                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
                                    LEFT JOIN fileEntries      ON fileEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN imageEntries     ON imageEntries.entryId=entriesNewest.entryId \
@@ -10257,9 +10320,8 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.id \
-                                   LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
-                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                  WHERE     entriesNewest.id IS NOT NULL \
+                                       AND entities.deletedFlag!=1 \
                                        AND %S \
                                  %s \
                                  %S \
@@ -10267,7 +10329,7 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                 ",
                                 !fragmentsFlag ? "1" : "COUNT(entriesNewest.id)",
                                 filterString,
-                                fragmentsFlag ? "GROUP BY entities.id,entriesNewest.type,entriesNewest.name" : "",
+                                !fragmentsFlag ? "GROUP BY entities.id,entriesNewest.type,entriesNewest.name" : "",
                                 orderString,
                                 offset,
                                 limit
@@ -10279,6 +10341,9 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
       INDEX_DOX(error,
                 indexHandle,
       {
+#warning remove
+fragmentsFlag=FALSE;
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return Database_prepare(&indexQueryHandle->databaseQueryHandle,
                                 &indexHandle->databaseHandle,
                                 "SELECT uuids.id, \
@@ -10306,6 +10371,8 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                         hardlinkEntries.size \
                                  FROM FTS_entries \
                                    LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
+                                   LEFT JOIN entities         ON entities.id=entries.entityId \
+                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
                                    LEFT JOIN fileEntries      ON fileEntries.entryId=entries.id \
                                    LEFT JOIN imageEntries     ON imageEntries.entryId=entries.id \
@@ -10313,16 +10380,15 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
                                    LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entries.id \
                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                                   LEFT JOIN entities         ON entities.id=entries.entityId \
-                                   LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                 WHERE %S \
+                                 WHERE     entities.deletedFlag!=1 \
+                                       AND %S \
                                  %s \
                                  %S \
                                  LIMIT %llu,%llu; \
                                 ",
                                 !fragmentsFlag ? "1" : "COUNT(entries.id)",
                                 filterString,
-                                fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : "",
+                                !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : "",
                                 orderString,
                                 offset,
                                 limit
@@ -13502,9 +13568,9 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
 Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
                                   IndexHandle      *indexHandle,
                                   const IndexId    indexIds[],
-                                  uint             indexIdCount,
+                                  ulong            indexIdCount,
                                   const IndexId    entryIds[],
-                                  uint             entryIdCount,
+                                  ulong            entryIdCount,
                                   IndexTypeSet     indexTypeSet,
                                   ConstString      name,
                                   DatabaseOrdering ordering,
