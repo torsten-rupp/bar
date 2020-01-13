@@ -7704,6 +7704,7 @@ databaseNode->debug.lastTrigger.transactionCount
                     databaseNode->debug.history[index].fileName,
                     databaseNode->debug.history[index].lineNb
                    );
+// optional
 #if 0
             #ifdef HAVE_BACKTRACE
               debugDumpStackTrace(stderr,
