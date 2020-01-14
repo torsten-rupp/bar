@@ -2957,6 +2957,7 @@ LOCAL Errors createArchiveFile(ArchiveHandle *archiveHandle)
         SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
         {
           error = Index_newStorage(archiveHandle->indexHandle,
+                                   archiveHandle->uuidId,
                                    archiveHandle->entityId,
                                    archiveHandle->hostName,
                                    archiveHandle->userName,
@@ -14510,6 +14511,7 @@ Errors Archive_verifySignatures(ArchiveHandle        *archiveHandle,
 }
 
 Errors Archive_addToIndex(IndexHandle *indexHandle,
+                          IndexId     uuidId,
                           IndexId     entityId,
                           ConstString hostName,
                           StorageInfo *storageInfo,
@@ -14529,6 +14531,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   // create new storage index
   printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
   error = Index_newStorage(indexHandle,
+                           uuidId,
                            entityId,
                            hostName,
                            NULL,  // userName,

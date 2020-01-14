@@ -1287,6 +1287,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            uuidId=<n>
 *            entityId=<n>
 *            storageName=<name>
 *            createdDateTime=<n>
@@ -1299,7 +1300,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
 
 LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId      entityId;
+  IndexId      uuidId,entityId;
   String       storageName;
   uint64       createdDateTime;
   uint64       size;
@@ -1312,7 +1313,12 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get entityId, storageName, createdDateTime, size, indexMode, indexState
+  // get uuidId, entityId, storageName, createdDateTime, size, indexMode, indexState
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,0LL))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,0LL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
@@ -1354,6 +1360,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
   {
     // create new storage
     error = Index_newStorage(indexHandle,
+                             uuidId,
                              entityId,
                              connectorInfo->io.network.name,
                              NULL,  // userName

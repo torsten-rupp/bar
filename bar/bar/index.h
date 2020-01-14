@@ -1662,6 +1662,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_newStorage
 * Purpose: create new storage index
 * Input  : indexHandle     - index handle
+*          uuidId          - index id of UUID
 *          entityId        - index id of entity
 *          userName        - user name (can be NULL)
 *          hostName        - host name (can be NULL)
@@ -1676,6 +1677,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 Errors Index_newStorage(IndexHandle *indexHandle,
+                        IndexId     uuidId,
                         IndexId     entityId,
                         ConstString userName,
                         ConstString hostName,
@@ -2454,6 +2456,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 * Name   : Index_addFile
 * Purpose: add file entry
 * Input  : indexHandle     - index handle
+*          uuidId          - index id of UUID
 *          entityId        - index id of entity
 *          storageId       - index id of storage
 *          name            - file name
@@ -2491,6 +2494,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 * Name   : Index_addImage
 * Purpose: add image entry
 * Input  : indexHandle    - index handle
+*          uuidId         - index id of UUID
 *          entityId       - index id of entity
 *          storageId      - index id of storage
 *          name           - image name
@@ -2552,6 +2556,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 * Name   : Index_addLink
 * Purpose: add link entry
 * Input  : indexHandle     - index handle
+*          uuidId          - index id of UUID
 *          entityId        - index id of entity
 *          storageId       - index id of storage
 *          linkName        - link name
@@ -2585,6 +2590,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 * Name   : Index_addHardlink
 * Purpose: add hard link entry
 * Input  : indexHandle     - index handle
+*          uuidId          - index id of UUID
 *          entityId        - index id of entity
 *          storageId       - index id of storage
 *          name            - hardlink name
@@ -2622,6 +2628,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 * Name   : Index_addSpecial
 * Purpose: add special entry
 * Input  : indexHandle     - index handle
+*          uuidId          - index id of UUID
 *          entityId        - index id of entity
 *          storageId       - index id of storage
 *          name            - name

@@ -3885,6 +3885,7 @@ LOCAL void indexThreadCode(void)
       {
         // get all job crypt passwords and crypt private keys (including no password and default crypt password)
         addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
+#warning
 //        addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
@@ -4283,7 +4284,8 @@ LOCAL void autoIndexThreadCode(void)
                                              {
                                                // add to index
                                                error = Index_newStorage(indexHandle,
-                                                                        INDEX_ID_NONE, // entityIndexId
+                                                                        INDEX_ID_NONE, // uuidId
+                                                                        INDEX_ID_NONE, // entityId
                                                                         NULL,  // hostName
                                                                         NULL,  // userName
                                                                         storageName,
@@ -13996,7 +13998,11 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   {
     entryType = INDEX_TYPE_ANY;
   }
-  else if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
+  {
+    // ok
+  }
+  else
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryTypexxxx=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL");
     String_delete(name);
@@ -15740,7 +15746,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   {
     entryType = INDEX_TYPE_ANY;
   }
-  else if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
+  {
+    // ok
+  }
+  else
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL");
     String_delete(name);
@@ -16105,7 +16115,11 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   {
     entryType = INDEX_TYPE_ANY;
   }
-  else if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
+  else if (StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
+  {
+    // ok
+  }
+  else
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINKE|SPECIAL");
     String_delete(name);
@@ -16608,7 +16622,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         else
         {
           error = Index_newStorage(indexHandle,
-                                   INDEX_ID_NONE, // entityIndexId
+                                   INDEX_ID_NONE, // uuidId
+                                   INDEX_ID_NONE, // entityId
                                    NULL,  // hostName
                                    NULL,  // userName
                                    Storage_getName(NULL,&storageSpecifier,NULL),
@@ -16694,7 +16709,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                  else
                                  {
                                    error = Index_newStorage(indexHandle,
-                                                            INDEX_ID_NONE, // entityIndexId
+                                                            INDEX_ID_NONE, // uuidId
+                                                            INDEX_ID_NONE, // entityId
                                                             NULL,  // hostName
                                                             NULL,  // userName
                                                             storageName,

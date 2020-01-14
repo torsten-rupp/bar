@@ -2900,14 +2900,12 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
         if (error == ERROR_NONE)
         {
           oldDatabaseCount++;
-#warning revert
-//          (void)File_delete(oldDatabaseFileName,FALSE);
+          (void)File_delete(oldDatabaseFileName,FALSE);
         }
         else
         {
           failFileName = String_appendCString(String_duplicate(oldDatabaseFileName),".fail");
-#warning revert
-//          (void)File_rename(oldDatabaseFileName,failFileName,NULL);
+          (void)File_rename(oldDatabaseFileName,failFileName,NULL);
           String_delete(failFileName);
         }
 
@@ -3201,34 +3199,6 @@ LOCAL void doneIndexQueryHandle(IndexQueryHandle *indexQueryHandle)
 }
 
 /***********************************************************************\
-* Name   : getIndexTypeString
-* Purpose: get index type filter string
-* Input  : string    - string variable
-*          indexType - index type
-* Output : -
-* Return : string for IN statement
-* Notes  : -
-\***********************************************************************/
-
-#warning remove
-LOCAL String xxxgetIndexTypeSetString(String string, IndexTypeSet indexTypeSet)
-{
-  IndexTypes indexType;
-
-  String_clear(string);
-  for (indexType = INDEX_TYPE_MIN; indexType <= INDEX_TYPE_MAX; indexType++)
-  {
-    if (IN_SET(indexTypeSet,indexType))
-    {
-      if (!String_isEmpty(string)) String_appendCString(string,",");
-      String_appendFormat(string,"%d",indexType);
-    }
-  }
-
-  return string;
-}
-
-/***********************************************************************\
 * Name   : getIndexStateSetString
 * Purpose: get index state filter string
 * Input  : string        - string variable
@@ -3454,7 +3424,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                          &databaseId,
                          "entriesNewest",
                          "id",
-                         "WHERE entryId=%llu",
+                         "WHERE entryId=%lld",
                          entryId
                         );
   if (error != ERROR_NONE)
@@ -3473,7 +3443,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                              "UPDATE directoryEntries \
                               SET totalEntryCount=totalEntryCount+1, \
                                   totalEntrySize =totalEntrySize +%llu \
-                              WHERE     storageId=%llu \
+                              WHERE     storageId=%lld \
                                     AND name=%'S \
                              ",
                              size,
@@ -3493,7 +3463,7 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
                                "UPDATE directoryEntries \
                                 SET totalEntryCountNewest=totalEntryCountNewest+1, \
                                     totalEntrySizeNewest =totalEntrySizeNewest +%llu \
-                                WHERE     storageId=%llu \
+                                WHERE     storageId=%lld \
                                       AND name=%'S \
                                ",
                                size,
@@ -8870,6 +8840,7 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
 }
 
 Errors Index_newStorage(IndexHandle *indexHandle,
+                        IndexId     uuidId,
                         IndexId     entityId,
                         ConstString hostName,
                         ConstString userName,
@@ -8903,6 +8874,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                NULL,  // changedRowCount
                                "INSERT INTO storages \
                                   ( \
+                                   uuidId, \
                                    entityId, \
                                    name, \
                                    created, \
@@ -8922,6 +8894,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                    DATETIME('now') \
                                   ); \
                                ",
+                               Index_getDatabaseId(uuidId),
                                Index_getDatabaseId(entityId),
 //TODO
 //                               hostName,
@@ -8961,7 +8934,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                         return ERROR_EXPECTED_PARAMETER;
                                       }
                                     },NULL),
-                                    "INDEX_NEW_STORAGE entityId=%lld hostName=%'S userName=%'S storageName=%'S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
+                                    "INDEX_NEW_STORAGE uuidId=%lld entityId=%lld hostName=%'S userName=%'S storageName=%'S createdDateTime=%llu size=%llu indexState=%s indexMode=%s",
+                                    uuidId,
                                     entityId,
 //TODO: remove hostName, userName -> entity
                                     hostName,
@@ -9257,7 +9231,9 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                       Index_getDatabaseId(storageId)
                      );
       }
+#ifndef NDEBUG
 //fprintf(stderr,"%s, %d: 1 fragments done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
+#endif
 
       ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,(error == ERROR_NONE) && doneFlag)
       {
@@ -9280,7 +9256,9 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
         }
       }
     }
+#ifndef NDEBUG
 //fprintf(stderr,"%s, %d: 2 file/image/hardlink done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
+#endif
 
     // purge directory/link/special entries
     if ((error == ERROR_NONE) && doneFlag)
@@ -9348,7 +9326,9 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                        );
         }
       }
+#ifndef NDEBUG
 fprintf(stderr,"%s, %d: 3 directory/link/special done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
+#endif
     }
 
     // end transaction
@@ -9629,6 +9609,8 @@ fprintf(stderr,"%s, %d: Index_getEntriesInfo ***********************************
 fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
 fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
 fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(entryIdsString));
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,indexType);
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
 
   // get filters
   String_setCString(filterString,"1");
@@ -9640,7 +9622,7 @@ fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(en
 fprintf(stderr,"%s, %d: entryIdCount=%ld filterString=%s\n",__FILE__,__LINE__,entryIdCount,String_cString(filterString));
 
   error = ERROR_NONE;
-  if (String_isEmpty(ftsName) && String_isEmpty(entryIdsString))
+  if (String_isEmpty(ftsName))
   {
     // no names
 
@@ -9650,25 +9632,142 @@ fprintf(stderr,"%s, %d: entryIdCount=%ld filterString=%s\n",__FILE__,__LINE__,en
       // get total entry count, total fragment count, total entry size
       if (newestOnly)
       {
-        // newest entries
+fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
+        // all newest entries
         if (String_isEmpty(entryIdsString))
         {
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
+          switch (indexType)
+          {
+            case INDEX_TYPE_NONE:
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+    //TODO
+                                       "SELECT TOTAL(entities.totalEntryCountNewest), \
+    0,\
+                                               TOTAL(entities.totalEntrySizeNewest) \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+    //TODO
+    ""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
+              break;
+            case INDEX_TYPE_FILE:
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
 //TODO
-                                   "SELECT TOTAL(entities.totalEntryCountNewest), \
+                                       "SELECT TOTAL(entities.totalFileCountNewest), \
 0,\
-                                           TOTAL(entities.totalEntrySizeNewest) \
-                                    FROM entities \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
-                                    %s \
-                                   ",
-                                   filterString,
+                                               TOTAL(entities.totalFileSizeNewest) \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
 //TODO
 ""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
-                                  );
+                                      );
+              break;
+            case INDEX_TYPE_IMAGE:
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+//TODO
+                                       "SELECT TOTAL(entities.totalImageCountNewest), \
+0,\
+                                               0 \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+//TODO
+""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
+              break;
+            case INDEX_TYPE_DIRECTORY:
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+//TODO
+                                       "SELECT TOTAL(entities.totalDirectoryCountNewest), \
+0,\
+                                               0 \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+//TODO
+""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
+              break;
+            case INDEX_TYPE_LINK:
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+//TODO
+                                       "SELECT TOTAL(entities.totalLinkCountNewest), \
+0,\
+                                               0 \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+//TODO
+""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
+              break;
+            case INDEX_TYPE_HARDLINK:
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+//TODO
+                                       "SELECT TOTAL(entities.totalHardlinkCountNewest), \
+0,\
+                                               TOTAL(entities.totalHardlinkSizeNewest) \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+//TODO
+""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
+              break;
+            case INDEX_TYPE_SPECIAL:
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+//TODO
+                                       "SELECT TOTAL(entities.totalSpecialCountNewest), \
+0,\
+                                               0 \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+//TODO
+""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
+              break;
+            default:
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              break;
+          }
         }
         else
         {
@@ -9693,7 +9792,7 @@ fprintf(stderr,"%s, %d: entryIdCount=%ld filterString=%s\n",__FILE__,__LINE__,en
       }
       else
       {
-        // storages, entries selected -> get data from entries
+        // all entries
         if (String_isEmpty(entryIdsString))
         {
 fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
@@ -9718,112 +9817,112 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                       );
               break;
             case INDEX_TYPE_FILE:
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-//TODO
-                                   "SELECT TOTAL(entities.totalEntryCount), \
-0,\
-                                           TOTAL(entities.totalEntrySize) \
-                                    FROM entities \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
-                                    %s \
-                                   ",
-                                   filterString,
-//TODO
-""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
-                                  );
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+    //TODO
+                                       "SELECT TOTAL(entities.totalEntryCount), \
+    0,\
+                                               TOTAL(entities.totalEntrySize) \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+    //TODO
+    ""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
               break;
             case INDEX_TYPE_IMAGE:
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-//TODO
-                                   "SELECT TOTAL(entities.totalImageCount), \
-0,\
-                                           TOTAL(entities.totalImageSize) \
-                                    FROM entities \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
-                                    %s \
-                                   ",
-                                   filterString,
-//TODO
-""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
-                                  );
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+    //TODO
+                                       "SELECT TOTAL(entities.totalImageCount), \
+    0,\
+                                               TOTAL(entities.totalImageSize) \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+    //TODO
+    ""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
               break;
             case INDEX_TYPE_DIRECTORY:
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-//TODO
-                                   "SELECT TOTAL(entities.totalDirectoryCount), \
-0,\
-                                           0.0 \
-                                    FROM entities \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
-                                    %s \
-                                   ",
-                                   filterString,
-//TODO
-""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
-                                  );
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+    //TODO
+                                       "SELECT TOTAL(entities.totalDirectoryCount), \
+    0,\
+                                               0 \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+    //TODO
+    ""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
               break;
             case INDEX_TYPE_LINK:
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-//TODO
-                                   "SELECT TOTAL(entities.totalLinkCount), \
-0,\
-                                           0.0 \
-                                    FROM entities \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
-                                    %s \
-                                   ",
-                                   filterString,
-//TODO
-""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
-                                  );
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+    //TODO
+                                       "SELECT TOTAL(entities.totalLinkCount), \
+    0,\
+                                               0 \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+    //TODO
+    ""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
               break;
             case INDEX_TYPE_HARDLINK:
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-//TODO
-                                   "SELECT TOTAL(entities.totalHardlinkCount), \
-0,\
-                                           TOTAL(entities.totalHardlinkSize) \
-                                    FROM entities \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
-                                    %s \
-                                   ",
-                                   filterString,
-//TODO
-""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
-                                  );
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+    //TODO
+                                       "SELECT TOTAL(entities.totalHardlinkCount), \
+    0,\
+                                               TOTAL(entities.totalHardlinkSize) \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+    //TODO
+    ""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
               break;
             case INDEX_TYPE_SPECIAL:
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-//TODO
-                                   "SELECT TOTAL(entities.totalSpecialCount), \
-0,\
-                                           0.0 \
-                                    FROM entities \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
-                                    %s \
-                                   ",
-                                   filterString,
-//TODO
-""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
-                                  );
+              error = Database_prepare(&databaseQueryHandle,
+                                       &indexHandle->databaseHandle,
+    //TODO
+                                       "SELECT TOTAL(entities.totalSpecialCount), \
+    0,\
+                                               0 \
+                                        FROM entities \
+                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                        WHERE     %S \
+                                              AND entities.deletedFlag!=1 \
+                                        %s \
+                                       ",
+                                       filterString,
+    //TODO
+    ""//                                   !fragmentsFlag ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                      );
               break;
             default:
               HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -10171,7 +10270,6 @@ t0=Misc_getTimestamp();
   uuidIdsString    = String_new();
   entityIdsString  = String_new();
   entryIdsString   = String_new();
-  filterString     = String_new();
   orderString      = String_new();
 
   // get FTS
@@ -10210,6 +10308,7 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
 fprintf(stderr,"%s, %d: indexType=%u\n",__FILE__,__LINE__,indexType);
 
   // get filters
+  filterString = String_newCString("1");
   filterIdsString = String_new();
   filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
@@ -12544,7 +12643,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_FILE uuidId=%llu entityId=%llu storageId=%llu name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_FILE uuidId=%lld entityId=%lld storageId=%llu name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -12746,7 +12845,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_IMAGE uuidId=%llu entityId=%llu storageId=%llu type=IMAGE name=%'S fileSystemType=%'s size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
+                                    "INDEX_ADD_IMAGE uuidId=%lld entityId=%lld storageId=%llu type=IMAGE name=%'S fileSystemType=%'s size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -12901,7 +13000,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_DIRECTORY uuidId=%llu entityId=%llu storageId=%llu type=DIRECTORY name=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_DIRECTORY uuidId=%lld entityId=%lld storageId=%llu type=DIRECTORY name=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -13049,7 +13148,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_LINK uuidId=%llu entityId=%llu storageId=%llu type=LINK name=%'S destinationName=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_LINK uuidId=%lld entityId=%lld storageId=%llu type=LINK name=%'S destinationName=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -13265,7 +13364,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_HARDLINK uuidId=%llu entityId=%llu storageId=%llu type=HARDLINK name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_HARDLINK uuidId=%lld entityId=%lld storageId=%llu type=HARDLINK name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
                                     uuidId,
                                     entityId,
                                     storageId,
@@ -13421,7 +13520,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_SPECIAL uuidId=%llu entityId=%llu storageId=%llu type=SPECIAL name=%'S specialType=%s timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
+                                    "INDEX_ADD_SPECIAL uuidId=%lld entityId=%lld storageId=%llu type=SPECIAL name=%'S specialType=%s timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
                                     uuidId,
                                     entityId,
                                     storageId,
