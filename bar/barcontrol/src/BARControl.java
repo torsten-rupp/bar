@@ -905,7 +905,7 @@ class Units
     else if (n >= (                  1024L*1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L*1024L));
     else if ((n % (                        1024L)) == 0) result = String.format("%d",(long)n/(1024L));
     else if (n >= (                        1024L)      ) result = DECIMAL_FORMAT.format(n/(1024L));
-    else                                               result = String.format("%d",(long)n);
+    else                                                 result = String.format("%d",(long)n);
 
     return result;
   }
