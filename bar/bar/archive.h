@@ -1738,6 +1738,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Archive_updateIndex(IndexHandle       *indexHandle,
+                           IndexId           uuidId,
                            IndexId           entityId,
                            IndexId           storageId,
                            StorageInfo       *storageInfo,

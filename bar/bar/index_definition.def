@@ -35,9 +35,9 @@
      |     |     |                           |
      |     |     |<- specialEntry -----------|
      |     |...
-     |     |
-     |     |<- skippedEntry
-     |     |...
+     |     |     
+     |     |<- skippedEntry  
+     |     |...   
      |...
 
 */
@@ -242,9 +242,13 @@ CREATE TABLE IF NOT EXISTS entries(
   userId          INTEGER,
   groupId         INTEGER,
   permission      INTEGER,
+  deletedFlag     INTEGER DEFAULT 0,
 
 //TODO: still not used
   archiveOffset   INTEGER,
+
+  // Note: redundancy for faster access
+  uuidId          INTEGER DEFAULT 0,
 
   // updated by triggers
   size            INTEGER DEFAULT 0  // file/image/hardlink size. Note: redundancy for faster access
@@ -262,6 +266,7 @@ CREATE TABLE IF NOT EXISTS entriesNewest(
   entryId         INTEGER REFERENCES entries(id) ON DELETE CASCADE,  // no 'NOT NULL'
 
   // Note: redundancy for faster access
+  uuidId          INTEGER DEFAULT 0,
   entityId        INTEGER DEFAULT 0,
   name            TEXT NOT NULL,
   type            INTEGER DEFAULT 0,
@@ -299,6 +304,7 @@ CREATE TRIGGER AFTER INSERT ON entries
     INSERT OR IGNORE INTO entriesNewest
         (
          entryId,
+         uuidId,
          entityId,
          type,
          name,
@@ -311,6 +317,7 @@ CREATE TRIGGER AFTER INSERT ON entries
       VALUES
         (
          NEW.id,
+         NEW.uuidId,
          NEW.entityId,
          NEW.type,
          NEW.name,
@@ -323,6 +330,14 @@ CREATE TRIGGER AFTER INSERT ON entries
 
     // update FTS
     INSERT INTO FTS_entries VALUES (NEW.id,NEW.name);
+  END;
+
+CREATE TRIGGER AFTER UPDATE OF uuidId ON entries
+  BEGIN
+    // update newest entries
+    UPDATE entriesNewest
+      SET uuidId=NEW.uuidId
+      WHERE entryId=OLD.id;
   END;
 
 CREATE TRIGGER AFTER UPDATE OF entityId ON entries
@@ -346,6 +361,7 @@ CREATE TRIGGER AFTER UPDATE OF timeLastChanged ON entries
     // update if entry is newer
     UPDATE entriesNewest
       SET entryId        =NEW.id,
+          uuidId         =NEW.uuidId,
           entityId       =NEW.entityId,
           type           =NEW.type,
           timeLastChanged=NEW.timeLastChanged,
@@ -364,8 +380,8 @@ CREATE TRIGGER BEFORE DELETE ON entries
     // delete/update newest info
     DELETE FROM entriesNewest WHERE entryId=OLD.id;
     INSERT OR IGNORE INTO entriesNewest
-        (entryId,entityId,name,type,timeLastChanged,userId,groupId,permission,size)
-      SELECT id,entityId,name,type,MAX(timeLastChanged),userId,groupId,permission,size
+        (entryId,uuidId,entityId,name,type,timeLastChanged,userId,groupId,permission,size)
+      SELECT id,uuidId,entityId,name,type,MAX(timeLastChanged),userId,groupId,permission,size
         FROM entries
         WHERE     id!=OLD.id
               AND name=OLD.name

@@ -1394,6 +1394,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            uuidId=<n>
 *            entityId=<n>
 *            storageId=<n>
 *            name=<name>
@@ -1411,7 +1412,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
 
 LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId entityId,storageId;
+  IndexId uuidId,entityId,storageId;
   String  name;
   uint64  size;
   uint64  timeLastAccess;
@@ -1428,7 +1429,12 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get entityId, storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  // get uuidId, entityId, storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
@@ -1553,6 +1559,8 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            uuidId=<n>
+*            entityId=<n>
 *            storageId=<n>
 *            name=<name>
 *            fileSystemType=<text>
@@ -1570,7 +1578,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
 
 LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId         entityId,storageId;
+  IndexId         uuidId,entityId,storageId;
   String          name;
   FileSystemTypes fileSystemType;
   uint64          size;
@@ -1583,7 +1591,12 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get entityId, storageId, name, fileSystemType, size, blockSize, blockOffset, blockCount
+  // get uuidId, entityId, storageId, name, fileSystemType, size, blockSize, blockOffset, blockCount
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
@@ -1680,6 +1693,8 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            uuidId=<n>
+*            entityId=<n>
 *            storageId=<n>
 *            name=<name>
 *            size=<n>
@@ -1696,7 +1711,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
 
 LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId entityId,storageId;
+  IndexId uuidId,entityId,storageId;
   String  name;
   uint64  timeLastAccess;
   uint64  timeModified;
@@ -1710,7 +1725,12 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get entityId, storageId, name, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  // get uuidId, entityId, storageId, name, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
@@ -1774,6 +1794,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
   {
     // add index directory entry
     error = Index_addDirectory(indexHandle,
+                               uuidId,
                                entityId,
                                storageId,
                                name,
@@ -1814,6 +1835,8 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            uuidId=<n>
+*            entityId=<n>
 *            storageId=<n>
 *            name=<name>
 *            destinationName=<name>
@@ -1829,7 +1852,7 @@ LOCAL void connectorCommand_indexAddDirectory(ConnectorInfo *connectorInfo, Inde
 
 LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId entityId,storageId;
+  IndexId uuidId,entityId,storageId;
   String  name;
   String  destinationName;
   uint64  timeLastAccess;
@@ -1844,7 +1867,12 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get entityId, storageId, name, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  // get uuidId, entityId, storageId, name, destinationName, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
@@ -1965,6 +1993,8 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            uuidId=<n>
+*            entityId=<n>
 *            storageId=<n>
 *            name=<name>
 *            size=<n>
@@ -1981,7 +2011,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
 
 LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId entityId,storageId;
+  IndexId uuidId,entityId,storageId;
   String  name;
   uint64  size;
   uint64  timeLastAccess;
@@ -1998,7 +2028,12 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get entityId, storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  // get uuidId, entityId, storageId, name, size, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");
@@ -2123,6 +2158,8 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            uuidId=<n>
+*            entityId=<n>
 *            storageId=<n>
 *            fileName=<name>
 *            size=<n>
@@ -2139,7 +2176,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
 
 LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  IndexId          entityId,storageId;
+  IndexId          uuidId,entityId,storageId;
   String           name;
   FileSpecialTypes specialType;
   uint64           timeLastAccess;
@@ -2155,7 +2192,12 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get entityId, storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  // get uuidId, entityId, storageId, name, specialType, timeLastAccess, timeModified, timeLastChanged, userId, groupId, permission, fragmentOffset, fragmentSize
+  if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE))
+  {
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
+    return;
+  }
   if (!StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"entityId=<n>");

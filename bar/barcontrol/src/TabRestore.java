@@ -3770,7 +3770,7 @@ Dprintf.dprintf("");
         try
         {
           ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO indexType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
+          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
                                                        entryType.toString(),
                                                        name,
                                                        newestOnly
@@ -9043,7 +9043,7 @@ Dprintf.dprintf("");
       try
       {
         // get total number of entries
-        totalEntryCount[0] = BARServer.getInt(StringParser.format("INDEX_ENTRY_LIST_INFO indexType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
+        totalEntryCount[0] = BARServer.getInt(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
                                                                   updateEntryTableThread.getEntryType().toString(),
                                                                   updateEntryTableThread.getName_(),
                                                                   updateEntryTableThread.getNewestOnly()
@@ -9536,7 +9536,7 @@ Dprintf.dprintf("");
               try
               {
                 // get total number of entries, total entry size, total content size to restore
-                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO name='' indexType=* newestOnly=no selectedOnly=yes fragments=no"),
+                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO name='' entryType=* newestOnly=no selectedOnly=yes fragments=no"),
                                          1,  // debugLevel
                                          valueMap
                                         );

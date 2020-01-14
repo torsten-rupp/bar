@@ -1557,6 +1557,7 @@ LOCAL void deleteArchiveIndexNode(ArchiveIndexNode *archiveIndexNode)
 \***********************************************************************/
 
 LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
+                                   IndexId       uuidId,
                                    IndexId       entityId,
                                    IndexId       storageId,
                                    uint          maxIndexEntries
@@ -1632,6 +1633,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
             break;
           case ARCHIVE_ENTRY_TYPE_DIRECTORY:
             error = Index_addDirectory(archiveHandle->indexHandle,
+                                       uuidId,
                                        entityId,
                                        storageId,
                                        archiveIndexNode->directory.name,
@@ -1722,11 +1724,12 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
 \***********************************************************************/
 
 LOCAL Errors autoFlushArchiveIndexList(ArchiveHandle *archiveHandle,
+                                       IndexId       uuidId,
                                        IndexId       entityId,
                                        IndexId       storageId
                                       )
 {
-  return flushArchiveIndexList(archiveHandle,entityId,storageId,MAX_INDEX_LIST);
+  return flushArchiveIndexList(archiveHandle,uuidId,entityId,storageId,MAX_INDEX_LIST);
 }
 
 /***********************************************************************\
@@ -3745,6 +3748,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
           // flush index list
           error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
+                                            archiveEntryInfo->archiveHandle->uuidId,
                                             archiveEntryInfo->archiveHandle->entityId,
                                             archiveEntryInfo->archiveHandle->storageId
                                            );
@@ -4352,6 +4356,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
           // flush index list
           error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
+                                            archiveEntryInfo->archiveHandle->uuidId,
                                             archiveEntryInfo->archiveHandle->entityId,
                                             archiveEntryInfo->archiveHandle->storageId
                                            );
@@ -5006,6 +5011,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
           // flush index list
           error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
+                                            archiveEntryInfo->archiveHandle->uuidId,
                                             archiveEntryInfo->archiveHandle->entityId,
                                             archiveEntryInfo->archiveHandle->storageId
                                            );
@@ -6088,6 +6094,7 @@ UNUSED_VARIABLE(storageInfo);
       case ARCHIVE_MODE_CREATE:
         // flush index list
         error = flushArchiveIndexList(archiveHandle,
+                                      archiveHandle->uuidId,
                                       archiveHandle->entityId,
                                       archiveHandle->storageId,
                                       0
@@ -13170,6 +13177,7 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
       if (error == ERROR_NONE)
       {
         error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
+                                          archiveEntryInfo->archiveHandle->uuidId,
                                           archiveEntryInfo->archiveHandle->entityId,
                                           archiveEntryInfo->archiveHandle->storageId
                                          );
@@ -14536,6 +14544,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   // add index
   error = Archive_updateIndex(indexHandle,
                               INDEX_ID_NONE,
+                              INDEX_ID_NONE,
                               storageId,
                               storageInfo,
                               totalEntryCount,
@@ -14554,6 +14563,7 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
 }
 
 Errors Archive_updateIndex(IndexHandle       *indexHandle,
+                           IndexId           uuidId,
                            IndexId           entityId,
                            IndexId           storageId,
                            StorageInfo       *storageInfo,
@@ -15021,6 +15031,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
           // flush index list (if entity known)
           error = flushArchiveIndexList(&archiveHandle,
+                                        uuidId,
                                         entityId,
                                         storageId,
                                         0
@@ -15105,6 +15116,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 
     // flush index list
     error = flushArchiveIndexList(&archiveHandle,
+                                  uuidId,
                                   entityId,
                                   storageId,
                                   MAX_INDEX_LIST
@@ -15171,6 +15183,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   {
     // flush index list
     error = flushArchiveIndexList(&archiveHandle,
+                                  uuidId,
                                   entityId,
                                   storageId,
                                   0

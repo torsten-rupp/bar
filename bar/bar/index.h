@@ -169,6 +169,8 @@ typedef enum
 #define INDEX_TYPE_MIN INDEX_TYPE_UUID
 #define INDEX_TYPE_MAX INDEX_TYPE_HISTORY
 
+#define INDEX_TYPE_ANY INDEX_TYPE_NONE
+
 #define INDEX_TYPE_SET_NONE 0
 #define INDEX_TYPE_SET_ANY \
   (  SET_VALUE(INDEX_TYPE_UUID) \
@@ -1833,7 +1835,7 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
+*          indexTypes       - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
 *          fragmentsFlag    - TRUE to get distinct fragment info
@@ -1850,7 +1852,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             ulong         indexIdCount,
                             const IndexId entryIds[],
                             ulong         entryIdCount,
-                            IndexTypeSet  indexTypeSet,
+                            IndexTypes    indexType,
                             ConstString   name,
                             bool          newestOnly,
                             bool          fragmentsFlag,
@@ -1868,7 +1870,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
+*          indexType        - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          fragmentsFlag    - TRUE to list all fragments
 *          newestOnly       - TRUE for newest entries only
@@ -1888,7 +1890,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              ulong               indexIdCount,
                              const IndexId       entryIds[],
                              ulong               entryIdCount,
-                             IndexTypeSet        indexTypeSet,
+                             IndexTypes          indexType,
                              ConstString         name,
                              bool                newestOnly,
                              bool                fragmentsFlag,
@@ -2470,6 +2472,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle);
 \***********************************************************************/
 
 Errors Index_addFile(IndexHandle *indexHandle,
+                     IndexId     uuidId,
                      IndexId     entityId,
                      IndexId     storageId,
                      ConstString name,
@@ -2502,6 +2505,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addImage(IndexHandle     *indexHandle,
+                      IndexId         uuidId,
                       IndexId         entityId,
                       IndexId         storageId,
                       ConstString     name,
@@ -2516,6 +2520,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 * Name   : Index_addDirectory
 * Purpose: add directory entry
 * Input  : indexHandle     - index handle
+*          uuidId          - index id of UUID
 *          entityId        - index id of entity
 *          storageId       - index id of storage
 *          name            - directory name
@@ -2531,6 +2536,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
 \***********************************************************************/
 
 Errors Index_addDirectory(IndexHandle *indexHandle,
+                          IndexId     uuidId,
                           IndexId     entityId,
                           IndexId     storageId,
                           String      name,
@@ -2562,6 +2568,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addLink(IndexHandle *indexHandle,
+                     IndexId     uuidId,
                      IndexId     entityId,
                      IndexId     storageId,
                      ConstString linkName,
@@ -2596,6 +2603,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addHardlink(IndexHandle *indexHandle,
+                         IndexId     uuidId,
                          IndexId     entityId,
                          IndexId     storageId,
                          ConstString name,
@@ -2631,6 +2639,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 \***********************************************************************/
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
+                        IndexId          uuidId,
                         IndexId          entityId,
                         IndexId          storageId,
                         ConstString      name,
@@ -2725,7 +2734,7 @@ Errors Index_pruneStorage(IndexHandle *indexHandle,
 *          indexIdCount     - uuid/entity/storage id count or 0
 *          entryIds         - entry ids or NULL
 *          entryIdCount     - entry id count or 0
-*          indexTypeSet     - index type set or INDEX_TYPE_SET_ANY
+*          indexType        - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
@@ -2741,7 +2750,7 @@ Errors Index_initListSkippedEntry(IndexQueryHandle *indexQueryHandle,
                                   ulong            indexIdCount,
                                   const IndexId    entryIds[],
                                   ulong            entryIdCount,
-                                  IndexTypeSet     indexTypeSet,
+                                  IndexTypes       indexType,
                                   ConstString      name,
                                   DatabaseOrdering ordering,
                                   uint64           offset,

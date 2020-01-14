@@ -3843,7 +3843,7 @@ LOCAL void pauseIndexUpdate(void)
 LOCAL void indexThreadCode(void)
 {
   IndexHandle            *indexHandle;
-  IndexId                entityId,storageId;
+  IndexId                uuidId,entityId,storageId;
   StorageSpecifier       storageSpecifier;
   String                 storageName,printableStorageName;
   StorageInfo            storageInfo;
@@ -3901,7 +3901,7 @@ LOCAL void indexThreadCode(void)
         while (   !quitFlag
                && Index_findStorageByState(indexHandle,
                                            INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED),
-                                           NULL,  // uuidIndexId
+                                           &uuidId,
                                            NULL,  // jobUUID
                                            &entityId,
                                            NULL,  // scheduleUUID
@@ -3963,6 +3963,7 @@ LOCAL void indexThreadCode(void)
               startTimestamp = Misc_getTimestamp();
 fprintf(stderr,"%s, %d: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n",__FILE__,__LINE__);
               error = Archive_updateIndex(indexHandle,
+                                          uuidId,
                                           entityId,
                                           storageId,
                                           &storageInfo,
@@ -13647,7 +13648,7 @@ LOCAL void xxxserverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *
                                 0, // indexIdCount
                                 Array_cArray(&clientInfo->entryIdArray),
                                 Array_length(&clientInfo->entryIdArray),
-                                INDEX_TYPE_SET_ANY_ENTRY,
+                                INDEX_TYPE_NONE,
                                 NULL, // name
                                 FALSE,  // newestOnly,
 //TODO
@@ -13868,7 +13869,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     }
   }
   String_doneTokenizer(&stringTokenizer);
-fprintf(stderr,"%s, %d: entryIds=%s -> #%d\n",__FILE__,__LINE__,String_cString(entryIds),Array_length(&clientInfo->entryIdArray));
+fprintf(stderr,"%s, %d: entryIds=%s -> #%ld\n",__FILE__,__LINE__,String_cString(entryIds),Array_length(&clientInfo->entryIdArray));
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
@@ -13959,7 +13960,7 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
 * Return : -
 * Notes  : Arguments:
 *            name=<text>
-*            indexType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
+*            entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
 *            newestOnly=yes|no
 *            selectedOnly=yes|no
 *            fragments=yes|no
@@ -13972,8 +13973,7 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
 LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   String     name;
-  bool       indexTypeAny;
-  IndexTypes indexType;
+  IndexTypes entryType;
   bool       newestOnly;
   bool       selectedOnly;
   bool       fragmentsFlag;
@@ -13992,17 +13992,13 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
     String_delete(name);
     return;
   }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType","*"),"*"))
   {
-    indexTypeAny = TRUE;
+    entryType = INDEX_TYPE_ANY;
   }
-  else if (StringMap_getEnum(argumentMap,"indexType",&indexType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_FILE))
+  else if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
   {
-    indexTypeAny = FALSE;
-  }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryTypexxxx=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL");
     String_delete(name);
     return;
   }
@@ -14038,7 +14034,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
                                Array_length(&clientInfo->indexIdArray),
                                selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
                                selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
-                               indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
+                               entryType,
                                name,
                                newestOnly,
                                fragmentsFlag,
@@ -14690,7 +14686,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     0, // indexIdCount
                                     Array_cArray(&clientInfo->entryIdArray),
                                     Array_length(&clientInfo->entryIdArray),
-                                    INDEX_TYPE_SET_ANY_ENTRY,
+                                    INDEX_TYPE_NONE,
                                     NULL, // name
                                     FALSE,  // newestOnly,
 //TODO
@@ -15551,7 +15547,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
 * Return : -
 * Notes  : Arguments:
 *            name=<text>
-*            indexType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
+*            entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
 *            newestOnly=yes|no
 *            selectedOnly=yes|no
 *            fragments=yes|no
@@ -15708,8 +15704,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     while (0)
 
   String                name;
-  bool                  indexTypeAny;
-  IndexTypes            indexType;
+  IndexTypes            entryType;
   bool                  newestOnly;
   bool                  selectedOnly;
   bool                  fragments;
@@ -15741,17 +15736,13 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   // filter name, index type, new entries only, fragments, offset, limit
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType","*"),"*"))
   {
-    indexTypeAny = TRUE;
+    entryType = INDEX_TYPE_ANY;
   }
-  else if (StringMap_getEnum(argumentMap,"indexType",&indexType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_FILE))
+  else if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
   {
-    indexTypeAny = FALSE;
-  }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL");
     String_delete(name);
     return;
   }
@@ -15798,7 +15789,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                 Array_length(&clientInfo->indexIdArray),
                                 selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
                                 selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
-                                indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
+                                entryType,
                                 name,
                                 newestOnly,
                                 fragments,
@@ -15915,9 +15906,9 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*
-*            newestOnly=yes|no
 *            name=<text>
+*            entryType=*FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
+*            newestOnly=yes|no
 *            [offset=<n>]
 *            [limit=<n>]
 *            [sortMode=ARCHIVE|NAME|TYPE|SIZE|LAST_CHANGED]
@@ -16077,8 +16068,7 @@ LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHan
     while (0)
 
   String                name;
-  bool                  indexTypeAny;
-  IndexTypes            indexType;
+  IndexTypes            entryType;
   bool                  newestOnly;
   uint64                offset;
   uint64                limit;
@@ -16108,29 +16098,22 @@ LOCAL void serverCommand_indexEntryFragmentList(ClientInfo *clientInfo, IndexHan
 
 HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
 
-  // filter entry pattern, index type, new entries only, offset, limit
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexType","*"),"*"))
+  // get index type, newest entries only, name, offset, limit
+  name = String_new();
+  StringMap_getString(argumentMap,"name",name,NULL);
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType","*"),"*"))
   {
-    indexTypeAny = TRUE;
+    entryType = INDEX_TYPE_ANY;
   }
-  else if (StringMap_getEnum(argumentMap,"indexType",&indexType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_FILE))
+  else if (!StringMap_getEnum(argumentMap,"entryType",&entryType,(StringMapParseEnumFunction)Index_parseType,INDEX_TYPE_ANY))
   {
-    indexTypeAny = FALSE;
-  }
-  else
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexType=FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL|*");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINKE|SPECIAL");
+    String_delete(name);
     return;
   }
   if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newestOnly=yes|no");
-    return;
-  }
-  name = String_new();
-  if (!StringMap_getString(argumentMap,"name",name,NULL))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"name=<text>");
     String_delete(name);
     return;
   }
@@ -16159,7 +16142,7 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
                                 Array_length(&clientInfo->indexIdArray),
                                 NULL,  // entryIds
                                 0,  // entryIdCount
-                                indexTypeAny ? INDEX_TYPE_SET_ANY_ENTRY : SET_VALUE(indexType),
+                                entryType,
                                 name,
                                 newestOnly,
                                 FALSE,  //fragments
