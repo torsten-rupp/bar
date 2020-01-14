@@ -4476,7 +4476,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
             break;
           default:
             #ifndef NDEBUG
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("from column '%s'",columnNode->name);
             #endif /* not NDEBUG */
             break; // not reached
         }
@@ -4605,7 +4605,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
               break;
             default:
               #ifndef NDEBUG
-                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("to column '%s'",columnNode->name);
               #endif /* not NDEBUG */
               break; // not reached
           }
@@ -4641,7 +4641,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
             break;
           default:
             #ifndef NDEBUG
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("to column '%s'",columnNode->name);
             #endif /* not NDEBUG */
             break; // not reached
         }
