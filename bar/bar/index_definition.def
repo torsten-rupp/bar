@@ -8,9 +8,9 @@
      ^
      |<- entity
      |     ^
-     |     |<----------------------------- storages
+     |<====|<----------------------------- storages
      |     |                                 ^
-     |     |<- entry                         |
+     |<====|<- entry                         |
      |     |     ^                           |
      |     |     |<- entryNewest             |
      |     |     |                           |
@@ -35,11 +35,13 @@
      |     |     |                           |
      |     |     |<- specialEntry -----------|
      |     |...
-     |     |     
-     |     |<- skippedEntry  
-     |     |...   
+     |     |
+     |     |<- skippedEntry
+     |     |...
      |...
 
+  Legend:  <--  mandadory information
+           <==  redundant information for faster access
 */
 
 // index version
@@ -86,25 +88,25 @@ INSERT OR IGNORE INTO meta (name,value) VALUES ('datetime',DATETIME('now'));
 
 // --- uuids -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS uuids(
-  id                  INTEGER PRIMARY KEY,
-  jobUUID             TEXT UNIQUE NOT NULL
+  id      INTEGER PRIMARY KEY,
+  jobUUID TEXT UNIQUE NOT NULL
 );
 CREATE INDEX ON uuids (jobUUID);
 
 // --- entities --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS entities(
-  id                  INTEGER PRIMARY KEY,
-  jobUUID             TEXT NOT NULL,
-  scheduleUUID        TEXT NOT NULL DEFAULT '',
-  hostName            TEXT,
+  id                        INTEGER PRIMARY KEY,
+  jobUUID                   TEXT NOT NULL,
+  scheduleUUID              TEXT NOT NULL DEFAULT '',
+  hostName                  TEXT,
 //TODO: use
-  userName            TEXT,
-  created             INTEGER,
-  type                INTEGER,
-  parentJobUUID       INTEGER,
-  bidFlag             INTEGER DEFAULT 0,
-  lockedCount         INTEGER DEFAULT 0,
-  deletedFlag         INTEGER DEFAULT 0,
+  userName                  TEXT,
+  created                   INTEGER,
+  type                      INTEGER,
+  parentJobUUID             INTEGER,
+  bidFlag                   INTEGER DEFAULT 0,
+  lockedCount               INTEGER DEFAULT 0,
+  deletedFlag               INTEGER DEFAULT 0,
 
   // Note: updated via Index_updateEntitiesInfos()
   totalEntryCount           INTEGER DEFAULT 0,  // total number of entries
@@ -151,7 +153,6 @@ CREATE TRIGGER AFTER INSERT ON entities
 CREATE TABLE IF NOT EXISTS storages(
   id                        INTEGER PRIMARY KEY,
 
-//TODO: obsolete?
   entityId                  INTEGER REFERENCES entities(id) ON DELETE CASCADE,
   name                      TEXT NOT NULL,
   created                   INTEGER,
@@ -192,8 +193,12 @@ CREATE TABLE IF NOT EXISTS storages(
   totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
   totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
   totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
-  totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
+  totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
+
+  // Note: redundancy for faster access
+  uuidId                    INTEGER DEFAULT 0
 );
+CREATE INDEX ON storages (uuidId,entityId,name,created,state);
 CREATE INDEX ON storages (entityId,name,created,state);
 //TODO: add?
 //CREATE INDEX ON storages (hostName);
@@ -253,6 +258,7 @@ CREATE TABLE IF NOT EXISTS entries(
   // updated by triggers
   size            INTEGER DEFAULT 0  // file/image/hardlink size. Note: redundancy for faster access
 );
+CREATE INDEX ON entries (uuidId,entityId,type,name);
 CREATE INDEX ON entries (entityId,type,name);
 CREATE INDEX ON entries (name,size,type,timeLastChanged);
 CREATE INDEX ON entries (type,size,name,timeLastChanged);
@@ -447,12 +453,12 @@ CREATE TRIGGER AFTER INSERT ON fileEntries
 
 // --- images ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS imageEntries(
-  id              INTEGER PRIMARY KEY,
+  id             INTEGER PRIMARY KEY,
 
-  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  size            INTEGER,
-  fileSystemType  INTEGER,
-  blockSize       INTEGER,                 // size of image block
+  entryId        INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size           INTEGER,
+  fileSystemType INTEGER,
+  blockSize      INTEGER,                 // size of image block
 
   CONSTRAINT imageEntries UNIQUE (entryId)
 );
@@ -522,10 +528,10 @@ CREATE TRIGGER AFTER INSERT ON linkEntries
 
 // --- hardlinks -------------------------------------------------------
 CREATE TABLE IF NOT EXISTS hardlinkEntries(
-  id              INTEGER PRIMARY KEY,
+  id      INTEGER PRIMARY KEY,
 
-  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  size            INTEGER,
+  entryId INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  size    INTEGER,
 
   CONSTRAINT hardlinkEntries UNIQUE (entryId)
 );
@@ -542,13 +548,13 @@ CREATE TRIGGER AFTER INSERT ON hardlinkEntries
 
 // --- special ---------------------------------------------------------
 CREATE TABLE IF NOT EXISTS specialEntries(
-  id              INTEGER PRIMARY KEY,
+  id          INTEGER PRIMARY KEY,
 
-  entryId         INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId       INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
-  specialType     INTEGER,
-  major           INTEGER,
-  minor           INTEGER,
+  entryId     INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId   INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  specialType INTEGER,
+  major       INTEGER,
+  minor       INTEGER,
 
   CONSTRAINT specialEntries UNIQUE (entryId)
 );
