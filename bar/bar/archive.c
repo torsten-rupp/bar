@@ -1605,6 +1605,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
         {
           case ARCHIVE_ENTRY_TYPE_FILE:
             error = Index_addFile(archiveHandle->indexHandle,
+                                  uuidId,
                                   entityId,
                                   storageId,
                                   archiveIndexNode->file.name,
@@ -1621,6 +1622,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
             break;
           case ARCHIVE_ENTRY_TYPE_IMAGE:
             error = Index_addImage(archiveHandle->indexHandle,
+                                   uuidId,
                                    entityId,
                                    storageId,
                                    archiveIndexNode->image.name,
@@ -1647,6 +1649,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
             break;
           case ARCHIVE_ENTRY_TYPE_LINK:
             error = Index_addLink(archiveHandle->indexHandle,
+                                  uuidId,
                                   entityId,
                                   storageId,
                                   archiveIndexNode->link.name,
@@ -1661,6 +1664,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
             break;
           case ARCHIVE_ENTRY_TYPE_HARDLINK:
             error = Index_addHardlink(archiveHandle->indexHandle,
+                                      uuidId,
                                       entityId,
                                       storageId,
                                       archiveIndexNode->hardlink.name,
@@ -1677,6 +1681,7 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
             break;
           case ARCHIVE_ENTRY_TYPE_SPECIAL:
             error = Index_addSpecial(archiveHandle->indexHandle,
+                                     uuidId,
                                      entityId,
                                      storageId,
                                      archiveIndexNode->special.name,

@@ -12348,6 +12348,7 @@ void Index_doneList(IndexQueryHandle *indexQueryHandle)
 }
 
 Errors Index_addFile(IndexHandle *indexHandle,
+                     IndexId     uuidId,
                      IndexId     entityId,
                      IndexId     storageId,
                      ConstString name,
@@ -12387,6 +12388,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                NULL,  // changedRowCount
                                "INSERT OR IGNORE INTO entries \
                                   ( \
+                                   uuidId,\
                                    entityId, \
                                    type, \
                                    name, \
@@ -12400,6 +12402,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                 VALUES \
                                   ( \
                                    %lld, \
+                                   %lld, \
                                    %d, \
                                    %'S, \
                                    %llu, \
@@ -12410,6 +12413,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                    %u \
                                   ); \
                                ",
+                               Index_getDatabaseId(uuidId),
                                Index_getDatabaseId(entityId),
                                INDEX_TYPE_FILE,
                                name,
@@ -12540,7 +12544,9 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_FILE storageId=%llu name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_FILE uuidId=%llu entityId=%llu storageId=%llu name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    uuidId,
+                                    entityId,
                                     storageId,
                                     name,
                                     size,
@@ -12559,6 +12565,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
 }
 
 Errors Index_addImage(IndexHandle     *indexHandle,
+                      IndexId         uuidId,
                       IndexId         entityId,
                       IndexId         storageId,
                       ConstString     name,
@@ -12594,6 +12601,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                NULL,  // changedRowCount
                                "INSERT OR IGNORE INTO entries \
                                   ( \
+                                   uuidId,\
                                    entityId, \
                                    type, \
                                    name, \
@@ -12607,6 +12615,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                 VALUES \
                                   ( \
                                    %lld, \
+                                   %lld, \
                                    %d, \
                                    %'S, \
                                    %llu, \
@@ -12617,6 +12626,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                    %u \
                                   ); \
                                ",
+                               Index_getDatabaseId(uuidId),
                                Index_getDatabaseId(entityId),
                                INDEX_TYPE_IMAGE,
                                name,
@@ -12736,7 +12746,9 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_IMAGE storageId=%llu type=IMAGE name=%'S fileSystemType=%'s size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
+                                    "INDEX_ADD_IMAGE uuidId=%llu entityId=%llu storageId=%llu type=IMAGE name=%'S fileSystemType=%'s size=%llu blockSize=%lu blockOffset=%llu blockCount=%llu",
+                                    uuidId,
+                                    entityId,
                                     storageId,
                                     name,
                                     FileSystem_fileSystemTypeToString(fileSystemType,"unknown"),
@@ -12889,7 +12901,9 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_DIRECTORY storageId=%llu type=DIRECTORY name=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_DIRECTORY uuidId=%llu entityId=%llu storageId=%llu type=DIRECTORY name=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    uuidId,
+                                    entityId,
                                     storageId,
                                     name,
                                     timeLastAccess,
@@ -12905,6 +12919,7 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
 }
 
 Errors Index_addLink(IndexHandle *indexHandle,
+                     IndexId     uuidId,
                      IndexId     entityId,
                      IndexId     storageId,
                      ConstString linkName,
@@ -12945,6 +12960,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                NULL,  // changedRowCount
                                "INSERT INTO entries \
                                   ( \
+                                   uuidId,\
                                    entityId, \
                                    type, \
                                    name, \
@@ -12958,6 +12974,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                 VALUES \
                                   ( \
                                    %lld, \
+                                   %lld, \
                                    %d, \
                                    %'S, \
                                    %llu, \
@@ -12968,6 +12985,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                    %u \
                                   ); \
                                ",
+                               Index_getDatabaseId(uuidId),
                                Index_getDatabaseId(entityId),
                                INDEX_TYPE_LINK,
                                linkName,
@@ -13031,7 +13049,9 @@ Errors Index_addLink(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_LINK storageId=%llu type=LINK name=%'S destinationName=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    "INDEX_ADD_LINK uuidId=%llu entityId=%llu storageId=%llu type=LINK name=%'S destinationName=%'S timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o",
+                                    uuidId,
+                                    entityId,
                                     storageId,
                                     linkName,
                                     destinationName,
@@ -13048,6 +13068,7 @@ Errors Index_addLink(IndexHandle *indexHandle,
 }
 
 Errors Index_addHardlink(IndexHandle *indexHandle,
+                         IndexId     uuidId,
                          IndexId     entityId,
                          IndexId     storageId,
                          ConstString name,
@@ -13087,6 +13108,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                NULL,  // changedRowCount
                                "INSERT OR IGNORE INTO entries \
                                   ( \
+                                   uuidId,\
                                    entityId, \
                                    type, \
                                    name, \
@@ -13100,6 +13122,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                 VALUES \
                                   ( \
                                    %lld, \
+                                   %lld, \
                                    %d, \
                                    %'S, \
                                    %llu, \
@@ -13110,6 +13133,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                    %u \
                                   ); \
                                ",
+                               Index_getDatabaseId(uuidId),
                                Index_getDatabaseId(entityId),
                                INDEX_TYPE_HARDLINK,
                                name,
@@ -13241,7 +13265,9 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_HARDLINK storageId=%llu type=HARDLINK name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    "INDEX_ADD_HARDLINK uuidId=%llu entityId=%llu storageId=%llu type=HARDLINK name=%'S size=%llu timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o fragmentOffset=%llu fragmentSize=%llu",
+                                    uuidId,
+                                    entityId,
                                     storageId,
                                     name,
                                     size,
@@ -13260,6 +13286,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
 }
 
 Errors Index_addSpecial(IndexHandle      *indexHandle,
+                        IndexId          uuidId,
                         IndexId          entityId,
                         IndexId          storageId,
                         ConstString      name,
@@ -13299,6 +13326,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                NULL,  // changedRowCount
                                "INSERT INTO entries \
                                   ( \
+                                   uuidId,\
                                    entityId, \
                                    type, \
                                    name, \
@@ -13312,6 +13340,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                 VALUES \
                                   ( \
                                    %lld, \
+                                   %lld, \
                                    %d, \
                                    %'S, \
                                    %llu, \
@@ -13322,6 +13351,7 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                    %u \
                                   ); \
                                ",
+                               Index_getDatabaseId(uuidId),
                                Index_getDatabaseId(entityId),
                                INDEX_TYPE_SPECIAL,
                                name,
@@ -13391,7 +13421,9 @@ Errors Index_addSpecial(IndexHandle      *indexHandle,
                                     SERVER_IO_DEBUG_LEVEL,
                                     SERVER_IO_TIMEOUT,
                                     CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_ADD_SPECIAL storageId=%llu type=SPECIAL name=%'S specialType=%s timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
+                                    "INDEX_ADD_SPECIAL uuidId=%llu entityId=%llu storageId=%llu type=SPECIAL name=%'S specialType=%s timeLastAccess=%llu timeModified=%llu timeLastChanged=%llu userId=%u groupId=%u permission=%o major=%u minor=%u",
+                                    uuidId,
+                                    entityId,
                                     storageId,
                                     name,
                                     File_fileSpecialTypeToString(specialType,""),

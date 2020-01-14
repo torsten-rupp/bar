@@ -1516,6 +1516,7 @@ LOCAL void connectorCommand_indexAddFile(ConnectorInfo *connectorInfo, IndexHand
   {
     // add index file entry
     error = Index_addFile(indexHandle,
+                          uuidId,
                           entityId,
                           storageId,
                           name,
@@ -1654,6 +1655,7 @@ LOCAL void connectorCommand_indexAddImage(ConnectorInfo *connectorInfo, IndexHan
   {
     // add index image entry
     error = Index_addImage(indexHandle,
+                           uuidId,
                            entityId,
                            storageId,
                            name,
@@ -1950,6 +1952,7 @@ LOCAL void connectorCommand_indexAddLink(ConnectorInfo *connectorInfo, IndexHand
   {
     // add index link entry
     error = Index_addLink(indexHandle,
+                          uuidId,
                           entityId,
                           storageId,
                           name,
@@ -2115,6 +2118,7 @@ LOCAL void connectorCommand_indexAddHardlink(ConnectorInfo *connectorInfo, Index
   {
     // add index hardlink entry
     error = Index_addHardlink(indexHandle,
+                              uuidId,
                               entityId,
                               storageId,
                               name,
@@ -2279,6 +2283,7 @@ LOCAL void connectorCommand_indexAddSpecial(ConnectorInfo *connectorInfo, IndexH
   {
     // add index special entry
     error = Index_addSpecial(indexHandle,
+                             uuidId,
                              entityId,
                              storageId,
                              name,
