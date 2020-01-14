@@ -14658,9 +14658,9 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
         {
           while (   !isCommandAborted(clientInfo,id)
                  && Index_getNextStorage(&indexQueryHandle,
-                                         NULL,  // uuidIndexId
+                                         NULL,  // uuidId
                                          NULL,  // jobUUID
-                                         NULL,  // entityIndexId
+                                         NULL,  // entityId
                                          NULL,  // scheduleUUID
                                          NULL,  // hostName
                                          NULL,  // userName
@@ -14670,12 +14670,12 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                          storageName,
                                          NULL,  // createdDateTime
                                          NULL,  // size
-                                         NULL,  // totalEntrySize
-                                         NULL,  // indexState,
+                                         NULL,  // indexState
                                          NULL,  // indexMode,
                                          NULL,  // lastCheckedDateTime,
-                                         NULL,  // errorMessage
-                                         NULL  // totalEntryCount
+                                         NULL,  // errorMessage,
+                                         NULL,  // totalEntryCount
+                                         NULL  // totalEntrySize
                                         )
                 )
           {
@@ -14707,9 +14707,9 @@ FALSE,//                                fragmentsFlag,
       {
         while (   !isCommandAborted(clientInfo,id)
                && Index_getNextEntry(&indexQueryHandle,
-                                     NULL,  // uuidIndexId
+                                     NULL,  // uuidId
                                      NULL,  // jobUUID,
-                                     NULL,  // entityIndexId
+                                     NULL,  // entityId
                                      NULL,  // scheduleUUID,
                                      NULL,  // hostName
                                      NULL,  // userName
@@ -14733,6 +14733,69 @@ FALSE,//                                fragmentsFlag,
           {
             String_appendCString(entryName,"/*");
             EntryList_append(&includeEntryList,ENTRY_TYPE_FILE,entryName,PATTERN_TYPE_GLOB,NULL);
+          }
+
+          error = Index_initListEntryFragments(&indexQueryHandle2,
+                                               indexHandle,
+                                               entryId,
+                                               INDEX_ENTRY_SORT_MODE_NONE,
+                                               DATABASE_ORDERING_NONE,
+                                               0,
+                                               INDEX_UNLIMITED
+                                              );
+          if (error == ERROR_NONE)
+          {
+            while (   !isCommandAborted(clientInfo,id)
+bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
+                                IndexId           *uuidId,
+                                String            jobUUID,
+                                IndexId           *entityId,
+                                String            scheduleUUID,
+                                String            userName,
+                                String            hostName,
+                                ArchiveTypes      *archiveType,
+                                IndexId           *storageId,
+                                String            storageName,
+                                uint64            *storageDateTime,
+                                IndexId           *entryId,
+                                String            entryName,
+                                String            destinationName,
+                                FileSystemTypes   *fileSystemType,
+                                uint64            *size,
+//TODO: use timeLastChanged
+                                uint64            *timeModified,
+                                uint32            *userId,
+                                uint32            *groupId,
+                                uint32            *permission,
+                                uint64            *fragmentOffset,
+                                uint64            *fragmentSize
+                               )
+
+                   && Index_getNextEntry(&indexQueryHandle2,
+                                         NULL,  // uuidId
+                                         NULL,  // jobUUID,
+                                         NULL,  // entityId
+                                         NULL,  // scheduleUUID,
+                                         NULL,  // hostName
+                                         NULL,  // userName
+                                         NULL,  // archiveType,
+                                         &storageId,
+                                         storageName,
+                                         NULL,  // storageDateTime
+                                         NULL,  // size
+                                         NULL,  // timeModified
+                                         NULL,  // userId
+                                         NULL,  // groupId
+                                         NULL,  // permission
+                                         NULL,  // fragmentCount
+                                         NULL,  // destinationName
+                                         NULL,  // fileSystemType
+                                         NULL  // blockSize
+                                        )
+                  )
+            {
+            }
+            Index_doneList(&indexQueryHandle2);
           }
         }
         Index_doneList(&indexQueryHandle);

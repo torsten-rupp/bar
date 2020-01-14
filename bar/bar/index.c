@@ -10883,6 +10883,7 @@ bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
                                 IndexId           *storageId,
                                 String            storageName,
                                 uint64            *storageDateTime,
+#if 0
                                 IndexId           *entryId,
                                 String            entryName,
                                 String            destinationName,
@@ -10893,6 +10894,7 @@ bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
                                 uint32            *userId,
                                 uint32            *groupId,
                                 uint32            *permission,
+#endif
                                 uint64            *fragmentOffset,
                                 uint64            *fragmentSize
                                )
