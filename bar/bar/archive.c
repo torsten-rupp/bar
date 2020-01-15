@@ -15299,8 +15299,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   return error;
 
   #undef MAX_ARCHIVE_CONTENT_LIST_LENGTH
-#warning revert
-exit(22);
 }
 
 Errors Archive_removeIndex(IndexHandle *indexHandle,
