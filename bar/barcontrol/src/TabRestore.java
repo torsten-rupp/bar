@@ -3074,7 +3074,10 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            widgetStorageTable.setRedraw(false);
+            if (!widgetStorageTable.isDisposed())
+            {
+              widgetStorageTable.setRedraw(false);
+            }
           }
         });
 
@@ -3091,7 +3094,10 @@ Dprintf.dprintf("");
         {
           public void run()
           {
-            widgetStorageTable.setRedraw(true);
+            if (!widgetStorageTable.isDisposed())
+            {
+              widgetStorageTable.setRedraw(true);
+            }
           }
         });
       }
