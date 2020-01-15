@@ -1402,7 +1402,6 @@ bool Index_getNextEntity(IndexQueryHandle *indexQueryHandle,
 \***********************************************************************/
 
 Errors Index_newEntity(IndexHandle  *indexHandle,
-//TODO: uuidId?
                        ConstString  jobUUID,
                        ConstString  scheduleUUID,
                        ConstString  hostName,
@@ -1970,8 +1969,6 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
 * Input  : indexQueryHandle - index query handle variable
 *          indexHandle      - index handle
 *          entryId          - entry id
-*          sortMode         - sort mode; see IndexStorageSortModes
-*          ordering         - ordering
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
 *                             INDEX_UNLIMITED
@@ -1980,40 +1977,20 @@ Errors Index_deleteEntry(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListEntryFragments(IndexQueryHandle    *indexQueryHandle,
-                                    IndexHandle         *indexHandle,
-                                    IndexId             entryId,
-                                    IndexEntrySortModes sortMode,
-                                    DatabaseOrdering    ordering,
-                                    uint64              offset,
-                                    uint64              limit
+Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
+                                    IndexHandle      *indexHandle,
+                                    IndexId          entryId,
+                                    uint64           offset,
+                                    uint64           limit
                                    );
 
 /***********************************************************************\
 * Name   : Index_getNextEntryFrament
 * Purpose: get next fragment of entry
 * Input  : indexQueryHandle - index query handle
-* Output : uuidId          - index id of UUID (can be NULL)
-*          jobUUID         - job UUID (can be NULL)
-*          entityId        - index id of entry
-*          scheduleUUID    - schedule UUID (can be NULL)
-*          userName        - user name (can be NULL)
-*          hostName        - host name (can be NULL)
-*          archiveType     - archive type (can be NULL)
-*          storageId       - index id of storage (can be NULL)
+* Output : storageId       - index id of storage (can be NULL)
 *          storageName     - storage name (can be NULL)
 *          storageDateTime - storage date/time stamp [s]
-*          entryId         - index id of entry
-*          entryName       - entry name
-*          destinationName - destination name (for link entries)
-*          fileSystemType  - file system type (for image
-*                            entries)
-*          size            - file/image/hardlink size [bytes]
-*                            or directory size [bytes]
-*          timeModified    - modified date/time stamp [s]
-*          userId          - user id
-*          groupId         - group id
-*          permission      - permission flags
 *          fragmentOffset  - fragment offset [bytes]
 *          fragmentSize    - fragment size [bytes]
 * Return : TRUE if entry read, FALSE otherwise
@@ -2021,26 +1998,9 @@ Errors Index_initListEntryFragments(IndexQueryHandle    *indexQueryHandle,
 \***********************************************************************/
 
 bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
-                                IndexId           *uuidId,
-                                String            jobUUID,
-                                IndexId           *entityId,
-                                String            scheduleUUID,
-                                String            userName,
-                                String            hostName,
-                                ArchiveTypes      *archiveType,
                                 IndexId           *storageId,
                                 String            storageName,
                                 uint64            *storageDateTime,
-                                IndexId           *entryId,
-                                String            entryName,
-                                String            destinationName,
-                                FileSystemTypes   *fileSystemType,
-                                uint64            *size,
-//TODO: use timeLastChanged
-                                uint64            *timeModified,
-                                uint32            *userId,
-                                uint32            *groupId,
-                                uint32            *permission,
                                 uint64            *fragmentOffset,
                                 uint64            *fragmentSize
                                );

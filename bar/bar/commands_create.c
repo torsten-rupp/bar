@@ -3989,7 +3989,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
          )
       {
         Array_append(&uuidIds,&oldUUIDId);
-        Array_append(&entityIds,&oldEntityId);
+        if (!INDEX_ID_IS_DEFAULT_ENTITY(oldEntityId)) Array_append(&entityIds,&oldEntityId);
         Array_append(&storageIds,&oldStorageId);
       }
     }

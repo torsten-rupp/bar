@@ -13814,64 +13814,10 @@ LOCAL void serverCommand_indexEntryListAdd(ClientInfo *clientInfo, IndexHandle *
         return;
       }
 
-//TODO
-#warning remove
-#if 0
-      // add id and all fragment ids
-      error = Index_initListEntryFragments(&indexQueryHandle,
-                                           indexHandle,
-                                           entryId,
-                                           INDEX_ENTRY_SORT_MODE_NONE,  // sortMode,
-                                           DATABASE_ORDERING_NONE,  // ordering,
-                                           0,
-                                           INDEX_UNLIMITED
-                                          );
-      if (error != ERROR_NONE)
-      {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-//        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init list fragments fail");
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
-        String_doneTokenizer(&stringTokenizer);
-        String_delete(entryIds);
-        Semaphore_unlock(&clientInfo->lock);
-        return;
-      }
-      while (   !isCommandAborted(clientInfo,id)
-             && Index_getNextEntryFragment(&indexQueryHandle,
-                                           NULL,  // uuidId,
-                                           NULL,  // jobUUID,
-                                           NULL,  // entityId,
-                                           NULL,  // scheduleUUID,
-                                           NULL,  // hostName,
-                                           NULL,  // userName
-                                           NULL,  // archiveType,
-                                           NULL,  // storageId,
-                                           NULL,  // storageName,
-                                           NULL,  // storageDateTime,
-                                           &entryId,
-                                           NULL,  // entryName,
-                                           NULL,  // destinationName,
-                                           NULL,  // fileSystemType,
-                                           NULL,  // size,
-                                           NULL,  // timeModified,
-                                           NULL,  // userId,
-                                           NULL,  // groupId,
-                                           NULL,  // permission,
-                                           NULL,  // fragmentOffset,
-                                           NULL  // fragmentSize
-                                          )
-            )
-      {
-        Array_append(&clientInfo->entryIdArray,&entryId);
-      }
-      Index_doneList(&indexQueryHandle);
-#else
       Array_append(&clientInfo->entryIdArray,&entryId);
-#endif
     }
   }
   String_doneTokenizer(&stringTokenizer);
-fprintf(stderr,"%s, %d: entryIds=%s -> #%ld\n",__FILE__,__LINE__,String_cString(entryIds),Array_length(&clientInfo->entryIdArray));
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
@@ -14596,7 +14542,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
   String             entryName;
   StringList         storageNameList;
   EntryList          includeEntryList;
-  IndexQueryHandle   indexQueryHandle;
+  IndexQueryHandle   indexQueryHandle1,indexQueryHandle2;
   char               byName[256];
   RestoreCommandInfo restoreCommandInfo;
   Errors             error;
@@ -14636,7 +14582,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
     case ARCHIVES:
       if (error == ERROR_NONE)
       {
-        error = Index_initListStorages(&indexQueryHandle,
+        error = Index_initListStorages(&indexQueryHandle1,
                                        indexHandle,
                                        INDEX_ID_ANY,  // uuidIndexId
                                        INDEX_ID_ANY,  // entityIndexId
@@ -14657,7 +14603,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
         if (error == ERROR_NONE)
         {
           while (   !isCommandAborted(clientInfo,id)
-                 && Index_getNextStorage(&indexQueryHandle,
+                 && Index_getNextStorage(&indexQueryHandle1,
                                          NULL,  // uuidId
                                          NULL,  // jobUUID
                                          NULL,  // entityId
@@ -14681,12 +14627,12 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
           {
             StringList_append(&storageNameList,storageName);
           }
-          Index_doneList(&indexQueryHandle);
+          Index_doneList(&indexQueryHandle1);
         }
       }
       break;
     case ENTRIES:
-      error = Index_initListEntries(&indexQueryHandle,
+      error = Index_initListEntries(&indexQueryHandle1,
                                     indexHandle,
                                     NULL, // indexIds
                                     0, // indexIdCount
@@ -14706,7 +14652,7 @@ FALSE,//                                fragmentsFlag,
       if (error == ERROR_NONE)
       {
         while (   !isCommandAborted(clientInfo,id)
-               && Index_getNextEntry(&indexQueryHandle,
+               && Index_getNextEntry(&indexQueryHandle1,
                                      NULL,  // uuidId
                                      NULL,  // jobUUID,
                                      NULL,  // entityId
@@ -14738,67 +14684,27 @@ FALSE,//                                fragmentsFlag,
           error = Index_initListEntryFragments(&indexQueryHandle2,
                                                indexHandle,
                                                entryId,
-                                               INDEX_ENTRY_SORT_MODE_NONE,
-                                               DATABASE_ORDERING_NONE,
                                                0,
                                                INDEX_UNLIMITED
                                               );
           if (error == ERROR_NONE)
           {
             while (   !isCommandAborted(clientInfo,id)
-bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
-                                IndexId           *uuidId,
-                                String            jobUUID,
-                                IndexId           *entityId,
-                                String            scheduleUUID,
-                                String            userName,
-                                String            hostName,
-                                ArchiveTypes      *archiveType,
-                                IndexId           *storageId,
-                                String            storageName,
-                                uint64            *storageDateTime,
-                                IndexId           *entryId,
-                                String            entryName,
-                                String            destinationName,
-                                FileSystemTypes   *fileSystemType,
-                                uint64            *size,
-//TODO: use timeLastChanged
-                                uint64            *timeModified,
-                                uint32            *userId,
-                                uint32            *groupId,
-                                uint32            *permission,
-                                uint64            *fragmentOffset,
-                                uint64            *fragmentSize
-                               )
-
-                   && Index_getNextEntry(&indexQueryHandle2,
-                                         NULL,  // uuidId
-                                         NULL,  // jobUUID,
-                                         NULL,  // entityId
-                                         NULL,  // scheduleUUID,
-                                         NULL,  // hostName
-                                         NULL,  // userName
-                                         NULL,  // archiveType,
-                                         &storageId,
-                                         storageName,
-                                         NULL,  // storageDateTime
-                                         NULL,  // size
-                                         NULL,  // timeModified
-                                         NULL,  // userId
-                                         NULL,  // groupId
-                                         NULL,  // permission
-                                         NULL,  // fragmentCount
-                                         NULL,  // destinationName
-                                         NULL,  // fileSystemType
-                                         NULL  // blockSize
-                                        )
+                   && Index_getNextEntryFragment(&indexQueryHandle2,
+                                                 NULL,  // storageId,
+                                                 storageName,
+                                                 NULL,  // storageDateTime
+                                                 NULL,  // fragmentOffset
+                                                 NULL  // fragmentSize
+                                                )
                   )
             {
+              StringList_append(&storageNameList,storageName);
             }
             Index_doneList(&indexQueryHandle2);
           }
         }
-        Index_doneList(&indexQueryHandle);
+        Index_doneList(&indexQueryHandle1);
       }
       break;
     default:

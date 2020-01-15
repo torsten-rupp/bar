@@ -133,7 +133,10 @@ CREATE TABLE IF NOT EXISTS entities(
   totalLinkCountNewest      INTEGER DEFAULT 0,  // total number of newest link entries
   totalHardlinkCountNewest  INTEGER DEFAULT 0,  // total number of newest hardlink entries
   totalHardlinkSizeNewest   INTEGER DEFAULT 0,  // total size of newest hardlink entries (sum of fragments) [bytes]
-  totalSpecialCountNewest   INTEGER DEFAULT 0   // total number of newest special entries
+  totalSpecialCountNewest   INTEGER DEFAULT 0,  // total number of newest special entries
+
+  // Note: redundancy for faster access
+  uuidId                    INTEGER DEFAULT 0
 );
 CREATE INDEX ON entities (jobUUID,created,type);
 CREATE INDEX ON entities (hostName);
@@ -239,8 +242,8 @@ CREATE TABLE IF NOT EXISTS entries(
   id              INTEGER PRIMARY KEY,
 
   entityId        INTEGER REFERENCES entities(id) ON DELETE CASCADE,
-  name            TEXT NOT NULL,
   type            INTEGER,
+  name            TEXT NOT NULL,
   timeLastAccess  INTEGER,
   timeModified    INTEGER,
   timeLastChanged INTEGER,
@@ -254,9 +257,9 @@ CREATE TABLE IF NOT EXISTS entries(
 
   // Note: redundancy for faster access
   uuidId          INTEGER DEFAULT 0,
+  size            INTEGER DEFAULT 0,  // updated by triggers
 
-  // updated by triggers
-  size            INTEGER DEFAULT 0  // file/image/hardlink size. Note: redundancy for faster access
+  CONSTRAINT entries UNIQUE (entityId,type,name)
 );
 CREATE INDEX ON entries (uuidId,entityId,type,name);
 CREATE INDEX ON entries (entityId,type,name);
