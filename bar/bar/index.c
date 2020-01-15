@@ -2375,10 +2375,8 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
     Array_done(&databaseIds);
     return error;
   }
-fprintf(stderr,"%s, %d: uuid=%ld\n",__FILE__,__LINE__,Index_getDatabaseId(uuidId));
   ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: databaseId=%ld\n",__FILE__,__LINE__,databaseId);
     error = pruneEntity(indexHandle,doneFlag,deletedCounter,databaseId);
   }
   if (error != ERROR_NONE)
@@ -2871,9 +2869,7 @@ LOCAL void indexThreadCode(void)
     String_delete(directoryName);
 
     // process all *.oldNNN files
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     #ifdef INDEX_DEBUG_IMPORT_OLD_DATABASE
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
       logImportIndexHandle = fopen(IMPORT_INDEX_LOG_FILENAME,"w");
     #endif /* INDEX_DEBUG_IMPORT_OLD_DATABASE */
     i                   = 0;
@@ -7837,7 +7833,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   // get ordering
   appendOrdering(orderString,TRUE,"entities.created",ordering);
 
-fprintf(stderr,"%s, %d: Index_initListEntities /////////////////////////////////////////////\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: Index_initListEntities /////////////////////////////////////////////\n",__FILE__,__LINE__);
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
@@ -7873,17 +7869,16 @@ fprintf(stderr,"%s, %d: Index_initListEntities /////////////////////////////////
   });
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     doneIndexQueryHandle(indexQueryHandle);
     String_delete(orderString);
     String_delete(filterString);
     String_delete(ftsName);
     return error;
   }
-#warning
-#ifndef NDEBUG
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-#endif
+//#warning
+//#ifndef NDEBUG
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+//#endif
 
   // free resources
   String_delete(orderString);
@@ -8675,10 +8670,10 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
         break;
     }
   }
-fprintf(stderr,"%s, %d: Index_initListStorages ------------------------------------------------------\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
-fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
-fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
+//fprintf(stderr,"%s, %d: Index_initListStorages ------------------------------------------------------\n",__FILE__,__LINE__);
+//fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
+//fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
+//fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
 
   // get filters
   filterIdsString = String_new();
@@ -8754,10 +8749,10 @@ fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(
     String_delete(ftsName);
     return error;
   }
-#warning
-#ifndef NDEBUG
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-#endif
+//#warning
+//#ifndef NDEBUG
+//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+//#endif
 
   // free resources
   String_delete(orderString);
@@ -8885,7 +8880,8 @@ Errors Index_newStorage(IndexHandle *indexHandle,
                                   ) \
                                 VALUES \
                                   ( \
-                                   %d, \
+                                   %lld, \
+                                   %lld, \
                                    %'S, \
                                    DATETIME(%llu,'unixepoch'), \
                                    %llu, \
@@ -10305,7 +10301,6 @@ t0=Misc_getTimestamp();
 fprintf(stderr,"%s, %d: Index_initListEntries ------------------------------------------------------\n",__FILE__,__LINE__);
 fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
 fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
-fprintf(stderr,"%s, %d: indexType=%u\n",__FILE__,__LINE__,indexType);
 
   // get filters
   filterString = String_newCString("1");
