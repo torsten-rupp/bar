@@ -3289,6 +3289,9 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                              totalEntryCount = (ulong)atol(values[0]);
                              totalEntrySize  = (uint64)atoll(values[1]);
 
+                             totalEntryCount = (ulong)atol(values[0]);
+                             totalEntrySize  = (uint64)atoll(values[1]);
+
                              printf("  Total           : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
 
                              return ERROR_NONE;
@@ -3948,6 +3951,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
                              printf("\n");
 
                              idsString = String_new();
+                             String_clear(idsString);
                              Database_execute(databaseHandle,
                                               CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                               {
@@ -3972,6 +3976,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
                                               uuidId
                                              );
                              printf("    Entity ids    : %s\n",String_cString(idsString));
+                             String_clear(idsString);
                              Database_execute(databaseHandle,
                                               CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                               {
@@ -4088,6 +4093,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              ulong      totalhardlinkCount;
                              uint64     totalHardlinkSize;
                              ulong      totalSpecialCount;
+                             DatabaseId uuidId;
                              String     idsString;
 
                              assert(count == 14);
@@ -4111,6 +4117,8 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              totalHardlinkSize   = (uint64)atoll(values[12]);
                              totalSpecialCount   = (ulong)atoll(values[13]);
 
+                             uuidId              = (DatabaseId)atoll(values[14]);
+
                              printf("  Id              : %"PRIi64"\n",entityId);
                              printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : values[ 1]);
                              printf("    UUID          : %s\n",values[ 2]);
@@ -4124,8 +4132,10 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              printf("    Hardlinks     : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalhardlinkCount,getByteSize(totalHardlinkSize),getByteUnitShort(totalHardlinkSize),totalHardlinkSize);
                              printf("    Special       : %lu\n",totalSpecialCount);
                              printf("\n");
+                             printf("    UUID id       : %"PRIi64"\n",uuidId);
 
                              idsString = String_new();
+                             String_clear(idsString);
                              Database_execute(databaseHandle,
                                               CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                               {
@@ -4183,7 +4193,9 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                                    totalLinkCountNewest, \
                                    totalHardlinkCountNewest, \
                                    totalHardlinkSizeNewest, \
-                                   totalSpecialCountNewest \
+                                   totalSpecialCountNewest, \
+                                   \
+                                   uuidId \
                             FROM entities \
                             WHERE     (%d OR id IN (%S)) \
                                   AND deletedFlag!=1 \
@@ -4256,25 +4268,26 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
+fprintf(stderr,"%s, %d: %s %s %s %s\n",__FILE__,__LINE__,values[3],values[7],values[8],values[11]);
                              state               = (uint)atoi(values[7]);
                              mode                = (uint)atoi(values[8]);
-                             totalEntryCount     = (ulong)atoll(values[11]);
-                             totalEntrySize      = (uint64)atoll(values[12]);
-                             totalFileCount      = (ulong)atoll(values[13]);
-                             totalFileSize       = (uint64)atoll(values[14]);
-                             totalImageCount     = (ulong)atoll(values[15]);
-                             totalImageSize      = (uint64)atoll(values[16]);
-                             totalDirectoryCount = (ulong)atoll(values[17]);
-                             totalLinkCount      = (ulong)atoll(values[18]);
-                             totalHardlinkCount  = (ulong)atoll(values[19]);
-                             totalHardlinkSize   = (uint64)atoll(values[20]);
-                             totalSpecialCount   = (ulong)atoll(values[21]);
+                             totalEntryCount     = (values[11] != NULL) ? (ulong)atoll(values[11]) : 0L;
+                             totalEntrySize      = (values[12] != NULL) ? (uint64)atoll(values[12]) : 0LL;
+                             totalFileCount      = (values[13] != NULL) ? (ulong)atoll(values[13]) : 0L;
+                             totalFileSize       = (values[14] != NULL) ? (uint64)atoll(values[14]) : 0LL;
+                             totalImageCount     = (values[15] != NULL) ? (ulong)atoll(values[15]) : 0L;
+                             totalImageSize      = (values[16] != NULL) ? (uint64)atoll(values[16]) : 0LL;
+                             totalDirectoryCount = (values[17] != NULL) ? (ulong)atoll(values[17]) : 0L;
+                             totalLinkCount      = (values[18] != NULL) ? (ulong)atoll(values[18]) : 0L;
+                             totalHardlinkCount  = (values[19] != NULL) ? (ulong)atoll(values[19]) : 0L;
+                             totalHardlinkSize   = (values[20] != NULL) ? (uint64)atoll(values[20]) : 0LL;
+                             totalSpecialCount   = (values[21] != NULL) ? (ulong)atoll(values[21]) : 0L;
 
                              printf("  Id              : %s\n",values[ 0]);
                              printf("    Name          : %s\n",values[ 3]);
                              printf("    Created       : %s\n",(values[ 4] != NULL) ? values[ 4] : "");
-                             printf("    User name     : %s\n",(values[ 5] != NULL) ? values[ 6] : "");
-                             printf("    Comment       : %s\n",(values[ 6] != NULL) ? values[ 7] : "");
+                             printf("    User name     : %s\n",(values[ 5] != NULL) ? values[ 5] : "");
+                             printf("    Comment       : %s\n",(values[ 6] != NULL) ? values[ 6] : "");
                              printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : values[ 7]);
                              printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : values[ 8]);
                              printf("    Last checked  : %s\n",values[ 9]);
