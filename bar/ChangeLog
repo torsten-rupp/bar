@@ -12,12 +12,7 @@
     job UUID, schedule UUID, type, created date/time,
     comment into archives
   * hardend encryption: added salt to crypt
-    NOTE: this required a new archive format BAR1! The old
-    format BAR0 can still be read, but older versions of BAR
-    cannot read archives with BAR1 format.
-  * hardend encryption: use key derivation function (Note: this
-    required a new archive format BAR1; the old format BAR0
-    can still be read)
+  * hardend encryption: use key derivation function
   * store only hash of server password in configuration file
   * support immutable, append-only file attributes
   * added Zstandard compression
@@ -39,6 +34,9 @@
   * incremental data is now written to incremental data directory
     in server mode by default
   * added option --continuous-min-time-delta
+  * reworked index database: separate fragments of entries; show
+    only entries in GUI and restore fragments automatically if
+    entry is restored
   * fixed memory leak if archive is broken and cannot be read
     completely
   * fixed multiple schedule types for job

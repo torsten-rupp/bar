@@ -59,7 +59,8 @@
 
 #define _NO_SESSION_ID
 #define _SIMULATOR
-#define _SIMULATE_PURGE
+#warning remove/revert
+#define SIMULATE_PURGE
 
 /***************************** Constants *******************************/
 
@@ -1137,7 +1138,7 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
     (void)Index_findUUID(indexHandle,
                          jobUUID,
                          scheduleUUID,
-                         NULL,  // uuidIndexId
+                         NULL,  // uuidId
                          &aggregateInfo->lastExecutedDateTime,
                          aggregateInfo->lastErrorMessage,
                          &aggregateInfo->executionCount.normal,
@@ -2822,8 +2823,8 @@ LOCAL Errors deleteStorage(IndexHandle *indexHandle,
                              storageId,
                              jobUUID,
                              NULL,  // scheduleUUID
-                             NULL,  // uuidIndexId
-                             NULL,  // entityIndexId
+                             NULL,  // uuidId
+                             NULL,  // entityId
                              storageName,
                              &createdDateTime,
                              NULL,  // size
@@ -3003,8 +3004,8 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                         0LL,  // find createdDateTime,
                         jobUUID,
                         NULL,  // scheduleUUID
-                        NULL,  // uuidIndexId
-                        NULL,  // entityIndexId
+                        NULL,  // uuidId
+                        NULL,  // entityId
                         NULL,  // archiveType
                         &createdDateTime,
                         NULL,  // lastErrorMessage
@@ -3035,7 +3036,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   // delete all storage with entity id
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
-                                 INDEX_ID_ANY,  // uuidIndexId
+                                 INDEX_ID_ANY,  // uuidId
                                  entityId,
                                  NULL,  // jobUUID
                                  NULL,  // scheduleUUID,
@@ -3060,9 +3061,9 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
   while (   (error == ERROR_NONE)
          && !quitFlag
          && Index_getNextStorage(&indexQueryHandle,
-                                 NULL,  // uuidIndexId
+                                 NULL,  // uuidId
                                  NULL,  // jobUUID
-                                 NULL,  // entityIndexId
+                                 NULL,  // entityId
                                  NULL,  // scheduleUUID
                                  NULL,  // hostName
                                  NULL,  // userName
@@ -3192,7 +3193,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
          && !quitFlag
          && !Job_isSomeActive()
          && Index_getNextEntity(&indexQueryHandle,
-                                NULL,  // uuidIndexId
+                                NULL,  // uuidId
                                 NULL,  // jobUUID
                                 NULL,  // scheduleUUID
                                 &entityId,
@@ -3339,7 +3340,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList  *expirationEntityLis
 
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
-                                 INDEX_ID_ANY,  // uuidIndexId
+                                 INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  NULL,  // scheduldUUID
                                  ARCHIVE_TYPE_ANY,
@@ -3357,7 +3358,7 @@ LOCAL bool getJobExpirationEntityList(ExpirationEntityList  *expirationEntityLis
 
   now = Misc_getCurrentDateTime();
   while (Index_getNextEntity(&indexQueryHandle,
-                             NULL,  // uuidIndexId,
+                             NULL,  // uuidId,
                              NULL,  // jobUUID,
                              NULL,  // scheduleUUID,
                              &entityId,
@@ -4234,8 +4235,8 @@ LOCAL void autoIndexThreadCode(void)
                                              if (Index_findStorageByName(indexHandle,
                                                                          &storageSpecifier,
                                                                          NULL,  // archiveName
-                                                                         NULL,  // uuidIndexId
-                                                                         NULL,  // entityIndexId
+                                                                         NULL,  // uuidId
+                                                                         NULL,  // entityId
                                                                          NULL,  // jobUUID
                                                                          NULL,  // scheduleUUID
                                                                          &storageId,
@@ -4326,7 +4327,7 @@ LOCAL void autoIndexThreadCode(void)
         // delete not existing and expired indizes
         error = Index_initListStorages(&indexQueryHandle,
                                        indexHandle,
-                                       INDEX_ID_ANY,  // uuidIndexId
+                                       INDEX_ID_ANY,  // uuidId
                                        INDEX_ID_ANY,  // entity id
                                        NULL,  // jobUUID
                                        NULL,  // scheduleUUID,
@@ -4348,9 +4349,9 @@ LOCAL void autoIndexThreadCode(void)
           string = String_new();
           while (   !quitFlag
                  && Index_getNextStorage(&indexQueryHandle,
-                                         NULL,  // uuidIndexId
+                                         NULL,  // uuidId
                                          NULL,  // jobUUID
-                                         NULL,  // entityIndexId
+                                         NULL,  // entityId
                                          NULL,  // scheduleUUID
                                          NULL,  // hostName
                                          NULL,  // userName
@@ -13197,8 +13198,8 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
   // list storage
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
-                                 INDEX_ID_ANY,  // uuidIndexId
-                                 INDEX_ID_ANY,  // entityIndexId
+                                 INDEX_ID_ANY,  // uuidId
+                                 INDEX_ID_ANY,  // entityId
                                  NULL,  // jobUUID
                                  NULL,  // scheduleUUID,
                                  Array_cArray(&clientInfo->indexIdArray),
@@ -13221,9 +13222,9 @@ LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexH
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextStorage(&indexQueryHandle,
-                                 NULL,  // uuidIndexId
+                                 NULL,  // uuidId
                                  NULL,  // jobUUID
-                                 NULL,  // entityIndexId
+                                 NULL,  // entityId
                                  NULL,  // scheduleUUID
                                  NULL,  // hostName
                                  NULL,  // userName
@@ -13553,7 +13554,7 @@ LOCAL void serverCommand_indexListInfo(ClientInfo *clientInfo, IndexHandle *inde
 
   // get index info
   error = Index_getStoragesInfos(indexHandle,
-                                 INDEX_ID_ANY,  // uuidIndexId
+                                 INDEX_ID_ANY,  // uuidId
                                  entityId,
                                  !jobUUIDAny ? jobUUID : NULL,
                                  !scheduleUUIDAny ? scheduleUUID : NULL,
@@ -13671,9 +13672,9 @@ exit(1);
   }
   while (   !isCommandAborted(clientInfo,id)
          && Index_getNextEntry(&indexQueryHandle,
-                               NULL,  // uuidIndexId
+                               NULL,  // uuidId
                                NULL,  // jobUUID
-                               NULL,  // entityIndexId
+                               NULL,  // entityId
                                NULL,  // scheduleUUID
                                NULL,  // hostName
                                NULL,  // userName
@@ -14085,8 +14086,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                          0LL,  // createdDateTime
                          uuid,
                          NULL,  // scheduleUUID
-                         NULL,  // uuidIndexId
-                         NULL,  // entityIndexId
+                         NULL,  // uuidId
+                         NULL,  // entityId
                          NULL,  // archiveType
                          NULL,  // createdDateTime
                          NULL,  // lastErrorMessage
@@ -14115,8 +14116,8 @@ LOCAL void serverCommand_storageDelete(ClientInfo *clientInfo, IndexHandle *inde
                               storageId,
                               uuid,
                               NULL,  // scheduleUUID
-                              NULL,  // uuidIndexId
-                              NULL,  // entityIndexId
+                              NULL,  // uuidId
+                              NULL,  // entityId
                               NULL,  // storageName
                               NULL,  // createdDateTime
                               NULL,  // size
@@ -14584,8 +14585,8 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
       {
         error = Index_initListStorages(&indexQueryHandle1,
                                        indexHandle,
-                                       INDEX_ID_ANY,  // uuidIndexId
-                                       INDEX_ID_ANY,  // entityIndexId
+                                       INDEX_ID_ANY,  // uuidId
+                                       INDEX_ID_ANY,  // entityId
                                        NULL,  // jobUUID
                                        NULL,  // scheduleUUID,
                                        Array_cArray(&clientInfo->indexIdArray),
@@ -15140,7 +15141,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   // get entities
   error = Index_initListEntities(&indexQueryHandle,
                                  indexHandle,
-                                 INDEX_ID_ANY,  // uuidIndexId
+                                 INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  NULL,  // scheduldUUID
                                  ARCHIVE_TYPE_ANY,
@@ -15403,7 +15404,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   // list index
   error = Index_initListStorages(&indexQueryHandle,
                                  indexHandle,
-                                 INDEX_ID_ANY,  // uuidIndexId
+                                 INDEX_ID_ANY,  // uuidId
                                  entityId,
                                  !jobUUIDAny ? jobUUID : NULL,
                                  !scheduleUUIDAny ? scheduleUUID : NULL,
@@ -16298,7 +16299,7 @@ LOCAL void serverCommand_indexHistoryList(ClientInfo *clientInfo, IndexHandle *i
   // get entities
   error = Index_initListHistory(&indexQueryHandle,
                                  indexHandle,
-                                 INDEX_ID_ANY,  // uuidIndexId
+                                 INDEX_ID_ANY,  // uuidId
                                  jobUUID,
                                  DATABASE_ORDERING_ASCENDING,
                                  0LL,  // offset
@@ -16551,8 +16552,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         if (Index_findStorageByName(indexHandle,
                                     &storageSpecifier,
                                     NULL,  // archiveName
-                                    NULL,  // uuidIndexId
-                                    NULL,  // entityIndexId
+                                    NULL,  // uuidId
+                                    NULL,  // entityId
                                     NULL,  // jobUUID
                                     NULL,  // scheduleUUID
                                     &storageId,
@@ -16638,8 +16639,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                  if (Index_findStorageByName(indexHandle,
                                                              &storageSpecifier,
                                                              NULL,  // archiveName
-                                                             NULL,  // uuidIndexId
-                                                             NULL,  // entityIndexId
+                                                             NULL,  // uuidId
+                                                             NULL,  // entityId
                                                              NULL,  // jobUUID
                                                              NULL,  // scheduleUUID
                                                              &storageId,
@@ -16825,7 +16826,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       // assign all storages of all entities of job to other entity
       error = Index_assignTo(indexHandle,
                              jobUUID,
-                             INDEX_ID_NONE,  // entityIndexId
+                             INDEX_ID_NONE,  // entityId
                              INDEX_ID_NONE,  // storageId
                              NULL,  // toJobUUID
                              toEntityId,
@@ -16862,7 +16863,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       // assign all storages of all entities of job to other entity
       error = Index_assignTo(indexHandle,
                              jobUUID,
-                             INDEX_ID_NONE,  // entityIndexId
+                             INDEX_ID_NONE,  // entityId
                              INDEX_ID_NONE,  // storageId
                              NULL,  // toJobUUID
                              toEntityId,
@@ -16906,6 +16907,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
+#warning remove/revert
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(toHostName);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign entity fail");
         return;
@@ -16925,6 +16928,8 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
+#warning remove/revert
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(toHostName);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign enttity fail");
         return;
@@ -16940,7 +16945,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       // assign storage to another entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
-                             INDEX_ID_NONE,  // entityIndexId
+                             INDEX_ID_NONE,  // entityId
                              storageId,
                              NULL,  // toJobUUID
                              toEntityId,
@@ -16949,8 +16954,9 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage fail");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage to entity fail");
         return;
       }
     }
@@ -16977,7 +16983,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
       // assign storage to another entity
       error = Index_assignTo(indexHandle,
                              NULL,  // jobUUID
-                             INDEX_ID_NONE,  // entityIndexId
+                             INDEX_ID_NONE,  // entityId
                              storageId,
                              NULL,  // toJobUUID
                              toEntityId,
@@ -16986,8 +16992,9 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(toHostName);
-        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage fail");
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage to entity fail");
         return;
       }
 
@@ -17097,7 +17104,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     // refresh all storage with specific state
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
-                                   INDEX_ID_ANY,  // uuidIndexId
+                                   INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID,
@@ -17123,9 +17130,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidIndexId
+                                   NULL,  // uuidId
                                    NULL,  // jobUUID
-                                   NULL,  // entityIndexId
+                                   NULL,  // entityId
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
@@ -17158,7 +17165,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
                                    uuidId,
-                                   INDEX_ID_ANY,  // entityIndexId
+                                   INDEX_ID_ANY,  // entityId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
@@ -17183,9 +17190,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidIndexId
+                                   NULL,  // uuidId
                                    NULL,  // jobUUID
-                                   NULL,  // entityIndexId
+                                   NULL,  // entityId
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
@@ -17217,7 +17224,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     // refresh all storage of entity
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
-                                   INDEX_ID_ANY,  // uuidIndexId
+                                   INDEX_ID_ANY,  // uuidId
                                    entityId,
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID,
@@ -17243,9 +17250,9 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidIndexId
+                                   NULL,  // uuidId
                                    NULL,  // jobUUID
-                                   NULL,  // entityIndexId
+                                   NULL,  // entityId
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
@@ -17282,7 +17289,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     // refresh all storage of all entities of job
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
-                                   INDEX_ID_ANY,  // uuidIndexId
+                                   INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY,  // entity id
                                    jobUUID,
                                    NULL,  // scheduleUUID,
@@ -17308,13 +17315,13 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidIndexId
+                                   NULL,  // uuidId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
-                                   NULL,  // entityIndexId
+                                   NULL,  // entityId
                                    NULL,  // archiveType
                                    &storageId,
                                    NULL,  // storageName
@@ -17342,8 +17349,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     // refresh all storage which match name
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
-                                   INDEX_ID_ANY,  // uuidIndexId
-                                   INDEX_ID_ANY,  // entityIndexId
+                                   INDEX_ID_ANY,  // uuidId
+                                   INDEX_ID_ANY,  // entityId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
@@ -17368,13 +17375,13 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidIndexId
+                                   NULL,  // uuidId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
-                                   NULL,  // entityIndexId
+                                   NULL,  // entityId
                                    NULL,  // archiveType
                                    &storageId,
                                    storageName,
@@ -17505,7 +17512,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     // delete all indizes with specific state
     error = Index_initListStorages(&indexQueryHandle,
                                    indexHandle,
-                                   INDEX_ID_ANY,  // uuidIndexId
+                                   INDEX_ID_ANY,  // uuidId
                                    INDEX_ID_ANY, // entity id
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID,
@@ -17531,13 +17538,13 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     }
     while (   !isCommandAborted(clientInfo,id)
            && Index_getNextStorage(&indexQueryHandle,
-                                   NULL,  // uuidIndexId
+                                   NULL,  // uuidId
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
-                                   NULL,  // entityIndexId
+                                   NULL,  // entityId
                                    NULL,  // archiveType
                                    &storageId,
                                    storageName,

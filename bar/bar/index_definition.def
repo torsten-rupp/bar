@@ -257,9 +257,7 @@ CREATE TABLE IF NOT EXISTS entries(
 
   // Note: redundancy for faster access
   uuidId          INTEGER DEFAULT 0,
-  size            INTEGER DEFAULT 0,  // updated by triggers
-
-  CONSTRAINT entries UNIQUE (entityId,type,name)
+  size            INTEGER DEFAULT 0  // updated by triggers
 );
 CREATE INDEX ON entries (uuidId,entityId,type,name);
 CREATE INDEX ON entries (entityId,type,name);

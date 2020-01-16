@@ -4117,7 +4117,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                              totalHardlinkSize   = (uint64)atoll(values[12]);
                              totalSpecialCount   = (ulong)atoll(values[13]);
 
-                             uuidId              = (DatabaseId)atoll(values[14]);
+                             uuidId              = (DatabaseId)atoll(values[25]);
 
                              printf("  Id              : %"PRIi64"\n",entityId);
                              printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : values[ 1]);
@@ -4268,7 +4268,6 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-fprintf(stderr,"%s, %d: %s %s %s %s\n",__FILE__,__LINE__,values[3],values[7],values[8],values[11]);
                              state               = (uint)atoi(values[7]);
                              mode                = (uint)atoi(values[8]);
                              totalEntryCount     = (values[11] != NULL) ? (ulong)atoll(values[11]) : 0L;

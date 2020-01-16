@@ -441,10 +441,6 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
        Database_unlock(databaseHandle,lockType), __databaseLock ## __COUNTER__ = FALSE \
       )
 
-#define DATABASE_TRANSFER_OPERATION_COPY(fromName,toName,type) DATABASE_TRANSFER_OPERATION_COPY,fromName,toName,type
-#define DATABASE_TRANSFER_OPERATION_SET(toName,type,value)     DATABASE_TRANSFER_OPERATION_SET, toName,  value, type
-#define DATABASE_TRANSFER_OPERATION_END()                      DATABASE_TRANSFER_OPERATION_NONE,NULL,    0,     0
-
 #ifndef NDEBUG
   #define Database_open(...)                __Database_open               (__FILE__,__LINE__, ## __VA_ARGS__)
   #define Database_close(...)               __Database_close              (__FILE__,__LINE__, ## __VA_ARGS__)
