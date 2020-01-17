@@ -2096,6 +2096,12 @@ LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
                              "id",
                              "WHERE entityId=%lld",
                              entityId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "entries",
+                             "id",
+                             "WHERE entityId=%lld",
+                             entityId
                             );
 }
 
