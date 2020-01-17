@@ -2658,7 +2658,6 @@ public class TabJobs
       {
         // file tree
         widgetFileTree = Widgets.newTree(tab,SWT.MULTI);
-//        widgetFileTree.setToolTipText(BARControl.tr("Tree representation of files, directories, links and special entries.\nDouble-click to open sub-directories, right-click to open context menu.\nNote size column: numbers in red color indicates size update is still in progress."));
         Widgets.layout(widgetFileTree,0,0,TableLayoutData.NSWE);
         SelectionListener fileTreeColumnSelectionListener = new SelectionListener()
         {
@@ -11369,6 +11368,8 @@ throw new Error("NYI");
     }
     try
     {
+      final FileTreeDataComparator fileTreeDataComparator = new FileTreeDataComparator(widgetFileTree);
+
       treeItem.removeAll();
 
       BARServer.executeCommand(StringParser.format("FILE_LIST jobUUID=%s directory=%'S",
@@ -11414,7 +11415,7 @@ throw new Error("NYI");
                                              public void run()
                                              {
                                                Widgets.insertTreeItem(treeItem,
-                                                                      new FileTreeDataComparator(widgetFileTree),
+                                                                      fileTreeDataComparator,
                                                                       fileTreeData,
                                                                       image,
                                                                       Widgets.TREE_ITEM_FLAG_NONE,
@@ -11456,7 +11457,7 @@ throw new Error("NYI");
                                              public void run()
                                              {
                                                TreeItem subTreeItem = Widgets.insertTreeItem(treeItem,
-                                                                                             new FileTreeDataComparator(widgetFileTree),
+                                                                                             fileTreeDataComparator,
                                                                                              fileTreeData,
                                                                                              image,
                                                                                              Widgets.TREE_ITEM_FLAG_FOLDER,
@@ -11498,7 +11499,7 @@ throw new Error("NYI");
                                              public void run()
                                              {
                                                Widgets.insertTreeItem(treeItem,
-                                                                      new FileTreeDataComparator(widgetFileTree),
+                                                                      fileTreeDataComparator,
                                                                       fileTreeData,
                                                                       image,
                                                                       Widgets.TREE_ITEM_FLAG_NONE,
@@ -11540,7 +11541,7 @@ throw new Error("NYI");
                                              public void run()
                                              {
                                                Widgets.insertTreeItem(treeItem,
-                                                                      new FileTreeDataComparator(widgetFileTree),
+                                                                      fileTreeDataComparator,
                                                                       fileTreeData,
                                                                       image,
                                                                       Widgets.TREE_ITEM_FLAG_NONE,
@@ -11586,7 +11587,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          new FileTreeDataComparator(widgetFileTree),
+                                                                          fileTreeDataComparator,
                                                                           fileTreeData,
                                                                           image,
                                                                           Widgets.TREE_ITEM_FLAG_NONE,
@@ -11611,7 +11612,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          new FileTreeDataComparator(widgetFileTree),
+                                                                          fileTreeDataComparator,
                                                                           fileTreeData,
                                                                           image,
                                                                           Widgets.TREE_ITEM_FLAG_NONE,
@@ -11637,7 +11638,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          new FileTreeDataComparator(widgetFileTree),
+                                                                          fileTreeDataComparator,
                                                                           fileTreeData,
                                                                           image,
                                                                           Widgets.TREE_ITEM_FLAG_NONE,
@@ -11663,7 +11664,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          new FileTreeDataComparator(widgetFileTree),
+                                                                          fileTreeDataComparator,
                                                                           fileTreeData,
                                                                           image,
                                                                           Widgets.TREE_ITEM_FLAG_NONE,
@@ -11688,7 +11689,7 @@ throw new Error("NYI");
                                                  public void run()
                                                  {
                                                    Widgets.insertTreeItem(treeItem,
-                                                                          new FileTreeDataComparator(widgetFileTree),
+                                                                          fileTreeDataComparator,
                                                                           fileTreeData,
                                                                           image,
                                                                           Widgets.TREE_ITEM_FLAG_NONE,

@@ -7770,6 +7770,8 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     final Color backgroundColor = tree.getBackground();
     final Color selectedColor   = composite.getDisplay().getSystemColor(SWT.COLOR_LIST_SELECTION);
 
+/*
+TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     Listener paintListener = new Listener()
     {
       @Override
@@ -7784,6 +7786,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
         {
           case SWT.MeasureItem:
             {
+              Image  image      = treeItem.getImage(event.index);
               String text       = treeItem.getText(event.index);
               Point  size       = event.gc.textExtent(text);
               int    fontHeight = event.gc.getFontMetrics().getHeight();
@@ -7793,15 +7796,14 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
               event.height = Math.max(event.height,fontHeight);
             }
             break;
-          case SWT.PaintItem: 
+          case SWT.PaintItem:
             {
               TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
+              Image      image      = treeItem.getImage(event.index);
               String     text       = treeItem.getText(event.index);
               Point      size       = event.gc.textExtent(text);
 
               int offsetX;
-              int offsetY = (event.height-event.gc.getFontMetrics().getHeight())/2;
-
               if ((event.index == 0) && (treeEditor != null))
               {
                 Control control = treeEditor.getEditor();
@@ -7825,12 +7827,24 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 offsetX = ((event.index == 0) && (tree.getStyle() & SWT.CHECK) != 0) ? 6 : 0;
               }
 
+              int offsetX0 = offsetX;
+              int offsetY0 = 0;
+              int offsetX1 = offsetX0;
+              int offsetY1 = (event.height-event.gc.getFontMetrics().getHeight())/2;
+              if (image != null)
+              {
+                Rectangle bounds = image.getBounds();
+
+                offsetX1 += 2+image.getBounds().width+2;
+                offsetY0 = (event.height-bounds.height)/2;
+              }
+
               if (   (renderer == null)
                   || !renderer.render(treeItem,
                                       event.index,
                                       event.gc,
-                                      event.x+offsetX,
-                                      event.y+offsetY,
+                                      event.x+offsetX1,
+                                      event.y+offsetY1,
                                       event.width,
                                       event.height
                                      )
@@ -7839,16 +7853,19 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                 int w = treeColumn.getWidth()-tree.getGridLineWidth()-4;
                 if      ((treeColumn.getStyle() & SWT.CENTER) == SWT.CENTER)
                 {
-                  event.gc.drawText(text,event.x+offsetX+(w-size.x)/2,event.y+offsetY,true);
+                  if (image != null) event.gc.drawImage(image,event.x+offsetX0+(w-size.x)/2,event.y+offsetY0);
+                  event.gc.drawText(text,event.x+offsetX1+(w-size.x)/2,event.y+offsetY1,true);
                 }
                 else if ((treeColumn.getStyle() & SWT.RIGHT) == SWT.RIGHT)
                 {
 //Dprintf.dprintf("text=%s %d %d %d g=%d",text,offsetX,w,size.x,tree.getGridLineWidth());
-                  event.gc.drawText(text,event.x+offsetX+(w-size.x),event.y+offsetY,true);
+                  if (image != null) event.gc.drawImage(image,event.x+offsetX0+(w-size.x),event.y+offsetY0);
+                  event.gc.drawText(text,event.x+offsetX1+(w-size.x),event.y+offsetY1,true);
                 }
                 else
                 {
-                  event.gc.drawText(text,event.x+offsetX,event.y+offsetY,true);
+                  if (image != null) event.gc.drawImage(image,event.x+offsetX0,event.y+offsetY0);
+                  event.gc.drawText(text,event.x+offsetX1,event.y+offsetY1,true);
                 }
               }
             }
@@ -7862,6 +7879,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     tree.addListener(SWT.MeasureItem, paintListener);
     tree.addListener(SWT.PaintItem, paintListener);
     tree.addListener(SWT.EraseItem, paintListener);
+*/
 
     return tree;
   }
@@ -8122,7 +8140,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             treeEditor.minimumWidth = checked.getSize().x;
             treeEditor.horizontalAlignment = SWT.LEFT;
             treeEditor.setEditor(checked,treeItem,0);
-            
+
             widgetCheckedMap.put(treeItem,treeEditor);
 
             checked.addSelectionListener(new SelectionListener()
@@ -8254,7 +8272,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             treeEditor.minimumWidth = checked.getSize().x;
             treeEditor.horizontalAlignment = SWT.LEFT;
             treeEditor.setEditor(checked,treeItem,0);
-            
+
             widgetCheckedMap.put(treeItem,treeEditor);
 
             checked.addSelectionListener(new SelectionListener()
@@ -8352,9 +8370,9 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
    * @param folderFlag TRUE iff foler
    * @return new tree item
    */
-  public static TreeItem addTreeItem(Tree      tree,   
-                                     Object    data,   
-                                     int       flags,  
+  public static TreeItem addTreeItem(Tree      tree,
+                                     Object    data,
+                                     int       flags,
                                      Object... values
                                     )
   {
@@ -8419,7 +8437,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             treeEditor.minimumWidth = checked.getSize().x;
             treeEditor.horizontalAlignment = SWT.LEFT;
             treeEditor.setEditor(checked,treeItem,0);
-            
+
             widgetCheckedMap.put(treeItem,treeEditor);
 
             checked.addSelectionListener(new SelectionListener()
@@ -8440,6 +8458,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
               }
             });
           }
+
           if      ((flags & TREE_ITEM_FLAG_OPEN  ) != 0)
           {
             if (!parentTreeItem.getExpanded())
@@ -8521,6 +8540,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                                             Object...     values
                                            )
   {
+Dprintf.dprintf("");
     return insertTreeItem(treeItem,
                           getTreeItemIndex(treeItem,comparator,data),
                           data,
@@ -8864,7 +8884,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             treeEditor.minimumWidth = checked.getSize().x;
             treeEditor.horizontalAlignment = SWT.LEFT;
             treeEditor.setEditor(checked,treeItem,0);
-            
+
             widgetCheckedMap.put(treeItem,treeEditor);
 
             checked.addSelectionListener(new SelectionListener()
@@ -9013,7 +9033,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
                     existingTreeItem.setText(i,values[i].toString());
                   }
                 }
-              }               
+              }
               treeItem = existingTreeItem;
               break;
             }
@@ -9041,9 +9061,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
           if ((flags & TREE_ITEM_FLAG_CHECK) != 0)
           {
             Button checked = new Button(tree,SWT.CHECK);
-//TODO: remove
-//            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
-//            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_TRANSPARENT));
+            checked.setBackground(tree.getDisplay().getSystemColor(SWT.COLOR_LIST_BACKGROUND));
             Widgets.layout(checked,0,0,TableLayoutData.NSWE);
             checked.pack();
 
@@ -9051,7 +9069,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             treeEditor.minimumWidth = checked.getSize().x;
             treeEditor.horizontalAlignment = SWT.LEFT;
             treeEditor.setEditor(checked,treeItem,0);
-            
+
             widgetCheckedMap.put(treeItem,treeEditor);
 
             checked.addSelectionListener(new SelectionListener()
@@ -9136,7 +9154,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
 
     return treeItem;
   }
-  
+
   /** update or insert tree item
    * @param parentTreeItem parent tree item
    * @param data item data
@@ -9268,7 +9286,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             treeEditor.minimumWidth = checked.getSize().x;
             treeEditor.horizontalAlignment = SWT.LEFT;
             treeEditor.setEditor(checked,treeItem,0);
-            
+
             widgetCheckedMap.put(treeItem,treeEditor);
 
             checked.addSelectionListener(new SelectionListener()
@@ -9504,7 +9522,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
             treeEditor.minimumWidth = checked.getSize().x;
             treeEditor.horizontalAlignment = SWT.LEFT;
             treeEditor.setEditor(checked,treeItem,0);
-            
+
             widgetCheckedMap.put(treeItem,treeEditor);
 
             checked.addSelectionListener(new SelectionListener()
@@ -10201,7 +10219,7 @@ private static void printTree(Tree tree)
           if (!treeItem.isDisposed())
           {
             HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
-            
+
             TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
             if (treeEditor != null)
             {
@@ -10215,7 +10233,7 @@ private static void printTree(Tree tree)
         }
       });
     }
-    
+
     return checked[0];
   }
 
@@ -10234,7 +10252,7 @@ private static void printTree(Tree tree)
           if (!treeItem.isDisposed())
           {
             HashMap<TreeItem,TreeEditor> widgetCheckedMap = (HashMap<TreeItem,TreeEditor>)treeItem.getParent().getData();
-            
+
             TreeEditor treeEditor = widgetCheckedMap.get(treeItem);
             if (treeEditor != null)
             {
