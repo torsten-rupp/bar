@@ -56,9 +56,8 @@
   #warning Index delete storages disabled!
 #endif
 
-#warning remove/revert
 #ifndef NDEBUG
-#define _XXX_LIST_INFO
+  #define DEBUG_INDEX_LIST_INFO
 #endif
 
 /***************************** Constants *******************************/
@@ -824,8 +823,29 @@ LOCAL void logImportIndex(const char *fileName, ulong lineNb, const char *format
 #include "index_version7.c"
 
 /***********************************************************************\
-* Name   : import current version
-* Purpose: upgrade and import index
+* Name   : getImportStepsCurrentVersion
+* Purpose: get number of import steps for current index version
+* Input  : oldIndexHandle     - old index handle
+*          uuidFactor         - UUID count factor (>= 1)
+*          entityCountFactor  - entity count factor (>= 1)
+*          storageCountFactor - storage count factor (>= 1)
+* Output : -
+* Return : number of import steps
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong getImportStepsCurrentVersion(IndexHandle *oldIndexHandle,
+                                         uint        uuidCountFactor,
+                                         uint        entityCountFactor,
+                                         uint        storageCountFactor
+                                        )
+{
+  return getImportStepsVersion6(oldIndexHandle,uuidCountFactor,entityCountFactor,storageCountFactor);
+}
+
+/***********************************************************************\
+* Name   : importCurrentVersion
+* Purpose: import current index version
 * Input  : oldIndexHandle,newIndexHandle - index handles
 * Output : -
 * Return : ERROR_NONE or error code
@@ -836,7 +856,7 @@ LOCAL Errors importCurrentVersion(IndexHandle *oldIndexHandle,
                                   IndexHandle *newIndexHandle
                                  )
 {
-  return upgradeFromVersion7(oldIndexHandle,newIndexHandle);
+  return importIndexVersion7(oldIndexHandle,newIndexHandle);
 }
 
 /***********************************************************************\
@@ -854,7 +874,10 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   Errors           error;
   IndexHandle      oldIndexHandle;
   int64            indexVersion;
+  ulong            maxSteps;
   IndexQueryHandle indexQueryHandle;
+  uint64           t0;
+  uint64           t1;
   IndexId          uuidId,entityId,storageId;
 
   // open old index (Note: must be read/write to fix errors in database)
@@ -889,22 +912,51 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   switch (indexVersion)
   {
     case 1:
-      error = upgradeFromVersion1(&oldIndexHandle,indexHandle);
+      maxSteps = getImportStepsVersion1(&oldIndexHandle,2,2,2);
       break;
     case 2:
-      error = upgradeFromVersion2(&oldIndexHandle,indexHandle);
+      maxSteps = getImportStepsVersion2(&oldIndexHandle,2,2,2);
       break;
     case 3:
-      error = upgradeFromVersion3(&oldIndexHandle,indexHandle);
+      maxSteps = getImportStepsVersion3(&oldIndexHandle,2,2,2);
       break;
     case 4:
-      error = upgradeFromVersion4(&oldIndexHandle,indexHandle);
+      maxSteps = getImportStepsVersion4(&oldIndexHandle,2,2,2);
       break;
     case 5:
-      error = upgradeFromVersion5(&oldIndexHandle,indexHandle);
+      maxSteps = getImportStepsVersion5(&oldIndexHandle,2,2,2);
       break;
     case 6:
-      error = upgradeFromVersion6(&oldIndexHandle,indexHandle);
+      maxSteps = getImportStepsVersion6(&oldIndexHandle,2,2,2);
+      break;
+    case INDEX_CONST_VERSION:
+      maxSteps = getImportStepsCurrentVersion(&oldIndexHandle,2,2,2);
+      break;
+    default:
+      // unknown version if index
+      error = ERROR_DATABASE_VERSION_UNKNOWN;
+      break;
+  }
+  initImportProgress(maxSteps);
+  switch (indexVersion)
+  {
+    case 1:
+      error = importIndexVersion1(&oldIndexHandle,indexHandle);
+      break;
+    case 2:
+      error = importIndexVersion2(&oldIndexHandle,indexHandle);
+      break;
+    case 3:
+      error = importIndexVersion3(&oldIndexHandle,indexHandle);
+      break;
+    case 4:
+      error = importIndexVersion4(&oldIndexHandle,indexHandle);
+      break;
+    case 5:
+      error = importIndexVersion5(&oldIndexHandle,indexHandle);
+      break;
+    case 6:
+      error = importIndexVersion6(&oldIndexHandle,indexHandle);
       break;
     case INDEX_CONST_VERSION:
       error = importCurrentVersion(&oldIndexHandle,indexHandle);
@@ -917,7 +969,6 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
   DIMPORT("import index done (error: %s)",Error_getText(error));
 
   DIMPORT("create aggregates");
-fprintf(stderr,"%s, %d: +++++++++++++++++++++++++++\n",__FILE__,__LINE__);
   if (error == ERROR_NONE)
   {
     error = Index_initListStorages(&indexQueryHandle,
@@ -961,14 +1012,22 @@ fprintf(stderr,"%s, %d: +++++++++++++++++++++++++++\n",__FILE__,__LINE__);
                                   )
           )
     {
-fprintf(stderr,"%s, %d: aggre stoage %ld\n",__FILE__,__LINE__,storageId);
+      t0 = Misc_getTimestamp();
       error = Index_updateStorageInfos(indexHandle,storageId);
+      t1 = Misc_getTimestamp();
+      if (error == ERROR_NONE)
+      {
+        logImportProgress("Aggregated storage #%"PRIi64": (%llus)",
+                          storageId,
+                          (t1-t0)/US_PER_SECOND
+                         );
+      }
+      importProgress(NULL);
     }
     Index_doneList(&indexQueryHandle);
   }
   if (error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = Index_initListEntities(&indexQueryHandle,
                                    indexHandle,
                                    INDEX_ID_ANY,  // uuidId
@@ -982,7 +1041,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     while (   (error == ERROR_NONE)
            && Index_getNextEntity(&indexQueryHandle,
                                   NULL,  // uuidId,
@@ -999,8 +1057,17 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                                  )
           )
     {
-fprintf(stderr,"%s, %d: aggre entiy %ld\n",__FILE__,__LINE__,entityId);
+      t0 = Misc_getTimestamp();
       error = Index_updateEntityInfos(indexHandle,entityId);
+      t1 = Misc_getTimestamp();
+      if (error == ERROR_NONE)
+      {
+        logImportProgress("Aggregated entity #%"PRIi64": (%llus)",
+                          storageId,
+                          (t1-t0)/US_PER_SECOND
+                         );
+      }
+      importProgress(NULL);
     }
     Index_doneList(&indexQueryHandle);
   }
@@ -1026,12 +1093,23 @@ fprintf(stderr,"%s, %d: aggre entiy %ld\n",__FILE__,__LINE__,entityId);
                                )
           )
     {
-fprintf(stderr,"%s, %d: aggre uuid %ld\n",__FILE__,__LINE__,uuidId);
+      t0 = Misc_getTimestamp();
       error = Index_updateUUIDInfos(indexHandle,uuidId);
+      t1 = Misc_getTimestamp();
+      if (error == ERROR_NONE)
+      {
+        logImportProgress("Aggregated UUID #%"PRIi64": (%llus)",
+                          uuidId,
+                          (t1-t0)/US_PER_SECOND
+                         );
+      }
+      importProgress(NULL);
     }
     Index_doneList(&indexQueryHandle);
   }
   DIMPORT("create aggregates done (error: %s)",Error_getText(error));
+
+  doneImportProgress();
 
   if (error == ERROR_NONE)
   {
@@ -1743,18 +1821,10 @@ LOCAL Errors purge(IndexHandle *indexHandle,
   String_vformat(filterString,filter,arguments);
   va_end(arguments);
 
-//fprintf(stderr,"%s, %d: indexUseCount=%d tableName=%s filterString=%s\n",__FILE__,__LINE__,indexUseCount,tableName,String_cString(filterString));
   error = ERROR_NONE;
   do
   {
     changedRowCount = 0;
-//Database_debugEnable(&indexHandle->databaseHandle,TRUE);
-fprintf(stderr,"%s, %d: xxx DELETE FROM %s \
-                              WHERE %s \
-                              LIMIT 64 \
-                             \n",
-                             __FILE__,__LINE__,tableName,
-                             String_cString(filterString));
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              &changedRowCount,
@@ -1765,7 +1835,6 @@ fprintf(stderr,"%s, %d: xxx DELETE FROM %s \
                              tableName,
                              filterString
                             );
-//Database_debugEnable(&indexHandle->databaseHandle,FALSE);
     if (error == ERROR_NONE)
     {
       if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
@@ -4337,15 +4406,17 @@ LOCAL Errors updateUUIDAggregates(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL assignStorageToStorage(IndexHandle *indexHandle,
-                             DatabaseId  storageId,
-                             DatabaseId  toUUIDId,
-                             DatabaseId  toEntityId,
-                             DatabaseId  toStorageId
-                            )
+LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
+                                    DatabaseId  storageId,
+                                    DatabaseId  toUUIDId,
+                                    DatabaseId  toEntityId,
+                                    DatabaseId  toStorageId
+                                   )
 {
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
+  
+  UNUSED_VARIABLE(toStorageId);
 
   return Database_execute(&indexHandle->databaseHandle,
                           CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -4374,12 +4445,12 @@ LOCAL assignStorageToStorage(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL assignEntriesToStorage(IndexHandle *indexHandle,
-                             DatabaseId  storageId,
-                             DatabaseId  toUUIDId,
-                             DatabaseId  toEntityId,
-                             DatabaseId  toStorageId
-                            )
+LOCAL Errors assignEntriesToStorage(IndexHandle *indexHandle,
+                                    DatabaseId  storageId,
+                                    DatabaseId  toUUIDId,
+                                    DatabaseId  toEntityId,
+                                    DatabaseId  toStorageId
+                                   )
 {
   Errors error;
 
@@ -4506,11 +4577,11 @@ LOCAL assignEntriesToStorage(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL assignEntriesToEntity(IndexHandle *indexHandle,
-                            DatabaseId  entityId,
-                            DatabaseId  toUUIDId,
-                            DatabaseId  toEntityId
-                           )
+LOCAL Errors assignEntriesToEntity(IndexHandle *indexHandle,
+                                   DatabaseId  entityId,
+                                   DatabaseId  toUUIDId,
+                                   DatabaseId  toEntityId
+                                  )
 {
   Errors error;
 
@@ -4726,7 +4797,6 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
     // update entities aggregates, UUID aggregates
     ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: dp updateEntityAggregates %ld\n",__FILE__,__LINE__,entityId);
       error = updateEntityAggregates(indexHandle,entityId);
     }
     if (error != ERROR_NONE)
@@ -4735,7 +4805,6 @@ fprintf(stderr,"%s, %d: dp updateEntityAggregates %ld\n",__FILE__,__LINE__,entit
     }
     ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
     {
-fprintf(stderr,"%s, %d: dp updateUUIDAggregates %ld\n",__FILE__,__LINE__,uuidId);
       error = updateUUIDAggregates(indexHandle,uuidId);
     }
     if (error != ERROR_NONE)
@@ -5116,7 +5185,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
     // assign all enties of job to other job
     error = Index_initListEntities(&indexQueryHandle,
                                    indexHandle,
-                                   NULL,  // uuidId
+                                   INDEX_ID_ANY,  // uuidId
                                    jobUUID,
                                    NULL,  // scheduleUUID,
                                    ARCHIVE_TYPE_ANY,
@@ -5988,13 +6057,11 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                               );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
-//#warning
-//#ifndef NDEBUG
-//Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-//#endif
+      #ifdef DEBUG_INDEX_LIST_INFO
+        Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #endif
 
       if (!Database_getNextRow(&databaseQueryHandle,
                                "%lld %lld %S %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
@@ -7719,7 +7786,6 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
   });
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     doneIndexQueryHandle(indexQueryHandle);
     String_delete(filterString);
     String_delete(ftsName);
@@ -8112,10 +8178,9 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
-#warning
-#ifdef XXX_LIST_INFO
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-#endif
+  #ifdef DEBUG_INDEX_LIST_INFO
+    Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+  #endif
 
   // free resources
   String_delete(orderString);
@@ -8655,10 +8720,11 @@ t0=Misc_getTimestamp();
         break;
     }
   }
-fprintf(stderr,"%s, %d: Index_getStoragesInfos ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
-fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
-//fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
+  #ifdef DEBUG_INDEX_LIST_INFO
+    fprintf(stderr,"%s, %d: --- Index_getStoragesInfos\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
+    fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
+  #endif
 
   filterIdsString     = String_new();
   indexStateSetString = String_new();
@@ -8701,10 +8767,9 @@ t1=Misc_getTimestamp();
     {
       return error;
     }
-#warning
-#ifdef XXX_LIST_INFO
-Database_debugPrintQueryInfo(&databaseQueryHandle);
-#endif
+    #ifdef DEBUG_INDEX_LIST_INFO
+      Database_debugPrintQueryInfo(&databaseQueryHandle);
+    #endif
     if (Database_getNextRow(&databaseQueryHandle,
                             "%lu %lf %lf %lf",
                             totalStorageCount,
@@ -8775,8 +8840,9 @@ t1=Misc_getTimestamp();
                                  filterString
                                 );
       }
-//#warning
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #ifdef DEBUG_INDEX_LIST_INFO
+        Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #endif
       if (error != ERROR_NONE)
       {
         return error;
@@ -9006,10 +9072,9 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
-#warning
-#ifdef XXX_LIST_INFO
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-#endif
+  #ifdef DEBUG_INDEX_LIST_INFO
+    Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+  #endif
 
   // free resources
   String_delete(orderString);
@@ -9799,17 +9864,15 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   String              entryIdsString;
   ulong               i;
   String              filterString,filterIdsString;
-  ulong               totalEntryCount_;
-double totalEntryCount_x;
-  double              totalEntryFragmentCount_,totalEntrySize_,totalEntryContentSize_;
-
-uint64 t0,t1;
+  double              totalEntryCount_,totalEntryFragmentCount_,totalEntrySize_,totalEntryContentSize_;
+  #ifdef DEBUG_INDEX_LIST_INFO
+    uint64              t0,t1;
+  #endif
 
   assert(indexHandle != NULL);
   assert((indexIdCount == 0L) || (indexIds != NULL));
   assert((entryIdCount == 0L) || (entryIds != NULL));
 
-t0=Misc_getTimestamp();
   // init variables
   if (totalEntryCount       != NULL) (*totalEntryCount      ) = 0L;
   if (totalEntrySize        != NULL) (*totalEntrySize       ) = 0LL;
@@ -9858,12 +9921,12 @@ t0=Misc_getTimestamp();
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
     String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
-fprintf(stderr,"%s, %d: Index_getEntriesInfo **************************************************** %d\n",__FILE__,__LINE__,newestOnly);
-fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
-fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
-fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(entryIdsString));
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,indexType);
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+  #ifdef DEBUG_INDEX_LIST_INFO
+    fprintf(stderr,"%s, %d: --- Index_getEntriesInfo\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
+    fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
+    fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(entryIdsString));
+  #endif
 
   // get filters
   String_setCString(filterString,"1");
@@ -9872,8 +9935,10 @@ fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,indexType);
   filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   String_delete(filterIdsString);
-fprintf(stderr,"%s, %d: entryIdCount=%ld filterString=%s\n",__FILE__,__LINE__,entryIdCount,String_cString(filterString));
 
+  #ifdef DEBUG_INDEX_LIST_INFO
+    t0=Misc_getTimestamp();
+  #endif
   error = ERROR_NONE;
   if (String_isEmpty(ftsName))
   {
@@ -9885,7 +9950,6 @@ fprintf(stderr,"%s, %d: entryIdCount=%ld filterString=%s\n",__FILE__,__LINE__,en
       // get total entry count, total fragment count, total entry size
       if (newestOnly)
       {
-fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
         // all newest entries
         if (String_isEmpty(entryIdsString))
         {
@@ -10205,16 +10269,14 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
       }
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
-#warning
-#ifdef XXX_LIST_INFO
-Database_debugPrintQueryInfo(&databaseQueryHandle);
-#endif
+      #ifdef DEBUG_INDEX_LIST_INFO
+        Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #endif
       if (!Database_getNextRow(&databaseQueryHandle,
                                "%lf %lf %lf",
-                               &totalEntryCount_x,
+                               &totalEntryCount_,
                                &totalEntryFragmentCount_,
                                &totalEntrySize_
                               )
@@ -10223,12 +10285,12 @@ Database_debugPrintQueryInfo(&databaseQueryHandle);
         Database_finalize(&databaseQueryHandle);
         return ERROR_DATABASE;
       }
-fprintf(stderr,"%s, %d: totalEntryCount_=%lf totalEntryFragmentCount_=%lf totalEntrySize_=%lf\n",__FILE__,__LINE__,totalEntryCount_x,totalEntryFragmentCount_,totalEntrySize_);
+      assert(totalEntryCount_ >= 0.0);
       assert(totalEntryFragmentCount_ >= 0.0);
       assert(totalEntrySize_ >= 0.0);
       if (totalEntryCount != NULL)
       {
-        (*totalEntryCount) += fragmentsFlag ? (uint64)totalEntryFragmentCount_ : totalEntryCount_x;
+        (*totalEntryCount) += fragmentsFlag ? (uint64)totalEntryFragmentCount_ : totalEntryCount_;
       }
       if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
       Database_finalize(&databaseQueryHandle);
@@ -10258,7 +10320,6 @@ fprintf(stderr,"%s, %d: totalEntryCount_=%lf totalEntryFragmentCount_=%lf totalE
       {
         if (String_isEmpty(entryIdsString))
         {
-fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
           // no storages selected, no entries selected -> get aggregated data from entities
           error = Database_prepare(&databaseQueryHandle,
                                    &indexHandle->databaseHandle,
@@ -10295,8 +10356,9 @@ fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uui
       {
         return error;
       }
-//#warning
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #ifdef DEBUG_INDEX_LIST_INFO
+        Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+      #endif
       if (!Database_getNextRow(&databaseQueryHandle,
                                "%lf",
                                &totalEntryContentSize_
@@ -10380,8 +10442,9 @@ fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uui
       {
         return error;
       }
-//#warning
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #ifdef DEBUG_INDEX_LIST_INFO
+        Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #endif
       if (!Database_getNextRow(&databaseQueryHandle,
                                "%lu %lf %lf",
                                &totalEntryCount_,
@@ -10440,11 +10503,11 @@ fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uui
       }
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
-//#warning
-//Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #ifdef DEBUG_INDEX_LIST_INFO
+        Database_debugPrintQueryInfo(&databaseQueryHandle);
+      #endif
       if (!Database_getNextRow(&databaseQueryHandle,
                                "%lf",
                                &totalEntryContentSize_
@@ -10452,7 +10515,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
          )
       {
         Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         return ERROR_DATABASE;
       }
 //TODO: may happend?
@@ -10463,8 +10525,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       return ERROR_NONE;
     });
   }
-t1=Misc_getTimestamp();
-fprintf(stderr,"%s, %d: %"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+  #ifdef DEBUG_INDEX_LIST_INFO
+    t1=Misc_getTimestamp();
+    fprintf(stderr,"%s, %d: %"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+  #endif
 
   // free resources
   String_delete(filterString);
@@ -10864,10 +10928,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(ftsName);
     return error;
   }
-#warning
-#ifdef XXX_LIST_INFO
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-#endif
+  #ifdef DEBUG_INDEX_LIST_INFO
+    Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+  #endif
 t1=Misc_getTimestamp();
 fprintf(stderr,"%s, %d: %"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
 
@@ -10965,8 +11028,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                                     uint64           limit
                                    )
 {
-  DatabaseQueryHandle databaseQueryHandle;
-  Errors              error;
+  Errors error;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
@@ -11016,10 +11078,9 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
-#warning
-#ifdef XXX_LIST_INFO
-Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-#endif
+  #ifdef DEBUG_INDEX_LIST_INFO
+    Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+  #endif
 
   // free resources
 
@@ -11036,8 +11097,7 @@ bool Index_getNextEntryFragment(IndexQueryHandle *indexQueryHandle,
                                 uint64           *fragmentSize
                                )
 {
-  IndexTypes indexType;
-  DatabaseId uuidDatabaseId,entityDatabaseId,entryDatabaseId,storageDatabaseId;
+  DatabaseId storageDatabaseId;
   int64      fragmentOffset_,fragmentSize_;
 
   assert(indexQueryHandle != NULL);
@@ -12550,7 +12610,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                     )
 {
   Errors     error;
-  DatabaseId entryId,fileEntryId;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
@@ -12586,7 +12646,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
                               );
         if ((error == ERROR_NONE) && (entryId == DATABASE_ID_NONE))
         {
-fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
           // add entry
           error = Database_execute(&indexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -12631,7 +12690,6 @@ fprintf(stderr,"%s, %d: 1\n",__FILE__,__LINE__);
                                   );
           if (error == ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
             entryId = Database_getLastRowId(&indexHandle->databaseHandle);
           }
         }
@@ -12641,7 +12699,7 @@ fprintf(stderr,"%s, %d: 2\n",__FILE__,__LINE__);
         return error;
       }
 #warning remove
-fprintf(stderr,"%s, %d: add file entityId=%lld entryId=%lld %s\n",__FILE__,__LINE__,Index_getDatabaseId(entityId),entryId,String_cString(name));
+fprintf(stderr,"%s, %d: add file entityId=%"PRIi64" entryId=%"PRIi64" %s\n",__FILE__,__LINE__,Index_getDatabaseId(entityId),entryId,String_cString(name));
 
       // add file entry fragment
       error = Database_execute(&indexHandle->databaseHandle,

@@ -45,6 +45,7 @@
 #endif
 
 #if 0
+//TODO: faster implementation?
 /***********************************************************************\
 * Name   : upgradeFromVersion7_importFileEntry
 * Purpose: import file entry
@@ -371,21 +372,178 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
 #endif
 
 /***********************************************************************\
-* Name   : upgradeFromVersion6
-* Purpose: upgrade index from version 6 to current version
+* Name   : getImportStepsVersion6
+* Purpose: get number of import steps for index version 6
+* Input  : oldIndexHandle     - old index handle
+*          uuidFactor         - UUID count factor (>= 1)
+*          entityCountFactor  - entity count factor (>= 1)
+*          storageCountFactor - storage count factor (>= 1)
+* Output : -
+* Return : number of import steps
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
+                                   uint        uuidCountFactor,
+                                   uint        entityCountFactor,
+                                   uint        storageCountFactor
+                                  )
+{
+  Errors error;
+  int64  uuidCount,entityCount,storageCount,entriesCount;
+  int64  fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
+
+  assert(uuidCountFactor >= 1);
+  assert(entityCountFactor >= 1);
+  assert(storageCountFactor >= 1);
+
+  // get max. steps (entities+storages+entries)
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &uuidCount,
+                                "uuids",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &entityCount,
+                                "entities",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &storageCount,
+                                "storage",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &entriesCount,
+                                "entries",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &fileEntryCount,
+                                "fileEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &imageEntryCount,
+                                "imageEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &directoryEntryCount,
+                                "directoryEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &linkEntryCount,
+                                "linkEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &hardlinkEntryCount,
+                                "hardlinkEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &specialEntryCount,
+                                "specialEntries",
+                                "COUNT(id)",
+                                ""
+                               );
+  if (error != ERROR_NONE)
+  {
+    return 0;
+  }
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "%lld entities/%lld storages/%lld entries to import",
+              entityCount,
+              storageCount,
+              entriesCount
+             );
+  DIMPORT("import %"PRIu64" UUIds",            uuidCount);
+  DIMPORT("import %"PRIu64" entities",         entityCount);
+  DIMPORT("import %"PRIu64" storages",         storageCount);
+  DIMPORT("import %"PRIu64" entries",          entriesCount);
+  DIMPORT("import %"PRIu64" file entries",     fileEntryCount);
+  DIMPORT("import %"PRIu64" image entries",    imageEntryCount);
+  DIMPORT("import %"PRIu64" directory entries",directoryEntryCount);
+  DIMPORT("import %"PRIu64" link entries",     linkEntryCount);
+  DIMPORT("import %"PRIu64" hardlink entries", hardlinkEntryCount);
+  DIMPORT("import %"PRIu64" special entries",  specialEntryCount);
+
+  return  6
+         +(ulong)uuidCount*(ulong)uuidCountFactor
+         +(ulong)entityCount*(ulong)entityCountFactor
+         +(ulong)storageCount*(ulong)storageCountFactor
+         +(ulong)entriesCount
+         +(ulong)fileEntryCount
+         +(ulong)imageEntryCount
+         +(ulong)directoryEntryCount
+         +(ulong)linkEntryCount
+         +(ulong)hardlinkEntryCount+
+         +(ulong)specialEntryCount;
+}
+
+/***********************************************************************\
+* Name   : importIndexVersion6
+* Purpose: import index version 6
 * Input  : oldIndexHandle,newIndexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
+LOCAL Errors importIndexVersion6(IndexHandle *oldIndexHandle,
                                  IndexHandle *newIndexHandle
                                 )
 {
   Errors  error;
-  int64   entityCount,storageCount,entriesCount;
-  int64   fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
   uint64  duration;
   IndexId toEntityId;
 
@@ -394,12 +552,12 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
   error = ERROR_NONE;
 
   // fix possible broken ids
-  fixBrokenIds(oldIndexHandle,"storage");
-  fixBrokenIds(oldIndexHandle,"files");
-  fixBrokenIds(oldIndexHandle,"images");
-  fixBrokenIds(oldIndexHandle,"directories");
-  fixBrokenIds(oldIndexHandle,"links");
-  fixBrokenIds(oldIndexHandle,"special");
+  fixBrokenIds(oldIndexHandle,"storage");     importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"files");       importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"images");      importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"directories"); importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"links");       importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"special");     importProgress(NULL);
   DIMPORT("fixed broken ids");
 
   // transfer uuids (if not exists, ignore errors)
@@ -412,130 +570,10 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
                            CALLBACK_(NULL,NULL),  // pre-copy
                            CALLBACK_(NULL,NULL),  // post-copy
                            CALLBACK_(getCopyPauseCallback(),NULL),
-                           CALLBACK_(NULL,NULL),  // progress
+                           CALLBACK_(importProgress,NULL),  // progress
                            NULL  // filter
                           );
   DIMPORT("imported UUIDs");
-
-  // get max. steps (entities+storages+entries)
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &entityCount,
-                                "entities",
-                                "COUNT(id)",
-                                "WHERE id!=0"
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &storageCount,
-                                "storage",
-                                "COUNT(id)",
-                                "WHERE id!=0"
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &entriesCount,
-                                "entries",
-                                "COUNT(id)",
-                                "WHERE id!=0"
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &fileEntryCount,
-                                "fileEntries",
-                                "COUNT(id)",
-                                ""
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &imageEntryCount,
-                                "imageEntries",
-                                "COUNT(id)",
-                                ""
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &directoryEntryCount,
-                                "directoryEntries",
-                                "COUNT(id)",
-                                ""
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &linkEntryCount,
-                                "linkEntries",
-                                "COUNT(id)",
-                                ""
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &hardlinkEntryCount,
-                                "hardlinkEntries",
-                                "COUNT(id)",
-                                ""
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
-                                &specialEntryCount,
-                                "specialEntries",
-                                "COUNT(id)",
-                                ""
-                               );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  plogMessage(NULL,  // logHandle
-              LOG_TYPE_INDEX,
-              "INDEX",
-              "%lld entities/%lld storages/%lld entries to import",
-              entityCount,
-              storageCount,
-              entriesCount
-             );
-  DIMPORT("import %"PRIu64" entities",         entityCount);
-  DIMPORT("import %"PRIu64" storages",         storageCount);
-  DIMPORT("import %"PRIu64" entries",          entriesCount);
-  DIMPORT("import %"PRIu64" file entries",     fileEntryCount);
-  DIMPORT("import %"PRIu64" image entries",    imageEntryCount);
-  DIMPORT("import %"PRIu64" directory entries",directoryEntryCount);
-  DIMPORT("import %"PRIu64" link entries",     linkEntryCount);
-  DIMPORT("import %"PRIu64" hardlink entries", hardlinkEntryCount);
-  DIMPORT("import %"PRIu64" special entries",  specialEntryCount);
-
-  initImportProgress(entityCount+
-                     storageCount+
-                     entriesCount+
-                     fileEntryCount+
-                     imageEntryCount+
-                     directoryEntryCount+
-                     linkEntryCount+
-                     hardlinkEntryCount+
-                     specialEntryCount
-                    );
 
   // transfer entities with storages and entries
   duration = 0LL;
@@ -1338,8 +1376,6 @@ LOCAL Errors upgradeFromVersion6(IndexHandle *oldIndexHandle,
     doneImportProgress();
     return error;
   }
-
-  doneImportProgress();
 
   return ERROR_NONE;
 }

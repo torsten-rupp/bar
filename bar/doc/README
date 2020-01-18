@@ -76,7 +76,7 @@ optional:
   eject (optional)
 
 for graphical frontend:
-* Java 1.6 or newer for graphical frontend (see below)
+* OpenJDK JRE 1.8 or newer for graphical frontend (see below)
 * SWT 3.6 or newer
 * ANT and launch4j
 
@@ -255,8 +255,8 @@ settings of BAR to create an DVD:
 BARControl is a graphical user interface for BAR. It is
 written in Java with SWT (Note: the former version used
 TclTk). To run the graphical user interface a Java
-runtime environment V1.6 (JRE6) or newer or Java
-development kit V1.6 (JDK6) or newer is required.
+runtime environment V1.8 (JRE8) or newer or Java
+development kit V1.8 (JDK8) or newer is required.
 
 To start the graphical user interface (for 32bit
 systems) type in
@@ -302,7 +302,8 @@ Note: If you want to use a ssh tunnel to connect to the bar
 
 Install Java, SWT, launch4j:
 
-* Download Java JRE V1.6 (JRE6) from http://www.sun.com
+* Install OpenJDK JRE V1.8 (JRE8) or download from
+  https://openjdk.java.net/
 * Install Java
 
 In case you do not want to use the included SWT 3.6

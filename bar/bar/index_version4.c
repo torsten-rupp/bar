@@ -45,15 +45,41 @@
 #endif
 
 /***********************************************************************\
-* Name   : upgradeFromVersion4
-* Purpose: upgrade index from version 4 to current version
+* Name   : getImportStepsVersion4
+* Purpose: get number of import steps for index version 4
+* Input  : oldIndexHandle     - old index handle
+*          uuidFactor         - UUID count factor (>= 1)
+*          entityCountFactor  - entity count factor (>= 1)
+*          storageCountFactor - storage count factor (>= 1)
+* Output : -
+* Return : number of import steps
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong getImportStepsVersion4(IndexHandle *oldIndexHandle,
+                                   uint        uuidCountFactor,
+                                   uint        entityCountFactor,
+                                   uint        storageCountFactor
+                                  )
+{
+  UNUSED_VARIABLE(oldIndexHandle);
+  UNUSED_VARIABLE(uuidCountFactor);
+  UNUSED_VARIABLE(entityCountFactor);
+  UNUSED_VARIABLE(storageCountFactor);
+
+  return 0L;
+}
+
+/***********************************************************************\
+* Name   : importIndexVersion4
+* Purpose: import index from version 4
 * Input  : oldIndexHandle,newIndexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIndexHandle)
+LOCAL Errors importIndexVersion4(IndexHandle *oldIndexHandle, IndexHandle *newIndexHandle)
 {
   Errors  error;
   IndexId entityId;

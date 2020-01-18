@@ -44,20 +44,45 @@
 #endif
 
 /***********************************************************************\
-* Name   : upgradeFromVersion5
-* Purpose: upgrade index from version 5 to current version
+* Name   : getImportStepsVersion5
+* Purpose: get number of import steps for index version 5
+* Input  : oldIndexHandle     - old index handle
+*          uuidFactor         - UUID count factor (>= 1)
+*          entityCountFactor  - entity count factor (>= 1)
+*          storageCountFactor - storage count factor (>= 1)
+* Output : -
+* Return : number of import steps
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong getImportStepsVersion5(IndexHandle *oldIndexHandle,
+                                   uint        uuidCountFactor,
+                                   uint        entityCountFactor,
+                                   uint        storageCountFactor
+                                  )
+{
+  UNUSED_VARIABLE(oldIndexHandle);
+  UNUSED_VARIABLE(uuidCountFactor);
+  UNUSED_VARIABLE(entityCountFactor);
+  UNUSED_VARIABLE(storageCountFactor);
+
+  return 0L;
+}
+
+/***********************************************************************\
+* Name   : importIndexVersion5
+* Purpose: import index from version 5
 * Input  : oldIndexHandle,newIndexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
+LOCAL Errors importIndexVersion5(IndexHandle *oldIndexHandle,
                                  IndexHandle *newIndexHandle
                                 )
 {
   Errors  error;
-  uint    step,maxSteps;
   uint64  duration;
   IndexId entityId;
 
@@ -492,14 +517,11 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported entity #%llu: '%s' (%3d%%, %llus)",
+                                           "Imported entity #%llu: '%s' (%llus)",
                                            toEntityId,
                                            Database_getTableColumnListCString(fromColumnList,"jobUUID",""),
-                                           (step*100)/maxSteps,
                                            (t1-t0)/US_PER_SECOND
                                           );
-
-                               step++;
 
                                return ERROR_NONE;
                              },NULL),
@@ -935,14 +957,11 @@ LOCAL Errors upgradeFromVersion5(IndexHandle *oldIndexHandle,
                                plogMessage(NULL,  // logHandle
                                            LOG_TYPE_INDEX,
                                            "INDEX",
-                                           "Imported storage #%llu: '%s' (%3d%%, %llus)",
+                                           "Imported storage #%llu: '%s' (%llus)",
                                            toStorageId,
                                            Database_getTableColumnListCString(fromColumnList,"name",""),
-                                           (step*100)/maxSteps,
                                            (t1-t0)/US_PER_SECOND
                                           );
-
-                               step++;
 
                                return error;
                              },NULL),

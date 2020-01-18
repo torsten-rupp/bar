@@ -99,6 +99,7 @@
   * BARControl: fixed options --index-database-list-entities,
     --index-database-list-storages: allow empty text
   * BARControl: fixed search entries in restore tab
+  * BARControl: require now OpenJDK JRE 1.8
   * change package build system to docker; build RPM on CentOS 6,
     DEB on Debian 7
   * Note: change package name to backup-archiver due to name

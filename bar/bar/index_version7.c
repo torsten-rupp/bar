@@ -410,71 +410,46 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle
 }
 
 /***********************************************************************\
-* Name   : upgradeFromVersion7
-* Purpose: upgrade index from version 7 to current version
-* Input  : oldIndexHandle,newIndexHandle - index handle
+* Name   : getImportStepsVersion7
+* Purpose: get number of import steps for index version 7
+* Input  : oldIndexHandle     - old index handle
+*          uuidFactor         - UUID count factor (>= 1)
+*          entityCountFactor  - entity count factor (>= 1)
+*          storageCountFactor - storage count factor (>= 1)
 * Output : -
-* Return : -
+* Return : number of import steps
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion7(IndexHandle *oldIndexHandle,
-                                 IndexHandle *newIndexHandle
-                                )
+LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
+                                   uint        uuidCountFactor,
+                                   uint        entityCountFactor,
+                                   uint        storageCountFactor
+                                  )
 {
-  typedef union
-  {
-    const void       *value;
-    const DatabaseId *id;
-  } KeyData;
-  typedef union
-  {
-    void       *value;
-    DatabaseId *id;
-  } ValueData;
+//  Errors error;
+  int64  uuidCount,entityCount,storageCount,entriesCount;
+  int64  fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
+//  int64  entryFragmentsCount;
+//  int64  n;
 
-  Errors             error;
-  int64              entityCount,storageCount,entriesCount;
-  int64              fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
-  int64              entryFragmentsCount;
-  int64              n;
-  uint64             duration;
-  Dictionary         storageIdDictionary;
-  DictionaryIterator dictionaryIterator;
-  KeyData            keyData;
-  ValueData          valueData;
-  String             storageIdsString;
-  IndexId            toEntityId;
-
-  error = ERROR_NONE;
-
-  // fix possible broken ids
-  fixBrokenIds(oldIndexHandle,"storages");
-  fixBrokenIds(oldIndexHandle,"files");
-  fixBrokenIds(oldIndexHandle,"images");
-  fixBrokenIds(oldIndexHandle,"directories");
-  fixBrokenIds(oldIndexHandle,"links");
-  fixBrokenIds(oldIndexHandle,"special");
-  DIMPORT("fixed broken ids");
-
-  // transfer uuids (if not exists, ignore errors)
-  (void)Database_copyTable(&oldIndexHandle->databaseHandle,
-                           &newIndexHandle->databaseHandle,
-                           "uuids",
-                           "uuids",
-                           FALSE,  // transaction flag
-                           NULL,  // duration
-                           CALLBACK_(NULL,NULL),  // pre-copy
-                           CALLBACK_(NULL,NULL),  // post-copy
-                           CALLBACK_(getCopyPauseCallback(),NULL),
-                           CALLBACK_(NULL,NULL),  // progress
-                           NULL  // filter
-                          );
-  DIMPORT("imported UUIDs");
+  assert(uuidCountFactor >= 1);
+  assert(entityCountFactor >= 1);
+  assert(storageCountFactor >= 1);
 
   // get max. steps (entities+storages+entries)
 #warning revert
 #if 0
+  error = Database_getInteger64(&oldIndexHandle->databaseHandle,
+                                &uuidCount,
+                                "uuids",
+                                "COUNT(id)",
+                                "WHERE id!=0"
+                               );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entityCount,
                                 "entities",
@@ -597,6 +572,8 @@ fprintf(stderr,"%s, %d: entryFragmentsCount=%"PRIi64"\n",__FILE__,__LINE__,entry
               entryFragmentsCount
              );
 #else
+UNUSED_VARIABLE(oldIndexHandle);
+uuidCount=0;
 entityCount=1;
 storageCount=1;
 entriesCount=1;
@@ -606,7 +583,7 @@ directoryEntryCount=1;
 linkEntryCount=1;
 hardlinkEntryCount=1;
 specialEntryCount=1;
-entryFragmentsCount=1;
+//entryFragmentsCount=1;
 #endif
   DIMPORT("import %"PRIu64" entities",         entityCount);
   DIMPORT("import %"PRIu64" storages",         storageCount);
@@ -617,13 +594,79 @@ entryFragmentsCount=1;
   DIMPORT("import %"PRIu64" link entries",     linkEntryCount);
   DIMPORT("import %"PRIu64" hardlink entries", hardlinkEntryCount);
   DIMPORT("import %"PRIu64" special entries",  specialEntryCount);
-  DIMPORT("import %"PRIu64" fragments",        entryFragmentsCount);
+//  DIMPORT("import %"PRIu64" fragments",        entryFragmentsCount);
 
-  initImportProgress(entityCount+
-                     storageCount+
-                     entriesCount+
-                     entryFragmentsCount
-                    );
+  return  6
+         +(ulong)uuidCount*(ulong)uuidCountFactor
+         +(ulong)entityCount*(ulong)entityCountFactor
+         +(ulong)storageCount*(ulong)storageCountFactor
+         +(ulong)entriesCount
+         +(ulong)fileEntryCount
+         +(ulong)imageEntryCount
+         +(ulong)directoryEntryCount
+         +(ulong)linkEntryCount
+         +(ulong)hardlinkEntryCount+
+         +(ulong)specialEntryCount;
+}
+
+/***********************************************************************\
+* Name   : importIndexVersion7
+* Purpose: import index version 7
+* Input  : oldIndexHandle,newIndexHandle - index handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
+                                 IndexHandle *newIndexHandle
+                                )
+{
+  typedef union
+  {
+    const void       *value;
+    const DatabaseId *id;
+  } KeyData;
+  typedef union
+  {
+    void       *value;
+    DatabaseId *id;
+  } ValueData;
+
+  Errors             error;
+  uint64             duration;
+  Dictionary         storageIdDictionary;
+  DictionaryIterator dictionaryIterator;
+  KeyData            keyData;
+  ValueData          valueData;
+  String             storageIdsString;
+  IndexId            toEntityId;
+
+  error = ERROR_NONE;
+
+  // fix possible broken ids
+  fixBrokenIds(oldIndexHandle,"storage");     importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"files");       importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"images");      importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"directories"); importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"links");       importProgress(NULL);
+  fixBrokenIds(oldIndexHandle,"special");     importProgress(NULL);
+  DIMPORT("fixed broken ids");
+
+  // transfer uuids (if not exists, ignore errors)
+  (void)Database_copyTable(&oldIndexHandle->databaseHandle,
+                           &newIndexHandle->databaseHandle,
+                           "uuids",
+                           "uuids",
+                           FALSE,  // transaction flag
+                           NULL,  // duration
+                           CALLBACK_(NULL,NULL),  // pre-copy
+                           CALLBACK_(NULL,NULL),  // post-copy
+                           CALLBACK_(getCopyPauseCallback(),NULL),
+                           CALLBACK_(importProgress,NULL),  // progress
+                           NULL  // filter
+                          );
+  DIMPORT("imported UUIDs");
 
   // transfer entities with storages and entries
   duration = 0LL;
@@ -1284,8 +1327,6 @@ entryFragmentsCount=1;
     doneImportProgress();
     return error;
   }
-
-  doneImportProgress();
 
   return error;
 }

@@ -44,15 +44,41 @@
 #endif
 
 /***********************************************************************\
-* Name   : upgradeFromVersion3
-* Purpose: upgrade index from version 3 to current version
+* Name   : getImportStepsVersion3
+* Purpose: get number of import steps for index version 3
+* Input  : oldIndexHandle     - old index handle
+*          uuidFactor         - UUID count factor (>= 1)
+*          entityCountFactor  - entity count factor (>= 1)
+*          storageCountFactor - storage count factor (>= 1)
+* Output : -
+* Return : number of import steps
+* Notes  : -
+\***********************************************************************/
+
+LOCAL ulong getImportStepsVersion3(IndexHandle *oldIndexHandle,
+                                   uint        uuidCountFactor,
+                                   uint        entityCountFactor,
+                                   uint        storageCountFactor
+                                  )
+{
+  UNUSED_VARIABLE(oldIndexHandle);
+  UNUSED_VARIABLE(uuidCountFactor);
+  UNUSED_VARIABLE(entityCountFactor);
+  UNUSED_VARIABLE(storageCountFactor);
+
+  return 0L;
+}
+
+/***********************************************************************\
+* Name   : importIndexVersion3
+* Purpose: import index from version 3
 * Input  : indexHandle - index handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors upgradeFromVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIndexHandle)
+LOCAL Errors importIndexVersion3(IndexHandle *oldIndexHandle, IndexHandle *newIndexHandle)
 {
   Errors              error;
   String              name1,name2;
