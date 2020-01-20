@@ -1732,53 +1732,6 @@ Dprintf.dprintf("");
   }
 */
 
-  /** find index for insert of item in sorted storage data table
-   * @param storageIndexData storage index data
-   * @param indexDataComparator index data comparator
-   * @return index in table
-   */
-  private int xxxfindStorageTableIndex(StorageIndexData storageIndexData, IndexDataComparator indexDataComparator)
-  {
-    TableItem tableItems[] = widgetStorageTable.getItems();
-
-    int index = 0;
-
-    if (tableItems.length > 0)
-    {
-      int i      = 0;
-      int i0     = 0;
-      int i1     = tableItems.length-1;
-      int result = -1;
-      while (i0 < i1)
-      {
-        i = (i1+i0)/2;
-        result = indexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[i].getData());
-        if      (result < 0) i1 = i-1;     // before i
-        else if (result > 0) i0 = i+1;     // after i
-        else                 i0 = i1 = i;  // exactly found at i
-      }
-      if (indexDataComparator.compare(storageIndexData,(StorageIndexData)tableItems[i0].getData()) < 0)
-      {
-        index = i0;
-      }
-      else
-      {
-        index = i0+1;
-      }
-    }
-
-    return index;
-  }
-
-  /** find index for insert of item in sorted storage data table
-   * @param storageIndexData storage index data
-   * @return index in table
-   */
-  private int xxxfindStorageTableIndex(StorageIndexData storageIndexData)
-  {
-    return xxxfindStorageTableIndex(storageIndexData,new IndexDataComparator(widgetStorageTable));
-  }
-
   /** update storage tree/table thread
    */
   class UpdateStorageTreeTableThread extends Thread
@@ -5433,7 +5386,7 @@ Dprintf.dprintf("");
           }
           else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
           {
-            removeStorageIndex();
+            removeStoragesFromIndex();
           }
           else if (Widgets.isAccelerator(keyEvent,SWT.CR) || Widgets.isAccelerator(keyEvent,SWT.KEYPAD_CR))
           {
@@ -5733,7 +5686,7 @@ Dprintf.dprintf("");
           }
           else if (Widgets.isAccelerator(keyEvent,SWT.DEL))
           {
-            removeStorageIndex();
+            removeStoragesFromIndex();
           }
           else if (Widgets.isAccelerator(keyEvent,SWT.SPACE))
           {
@@ -5890,7 +5843,7 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            addStorageIndex();
+            addStoragesToIndex();
           }
         });
 
@@ -5904,7 +5857,7 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            removeStorageIndex();
+            removeStoragesFromIndex();
           }
         });
 
@@ -7568,7 +7521,7 @@ Dprintf.dprintf("");
     }
   }
 
-  /** create entity for job and assign jobs/entities/storages to job
+  /** create entity for job and assign jobs/entities/storages to entity
    * @param indexDataHashSet index data
    * @param toJobUUID to job UUID
    * @param toScheduleUUID to schedule UUID or null
@@ -7642,6 +7595,7 @@ Dprintf.dprintf("");
                                    valueMap
                                   );
           entityId = valueMap.getLong("entityId");
+Dprintf.dprintf("entityId=%d",entityId);
         }
         catch (Exception exception)
         {
@@ -8142,9 +8096,9 @@ Dprintf.dprintf("");
     }
   }
 
-  /** add storage to index database
+  /** add storages to index database
    */
-  private void addStorageIndex()
+  private void addStoragesToIndex()
   {
     Label     label;
     Composite composite;
@@ -8348,7 +8302,7 @@ Dprintf.dprintf("");
 
   /** remove selected storages from index database
    */
-  private void removeStorageIndex()
+  private void removeStoragesFromIndex()
   {
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
     if (!indexDataHashSet.isEmpty())
