@@ -427,28 +427,34 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
                                    uint        storageCountFactor
                                   )
 {
-//  Errors error;
+  ulong  maxSteps;
+  Errors error;
   int64  uuidCount,entityCount,storageCount,entriesCount;
   int64  fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
-//  int64  entryFragmentsCount;
-//  int64  n;
+  int64  entryFragmentsCount;
 
   assert(uuidCountFactor >= 1);
   assert(entityCountFactor >= 1);
   assert(storageCountFactor >= 1);
 
+  maxSteps = 0;
+
+  maxSteps += 6;
+
   // get max. steps (entities+storages+entries)
-#warning revert
-#if 0
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &uuidCount,
                                 "uuids",
                                 "COUNT(id)",
                                 "WHERE id!=0"
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += uuidCount*(ulong)uuidCountFactor;
+  }
+  else
+  {
+    uuidCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entityCount,
@@ -456,66 +462,84 @@ LOCAL ulong getImportStepsVersion7(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 "WHERE id!=0"
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += entityCount*(ulong)entityCountFactor;
   }
-fprintf(stderr,"%s, %d: entityCount=%"PRIi64"\n",__FILE__,__LINE__,entityCount);
+  else
+  {
+    entityCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &storageCount,
                                 "storages",
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += storageCount*(ulong)storageCountFactor;
   }
-fprintf(stderr,"%s, %d: storageCount=%"PRIi64"\n",__FILE__,__LINE__,storageCount);
+  else
+  {
+    storageCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entriesCount,
                                 "entries",
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += entriesCount;
   }
-fprintf(stderr,"%s, %d: entriesCount=%"PRIi64"\n",__FILE__,__LINE__,entriesCount);
+  else
+  {
+    entriesCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &fileEntryCount,
                                 "fileEntries",
                                 "COUNT(id)",
                                 "GROUP BY entryId"
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += fileEntryCount;
   }
-  entriesCount += n;
+  else
+  {
+    fileEntryCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &imageEntryCount,
                                 "imageEntries",
                                 "COUNT(id)",
                                 "GROUP BY entryId"
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += imageEntryCount;
   }
-  entriesCount += n;
+  else
+  {
+    imageEntryCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &directoryEntryCount,
                                 "directoryEntries",
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += directoryEntryCount;
   }
-  entriesCount += n;
+  else
+  {
+    directoryEntryCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &linkEntryCount,
                                 "linkEntries",
@@ -523,22 +547,28 @@ fprintf(stderr,"%s, %d: entriesCount=%"PRIi64"\n",__FILE__,__LINE__,entriesCount
                                 "GROUP BY entryId"
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += linkEntryCount;
   }
-  entriesCount += n;
+  else
+  {
+    linkEntryCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &hardlinkEntryCount,
                                 "hardlinkEntries",
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += hardlinkEntryCount;
   }
-  entriesCount += n;
+  else
+  {
+    hardlinkEntryCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &specialEntryCount,
                                 "specialEntries",
@@ -546,22 +576,28 @@ fprintf(stderr,"%s, %d: entriesCount=%"PRIi64"\n",__FILE__,__LINE__,entriesCount
                                 "GROUP BY entryId"
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    maxSteps += specialEntryCount;
   }
-  entriesCount += n;
+  else
+  {
+    specialEntryCount = 0LL;
+  }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entryFragmentsCount,
                                 "entryFragments",
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    // nothing to do
   }
-fprintf(stderr,"%s, %d: entryFragmentsCount=%"PRIi64"\n",__FILE__,__LINE__,entryFragmentsCount);
+  else
+  {
+    entryFragmentsCount = 0LL;
+  }
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
               "INDEX",
@@ -571,20 +607,6 @@ fprintf(stderr,"%s, %d: entryFragmentsCount=%"PRIi64"\n",__FILE__,__LINE__,entry
               entriesCount,
               entryFragmentsCount
              );
-#else
-UNUSED_VARIABLE(oldIndexHandle);
-uuidCount=0;
-entityCount=1;
-storageCount=1;
-entriesCount=1;
-fileEntryCount=1;
-imageEntryCount=1;
-directoryEntryCount=1;
-linkEntryCount=1;
-hardlinkEntryCount=1;
-specialEntryCount=1;
-//entryFragmentsCount=1;
-#endif
   DIMPORT("import %"PRIu64" entities",         entityCount);
   DIMPORT("import %"PRIu64" storages",         storageCount);
   DIMPORT("import %"PRIu64" entries",          entriesCount);
@@ -594,19 +616,9 @@ specialEntryCount=1;
   DIMPORT("import %"PRIu64" link entries",     linkEntryCount);
   DIMPORT("import %"PRIu64" hardlink entries", hardlinkEntryCount);
   DIMPORT("import %"PRIu64" special entries",  specialEntryCount);
-//  DIMPORT("import %"PRIu64" fragments",        entryFragmentsCount);
+  DIMPORT("import %"PRIu64" fragments",        entryFragmentsCount);
 
-  return  6
-         +(ulong)uuidCount*(ulong)uuidCountFactor
-         +(ulong)entityCount*(ulong)entityCountFactor
-         +(ulong)storageCount*(ulong)storageCountFactor
-         +(ulong)entriesCount
-         +(ulong)fileEntryCount
-         +(ulong)imageEntryCount
-         +(ulong)directoryEntryCount
-         +(ulong)linkEntryCount
-         +(ulong)hardlinkEntryCount+
-         +(ulong)specialEntryCount;
+  return maxSteps;
 }
 
 /***********************************************************************\
@@ -1005,7 +1017,8 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                             );
   if (error != ERROR_NONE)
   {
-    doneImportProgress();
+    String_delete(storageIdsString);
+    Dictionary_done(&storageIdDictionary);
     return error;
   }
 
@@ -1324,7 +1337,6 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
   Dictionary_done(&storageIdDictionary);
   if (error != ERROR_NONE)
   {
-    doneImportProgress();
     return error;
   }
 

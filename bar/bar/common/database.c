@@ -54,6 +54,8 @@
 #define _DATABASE_DEBUG_LOCK
 #define _DATABASE_DEBUG_TIMEOUT
 #define _DATABASE_DEBUG_COPY_TABLE
+#warning remove/revert
+#define DATABASE_DEBUG_LOG SQLITE_TRACE_STMT
 
 /***************************** Constants *******************************/
 #define MAX_INTERRUPT_COPY_TABLE_COUNT 128
@@ -521,6 +523,61 @@ LOCAL DatabaseList databaseList;
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+#ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : logTraceCommandHandler
+* Purpose: log database trace command into file
+* Input  : traceCommand - trace command; see SQLITE_TRACE_...
+*          context      - database context
+*          p,t          - specific trace command data
+* Output : -
+* Return : 0
+* Notes  : -
+\***********************************************************************/
+
+LOCAL int logTraceCommandHandler(unsigned int traceCommand, void *context, void *p, void *t)
+{
+  FILE *handle;
+
+  UNUSED_VARIABLE(context);
+
+  handle = fopen("database.log","a");
+  if (handle == NULL)
+  {
+    return 0;
+  }
+
+  switch (traceCommand)
+  {
+    case SQLITE_TRACE_STMT:
+      {
+        sqlite3_stmt *statementHandle = (sqlite3_stmt*)p;
+        char         *sqlCommand;
+
+        if (!stringStartsWith((const char*)t,"--"))
+        {
+          sqlCommand = sqlite3_expanded_sql(statementHandle);
+          fprintf(handle,"prepare: %s\n",sqlite3_sql(statementHandle));
+          fprintf(handle,"  expanded: %s\n",sqlCommand);
+          sqlite3_free(sqlCommand);
+        }
+        else
+        {
+          fprintf(handle,"command: %s\n",(const char*)t);
+        }
+      }
+      break;
+    default:
+      break;
+  }
+
+  fclose(handle);
+
+  return 0;
+}
+#endif /* not NDEBUG */
 
 #if   defined(PLATFORM_LINUX)
 #elif defined(PLATFORM_WINDOWS)
@@ -3068,6 +3125,7 @@ Errors Database_initAll(void)
   List_init(&databaseList);
   Semaphore_init(&databaseList.lock,SEMAPHORE_TYPE_BINARY);
 
+  // enable multi-threaded support
   sqliteResult = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
   if (sqliteResult != SQLITE_OK)
   {
@@ -3077,7 +3135,7 @@ Errors Database_initAll(void)
     pthread_mutexattr_destroy(&databaseLockAttribute);
     return ERRORX_(DATABASE,sqliteResult,"enable multi-threading");
   }
-
+  
   return ERROR_NONE;
 }
 
@@ -3279,6 +3337,10 @@ void Database_doneAll(void)
 
     databaseHandle->databaseNode = databaseNode;
   }
+
+  #if !defined(NDEBUG) && defined(DATABASE_DEBUG_LOG)
+    sqlite3_trace_v2(databaseHandle->handle,DATABASE_DEBUG_LOG,logTraceCommandHandler,NULL);
+  #endif /* DATABASE_DEBUG_LOG */
 
 #if 0
   // set busy handler

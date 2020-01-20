@@ -57,7 +57,7 @@
 #endif
 
 #ifndef NDEBUG
-  #define DEBUG_INDEX_LIST_INFO
+  #define _INDEX_DEBUG_LIST_INFO
 #endif
 
 /***************************** Constants *******************************/
@@ -733,29 +733,32 @@ LOCAL void importProgress(void *userData)
 
   importSteps++;
 
-  progress           = (importSteps*1000)/importMaxSteps;
-  importLastProgress = (importLastProgressCount > 0) ? (uint)(importLastProgressSum/(ulong)importLastProgressCount) : 0;
-  now                = Misc_getTimestamp();
-  if (   (progress > importLastProgress)
-      && (now > (importLastProgressTimestamp+60*US_PER_SECOND))
-     )
+  if (importMaxSteps > 0)
   {
-    elapsedTime       = now-importStartTimestamp;
-    importTotalTime   = (elapsedTime*importMaxSteps)/importSteps;
-    estimatedRestTime = importTotalTime-elapsedTime;
+    progress           = (importSteps*1000)/importMaxSteps;
+    importLastProgress = (importLastProgressCount > 0) ? (uint)(importLastProgressSum/(ulong)importLastProgressCount) : 0;
+    now                = Misc_getTimestamp();
+    if (   (progress >= (importLastProgress+1))
+        && (now > (importLastProgressTimestamp+60*US_PER_SECOND))
+       )
+    {
+      elapsedTime       = now-importStartTimestamp;
+      importTotalTime   = (elapsedTime*importMaxSteps)/importSteps;
+      estimatedRestTime = importTotalTime-elapsedTime;
 
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Imported %0.1f%%, estimated rest time %uh:%02umin:%02us",
-                (float)progress/10.0,
-                (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
-                (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
-                (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
-               );
-    importLastProgressSum       += progress;
-    importLastProgressCount     += 1;
-    importLastProgressTimestamp = now;
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Imported %0.1f%%, estimated rest time %uh:%02umin:%02us",
+                  (float)progress/10.0,
+                  (uint)((estimatedRestTime/US_PER_SECOND)/3600LL),
+                  (uint)(((estimatedRestTime/US_PER_SECOND)%3600LL)/60),
+                  (uint)((estimatedRestTime/US_PER_SECOND)%60LL)
+                 );
+      importLastProgressSum       += progress;
+      importLastProgressCount     += 1;
+      importLastProgressTimestamp = now;
+    }
   }
 }
 
@@ -1860,170 +1863,6 @@ LOCAL Errors purge(IndexHandle *indexHandle,
 }
 
 /***********************************************************************\
-* Name   : isEmptyStorage
-* Purpose: check if storage if empty
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
-* Output : -
-* Return : TRUE iff entity is empty
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isEmptyStorage(IndexHandle *indexHandle,
-                          DatabaseId  storageId
-                         )
-{
-  assert(indexHandle != NULL);
-
-  return    (storageId != DATABASE_ID_NONE)
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entryFragments",
-                              "id",
-                              "WHERE storageId=%lld",
-                              storageId
-                             )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "directoryEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "linkEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "specialEntries",
-                             "id",
-                             "WHERE storageId=%lld",
-                             storageId
-                            );
-}
-
-/***********************************************************************\
-* Name   : pruneStorage
-* Purpose: prune empty storage
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneStorage(IndexHandle *indexHandle,
-                          DatabaseId  storageId
-                         )
-{
-  Errors error;
-  String name;
-
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-
-  // prune storage if empty and not in use
-//TODO: how to check in use?
-  if (isEmptyStorage(indexHandle,storageId))
-  {
-    // get storage name
-    name = String_new();
-    error = Database_getString(&indexHandle->databaseHandle,
-                               name,
-                               "storages",
-                               "name",
-                               "WHERE id=%lld",
-                               storageId
-                              );
-    if (error != ERROR_NONE)
-    {
-      String_clear(name);
-    }
-
-    // purge storage
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM storages \
-                              WHERE id=%lld \
-                             ",
-                             storageId
-                            );
-    if (error != ERROR_NONE)
-    {
-      String_delete(name);
-      return error;
-    }
-
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Purged storage #%llu, %s: no entries",
-                storageId,
-                String_cString(name)
-               );
-
-    String_delete(name);
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : pruneStorages
-* Purpose: prune all empty storages which have state OK
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneStorages(IndexHandle *indexHandle)
-{
-  Array         storageIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    databaseId;
-
-  assert(indexHandle != NULL);
-
-  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    error = Database_getIds(&indexHandle->databaseHandle,
-                            &storageIds,
-                            "storages",
-                            "id",
-                            "WHERE state IN (%u,%u) \
-                            ",
-                            INDEX_STATE_OK,
-                            INDEX_STATE_ERROR
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,error == ERROR_NONE)
-    {
-      error = pruneStorage(indexHandle,databaseId);
-    }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-  Array_done(&storageIds);
-
-  return error;
-}
-
-/***********************************************************************\
 * Name   : pruneEntries
 * Purpose: prune all entries (file, image, hardlink) with no fragments
 * Input  : indexHandle    - index handle
@@ -2048,345 +1887,107 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
   assert(doneFlag != NULL);
   assert(deletedCounter != NULL);
 
+  // init vairables
   Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    Array_clear(&databaseIds);
-    error = Database_getIds(&indexHandle->databaseHandle,
-                            &databaseIds,
-                            "fileEntries",
-                            "fileEntries.id",
-                            "LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id WHERE entryFragments.id IS NULL \
-                            "
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
 
-    ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
-    {
-      error = purge(indexHandle,
-                    doneFlag,
-                    deletedCounter,
-                    "fileEntries",
-                    "id=%lld",
-                    databaseId
-                   );
-    }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    Array_clear(&databaseIds);
-    error = Database_getIds(&indexHandle->databaseHandle,
-                            &databaseIds,
-                            "imageEntries",
-                            "imageEntries.id",
-                            "LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id WHERE entryFragments.id IS NULL \
-                            "
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
-    {
-      error = purge(indexHandle,
-                    doneFlag,
-                    deletedCounter,
-                    "imageEntries",
-                    "id=%lld",
-                    databaseId
-                   );
-    }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    Array_clear(&databaseIds);
-    error = Database_getIds(&indexHandle->databaseHandle,
-                            &databaseIds,
-                            "hardlinkEntries",
-                            "hardlinkEntries.id",
-                            "LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id WHERE entryFragments.id IS NULL \
-                            "
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
-    {
-      error = purge(indexHandle,
-                    doneFlag,
-                    deletedCounter,
-                    "hardlinkEntries",
-                    "id=%lld",
-                    databaseId
-                   );
-    }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-  Array_done(&databaseIds);
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : isEmptyEntity
-* Purpose: check if entity if empty
-* Input  : indexHandle - index handle
-*          entityId    - entity database id
-* Output : -
-* Return : TRUE iff entity is empty
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
-                         DatabaseId  entityId
-                        )
-{
-  assert(indexHandle != NULL);
-
-  return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "storages",
-                             "id",
-                             "WHERE entityId=%lld",
-                             entityId
-                            )
-         && !Database_exists(&indexHandle->databaseHandle,
-                             "entries",
-                             "id",
-                             "WHERE entityId=%lld",
-                             entityId
-                            );
-}
-
-/***********************************************************************\
-* Name   : pruneEntity
-* Purpose: prune entity if empty and not default entity, prune UUID if
-*          empty
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-*          entityId       - entity database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneEntity(IndexHandle *indexHandle,
-                         bool        *doneFlag,
-                         ulong       *deletedCounter,
-                         DatabaseId  entityId
-                        )
-{
-  int64               lockedCount;
-  Errors              error;
-  Array               databaseIds;
-  ArrayIterator       arrayIterator;
-  DatabaseId          databaseId;
-  DatabaseQueryHandle databaseQueryHandle;
-  DatabaseId          uuidId;
-  StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
-  uint64              createdDateTime;
-  ArchiveTypes        archiveType;
-
-  assert(indexHandle != NULL);
-
-  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
-  {
-#warning requried?
-//TODO: required?
-//TODO: race condition! change entity lock while list storages
-    // get locked count
-    error = Database_getInteger64(&indexHandle->databaseHandle,
-                                  &lockedCount,
-                                  "entities",
-                                  "lockedCount",
-                                  "WHERE id=%lld",
-                                  entityId
-                                 );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    if (lockedCount == 0LL)
-    {
-      Array_init(&databaseIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-      error = Database_getIds(&indexHandle->databaseHandle,
-                              &databaseIds,
-                              "storages",
-                              "id",
-                              "WHERE     entityId=%lld \
-                                     AND state IN (%u,%u) \
-                              ",
-                              entityId,
-                              INDEX_STATE_OK,
-                              INDEX_STATE_ERROR
-                             );
-      if (error != ERROR_NONE)
-      {
-        Array_done(&databaseIds);
-        return error;
-      }
-      ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE)
-      {
-        error = pruneStorage(indexHandle,databaseId);
-      }
-      if (error != ERROR_NONE)
-      {
-        Array_done(&databaseIds);
-        return error;
-      }
-      Array_done(&databaseIds);
-
-      // prune entity if empty
-      if (isEmptyEntity(indexHandle,entityId))
-      {
-        // get uuid id, job UUID, crated date/time, archive type
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT uuids.id, \
-                                         entities.jobUUID, \
-                                         UNIXTIMESTAMP(entities.created), \
-                                         entities.type \
-                                  FROM entities \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE entities.id=%lld \
-                                 ",
-                                 entityId
-                                );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        if (!Database_getNextRow(&databaseQueryHandle,
-                                 "%llu %S %llu %u",
-                                 &uuidId,
-                                 jobUUID,
-                                 &createdDateTime,
-                                 &archiveType
-                                )
-           )
-        {
-          String_clear(jobUUID);
-          createdDateTime = 0LL;
-          archiveType     = ARCHIVE_TYPE_NONE;
-        }
-
-        Database_finalize(&databaseQueryHandle);
-
-        if (error != ERROR_NONE)
-        {
-          String_clear(jobUUID);
-          createdDateTime = 0LL;
-          archiveType     = ARCHIVE_TYPE_NONE;
-        }
-
-        // purge entity
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "DELETE FROM entities WHERE id=%lld",
-                                 entityId
-                                );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        // purge skipped entries of entity
-        error = purge(indexHandle,
-                      doneFlag,
-                      deletedCounter,
-                      "skippedEntries",
-                      "entityId=%lld",
-                      entityId
-                     );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_INDEX,
-                    "INDEX",
-                    "Purged entity #%llu, %s, %llu, %u: no archives",
-                    entityId,
-                    String_cString(jobUUID),
-                    createdDateTime,
-                    archiveType
-                   );
-      }
-    }
-  }
-
-  return error;
-}
-
-/***********************************************************************\
-* Name   : pruneEntities
-* Purpose: prune all empty entities
-* Input  : indexHandle    - index handle
-*          doneFlag       - done flag (can be NULL)
-*          deletedCounter - deleted entries count (can be NULL)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors pruneEntities(IndexHandle *indexHandle,
-                           bool        *doneFlag,
-                           ulong       *deletedCounter
-                          )
-{
-  Array         entityIds;
-  Errors        error;
-  ArrayIterator arrayIterator;
-  DatabaseId    entityId;
-
-  assert(indexHandle != NULL);
-
-  // Note: keep default entity!
-  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  // get all file entries without fragments
+  Array_clear(&databaseIds);
   error = Database_getIds(&indexHandle->databaseHandle,
-                          &entityIds,
-                          "entities",
-                          "id",
-                          "WHERE id!=%lld \
-                          ",
-                          INDEX_DEFAULT_ENTITY_DATABASE_ID
+                          &databaseIds,
+                          "fileEntries",
+                          "fileEntries.id",
+                          "LEFT JOIN entryFragments ON entryFragments.entryId=fileEntries.id WHERE entryFragments.id IS NULL \
+                          "
                          );
   if (error != ERROR_NONE)
   {
-    Array_done(&entityIds);
+    Array_done(&databaseIds);
     return error;
   }
-  ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
+
+  // purge file entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
   {
-    error = pruneEntity(indexHandle,doneFlag,deletedCounter,entityId);
+    error = purge(indexHandle,
+                  doneFlag,
+                  deletedCounter,
+                  "fileEntries",
+                  "id=%lld",
+                  databaseId
+                 );
   }
   if (error != ERROR_NONE)
   {
-    Array_done(&entityIds);
+    Array_done(&databaseIds);
     return error;
   }
-  Array_done(&entityIds);
+
+  // get all image entries without fragments
+  Array_clear(&databaseIds);
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &databaseIds,
+                          "imageEntries",
+                          "imageEntries.id",
+                          "LEFT JOIN entryFragments ON entryFragments.entryId=imageEntries.id WHERE entryFragments.id IS NULL \
+                          "
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // purge image entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
+  {
+    error = purge(indexHandle,
+                  doneFlag,
+                  deletedCounter,
+                  "imageEntries",
+                  "id=%lld",
+                  databaseId
+                 );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // get all hardlink entries without fragments
+  Array_clear(&databaseIds);
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &databaseIds,
+                          "hardlinkEntries",
+                          "hardlinkEntries.id",
+                          "LEFT JOIN entryFragments ON entryFragments.entryId=hardlinkEntries.id WHERE entryFragments.id IS NULL \
+                          "
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // purge hardlink entries without fragments
+  ARRAY_ITERATEX(&databaseIds,arrayIterator,databaseId,error == ERROR_NONE && (*doneFlag) && !quitFlag)
+  {
+    error = purge(indexHandle,
+                  doneFlag,
+                  deletedCounter,
+                  "hardlinkEntries",
+                  "id=%lld",
+                  databaseId
+                 );
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&databaseIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&databaseIds);
 
   return ERROR_NONE;
 }
@@ -2444,6 +2045,8 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(uuidId != DATABASE_ID_NONE);
 
+#warning remove
+#if 0
   // prune entities of uuid
   Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   error = Database_getIds(&indexHandle->databaseHandle,
@@ -2472,11 +2075,12 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
     return error;
   }
   Array_done(&entityIds);
+#endif
 
   // delete uuid if empty
   if (isEmptyUUID(indexHandle,uuidId))
   {
-    // purge UUID
+    // delete UUID index
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -2548,6 +2152,446 @@ LOCAL Errors pruneUUIDs(IndexHandle *indexHandle,
     return error;
   }
   Array_done(&uuidIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : isEmptyEntity
+* Purpose: check if entity if empty
+* Input  : indexHandle - index handle
+*          entityId    - entity database id
+* Output : -
+* Return : TRUE iff entity is empty
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isEmptyEntity(IndexHandle *indexHandle,
+                         DatabaseId  entityId
+                        )
+{
+  assert(indexHandle != NULL);
+
+  return    (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "storages",
+                             "id",
+                             "WHERE entityId=%lld",
+                             entityId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "entries",
+                             "id",
+                             "WHERE entityId=%lld",
+                             entityId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "entriesNewest",
+                             "id",
+                             "WHERE entityId=%lld",
+                             entityId
+                            );
+}
+
+/***********************************************************************\
+* Name   : pruneEntity
+* Purpose: prune entity if empty, not default entity and not locked,
+*          prune UUID if empty
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+*          entityId       - entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneEntity(IndexHandle *indexHandle,
+                         bool        *doneFlag,
+                         ulong       *deletedCounter,
+                         DatabaseId  entityId
+                        )
+{
+  int64               lockedCount;
+  Errors              error;
+  Array               databaseIds;
+  ArrayIterator       arrayIterator;
+  DatabaseId          databaseId;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          uuidId;
+  StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
+  uint64              createdDateTime;
+  ArchiveTypes        archiveType;
+
+  assert(indexHandle != NULL);
+
+  if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
+  {
+#warning requried?
+//TODO: required?
+//TODO: race condition! change entity lock while list storages
+    // get locked count
+    error = Database_getInteger64(&indexHandle->databaseHandle,
+                                  &lockedCount,
+                                  "entities",
+                                  "lockedCount",
+                                  "WHERE id=%lld",
+                                  entityId
+                                 );
+    if (error != ERROR_NONE)
+    {
+      return error;
+    }
+
+    if (lockedCount == 0LL)
+    {
+      // prune entity if empty
+      if (isEmptyEntity(indexHandle,entityId))
+      {
+        // get uuid id, job UUID, crated date/time, archive type
+        error = Database_prepare(&databaseQueryHandle,
+                                 &indexHandle->databaseHandle,
+                                 "SELECT uuids.id, \
+                                         entities.jobUUID, \
+                                         UNIXTIMESTAMP(entities.created), \
+                                         entities.type \
+                                  FROM entities \
+                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                  WHERE entities.id=%lld \
+                                 ",
+                                 entityId
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%llu %S %llu %u",
+                                 &uuidId,
+                                 jobUUID,
+                                 &createdDateTime,
+                                 &archiveType
+                                )
+           )
+        {
+          String_clear(jobUUID);
+          createdDateTime = 0LL;
+          archiveType     = ARCHIVE_TYPE_NONE;
+        }
+        Database_finalize(&databaseQueryHandle);
+
+        // delete entity index
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "DELETE FROM entities WHERE id=%lld",
+                                 entityId
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        // purge skipped entries of entity
+        error = purge(indexHandle,
+                      doneFlag,
+                      deletedCounter,
+                      "skippedEntries",
+                      "entityId=%lld",
+                      entityId
+                     );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_INDEX,
+                    "INDEX",
+                    "Purged entity #%llu, %s, %llu, %u: no archives",
+                    entityId,
+                    String_cString(jobUUID),
+                    createdDateTime,
+                    archiveType
+                   );
+
+        // prune UUID
+        if (uuidId != DATABASE_ID_NONE)
+        {
+          error = pruneUUID(indexHandle,
+                            doneFlag,
+                            deletedCounter,
+                            uuidId
+                           );
+          if (error != ERROR_NONE)
+          {
+            return error;
+          }
+        }
+      }
+    }
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : pruneEntities
+* Purpose: prune all empty entities
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneEntities(IndexHandle *indexHandle,
+                           bool        *doneFlag,
+                           ulong       *deletedCounter
+                          )
+{
+  Array         entityIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    entityId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all entity ids (Note: skip default entity!)
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &entityIds,
+                          "entities",
+                          "id",
+                          "WHERE id!=%lld \
+                          ",
+                          INDEX_DEFAULT_ENTITY_DATABASE_ID
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIds);
+    return error;
+  }
+
+  // prune entities
+  ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
+  {
+    error = pruneEntity(indexHandle,doneFlag,deletedCounter,entityId);
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&entityIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&entityIds);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : isEmptyStorage
+* Purpose: check if storage if empty
+* Input  : indexHandle - index handle
+*          storageId   - storage database id
+* Output : -
+* Return : TRUE iff entity is empty
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool isEmptyStorage(IndexHandle *indexHandle,
+                          DatabaseId  storageId
+                         )
+{
+  assert(indexHandle != NULL);
+
+  return    (storageId != DATABASE_ID_NONE)
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "entryFragments",
+                              "id",
+                              "WHERE storageId=%lld",
+                              storageId
+                             )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "directoryEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "linkEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            )
+         && !Database_exists(&indexHandle->databaseHandle,
+                             "specialEntries",
+                             "id",
+                             "WHERE storageId=%lld",
+                             storageId
+                            );
+}
+
+/***********************************************************************\
+* Name   : pruneStorage
+* Purpose: prune storage if empty, prune entity/UUID
+* Input  : indexHandle - index handle
+*          storageId   - storage database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneStorage(IndexHandle *indexHandle,
+                          DatabaseId  storageId
+                         )
+{
+  String              name;
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          entityId;
+
+  assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+
+  // prune storage if empty and not in use
+//TODO: how to check in use?
+  if (isEmptyStorage(indexHandle,storageId))
+  {
+    // init variables
+    name = String_new();
+
+    // get storage name, entity id
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT entities.id, \
+                                     storages.name \
+                              FROM storages \
+                                LEFT JOIN entities ON entities.id=storages.entityId \
+                              WHERE storages.id=%lld \
+                             ",
+                             storageId
+                            );
+    if (error == ERROR_NONE)
+    {
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%llu %'S",
+                               &entityId,
+                               name
+                              )
+         )
+      {
+        error = ERROR_DATABASE;
+      }
+      Database_finalize(&databaseQueryHandle);
+    }
+    if (error != ERROR_NONE)
+    {
+      entityId = DATABASE_ID_NONE;
+      String_clear(name);
+    }
+
+    // delete storage index
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM storages \
+                              WHERE id=%lld \
+                             ",
+                             storageId
+                            );
+    if (error != ERROR_NONE)
+    {
+      String_delete(name);
+      return error;
+    }
+
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Purged storage #%llu, %s: no entries",
+                storageId,
+                String_cString(name)
+               );
+
+    // prune entity
+    if (entityId != DATABASE_ID_NONE)
+    {
+      error = pruneEntity(indexHandle,
+                          NULL,  // doneFlag
+                          NULL,  // deletedCounter
+                          entityId
+                         );
+      if (error != ERROR_NONE)
+      {
+        String_delete(name);
+        return error;
+      }
+    }
+
+    // free resources
+    String_delete(name);
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : pruneStorages
+* Purpose: prune all empty storages which have state OK
+* Input  : indexHandle    - index handle
+*          doneFlag       - done flag (can be NULL)
+*          deletedCounter - deleted entries count (can be NULL)
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors pruneStorages(IndexHandle *indexHandle)
+{
+  Array         storageIds;
+  Errors        error;
+  ArrayIterator arrayIterator;
+  DatabaseId    databaseId;
+
+  assert(indexHandle != NULL);
+
+  // init variables
+  Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+
+  // get all storage ids  
+  error = Database_getIds(&indexHandle->databaseHandle,
+                          &storageIds,
+                          "storages",
+                          "id",
+                          "WHERE state IN (%u,%u) \
+                          ",
+                          INDEX_STATE_OK,
+                          INDEX_STATE_ERROR
+                         );
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // prune storages
+  ARRAY_ITERATEX(&storageIds,arrayIterator,databaseId,error == ERROR_NONE)
+  {
+    error = pruneStorage(indexHandle,databaseId);
+  }
+  if (error != ERROR_NONE)
+  {
+    Array_done(&storageIds);
+    return error;
+  }
+
+  // free resources
+  Array_done(&storageIds);
 
   return ERROR_NONE;
 }
@@ -3566,6 +3610,485 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
+
+/***********************************************************************\
+* Name   : updateUUIDAggregates
+* Purpose: update UUID aggregates
+* Input  : indexHandle - index handle
+*          uuidId      - UUID database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : currently nothing to do
+\***********************************************************************/
+
+LOCAL Errors updateUUIDAggregates(IndexHandle *indexHandle,
+                                  DatabaseId  uuidId
+                                 )
+{
+  UNUSED_VARIABLE(indexHandle);
+  UNUSED_VARIABLE(uuidId);
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
+* Name   : updateEntityAggregates
+* Purpose: update entity aggregates
+* Input  : indexHandle - index handle
+*          entityId    - entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
+                                    DatabaseId  entityId
+                                   )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+  ulong               totalFileCount;
+  double              totalFileSize_;
+  uint64              totalFileSize;
+  ulong               totalImageCount;
+  double              totalImageSize_;
+  uint64              totalImageSize;
+  ulong               totalDirectoryCount;
+  ulong               totalLinkCount;
+  ulong               totalHardlinkCount;
+  double              totalHardlinkSize_;
+  uint64              totalHardlinkSize;
+  ulong               totalSpecialCount;
+
+  assert(indexHandle != NULL);
+
+  // get file aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+//TODO: use entries.size?
+                           "SELECT COUNT(entries.id), \
+                                   TOTAL(entryFragments.size) \
+                            FROM entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                            WHERE     entries.type=%u \
+                                  AND entries.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_FILE,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalFileCount,
+                           &totalFileSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalFileSize_ >= 0.0);
+  totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
+  Database_finalize(&databaseQueryHandle);
+
+  // get image aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+//TODO: use entries.size?
+                           "SELECT COUNT(entries.id),\
+                                   TOTAL(entryFragments.size) \
+                            FROM entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                            WHERE     entries.type=%u \
+                                  AND entries.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_IMAGE,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalImageCount,
+                           &totalImageSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalImageSize_ >= 0.0);
+  totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
+  Database_finalize(&databaseQueryHandle);
+
+  // get directory aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(entries.id) \
+                            FROM entries \
+                            WHERE     entries.type=%u \
+                                  AND entries.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_DIRECTORY,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalDirectoryCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  // get link aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(entries.id) \
+                            FROM entries \
+                            WHERE     entries.type=%u \
+                                  AND entries.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_LINK,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalLinkCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  // get hardlink aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+//TODO: use entries.size?
+                           "SELECT COUNT(entries.id), \
+                                   TOTAL(entryFragments.size) \
+                            FROM entries \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
+                            WHERE     entries.type=%u \
+                                  AND entries.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_HARDLINK,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalHardlinkCount,
+                           &totalHardlinkSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalHardlinkSize_ >= 0.0);
+  totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
+  Database_finalize(&databaseQueryHandle);
+
+  // get special aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(entries.id) \
+                            FROM entries \
+                            WHERE     entries.type=%u \
+                                  AND entries.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_SPECIAL,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalSpecialCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  // update entity aggregate data
+#warning
+fprintf(stderr,"%s, %d: aggregate entityId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,entityId,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+//if ((totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize) == 0) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "UPDATE entities \
+                            SET totalEntryCount    =%llu, \
+                                totalEntrySize     =%llu, \
+                                totalFileCount     =%llu, \
+                                totalFileSize      =%llu, \
+                                totalImageCount    =%llu, \
+                                totalImageSize     =%llu, \
+                                totalDirectoryCount=%llu, \
+                                totalLinkCount     =%llu, \
+                                totalHardlinkCount =%llu, \
+                                totalHardlinkSize  =%llu, \
+                                totalSpecialCount  =%llu \
+                            WHERE id=%lld; \
+                           ",
+                           totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
+                           totalFileSize+totalImageSize+totalHardlinkSize,
+                           totalFileCount,
+                           totalFileSize,
+                           totalImageCount,
+                           totalImageSize,
+                           totalDirectoryCount,
+                           totalLinkCount,
+                           totalHardlinkCount,
+                           totalHardlinkSize,
+                           totalSpecialCount,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // -----------------------------------------------------------------
+
+  // get newest file aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(entriesNewest.id), \
+                                   TOTAL(entryFragments.size) \
+                            FROM entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                            WHERE     entriesNewest.type=%u \
+                                  AND entriesNewest.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_FILE,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalFileCount,
+                           &totalFileSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalFileSize_ >= 0.0);
+  totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
+  Database_finalize(&databaseQueryHandle);
+
+  // get newest image aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(entriesNewest.id), \
+                                   TOTAL(entryFragments.size) \
+                            FROM entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                            WHERE     entriesNewest.type=%u \
+                                  AND entriesNewest.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_IMAGE,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalImageCount,
+                           &totalImageSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalImageSize_ >= 0.0);
+  totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
+  Database_finalize(&databaseQueryHandle);
+
+  // get newest directory aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(entriesNewest.id) \
+                            FROM entriesNewest \
+                            WHERE     entriesNewest.type=%u \
+                                  AND entriesNewest.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_DIRECTORY,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalDirectoryCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  // get newest link aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(entriesNewest.id) \
+                            FROM entriesNewest \
+                            WHERE     entriesNewest.type=%u \
+                                  AND entriesNewest.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_LINK,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalLinkCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  // get newest hardlink aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+//TODO: use entriesNewest.size?
+                           "SELECT COUNT(entriesNewest.id), \
+                                   TOTAL(entryFragments.size) \
+                            FROM entriesNewest \
+                              LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
+                            WHERE     entriesNewest.type=%u \
+                                  AND entriesNewest.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_HARDLINK,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalHardlinkCount,
+                           &totalHardlinkSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  assert(totalHardlinkSize_ >= 0.0);
+  totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
+  Database_finalize(&databaseQueryHandle);
+
+  // get newest special aggregate data
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT COUNT(entriesNewest.id) \
+                            FROM entriesNewest \
+                            WHERE     entriesNewest.type=%u \
+                                  AND entriesNewest.entityId=%lld; \
+                           ",
+                           INDEX_TYPE_SPECIAL,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalSpecialCount
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
+  Database_finalize(&databaseQueryHandle);
+
+  // update newest aggregate data
+fprintf(stderr,"%s, %d: aggregate newest entityId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,entityId,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+  error = Database_execute(&indexHandle->databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "UPDATE entities \
+                            SET totalEntryCountNewest    =%llu, \
+                                totalEntrySizeNewest     =%llu, \
+                                totalFileCountNewest     =%llu, \
+                                totalFileSizeNewest      =%llu, \
+                                totalImageCountNewest    =%llu, \
+                                totalImageSizeNewest     =%llu, \
+                                totalDirectoryCountNewest=%llu, \
+                                totalLinkCountNewest     =%llu, \
+                                totalHardlinkCountNewest =%llu, \
+                                totalHardlinkSizeNewest  =%llu, \
+                                totalSpecialCountNewest  =%llu \
+                            WHERE id=%lld; \
+                           ",
+                           totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
+                           totalFileSize+totalImageSize+totalHardlinkSize,
+                           totalFileCount,
+                           totalFileSize,
+                           totalImageCount,
+                           totalImageSize,
+                           totalDirectoryCount,
+                           totalLinkCount,
+                           totalHardlinkCount,
+                           totalHardlinkSize,
+                           totalSpecialCount,
+                           entityId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  return ERROR_NONE;
+}
+
 /***********************************************************************\
 * Name   : updateStorageAggregates
 * Purpose: update storage aggregates
@@ -3594,6 +4117,7 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   double              totalHardlinkSize_;
   uint64              totalHardlinkSize;
   ulong               totalSpecialCount;
+  DatabaseId          entityId;
 
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
@@ -3616,11 +4140,16 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu %lf",
-                      &totalFileCount,
-                      &totalFileSize_
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalFileCount,
+                           &totalFileSize_
+                          )
+     )
+  {
+    totalFileCount = 0L;
+    totalFileSize_ = 0.0;
+  }
   assert(totalFileSize_ >= 0.0);
   totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
@@ -3643,11 +4172,16 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu %lf",
-                      &totalImageCount,
-                      &totalImageSize_
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalImageCount,
+                           &totalImageSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
   assert(totalImageSize_ >= 0.0);
   totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
@@ -3668,10 +4202,14 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu",
-                      &totalDirectoryCount
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalDirectoryCount
+                          )
+     )
+  {
+    totalDirectoryCount = 0L;
+  }
   Database_finalize(&databaseQueryHandle);
 
   // get link aggregate data
@@ -3690,10 +4228,14 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu",
-                      &totalLinkCount
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalLinkCount
+                          )
+     )
+  {
+    totalLinkCount = 0L;
+  }
   Database_finalize(&databaseQueryHandle);
 
   // get hardlink aggregate data
@@ -3714,11 +4256,16 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu %lf",
-                      &totalHardlinkCount,
-                      &totalHardlinkSize_
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalHardlinkCount,
+                           &totalHardlinkSize_
+                          )
+     )
+  {
+    totalHardlinkCount = 0L;
+    totalHardlinkSize_ = 0.0;
+  }
   assert(totalHardlinkSize_ >= 0.0);
   totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
@@ -3739,10 +4286,14 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu",
-                      &totalSpecialCount
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalSpecialCount
+                          )
+     )
+  {
+    totalSpecialCount = 0L;
+  }
   Database_finalize(&databaseQueryHandle);
 
   // update aggregate data
@@ -3801,11 +4352,16 @@ fprintf(stderr,"%s, %d: aggregate storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu %lf",
-                      &totalFileCount,
-                      &totalFileSize_
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalFileCount,
+                           &totalFileSize_
+                          )
+     )
+  {
+    totalFileCount = 0L;
+    totalFileSize_ = 0.0;
+  }
   assert(totalFileSize_ >= 0.0);
   totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
@@ -3827,11 +4383,16 @@ fprintf(stderr,"%s, %d: aggregate storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu %lf",
-                      &totalImageCount,
-                      &totalImageSize_
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalImageCount,
+                           &totalImageSize_
+                          )
+     )
+  {
+    totalImageCount = 0L;
+    totalImageSize_ = 0.0;
+  }
   assert(totalImageSize_ >= 0.0);
   totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
@@ -3852,10 +4413,14 @@ fprintf(stderr,"%s, %d: aggregate storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu",
-                      &totalDirectoryCount
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalDirectoryCount
+                          )
+     )
+  {
+    totalDirectoryCount = 0L;
+  }
   Database_finalize(&databaseQueryHandle);
 
   // get newest link aggregate data
@@ -3874,10 +4439,14 @@ fprintf(stderr,"%s, %d: aggregate storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu",
-                      &totalLinkCount
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalLinkCount
+                          )
+     )
+  {
+    totalLinkCount = 0L;
+  }
   Database_finalize(&databaseQueryHandle);
 
   // get newest hardlink aggregate data
@@ -3898,11 +4467,16 @@ fprintf(stderr,"%s, %d: aggregate storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu %lf",
-                      &totalHardlinkCount,
-                      &totalHardlinkSize_
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu %lf",
+                           &totalHardlinkCount,
+                           &totalHardlinkSize_
+                          )
+     )
+  {
+    totalHardlinkCount = 0L;
+    totalHardlinkSize_ = 0.0;
+  }
   assert(totalHardlinkSize_ >= 0.0);
   totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
@@ -3923,10 +4497,14 @@ fprintf(stderr,"%s, %d: aggregate storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__
   {
     return error;
   }
-  Database_getNextRow(&databaseQueryHandle,
-                      "%lu",
-                      &totalSpecialCount
-                     );
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%lu",
+                           &totalSpecialCount
+                          )
+     )
+  {
+    totalSpecialCount = 0L;
+  }
   Database_finalize(&databaseQueryHandle);
 
   // update newest aggregate data
@@ -3966,608 +4544,223 @@ fprintf(stderr,"%s, %d: aggregate newest storageId=%ld: %"PRIu64" %"PRIu64"\n",_
     return error;
   }
 
+  // update entity aggregates
+  error = Database_getId(&indexHandle->databaseHandle,
+                         &entityId,
+                         "storages",
+                         "entityId",
+                         "WHERE id=%lld \
+                         ",
+                         storageId
+                        );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  error = updateEntityAggregates(indexHandle,entityId);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
   return ERROR_NONE;
 }
 
+// ----------------------------------------------------------------------
+
 /***********************************************************************\
-* Name   : updateEntityAggregates
-* Purpose: update entity aggregates
+* Name   : assignStorageEntriesToStorage
+* Purpose: assign all entries of storage to other storage and remove
+*          storage index
 * Input  : indexHandle - index handle
-*          entityId    - entity database id
+*          storageId   - storage database id
+*          toStorageId - to-storage database id
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
-                                    DatabaseId  entityId
-                                   )
+LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
+                                           DatabaseId  storageId,
+                                           DatabaseId  toStorageId
+                                          )
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
-  ulong               totalFileCount;
-  double              totalFileSize_;
-  uint64              totalFileSize;
-  ulong               totalImageCount;
-  double              totalImageSize_;
-  uint64              totalImageSize;
-  ulong               totalDirectoryCount;
-  ulong               totalLinkCount;
-  ulong               totalHardlinkCount;
-  double              totalHardlinkSize_;
-  uint64              totalHardlinkSize;
-  ulong               totalSpecialCount;
+  DatabaseId          toUUIDId,toEntityId;
+
+  /* steps:
+     - get to-UUID id, to-entity id
+     - assign entries of storage
+     - update storage aggregates
+     - prune storage
+  */
 
   assert(indexHandle != NULL);
+  assert(storageId != DATABASE_ID_NONE);
+  assert(toStorageId != DATABASE_ID_NONE);
 
-  INDEX_DOX(error,
-            indexHandle,
+  // init vairables
+
+  error = ERROR_NONE;
+
+  // get to-uuid id, to-entity id
+  if (error == ERROR_NONE)
   {
-    // get file aggregate data
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
-//TODO: use entries.size?
-                             "SELECT COUNT(entries.id), \
-                                     TOTAL(entryFragments.size) \
-                              FROM entries \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              WHERE     entries.type=%u \
-                                    AND entries.entityId=%lld; \
+                             "SELECT uuids.id, \
+                                     entities.id \
+                              FROM storages \
+                                LEFT JOIN entities ON entities.id=storages.entityId \
+                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                              WHERE storages.id=%lld \
                              ",
-                             INDEX_TYPE_FILE,
-                             entityId
+                             toStorageId
                             );
-    if (error != ERROR_NONE)
+    if (error == ERROR_NONE)
     {
-      return error;
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%llu %llu",
+                               &toUUIDId,
+                               &toEntityId
+                              )
+         )
+      {
+        error = ERROR_DATABASE;
+      }
+      Database_finalize(&databaseQueryHandle);
     }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu %lf",
-                        &totalFileCount,
-                        &totalFileSize_
-                       );
-    assert(totalFileSize_ >= 0.0);
-    totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
-    Database_finalize(&databaseQueryHandle);
+  }
 
-    // get image aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-//TODO: use entries.size?
-                             "SELECT COUNT(entries.id),\
-                                     TOTAL(entryFragments.size) \
-                              FROM entries \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              WHERE     entries.type=%u \
-                                    AND entries.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_IMAGE,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu %lf",
-                        &totalImageCount,
-                        &totalImageSize_
-                       );
-    assert(totalImageSize_ >= 0.0);
-    totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
-    Database_finalize(&databaseQueryHandle);
-
-    // get directory aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(entries.id) \
-                              FROM entries \
-                              WHERE     entries.type=%u \
-                                    AND entries.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_DIRECTORY,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu",
-                        &totalDirectoryCount
-                       );
-    Database_finalize(&databaseQueryHandle);
-
-    // get link aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(entries.id) \
-                              FROM entries \
-                              WHERE     entries.type=%u \
-                                    AND entries.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_LINK,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu",
-                        &totalLinkCount
-                       );
-    Database_finalize(&databaseQueryHandle);
-
-    // get hardlink aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-//TODO: use entries.size?
-                             "SELECT COUNT(entries.id), \
-                                     TOTAL(entryFragments.size) \
-                              FROM entries \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entries.id \
-                              WHERE     entries.type=%u \
-                                    AND entries.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_HARDLINK,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu %lf",
-                        &totalHardlinkCount,
-                        &totalHardlinkSize_
-                       );
-    assert(totalHardlinkSize_ >= 0.0);
-    totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
-    Database_finalize(&databaseQueryHandle);
-
-    // get special aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(entries.id) \
-                              FROM entries \
-                              WHERE     entries.type=%u \
-                                    AND entries.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_SPECIAL,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu",
-                        &totalSpecialCount
-                       );
-    Database_finalize(&databaseQueryHandle);
-
-    // update entity aggregate data
-#warning
-fprintf(stderr,"%s, %d: aggregate entityId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,entityId,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+  // set uuid, entity id of all entries of storage
+  if (error == ERROR_NONE)
+  {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
-                             "UPDATE entities \
-                              SET totalEntryCount    =%llu, \
-                                  totalEntrySize     =%llu, \
-                                  totalFileCount     =%llu, \
-                                  totalFileSize      =%llu, \
-                                  totalImageCount    =%llu, \
-                                  totalImageSize     =%llu, \
-                                  totalDirectoryCount=%llu, \
-                                  totalLinkCount     =%llu, \
-                                  totalHardlinkCount =%llu, \
-                                  totalHardlinkSize  =%llu, \
-                                  totalSpecialCount  =%llu \
-                              WHERE id=%lld; \
+                             "UPDATE entries \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE id IN (      SELECT entryId FROM entryFragments   WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM directoryEntries WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM linkEntries      WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM specialEntries   WHERE storageId=%lld \
+                                          ); \
                              ",
-                             totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
-                             totalFileSize+totalImageSize+totalHardlinkSize,
-                             totalFileCount,
-                             totalFileSize,
-                             totalImageCount,
-                             totalImageSize,
-                             totalDirectoryCount,
-                             totalLinkCount,
-                             totalHardlinkCount,
-                             totalHardlinkSize,
-                             totalSpecialCount,
-                             entityId
+                             toUUIDId,
+                             toEntityId,
+                             storageId,
+                             storageId,
+                             storageId,
+                             storageId
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // -----------------------------------------------------------------
-
-    // get newest file aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(entriesNewest.id), \
-                                     TOTAL(entryFragments.size) \
-                              FROM entriesNewest \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
-                              WHERE     entriesNewest.type=%u \
-                                    AND entriesNewest.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_FILE,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu %lf",
-                        &totalFileCount,
-                        &totalFileSize_
-                       );
-    assert(totalFileSize_ >= 0.0);
-    totalFileSize = (totalFileSize_ >= 0.0) ? (uint64)totalFileSize_ : 0LL;
-    Database_finalize(&databaseQueryHandle);
-
-    // get newest image aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(entriesNewest.id), \
-                                     TOTAL(entryFragments.size) \
-                              FROM entriesNewest \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
-                              WHERE     entriesNewest.type=%u \
-                                    AND entriesNewest.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_IMAGE,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu %lf",
-                        &totalImageCount,
-                        &totalImageSize_
-                       );
-    assert(totalImageSize_ >= 0.0);
-    totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
-    Database_finalize(&databaseQueryHandle);
-
-    // get newest directory aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(entriesNewest.id) \
-                              FROM entriesNewest \
-                              WHERE     entriesNewest.type=%u \
-                                    AND entriesNewest.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_DIRECTORY,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu",
-                        &totalDirectoryCount
-                       );
-    Database_finalize(&databaseQueryHandle);
-
-    // get newest link aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(entriesNewest.id) \
-                              FROM entriesNewest \
-                              WHERE     entriesNewest.type=%u \
-                                    AND entriesNewest.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_LINK,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu",
-                        &totalLinkCount
-                       );
-    Database_finalize(&databaseQueryHandle);
-
-    // get newest hardlink aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-//TODO: use entriesNewest.size?
-                             "SELECT COUNT(entriesNewest.id), \
-                                     TOTAL(entryFragments.size) \
-                              FROM entriesNewest \
-                                LEFT JOIN entryFragments ON entryFragments.entryId=entriesNewest.entryId \
-                              WHERE     entriesNewest.type=%u \
-                                    AND entriesNewest.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_HARDLINK,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu %lf",
-                        &totalHardlinkCount,
-                        &totalHardlinkSize_
-                       );
-    assert(totalHardlinkSize_ >= 0.0);
-    totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
-    Database_finalize(&databaseQueryHandle);
-
-    // get newest special aggregate data
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT COUNT(entriesNewest.id) \
-                              FROM entriesNewest \
-                              WHERE     entriesNewest.type=%u \
-                                    AND entriesNewest.entityId=%lld; \
-                             ",
-                             INDEX_TYPE_SPECIAL,
-                             entityId
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Database_getNextRow(&databaseQueryHandle,
-                        "%lu",
-                        &totalSpecialCount
-                       );
-    Database_finalize(&databaseQueryHandle);
-
-    // update newest aggregate data
-fprintf(stderr,"%s, %d: aggregate newest entityId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,entityId,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
+  }
+  if (error == ERROR_NONE)
+  {
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
-                             "UPDATE entities \
-                              SET totalEntryCountNewest    =%llu, \
-                                  totalEntrySizeNewest     =%llu, \
-                                  totalFileCountNewest     =%llu, \
-                                  totalFileSizeNewest      =%llu, \
-                                  totalImageCountNewest    =%llu, \
-                                  totalImageSizeNewest     =%llu, \
-                                  totalDirectoryCountNewest=%llu, \
-                                  totalLinkCountNewest     =%llu, \
-                                  totalHardlinkCountNewest =%llu, \
-                                  totalHardlinkSizeNewest  =%llu, \
-                                  totalSpecialCountNewest  =%llu \
-                              WHERE id=%lld; \
+                             "UPDATE entriesNewest \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE id IN (      SELECT entryId FROM entryFragments   WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM directoryEntries WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM linkEntries      WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM specialEntries   WHERE storageId=%lld \
+                                          ); \
                              ",
-                             totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,
-                             totalFileSize+totalImageSize+totalHardlinkSize,
-                             totalFileCount,
-                             totalFileSize,
-                             totalImageCount,
-                             totalImageSize,
-                             totalDirectoryCount,
-                             totalLinkCount,
-                             totalHardlinkCount,
-                             totalHardlinkSize,
-                             totalSpecialCount,
-                             entityId
+                             toUUIDId,
+                             toEntityId,
+                             storageId,
+                             storageId,
+                             storageId,
+                             storageId
                             );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  }
 
-    return ERROR_NONE;
-  });
+  // set storage id of all entry fragments/entries of storage
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE entryFragments \
+                              SET storageId=%lld \
+                              WHERE storageId=%lld; \
+                             ",
+                             toStorageId,
+                             storageId
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE directoryEntries \
+                              SET storageId=%lld \
+                              WHERE storageId=%lld; \
+                             ",
+                             toStorageId,
+                             storageId
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE linkEntries \
+                              SET storageId=%lld \
+                              WHERE storageId=%lld; \
+                             ",
+                             toStorageId,
+                             storageId
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE specialEntries \
+                              SET storageId=%lld \
+                              WHERE storageId=%lld; \
+                             ",
+                             toStorageId,
+                             storageId
+                            );
+  }
+
+  // update aggregates
+  if (error == ERROR_NONE)
+  {
+    error = updateStorageAggregates(indexHandle,toStorageId);
+  }
+
+  // delete storage index
+  if (error == ERROR_NONE)
+  {
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxx\n",__FILE__,__LINE__);
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "DELETE FROM storages \
+                              WHERE id=%lld \
+                             ",
+                             storageId
+                            );
+  }
+
+  // free resources
 
   return error;
 }
 
 /***********************************************************************\
-* Name   : updateUUIDAggregates
-* Purpose: update UUID aggregates
-* Input  : indexHandle - index handle
-*          uuidId      - UUID database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : currently nothing to do
-\***********************************************************************/
-
-LOCAL Errors updateUUIDAggregates(IndexHandle *indexHandle,
-                                  DatabaseId  uuidId
-                                 )
-{
-  UNUSED_VARIABLE(indexHandle);
-  UNUSED_VARIABLE(uuidId);
-
-  return ERROR_NONE;
-}
-// ----------------------------------------------------------------------
-
-/***********************************************************************\
-* Name   : assignStorageToStorage
-* Purpose: assign entries of storage to storage
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
-*          toUUIDId    - to-UUID database id
-*          toEntityId  - to-entity database id
-*          toStorageId - to-storage database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors assignStorageToStorage(IndexHandle *indexHandle,
-                                    DatabaseId  storageId,
-                                    DatabaseId  toUUIDId,
-                                    DatabaseId  toEntityId,
-                                    DatabaseId  toStorageId
-                                   )
-{
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-  
-  UNUSED_VARIABLE(toStorageId);
-
-  return Database_execute(&indexHandle->databaseHandle,
-                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                          NULL,  // changedRowCount
-                          "UPDATE storages \
-                           SET uuidId  =%lld, \
-                               entityId=%lld \
-                           WHERE id=%lld; \
-                          ",
-                          toUUIDId,
-                          toEntityId,
-                          storageId
-                         );
-}
-
-/***********************************************************************\
-* Name   : assignEntriesToStorage
-* Purpose: assign entries of storage to storage
-* Input  : indexHandle - index handle
-*          storageId   - storage database id
-*          toUUIDId    - to-UUID database id
-*          toEntityId  - to-entity database id
-*          toStorageId - to-storage database id
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors assignEntriesToStorage(IndexHandle *indexHandle,
-                                    DatabaseId  storageId,
-                                    DatabaseId  toUUIDId,
-                                    DatabaseId  toEntityId,
-                                    DatabaseId  toStorageId
-                                   )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(storageId != DATABASE_ID_NONE);
-
-  // set uuid, entity id of all storage entries
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE entries \
-                            SET uuidId  =%lld, \
-                                entityId=%lld \
-                            WHERE id IN (      SELECT entryId FROM entryFragments   WHERE storageId=%lld \
-                                         UNION SELECT entryId FROM directoryEntries WHERE storageId=%lld \
-                                         UNION SELECT entryId FROM linkEntries      WHERE storageId=%lld \
-                                         UNION SELECT entryId FROM specialEntries   WHERE storageId=%lld \
-                                        ); \
-                           ",
-                           toUUIDId,
-                           toEntityId,
-                           storageId,
-                           storageId,
-                           storageId,
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE entriesNewest \
-                            SET uuidId  =%lld, \
-                                entityId=%lld \
-                            WHERE id IN (      SELECT entryId FROM entryFragments   WHERE storageId=%lld \
-                                         UNION SELECT entryId FROM directoryEntries WHERE storageId=%lld \
-                                         UNION SELECT entryId FROM linkEntries      WHERE storageId=%lld \
-                                         UNION SELECT entryId FROM specialEntries   WHERE storageId=%lld \
-                                        ); \
-                           ",
-                           toUUIDId,
-                           toEntityId,
-                           storageId,
-                           storageId,
-                           storageId,
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  // set storage id of all storage entry fragments/entries
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE entryFragments \
-                            SET storageId=%lld \
-                            WHERE storageId=%lld; \
-                           ",
-                           toStorageId,
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE directoryEntries \
-                            SET storageId=%lld \
-                            WHERE storageId=%lld; \
-                           ",
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE linkEntries \
-                            SET storageId=%lld \
-                            WHERE storageId=%lld; \
-                           ",
-                           toStorageId,
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE specialEntries \
-                            SET storageId=%lld \
-                            WHERE storageId=%lld; \
-                           ",
-                           toStorageId,
-                           storageId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
-}
-
-/***********************************************************************\
-* Name   : assignEntriesToEntity
-* Purpose: assign entries of entity to entity
+* Name   : assignEntityStoragesToEntity
+* Purpose: assign storages of entity to other entity
 * Input  : indexHandle - index handle
 *          entityId    - entity database id
 *          toUUIDId    - to-UUID database id
@@ -4577,81 +4770,102 @@ LOCAL Errors assignEntriesToStorage(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors assignEntriesToEntity(IndexHandle *indexHandle,
-                                   DatabaseId  entityId,
-                                   DatabaseId  toUUIDId,
-                                   DatabaseId  toEntityId
-                                  )
+LOCAL Errors assignEntityStoragesToEntity(IndexHandle *indexHandle,
+                                          DatabaseId  entityId,
+                                          DatabaseId  toUUIDId,
+                                          DatabaseId  toEntityId
+                                         )
 {
   Errors error;
 
+  error = ERROR_NONE;
+
   // set uuid/entity id of all storages of entity
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE storages \
-                            SET uuidId  =%lld, \
-                                entityId=%lld \
-                            WHERE id IN (      SELECT storageId FROM entryFragments   LEFT JOIN entries ON entries.id=entryFragments.entryId   WHERE entries.entityId=%lld \
-                                         UNION SELECT storageId FROM directoryEntries LEFT JOIN entries ON entries.id=directoryEntries.entryId WHERE entries.entityId=%lld \
-                                         UNION SELECT storageId FROM linkEntries      LEFT JOIN entries ON entries.id=linkEntries.entryId      WHERE entries.entityId=%lld \
-                                         UNION SELECT storageId FROM specialEntries   LEFT JOIN entries ON entries.id=specialEntries.entryId   WHERE entries.entityId=%lld \
-                                        ) \
-                           ",
-                           toUUIDId,
-                           toEntityId,
-                           entityId,
-                           entityId,
-                           entityId,
-                           entityId
-                          );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return error;
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE storages \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE id IN (      SELECT storageId FROM entryFragments   LEFT JOIN entries ON entries.id=entryFragments.entryId   WHERE entries.entityId=%lld \
+                                           UNION SELECT storageId FROM directoryEntries LEFT JOIN entries ON entries.id=directoryEntries.entryId WHERE entries.entityId=%lld \
+                                           UNION SELECT storageId FROM linkEntries      LEFT JOIN entries ON entries.id=linkEntries.entryId      WHERE entries.entityId=%lld \
+                                           UNION SELECT storageId FROM specialEntries   LEFT JOIN entries ON entries.id=specialEntries.entryId   WHERE entries.entityId=%lld \
+                                          ) \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             entityId,
+                             entityId,
+                             entityId,
+                             entityId
+                            );
   }
 
-  // set uuid/entity id of all entity entries
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE entries \
-                            SET uuidId  =%lld, \
-                                entityId=%lld \
-                            WHERE entityId=%lld \
-                           ",
-                           toUUIDId,
-                           toEntityId,
-                           entityId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-  error = Database_execute(&indexHandle->databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "UPDATE entriesNewest \
-                            SET uuidId  =%lld, \
-                                entityId=%lld \
-                            WHERE entryId IN (SELECT entries.id FROM entries LEFT JOIN entriesNewest ON entriesNewest.entryId=entries.id WHERE entries.entityId=%lld) \
-                           ",
-                           toUUIDId,
-                           toEntityId,
-                           entityId
-                          );
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
+  return error;
 }
 
-/*---------------------------------------------------------------------*/
+/***********************************************************************\
+* Name   : assignEntityEntriesToEntity
+* Purpose: assign entries of entity to other entity
+* Input  : indexHandle - index handle
+*          entityId    - entity database id
+*          toUUIDId    - to-UUID database id
+*          toEntityId  - to-entity database id
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors assignEntityEntriesToEntity(IndexHandle *indexHandle,
+                                         DatabaseId  entityId,
+                                         DatabaseId  toUUIDId,
+                                         DatabaseId  toEntityId
+                                        )
+{
+  Errors error;
+
+  error = ERROR_NONE;
+
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE entries \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE entityId=%lld \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             entityId
+                            );
+  }
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE entriesNewest \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE entryId IN (SELECT entries.id FROM entries LEFT JOIN entriesNewest ON entriesNewest.entryId=entries.id WHERE entries.entityId=%lld) \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             entityId
+                            );
+  }
+
+  return error;
+}
 
 /***********************************************************************\
 * Name   : assignStorageToEntity
-* Purpose: assign storage entries to other entity
+* Purpose: assign all entries of storage and storage to other entity
 * Input  : indexHandle - index handle
 *          storageId   - storage database id
 *          toEntityId  - to entity database id
@@ -4666,38 +4880,60 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                                    DatabaseId  toEntityId
                                   )
 {
-  Array         entityIds,uuidIds;
-  String        entityIdsString;
-  DatabaseId    toUUIDId;
-  ArrayIterator arrayIterator;
-  DatabaseId    entityId,uuidId;
-  Errors        error;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          entityId,uuidId;
+  DatabaseId          toUUIDId;
+  Errors              error;
 
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
   assert(toEntityId != DATABASE_ID_NONE);
 
-  /* steps to do:
-       - storage entries.uuid := toEntity.uuid
-       - storage entries.entity := toEntity
-       - storage.uuid := toEntity.uuid
-       - storage.entity := toEntity
-       - update storage aggregates
-       - update entity aggregates
-       - prune entities
-       - prune UUIDs
+  /* steps to do:   
+     - get entity id, UUID id
+     - get to-UUID id
+     - assign entries of storage
+     - assign storage
+     - update entity aggregates
+     - prune entity
   */
 
   // init variables
-  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  Array_init(&uuidIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  entityIdsString = String_new();
 
-  // get UUID id, entities to update aggregates
-  INDEX_DOX(error,
-            indexHandle,
+  error = ERROR_NONE;
+
+  // get entity id, uuid id
+  if (error == ERROR_NONE)
   {
-    // get to-uuid id
+    error = Database_prepare(&databaseQueryHandle,
+                             &indexHandle->databaseHandle,
+                             "SELECT uuids.id, \
+                                     entities.id \
+                              FROM storages \
+                                LEFT JOIN entities ON entities.id=storages.entityId \
+                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                              WHERE storages.id=%lld \
+                             ",
+                             storageId
+                            );
+    if (error == ERROR_NONE)
+    {
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%llu %llu",
+                               &uuidId,
+                               &entityId
+                              )
+         )
+      {
+        error = ERROR_DATABASE;
+      }
+      Database_finalize(&databaseQueryHandle);
+    }
+  }
+
+  // get to-uuid id
+  if (error == ERROR_NONE)
+  {
     error = Database_getId(&indexHandle->databaseHandle,
                            &toUUIDId,
                            "entities",
@@ -4707,158 +4943,69 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                            ",
                            toEntityId
                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // get all entity ids for update aggregates
-    error = Database_getIds(&indexHandle->databaseHandle,
-                            &entityIds,
-                            "entries",
-                            "entityId",
-                            "WHERE     id IN (      SELECT entryId FROM entryFragments   WHERE storageId=%lld \
-                                              UNION SELECT entryId FROM directoryEntries WHERE storageId=%lld \
-                                              UNION SELECT entryId FROM linkEntries      WHERE storageId=%lld \
-                                              UNION SELECT entryId FROM specialEntries   WHERE storageId=%lld \
-                                             ) \
-                                   AND entityId!=0 \
-                            ",
-                            storageId,
-                            storageId,
-                            storageId,
-                            storageId
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    Array_append(&entityIds,&toEntityId);
-//ARRAY_ITERATE(&databaseIds,arrayIterator,databaseId) { fprintf(stderr,"%s, %d: assign entity id %ld\n",__FILE__,__LINE__,databaseId); }
-
-    // get all UUID ids for update aggregates
-    ARRAY_ITERATE(&entityIds,arrayIterator,entityId)
-    {
-      if (!String_isEmpty(entityIdsString)) String_appendChar(entityIdsString,',');
-      String_appendFormat(entityIdsString,"%lld",entityId);
-    }
-    error = Database_getIds(&indexHandle->databaseHandle,
-                            &uuidIds,
-                            "entities",
-                            "uuids.id",
-                            "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID\
-                             WHERE entities.id IN (%S) \
-                            ",
-                            entityIdsString
-                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    String_delete(entityIdsString);
-    Array_done(&uuidIds);
-    Array_done(&entityIds);
-    return error;
   }
 
-  // assign to entity, update aggregates, prune entity/uuid
-  INDEX_DOX(error,
-            indexHandle,
+  // assign storage to new entity
+  if (error == ERROR_NONE)
   {
-    // assign storage to new entity
-    error = assignStorageToStorage(indexHandle,
-                                   storageId,
-                                   toUUIDId,
-                                   toEntityId,
-                                   storageId
-                                  );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE storages \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE id=%lld; \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             storageId
+                            );
+  }
 
-    // assign entries of storage to new entity
-    error = assignEntriesToStorage(indexHandle,
-                                   storageId,
-                                   toUUIDId,
-                                   toEntityId,
-                                   storageId
-                                  );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  // assign entries of storage to new entity
+  if (error == ERROR_NONE)
+  {
+    error = Database_execute(&indexHandle->databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "UPDATE entries \
+                              SET uuidId  =%lld, \
+                                  entityId=%lld \
+                              WHERE id IN (      SELECT entryId FROM entryFragments   WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM directoryEntries WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM linkEntries      WHERE storageId=%lld \
+                                           UNION SELECT entryId FROM specialEntries   WHERE storageId=%lld \
+                                          ); \
+                             ",
+                             toUUIDId,
+                             toEntityId,
+                             storageId,
+                             storageId,
+                             storageId,
+                             storageId
+                            );
+  }
 
-    // update entities aggregates, UUID aggregates
-    ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
-    {
-      error = updateEntityAggregates(indexHandle,entityId);
-    }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-    ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
-    {
-      error = updateUUIDAggregates(indexHandle,uuidId);
-    }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  // update entity aggregates
+  if (error == ERROR_NONE)
+  {
+    error = updateEntityAggregates(indexHandle,toEntityId);
+  }
 
-    // delete entities if empty and not default entity
-    ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
-    {
-      error = pruneEntity(indexHandle,
-                          NULL,  // doneFlag
-                          NULL,  // deletedCounter
-                          entityId
-                         );
-    }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    // delete UUIDs if empty
-    ARRAY_ITERATEX(&uuidIds,arrayIterator,uuidId,error == ERROR_NONE)
-    {
-      error = pruneUUID(indexHandle,
+  // prune entity
+  if (error == ERROR_NONE)
+  {
+    error = pruneEntity(indexHandle,
                         NULL,  // doneFlag
                         NULL,  // deletedCounter
-                        uuidId
+                        entityId
                        );
-    }
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    String_delete(entityIdsString);
-    Array_done(&uuidIds);
-    Array_done(&entityIds);
-    return error;
   }
 
   // free resources
-  String_delete(entityIdsString);
-  Array_done(&uuidIds);
-  Array_done(&entityIds);
 
-  return ERROR_NONE;
+  return error;
 }
-
-/*---------------------------------------------------------------------*/
 
 /***********************************************************************\
 * Name   : assignEntityToEntity
@@ -4886,22 +5033,21 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
   assert(indexHandle != NULL);
 
   /* steps to do:
-       - storage entries.uuid := toEntity.uuid
-       - storage entries.entity := toEntity
-       - storage.uuid := toEntity.uuid
-       - storage.entity := toEntity
-       - update storage aggregates
+       - assign all storages of entity
+       - assign all entries of entity
        - update entity aggregates
        - prune entity
+       - set archive type
   */
+
+  error = ERROR_NONE;
 
   // assign to entity, update aggregates, prune entity
   if (entityId != toEntityId)
   {
-    INDEX_DOX(error,
-              indexHandle,
+    // get to-uuid id
+    if (error == ERROR_NONE)
     {
-      // get to-uuid id
       error = Database_getId(&indexHandle->databaseHandle,
                              &toUUIDId,
                              "entities",
@@ -4911,77 +5057,68 @@ LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
                              ",
                              toEntityId
                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    }
 
-      // assign entries of entity to other entity
-      error = assignEntriesToEntity(indexHandle,
-                                    entityId,
-                                    toUUIDId,
-                                    toEntityId
-                                   );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    // assign entries of entity to other entity
+    if (error == ERROR_NONE)
+    {
+      error = assignEntityEntriesToEntity(indexHandle,
+                                          entityId,
+                                          toUUIDId,
+                                          toEntityId
+                                         );
+    }
 
-      // update entities aggregates
+    // assign storages of entity to other entity
+    if (error == ERROR_NONE)
+    {
+      error = assignEntityStoragesToEntity(indexHandle,
+                                           entityId,
+                                           toUUIDId,
+                                           toEntityId
+                                          );
+    }
+
+    // update entities aggregates
+    if (error == ERROR_NONE)
+    {
       error = updateEntityAggregates(indexHandle,entityId);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    }
+    if (error == ERROR_NONE)
+    {
       error = updateEntityAggregates(indexHandle,toEntityId);
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    }
 
-      // delete entity if empty and not default entity
+    // prune entity
+    if (error == ERROR_NONE)
+    {
       error = pruneEntity(indexHandle,
                           NULL,  // doneFlag
                           NULL,  // deletedCounter
                           entityId
                          );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      return ERROR_NONE;
-    });
-    if (error != ERROR_NONE)
-    {
-      return error;
     }
   }
 
   // set entity type
   if (toArchiveType != ARCHIVE_TYPE_NONE)
   {
-    INDEX_DOX(error,
-              indexHandle,
+    if (error == ERROR_NONE)
     {
-      return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK_(NULL,NULL),  // databaseRowFunction
-                              NULL,  // changedRowCount
-                              "UPDATE entities \
-                               SET type=%d \
-                               WHERE id=%lld; \
-                              ",
-                              toArchiveType,
-                              toEntityId
-                             );
-    });
-    if (error != ERROR_NONE)
-    {
-      return error;
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "UPDATE entities \
+                                SET type=%d \
+                                WHERE id=%lld; \
+                               ",
+                               toArchiveType,
+                               toEntityId
+                              );
     }
   }
 
-  return ERROR_NONE;
+  return error;
 }
 
 /***********************************************************************\
@@ -5011,20 +5148,18 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
   assert(toJobUUID != NULL);
 
   /* steps to do:
-       - storage entries.uuid := toEntity.uuid
-       - storage entries.entity := toEntity
-       - storage.uuid := toEntity.uuid
-       - storage.entity := toEntity
-       - entity.uuid := toEntity.uuid
+       - assign all storages of entity
+       - assign entity
        - prune UUID
   */
 
+  error = ERROR_NONE;
+
   if (toJobUUID != NULL)
   {
-    INDEX_DOX(error,
-              indexHandle,
+    // get uuid id, to-uuid id
+    if (error == ERROR_NONE)
     {
-      // get uuid id, to-uuid id
       error = Database_getId(&indexHandle->databaseHandle,
                              &uuidId,
                              "entities",
@@ -5034,10 +5169,9 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
                              ",
                              entityId
                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    }
+    if (error == ERROR_NONE)
+    {
       error = Database_getId(&indexHandle->databaseHandle,
                              &toUUIDId,
                              "uuids",
@@ -5046,23 +5180,31 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
                              ",
                              toJobUUID
                             );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    }
 
-      // assign entries of entity to other entity
-      error = assignEntriesToEntity(indexHandle,
-                                    entityId,
-                                    toUUIDId,
-                                    entityId
-                                   );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    // assign storages of entity to other entity
+    if (error == ERROR_NONE)
+    {
+      error = assignEntityStoragesToEntity(indexHandle,
+                                           entityId,
+                                           toUUIDId,
+                                           entityId
+                                          );
+    }
 
-      // assign entity to job
+    // assign entries of entity to other entity
+    if (error == ERROR_NONE)
+    {
+      error = assignEntityEntriesToEntity(indexHandle,
+                                          entityId,
+                                          toUUIDId,
+                                          entityId
+                                         );
+    }
+
+    // assign entity to job
+    if (error == ERROR_NONE)
+    {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
@@ -5075,57 +5217,39 @@ LOCAL Errors assignEntityToJob(IndexHandle  *indexHandle,
                                toJobUUID,
                                entityId
                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
+    }
 
-      // delete UUID if empty
+    // prune UUID
+    if (error == ERROR_NONE)
+    {
       error = pruneUUID(indexHandle,
                         NULL,  // doneFlag,
                         NULL,  // deletedCounter,
                         uuidId
                        );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      return ERROR_NONE;
-    });
-    if (error != ERROR_NONE)
-    {
-      return error;
     }
   }
 
   if (toArchiveType != ARCHIVE_TYPE_NONE)
   {
     // set entity type
-    INDEX_DOX(error,
-              indexHandle,
+    if (error == ERROR_NONE)
     {
-      return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK_(NULL,NULL),  // databaseRowFunction
-                              NULL,  // changedRowCount
-                              "UPDATE entities \
-                               SET type=%d \
-                               WHERE id=%lld; \
-                              ",
-                              toArchiveType,
-                              entityId
-                             );
-    });
-    if (error != ERROR_NONE)
-    {
-      return error;
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "UPDATE entities \
+                                SET type=%d \
+                                WHERE id=%lld; \
+                               ",
+                               toArchiveType,
+                               entityId
+                              );
     }
   }
 
-  return ERROR_NONE;
+  return error;
 }
-
-/*---------------------------------------------------------------------*/
 
 /***********************************************************************\
 * Name   : assignJobToJob
@@ -5154,21 +5278,15 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
   assert(!String_isEmpty(toJobUUID));
 
   /* steps to do:
-       - get toJobUUID.uuid
-       - storage entries.uuid := toJobUUID.uuid
-       - storage entries.entity := toEntity
-       - storage.uuid := toJobUUID.uuid
-       - storage.entity := toEntity
-       - entity.uuid := toJobUUID.uuid
-       - entity.entity := toEntity
-       - update storage aggregates
-       - update entity aggregates
+     - get to-uuid id
+     - assign all entities of job
   */
 
-  INDEX_DOX(error,
-            indexHandle,
+  error = ERROR_NONE;
+
+  // get to-uuid id
+  if (error == ERROR_NONE)
   {
-    // get to-uuid id
     error = Database_getId(&indexHandle->databaseHandle,
                            &toUUIDId,
                            "uuids",
@@ -5177,12 +5295,11 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
                            ",
                            toJobUUID
                           );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+  }
 
-    // assign all enties of job to other job
+  // assign all enties of job to other job
+  if (error == ERROR_NONE)
+  {
     error = Index_initListEntities(&indexQueryHandle,
                                    indexHandle,
                                    INDEX_ID_ANY,  // uuidId
@@ -5220,22 +5337,11 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
                                   );
     }
     Index_doneList(&indexQueryHandle);
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    return ERROR_NONE;
-  });
-  if (error != ERROR_NONE)
-  {
-    return error;
   }
 
   if (toArchiveType != ARCHIVE_TYPE_NONE)
   {
-    INDEX_DOX(error,
-              indexHandle,
+    if (error == ERROR_NONE)
     {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -5247,17 +5353,7 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
                                toArchiveType,
                                jobUUID
                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      return ERROR_NONE;
-    });
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
+    }
   }
 
   return error;
@@ -6059,7 +6155,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       {
         return error;
       }
-      #ifdef DEBUG_INDEX_LIST_INFO
+      #ifdef INDEX_DEBUG_LIST_INFO
         Database_debugPrintQueryInfo(&databaseQueryHandle);
       #endif
 
@@ -6391,6 +6487,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
+//TODO: optimize: search for part of name?
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
                              "SELECT IFNULL(uuids.id,0), \
@@ -7977,7 +8074,7 @@ Errors Index_deleteUUID(IndexHandle *indexHandle,
       return error;
     }
 
-    // delete UUID
+    // delete UUID index
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -8178,7 +8275,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   #endif
 
@@ -8720,7 +8817,7 @@ t0=Misc_getTimestamp();
         break;
     }
   }
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: --- Index_getStoragesInfos\n",__FILE__,__LINE__);
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
@@ -8767,7 +8864,7 @@ t1=Misc_getTimestamp();
     {
       return error;
     }
-    #ifdef DEBUG_INDEX_LIST_INFO
+    #ifdef INDEX_DEBUG_LIST_INFO
       Database_debugPrintQueryInfo(&databaseQueryHandle);
     #endif
     if (Database_getNextRow(&databaseQueryHandle,
@@ -8840,7 +8937,7 @@ t1=Misc_getTimestamp();
                                  filterString
                                 );
       }
-      #ifdef DEBUG_INDEX_LIST_INFO
+      #ifdef INDEX_DEBUG_LIST_INFO
         Database_debugPrintQueryInfo(&databaseQueryHandle);
       #endif
       if (error != ERROR_NONE)
@@ -9072,7 +9169,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     String_delete(ftsName);
     return error;
   }
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   #endif
 
@@ -9865,7 +9962,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   ulong               i;
   String              filterString,filterIdsString;
   double              totalEntryCount_,totalEntryFragmentCount_,totalEntrySize_,totalEntryContentSize_;
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     uint64              t0,t1;
   #endif
 
@@ -9921,7 +10018,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
     String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: --- Index_getEntriesInfo\n",__FILE__,__LINE__);
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
@@ -9936,7 +10033,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   String_delete(filterIdsString);
 
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     t0=Misc_getTimestamp();
   #endif
   error = ERROR_NONE;
@@ -10271,7 +10368,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
       {
         return error;
       }
-      #ifdef DEBUG_INDEX_LIST_INFO
+      #ifdef INDEX_DEBUG_LIST_INFO
         Database_debugPrintQueryInfo(&databaseQueryHandle);
       #endif
       if (!Database_getNextRow(&databaseQueryHandle,
@@ -10356,7 +10453,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
       {
         return error;
       }
-      #ifdef DEBUG_INDEX_LIST_INFO
+      #ifdef INDEX_DEBUG_LIST_INFO
         Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
       #endif
       if (!Database_getNextRow(&databaseQueryHandle,
@@ -10442,7 +10539,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
       {
         return error;
       }
-      #ifdef DEBUG_INDEX_LIST_INFO
+      #ifdef INDEX_DEBUG_LIST_INFO
         Database_debugPrintQueryInfo(&databaseQueryHandle);
       #endif
       if (!Database_getNextRow(&databaseQueryHandle,
@@ -10505,7 +10602,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
       {
         return error;
       }
-      #ifdef DEBUG_INDEX_LIST_INFO
+      #ifdef INDEX_DEBUG_LIST_INFO
         Database_debugPrintQueryInfo(&databaseQueryHandle);
       #endif
       if (!Database_getNextRow(&databaseQueryHandle,
@@ -10525,7 +10622,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
       return ERROR_NONE;
     });
   }
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     t1=Misc_getTimestamp();
     fprintf(stderr,"%s, %d: %"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
   #endif
@@ -10928,7 +11025,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     String_delete(ftsName);
     return error;
   }
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   #endif
 t1=Misc_getTimestamp();
@@ -11078,7 +11175,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
     doneIndexQueryHandle(indexQueryHandle);
     return error;
   }
-  #ifdef DEBUG_INDEX_LIST_INFO
+  #ifdef INDEX_DEBUG_LIST_INFO
     Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
   #endif
 
@@ -12698,8 +12795,8 @@ Errors Index_addFile(IndexHandle *indexHandle,
       {
         return error;
       }
-#warning remove
-fprintf(stderr,"%s, %d: add file entityId=%"PRIi64" entryId=%"PRIi64" %s\n",__FILE__,__LINE__,Index_getDatabaseId(entityId),entryId,String_cString(name));
+//#warning remove
+//fprintf(stderr,"%s, %d: add file entityId=%lld entryId=%lld %s\n",__FILE__,__LINE__,Index_getDatabaseId(entityId),entryId,String_cString(name));
 
       // add file entry fragment
       error = Database_execute(&indexHandle->databaseHandle,
@@ -13066,10 +13163,6 @@ Errors Index_addDirectory(IndexHandle *indexHandle,
       entryId = Database_getLastRowId(&indexHandle->databaseHandle);
 
       // add directory entry
-#warning remove
-//fprintf(stderr,"%s, %d: insert direct %lld %lld: %s\n",__FILE__,__LINE__,entryId,Index_getDatabaseId(storageId),String_cString(name));
-//if (Index_getDatabaseId(storageId) > 10000) { fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3"); }
-
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
@@ -13690,7 +13783,6 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
   }
 
 #warning remove/revert
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
   if (indexHandle->masterIO == NULL)
   {
 #warning remove/revert
@@ -13711,6 +13803,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                    );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
@@ -13725,6 +13818,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                 );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
@@ -13744,6 +13838,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                        );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
@@ -13761,6 +13856,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                       );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
@@ -13777,6 +13873,7 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                    );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
 #else
@@ -13792,20 +13889,16 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignJobToEntity");
         {
           assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
 
-#if 0
-//TODO: not used
           // assign storage entries to other storage
-          error = assignStorageToStorage(indexHandle,
-                                         Index_getDatabaseId(storageId),
-                                         Index_getDatabaseId(toStorageId)
-                                        );
+          error = assignStorageEntriesToStorage(indexHandle,
+                                                Index_getDatabaseId(storageId),
+                                                Index_getDatabaseId(toStorageId)
+                                               );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
-#else
-return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignStorageToStorage");
-#endif
         }
 
         if (!INDEX_ID_IS_NONE(entityId))
@@ -13821,6 +13914,7 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignStorageToStorage");
                                        );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
 #else
@@ -13839,6 +13933,7 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignEntityToStorage");
                                     );
           if (error != ERROR_NONE)
           {
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
 #else

@@ -61,6 +61,7 @@
 #define _SIMULATOR
 #warning remove/revert
 #define SIMULATE_PURGE
+#define _NO_AUTO_INDEX
 
 /***************************** Constants *******************************/
 
@@ -2560,6 +2561,7 @@ LOCAL void schedulerThreadCode(void)
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
     currentDateTime     = Misc_getCurrentDateTime();
+#warning remove/revert
 //TODO: avoid long running lock
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
     {
@@ -3963,7 +3965,7 @@ LOCAL void indexThreadCode(void)
 
               // index update
               startTimestamp = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n",__FILE__,__LINE__);
+fprintf(stderr,"%s, %d: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA %s\n",__FILE__,__LINE__,String_cString(storageName));
               error = Archive_updateIndex(indexHandle,
                                           uuidId,
                                           entityId,
@@ -19258,10 +19260,12 @@ Errors Server_run(ServerModes       mode,
       Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
       Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-      if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
-      {
-        HALT_FATAL_ERROR("Cannot initialize index thread!");
-      }
+      #ifndef NO_AUTO_INDEX
+        if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
+        {
+          HALT_FATAL_ERROR("Cannot initialize index thread!");
+        }
+      #endif /* not NO_AUTO_INDEX */
       if (globalOptions.indexDatabaseAutoUpdateFlag)
       {
         if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
@@ -19737,11 +19741,13 @@ Errors Server_run(ServerModes       mode,
         }
         Thread_done(&autoIndexThread);
       }
-      if (!Thread_join(&indexThread))
-      {
-        HALT_INTERNAL_ERROR("Cannot stop index thread!");
-      }
-      Thread_done(&indexThread);
+      #ifndef NO_AUTO_INDEX
+        if (!Thread_join(&indexThread))
+        {
+          HALT_INTERNAL_ERROR("Cannot stop index thread!");
+        }
+        Thread_done(&indexThread);
+      #endif /* not NO_AUTO_INDEX */
 
       Semaphore_done(&indexThreadTrigger);
 
@@ -19995,11 +20001,13 @@ processCommand(&clientInfo,commandString);
       }
       Thread_done(&autoIndexThread);
     }
-    if (!Thread_join(&indexThread))
-    {
-      HALT_INTERNAL_ERROR("Cannot stop index thread!");
-    }
-    Thread_done(&indexThread);
+    #ifndef NO_AUTO_INDEX
+      if (!Thread_join(&indexThread))
+      {
+        HALT_INTERNAL_ERROR("Cannot stop index thread!");
+      }
+      Thread_done(&indexThread);
+    #endif /* not NO_AUTO_INDEX */
 
     Semaphore_done(&indexThreadTrigger);
 

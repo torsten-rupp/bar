@@ -389,6 +389,7 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                    uint        storageCountFactor
                                   )
 {
+  ulong  maxSteps;
   Errors error;
   int64  uuidCount,entityCount,storageCount,entriesCount;
   int64  fileEntryCount,imageEntryCount,directoryEntryCount,linkEntryCount,hardlinkEntryCount,specialEntryCount;
@@ -397,6 +398,10 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
   assert(entityCountFactor >= 1);
   assert(storageCountFactor >= 1);
 
+  maxSteps = 0;
+
+  maxSteps += 6;
+
   // get max. steps (entities+storages+entries)
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &uuidCount,
@@ -404,9 +409,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 "WHERE id!=0"
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += uuidCount*(ulong)uuidCountFactor;
+  }
+  else
+  {
+    uuidCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entityCount,
@@ -414,9 +423,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 "WHERE id!=0"
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += entityCount*(ulong)entityCountFactor;
+  }
+  else
+  {
+    entityCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &storageCount,
@@ -424,9 +437,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 "WHERE id!=0"
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += storageCount*(ulong)storageCountFactor;
+  }
+  else
+  {
+    storageCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &entriesCount,
@@ -434,9 +451,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 "WHERE id!=0"
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += entriesCount;
+  }
+  else
+  {
+    entriesCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &fileEntryCount,
@@ -444,9 +465,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += fileEntryCount;
+  }
+  else
+  {
+    fileEntryCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &imageEntryCount,
@@ -454,9 +479,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += imageEntryCount;
+  }
+  else
+  {
+    imageEntryCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &directoryEntryCount,
@@ -464,9 +493,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += directoryEntryCount;
+  }
+  else
+  {
+    directoryEntryCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &linkEntryCount,
@@ -474,9 +507,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += linkEntryCount;
+  }
+  else
+  {
+    linkEntryCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &hardlinkEntryCount,
@@ -484,9 +521,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += hardlinkEntryCount;
+  }
+  else
+  {
+    hardlinkEntryCount = 0LL;
   }
   error = Database_getInteger64(&oldIndexHandle->databaseHandle,
                                 &specialEntryCount,
@@ -494,9 +535,13 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
                                 "COUNT(id)",
                                 ""
                                );
-  if (error != ERROR_NONE)
+  if (error == ERROR_NONE)
   {
-    return 0;
+    maxSteps += specialEntryCount;
+  }
+  else
+  {
+    specialEntryCount = 0LL;
   }
   plogMessage(NULL,  // logHandle
               LOG_TYPE_INDEX,
@@ -517,17 +562,7 @@ LOCAL ulong getImportStepsVersion6(IndexHandle *oldIndexHandle,
   DIMPORT("import %"PRIu64" hardlink entries", hardlinkEntryCount);
   DIMPORT("import %"PRIu64" special entries",  specialEntryCount);
 
-  return  6
-         +(ulong)uuidCount*(ulong)uuidCountFactor
-         +(ulong)entityCount*(ulong)entityCountFactor
-         +(ulong)storageCount*(ulong)storageCountFactor
-         +(ulong)entriesCount
-         +(ulong)fileEntryCount
-         +(ulong)imageEntryCount
-         +(ulong)directoryEntryCount
-         +(ulong)linkEntryCount
-         +(ulong)hardlinkEntryCount+
-         +(ulong)specialEntryCount;
+  return maxSteps;
 }
 
 /***********************************************************************\

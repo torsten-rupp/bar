@@ -1550,7 +1550,8 @@ LOCAL void deleteArchiveIndexNode(ArchiveIndexNode *archiveIndexNode)
 * Input  : archiveHandle   - archive handle
 *          entityId        - entity index id
 *          storageId       - storage index id
-*          maxIndexEntries - max. entries in list to do flush
+*          maxIndexEntries - max. entries in list to do flush (0 to
+*                            force flush)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -14586,6 +14587,11 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                            LogHandle         *logHandle
                           )
 {
+  uint64             updateStartTimestamp;
+  uint64             updateSize;
+  uint               importLastProgress;
+  uint64             updateLastProgressTimestamp;
+
   StorageSpecifier   storageSpecifier;
   String             printableStorageName;
   Errors             error;
@@ -14602,12 +14608,87 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String             destinationName;
   StringList         fileNameList;
   String             hostName,userName;
-  uint               lastDonePercentage;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
   uint64             createdDateTime;
-  uint               donePercentage;
+
+  /***********************************************************************\
+  * Name   : initUpdateProgress
+  * Purpose: init update index
+  * Input  : size - archive size
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  void initUpdateIndexProgress(uint64 size)
+  {
+    updateStartTimestamp        = Misc_getTimestamp();
+    updateSize                  = size;
+    importLastProgress          = 0;
+    updateLastProgressTimestamp = 0LL;
+  }
+
+  /***********************************************************************\
+  * Name   : doneUpdateIndexProgress
+  * Purpose: done update index
+  * Input  : -
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  void doneUpdateIndexProgress(void)
+  {
+  }
+
+  /***********************************************************************\
+  * Name   : updateIndexProgress
+  * Purpose: log update index progress
+  * Input  : offset - current offset in archive [0..size-1]
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  void updateIndexProgress(uint64 offset)
+  {
+    uint   progress;
+    uint64 now;
+    ulong  elapsedTime,importTotalTime;
+    ulong  estimatedRestTime;
+    
+    assert(offset > 0LL);
+
+    if (updateSize > 0)
+    {
+      progress          = (offset*1000)/updateSize;
+      now               = Misc_getTimestamp();
+      elapsedTime       = (ulong)((now-updateStartTimestamp)/US_PER_SECOND);
+      importTotalTime   = (ulong)(((uint64)elapsedTime*updateSize)/offset);
+      estimatedRestTime = importTotalTime-elapsedTime;
+      if (   (progress >= (importLastProgress+1))
+          && (now > (updateLastProgressTimestamp+30*US_PER_SECOND))
+          && (estimatedRestTime > 0)
+         )
+      {
+
+        plogMessage(NULL,  // logHandle
+                    LOG_TYPE_INDEX,
+                    "INDEX",
+                    "Create index for '%s': %0.1f%%, estimated rest time %luh:%02lumin:%02lus",
+                    String_cString(printableStorageName),
+                    (float)progress/10.0,
+                    (ulong)(estimatedRestTime/3600LL),
+                    (ulong)((estimatedRestTime%3600LL)/60),
+                    (ulong)(estimatedRestTime%60LL)
+                   );
+        importLastProgress          = progress;
+        updateLastProgressTimestamp = now;
+      }
+    }
+  }
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -14660,6 +14741,13 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   if (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Failed to create index for '%s' (error: %s)",
+                String_cString(printableStorageName),
+                Error_getText(error)
+               );
 
     Index_setState(indexHandle,
                    storageId,
@@ -14675,7 +14763,13 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
 
   // index archive contents
-  printInfo(4,"Create index for '%s'\n",String_cString(printableStorageName));
+  printInfo(4,"Start create index for '%s'\n",String_cString(printableStorageName));
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start create index for '%s'",
+              String_cString(printableStorageName)
+             );
 
   // set state 'update'
   Index_setState(indexHandle,
@@ -14699,6 +14793,13 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   if (error != ERROR_NONE)
   {
     printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Failed to create index for '%s' (error: %s)",
+                String_cString(printableStorageName),
+                Error_getText(error)
+               );
 
     Archive_close(&archiveHandle);
     Index_setState(indexHandle,
@@ -14717,6 +14818,10 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   // get size
   size = Archive_getSize(&archiveHandle);
 
+  // init progress info
+  initUpdateIndexProgress(size);
+
+//fprintf(stderr,"%s, %d: yyyyyyyyyyyyyyyyyyyyyyy\n",__FILE__,__LINE__);
   // read archive content
   entryCount                  = 0L;
   deletedFlag                 = FALSE;
@@ -14730,8 +14835,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   StringList_init(&fileNameList);
   hostName                    = String_new();
   userName                    = String_new();
-  lastDonePercentage          = 0;
-//uint64 t0,t1; t0 = Misc_getTimestamp();
+uint64 t0,t1; t0 = Misc_getTimestamp();
+bool bbb=FALSE;
   while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
          && (error == ERROR_NONE)
          && !deletedFlag
@@ -14739,6 +14844,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
          && !serverAllocationPendingFlag
         )
   {
+bbb=((entryCount%100) == 0);
     // get next file type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
@@ -15066,7 +15172,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           }
           else
           {
-            // check if entity with given schedule exists, otherwise create new entity
+            // check if entity with given schedule/host/archive type exists, otherwise create new entity
             if (!Index_findEntity(indexHandle,
                                   INDEX_ID_NONE,  // findEntityIndexId
                                   jobUUID,
@@ -15124,25 +15230,19 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
       break;
     }
 
-    // flush index list
-    error = flushArchiveIndexList(&archiveHandle,
-                                  uuidId,
-                                  entityId,
-                                  storageId,
-                                  MAX_INDEX_LIST
-                                 );
+    // auto flush index list
+    error = autoFlushArchiveIndexList(&archiveHandle,
+                                      uuidId,
+                                      entityId,
+                                      storageId
+                                     );
     if (error != ERROR_NONE)
     {
       break;
     }
 
-    // log output
-    donePercentage = (uint)(Archive_tell(&archiveHandle)*100LL/size);
-    if (donePercentage >= (lastDonePercentage+10))
-    {
-      printInfo(4,"Created index for '%s': %u%%\n",String_cString(printableStorageName),donePercentage);
-      lastDonePercentage = donePercentage;
-    }
+    // updateprogress info
+    updateIndexProgress(Archive_tell(&archiveHandle));
 
     // pause
     if ((isPauseFunction != NULL) && isPauseFunction(isPauseUserData))
@@ -15158,11 +15258,13 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
 #endif /* 0 */
 
       // wait
+fprintf(stderr,"%s, %d: wait\n",__FILE__,__LINE__);
       do
       {
         Misc_udelay(10LL*US_PER_SECOND);
       }
       while (isPauseFunction(isPauseUserData));
+fprintf(stderr,"%s, %d: wait done\n",__FILE__,__LINE__);
 
 //TODO
 #if 0
@@ -15179,6 +15281,9 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     deletedFlag                 = Index_isDeletedStorage(indexHandle,storageId);
     abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
+
+//if (bbb) fprintf(stderr,"%s, %d: %lu: %llu: %d\n",__FILE__,__LINE__,Misc_getCurrentTime(),Misc_getTimestamp()-t0,entryCount);
+if ((entryCount%100) == 0) t0=Misc_getTimestamp();
   }
   String_delete(userName);
   String_delete(hostName);
@@ -15189,9 +15294,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String_delete(imageName);
   String_delete(fileName);
 
+  // done progress info
+  doneUpdateIndexProgress();
+
+  // flush index list
   if (error == ERROR_NONE)
   {
-    // flush index list
     error = flushArchiveIndexList(&archiveHandle,
                                   uuidId,
                                   entityId,
@@ -15220,6 +15328,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   if     (abortedFlag)
   {
     printInfo(4,"Aborted create index for '%s'\n",String_cString(printableStorageName));
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Aborted create index for '%s'",
+                String_cString(printableStorageName)
+               );
 
     Index_setState(indexHandle,
                    storageId,
@@ -15233,6 +15347,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   else if (serverAllocationPendingFlag)
   {
     printInfo(4,"Interrupted create index for '%s'\n",String_cString(printableStorageName));
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Interruped create index for '%s'",
+                String_cString(printableStorageName)
+               );
 
     // set index state
     Index_setState(indexHandle,
@@ -15247,6 +15367,12 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   else
   {
     printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Done create index for '%s'",
+                String_cString(printableStorageName)
+               );
 
     // update storages info (aggregated values)
     if (error == ERROR_NONE)
