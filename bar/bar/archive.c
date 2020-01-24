@@ -14658,7 +14658,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     uint64 now;
     ulong  elapsedTime,importTotalTime;
     ulong  estimatedRestTime;
-    
+
     assert(offset > 0LL);
 
     if (updateSize > 0)
@@ -14835,8 +14835,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   StringList_init(&fileNameList);
   hostName                    = String_new();
   userName                    = String_new();
-uint64 t0,t1; t0 = Misc_getTimestamp();
-bool bbb=FALSE;
+//uint64 t0,t1; t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
          && (error == ERROR_NONE)
          && !deletedFlag
@@ -14844,7 +14843,6 @@ bool bbb=FALSE;
          && !serverAllocationPendingFlag
         )
   {
-bbb=((entryCount%100) == 0);
     // get next file type
     error = Archive_getNextArchiveEntry(&archiveHandle,
                                         &archiveEntryType,
@@ -15258,13 +15256,11 @@ bbb=((entryCount%100) == 0);
 #endif /* 0 */
 
       // wait
-fprintf(stderr,"%s, %d: wait\n",__FILE__,__LINE__);
       do
       {
         Misc_udelay(10LL*US_PER_SECOND);
       }
       while (isPauseFunction(isPauseUserData));
-fprintf(stderr,"%s, %d: wait done\n",__FILE__,__LINE__);
 
 //TODO
 #if 0
@@ -15281,9 +15277,6 @@ fprintf(stderr,"%s, %d: wait done\n",__FILE__,__LINE__);
     deletedFlag                 = Index_isDeletedStorage(indexHandle,storageId);
     abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
-
-//if (bbb) fprintf(stderr,"%s, %d: %lu: %llu: %d\n",__FILE__,__LINE__,Misc_getCurrentTime(),Misc_getTimestamp()-t0,entryCount);
-if ((entryCount%100) == 0) t0=Misc_getTimestamp();
   }
   String_delete(userName);
   String_delete(hostName);
