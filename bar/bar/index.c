@@ -843,7 +843,7 @@ LOCAL ulong getImportStepsCurrentVersion(IndexHandle *oldIndexHandle,
                                          uint        storageCountFactor
                                         )
 {
-  return getImportStepsVersion6(oldIndexHandle,uuidCountFactor,entityCountFactor,storageCountFactor);
+  return getImportStepsVersion7(oldIndexHandle,uuidCountFactor,entityCountFactor,storageCountFactor);
 }
 
 /***********************************************************************\
@@ -912,6 +912,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
               indexVersion
              );
   DIMPORT("import index %"PRIi64"",indexVersion);
+  maxSteps = 0L;
   switch (indexVersion)
   {
     case 1:
@@ -1066,7 +1067,7 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
       if (error == ERROR_NONE)
       {
         logImportProgress("Aggregated entity #%"PRIi64": (%llus)",
-                          storageId,
+                          entityId,
                           (t1-t0)/US_PER_SECOND
                          );
       }
@@ -1862,6 +1863,8 @@ LOCAL Errors purge(IndexHandle *indexHandle,
   return error;
 }
 
+#if 0
+//TODO: still not used
 /***********************************************************************\
 * Name   : pruneEntries
 * Purpose: prune all entries (file, image, hardlink) with no fragments
@@ -1991,6 +1994,7 @@ LOCAL Errors pruneEntries(IndexHandle *indexHandle,
 
   return ERROR_NONE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : isEmptyUUID
@@ -2563,7 +2567,7 @@ LOCAL Errors pruneStorages(IndexHandle *indexHandle)
   // init variables
   Array_init(&storageIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
 
-  // get all storage ids  
+  // get all storage ids
   error = Database_getIds(&indexHandle->databaseHandle,
                           &storageIds,
                           "storages",
@@ -3610,7 +3614,8 @@ LOCAL Errors updateDirectoryContentAggregates(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-
+#if 0
+//TODO: still not used
 /***********************************************************************\
 * Name   : updateUUIDAggregates
 * Purpose: update UUID aggregates
@@ -3630,6 +3635,7 @@ LOCAL Errors updateUUIDAggregates(IndexHandle *indexHandle,
 
   return ERROR_NONE;
 }
+#endif
 
 /***********************************************************************\
 * Name   : updateEntityAggregates
@@ -4889,7 +4895,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
   assert(storageId != DATABASE_ID_NONE);
   assert(toEntityId != DATABASE_ID_NONE);
 
-  /* steps to do:   
+  /* steps to do:
      - get entity id, UUID id
      - get to-UUID id
      - assign entries of storage
@@ -5012,7 +5018,6 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 * Purpose: assign entity to other entity
 * Input  : indexHandle   - index handle
 *          entityId      - entity database id
-*          toJobUUID     - to job UUID
 *          toEntityId    - to entity database id
 *          toArchiveType - archive type or ARCHIVE_TYPE_NONE
 * Output : -
@@ -5022,7 +5027,6 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
 
 LOCAL Errors assignEntityToEntity(IndexHandle  *indexHandle,
                                   DatabaseId   entityId,
-                                  ConstString  toJobUUID,
                                   DatabaseId   toEntityId,
                                   ArchiveTypes toArchiveType
                                  )
@@ -5331,7 +5335,6 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
     {
       error = assignEntityToEntity(indexHandle,
                                    entityId,
-                                   toJobUUID,
                                    toUUIDId,
                                    entityId
                                   );
@@ -13850,7 +13853,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
           // assign entity to other entity
           error = assignEntityToEntity(indexHandle,
                                        Index_getDatabaseId(entityId),
-                                       toJobUUID,
                                        Index_getDatabaseId(toEntityId),
                                        toArchiveType
                                       );
