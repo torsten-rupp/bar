@@ -5131,6 +5131,7 @@ Dprintf.dprintf("");
       {
         public boolean render(TreeItem treeItem, int column, GC gc, int x, int y, int width, int height)
         {
+Dprintf.dprintf("");
           if (column == 2)
           {
             // draw column 2: date/time
@@ -5210,6 +5211,39 @@ Dprintf.dprintf("");
           {
             // Note: do not draw column 2 = date/time
             event.detail &= ~SWT.FOREGROUND;
+          }
+        }
+      });
+      widgetStorageTree.addListener(SWT.PaintItem, new Listener()
+      {
+        public void handleEvent(Event event)
+        {
+          TreeItem treeItem = (TreeItem)event.item;
+
+          if (event.index == 2)
+          {
+            // draw column 2 = date/time
+            IndexData indexData = (IndexData)treeItem.getData();
+
+            long dateTime = indexData.getDateTime();
+            if (dateTime > 0)
+            {
+              String t1 = SIMPLE_DATE_FORMAT1.format(new Date(dateTime*1000L));
+              String t2 = SIMPLE_DATE_FORMAT2.format(new Date(dateTime*1000L));
+              String t3 = SIMPLE_DATE_FORMAT3.format(new Date(dateTime*1000L));
+              Point  s1 = event.gc.textExtent(t1);
+              Point  s2 = event.gc.textExtent("MMM");
+              Point  s3 = event.gc.textExtent(t3);
+              event.gc.drawText(t1,event.x+0            ,event.y+(event.height-s1.y)/2,false);
+              event.gc.drawText(t2,event.x+s1.x+2       ,event.y+(event.height-s2.y)/2,false);
+              event.gc.drawText(t3,event.x+s1.x+2+s2.x+2,event.y+(event.height-s3.y)/2,false);
+            }
+            else
+            {
+              String t1 = "-";
+              Point  s1 = event.gc.textExtent(t1);
+              event.gc.drawText(t1, event.x+0, event.y+(event.height-s1.y)/2, false);
+            }
           }
         }
       });
