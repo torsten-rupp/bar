@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdarg.h>
 #include <wctype.h>
 #include <assert.h>
@@ -93,8 +94,8 @@ typedef const char*(*StringIterateFunction)(char ch, void *userData);
 // number unit
 typedef struct
 {
-  const char *name;
-  uint64     factor;
+  const char         *name;
+  unsigned long long factor;
 } StringUnit;
 
 // debug info function
