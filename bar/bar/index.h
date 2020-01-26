@@ -1988,7 +1988,8 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
 * Name   : Index_getNextEntryFrament
 * Purpose: get next fragment of entry
 * Input  : indexQueryHandle - index query handle
-* Output : storageId       - index id of storage (can be NULL)
+* Output : entryFragmentId - index id of entry fragment
+*          storageId       - index id of storage (can be NULL)
 *          storageName     - storage name (can be NULL)
 *          storageDateTime - storage date/time stamp [s]
 *          fragmentOffset  - fragment offset [bytes]
@@ -1997,12 +1998,13 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
 * Notes  : -
 \***********************************************************************/
 
-bool Index_getNextEntryFragment(IndexQueryHandle  *indexQueryHandle,
-                                IndexId           *storageId,
-                                String            storageName,
-                                uint64            *storageDateTime,
-                                uint64            *fragmentOffset,
-                                uint64            *fragmentSize
+bool Index_getNextEntryFragment(IndexQueryHandle *indexQueryHandle,
+                                IndexId          *entryFragmentId,
+                                IndexId          *storageId,
+                                String           storageName,
+                                uint64           *storageDateTime,
+                                uint64           *fragmentOffset,
+                                uint64           *fragmentSize
                                );
 
 // ---------------------------------------------------------------------

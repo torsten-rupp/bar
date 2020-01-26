@@ -57,7 +57,7 @@
 #endif
 
 #ifndef NDEBUG
-  #define _INDEX_DEBUG_LIST_INFO
+  #define INDEX_DEBUG_LIST_INFO
 #endif
 
 /***************************** Constants *******************************/
@@ -6310,8 +6310,8 @@ bool Index_findEntity(IndexHandle  *indexHandle,
                               FROM entities \
                                 LEFT JOIN storages ON storages.entityId=entities.id AND (storages.deletedFlag!=1) \
                                 LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                              WHERE     %S \
-                                    AND entities.deletedFlag!=1 \
+                              WHERE     entities.deletedFlag!=1 \
+                                    AND %S \
                               GROUP BY entities.id \
                               LIMIT 0,1 \
                              ",
@@ -6406,8 +6406,8 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                               FROM storages \
                                 LEFT JOIN entities ON storages.entityId=entities.id \
                                 LEFT JOIN uuids ON entities.jobUUID=uuids.jobUUID \
-                              WHERE     storages.id=%lld \
-                                    AND storages.deletedFlag!=1 \
+                              WHERE     storages.deletedFlag!=1 \
+                                    AND storages.id=%lld \
                               GROUP BY storages.id \
                               LIMIT 0,1 \
                              ",
@@ -6626,8 +6626,8 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                               FROM storages \
                                 LEFT JOIN entities ON storages.entityId=entities.id \
                                 LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                              WHERE     (storages.state IN (%S)) \
-                                    AND storages.deletedFlag!=1 \
+                              WHERE     storages.deletedFlag!=1 \
+                                    AND (storages.state IN (%S)) \
                               LIMIT 0,1 \
                              ",
                              getIndexStateSetString(indexStateSetString,findIndexStateSet)
@@ -8236,7 +8236,13 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   // get ordering
   appendOrdering(orderString,TRUE,"entities.created",ordering);
 
-//fprintf(stderr,"%s, %d: Index_initListEntities /////////////////////////////////////////////\n",__FILE__,__LINE__);
+  #ifdef INDEX_DEBUG_LIST_INFO
+    fprintf(stderr,"%s, %d: Index_initListEntities ------------------------------------------------------\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
+    fprintf(stderr,"%s, %d: archiveType=%u\n",__FILE__,__LINE__,archiveType);
+    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+  #endif /* INDEX_DEBUG_LIST_INFO */
+
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
@@ -8258,8 +8264,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
                              FROM entities \
                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                                LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
-                             WHERE          %S \
-                                   AND entities.deletedFlag!=1 \
+                             WHERE     entities.deletedFlag!=1 \
+                                   AND %S \
                              GROUP BY entities.id \
                              %S \
                              LIMIT %llu,%llu \
@@ -8280,6 +8286,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   }
   #ifdef INDEX_DEBUG_LIST_INFO
     Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
   #endif
 
   // free resources
@@ -8766,15 +8773,15 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
   double              totalStorageSize_,totalEntryCount_,totalEntrySize_,totalEntryContentSize_;
-
-uint64 t0,t1;
+  #ifdef INDEX_DEBUG_LIST_INFO
+    uint64              t0,t1;
+  #endif /* INDEX_DEBUG_LIST_INFO */
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_ANY(uuidId) || (Index_getType(uuidId) == INDEX_TYPE_UUID));
   assert(INDEX_ID_IS_ANY(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
   assert((indexIdCount == 0L) || (indexIds != NULL));
 
-t0=Misc_getTimestamp();
   // init variables
   if (totalStorageCount     != NULL) (*totalStorageCount    ) = 0L;
   if (totalStorageSize      != NULL) (*totalStorageSize     ) = 0LL;
@@ -8821,10 +8828,11 @@ t0=Misc_getTimestamp();
     }
   }
   #ifdef INDEX_DEBUG_LIST_INFO
-    fprintf(stderr,"%s, %d: --- Index_getStoragesInfos\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: Index_getStoragesInfos ------------------------------------------------------\n",__FILE__,__LINE__);
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
-  #endif
+    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+  #endif /* INDEX_DEBUG_LIST_INFO */
 
   filterIdsString     = String_new();
   indexStateSetString = String_new();
@@ -8844,11 +8852,13 @@ t0=Misc_getTimestamp();
   String_delete(indexStateSetString);
   String_delete(filterIdsString);
 
+  #ifdef INDEX_DEBUG_LIST_INFO
+    t0 = Misc_getTimestamp();
+  #endif /* INDEX_DEBUG_LIST_INFO */
   INDEX_DOX(error,
             indexHandle,
   {
     // get storage count, storage size, entry count, entry size
-t1=Misc_getTimestamp();
     error = Database_prepare(&databaseQueryHandle,
                              &indexHandle->databaseHandle,
 //TODO newest
@@ -8859,7 +8869,8 @@ t1=Misc_getTimestamp();
                               FROM storages \
                                 LEFT JOIN entities ON entities.id=storages.entityId \
                                 LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                              WHERE %S \
+                              WHERE     storages.deletedFlag!=1 \
+                                    AND %S \
                              ",
                              filterString
                             );
@@ -8885,14 +8896,12 @@ t1=Misc_getTimestamp();
 //      assert(totalEntrySize_ >= 0.0);
       if (totalEntryCount  != NULL) (*totalEntryCount ) = (totalEntryCount_  >= 0.0) ? (ulong)totalEntryCount_   : 0L;
       if (totalEntrySize   != NULL) (*totalEntrySize  ) = (totalEntrySize_   >= 0.0) ? (uint64)totalEntrySize_   : 0LL;
-fprintf(stderr,"%s, %d: totalStorageCount=%lu totalStorageSize=%lf totalEntryCount_=%lf totalEntrySize_=%lf\n",__FILE__,__LINE__,*totalStorageCount,totalStorageSize_,totalEntryCount_,totalEntrySize_);
     }
     Database_finalize(&databaseQueryHandle);
 
     if (totalEntryContentSize != NULL)
     {
       // get entry content size
-t1=Misc_getTimestamp();
       if      (!String_isEmpty(uuidIdsString))
       {
         error = Database_prepare(&databaseQueryHandle,
@@ -8953,12 +8962,11 @@ t1=Misc_getTimestamp();
                              )
             )
       {
-  //TODO: may happen?
-  //      assert(totalEntryContentSize_ >= 0.0);
+//TODO: may happen?
+//      assert(totalEntryContentSize_ >= 0.0);
         if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0.0) ? (uint64)totalEntryContentSize_ : 0LL;
       }
       Database_finalize(&databaseQueryHandle);
-fprintf(stderr,"%s, %d: b %"PRIu64"us\n",__FILE__,__LINE__,(Misc_getTimestamp()-t1));
     }
 
     return ERROR_NONE;
@@ -8972,8 +8980,12 @@ fprintf(stderr,"%s, %d: b %"PRIu64"us\n",__FILE__,__LINE__,(Misc_getTimestamp()-
     String_delete(ftsName);
     return error;
   }
-t1=Misc_getTimestamp();
-fprintf(stderr,"%s, %d: %"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+  #ifdef INDEX_DEBUG_LIST_INFO
+    t1 = Misc_getTimestamp();
+    fprintf(stderr,"%s, %d: totalStorageCount=%lu totalStorageSize=%lf totalEntryCount_=%lf totalEntrySize_=%lf\n",__FILE__,__LINE__,*totalStorageCount,totalStorageSize_,totalEntryCount_,totalEntrySize_);
+    fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
+  #endif /* INDEX_DEBUG_LIST_INFO */
 
   // free resources
   String_delete(storageIdsString);
@@ -9093,10 +9105,6 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
         break;
     }
   }
-//fprintf(stderr,"%s, %d: Index_initListStorages ------------------------------------------------------\n",__FILE__,__LINE__);
-//fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
-//fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
-//fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
 
   // get filters
   filterIdsString = String_new();
@@ -9119,6 +9127,16 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   // get sort mode, ordering
   appendOrdering(orderString,sortMode != INDEX_STORAGE_SORT_MODE_NONE,INDEX_STORAGE_SORT_MODE_COLUMNS[sortMode],ordering);
+
+  #ifdef INDEX_DEBUG_LIST_INFO
+    fprintf(stderr,"%s, %d: Index_initListStorages ------------------------------------------------------\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
+    fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
+    fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
+    fprintf(stderr,"%s, %d: hostName=%s\n",__FILE__,__LINE__,String_cString(hostName));
+    fprintf(stderr,"%s, %d: userName=%s\n",__FILE__,__LINE__,String_cString(userName));
+    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+  #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -9149,8 +9167,8 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                              FROM storages \
                                LEFT JOIN entities ON entities.id=storages.entityId \
                                LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                             WHERE     %S \
-                                   AND storages.deletedFlag!=1 \
+                             WHERE     storages.deletedFlag!=1 \
+                                   AND %S \
                              GROUP BY storages.id \
                              %S \
                              LIMIT %llu,%llu \
@@ -9174,6 +9192,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
   }
   #ifdef INDEX_DEBUG_LIST_INFO
     Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
   #endif
 
   // free resources
@@ -10022,11 +10041,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
     String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
   #ifdef INDEX_DEBUG_LIST_INFO
-    fprintf(stderr,"%s, %d: --- Index_getEntriesInfo\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: Index_getEntriesInfo --------------------------------------------------------\n",__FILE__,__LINE__);
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
     fprintf(stderr,"%s, %d: entryIdsString=%s\n",__FILE__,__LINE__,String_cString(entryIdsString));
-  #endif
+    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+  #endif /* INDEX_DEBUG_LIST_INFO */
 
   // get filters
   String_setCString(filterString,"1");
@@ -10037,8 +10057,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   String_delete(filterIdsString);
 
   #ifdef INDEX_DEBUG_LIST_INFO
-    t0=Misc_getTimestamp();
-  #endif
+    t0 = Misc_getTimestamp();
+  #endif /* INDEX_DEBUG_LIST_INFO */
   error = ERROR_NONE;
   if (String_isEmpty(ftsName))
   {
@@ -10197,8 +10217,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     FROM entriesNewest \
                                       LEFT JOIN entities ON entities.id=entriesNewest.entityId \
                                       LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
+                                    WHERE     entities.deletedFlag!=1 \
+                                          AND %S \
                                     %s \
                                    ",
                                    filterString,
@@ -10224,8 +10244,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                                TOTAL(entities.totalEntrySize) \
                                         FROM entities \
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
+                                        WHERE     entities.deletedFlag!=1 \
+                                              AND %S \
                                         %s \
                                        ",
                                        filterString,
@@ -10242,8 +10262,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                                TOTAL(entities.totalEntrySize) \
                                         FROM entities \
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
+                                        WHERE     entities.deletedFlag!=1 \
+                                              AND %S \
                                         %s \
                                        ",
                                        filterString,
@@ -10260,8 +10280,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                                TOTAL(entities.totalImageSize) \
                                         FROM entities \
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
+                                        WHERE     entities.deletedFlag!=1 \
+                                              AND %S \
                                         %s \
                                        ",
                                        filterString,
@@ -10278,8 +10298,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                                0 \
                                         FROM entities \
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
+                                        WHERE     entities.deletedFlag!=1 \
+                                              AND %S \
                                         %s \
                                        ",
                                        filterString,
@@ -10296,8 +10316,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                                0 \
                                         FROM entities \
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
+                                        WHERE     entities.deletedFlag!=1 \
+                                              AND %S \
                                         %s \
                                        ",
                                        filterString,
@@ -10314,8 +10334,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                                TOTAL(entities.totalHardlinkSize) \
                                         FROM entities \
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
+                                        WHERE     entities.deletedFlag!=1 \
+                                              AND %S \
                                         %s \
                                        ",
                                        filterString,
@@ -10332,8 +10352,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                                0 \
                                         FROM entities \
                                           LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
+                                        WHERE     entities.deletedFlag!=1 \
+                                              AND %S \
                                         %s \
                                        ",
                                        filterString,
@@ -10357,8 +10377,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                     FROM entries \
                                       LEFT JOIN entities ON entities.id=entries.entityId \
                                       LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
+                                    WHERE     entities.deletedFlag!=1 \
+                                          AND %S \
                                     %s \
                                    ",
                                    filterString,
@@ -10410,8 +10430,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                     LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
                                     LEFT JOIN entities         ON entities.id=storages.entityId \
                                     LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     %S \
-                                        AND entities.deletedFlag!=1 \
+                                  WHERE     entities.deletedFlag!=1 \
+                                        AND %S \
                                  ",
                                  filterString
                                 );
@@ -10426,8 +10446,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                    "SELECT TOTAL(entities.totalEntrySize) \
                                     FROM entities \
                                       LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
+                                    WHERE     entities.deletedFlag!=1 \
+                                          AND %S \
                                    ",
                                    filterString
                                   );
@@ -10445,8 +10465,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                       LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
                                       LEFT JOIN entities         ON entities.id=storages.entityId \
                                       LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     %S \
-                                          AND entities.deletedFlag!=1 \
+                                    WHERE     entities.deletedFlag!=1 \
+                                          AND %S \
                                    ",
                                    filterString
                                   );
@@ -10508,9 +10528,9 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
                                     LEFT JOIN entities      ON entities.id=entriesNewest.entityId \
                                     LEFT JOIN uuids         ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     entriesNewest.id IS NOT NULL \
+                                  WHERE     entities.deletedFlag!=1 \
+                                        AND entriesNewest.id IS NOT NULL \
                                         AND %S \
-                                        AND entities.deletedFlag!=1 \
                                   %s \
                                  ",
                                  filterString,
@@ -10529,8 +10549,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                     LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
                                     LEFT JOIN entities ON entities.id=entries.entityId \
                                     LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     %S \
-                                        AND entities.deletedFlag!=1 \
+                                  WHERE     entities.deletedFlag!=1 \
+                                        AND %S \
                                   %s \
                                  ",
                                  filterString,
@@ -10578,8 +10598,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                     LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
                                     LEFT JOIN entities         ON entities.id=storages.entityId \
                                     LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     %S \
-                                        AND storages.deletedFlag!=1 \
+                                  WHERE     storages.deletedFlag!=1 \
+                                        AND %S \
                                  ",
                                  filterString
                                 );
@@ -10595,8 +10615,8 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
                                     LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
                                     LEFT JOIN entities         ON entities.id=storages.entityId \
                                     LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     %S \
-                                        AND storages.deletedFlag!=1 \
+                                  WHERE     storages.deletedFlag!=1 \
+                                        AND %S \
                                  ",
                                  filterString
                                 );
@@ -10626,8 +10646,10 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
     });
   }
   #ifdef INDEX_DEBUG_LIST_INFO
-    t1=Misc_getTimestamp();
-    fprintf(stderr,"%s, %d: %"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+    t1 = Misc_getTimestamp();
+    fprintf(stderr,"%s, %d: totalEntryCount_=%lf totalEntryFragmentCount_=%lf totalEntrySize_=%lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntryFragmentCount_,totalEntrySize_);
+    fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
   #endif
 
   // free resources
@@ -10666,8 +10688,6 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
   String              orderString;
   Errors              error;
 
-uint64 t0,t1;
-
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
   assert((indexIdCount == 0L) || (indexIds != NULL));
@@ -10679,7 +10699,6 @@ uint64 t0,t1;
     return indexHandle->upgradeError;
   }
 
-t0=Misc_getTimestamp();
   // init variables
   ftsName          = String_new();
   uuidIdsString    = String_new();
@@ -10717,9 +10736,6 @@ t0=Misc_getTimestamp();
     if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
     String_appendFormat(entryIdsString,"%lld",Index_getDatabaseId(entryIds[i]));
   }
-fprintf(stderr,"%s, %d: Index_initListEntries ------------------------------------------------------\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
-fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
 
   // get filters
   filterString = String_newCString("1");
@@ -10746,6 +10762,12 @@ fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(e
   {
     appendOrdering(orderString,sortMode != INDEX_ENTRY_SORT_MODE_NONE,INDEX_ENTRY_SORT_MODE_COLUMNS[sortMode],ordering);
   }
+
+  #ifdef INDEX_DEBUG_LIST_INFO
+    fprintf(stderr,"%s, %d: Index_initListEntries -------------------------------------------------------\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
+    fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
+  #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
@@ -10806,8 +10828,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.id \
-                                 WHERE     entriesNewest.id IS NOT NULL \
-                                       AND entities.deletedFlag!=1 \
+                                 WHERE     entities.deletedFlag!=1 \
+                                       AND entriesNewest.id IS NOT NULL \
                                        AND %S \
                                  %s \
                                  %S \
@@ -10939,8 +10961,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN hardlinkEntries  ON hardlinkEntries.entryId=entriesNewest.entryId \
                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.id \
-                                 WHERE     entriesNewest.id IS NOT NULL \
-                                       AND entities.deletedFlag!=1 \
+                                 WHERE     entities.deletedFlag!=1 \
+                                       AND entriesNewest.id IS NOT NULL \
                                        AND %S \
                                  %s \
                                  %S \
@@ -11030,9 +11052,8 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   #ifdef INDEX_DEBUG_LIST_INFO
     Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
   #endif
-t1=Misc_getTimestamp();
-fprintf(stderr,"%s, %d: %"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
 
   // free resources
   String_delete(orderString);
@@ -11148,6 +11169,11 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
 
   // init variables
 
+  #ifdef INDEX_DEBUG_LIST_INFO
+    fprintf(stderr,"%s, %d: Index_initListEntryFragments ------------------------------------------------\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: entryId=%u\n",__FILE__,__LINE__,entryId);
+  #endif /* INDEX_DEBUG_LIST_INFO */
+
   // prepare list
   initIndexQueryHandle(indexQueryHandle,indexHandle);
   INDEX_DOX(error,
@@ -11163,8 +11189,8 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
                                     entryFragments.size \
                              FROM entryFragments \
                                LEFT JOIN storages ON storages.id=entryFragments.storageId \
-                             WHERE     entryFragments.entryId=%lld \
-                                   AND storages.deletedFlag!=1 \
+                             WHERE     storages.deletedFlag!=1 \
+                                   AND entryFragments.entryId=%lld \
                              ORDER BY offset ASC \
                              LIMIT %llu,%llu; \
                             ",
@@ -11180,6 +11206,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
   }
   #ifdef INDEX_DEBUG_LIST_INFO
     Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
   #endif
 
   // free resources
@@ -11190,6 +11217,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
 }
 
 bool Index_getNextEntryFragment(IndexQueryHandle *indexQueryHandle,
+                                IndexId          *entryFragmentId,
                                 IndexId          *storageId,
                                 String           storageName,
                                 uint64           *storageDateTime,
@@ -11197,7 +11225,7 @@ bool Index_getNextEntryFragment(IndexQueryHandle *indexQueryHandle,
                                 uint64           *fragmentSize
                                )
 {
-  DatabaseId storageDatabaseId;
+  DatabaseId entryFragmentDatabaseId,storageDatabaseId;
   int64      fragmentOffset_,fragmentSize_;
 
   assert(indexQueryHandle != NULL);
@@ -11210,7 +11238,8 @@ bool Index_getNextEntryFragment(IndexQueryHandle *indexQueryHandle,
   }
 
   if (!Database_getNextRow(&indexQueryHandle->databaseQueryHandle,
-                           "%llu %S %llu %llu %llu %llu",
+                           "%llu %llu %'S %llu %llu %llu",
+                           &entryFragmentDatabaseId,
                            &storageDatabaseId,
                            storageName,
                            storageDateTime,
@@ -11223,9 +11252,10 @@ bool Index_getNextEntryFragment(IndexQueryHandle *indexQueryHandle,
   }
   assert(fragmentOffset_ >= 0LL);
   assert(fragmentSize_ >= 0LL);
-  if (storageId      != NULL) (*storageId     ) = INDEX_ID_(INDEX_TYPE_STORAGE,storageDatabaseId);
-  if (fragmentOffset != NULL) (*fragmentOffset) = (uint64)fragmentOffset_;
-  if (fragmentSize   != NULL) (*fragmentSize  ) = (uint64)fragmentSize_;
+  if (entryFragmentId != NULL) (*entryFragmentId) = INDEX_ID_(INDEX_TYPE_STORAGE,entryFragmentDatabaseId);
+  if (storageId       != NULL) (*storageId      ) = INDEX_ID_(INDEX_TYPE_STORAGE,storageDatabaseId);
+  if (fragmentOffset  != NULL) (*fragmentOffset ) = (uint64)fragmentOffset_;
+  if (fragmentSize    != NULL) (*fragmentSize   ) = (uint64)fragmentSize_;
 
   return TRUE;
 }
@@ -11441,8 +11471,8 @@ Errors Index_initListFiles(IndexQueryHandle *indexQueryHandle,
                                     entries.permission \
                              FROM entries \
                                LEFT JOIN entities ON entities.id=entries.entityId \
-                             WHERE     %S \
-                                   AND entities.deletedFlag!=1 \
+                             WHERE     entities.deletedFlag!=1 \
+                                   AND %S \
                             ",
                             filterString
                            );
@@ -11658,8 +11688,8 @@ Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                                     entries.size \
                              FROM entries \
                                LEFT JOIN entities ON entities.id=entries.entityId \
-                             WHERE     %S \
-                                   AND entities.deletedFlag!=1 \
+                             WHERE     entities.deletedFlag!=1 \
+                                   AND %S \
                             ",
                             filterString
                            );
@@ -11887,8 +11917,8 @@ Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                     entries.permission \
                              FROM entries \
                                LEFT JOIN entities ON entities.id=entries.entityId \
-                             WHERE     %S \
-                                   AND entities.deletedFlag!=1 \
+                             WHERE     entities.deletedFlag!=1 \
+                                   AND %S \
                             ",
                             filterString
                            );
@@ -12106,8 +12136,8 @@ Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                                     entries.permission \
                              FROM entries \
                                LEFT JOIN entities ON entities.id=entries.entityId \
-                             WHERE     %S \
-                                   AND storages.deletedFlag!=1 \
+                             WHERE     storages.deletedFlag!=1 \
+                                   AND %S \
                             ",
                             filterString
                            );
@@ -12324,8 +12354,8 @@ Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                     entries.permission \
                              FROM entries \
                                LEFT JOIN entities ON entities.id=entries.entityId \
-                             WHERE     %S \
-                                   AND entities.deletedFlag!=1 \
+                             WHERE     entities.deletedFlag!=1 \
+                                   AND %S \
                             ",
                             filterString
                            );
@@ -12542,8 +12572,8 @@ Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                                     entries.permission \
                              FROM entries \
                                LEFT JOIN entities ON entities.id=entries.entityId \
-                             WHERE     %S \
-                                   AND entities.deletedFlag!=1 \
+                             WHERE     entities.deletedFlag!=1 \
+                                   AND %S \
                             ",
                             filterString
                            );
