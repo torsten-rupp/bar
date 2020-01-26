@@ -131,7 +131,7 @@ LOCAL void printUsage(const char *programName)
   printf("          --info-entities[=id,...]              - output index database entities infos\n");
   printf("          --info-storages[=id,...]              - output index database storages infos\n");
   printf("          --info-lost-storages[=id,...]         - output index database storages infos without an entity\n");
-  printf("          --info-entries[=id,...]               - output index database entries infos\n");
+  printf("          --info-entries[=id,...|name]          - output index database entries infos\n");
   printf("          --info-lost-entries[=id,...]          - output index database entries infos without an entity\n");
   printf("          --create                              - create new index database\n");
   printf("          --create-triggers                     - re-create triggers\n");
@@ -417,6 +417,72 @@ LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
   {
     fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
   }
+}
+
+/***********************************************************************\
+* Name   : getFTSString
+* Purpose: get full-text-search filter string
+* Input  : string      - string variable
+*          patternText - pattern text
+* Output : -
+* Return : string for WHERE filter-statement
+* Notes  : -
+\***********************************************************************/
+
+LOCAL String getFTSString(String string, ConstString patternText)
+{
+  StringTokenizer stringTokenizer;
+  ConstString     token;
+  bool            addedTextFlag,addedPatternFlag;
+  size_t          iteratorVariable;
+  Codepoint       codepoint;
+
+  String_clear(string);
+
+  if (!String_isEmpty(patternText))
+  {
+    String_initTokenizer(&stringTokenizer,
+                         patternText,
+                         STRING_BEGIN,
+                         STRING_WHITE_SPACES,
+                         STRING_QUOTES,
+                         TRUE
+                        );
+    while (String_getNextToken(&stringTokenizer,&token,NULL))
+    {
+      addedTextFlag    = FALSE;
+      addedPatternFlag = FALSE;
+      STRING_CHAR_ITERATE_UTF8(token,iteratorVariable,codepoint)
+      {
+        if (isalnum(codepoint) || (codepoint >= 128))
+        {
+          if (addedPatternFlag)
+          {
+            String_appendChar(string,' ');
+            addedPatternFlag = FALSE;
+          }
+          String_appendCharUTF8(string,codepoint);
+          addedTextFlag = TRUE;
+        }
+        else
+        {
+          if (addedTextFlag && !addedPatternFlag)
+          {
+            String_appendChar(string,'*');
+            addedTextFlag    = FALSE;
+            addedPatternFlag = TRUE;
+          }
+        }
+      }
+      if (addedTextFlag && !addedPatternFlag)
+      {
+        String_appendChar(string,'*');
+      }
+    }
+    String_doneTokenizer(&stringTokenizer);
+  }
+
+  return string;
 }
 
 /***********************************************************************\
@@ -4374,11 +4440,12 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityIdArray)
+LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityIdArray, ConstString name)
 {
   const char *TYPE_TEXT[] = {"","uuid","entity","storage","entry","file","image","directory","link","hardlink","special","history"};
 
   String     entityIdsString;
+  String     ftsName;
   ulong      i;
   DatabaseId entityId;
   Errors     error;
@@ -4390,12 +4457,16 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
     String_formatAppend(entityIdsString,"%lld",entityId);
   }
 
+  ftsName = String_new();
+  getFTSString(ftsName,name);
+
   printf("Entries:\n");
   error = Database_execute(databaseHandle,
                            CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                            {
                              DatabaseId entityId;
                              DatabaseId uuidId;
+                             bool       entityOutputFlag;
 
 //                             assert(count == 14);
                              assert(values[0] != NULL);
@@ -4407,14 +4478,12 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                              entityId = (DatabaseId)atoll(values[0]);
                              uuidId   = (DatabaseId)atoll(values[1]);
 
-                             printf("  Entity id : %"PRIi64"\n",entityId);
-                             printf("  UUID id   : %"PRIi64"\n",uuidId);
+                             entityOutputFlag = FALSE;
                              error = Database_execute(databaseHandle,
                                                       CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                                       {
                                                         uint type;
 
-                           //                             assert(count == 14);
                                                         assert(values[0] != NULL);
 
                                                         UNUSED_VARIABLE(columns);
@@ -4423,6 +4492,12 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
 
                                                         type = (uint)atoll(values[2]);
 
+                                                        if (!entityOutputFlag)
+                                                        {
+                                                          printf("  Entity id: %"PRIi64"\n",entityId);
+                                                          printf("  UUID id  : %"PRIi64"\n",uuidId);
+                                                          entityOutputFlag = TRUE;
+                                                        }
                                                         printf("    Id               : %s\n",values[0]);
                                                         printf("      Name           : %s\n",values[1]);
                                                         printf("      Type           : %s\n",(type <= INDEX_CONST_TYPE_HISTORY) ? TYPE_TEXT[type] : values[2]);
@@ -4475,8 +4550,11 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                        LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id \
                                                        LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                        WHERE     entries.entityId=%lld \
+                                                             AND (%d OR entries.id IN (SELECT entryId FROM FTS_entries WHERE FTS_entries MATCH '%S')) \
                                                       ",
-                                                      entityId
+                                                      entityId,
+                                                      String_isEmpty(ftsName) ? 1 : 0,
+                                                      ftsName
                                                      );
                              if (error != ERROR_NONE)
                              {
@@ -4501,6 +4579,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   }
 
   // free resources
+  String_delete(ftsName);
   String_delete(entityIdsString);
 }
 
@@ -5056,6 +5135,7 @@ int main(int argc, const char *argv[])
   const uint MAX_LINE_LENGTH = 8192;
 
   Array            uuidIdArray,entityIdArray,storageIdArray;
+  String           entryName;
   uint             i,n;
   CStringTokenizer stringTokenizer;
   const char       *token;
@@ -5076,6 +5156,7 @@ int main(int argc, const char *argv[])
   Array_init(&uuidIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&entityIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&storageIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  entryName = String_new();
   databaseFileName = NULL;
   commands         = String_new();
 
@@ -5145,6 +5226,7 @@ int main(int argc, const char *argv[])
         {
           Array_append(&entityIdArray,&databaseId);
         }
+        String_setCString(entryName,token);
       }
       stringTokenizerDone(&stringTokenizer);
       i++;
@@ -5483,11 +5565,7 @@ else if (stringEquals(argv[i],"--xxx"))
 
   if (infoEntriesFlag)
   {
-    printEntriesInfo(&databaseHandle,entityIdArray);
-  }
-  if (infoEntriesFlag)
-  {
-    printEntriesInfo(&databaseHandle,entityIdArray);
+    printEntriesInfo(&databaseHandle,entityIdArray,entryName);
   }
 
   if (checkFlag)
@@ -5966,6 +6044,7 @@ if (xxxFlag)
   closeDatabase(&databaseHandle);
 
   // free resources
+  String_delete(entryName);
   Array_done(&storageIdArray);
   Array_done(&entityIdArray);
   Array_done(&uuidIdArray);
