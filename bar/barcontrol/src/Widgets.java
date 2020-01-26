@@ -11755,6 +11755,7 @@ Dprintf.dprintf("");
 
     if (isVisible)
     {
+//TODO: index?
 /*
       MenuItem menuItem;
       if (index >= 0)
@@ -12709,6 +12710,23 @@ Dprintf.dprintf("");
     removeMenuItems(menu,index,index);
   }
 
+  /** remove all sub-menu items
+   * @param menuItem menu item
+   */
+  private static void removeAllMenuItems(MenuItem menuItem)
+  {
+    Menu menu = menuItem.getMenu();
+    if (menu != null)
+    {
+      MenuItem[] menuItems = menu.getItems();
+      for (int i = 0; i < menuItems.length; i++)
+      {
+        removeAllMenuItems(menuItems[i]);
+      }
+    }
+    menuItem.dispose();
+  }
+
   /** remove all menu items
    * @param menu menu
    */
@@ -12717,7 +12735,7 @@ Dprintf.dprintf("");
     MenuItem[] menuItems = menu.getItems();
     for (int i = 0; i < menuItems.length; i++)
     {
-      menuItems[i].dispose();
+      removeAllMenuItems(menuItems[i]);
     }
   }
 

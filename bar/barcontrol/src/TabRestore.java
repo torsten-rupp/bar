@@ -7302,7 +7302,6 @@ Dprintf.dprintf("");
   /** update assign-to sub-menu
    * @param menu menu
    * @param jobUUID job UUID
-   * @param archiveType archive type
    */
   private void updateAssignToMenu(Menu         subMenu,
                                   final String jobUUID
@@ -7382,7 +7381,7 @@ Dprintf.dprintf("");
         BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
                                                      jobUUID
                                                     ),
-0,//                                 2,  // debugLevel
+                                 2,  // debugLevel
                                  new Command.ResultHandler()
                                  {
                                    @Override
@@ -7435,9 +7434,12 @@ Dprintf.dprintf("");
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            MenuItem widget = (MenuItem)selectionEvent.widget;
-
+            MenuItem        widget          = (MenuItem)selectionEvent.widget;
             EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
+
+            // Work-around for SWT bug: sometimes some sub-menu keeps open; force dispose of all menu items
+            Widgets.removeAllMenuItems(widgetStorageAssignToMenu);
+
             assignStorages(entityIndexData);
           }
         });
@@ -7540,6 +7542,9 @@ Dprintf.dprintf("");
           {
             MenuItem     widget       = (MenuItem)selectionEvent.widget;
             AssignToData assignToData = (AssignToData)widget.getData();
+
+            // Work-around for SWT bug: sometimes some sub-menu keeps open; force dispose of all menu items
+            Widgets.removeAllMenuItems(widgetStorageAssignToMenu);
 
             assignStorages(assignToData.jobUUID,assignToData.scheduleUUID,archiveType);
           }
