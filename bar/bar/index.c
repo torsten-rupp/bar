@@ -12828,8 +12828,29 @@ Errors Index_addFile(IndexHandle *indexHandle,
       {
         return error;
       }
-//#warning remove
-//fprintf(stderr,"%s, %d: add file entityId=%lld entryId=%lld %s\n",__FILE__,__LINE__,Index_getDatabaseId(entityId),entryId,String_cString(name));
+
+      // add file entry
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "INSERT INTO fileEntries \
+                                  ( \
+                                   entryId, \
+                                   size \
+                                  ) \
+                                VALUES \
+                                  ( \
+                                   %lld, \
+                                   %llu \
+                                  ); \
+                               ",
+                               entryId,
+                               size
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
 
       // add file entry fragment
       error = Database_execute(&indexHandle->databaseHandle,
@@ -12924,7 +12945,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                      )
 {
   Errors     error;
-  DatabaseId entryId,imageEntryId;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));
@@ -13017,7 +13038,7 @@ Errors Index_addImage(IndexHandle     *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
-                               "INSERT OR IGNORE INTO imageEntries \
+                               "INSERT INTO imageEntries \
                                   ( \
                                    entryId, \
                                    fileSystemType, \
@@ -13037,20 +13058,6 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                size,
                                blockSize
                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // get image entry id
-      error = Database_getId(&indexHandle->databaseHandle,
-                             &imageEntryId,
-                             "imageEntries",
-                             "id",
-                             "WHERE entryId=%lld \
-                             ",
-                             entryId
-                            );
       if (error != ERROR_NONE)
       {
         return error;
@@ -13526,7 +13533,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
-                               "INSERT OR IGNORE INTO hardlinkEntries \
+                               "INSERT INTO hardlinkEntries \
                                   ( \
                                    entryId, \
                                    size \
@@ -13540,20 +13547,6 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                entryId,
                                size
                               );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // get hard link entry id
-      error = Database_getId(&indexHandle->databaseHandle,
-                             &hardlinkEntryId,
-                             "hardlinkEntries",
-                             "id",
-                             "WHERE entryId=%lld \
-                             ",
-                             entryId
-                            );
       if (error != ERROR_NONE)
       {
         return error;
