@@ -65,7 +65,6 @@ const char *ARCHIVE_TYPES[] =
   [CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS  ] = "continuous"
 };
 
-
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
@@ -4468,7 +4467,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                              DatabaseId uuidId;
                              bool       entityOutputFlag;
 
-//                             assert(count == 14);
+                             assert(count == 2);
                              assert(values[0] != NULL);
 
                              UNUSED_VARIABLE(columns);
@@ -4484,6 +4483,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                       {
                                                         uint type;
 
+                                                        assert(count == 8);
                                                         assert(values[0] != NULL);
 
                                                         UNUSED_VARIABLE(columns);
@@ -5156,7 +5156,7 @@ int main(int argc, const char *argv[])
   Array_init(&uuidIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&entityIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&storageIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  entryName = String_new();
+  entryName        = String_new();
   databaseFileName = NULL;
   commands         = String_new();
 
@@ -5219,7 +5219,7 @@ int main(int argc, const char *argv[])
     else if (stringStartsWith(argv[i],"--info-entries"))
     {
       infoEntriesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][15],",");
+      stringTokenizerInit(&stringTokenizer,&argv[i][14],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
         if (stringToInt64(token,&databaseId))
