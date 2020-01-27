@@ -4505,11 +4505,15 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                         {
                                                           case INDEX_CONST_TYPE_FILE:
                                                             printf("      Size           : %s\n",values[3]);
-                                                            printf("      Fragment offset: %s\n",values[6]);
-                                                            printf("      Fragment size  : %s\n",values[7]);
+                                                            printf("      Fragment id    : %s\n",values[6]);
+                                                            printf("      Fragment offset: %s\n",values[7]);
+                                                            printf("      Fragment size  : %s\n",values[8]);
                                                             break;
                                                           case INDEX_CONST_TYPE_IMAGE:
                                                             printf("      Size           : %s\n",values[4]);
+                                                            printf("      Fragment id    : %s\n",values[6]);
+                                                            printf("      Fragment offset: %s\n",values[7]);
+                                                            printf("      Fragment size  : %s\n",values[8]);
                                                             break;
                                                           case INDEX_CONST_TYPE_DIRECTORY:
                                                             break;
@@ -4517,8 +4521,9 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                             break;
                                                           case INDEX_CONST_TYPE_HARDLINK:
                                                             printf("      Size           : %s\n",values[5]);
-                                                            printf("      Fragment offset: %s\n",values[6]);
-                                                            printf("      Fragment size  : %s\n",values[7]);
+                                                            printf("      Fragment id    : %s\n",values[6]);
+                                                            printf("      Fragment offset: %s\n",values[7]);
+                                                            printf("      Fragment size  : %s\n",values[8]);
                                                             break;
                                                             break;
                                                           case INDEX_CONST_TYPE_SPECIAL:
@@ -4538,6 +4543,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                                                               fileEntries.size, \
                                                               imageEntries.size, \
                                                               hardlinkEntries.size, \
+                                                              entryFragments.id, \
                                                               entryFragments.offset, \
                                                               entryFragments.size \
                                                               \
