@@ -9983,7 +9983,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   String              entryIdsString;
   ulong               i;
   String              filterString,filterIdsString;
-  double              totalEntryCount_,totalEntryFragmentCount_,totalEntrySize_,totalEntryContentSize_;
+  int64               totalEntryCount_;
+  double              totalEntryFragmentCount_,totalEntrySize_,totalEntryContentSize_;
   #ifdef INDEX_DEBUG_LIST_INFO
     uint64              t0,t1;
   #endif
@@ -10232,7 +10233,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         // all entries
         if (String_isEmpty(entryIdsString))
         {
-fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
           switch (indexType)
           {
             case INDEX_TYPE_NONE:
@@ -10395,7 +10395,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
         Database_debugPrintQueryInfo(&databaseQueryHandle);
       #endif
       if (!Database_getNextRow(&databaseQueryHandle,
-                               "%lf %lf %lf",
+                               "%lld %lf %lf",
                                &totalEntryCount_,
                                &totalEntryFragmentCount_,
                                &totalEntrySize_
@@ -10405,12 +10405,11 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
         Database_finalize(&databaseQueryHandle);
         return ERROR_DATABASE;
       }
-      assert(totalEntryCount_ >= 0.0);
       assert(totalEntryFragmentCount_ >= 0.0);
       assert(totalEntrySize_ >= 0.0);
       if (totalEntryCount != NULL)
       {
-        (*totalEntryCount) += fragmentsFlag ? (uint64)totalEntryFragmentCount_ : totalEntryCount_;
+        (*totalEntryCount) += fragmentsFlag ? (uint64)totalEntryFragmentCount_ : (ulong)totalEntryCount_;
       }
       if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
       Database_finalize(&databaseQueryHandle);
@@ -10543,7 +10542,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(entries.id), \
-0,\
+123,\
                                          TOTAL(entries.size) \
                                   FROM FTS_entries \
                                     LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
@@ -10566,7 +10565,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
         Database_debugPrintQueryInfo(&databaseQueryHandle);
       #endif
       if (!Database_getNextRow(&databaseQueryHandle,
-                               "%lu %lf %lf",
+                               "%lld %lf %lf",
                                &totalEntryCount_,
                                &totalEntryFragmentCount_,
                                &totalEntrySize_
@@ -10580,7 +10579,7 @@ fprintf(stderr,"%s, %d: indexType=%d\n",__FILE__,__LINE__,indexType);
       assert(totalEntrySize_ >= 0.0);
       if (totalEntryCount != NULL)
       {
-        (*totalEntryCount) += fragmentsFlag ? (ulong)totalEntryFragmentCount_ : totalEntryCount_;
+        (*totalEntryCount) += fragmentsFlag ? (ulong)totalEntryFragmentCount_ : (ulong)totalEntryCount_;
       }
       if (totalEntrySize != NULL) (*totalEntrySize) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
       Database_finalize(&databaseQueryHandle);
