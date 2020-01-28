@@ -4818,14 +4818,87 @@ Dprintf.dprintf("");
    */
   private void showEntryToolTip(EntryIndexData entryIndexData, int x, int y)
   {
+    /** fragment data
+     */
+    class FragmentData
+    {
+      public long   storageId;
+      public String storageName;
+      public long   fragmentOffset;
+      public long   fragmentSize;
+
+      /** create fragment data
+       * @param storageId storage index id
+       * @param storageName storage name
+       * @param fragmentOffset fragment offset
+       * @param fragmentSize fragment size
+       */
+      public FragmentData(long storageId, String storageName, long fragmentOffset, long fragmentSize)
+      {
+        this.storageId      = storageId;
+        this.storageName    = storageName;
+        this.fragmentOffset = fragmentOffset;
+        this.fragmentSize   = fragmentSize;
+      }
+    };
+
+    final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
+    final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+
     int         row;
     Label       label;
     Control     control;
     final Table table;
     TableColumn tableColumn;
+    TableItem   tableItem;
 
-    final Color COLOR_FOREGROUND = display.getSystemColor(SWT.COLOR_INFO_FOREGROUND);
-    final Color COLOR_BACKGROUND = display.getSystemColor(SWT.COLOR_INFO_BACKGROUND);
+    final ArrayList<FragmentData> fragmentDataList = new ArrayList<FragmentData>();
+    if (entryIndexData != null)
+    {
+      // get fragments list
+      try
+      {
+        BARServer.executeCommand(StringParser.format("INDEX_ENTRY_FRAGMENT_LIST entryId=%lld",
+                                                     entryIndexData.id
+                                                    ),
+                                 2,  // debugLevel
+                                 new Command.ResultHandler()
+                                 {
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
+                                   {
+                                     long   storageId      = valueMap.getLong  ("storageId"     );
+                                     String storageName    = valueMap.getString("storageName"   );
+                                     long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
+                                     long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
+
+                                     fragmentDataList.add(new FragmentData(storageId,
+                                                                           storageName,
+                                                                           fragmentOffset,
+                                                                           fragmentSize
+                                                                          )
+                                                         );
+                                   }
+                                 }
+                                );
+      }
+      catch (BARException exception)
+      {
+        // ignored
+        if (Settings.debugLevel > 0)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+      catch (Exception exception)
+      {
+        // ignored
+        if (Settings.debugLevel > 0)
+        {
+          BARControl.printStackTrace(exception);
+        }
+      }
+    }
 
     if (widgetEntryTableToolTip != null)
     {
@@ -4954,62 +5027,18 @@ Dprintf.dprintf("");
       table.setForeground(COLOR_FOREGROUND);
       table.setBackground(COLOR_BACKGROUND);
       table.setHeaderVisible(false);
-      Widgets.layout(table,row,1,TableLayoutData.WE,0,0,0,0,100,100);
+      Widgets.layout(table,row,1,TableLayoutData.NSWE,0,0,0,0,200,SWT.DEFAULT);
       Widgets.addTableColumn(table,0,SWT.RIGHT,80, true);
       Widgets.addTableColumn(table,1,SWT.RIGHT,80, true);
-      Widgets.addTableColumn(table,2,SWT.LEFT, 200,true);
+      Widgets.addTableColumn(table,2,SWT.LEFT, 800,true);
+      for (FragmentData fragmentData : fragmentDataList)
+      {
+        tableItem = new TableItem(table,SWT.NONE);
+        tableItem.setText(0,Long.toString(fragmentData.fragmentOffset));
+        tableItem.setText(1,Long.toString(fragmentData.fragmentSize));
+        tableItem.setText(2,fragmentData.storageName);
+      }
       row++;
-
-      // get fragments list
-      try
-      {
-        BARServer.executeCommand(StringParser.format("INDEX_ENTRY_FRAGMENT_LIST entryId=%lld",
-                                                     entryIndexData.id
-                                                    ),
-0,//                                 2,  // debugLevel
-                                 new Command.ResultHandler()
-                                 {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
-                                   {
-                                     final long   storageId      = valueMap.getLong  ("storageId"     );
-                                     final String storageName    = valueMap.getString("storageName"   );
-                                     final long   fragmentOffset = valueMap.getLong  ("fragmentOffset");
-                                     final long   fragmentSize   = valueMap.getLong  ("fragmentSize"  );
-
-                                     display.syncExec(new Runnable()
-                                     {
-                                       public void run()
-                                       {
-                                         if (!table.isDisposed())
-                                         {
-                                           TableItem tableItem = new TableItem(table,SWT.NONE);
-                                           tableItem.setText(0,Long.toString(fragmentOffset));
-                                           tableItem.setText(1,Long.toString(fragmentSize));
-                                           tableItem.setText(2,storageName);
-                                         }
-                                       }
-                                     });
-                                   }
-                                 }
-                                );
-      }
-      catch (BARException exception)
-      {
-        // ignored
-        if (Settings.debugLevel > 0)
-        {
-          BARControl.printStackTrace(exception);
-        }
-      }
-      catch (Exception exception)
-      {
-        // ignored
-        if (Settings.debugLevel > 0)
-        {
-          BARControl.printStackTrace(exception);
-        }
-      }
 
       Point size = widgetEntryTableToolTip.computeSize(SWT.DEFAULT,SWT.DEFAULT);
       widgetEntryTableToolTip.setBounds(x,y,size.x,size.y);

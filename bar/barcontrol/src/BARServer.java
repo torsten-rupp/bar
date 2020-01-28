@@ -947,8 +947,6 @@ class ReadThread extends Thread
         // communication impossible -> quit and cancel all commands with error
         synchronized(commandHashMap)
         {
-          quitFlag = true;
-
           for (Command command : commandHashMap.values())
           {
             synchronized(command)
@@ -974,7 +972,7 @@ class ReadThread extends Thread
           }
         }
 
-        if (display != null)
+        if (!quitFlag && (display != null))
         {
           display.asyncExec(new Runnable()
           {
@@ -984,10 +982,12 @@ class ReadThread extends Thread
             }
           });
         }
+
+        quitFlag = true;
       }
       catch (final SWTException exception)
       {
-        if (display != null)
+        if (!quitFlag && (display != null))
         {
           display.asyncExec(new Runnable()
           {
@@ -1017,7 +1017,7 @@ class ReadThread extends Thread
       }
       catch (final InternalError error)
       {
-        if (display != null)
+        if (!quitFlag && (display != null))
         {
           display.asyncExec(new Runnable()
           {
