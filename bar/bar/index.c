@@ -12820,33 +12820,30 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                   );
           if (error == ERROR_NONE)
           {
+            // get entry id
             entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+            // add file entry
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "INSERT INTO fileEntries \
+                                        ( \
+                                         entryId, \
+                                         size \
+                                        ) \
+                                      VALUES \
+                                        ( \
+                                         %lld, \
+                                         %llu \
+                                        ); \
+                                     ",
+                                     entryId,
+                                     size
+                                    );
           }
         }
       }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // add file entry
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "INSERT INTO fileEntries \
-                                  ( \
-                                   entryId, \
-                                   size \
-                                  ) \
-                                VALUES \
-                                  ( \
-                                   %lld, \
-                                   %llu \
-                                  ); \
-                               ",
-                               entryId,
-                               size
-                              );
       if (error != ERROR_NONE)
       {
         return error;
@@ -13025,39 +13022,36 @@ Errors Index_addImage(IndexHandle     *indexHandle,
                                   );
           if (error == ERROR_NONE)
           {
+            // get entry id
             entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+            // add image entry
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "INSERT INTO imageEntries \
+                                        ( \
+                                         entryId, \
+                                         fileSystemType, \
+                                         size, \
+                                         blockSize \
+                                        ) \
+                                      VALUES \
+                                        ( \
+                                         %lld, \
+                                         %d, \
+                                         %llu, \
+                                         %u \
+                                        ); \
+                                     ",
+                                     entryId,
+                                     fileSystemType,
+                                     size,
+                                     blockSize
+                                    );
           }
         }
       }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // add image entry
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "INSERT INTO imageEntries \
-                                  ( \
-                                   entryId, \
-                                   fileSystemType, \
-                                   size, \
-                                   blockSize \
-                                  ) \
-                                VALUES \
-                                  ( \
-                                   %lld, \
-                                   %d, \
-                                   %llu, \
-                                   %u \
-                                  ); \
-                               ",
-                               entryId,
-                               fileSystemType,
-                               size,
-                               blockSize
-                              );
       if (error != ERROR_NONE)
       {
         return error;
@@ -13520,33 +13514,30 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                                   );
           if (error == ERROR_NONE)
           {
+            // get entry id
             entryId = Database_getLastRowId(&indexHandle->databaseHandle);
+
+            // add hard link entry
+            error = Database_execute(&indexHandle->databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "INSERT INTO hardlinkEntries \
+                                        ( \
+                                         entryId, \
+                                         size \
+                                        ) \
+                                      VALUES \
+                                        ( \
+                                         %lld, \
+                                         %llu \
+                                        ); \
+                                     ",
+                                     entryId,
+                                     size
+                                    );
           }
         }
       }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      // add hard link entry
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "INSERT INTO hardlinkEntries \
-                                  ( \
-                                   entryId, \
-                                   size \
-                                  ) \
-                                VALUES \
-                                  ( \
-                                   %lld, \
-                                   %llu \
-                                  ); \
-                               ",
-                               entryId,
-                               size
-                              );
       if (error != ERROR_NONE)
       {
         return error;
