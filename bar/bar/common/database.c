@@ -54,8 +54,7 @@
 #define _DATABASE_DEBUG_LOCK
 #define _DATABASE_DEBUG_TIMEOUT
 #define _DATABASE_DEBUG_COPY_TABLE
-#warning remove/revert
-#define DATABASE_DEBUG_LOG SQLITE_TRACE_STMT
+#define _DATABASE_DEBUG_LOG SQLITE_TRACE_STMT
 
 /***************************** Constants *******************************/
 #define MAX_INTERRUPT_COPY_TABLE_COUNT 128
