@@ -3729,7 +3729,7 @@ Dprintf.dprintf("");
         try
         {
           ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
+          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=%s name=%'S newestOnly=%y selectedOnly=no fragmentsCount=no",
                                                        entryType.toString(),
                                                        name,
                                                        newestOnly
@@ -3871,7 +3871,7 @@ Dprintf.dprintf("");
         final ArrayList<EntryIndexData> entryIndexDataList = new ArrayList<EntryIndexData>();
         try
         {
-          entryTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRY_LIST entryType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no offset=%d limit=%d sortMode=%s ordering=%s",
+          entryTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_ENTRY_LIST entryType=%s name=%'S newestOnly=%y selectedOnly=no fragmentsCount=no offset=%d limit=%d sortMode=%s ordering=%s",
                                                                                 entryType.toString(),
                                                                                 name,
                                                                                 newestOnly,
@@ -5027,7 +5027,7 @@ Dprintf.dprintf("");
       table.setForeground(COLOR_FOREGROUND);
       table.setBackground(COLOR_BACKGROUND);
       table.setHeaderVisible(false);
-      Widgets.layout(table,row,1,TableLayoutData.NSWE,0,0,0,0,200,SWT.DEFAULT);
+      Widgets.layout(table,row,1,TableLayoutData.NSWE,0,0,0,0,400,SWT.DEFAULT);
       Widgets.addTableColumn(table,0,SWT.RIGHT,80, true);
       Widgets.addTableColumn(table,1,SWT.RIGHT,80, true);
       Widgets.addTableColumn(table,2,SWT.LEFT, 800,true);
@@ -9134,7 +9134,7 @@ Dprintf.dprintf("entityId=%d",entityId);
       try
       {
         // get total number of entries
-        totalEntryCount[0] = BARServer.getInt(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
+        totalEntryCount[0] = BARServer.getInt(StringParser.format("INDEX_ENTRY_LIST_INFO entryType=%s name=%'S newestOnly=%y selectedOnly=no",
                                                                   updateEntryTableThread.getEntryType().toString(),
                                                                   updateEntryTableThread.getName_(),
                                                                   updateEntryTableThread.getNewestOnly()
@@ -9187,7 +9187,7 @@ Dprintf.dprintf("entityId=%d",entityId);
           final int        n[]        = new int[]{0};
           busyDialog.setMaximum(totalEntryCount[0]);
 
-          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=%s name=%'S newestOnly=%y selectedOnly=no fragments=no",
+          BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST entryType=%s name=%'S newestOnly=%y selectedOnly=no fragmentsCount=no",
                                                        updateEntryTableThread.getEntryType().toString(),
                                                        updateEntryTableThread.getName_(),
                                                        updateEntryTableThread.getNewestOnly()
@@ -9627,7 +9627,7 @@ Dprintf.dprintf("entityId=%d",entityId);
               try
               {
                 // get total number of entries, total entry size, total content size to restore
-                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO name='' entryType=* newestOnly=no selectedOnly=yes fragments=no"),
+                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST_INFO name='' entryType=* newestOnly=no selectedOnly=yes"),
                                          1,  // debugLevel
                                          valueMap
                                         );
@@ -9654,7 +9654,7 @@ Dprintf.dprintf("entityId=%d",entityId);
                 });
 
                 // get entries to restore
-                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST newestOnly=no selectedOnly=yes fragments=no"),
+                BARServer.executeCommand(StringParser.format("INDEX_ENTRY_LIST newestOnly=no selectedOnly=yes fragmentsCount=yes"),
                                          1,  // debugLevel
                                          new Command.ResultHandler()
                                          {
