@@ -13596,141 +13596,6 @@ totalEntryContentSize=0;
   String_delete(name);
 }
 
-//TODO
-#warning remove
-#if 0
-/***********************************************************************\
-* Name   : serverCommand_indexEntryList
-* Purpose: list selected index entries
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*            fragments=yes|no
-*          Result:
-*            entryId=<n> name=<text> type=<type> size=<n> dateTime=<n>
-\***********************************************************************/
-
-LOCAL void xxxserverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  bool             fragmentsFlag;
-  String           entryName;
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          entryId;
-  const char       *type;
-  uint64           size;
-  uint64           timeModified;
-  ulong            fragmentCount;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(argumentMap);
-
-  // get fragment flag
-  if (!StringMap_getBool(argumentMap,"fragments",&fragmentsFlag,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragments=yes|no");
-    return;
-  }
-
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
-
-  // init variables
-  entryName = String_new();
-
-  // list entries
-  error = Index_initListEntries(&indexQueryHandle,
-                                indexHandle,
-                                NULL, // indexIds
-                                0, // indexIdCount
-                                Array_cArray(&clientInfo->entryIdArray),
-                                Array_length(&clientInfo->entryIdArray),
-                                INDEX_TYPE_NONE,
-                                NULL, // name
-                                FALSE,  // newestOnly,
-//TODO
-FALSE,//                                fragmentsFlag,
-                                INDEX_ENTRY_SORT_MODE_NONE,
-                                DATABASE_ORDERING_NONE,
-                                0,
-                                INDEX_UNLIMITED
-                               );
-  if (error != ERROR_NONE)
-  {
-#warning
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-exit(1);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init list storage fail");
-    String_delete(entryName);
-    return;
-  }
-  while (   !isCommandAborted(clientInfo,id)
-         && Index_getNextEntry(&indexQueryHandle,
-                               NULL,  // uuidId
-                               NULL,  // jobUUID
-                               NULL,  // entityId
-                               NULL,  // scheduleUUID
-                               NULL,  // hostName
-                               NULL,  // userName
-                               NULL,  // archiveType
-                               &entryId,
-                               entryName,
-                               NULL,  // destinationName
-                               NULL,  // fileSystemType
-                               &size,  // size
-                               &timeModified,
-                               NULL,  // userId
-                               NULL,  // groupId
-                               NULL,  // permission
-                               &fragmentCount
-                              )
-        )
-  {
-    type = "";
-    switch (Index_getType(entryId))
-    {
-      case INDEX_TYPE_FILE:      type = "FILE";      break;
-      case INDEX_TYPE_IMAGE:     type = "IMAGE";     break;
-      case INDEX_TYPE_DIRECTORY: type = "DIRECTORY"; break;
-      case INDEX_TYPE_LINK:      type = "LINK";      break;
-      case INDEX_TYPE_HARDLINK:  type = "HARDLINK";  break;
-      case INDEX_TYPE_SPECIAL:   type = "SPECIAL";   break;
-      default:
-        #ifndef NDEBUG
-          HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-        #endif /* NDEBUG */
-        break;
-    }
-
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "entryId=%"PRIu64" name=%'S type=%s size=%"PRIu64" dateTime=%"PRIu64" fragmentCount=%u",
-                        entryId,
-                        entryName,
-                        type,
-                        size,
-                        timeModified,
-                        fragmentCount
-                       );
-  }
-  Index_doneList(&indexQueryHandle);
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-
-  // free resource3s
-  String_delete(entryName);
-}
-#endif
-
 /***********************************************************************\
 * Name   : serverCommand_indexEntryListClear
 * Purpose: clear selected index entry list
@@ -13916,7 +13781,6 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
 *            entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
 *            newestOnly=yes|no
 *            selectedOnly=yes|no
-*            fragments=yes|no
 *          Result:
 *            totalEntryCount=<n>
 *            totalEntrySize=<n [bytes]>
@@ -13929,7 +13793,6 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   IndexTypes entryType;
   bool       newestOnly;
   bool       selectedOnly;
-  bool       fragmentsFlag;
   Errors     error;
   ulong      totalEntryCount;
   uint64     totalEntrySize,totalEntryContentSize;
@@ -13955,7 +13818,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryTypexxxx=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL");
     String_delete(name);
     return;
   }
@@ -13969,11 +13832,6 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"selectedOnly=yes|no");
     String_delete(name);
-    return;
-  }
-  if (!StringMap_getBool(argumentMap,"fragments",&fragmentsFlag,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragments=yes|no");
     return;
   }
 
@@ -13994,7 +13852,6 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
                                entryType,
                                name,
                                newestOnly,
-                               fragmentsFlag,
                                &totalEntryCount,
                                &totalEntrySize,
                                &totalEntryContentSize
@@ -14646,9 +14503,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     INDEX_TYPE_NONE,
                                     NULL, // name
                                     FALSE,  // newestOnly,
-//TODO
-FALSE,//                                fragmentsFlag,
-//                                    TRUE,  //fragments
+                                    FALSE,  //fragments
                                     INDEX_ENTRY_SORT_MODE_NONE,
                                     DATABASE_ORDERING_NONE,
                                     0,
@@ -15688,7 +15543,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   IndexTypes            entryType;
   bool                  newestOnly;
   bool                  selectedOnly;
-  bool                  fragments;
+  bool                  fragmentsCount;
   uint64                offset;
   uint64                limit;
   IndexStorageSortModes sortMode;
@@ -15743,7 +15598,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
     String_delete(name);
     return;
   }
-  if (!StringMap_getBool(argumentMap,"fragments",&fragments,FALSE))
+  if (!StringMap_getBool(argumentMap,"fragmentsCount",&fragmentsCount,FALSE))
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragments=yes|no");
     String_delete(name);
@@ -15768,6 +15623,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   hostName        = String_new();
   entryName       = String_new();
   destinationName = String_new();
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx %d\n",__FILE__,__LINE__,fragmentsCount);
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
                                 Array_cArray(&clientInfo->indexIdArray),
@@ -15777,7 +15633,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
                                 entryType,
                                 name,
                                 newestOnly,
-                                fragments,
+                                fragmentsCount,
                                 sortMode,
                                 ordering,
                                 offset,

@@ -1578,7 +1578,6 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 *          userName         - user name (can be NULL)
 *          hostName         - host name (can be NULL)
 *          name             - name (can be NULL)
-*          fragmentsFlag    - TRUE to list all fragments
 *          sortMode         - sort mode; see IndexStorageSortModes
 *          ordering         - ordering
 *          offset           - offset or 0
@@ -1839,7 +1838,6 @@ Errors Index_storageUpdate(IndexHandle *indexHandle,
 *          indexTypes       - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
 *          newestOnly       - TRUE for newest entries only
-*          fragmentsFlag    - TRUE to get distinct fragment info
 * Output : totalEntryCount       - total entry count (can be NULL)
 *          totalEntrySize        - total size [bytes] (can be NULL)
 *          totalEntryContentSize - total size including directory
@@ -1856,7 +1854,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                             IndexTypes    indexType,
                             ConstString   name,
                             bool          newestOnly,
-                            bool          fragmentsFlag,
                             ulong         *totalEntryCount,
                             uint64        *totalEntrySize,
                             uint64        *totalEntryContentSize
@@ -1873,8 +1870,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
 *          entryIdCount     - entry id count or 0
 *          indexType        - index type or INDEX_TYPE_NONE
 *          name             - name pattern (glob, can be NULL)
-*          fragmentsFlag    - TRUE to list all fragments
 *          newestOnly       - TRUE for newest entries only
+*          fragmentsCount   - TRUE to get fragments count
 *          sortMode         - sort mode; see IndexStorageSortModes
 *          ordering         - ordering
 *          offset           - offset or 0
@@ -1894,7 +1891,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
                              IndexTypes          indexType,
                              ConstString         name,
                              bool                newestOnly,
-                             bool                fragmentsFlag,
+                             bool                fragmentsCount,
                              IndexEntrySortModes sortMode,
                              DatabaseOrdering    ordering,
                              uint64              offset,
