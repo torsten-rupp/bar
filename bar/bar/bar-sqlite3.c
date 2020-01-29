@@ -2290,32 +2290,32 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                       CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                       NULL,  // changedRowCount
                                                       "UPDATE storages \
-                                                       SET totalFileCount     =(SELECT COUNT(entries.id) \
+                                                       SET totalFileCount     =(SELECT COUNT(DISTINCT entries.id) \
                                                                                 FROM entries \
                                                                                   LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                 WHERE entries.type=%d AND entryFragments.storageId=%lld \
                                                                                ), \
-                                                           totalImageCount    =(SELECT COUNT(entries.id) \
+                                                           totalImageCount    =(SELECT COUNT(DISTINCT entries.id) \
                                                                                 FROM entries \
                                                                                   LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                 WHERE entries.type=%d AND entryFragments.storageId=%lld \
                                                                                ), \
-                                                           totalDirectoryCount=(SELECT COUNT(entries.id) \
+                                                           totalDirectoryCount=(SELECT COUNT(DISTINCT entries.id) \
                                                                                 FROM entries \
                                                                                   LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
                                                                                 WHERE entries.type=%d AND directoryEntries.storageId=%lld \
                                                                                ), \
-                                                           totalLinkCount     =(SELECT COUNT(entries.id) \
+                                                           totalLinkCount     =(SELECT COUNT(DISTINCT entries.id) \
                                                                                 FROM entries \
                                                                                   LEFT JOIN linkEntries      ON linkEntries.entryId     =entries.id \
                                                                                 WHERE entries.type=%d AND linkEntries.storageId=%lld \
                                                                                ), \
-                                                           totalHardlinkCount =(SELECT COUNT(entries.id) \
+                                                           totalHardlinkCount =(SELECT COUNT(DISTINCT entries.id) \
                                                                                 FROM entries \
                                                                                   LEFT JOIN entryFragments   ON entryFragments.entryId  =entries.id \
                                                                                 WHERE entries.type=%d AND entryFragments.storageId=%lld \
                                                                                ), \
-                                                           totalSpecialCount  =(SELECT COUNT(entries.id) \
+                                                           totalSpecialCount  =(SELECT COUNT(DISTINCT entries.id) \
                                                                                 FROM entries \
                                                                                   LEFT JOIN specialEntries   ON specialEntries.entryId  =entries.id \
                                                                                 WHERE entries.type=%d AND specialEntries.storageId=%lld \
