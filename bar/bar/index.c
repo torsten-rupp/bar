@@ -10433,7 +10433,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(entriesNewest.id), \
-0,\
                                          TOTAL(entriesNewest.size) \
                                   FROM FTS_entries \
                                     LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
@@ -10442,11 +10441,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                   WHERE     entities.deletedFlag!=1 \
                                         AND entriesNewest.id IS NOT NULL \
                                         AND %S \
-                                  %s \
                                  ",
-                                 filterString,
-//TODO
-""//                                 !fragmentsCount ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                 filterString
                                 );
       }
       else
@@ -10454,7 +10450,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
         error = Database_prepare(&databaseQueryHandle,
                                  &indexHandle->databaseHandle,
                                  "SELECT COUNT(entries.id), \
-123,\
                                          TOTAL(entries.size) \
                                   FROM FTS_entries \
                                     LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
@@ -10462,11 +10457,8 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                     LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
                                   WHERE     entities.deletedFlag!=1 \
                                         AND %S \
-                                  %s \
                                  ",
-                                 filterString,
-//TODO
-""//                                 !fragmentsCount ? "GROUP BY entities.id,entries.type,entries.name" : ""
+                                 filterString
                                 );
       }
       if (error != ERROR_NONE)
@@ -11413,81 +11405,6 @@ bool Index_getNextFile(IndexQueryHandle *indexQueryHandle,
   return TRUE;
 }
 
-#if 0
-//TODO: obsolete
-Errors Index_deleteFile(IndexHandle *indexHandle,
-                        IndexId     indexId
-                       )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_FILE);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM fileEntries WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE id=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalFileCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalFileSize<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-#endif
-
 Errors Index_initListImages(IndexQueryHandle *indexQueryHandle,
                             IndexHandle      *indexHandle,
                             const IndexId    entityIds[],
@@ -11641,81 +11558,6 @@ bool Index_getNextImage(IndexQueryHandle *indexQueryHandle,
   return TRUE;
 }
 
-#if 0
-//TODO: obsolete
-Errors Index_deleteImage(IndexHandle *indexHandle,
-                         IndexId     indexId
-                        )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_IMAGE);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM imageEntries WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE id=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalImageCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalImageSize<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-#endif
-
 Errors Index_initListDirectories(IndexQueryHandle *indexQueryHandle,
                                  IndexHandle      *indexHandle,
                                  const IndexId    entityIds[],
@@ -11857,81 +11699,6 @@ bool Index_getNextDirectory(IndexQueryHandle *indexQueryHandle,
 
   return TRUE;
 }
-
-#if 0
-//TODO: obsolete
-Errors Index_deleteDirectory(IndexHandle *indexHandle,
-                             IndexId     indexId
-                            )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_DIRECTORY);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  INDEX_DOX(error,
-            indexHandle,
-            SEMAPHORE_LOCK_TYPE_READ_WRITE,
-  {
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM directoryEntries WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE id=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalDirectoryCount<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-#endif
 
 Errors Index_initListLinks(IndexQueryHandle *indexQueryHandle,
                            IndexHandle      *indexHandle,
@@ -12078,80 +11845,6 @@ bool Index_getNextLink(IndexQueryHandle *indexQueryHandle,
   return TRUE;
 }
 
-#if 0
-//TODO: obsolete
-Errors Index_deleteLink(IndexHandle *indexHandle,
-                        IndexId     indexId
-                       )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_LINK);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM linkEntries WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE id=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalLinkCount<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-#endif
-
 Errors Index_initListHardLinks(IndexQueryHandle *indexQueryHandle,
                                IndexHandle      *indexHandle,
                                const IndexId    entityIds[],
@@ -12296,81 +11989,6 @@ bool Index_getNextHardLink(IndexQueryHandle *indexQueryHandle,
   return TRUE;
 }
 
-#if 0
-//TODO: obsolete
-Errors Index_deleteHardLink(IndexHandle *indexHandle,
-                            IndexId     indexId
-                           )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_HARDLINK);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM hardlinkEntries WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE id=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalHardlinkCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalHardlinkSize<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-#endif
-
 Errors Index_initListSpecial(IndexQueryHandle *indexQueryHandle,
                              IndexHandle      *indexHandle,
                              const IndexId    entityIds[],
@@ -12511,80 +12129,6 @@ bool Index_getNextSpecial(IndexQueryHandle *indexQueryHandle,
 
   return TRUE;
 }
-
-#if 0
-//TODO: obsolete
-Errors Index_deleteSpecial(IndexHandle *indexHandle,
-                           IndexId     indexId
-                          )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_getType(indexId) == INDEX_TYPE_SPECIAL);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  INDEX_DOX(error,
-            indexHandle,
-  {
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
-
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM specialEntries WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entriesNewest WHERE entryId=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "DELETE FROM entries WHERE id=%lld;",
-                             Index_getDatabaseId(indexId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-      return error;
-    }
-
-    #ifndef NDEBUG
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalEntrySize<0");
-      verify(indexHandle,"storages","COUNT(id)",0,"WHERE totalSpecialCount<0");
-
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntryCount<0");
-      verify(indexHandle,"directoryEntries","COUNT(id)",0,"WHERE totalEntrySize<0");
-    #endif /* not NDEBUG */
-
-    (void)Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
-
-    return ERROR_NONE;
-  });
-
-  return error;
-}
-#endif
 
 void Index_doneList(IndexQueryHandle *indexQueryHandle)
 {
@@ -13785,7 +13329,6 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignJobToEntity");
                                                );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
