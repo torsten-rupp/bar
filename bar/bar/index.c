@@ -1,4 +1,4 @@
-/***********************************************************************\
+ /***********************************************************************\
 *
 * $Revision$
 * $Date$
@@ -3843,9 +3843,6 @@ LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
   Database_finalize(&databaseQueryHandle);
 
   // update entity aggregate data
-#warning
-fprintf(stderr,"%s, %d: aggregate entityId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,entityId,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
-//if ((totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize) == 0) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -13216,13 +13213,11 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-#warning remove/revert
   if (indexHandle->masterIO == NULL)
   {
-#warning remove/revert
-//    INDEX_DOX(error,
-//              indexHandle,
-//    {
+    INDEX_DOX(error,
+              indexHandle,
+    {
       if      (toJobUUID != NULL)
       {
         if (!INDEX_ID_IS_NONE(entityId) && !INDEX_ID_IS_DEFAULT_ENTITY(entityId))
@@ -13237,7 +13232,6 @@ Errors Index_assignTo(IndexHandle  *indexHandle,
                                    );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
@@ -13252,7 +13246,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                                 );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
@@ -13272,7 +13265,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                                        );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
@@ -13289,7 +13281,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                                       );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
         }
@@ -13306,7 +13297,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                                    );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
 #else
@@ -13346,7 +13336,6 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignJobToEntity");
                                        );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
 #else
@@ -13365,7 +13354,6 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignEntityToStorage");
                                     );
           if (error != ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
             return error;
           }
 #else
@@ -13385,7 +13373,7 @@ return ERRORX_(STILL_NOT_IMPLEMENTED,0,"assignJobToStorage");
       #endif /* not NDEBUG */
 
       return ERROR_NONE;
-//    });
+    });
   }
   else
   {
