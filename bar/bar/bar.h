@@ -747,6 +747,26 @@ INLINE bool isKeyAvailable(const Key *key)
 }
 #endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
 
+/***********************************************************************\
+* Name   : keyEquals
+* Purpose: check if public/private key equals
+* Input  : key0,key1 - keys
+* Output : -
+* Return : TRUE iff keys equals
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool keyEquals(const Key *key0, const Key *key1);
+#if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
+INLINE bool keyEquals(const Key *key0, const Key *key1)
+{
+  assert(key0 != NULL);
+  assert(key1 != NULL);
+
+  return memEquals(key0->data,key0->length,key1->data,key1->length);
+}
+#endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
+
 // ----------------------------------------------------------------------
 
 /***********************************************************************\
