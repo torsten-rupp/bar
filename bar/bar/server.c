@@ -3752,16 +3752,24 @@ LOCAL void addIndexCryptPasswordNode(IndexCryptPasswordList *indexCryptPasswordL
 {
   IndexCryptPasswordNode *indexCryptPasswordNode;
 
-  indexCryptPasswordNode = LIST_NEW_NODE(IndexCryptPasswordNode);
-  if (indexCryptPasswordNode == NULL)
+  if (!LIST_CONTAINS(indexCryptPasswordList,
+                     indexCryptPasswordNode,
+                        Password_equals(indexCryptPasswordNode->cryptPassword,cryptPassword)
+                     && keyEquals(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey)
+                    )
+     )
   {
-    return;
+    indexCryptPasswordNode = LIST_NEW_NODE(IndexCryptPasswordNode);
+    if (indexCryptPasswordNode == NULL)
+    {
+      return;
+    }
+
+    indexCryptPasswordNode->cryptPassword = Password_duplicate(cryptPassword);
+    duplicateKey(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
+
+    List_append(indexCryptPasswordList,indexCryptPasswordNode);
   }
-
-  indexCryptPasswordNode->cryptPassword = Password_duplicate(cryptPassword);
-  duplicateKey(&indexCryptPasswordNode->cryptPrivateKey,cryptPrivateKey);
-
-  List_append(indexCryptPasswordList,indexCryptPasswordNode);
 }
 
 /***********************************************************************\
@@ -3888,9 +3896,6 @@ LOCAL void indexThreadCode(void)
       if (Index_isInitialized())
       {
         // get all job crypt passwords and crypt private keys (including no password and default crypt password)
-        addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);
-#warning
-//        addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
         {
           JOB_LIST_ITERATE(jobNode)
@@ -3901,6 +3906,9 @@ LOCAL void indexThreadCode(void)
             }
           }
         }
+        addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);  // no password
+#warning
+//        addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
 
         // update index entries
         while (   !quitFlag
@@ -3957,6 +3965,30 @@ LOCAL void indexThreadCode(void)
                               );
           if (error == ERROR_NONE)
           {
+            // index archive contents
+            printInfo(4,"Start create index for '%s'\n",String_cString(printableStorageName));
+            plogMessage(NULL,  // logHandle
+                        LOG_TYPE_INDEX,
+                        "INDEX",
+                        "Start create index for '%s'",
+                        String_cString(printableStorageName)
+                       );
+
+            // lock entity
+            if (!INDEX_ID_IS_NONE(entityId))
+            {
+              // lock
+              Index_lockEntity(indexHandle,entityId);
+            }
+
+            // set state 'update'
+            Index_setStorageState(indexHandle,
+                                  storageId,
+                                  INDEX_STATE_UPDATE,
+                                  0LL,  // lastCheckedDateTime
+                                  NULL  // errorMessage
+                                 );
+
             // try to create index
             LIST_ITERATE(&indexCryptPasswordList,indexCryptPasswordNode)
             {
@@ -3966,7 +3998,6 @@ LOCAL void indexThreadCode(void)
 
               // index update
               startTimestamp = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA %s\n",__FILE__,__LINE__,String_cString(storageName));
               error = Archive_updateIndex(indexHandle,
                                           uuidId,
                                           entityId,
@@ -3978,7 +4009,6 @@ fprintf(stderr,"%s, %d: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA %s\n",__FILE_
                                           CALLBACK_(indexAbortCallback,NULL),
                                           NULL  // logHandle
                                          );
-fprintf(stderr,"%s, %d: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n",__FILE__,__LINE__);
               endTimestamp = Misc_getTimestamp();
 
               // stop if done, interrupted, or quit
@@ -3991,50 +4021,82 @@ fprintf(stderr,"%s, %d: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n",__FILE__,__
               }
             }
 
+            // set index state
+            if      (error == ERROR_NONE)
+            {
+              // done
+              printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
+              (void)Index_setStorageState(indexHandle,
+                                          storageId,
+                                          INDEX_STATE_OK,
+                                          Misc_getCurrentDateTime(),
+                                          NULL  // errorMessage
+                                         );
+              plogMessage(NULL,  // logHandle,
+                          LOG_TYPE_INDEX,
+                          "INDEX",
+                          "Done index for '%s', %"PRIu64" entries/%.1f%s (%"PRIu64" bytes), %lumin:%02lus",
+                          String_cString(printableStorageName),
+                          totalEntryCount,
+                          BYTES_SHORT(totalEntrySize),
+                          BYTES_UNIT(totalEntrySize),
+                          totalEntrySize,
+                          ((endTimestamp-startTimestamp)/US_PER_SECOND)/60,
+                          ((endTimestamp-startTimestamp)/US_PER_SECOND)%60
+                         );
+            }
+            else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
+            {
+              // interrupt
+              (void)Index_setStorageState(indexHandle,
+                                          storageId,
+                                          INDEX_STATE_UPDATE_REQUESTED,
+                                          0LL,  // lastCheckedTimestamp
+                                          NULL  // errorMessage
+                                         );
+            }
+            else
+            {
+              // error
+              printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
+              (void)Index_setStorageState(indexHandle,
+                                          storageId,
+                                          INDEX_STATE_ERROR,
+                                          0LL,  // lastCheckedDateTime
+                                          "%s (error code: %d)",
+                                          Error_getText(error),
+                                          Error_getCode(error)
+                                         );
+              plogMessage(NULL,  // logHandle
+                          LOG_TYPE_INDEX,
+                          "INDEX",
+                          "Failed to create index for '%s' (error: %s)",
+                          String_cString(printableStorageName),
+                          Error_getText(error)
+                         );
+            }
+
+            // update infos, unlock entity (if exists)
+            if (!INDEX_ID_IS_NONE(entityId))
+            {
+              // unlock
+              Index_unlockEntity(indexHandle,entityId);
+            }
+
             // done storage
             (void)Storage_done(&storageInfo);
           }
           else
           {
-            Index_setState(indexHandle,
-                           storageId,
-                           INDEX_STATE_ERROR,
-                           0LL,
-                           "Cannot initialise storage (error: %s)",
-                           Error_getText(error)
-                          );
+            Index_setStorageState(indexHandle,
+                                  storageId,
+                                  INDEX_STATE_ERROR,
+                                  0LL,
+                                  "Cannot initialise storage (error: %s)",
+                                  Error_getText(error)
+                                 );
           }
           Job_doneOptions(&jobOptions);
-
-          if (error == ERROR_NONE)
-          {
-            plogMessage(NULL,  // logHandle,
-                        LOG_TYPE_INDEX,
-                        "INDEX",
-                        "Created index for '%s', %"PRIu64" entries/%.1f%s (%"PRIu64" bytes), %lumin:%02lus",
-                        String_cString(printableStorageName),
-                        totalEntryCount,
-                        BYTES_SHORT(totalEntrySize),
-                        BYTES_UNIT(totalEntrySize),
-                        totalEntrySize,
-                        ((endTimestamp-startTimestamp)/US_PER_SECOND)/60,
-                        ((endTimestamp-startTimestamp)/US_PER_SECOND)%60
-                       );
-          }
-          else if (Error_getCode(error) == ERROR_CODE_INTERRUPTED)
-          {
-            // nothing to do
-          }
-          else
-          {
-            plogMessage(NULL,  // logHandle,
-                        LOG_TYPE_INDEX,
-                        "INDEX",
-                        "Cannot create index for '%s' (error: %s)",
-                        String_cString(printableStorageName),
-                        Error_getText(error)
-                       );
-          }
         }
 
         // free resources
@@ -4254,15 +4316,16 @@ LOCAL void autoIndexThreadCode(void)
                                                                         )
                                                 )
                                              {
+                                               // already in index -> check if modified/state
                                                if      (fileInfo->timeModified > lastCheckedDateTime)
                                                {
-                                                 // request update index
-                                                 error = Index_setState(indexHandle,
-                                                                        storageId,
-                                                                        INDEX_STATE_UPDATE_REQUESTED,
-                                                                        Misc_getCurrentDateTime(),
-                                                                        NULL
-                                                                       );
+                                                 // modified -> request update index
+                                                 error = Index_setStorageState(indexHandle,
+                                                                               storageId,
+                                                                               INDEX_STATE_UPDATE_REQUESTED,
+                                                                               Misc_getCurrentDateTime(),
+                                                                               NULL
+                                                                              );
                                                  if (error == ERROR_NONE)
                                                  {
                                                    plogMessage(NULL,  // logHandle,
@@ -4276,12 +4339,12 @@ LOCAL void autoIndexThreadCode(void)
                                                else if (indexState == INDEX_STATE_OK)
                                                {
                                                  // set last checked date/time
-                                                 error = Index_setState(indexHandle,
-                                                                        storageId,
-                                                                        INDEX_STATE_OK,
-                                                                        Misc_getCurrentDateTime(),
-                                                                        NULL
-                                                                       );
+                                                 error = Index_setStorageState(indexHandle,
+                                                                               storageId,
+                                                                               INDEX_STATE_OK,
+                                                                               Misc_getCurrentDateTime(),
+                                                                               NULL
+                                                                              );
                                                }
                                              }
                                              else
@@ -15623,7 +15686,6 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   hostName        = String_new();
   entryName       = String_new();
   destinationName = String_new();
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx %d\n",__FILE__,__LINE__,fragmentsCount);
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
                                 Array_cArray(&clientInfo->indexIdArray),
@@ -15641,8 +15703,6 @@ fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx %d\n",__FILE__,__LINE__,fragmentsCount);
                                );
   if (error != ERROR_NONE)
   {
-#warning remove
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init list entries fail");
     String_delete(destinationName);
     String_delete(entryName);
@@ -16170,12 +16230,12 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         {
           if (forceRefresh)
           {
-            error = Index_setState(indexHandle,
-                                   storageId,
-                                   INDEX_STATE_UPDATE_REQUESTED,
-                                   Misc_getCurrentDateTime(),
-                                   NULL
-                                  );
+            error = Index_setStorageState(indexHandle,
+                                          storageId,
+                                          INDEX_STATE_UPDATE_REQUESTED,
+                                          Misc_getCurrentDateTime(),
+                                          NULL
+                                         );
             if (error == ERROR_NONE)
             {
               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
@@ -16257,12 +16317,12 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                  {
                                    if (forceRefresh)
                                    {
-                                     error = Index_setState(indexHandle,
-                                                            storageId,
-                                                            INDEX_STATE_UPDATE_REQUESTED,
-                                                            Misc_getCurrentDateTime(),
-                                                            NULL
-                                                           );
+                                     error = Index_setStorageState(indexHandle,
+                                                                   storageId,
+                                                                   INDEX_STATE_UPDATE_REQUESTED,
+                                                                   Misc_getCurrentDateTime(),
+                                                                   NULL
+                                                                  );
                                      if (error == ERROR_NONE)
                                      {
                                        ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
@@ -17007,12 +17067,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   // set state for collected storage ids
   ARRAY_ITERATE(&storageIdArray,i,storageId)
   {
-    error = Index_setState(indexHandle,
-                           storageId,
-                           INDEX_STATE_UPDATE_REQUESTED,
-                           0LL,
-                           NULL
-                          );
+    error = Index_setStorageState(indexHandle,
+                                  storageId,
+                                  INDEX_STATE_UPDATE_REQUESTED,
+                                  0LL,
+                                  NULL
+                                 );
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"set storage state fail");

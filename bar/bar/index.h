@@ -941,8 +941,8 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                              );
 
 /***********************************************************************\
-* Name   : Index_getState
-* Purpose: get index state
+* Name   : Index_getStorageState
+* Purpose: get index storage state
 * Input  : indexHandle - index handle
 *          storageId   - index id of storage
 * Output : indexState          - index state; see IndexStates
@@ -953,15 +953,15 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_getState(IndexHandle  *indexHandle,
-                      IndexId      storageId,
-                      IndexStates  *indexState,
-                      uint64       *lastCheckedDateTime,
-                      String       errorMessage
-                     );
+Errors Index_getStorageState(IndexHandle  *indexHandle,
+                             IndexId      storageId,
+                             IndexStates  *indexState,
+                             uint64       *lastCheckedDateTime,
+                             String       errorMessage
+                            );
 
 /***********************************************************************\
-* Name   : Index_setState
+* Name   : Index_setStorageState
 * Purpose: set storage index state
 * Input  : indexHandle         - index handle
 *          storageId           - index id of storage
@@ -975,16 +975,16 @@ Errors Index_getState(IndexHandle  *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_setState(IndexHandle *indexHandle,
-                      IndexId     storageId,
-                      IndexStates indexState,
-                      uint64      lastCheckedDateTime,
-                      const char  *errorMessage,
-                      ...
-                     );
+Errors Index_setStorageState(IndexHandle *indexHandle,
+                             IndexId     storageId,
+                             IndexStates indexState,
+                             uint64      lastCheckedDateTime,
+                             const char  *errorMessage,
+                             ...
+                            );
 
 /***********************************************************************\
-* Name   : Index_countState
+* Name   : Index_countStorageState
 * Purpose: get number of storage entries with specific state
 * Input  : indexHandle - index handle
 *          indexState  - index state; see IndexStates
@@ -993,9 +993,9 @@ Errors Index_setState(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-long Index_countState(IndexHandle *indexHandle,
-                      IndexStates indexState
-                     );
+long Index_countStorageState(IndexHandle *indexHandle,
+                             IndexStates indexState
+                            );
 
 // ---------------------------------------------------------------------
 

@@ -57,7 +57,7 @@
 #endif
 
 #ifndef NDEBUG
-  #define INDEX_DEBUG_LIST_INFO
+  #define _INDEX_DEBUG_LIST_INFO
 #endif
 
 /***************************** Constants *******************************/
@@ -1310,12 +1310,12 @@ LOCAL Errors cleanUpIncompleteUpdate(IndexHandle *indexHandle)
         String_set(printableStorageName,storageName);
       }
 
-      error = Index_setState(indexHandle,
-                             indexId,
-                             INDEX_STATE_UPDATE_REQUESTED,
-                             0LL,
-                             NULL
-                            );
+      error = Index_setStorageState(indexHandle,
+                                    indexId,
+                                    INDEX_STATE_UPDATE_REQUESTED,
+                                    0LL,
+                                    NULL
+                                   );
       if (error == ERROR_NONE)
       {
         plogMessage(NULL,  // logHandle
@@ -2041,13 +2041,18 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
                        DatabaseId  uuidId
                       )
 {
-  Array         entityIds;
+//  Array         entityIds;
   Errors        error;
+#if 0
   ArrayIterator arrayIterator;
   DatabaseId    entityId;
+#endif
 
   assert(indexHandle != NULL);
   assert(uuidId != DATABASE_ID_NONE);
+
+UNUSED_VARIABLE(doneFlag);
+UNUSED_VARIABLE(deletedCounter);
 
 #warning remove
 #if 0
@@ -2218,9 +2223,6 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
 {
   int64               lockedCount;
   Errors              error;
-  Array               databaseIds;
-  ArrayIterator       arrayIterator;
-  DatabaseId          databaseId;
   DatabaseQueryHandle databaseQueryHandle;
   DatabaseId          uuidId;
   StaticString        (jobUUID,MISC_UUID_STRING_LENGTH);
@@ -2397,6 +2399,62 @@ LOCAL Errors pruneEntities(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
+
+/***********************************************************************\
+* Name   : getStorageState
+* Purpose: get index storage state
+* Input  : indexHandle - index handle
+*          storageId   - index id of storage
+* Output : indexState          - index state; see IndexStates
+*          lastCheckedDateTime - last checked date/time stamp [s] (can
+*                                be NULL)
+*          errorMessage        - error message (can be NULL)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getStorageState(IndexHandle *indexHandle,
+                             DatabaseId  storageId,
+                             IndexStates *indexState,
+                             uint64      *lastCheckedDateTime,
+                             String      errorMessage
+                            )
+{
+  Errors              error;
+  DatabaseQueryHandle databaseQueryHandle;
+
+  error = Database_prepare(&databaseQueryHandle,
+                           &indexHandle->databaseHandle,
+                           "SELECT state, \
+                                   UNIXTIMESTAMP(lastChecked), \
+                                   errorMessage \
+                            FROM storages \
+                            WHERE id=%lld \
+                           ",
+                           storageId
+                          );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  if (!Database_getNextRow(&databaseQueryHandle,
+                           "%d %llu %S",
+                           indexState,
+                           lastCheckedDateTime,
+                           errorMessage
+                          )
+     )
+  {
+    (*indexState) = INDEX_STATE_UNKNOWN;
+    if (errorMessage != NULL) String_clear(errorMessage);
+  }
+
+  Database_finalize(&databaseQueryHandle);
+
+  return ERROR_NONE;
+}
+
 /***********************************************************************\
 * Name   : isEmptyStorage
 * Purpose: check if storage if empty
@@ -2454,6 +2512,7 @@ LOCAL Errors pruneStorage(IndexHandle *indexHandle,
                           DatabaseId  storageId
                          )
 {
+  IndexStates         indexState;
   String              name;
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
@@ -2462,9 +2521,20 @@ LOCAL Errors pruneStorage(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(storageId != DATABASE_ID_NONE);
 
-  // prune storage if empty and not in use
-//TODO: how to check in use?
-  if (isEmptyStorage(indexHandle,storageId))
+  // get storage state
+  error = getStorageState(indexHandle,
+                          storageId,
+                          &indexState,
+                          NULL,  // lastCheckedDateTime
+                          NULL  // errorMessage
+                         );
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+
+  // prune storage if not in error state/in use and empty
+  if ((indexState == INDEX_STATE_OK) && isEmptyStorage(indexHandle,storageId))
   {
     // init variables
     name = String_new();
@@ -4053,7 +4123,6 @@ LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
   Database_finalize(&databaseQueryHandle);
 
   // update newest aggregate data
-fprintf(stderr,"%s, %d: aggregate newest entityId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,entityId,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -4086,6 +4155,7 @@ fprintf(stderr,"%s, %d: aggregate newest entityId=%ld: %"PRIu64" %"PRIu64"\n",__
                           );
   if (error != ERROR_NONE)
   {
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -4300,7 +4370,6 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   Database_finalize(&databaseQueryHandle);
 
   // update aggregate data
-fprintf(stderr,"%s, %d: aggregate storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,storageId,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -4511,7 +4580,6 @@ fprintf(stderr,"%s, %d: aggregate storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__
   Database_finalize(&databaseQueryHandle);
 
   // update newest aggregate data
-fprintf(stderr,"%s, %d: aggregate newest storageId=%ld: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,storageId,totalFileCount+totalImageCount+totalDirectoryCount+totalLinkCount+totalHardlinkCount+totalSpecialCount,totalFileSize+totalImageSize+totalHardlinkSize);
   error = Database_execute(&indexHandle->databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -6671,15 +6739,14 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
   return result;
 }
 
-Errors Index_getState(IndexHandle *indexHandle,
-                      IndexId     storageId,
-                      IndexStates *indexState,
-                      uint64      *lastCheckedDateTime,
-                      String      errorMessage
-                     )
+Errors Index_getStorageState(IndexHandle *indexHandle,
+                             IndexId     storageId,
+                             IndexStates *indexState,
+                             uint64      *lastCheckedDateTime,
+                             String      errorMessage
+                            )
 {
-  Errors              error;
-  DatabaseQueryHandle databaseQueryHandle;
+  Errors error;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -6693,48 +6760,24 @@ Errors Index_getState(IndexHandle *indexHandle,
   INDEX_DOX(error,
             indexHandle,
   {
-    error = Database_prepare(&databaseQueryHandle,
-                             &indexHandle->databaseHandle,
-                             "SELECT state, \
-                                     UNIXTIMESTAMP(lastChecked), \
-                                     errorMessage \
-                              FROM storages \
-                              WHERE id=%lld \
-                             ",
-                             Index_getDatabaseId(storageId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-
-    if (!Database_getNextRow(&databaseQueryHandle,
-                             "%d %llu %S",
-                             indexState,
-                             lastCheckedDateTime,
-                             errorMessage
-                            )
-       )
-    {
-      (*indexState) = INDEX_STATE_UNKNOWN;
-      if (errorMessage != NULL) String_clear(errorMessage);
-    }
-
-    Database_finalize(&databaseQueryHandle);
-
-    return ERROR_NONE;
+    return getStorageState(indexHandle,
+                           Index_getDatabaseId(storageId),
+                           indexState,
+                           lastCheckedDateTime,
+                           errorMessage
+                          );
   });
 
   return error;
 }
 
-Errors Index_setState(IndexHandle *indexHandle,
-                      IndexId     indexId,
-                      IndexStates indexState,
-                      uint64      lastCheckedDateTime,
-                      const char  *errorMessage,
-                      ...
-                     )
+Errors Index_setStorageState(IndexHandle *indexHandle,
+                             IndexId     indexId,
+                             IndexStates indexState,
+                             uint64      lastCheckedDateTime,
+                             const char  *errorMessage,
+                             ...
+                            )
 {
   Errors  error;
   va_list arguments;
@@ -6909,9 +6952,9 @@ Errors Index_setState(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-long Index_countState(IndexHandle *indexHandle,
-                      IndexStates indexState
-                     )
+long Index_countStorageState(IndexHandle *indexHandle,
+                             IndexStates indexState
+                            )
 {
   Errors              error;
   DatabaseQueryHandle databaseQueryHandle;
@@ -9577,9 +9620,13 @@ bool Index_isEmptyStorage(IndexHandle *indexHandle,
 
   if (indexHandle->masterIO == NULL)
   {
-    emptyFlag = isEmptyStorage(indexHandle,
-                               Index_getDatabaseId(storageId)
-                              );
+    INDEX_DOX(emptyFlag,
+              indexHandle,
+    {
+      return isEmptyStorage(indexHandle,
+                            Index_getDatabaseId(storageId)
+                           );
+    });
   }
   else
   {
@@ -9760,9 +9807,6 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                        );
         }
       }
-#ifndef NDEBUG
-fprintf(stderr,"%s, %d: 3 directory/link/special done=%d deletedCounter=%lu\n",__FILE__,__LINE__,doneFlag,deletedCounter);
-#endif
     }
 
     // end transaction

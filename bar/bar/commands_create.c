@@ -4850,12 +4850,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
            )
         {
           // set index database state
-          error = Index_setState(createInfo->indexHandle,
-                                 storageId,
-                                 INDEX_STATE_CREATE,
-                                 0LL,  // lastCheckedDateTime
-                                 NULL // errorMessage
-                                );
+          error = Index_setStorageState(createInfo->indexHandle,
+                                        storageId,
+                                        INDEX_STATE_CREATE,
+                                        0LL,  // lastCheckedDateTime
+                                        NULL // errorMessage
+                                       );
           if (error != ERROR_NONE)
           {
             if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
@@ -4865,12 +4865,12 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
           AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
           {
-            (void)Index_setState(createInfo->indexHandle,
-                                 storageId,
-                                 INDEX_STATE_ERROR,
-                                 0LL,  // lastCheckedDateTime
-                                 NULL // errorMessage
-                                );
+            (void)Index_setStorageState(createInfo->indexHandle,
+                                        storageId,
+                                        INDEX_STATE_ERROR,
+                                        0LL,  // lastCheckedDateTime
+                                        NULL // errorMessage
+                                       );
           });
 
           // append index: assign storage index entries to existing storage index
@@ -5039,14 +5039,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         // set index database state and time stamp
         if (error == ERROR_NONE)
         {
-          error = Index_setState(createInfo->indexHandle,
-                                 storageId,
-                                 ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
-                                   ? INDEX_STATE_OK
-                                   : INDEX_STATE_ERROR,
-                                 Misc_getCurrentDateTime(),
-                                 NULL // errorMessage
-                                );
+          error = Index_setStorageState(createInfo->indexHandle,
+                                        storageId,
+                                        ((createInfo->failError == ERROR_NONE) && !isAborted(createInfo))
+                                          ? INDEX_STATE_OK
+                                          : INDEX_STATE_ERROR,
+                                        Misc_getCurrentDateTime(),
+                                        NULL // errorMessage
+                                       );
         }
         if (error != ERROR_NONE)
         {

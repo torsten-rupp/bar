@@ -2484,13 +2484,13 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
   if (indexHandle != NULL)
   {
     // set state
-    error = Index_setState(indexHandle,
-                           indexId,
-                           indexState,
-                           lastCheckedDateTime,
-                           "%s",
-                           String_cString(errorMessage)
-                          );
+    error = Index_setStorageState(indexHandle,
+                                  indexId,
+                                  indexState,
+                                  lastCheckedDateTime,
+                                  "%s",
+                                  String_cString(errorMessage)
+                                 );
     if (error != ERROR_NONE)
     {
       sendResult(connectorInfo,id,TRUE,error,"%s",Error_getData(error));

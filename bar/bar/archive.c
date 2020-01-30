@@ -6459,7 +6459,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
             Crypt_doneKey(&privateCryptKey);
             return FALSE;
           }
-// Password_dump(archiveHandle->cryptPassword);
+
           // free resources
           Crypt_doneKey(&privateCryptKey);
         }
@@ -14529,6 +14529,13 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   assert(indexHandle != NULL);
   assert(storageInfo != NULL);
 
+  // lock entity
+  if (!INDEX_ID_IS_NONE(entityId))
+  {
+    // lock
+    Index_lockEntity(indexHandle,entityId);
+  }
+
   // create new storage index
   printableStorageName = Storage_getPrintableName(String_new(),&storageInfo->storageSpecifier,NULL);
   error = Index_newStorage(indexHandle,
@@ -14546,9 +14553,21 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
   if (error != ERROR_NONE)
   {
     String_delete(printableStorageName);
+    if (!INDEX_ID_IS_NONE(entityId))
+    {
+      Index_unlockEntity(indexHandle,entityId);
+    }
     return error;
   }
   String_delete(printableStorageName);
+
+  // set state 'update'
+  Index_setStorageState(indexHandle,
+                        storageId,
+                        INDEX_STATE_UPDATE,
+                        0LL,  // lastCheckedDateTime
+                        NULL  // errorMessage
+                       );
 
   // add index
   error = Archive_updateIndex(indexHandle,
@@ -14566,8 +14585,33 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
                              );
   if (error != ERROR_NONE)
   {
+    if (!INDEX_ID_IS_NONE(entityId))
+    {
+      Index_unlockEntity(indexHandle,entityId);
+    }
     (void)Index_deleteStorage(indexHandle,storageId);
     return error;
+  }
+
+  // set index state
+  if (error == ERROR_NONE)
+  {
+    Index_setStorageState(indexHandle,
+                          storageId,
+                          INDEX_STATE_OK,
+                          Misc_getCurrentDateTime(),
+                          NULL  // errorMessage
+                         );
+  }
+  else
+  {
+    (void)Index_deleteStorage(indexHandle,storageId);
+  }
+
+  // unlock entity (if exists)
+  if (!INDEX_ID_IS_NONE(entityId))
+  {
+    Index_unlockEntity(indexHandle,entityId);
   }
 
   return ERROR_NONE;
@@ -14673,7 +14717,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
           && (estimatedRestTime > 0)
          )
       {
-
         plogMessage(NULL,  // logHandle
                     LOG_TYPE_INDEX,
                     "INDEX",
@@ -14740,50 +14783,9 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
   if (error != ERROR_NONE)
   {
-    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Failed to create index for '%s' (error: %s)",
-                String_cString(printableStorageName),
-                Error_getText(error)
-               );
-
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_ERROR,
-                   0LL,  // lastCheckedDateTime
-                   "%s (error code: %d)",
-                   Error_getText(error),
-                   Error_getCode(error)
-                  );
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
-  }
-
-  // index archive contents
-  printInfo(4,"Start create index for '%s'\n",String_cString(printableStorageName));
-  plogMessage(NULL,  // logHandle
-              LOG_TYPE_INDEX,
-              "INDEX",
-              "Start create index for '%s'",
-              String_cString(printableStorageName)
-             );
-
-  // set state 'update'
-  Index_setState(indexHandle,
-                 storageId,
-                 INDEX_STATE_UPDATE,
-                 0LL,  // lastCheckedDateTime
-                 NULL  // errorMessage
-                );
-
-  // lock entity
-  if (!INDEX_ID_IS_NONE(entityId))
-  {
-    // lock
-    Index_lockEntity(archiveHandle.indexHandle,entityId);
   }
 
   // clear index
@@ -14792,24 +14794,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                             );
   if (error != ERROR_NONE)
   {
-    printInfo(4,"Failed to create index for '%s' (error: %s)\n",String_cString(printableStorageName),Error_getText(error));
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Failed to create index for '%s' (error: %s)",
-                String_cString(printableStorageName),
-                Error_getText(error)
-               );
-
     Archive_close(&archiveHandle);
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_ERROR,
-                   0LL,  // lastCheckedDateTime
-                   "%s (error code: %d)",
-                   Error_getText(error),
-                   Error_getCode(error)
-                  );
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -14821,7 +14806,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   // init progress info
   initUpdateIndexProgress(size);
 
-//fprintf(stderr,"%s, %d: yyyyyyyyyyyyyyyyyyyyyyy\n",__FILE__,__LINE__);
   // read archive content
   entryCount                  = 0L;
   deletedFlag                 = FALSE;
@@ -15308,65 +15292,20 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                             size
                            );
 
-  // update infos, unlock entity (if exists)
-  if (!INDEX_ID_IS_NONE(entityId))
-  {
-    // unlock
-    Index_unlockEntity(archiveHandle.indexHandle,entityId);
-  }
-
   // close archive
   Archive_close(&archiveHandle);
 
+  // info
   if     (abortedFlag)
   {
-    printInfo(4,"Aborted create index for '%s'\n",String_cString(printableStorageName));
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Aborted create index for '%s'",
-                String_cString(printableStorageName)
-               );
-
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_ERROR,
-                   0LL,  // lastCheckedTimestamp
-                   "aborted"
-                  );
-
     error = ERROR_ABORTED;
   }
   else if (serverAllocationPendingFlag)
   {
-    printInfo(4,"Interrupted create index for '%s'\n",String_cString(printableStorageName));
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Interruped create index for '%s'",
-                String_cString(printableStorageName)
-               );
-
-    // set index state
-    Index_setState(indexHandle,
-                   storageId,
-                   INDEX_STATE_UPDATE_REQUESTED,
-                   0LL,  // lastCheckedTimestamp
-                   NULL  // errorMessage
-                  );
-
     error = ERROR_INTERRUPTED;
   }
   else
   {
-    printInfo(4,"Done create index for '%s'\n",String_cString(printableStorageName));
-    plogMessage(NULL,  // logHandle
-                LOG_TYPE_INDEX,
-                "INDEX",
-                "Done create index for '%s'",
-                String_cString(printableStorageName)
-               );
-
     // update storages info (aggregated values)
     if (error == ERROR_NONE)
     {
@@ -15383,29 +15322,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                   printableStorageName,
                                   size
                                  );
-    }
-
-    // set index state, last checked time
-    if (error == ERROR_NONE)
-    {
-      // set index state 'OK', last checked time
-      Index_setState(indexHandle,
-                     storageId,
-                     INDEX_STATE_OK,
-                     Misc_getCurrentDateTime(),
-                     NULL  // errorMessage
-                    );
-    }
-    else
-    {
-      Index_setState(indexHandle,
-                     storageId,
-                     INDEX_STATE_ERROR,
-                     0LL, // lastCheckedTimestamp
-                     "%s (error code: %d)",
-                     Error_getText(error),
-                     Error_getCode(error)
-                    );
     }
   }
 
