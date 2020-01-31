@@ -8281,6 +8281,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
     fprintf(stderr,"%s, %d: archiveType=%u\n",__FILE__,__LINE__,archiveType);
     fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+    fprintf(stderr,"%s, %d: offset=%llu, limit=%llu\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
@@ -9176,6 +9177,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
     fprintf(stderr,"%s, %d: hostName=%s\n",__FILE__,__LINE__,String_cString(hostName));
     fprintf(stderr,"%s, %d: userName=%s\n",__FILE__,__LINE__,String_cString(userName));
     fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+    fprintf(stderr,"%s, %d: offset=%llu, limit=%llu\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
@@ -10033,11 +10035,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   assert((indexIdCount == 0L) || (indexIds != NULL));
   assert((entryIdCount == 0L) || (entryIds != NULL));
 
-  // init variables
-  if (totalEntryCount       != NULL) (*totalEntryCount      ) = 0L;
-  if (totalEntrySize        != NULL) (*totalEntrySize       ) = 0LL;
-  if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
-
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
@@ -10095,326 +10092,313 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
   filterAppend(filterString,!String_isEmpty(entityIdsString),"AND","entities.id IN (%S)",entityIdsString);
   filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
 
-  #ifdef INDEX_DEBUG_LIST_INFO
-    t0 = Misc_getTimestamp();
-  #endif /* INDEX_DEBUG_LIST_INFO */
   error = ERROR_NONE;
   if (String_isEmpty(ftsName))
   {
     // no names
-
-    INDEX_DOX(error,
-              indexHandle,
+    if (error == ERROR_NONE)
     {
-      // get total entry count, total fragment count, total entry size
-      if (newestOnly)
-      {
-        // all newest entries
-        if (String_isEmpty(entryIdsString))
-        {
-          switch (indexType)
-          {
-            case INDEX_TYPE_NONE:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalEntryCountNewest), \
-                                               TOTAL(entities.totalEntrySizeNewest) \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_FILE:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalFileCountNewest), \
-                                               TOTAL(entities.totalFileSizeNewest) \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_IMAGE:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalImageCountNewest), \
-                                               0 \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_DIRECTORY:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalDirectoryCountNewest), \
-                                               0 \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_LINK:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalLinkCountNewest), \
-                                               0 \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_HARDLINK:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalHardlinkCountNewest), \
-                                               TOTAL(entities.totalHardlinkSizeNewest) \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_SPECIAL:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalSpecialCountNewest), \
-                                               0 \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     %S \
-                                              AND entities.deletedFlag!=1 \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break;
-          }
-        }
-        else
-        {
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-                                   "SELECT COUNT(entriesNewest.id), \
-                                           TOTAL(entriesNewest.size) \
-                                    FROM entriesNewest \
-                                      LEFT JOIN entities ON entities.id=entriesNewest.entityId \
-                                      LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     entities.deletedFlag!=1 \
-                                          AND %S \
-                                   ",
-                                   filterString
-                                  );
-        }
-      }
-      else
-      {
-        // all entries
-        if (String_isEmpty(entryIdsString))
-        {
-          switch (indexType)
-          {
-            case INDEX_TYPE_NONE:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalEntryCount), \
-                                               TOTAL(entities.totalEntrySize) \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     entities.deletedFlag!=1 \
-                                              AND %S \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_FILE:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalEntryCount), \
-                                               TOTAL(entities.totalEntrySize) \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     entities.deletedFlag!=1 \
-                                              AND %S \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_IMAGE:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalImageCount), \
-                                               TOTAL(entities.totalImageSize) \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     entities.deletedFlag!=1 \
-                                              AND %S \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_DIRECTORY:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalDirectoryCount), \
-                                               0 \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     entities.deletedFlag!=1 \
-                                              AND %S \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_LINK:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalLinkCount), \
-                                               0 \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     entities.deletedFlag!=1 \
-                                              AND %S \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_HARDLINK:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalHardlinkCount), \
-                                               TOTAL(entities.totalHardlinkSize) \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     entities.deletedFlag!=1 \
-                                              AND %S \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            case INDEX_TYPE_SPECIAL:
-              error = Database_prepare(&databaseQueryHandle,
-                                       &indexHandle->databaseHandle,
-                                       "SELECT TOTAL(entities.totalSpecialCount), \
-                                               0 \
-                                        FROM entities \
-                                          LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                        WHERE     entities.deletedFlag!=1 \
-                                              AND %S \
-                                       ",
-                                       filterString
-                                      );
-              break;
-            default:
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-              break;
-          }
-        }
-        else
-        {
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-                                   "SELECT COUNT(entries.id), \
-                                           TOTAL(entries.size) \
-                                    FROM entries \
-                                      LEFT JOIN entities ON entities.id=entries.entityId \
-                                      LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     entities.deletedFlag!=1 \
-                                          AND %S \
-                                   ",
-                                   filterString
-                                  );
-        }
-      }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
       #ifdef INDEX_DEBUG_LIST_INFO
-        Database_debugPrintQueryInfo(&databaseQueryHandle);
-      #endif
-      if (!Database_getNextRow(&databaseQueryHandle,
-                               "%lld %lf",
-                               &totalEntryCount_,
-                               &totalEntrySize_
-                              )
-         )
-      {
-        Database_finalize(&databaseQueryHandle);
-        return ERROR_DATABASE;
-      }
-      assert(totalEntrySize_ >= 0.0);
-      if (totalEntryCount != NULL) (*totalEntryCount) += (ulong)totalEntryCount_;
-      if (totalEntrySize  != NULL) (*totalEntrySize ) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
-      Database_finalize(&databaseQueryHandle);
+        t0 = Misc_getTimestamp();
+      #endif /* INDEX_DEBUG_LIST_INFO */
 
-#warning
-#if 0
-      // get entry content size
-      if (newestOnly)
+      INDEX_DOX(error,
+                indexHandle,
       {
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
-                                  FROM entriesNewest \
-                                    LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
-                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                    LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
-                                    LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
-                                    LEFT JOIN entities         ON entities.id=storages.entityId \
-                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     entities.deletedFlag!=1 \
-                                        AND %S \
-                                 ",
-                                 filterString
-                                );
-      }
-      else
-      {
-        if (String_isEmpty(entryIdsString))
+        // get total entry count, total fragment count, total entry size
+        if (newestOnly)
         {
-          // no storages selected, no entries selected -> get aggregated data from entities
-          error = Database_prepare(&databaseQueryHandle,
-                                   &indexHandle->databaseHandle,
-                                   "SELECT TOTAL(entities.totalEntrySize) \
-                                    FROM entities \
-                                      LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                    WHERE     entities.deletedFlag!=1 \
-                                          AND %S \
-                                   ",
-                                   filterString
-                                  );
+          // all newest entries
+          if (String_isEmpty(entryIdsString))
+          {
+            switch (indexType)
+            {
+              case INDEX_TYPE_NONE:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalEntryCountNewest), \
+                                                 TOTAL(entities.totalEntrySizeNewest) \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     %S \
+                                                AND entities.deletedFlag!=1 \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_FILE:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalFileCountNewest), \
+                                                 TOTAL(entities.totalFileSizeNewest) \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     %S \
+                                                AND entities.deletedFlag!=1 \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_IMAGE:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalImageCountNewest), \
+                                                 0 \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     %S \
+                                                AND entities.deletedFlag!=1 \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_DIRECTORY:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalDirectoryCountNewest), \
+                                                 0 \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     %S \
+                                                AND entities.deletedFlag!=1 \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_LINK:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalLinkCountNewest), \
+                                                 0 \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     %S \
+                                                AND entities.deletedFlag!=1 \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_HARDLINK:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalHardlinkCountNewest), \
+                                                 TOTAL(entities.totalHardlinkSizeNewest) \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     %S \
+                                                AND entities.deletedFlag!=1 \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_SPECIAL:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalSpecialCountNewest), \
+                                                 0 \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     %S \
+                                                AND entities.deletedFlag!=1 \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break;
+            }
+          }
+          else
+          {
+            error = Database_prepare(&databaseQueryHandle,
+                                     &indexHandle->databaseHandle,
+                                     "SELECT COUNT(entriesNewest.id), \
+                                             TOTAL(entriesNewest.size) \
+                                      FROM entriesNewest \
+                                        LEFT JOIN entities ON entities.id=entriesNewest.entityId \
+                                        LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                      WHERE     entities.deletedFlag!=1 \
+                                            AND %S \
+                                     ",
+                                     filterString
+                                    );
+          }
         }
         else
         {
-          // entries selected -> get aggregated data from entries
+          // all entries
+          if (String_isEmpty(entryIdsString))
+          {
+            switch (indexType)
+            {
+              case INDEX_TYPE_NONE:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalEntryCount), \
+                                                 TOTAL(entities.totalEntrySize) \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     entities.deletedFlag!=1 \
+                                                AND %S \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_FILE:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalEntryCount), \
+                                                 TOTAL(entities.totalEntrySize) \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     entities.deletedFlag!=1 \
+                                                AND %S \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_IMAGE:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalImageCount), \
+                                                 TOTAL(entities.totalImageSize) \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     entities.deletedFlag!=1 \
+                                                AND %S \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_DIRECTORY:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalDirectoryCount), \
+                                                 0 \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     entities.deletedFlag!=1 \
+                                                AND %S \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_LINK:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalLinkCount), \
+                                                 0 \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     entities.deletedFlag!=1 \
+                                                AND %S \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_HARDLINK:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalHardlinkCount), \
+                                                 TOTAL(entities.totalHardlinkSize) \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     entities.deletedFlag!=1 \
+                                                AND %S \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              case INDEX_TYPE_SPECIAL:
+                error = Database_prepare(&databaseQueryHandle,
+                                         &indexHandle->databaseHandle,
+                                         "SELECT TOTAL(entities.totalSpecialCount), \
+                                                 0 \
+                                          FROM entities \
+                                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                          WHERE     entities.deletedFlag!=1 \
+                                                AND %S \
+                                         ",
+                                         filterString
+                                        );
+                break;
+              default:
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+                break;
+            }
+          }
+          else
+          {
+            error = Database_prepare(&databaseQueryHandle,
+                                     &indexHandle->databaseHandle,
+                                     "SELECT COUNT(entries.id), \
+                                             TOTAL(entries.size) \
+                                      FROM entries \
+                                        LEFT JOIN entities ON entities.id=entries.entityId \
+                                        LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                      WHERE     entities.deletedFlag!=1 \
+                                            AND %S \
+                                     ",
+                                     filterString
+                                    );
+          }
+        }
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        #ifdef INDEX_DEBUG_LIST_INFO
+          Database_debugPrintQueryInfo(&databaseQueryHandle);
+        #endif
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %lf",
+                                 &totalEntryCount_,
+                                 &totalEntrySize_
+                                )
+           )
+        {
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_DATABASE;
+        }
+        assert(totalEntrySize_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
+        if (totalEntrySize  != NULL) (*totalEntrySize ) = (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
+        Database_finalize(&databaseQueryHandle);
+
+        return ERROR_NONE;
+      });
+
+      #ifdef INDEX_DEBUG_LIST_INFO
+        t1 = Misc_getTimestamp();
+        fprintf(stderr,"%s, %d: totalEntryCount_=%"PRIi64" totalEntrySize_=%lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
+        fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+        fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
+      #endif
+    }
+
+    if (error == ERROR_NONE)
+    {
+      #ifdef INDEX_DEBUG_LIST_INFO
+        t0 = Misc_getTimestamp();
+      #endif /* INDEX_DEBUG_LIST_INFO */
+
+      INDEX_DOX(error,
+                indexHandle,
+      {
+#warning remove/revert
+#if 0
+        // get entry content size
+        if (newestOnly)
+        {
           error = Database_prepare(&databaseQueryHandle,
                                    &indexHandle->databaseHandle,
                                    "SELECT TOTAL(directoryEntries.totalEntrySize) \
-                                    FROM entries \
-                                      LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
-                                      LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
-                                      LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
-                                      LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
+                                    FROM entriesNewest \
+                                      LEFT JOIN entryFragments   ON entryFragments.entryId=entriesNewest.entryId \
+                                      LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                      LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
+                                      LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
                                       LEFT JOIN entities         ON entities.id=storages.entityId \
                                       LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                     WHERE     entities.deletedFlag!=1 \
@@ -10423,31 +10407,76 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                    filterString
                                   );
         }
-      }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      #ifdef INDEX_DEBUG_LIST_INFO
-        Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
-      #endif
-      if (!Database_getNextRow(&databaseQueryHandle,
-                               "%lf",
-                               &totalEntryContentSize_
-                              )
-         )
-      {
-        Database_finalize(&databaseQueryHandle);
-        return ERROR_DATABASE;
-      }
+        else
+        {
+          if (String_isEmpty(entryIdsString))
+          {
+            // no storages selected, no entries selected -> get aggregated data from entities
+            error = Database_prepare(&databaseQueryHandle,
+                                     &indexHandle->databaseHandle,
+                                     "SELECT TOTAL(entities.totalEntrySize) \
+                                      FROM entities \
+                                        LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                      WHERE     entities.deletedFlag!=1 \
+                                            AND %S \
+                                     ",
+                                     filterString
+                                    );
+          }
+          else
+          {
+            // entries selected -> get aggregated data from entries
+            error = Database_prepare(&databaseQueryHandle,
+                                     &indexHandle->databaseHandle,
+                                     "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                      FROM entries \
+                                        LEFT JOIN entryFragments   ON entryFragments.entryId=entries.id \
+                                        LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
+                                        LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
+                                        LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
+                                        LEFT JOIN entities         ON entities.id=storages.entityId \
+                                        LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                      WHERE     entities.deletedFlag!=1 \
+                                            AND %S \
+                                     ",
+                                     filterString
+                                    );
+          }
+        }
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        #ifdef INDEX_DEBUG_LIST_INFO
+          Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+        #endif
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf",
+                                 &totalEntryContentSize_
+                                )
+           )
+        {
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_DATABASE;
+        }
 //TODO: may happend?
-//      assert(totalEntryContentSize_ >= 0.0);
-      if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
-      Database_finalize(&databaseQueryHandle);
+//        assert(totalEntryContentSize_ >= 0.0);
+        if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
+        Database_finalize(&databaseQueryHandle);
+#else
+if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
 #endif
 
-      return ERROR_NONE;
-    });
+        return ERROR_NONE;
+      });
+
+      #ifdef INDEX_DEBUG_LIST_INFO
+        t1 = Misc_getTimestamp();
+        fprintf(stderr,"%s, %d: totalEntryContentSize_=%lf\n",__FILE__,__LINE__,totalEntryContentSize_);
+        fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+        fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
+      #endif
+    }
   }
   else /* !String_isEmpty(ftsName) */
   {
@@ -10465,131 +10494,160 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       filterAppend(filterString,!String_isEmpty(entryIdsString),"AND","entries.id IN (%S)",entryIdsString);
       filterAppend(filterString,indexType != INDEX_TYPE_ANY,"AND","entries.type=%u",indexType);
     }
-    INDEX_DOX(error,
-              indexHandle,
+
+    if (error == ERROR_NONE)
     {
-      // get entry count, entry size
-      if (newestOnly)
-      {
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT COUNT(entriesNewest.id), \
-                                         TOTAL(entriesNewest.size) \
-                                  FROM FTS_entries \
-                                    LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
-                                    LEFT JOIN entities      ON entities.id=entriesNewest.entityId \
-                                    LEFT JOIN uuids         ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     entities.deletedFlag!=1 \
-                                        AND entriesNewest.id IS NOT NULL \
-                                        AND %S \
-                                 ",
-                                 filterString
-                                );
-      }
-      else
-      {
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT COUNT(entries.id), \
-                                         TOTAL(entries.size) \
-                                  FROM FTS_entries \
-                                    LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
-                                    LEFT JOIN entities ON entities.id=entries.entityId \
-                                    LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     entities.deletedFlag!=1 \
-                                        AND %S \
-                                 ",
-                                 filterString
-                                );
-      }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
       #ifdef INDEX_DEBUG_LIST_INFO
-        Database_debugPrintQueryInfo(&databaseQueryHandle);
-      #endif
-      if (!Database_getNextRow(&databaseQueryHandle,
-                               "%lld %lf",
-                               &totalEntryCount_,
-                               &totalEntrySize_
-                              )
-         )
-      {
-        Database_finalize(&databaseQueryHandle);
-        return ERROR_DATABASE;
-      }
-      assert(totalEntrySize_ >= 0.0);
-      if (totalEntryCount != NULL) (*totalEntryCount) += (ulong)totalEntryCount_;
-      if (totalEntrySize  != NULL) (*totalEntrySize ) += (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
-      Database_finalize(&databaseQueryHandle);
+        t0 = Misc_getTimestamp();
+      #endif /* INDEX_DEBUG_LIST_INFO */
 
-      // get entry content size
-      if (newestOnly)
+      INDEX_DOX(error,
+                indexHandle,
       {
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
-                                  FROM FTS_entries \
-                                    LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
-                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
-                                    LEFT JOIN entries          ON entries.id=entriesNewest.entryId \
-                                    LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
-                                    LEFT JOIN entities         ON entities.id=storages.entityId \
-                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     storages.deletedFlag!=1 \
-                                        AND %S \
-                                 ",
-                                 filterString
-                                );
-      }
-      else
-      {
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT TOTAL(directoryEntries.totalEntrySize) \
-                                  FROM FTS_entries \
-                                    LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
-                                    LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
-                                    LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
-                                    LEFT JOIN entities         ON entities.id=storages.entityId \
-                                    LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE     storages.deletedFlag!=1 \
-                                        AND %S \
-                                 ",
-                                 filterString
-                                );
-      }
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-      #ifdef INDEX_DEBUG_LIST_INFO
-        Database_debugPrintQueryInfo(&databaseQueryHandle);
-      #endif
-      if (!Database_getNextRow(&databaseQueryHandle,
-                               "%lf",
-                               &totalEntryContentSize_
-                              )
-         )
-      {
+        // get entry count, entry size
+        if (newestOnly)
+        {
+          error = Database_prepare(&databaseQueryHandle,
+                                   &indexHandle->databaseHandle,
+                                   "SELECT COUNT(entriesNewest.id), \
+                                           TOTAL(entriesNewest.size) \
+                                    FROM FTS_entries \
+                                      LEFT JOIN entriesNewest ON entriesNewest.entryId=FTS_entries.entryId \
+                                      LEFT JOIN entities      ON entities.id=entriesNewest.entityId \
+                                      LEFT JOIN uuids         ON uuids.jobUUID=entities.jobUUID \
+                                    WHERE     entities.deletedFlag!=1 \
+                                          AND entriesNewest.id IS NOT NULL \
+                                          AND %S \
+                                   ",
+                                   filterString
+                                  );
+        }
+        else
+        {
+          error = Database_prepare(&databaseQueryHandle,
+                                   &indexHandle->databaseHandle,
+                                   "SELECT COUNT(entries.id), \
+                                           TOTAL(entries.size) \
+                                    FROM FTS_entries \
+                                      LEFT JOIN entries  ON entries.id=FTS_entries.entryId \
+                                      LEFT JOIN entities ON entities.id=entries.entityId \
+                                      LEFT JOIN uuids    ON uuids.jobUUID=entities.jobUUID \
+                                    WHERE     entities.deletedFlag!=1 \
+                                          AND %S \
+                                   ",
+                                   filterString
+                                  );
+        }
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        #ifdef INDEX_DEBUG_LIST_INFO
+          Database_debugPrintQueryInfo(&databaseQueryHandle);
+        #endif
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lld %lf",
+                                 &totalEntryCount_,
+                                 &totalEntrySize_
+                                )
+           )
+        {
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_DATABASE;
+        }
+        assert(totalEntrySize_ >= 0.0);
+        if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
+        if (totalEntrySize  != NULL) (*totalEntrySize ) = (totalEntrySize_ >= 0.0) ? (uint64)totalEntrySize_ : 0LL;
         Database_finalize(&databaseQueryHandle);
-        return ERROR_DATABASE;
-      }
+
+        return ERROR_NONE;
+      });
+
+      #ifdef INDEX_DEBUG_LIST_INFO
+        t1 = Misc_getTimestamp();
+        fprintf(stderr,"%s, %d: totalEntryCount_=%"PRIi64" totalEntrySize_=%lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
+        fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+        fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
+      #endif
+    }
+
+    if (error == ERROR_NONE)
+    {
+      #ifdef INDEX_DEBUG_LIST_INFO
+        t0 = Misc_getTimestamp();
+      #endif /* INDEX_DEBUG_LIST_INFO */
+
+      INDEX_DOX(error,
+                indexHandle,
+      {
+        // get entry content size
+        if (newestOnly)
+        {
+          error = Database_prepare(&databaseQueryHandle,
+                                   &indexHandle->databaseHandle,
+                                   "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                    FROM FTS_entries \
+                                      LEFT JOIN entriesNewest    ON entriesNewest.entryId=FTS_entries.entryId \
+                                      LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
+                                      LEFT JOIN entries          ON entries.id=entriesNewest.entryId \
+                                      LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
+                                      LEFT JOIN entities         ON entities.id=storages.entityId \
+                                      LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND %S \
+                                   ",
+                                   filterString
+                                  );
+        }
+        else
+        {
+          error = Database_prepare(&databaseQueryHandle,
+                                   &indexHandle->databaseHandle,
+                                   "SELECT TOTAL(directoryEntries.totalEntrySize) \
+                                    FROM FTS_entries \
+                                      LEFT JOIN directoryEntries ON directoryEntries.entryId=FTS_entries.entryId \
+                                      LEFT JOIN entries          ON entries.id=FTS_entries.entryId \
+                                      LEFT JOIN storages         ON storages.id=directoryEntries.storageId \
+                                      LEFT JOIN entities         ON entities.id=storages.entityId \
+                                      LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
+                                    WHERE     storages.deletedFlag!=1 \
+                                          AND %S \
+                                   ",
+                                   filterString
+                                  );
+        }
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        #ifdef INDEX_DEBUG_LIST_INFO
+          Database_debugPrintQueryInfo(&databaseQueryHandle);
+        #endif
+        if (!Database_getNextRow(&databaseQueryHandle,
+                                 "%lf",
+                                 &totalEntryContentSize_
+                                )
+           )
+        {
+          Database_finalize(&databaseQueryHandle);
+          return ERROR_DATABASE;
+        }
 //TODO: may happend?
-//      assert(totalEntryContentSize_ >= 0.0);
-      if (totalEntryContentSize != NULL) (*totalEntryContentSize) += (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
-      Database_finalize(&databaseQueryHandle);
+//        assert(totalEntryContentSize_ >= 0.0);
+        if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
+        Database_finalize(&databaseQueryHandle);
 
-      return ERROR_NONE;
-    });
+        return ERROR_NONE;
+      });
+
+      #ifdef INDEX_DEBUG_LIST_INFO
+        t1 = Misc_getTimestamp();
+        fprintf(stderr,"%s, %d: totalEntryContentSize_=%lf\n",__FILE__,__LINE__,totalEntryContentSize_);
+        fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
+        fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
+      #endif
+    }
   }
-  #ifdef INDEX_DEBUG_LIST_INFO
-    t1 = Misc_getTimestamp();
-    fprintf(stderr,"%s, %d: totalEntryCount_=%"PRIi64" totalEntrySize_=%lf\n",__FILE__,__LINE__,totalEntryCount_,totalEntrySize_);
-    fprintf(stderr,"%s, %d: time=%"PRIu64"us\n",__FILE__,__LINE__,(t1-t0));
-    fprintf(stderr,"%s, %d: -----------------------------------------------------------------------------\n",__FILE__,__LINE__);
-  #endif
 
   // free resources
   String_delete(filterString);
@@ -10702,6 +10760,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     fprintf(stderr,"%s, %d: Index_initListEntries -------------------------------------------------------\n",__FILE__,__LINE__);
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
+    fprintf(stderr,"%s, %d: offset=%llu, limit=%llu\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
@@ -11078,6 +11137,7 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
   #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: Index_initListEntryFragments ------------------------------------------------\n",__FILE__,__LINE__);
     fprintf(stderr,"%s, %d: entryId=%u\n",__FILE__,__LINE__,entryId);
+    fprintf(stderr,"%s, %d: offset=%llu, limit=%llu\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
