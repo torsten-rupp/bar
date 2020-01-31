@@ -13863,6 +13863,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
+fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   // get entry pattern, index type, new entries only
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
@@ -18752,6 +18753,29 @@ Errors Server_run(ServerModes       mode,
     }
     AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
   }
+
+#if 0
+{
+ulong totalEntryCount;
+uint64 totalEntrySize;
+uint64 totalEntryContentSize;
+String name = String_newCString("torsten.rupp");
+#warning remove/revert
+Index_getEntriesInfo(indexHandle,
+                                NULL,
+                                0L,
+                               NULL,
+                               0L,
+                               INDEX_TYPE_ANY,
+                               name,
+                               FALSE,
+                               &totalEntryCount,
+                               &totalEntrySize,
+                               &totalEntryContentSize
+                              );
+exit(1);
+}
+#endif
 
   // init server sockets
   serverFlag    = FALSE;
