@@ -3134,7 +3134,7 @@ Errors Database_initAll(void)
     pthread_mutexattr_destroy(&databaseLockAttribute);
     return ERRORX_(DATABASE,sqliteResult,"enable multi-threading");
   }
-  
+
   return ERROR_NONE;
 }
 
@@ -3338,6 +3338,7 @@ void Database_doneAll(void)
   }
 
   #if !defined(NDEBUG) && defined(DATABASE_DEBUG_LOG)
+    fprintf(stderr,"WARNING: datatbase logging is enabled!\n");
     sqlite3_trace_v2(databaseHandle->handle,DATABASE_DEBUG_LOG,logTraceCommandHandler,NULL);
   #endif /* DATABASE_DEBUG_LOG */
 
