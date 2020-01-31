@@ -14571,10 +14571,8 @@ Errors Archive_addToIndex(IndexHandle *indexHandle,
 
   // add index
   error = Archive_updateIndex(indexHandle,
-#warning TODO
-//TODO: uuidId, entityId?
-                              INDEX_ID_NONE,
-                              INDEX_ID_NONE,
+                              uuidId,
+                              entityId,
                               storageId,
                               storageInfo,
                               totalEntryCount,

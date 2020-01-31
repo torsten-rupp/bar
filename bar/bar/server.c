@@ -67,9 +67,7 @@
 
 #define SESSION_KEY_SIZE                         1024     // number of session key bits
 
-//TODO:
-#warning #define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
-#define MAX_NETWORK_CLIENT_THREADS               1        // number of threads for a client
+#define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
 #define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
 #define CLIENT_TIMEOUT                           (30L*MS_PER_SECOND)  // client timeout [ms]
 
@@ -2561,7 +2559,9 @@ LOCAL void schedulerThreadCode(void)
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
     currentDateTime     = Misc_getCurrentDateTime();
+#ifndef WERROR
 #warning remove/revert
+#endif
 //TODO: avoid long running lock
     JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)  // Note: read/write because of trigger job
     {
@@ -13220,112 +13220,6 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
   String_delete(storageName);
 }
 
-//TODO
-#warning remove
-#if 0
-/***********************************************************************\
-* Name   : serverCommand_storageList
-* Purpose: list selected storages
-* Input  : clientInfo  - client info
-*          indexHandle - index handle
-*          id          - command id
-*          argumentMap - command arguments
-* Output : -
-* Return : -
-* Notes  : Arguments:
-*          Result:
-*            storageId=<n> name=<text> totalEntryCount=<n> totalEntrySize=<n>
-\***********************************************************************/
-
-LOCAL void serverCommand_storageList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
-{
-  String           storageName;
-  Errors           error;
-  IndexQueryHandle indexQueryHandle;
-  IndexId          storageId;
-  ulong            totalEntryCount;
-  uint64           totalEntrySize;
-
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(argumentMap);
-
-  // check if index database is available
-  if (indexHandle == NULL)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
-    return;
-  }
-
-  // init variables
-  storageName = String_new();
-
-  // list storage
-  error = Index_initListStorages(&indexQueryHandle,
-                                 indexHandle,
-                                 INDEX_ID_ANY,  // uuidId
-                                 INDEX_ID_ANY,  // entityId
-                                 NULL,  // jobUUID
-                                 NULL,  // scheduleUUID,
-                                 Array_cArray(&clientInfo->indexIdArray),
-                                 Array_length(&clientInfo->indexIdArray),
-                                 INDEX_STATE_SET_ALL,
-                                 INDEX_MODE_SET_ALL,
-                                 NULL,  // hostName
-                                 NULL,  // userName
-                                 NULL,  // name
-                                 INDEX_STORAGE_SORT_MODE_NONE,
-                                 DATABASE_ORDERING_NONE,
-                                 0LL,  // offset
-                                 INDEX_UNLIMITED
-                                );
-  if (error != ERROR_NONE)
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init list storage fail");
-    String_delete(storageName);
-    return;
-  }
-  while (   !isCommandAborted(clientInfo,id)
-         && Index_getNextStorage(&indexQueryHandle,
-                                 NULL,  // uuidId
-                                 NULL,  // jobUUID
-                                 NULL,  // entityId
-                                 NULL,  // scheduleUUID
-                                 NULL,  // hostName
-                                 NULL,  // userName
-                                 NULL,  // comment
-                                 NULL,  // archiveType
-                                 &storageId,
-                                 storageName,
-                                 NULL,  // createdDateTime
-                                 NULL,  // size
-                                 NULL,  // indexState
-                                 NULL,  // indexMode
-                                 NULL,  // lastCheckedDateTime
-                                 NULL,  // errorMessage
-                                 &totalEntryCount,
-                                 &totalEntrySize
-                                )
-        )
-  {
-    ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "storageId=%"PRIu64" name=%'S totalEntryCount=%lu totalEntrySize=%"PRIu64"",
-                        storageId,
-                        storageName,
-                        totalEntryCount,
-                        totalEntrySize
-                       );
-  }
-  Index_doneList(&indexQueryHandle);
-
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
-
-  // free resource3s
-  String_delete(storageName);
-}
-#endif
-
 /***********************************************************************\
 * Name   : serverCommand_indexListClear
 * Purpose: clear selected index list
@@ -13597,7 +13491,6 @@ LOCAL void serverCommand_indexListInfo(ClientInfo *clientInfo, IndexHandle *inde
   else
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexState=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    String_delete(name);
     return;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
@@ -16568,8 +16461,6 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
-#warning remove/revert
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(toHostName);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign entity fail");
         return;
@@ -16589,8 +16480,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                             );
       if (error != ERROR_NONE)
       {
-#warning remove/revert
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(toHostName);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign enttity fail");
         return;

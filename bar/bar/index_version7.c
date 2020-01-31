@@ -1011,9 +1011,7 @@ LOCAL Errors importIndexVersion7(IndexHandle *oldIndexHandle,
                              },NULL),
                              CALLBACK_(getCopyPauseCallback(),NULL),
                              CALLBACK_(importProgress,NULL),
-#warning revert
-//                             "WHERE id!=0"
-                             "WHERE id!=0 LIMIT 0,3"
+                             "WHERE id!=0"
                             );
   if (error != ERROR_NONE)
   {

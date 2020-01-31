@@ -415,7 +415,7 @@ void Dictionary_debugDump(Dictionary *dictionary);
 * Notes  : -
 \***********************************************************************/
 
-void Dictionary_printStatistic(const Dictionary *dictionary);
+void Dictionary_printStatistic(Dictionary *dictionary);
 
 #endif /* NDEBUG */
 

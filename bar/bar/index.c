@@ -2041,50 +2041,13 @@ LOCAL Errors pruneUUID(IndexHandle *indexHandle,
                        DatabaseId  uuidId
                       )
 {
-//  Array         entityIds;
   Errors        error;
-#if 0
-  ArrayIterator arrayIterator;
-  DatabaseId    entityId;
-#endif
 
   assert(indexHandle != NULL);
   assert(uuidId != DATABASE_ID_NONE);
 
-UNUSED_VARIABLE(doneFlag);
-UNUSED_VARIABLE(deletedCounter);
-
-#warning remove
-#if 0
-  // prune entities of uuid
-  Array_init(&entityIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
-  error = Database_getIds(&indexHandle->databaseHandle,
-                          &entityIds,
-                          "entities",
-                          "entities.id",
-                          "LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                           WHERE     uuids.id=%lld \
-                                 AND entities.id!=%lld \
-                          ",
-                          Index_getDatabaseId(uuidId),
-                          INDEX_DEFAULT_ENTITY_DATABASE_ID
-                         );
-  if (error != ERROR_NONE)
-  {
-    Array_done(&entityIds);
-    return error;
-  }
-  ARRAY_ITERATEX(&entityIds,arrayIterator,entityId,error == ERROR_NONE)
-  {
-    error = pruneEntity(indexHandle,doneFlag,deletedCounter,entityId);
-  }
-  if (error != ERROR_NONE)
-  {
-    Array_done(&entityIds);
-    return error;
-  }
-  Array_done(&entityIds);
-#endif
+  UNUSED_VARIABLE(doneFlag);
+  UNUSED_VARIABLE(deletedCounter);
 
   // delete uuid if empty
   if (isEmptyUUID(indexHandle,uuidId))
@@ -2233,9 +2196,6 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
 
   if (entityId != INDEX_DEFAULT_ENTITY_DATABASE_ID)
   {
-#warning requried?
-//TODO: required?
-//TODO: race condition! change entity lock while list storages
     // get locked count
     error = Database_getInteger64(&indexHandle->databaseHandle,
                                   &lockedCount,
@@ -12952,7 +12912,7 @@ Errors Index_addHardlink(IndexHandle *indexHandle,
                         )
 {
   Errors     error;
-  DatabaseId entryId,hardlinkEntryId;
+  DatabaseId entryId;
 
   assert(indexHandle != NULL);
   assert(INDEX_ID_IS_NONE(entityId) || (Index_getType(entityId) == INDEX_TYPE_ENTITY));

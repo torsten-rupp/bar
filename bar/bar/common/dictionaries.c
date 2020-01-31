@@ -1296,7 +1296,7 @@ void Dictionary_debugDump(Dictionary *dictionary)
                     );
 }
 
-void Dictionary_printStatistic(const Dictionary *dictionary)
+void Dictionary_printStatistic(Dictionary *dictionary)
 {
   ulong totalEntryCount,totalIndexCount;
   uint  i;
