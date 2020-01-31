@@ -13908,8 +13908,8 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
 
   // get index info
   error = Index_getEntriesInfo(indexHandle,
-                               Array_cArray(&clientInfo->indexIdArray),
-                               Array_length(&clientInfo->indexIdArray),
+                               !selectedOnly ? Array_cArray(&clientInfo->indexIdArray) : NULL,
+                               !selectedOnly ? Array_length(&clientInfo->indexIdArray) : 0L,
                                selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
                                selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
                                entryType,
@@ -15688,8 +15688,8 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   destinationName = String_new();
   error = Index_initListEntries(&indexQueryHandle,
                                 indexHandle,
-                                Array_cArray(&clientInfo->indexIdArray),
-                                Array_length(&clientInfo->indexIdArray),
+                                !selectedOnly ? Array_cArray(&clientInfo->indexIdArray) : NULL,
+                                !selectedOnly ? Array_length(&clientInfo->indexIdArray) : 0,
                                 selectedOnly ? Array_cArray(&clientInfo->entryIdArray) : NULL,
                                 selectedOnly ? Array_length(&clientInfo->entryIdArray) : 0L,
                                 entryType,
