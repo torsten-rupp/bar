@@ -1411,7 +1411,7 @@ public class BARServer
 
   public static char                    fileSeparator;
 
-  private final static int              SOCKET_READ_TIMEOUT    = 30*1000;                       // timeout reading socket [ms]
+  private final static int              SOCKET_READ_TIMEOUT    =  60*1000;                      // timeout reading socket [ms]
   private final static int              TIMEOUT                = 120*1000;                      // global timeout [ms]
 
   private static final SimpleDateFormat LOG_TIME_FORMAT = new SimpleDateFormat("HH:mm:ss:SSS");
