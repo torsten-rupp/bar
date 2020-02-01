@@ -1,94 +1,142 @@
 #!/usr/bin/make -f
-# -*- makefile -*-
 # Sample debian/rules that uses debhelper.
-# This file was originally written by Joey Hess and Craig Small.
-# As a special exception, when this file is copied by dh-make into a
-# dh-make output file, you may use that output file without restriction.
-# This special exception was added by Craig Small in version 0.37 of dh-make.
+# GNU copyright 1997 to 1999 by Joey Hess.
 
 # Uncomment this to turn on verbose mode.
-export DH_VERBOSE=1
+#export DH_VERBOSE=1
 
-# This has to be exported to make some magic below work.
-export DH_OPTIONS
+# This is the debhelper compatibility version to use.
+export DH_COMPAT=4
 
-config.status: configure
-	dh_testdir
-	# Add here commands to configure the package.
-ifneq "$(wildcard /usr/share/misc/config.sub)" ""
-	cp -f /usr/share/misc/config.sub config.sub
+CFLAGS = -g
+ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+CFLAGS += -O0
+else
+CFLAGS += -O2
 endif
-ifneq "$(wildcard /usr/share/misc/config.guess)" ""
-	cp -f /usr/share/misc/config.guess config.guess
-endif
-	./configure $(CROSS) --prefix=/usr --mandir=\$${prefix}/share/man --infodir=\$${prefix}/share/info CFLAGS="$(CFLAGS)" LDFLAGS="-Wl,-z,defs"
 
+.PHONY: build clean install install-backup-archiver install-backup-archiver-gui
 build: build-stamp
-build-stamp:  config.status 
+build-stamp:
 	dh_testdir
 
-	# Add here commands to compile the package.
-	$(MAKE)
+	# --- begin custom part for compiling
+	./download-third-party-packages.sh \
+          --clean
+	./download-third-party-packages.sh \
+          --no-verbose \
+          $(ADDITIONAL_DOWNLOAD_FLAGS)
+	./configure \
+          $(CROSS) \
+          --prefix=/usr \
+          --mandir=\$${prefix}/share/man \
+          --infodir=\$${prefix}/share/info \
+          CFLAGS="$(CFLAGS)" \
+          LDFLAGS="-Wl,-z,defs" \
+          --enable-extern-check \
+          --disable-crashdump \
+          --disable-epm \
+          $(ADDITIONAL_CONFIGURE_FLAGS)
+	$(MAKE) all
+	#$(MAKE) test1-debug test2-debug test3-debug test4-debug test5-debug COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7"
+	# --- end custom part for compiling
 
-	touch $@
+	touch build-stamp
 
-clean: 
+build-arch:
+
+clean:
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp 
+	rm -f build-stamp
 
-	# Add here commands to clean up after the build process.
-	[ ! -f Makefile ] || $(MAKE) clean
-	[ ! -f Makefile ] || $(MAKE) distclean
-	rm -f config.sub config.guess
+	# --- begin custom part for cleaning up
+	#$(MAKE) clean || true
+	# --- end custom part for cleaning up
 
-	dh_clean 
+	dh_clean
 
 install: build
 	dh_testdir
 	dh_testroot
-	dh_prep  
+	dh_clean -k
 	dh_installdirs
 
-	# Add here commands to install the package into debian/bar.
-	$(MAKE) prefix=$(CURDIR)/debian/bar debian_package_install
-	$(MAKE) prefix=$(CURDIR)/debian/bar-gui debian_package_install_gui
+	# --- begin custom part for installing 'install'
+	# --- end custom part for installing 'install'
 
-# Build architecture-independent files here.
-binary-indep: install
-# We have nothing to do by default.
-
-# This single target is used to build all the packages, all at once, or
-# one at a time. So keep in mind: any options passed to commands here will
-# affect _all_ packages. Anything you want to only affect one package
-# should be put in another target, such as the install target.
-binary-common:
+install-backup-archiver: build
 	dh_testdir
 	dh_testroot
-	dh_installchangelogs
-	dh_installdocs
-	dh_strip
-	dh_link
-	dh_compress
-	dh_fixperms
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
+	dh_clean -k
+	dh_installdirs
 
-# Build architecture independant packages using the common target.
+	# --- begin custom part for installing 'install-backup-archiver'
+	$(MAKE) \
+          DESTDIR=$(CURDIR)/debian/backup-archiver DIST=1 SYSTEM=Debian \
+          install_bar install_scripts install_man
+	# --- end custom part for installing 'install-backup-archiver'
+
+install-backup-archiver-gui: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+
+	# --- begin custom part for installing 'install-backup-archiver-gui'
+	$(MAKE) \
+          DESTDIR=$(CURDIR)/debian/backup-archiver-gui DIST=1 SYSTEM=Debian \
+          install_barcontrol
+	# --- end custom part for installing 'install-backup-archiver-gui'
+
+# build architecture-independent files
+.PHONY: binary-indep
 binary-indep: build install
-# (Uncomment this next line if you have such packages.)
-	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
+	# nothing to do
 
-# Build architecture independant packages using the common target.
-binary-arch: build install
-	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
+# build architecture-dependent files
+.PHONY: backup-archiver backup-archiver-gui
+backup-archiver: build install-backup-archiver
+	dh_testdir
+	dh_testroot
+	dh_installdirs -p$@
+	dh_installdocs -p$@
+	dh_installexamples -p$@
+	dh_installmenu -p$@
+	dh_installcron -p$@
+	dh_installman -p$@
+	dh_installinfo -p$@
+	dh_installchangelogs -p$@
+	dh_link -p$@
+	dh_strip -p$@
+	dh_compress -p$@
+	dh_fixperms -p$@
+	dh_installdeb -p$@
+	dh_shlibdeps -p$@
+	dh_gencontrol -p$@
+	dh_md5sums -p$@
+	dh_builddeb -p$@
 
-# Any other binary targets build just one binary package at a time.
-binary-%: build install-%
-	make -f debian/rules binary-common DH_OPTIONS=-p$*
+backup-archiver-gui: build install-backup-archiver-gui
+	dh_testdir
+	dh_testroot
+	dh_installdirs -p$@
+	dh_installdocs -p$@
+	dh_installexamples -p$@
+	dh_installmenu -p$@
+	dh_installcron -p$@
+	dh_installman -p$@
+	dh_installinfo -p$@
+	dh_installchangelogs -p$@
+	dh_link -p$@
+	dh_strip -p$@
+	dh_compress -p$@
+	dh_fixperms -p$@
+	dh_installdeb -p$@
+	dh_shlibdeps -p$@
+	dh_gencontrol -p$@
+	dh_md5sums -p$@
+	dh_builddeb -p$@
 
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary-common binary install
+.PHONY: binary
+binary: binary-indep backup-archiver backup-archiver-gui

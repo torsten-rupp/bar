@@ -1,12 +1,12 @@
-Source: bar
+Source: backup-archiver
 Section: base
 Priority: extra
 Maintainer: Torsten Rupp <torsten.rupp@gmx.net>
-Build-Depends: debhelper (>= 7), libc6, libgcrypt11-dev (>= 1.4.4-2ubuntu2 ), libgnutls-dev (>= 2.8.3-2 ), libgpg-error-dev (>= 1.6-1ubuntu1 ), libtasn1-3 (>= 2.2-1 ), zlib1g (>= 1 )
+Build-Depends: debhelper (>= 7), libc6
 Standards-Version: 3.8.1
-Homepage: 
+Homepage:
 
-Package: bar
+Package: backup-archiver
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Archiver program for compressed and encrypted archives.
@@ -36,7 +36,7 @@ Description: Archiver program for compressed and encrypted archives.
    connection
  * nice graphical frontend (written in Java+SWT)
 
-Package: bar-gui
+Package: backup-archiver-gui
 Architecture: all
 Depends: ${shlibs:Depends}, ${misc:Depends}, bar, java-common
 Description: GUI front end for bar
