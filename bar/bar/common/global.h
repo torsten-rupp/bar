@@ -490,7 +490,7 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 * Output : -
 * Return : -
 * Notes  : Windows does not support %ll format token, instead it tries
-*          - as usual according to the MS principle: ignore any standard
+*          - as usually according to the MS principle: ignore any standard
 *          whenever possible - its own way (and of course fail...).
 *          Thus use the MinGW implementation of printf/fprintf.
 \***********************************************************************/
@@ -3045,7 +3045,7 @@ static inline void stringTokenizerInit(CStringTokenizer *cStringTokenizer, const
 {
   assert(cStringTokenizer != NULL);
   assert(string != NULL);
-  
+
   cStringTokenizer->nextToken  = strtok_r((char*)string,delimiters,&cStringTokenizer->p);
   cStringTokenizer->delimiters = delimiters;
 }
@@ -3062,7 +3062,7 @@ static inline void stringTokenizerInit(CStringTokenizer *cStringTokenizer, const
 static inline void stringTokenizerDone(CStringTokenizer *cStringTokenizer)
 {
   assert(cStringTokenizer != NULL);
-  
+
   UNUSED_VARIABLE(cStringTokenizer);
 }
 
@@ -3079,10 +3079,10 @@ static inline bool stringGetNextToken(CStringTokenizer *cStringTokenizer, const 
 {
   assert(cStringTokenizer != NULL);
   assert(token != NULL);
-  
+
   (*token) = cStringTokenizer->nextToken;
   cStringTokenizer->nextToken = strtok_r(NULL,cStringTokenizer->delimiters,&cStringTokenizer->p);
-  
+
   return (*token) != NULL;
 }
 
