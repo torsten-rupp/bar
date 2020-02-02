@@ -48,8 +48,8 @@
 #if   defined(PLATFORM_LINUX)
   #include <linux/tcp.h>
 #elif defined(PLATFORM_WINDOWS)
-  #include <windows.h>
   #include <winsock2.h>
+  #include <windows.h>
   #include <in6addr.h>
 #endif /* PLATFORM_... */
 
@@ -2132,7 +2132,7 @@ void Network_getRemoteInfo(SocketHandle  *socketHandle,
           String_setCString(name,inet_ntoa(sockAddrIn.sin_addr));
         }
       #elif defined(HAVE_GETHOSTBYADDR)
-        hostEntry = gethostbyaddr(&sockAddrIn.sin_addr,
+        hostEntry = gethostbyaddr((const void*)&sockAddrIn.sin_addr,
                                   sizeof(sockAddrIn.sin_addr),
                                   AF_INET
                                  );
