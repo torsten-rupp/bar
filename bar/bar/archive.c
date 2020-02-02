@@ -1111,7 +1111,7 @@ HALT_NOT_YET_IMPLEMENTED();
   {
     error = Crypt_init(cryptInfo,
                        cryptAlgorithms[i],
-                       CRYPT_MODE_CBC,
+                       CRYPT_MODE_CBC_,
                        cryptSalt,
                        crypyKey
                       );
@@ -2122,7 +2122,7 @@ LOCAL Errors readHeader(ArchiveHandle     *archiveHandle,
   // add new crypt info (Note: older BAR version use CTS+simple key derivation)
   addArchiveCryptInfoNode(archiveHandle,
                           CRYPT_TYPE_NONE,
-                          CRYPT_MODE_CTS,
+                          CRYPT_MODE_CTS_,
                           CRYPT_KEY_DERIVE_SIMPLE
                          );
 
@@ -2622,7 +2622,7 @@ LOCAL Errors writeMeta(ArchiveHandle *archiveHandle)
   error = Crypt_init(&cryptInfo,
 //TODO: MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -5715,7 +5715,7 @@ UNUSED_VARIABLE(storageInfo);
         error = Crypt_setPublicPrivateKeyData(&publicCryptKey,
                                               cryptPublicKey->data,
                                               cryptPublicKey->length,
-                                              CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                              CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                               CRYPT_KEY_DERIVE_NONE,
                                               NULL,  // cryptSalt
                                               NULL  // password
@@ -6401,7 +6401,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
           archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
                                                                       cryptPrivateKey->data,
                                                                       cryptPrivateKey->length,
-                                                                      CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                                      CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
 //CRYPT_KEY_DERIVE_NONE,//                                                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
 CRYPT_KEY_DERIVE_FUNCTION,//
                                                                       NULL,  // salt
@@ -6426,7 +6426,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
               archiveHandle->pendingError = Crypt_setPublicPrivateKeyData(&privateCryptKey,
                                                                           cryptPrivateKey->data,
                                                                           cryptPrivateKey->length,
-                                                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
 //archiveHandle->archiveCryptInfo->cryptMode,
 //                                                                          archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
 //CRYPT_KEY_DERIVE_NONE,
@@ -6695,7 +6695,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -6710,7 +6710,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -6725,7 +6725,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -6740,7 +6740,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -6755,7 +6755,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
 //TODO MULTI_CRYPT
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7107,7 +7107,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7122,7 +7122,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7137,7 +7137,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7152,7 +7152,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7383,7 +7383,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7397,7 +7397,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7615,7 +7615,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7629,7 +7629,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7940,7 +7940,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7954,7 +7954,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7968,7 +7968,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7982,7 +7982,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -7996,7 +7996,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -8010,7 +8010,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -8292,7 +8292,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -8306,7 +8306,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -8533,7 +8533,7 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   error = Crypt_init(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
 //TODO: multi crypt
                      archiveHandle->storageInfo->jobOptions->cryptAlgorithms[0],
-                     CRYPT_MODE_CBC,
+                     CRYPT_MODE_CBC_,
                      &archiveHandle->archiveCryptInfo->cryptSalt,
                      &archiveHandle->archiveCryptInfo->cryptKey
                     );
@@ -8708,7 +8708,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
           error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
                                                 cryptPrivateKey->data,
                                                 cryptPrivateKey->length,
-                                                CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                                 archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                                 NULL,  // cryptSalt
                                                 NULL  // password
@@ -8730,7 +8730,7 @@ Errors Archive_getNextArchiveEntry(ArchiveHandle          *archiveHandle,
             error = Crypt_setPublicPrivateKeyData(&privateCryptKey,
                                                   cryptPrivateKey->data,
                                                   cryptPrivateKey->length,
-                                                  CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                                  CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                                   archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
                                                   &archiveHandle->archiveCryptInfo->cryptSalt,
                                                   password
@@ -9084,7 +9084,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
     {
       error = Crypt_init(&archiveEntryInfo->meta.chunkMetaEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -9492,7 +9492,7 @@ Errors Archive_skipNextEntry(ArchiveHandle *archiveHandle)
 #ifndef MULTI_CRYPT
       error = Crypt_init(&archiveEntryInfo->file.chunkFileEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -9514,7 +9514,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -9527,7 +9527,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -9540,7 +9540,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->file.chunkFileData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -9553,7 +9553,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->file.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -10131,7 +10131,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -10144,7 +10144,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -10157,7 +10157,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->image.chunkImageData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -10170,7 +10170,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->image.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -10643,7 +10643,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -10656,7 +10656,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->directory.chunkDirectoryExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -11065,7 +11065,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -11078,7 +11078,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->link.chunkLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -11536,7 +11536,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -11549,7 +11549,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -11562,7 +11562,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkName.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -11575,7 +11575,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkDelta.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -11588,7 +11588,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.chunkHardLinkData.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -11601,7 +11601,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->hardLink.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -12168,7 +12168,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialEntry.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );
@@ -12181,7 +12181,7 @@ NULL//                             password
     {
       error = Crypt_init(&archiveEntryInfo->special.chunkSpecialExtendedAttribute.cryptInfo,
                          archiveEntryInfo->cryptAlgorithms[0],
-                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC,
+                         archiveHandle->archiveCryptInfo->cryptMode|CRYPT_MODE_CBC_,
                          &archiveHandle->archiveCryptInfo->cryptSalt,
                          decryptKey
                         );

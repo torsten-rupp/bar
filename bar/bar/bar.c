@@ -3340,7 +3340,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     fileName = String_newCString(value);
     error = Crypt_readPublicPrivateKeyFile(cryptKey,
                                            fileName,
-                                           CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                           CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                            CRYPT_KEY_DERIVE_NONE,
                                            NULL,  // cryptSalt
                                            NULL  // password
@@ -3361,7 +3361,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     error = Crypt_setPublicPrivateKeyData(cryptKey,
                                           &value[7],
                                           stringLength(value)-7,
-                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                           CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // cryptSalt
                                           NULL  // password
@@ -3380,7 +3380,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
     error = Crypt_setPublicPrivateKeyData(cryptKey,
                                           value,
                                           stringLength(value),
-                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                           CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // cryptSalt
                                           NULL  // password
@@ -9875,7 +9875,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     // write encryption public key file
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
                                             publicKeyFileName,
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                             CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // cryptSalt
                                             NULL  // password
@@ -9894,7 +9894,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     // write encryption private key file
     error = Crypt_writePublicPrivateKeyFile(&privateKey,
                                             privateKeyFileName,
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                             CRYPT_KEY_DERIVE_FUNCTION,
                                             NULL,  // cryptSalt
                                             cryptPassword
@@ -9917,7 +9917,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     error = Crypt_getPublicPrivateKeyData(&publicKey,
                                           &data,
                                           &dataLength,
-                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                           CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // cryptSalt
                                           NULL  // password
@@ -9940,7 +9940,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
     error = Crypt_getPublicPrivateKeyData(&privateKey,
                                           &data,
                                           &dataLength,
-                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                           CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // cryptSalt
                                           NULL  // password
@@ -10069,7 +10069,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     // write signature public key
     error = Crypt_writePublicPrivateKeyFile(&publicKey,
                                             publicKeyFileName,
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                             CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // cryptSalt
                                             NULL  // password
@@ -10088,7 +10088,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     // write signature private key
     error = Crypt_writePublicPrivateKeyFile(&privateKey,
                                             privateKeyFileName,
-                                            CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                            CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                             CRYPT_KEY_DERIVE_NONE,
                                             NULL,  // cryptSalt
                                             NULL  // password,
@@ -10110,7 +10110,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     error = Crypt_getPublicPrivateKeyData(&publicKey,
                                           &data,
                                           &dataLength,
-                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                           CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // cryptSalt
                                           NULL  // password,
@@ -10133,7 +10133,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     error = Crypt_getPublicPrivateKeyData(&privateKey,
                                           &data,
                                           &dataLength,
-                                          CRYPT_MODE_CBC|CRYPT_MODE_CTS,
+                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
                                           CRYPT_KEY_DERIVE_NONE,
                                           NULL,  // cryptSalt
                                           NULL  // password
