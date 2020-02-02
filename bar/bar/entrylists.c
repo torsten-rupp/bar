@@ -346,7 +346,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
   #elif defined(PLATFORM_WINDOWS)
     // escape all '\' by '\\'
     escapedString = String_newCString(string);
-    String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
+    String_replaceAllCString(escapedString,STRING_BEGIN,"\\","\\\\");
 
     error = Pattern_init(&entryNode->pattern,
                          escapedString,
@@ -417,7 +417,7 @@ Errors EntryList_updateCString(EntryList    *entryList,
     #elif defined(PLATFORM_WINDOWS)
       // escape all '\' by '\\'
       escapedString = String_newCString(string);
-      String_replaceAllCString(string,STRING_BEGIN,"\\","\\\\");
+      String_replaceAllCString(escapedString,STRING_BEGIN,"\\","\\\\");
 
       error = Pattern_init(&pattern,
                            escapedString,
