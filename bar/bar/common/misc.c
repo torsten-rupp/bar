@@ -83,6 +83,7 @@
 * Notes  : -
 \***********************************************************************/
 
+#if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
 LOCAL bool readProcessIO(int fd, String line)
 {
   #if   defined(PLATFORM_LINUX)
@@ -131,6 +132,7 @@ LOCAL bool readProcessIO(int fd, String line)
 
   return FALSE;
 }
+#endif /* defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID) */
 
 /***********************************************************************\
 * Name   : execute
@@ -198,7 +200,6 @@ LOCAL Errors execute(const char        *command,
 //fprintf(stderr,"%s,%d: command %s\n",__FILE__,__LINE__,String_cString(text));
 
   #if defined(HAVE_PIPE) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
-#if 1
     // create i/o pipes
     if (pipe(pipeStdin) != 0)
     {
@@ -274,9 +275,6 @@ LOCAL Errors execute(const char        *command,
     close(pipeStderr[1]);
     close(pipeStdout[1]);
     close(pipeStdin[0]);
-#else /* 0 */
-error = ERROR_NONE;
-#endif /* 0 */
 
     // read stdout/stderr and wait until process terminate
     line   = String_new();
@@ -1425,6 +1423,7 @@ String Misc_getCurrentUserName(String string)
       String_clear(string);
     }
   #else
+//TODO: not available on Windows?
     String_setCString(string,getlogin());
   #endif
 
@@ -1861,6 +1860,8 @@ uint Misc_waitHandle(int        handle,
         selectTimeout.tv_nsec = (long)(timeout%MS_PER_SECOND)*NS_PER_MS;
         n = pselect(handle+1,&readfds,&writefds,&exceptionfds,&selectTimeout,signalMask);
       #else /* not HAVE_PSELECT */
+        UNUSED_VARIABLE(signalMask);
+
         selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
         selectTimeout.tv_usec = (long)(timeout%MS_PER_SECOND)*US_PER_MS;
         n = select(handle+1,&readfds,&writefds,&exceptionfds,&selectTimeout);
@@ -2017,6 +2018,8 @@ int Misc_waitHandles(WaitHandle *waitHandle,
         selectTimeout.tv_nsec = (long)(timeout%MS_PER_SECOND)*NS_PER_MS;
         return pselect(waitHandle->handleCount+1,&waitHandle->readfds,&waitHandle->writefds,&waitHandle->exceptionfds,&selectTimeout,signalMask);
       #else /* not HAVE_PSELECT */
+        UNUSED_VARIABLE(signalMask);
+
         selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
         selectTimeout.tv_usec = (long)(timeout%MS_PER_SECOND)*US_PER_MS;
         return select(waitHandle->handleCount+1,&waitHandle->readfds,&waitHandle->writefds,&waitHandle->exceptionfds,&selectTimeout);
