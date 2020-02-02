@@ -645,10 +645,10 @@ LOCAL void sigActionHandler(int signalNumber, siginfo_t *sigInfo, void *context)
 
 // ---------------------------------------------------------------------
 
-void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
-                     uint                    signalHandlerInfoCount_,
-                     SignalHandlerFunction   signalHandlerFunction_,
-                     void                    *signalHandlerUserData_
+void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo,
+                     uint                    signalHandlerInfoCount,
+                     SignalHandlerFunction   signalHandlerFunction,
+                     void                    *signalHandlerUserData
                     )
 {
   #if   defined(PLATFORM_LINUX)
@@ -659,7 +659,7 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
-  assert(signalHandlerInfo_ != NULL);
+  assert(signalHandlerInfo != NULL);
 
   #if   defined(PLATFORM_LINUX)
     // initialise signal handler stack
@@ -673,10 +673,10 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
     }
 
     // add signal handlers
-    signalHandlerInfo      = signalHandlerInfo_;
-    signalHandlerInfoCount = signalHandlerInfoCount_;
-    signalHandlerFunction  = signalHandlerFunction_;
-    signalHandlerUserData  = signalHandlerUserData_;
+    signalHandlerInfo      = signalHandlerInfo;
+    signalHandlerInfoCount = signalHandlerInfoCount;
+    signalHandlerFunction  = signalHandlerFunction;
+    signalHandlerUserData  = signalHandlerUserData;
     for (uint i = 0; i < signalHandlerInfoCount; i++)
     {
        signalActionInfo.sa_handler   = NULL;
@@ -687,6 +687,10 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
        sigaction(signalHandlerInfo[i].signalNumber, &signalActionInfo, NULL);
     }
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(signalHandlerInfo);
+    UNUSED_VARIABLE(signalHandlerInfoCount);
+    UNUSED_VARIABLE(signalHandlerFunction);
+    UNUSED_VARIABLE(signalHandlerUserData);
   #endif /* PLATFORM_... */
 }
 
