@@ -3720,11 +3720,11 @@ Errors File_getAttributesCString(FileAttributes *fileAttributes,
     int    handle;
     Errors error;
   #endif /* FS_IOC_GETFLAGS */
-  #ifndef HAVE_O_NOATIME
-    struct stat fileStat;
-    bool   atimeFlag;
+  #if defined(FS_IOC_GETFLAGS) && !defined(HAVE_O_NOATIME)
+    struct stat     fileStat;
+    bool            atimeFlag;
     struct timespec atime;
-  #endif /* not HAVE_O_NOATIME */
+  #endif /* defined(FS_IOC_GETFLAGS) && !defined(HAVE_O_NOATIME) */
 
   assert(fileAttributes != NULL);
   assert(fileName != NULL);
@@ -4052,6 +4052,9 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
 
     // free resources
     free(names);
+  #else /* not HAVE_LLISTXATTR */
+    UNUSED_VARIABLE(fileExtendedAttributeList);
+    UNUSED_VARIABLE(fileName);
   #endif /* HAVE_LLISTXATTR */
 
   return ERROR_NONE;
@@ -4082,6 +4085,9 @@ Errors File_setExtendedAttributes(ConstString                     fileName,
         return ERRORX_(IO,errno,"%E",errno);
       }
     }
+  #else /* not HAVE_LSETXATTR */
+    UNUSED_VARIABLE(fileName);
+    UNUSED_VARIABLE(fileExtendedAttributeList);
   #endif /* HAVE_LSETXATTR */
 
   return ERROR_NONE;
