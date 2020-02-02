@@ -240,7 +240,6 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
   String                     fileName;
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
-    String    string;
   #endif /* PLATFORM_... */
 
   assert(deltaSourceList != NULL);
@@ -382,7 +381,6 @@ Errors DeltaSourceList_update(DeltaSourceList *deltaSourceList,
   String                     fileName;
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
-    String    string;
   #endif /* PLATFORM_... */
 
   assert(deltaSourceList != NULL);
