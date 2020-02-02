@@ -75,10 +75,10 @@ typedef enum
 
 // crypt modes
 #define CRYPT_MODE_KDF        0          // use key derivation function to generate password
-//TODO: required? Cam be default?
+//TODO: required? Can be default?
 #define CRYPT_MODE_SIMPLE_KEY (1 << 0)   // use simple function to generate password
-#define CRYPT_MODE_CBC        (1 << 1)   // cipher block chaining
-#define CRYPT_MODE_CTS        (1 << 2)   // cipher text stealing
+#define CRYPT_MODE_CBC_       (1 << 1)   // cipher block chaining (Note: name clash on Windows!)
+#define CRYPT_MODE_CTS_       (1 << 2)   // cipher text stealing (Note: name clash on Windows!)
 #define CRYPT_MODE_CTS_DATA   (1 << 3)   // cipher text stealing for data (Crypt_encryptBytes()/Crypt_decryptBytes)
 
 #define CRYPT_MODE_NONE 0
