@@ -780,7 +780,7 @@ Errors __Crypt_init(const char      *__fileName__,
               #endif /* NDEBUG */
               break; /* not reached */
           }
-          gcryptMode  = ((cryptMode & CRYPT_MODE_CBC) == CRYPT_MODE_CBC) ? GCRY_CIPHER_MODE_CBC : GCRY_CIPHER_MODE_NONE;
+          gcryptMode  = ((cryptMode & CRYPT_MODE_CBC_) == CRYPT_MODE_CBC_) ? GCRY_CIPHER_MODE_CBC : GCRY_CIPHER_MODE_NONE;
           gcryptFlags = 0;
 
           // check if algorithm available
@@ -1125,7 +1125,7 @@ Errors Crypt_encrypt(CryptInfo *cryptInfo,
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,
-                                      IS_SET(cryptInfo->cryptMode,CRYPT_MODE_CTS)
+                                      IS_SET(cryptInfo->cryptMode,CRYPT_MODE_CTS_)
                                      );
         if (gcryptError != 0)
         {
@@ -1194,7 +1194,7 @@ Errors Crypt_decrypt(CryptInfo *cryptInfo,
         assert((bufferLength%cryptInfo->blockLength) == 0);
 
         gcryptError = gcry_cipher_cts(cryptInfo->gcry_cipher_hd,
-                                      IS_SET(cryptInfo->cryptMode,CRYPT_MODE_CTS)
+                                      IS_SET(cryptInfo->cryptMode,CRYPT_MODE_CTS_)
                                      );
         if (gcryptError != 0)
         {
