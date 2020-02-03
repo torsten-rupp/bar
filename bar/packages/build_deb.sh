@@ -131,28 +131,33 @@ fi
 #trap /bin/bash ERR
 #set -e
 
-# build deb
+# extract sources
 cd /tmp
 tar xjf $BASE_PATH/$distributionFileName
 cd $packageName-$version
+
+# create debian files with changelog
 install -d debian
-install /media/home/packages/debian/changelog \
-        /media/home/packages/debian/compat \
-        /media/home/packages/debian/control \
-        /media/home/packages/debian/copyright \
-        /media/home/packages/debian/preinst \
-        /media/home/packages/debian/postinst \
-        /media/home/packages/debian/prerm \
-        /media/home/packages/debian/postrm \
-        /media/home/packages/debian/rules \
+install packages/debian/compat \
+        packages/debian/control \
+        packages/debian/copyright \
+        packages/debian/preinst \
+        packages/debian/postinst \
+        packages/debian/prerm \
+        packages/debian/postrm \
+        packages/debian/rules \
         debian
-install /media/home/packages/debian/source/format \
+install packages/debian/source/format \
         debian/source
+LANG=en_US.utf8 ./packages/changelog.pl --type deb < ChangeLog > debian/changelog
+
+# build deb
 #debuild \
 #  -rfakeroot \
 #  -e SOURCE_DIR=$BASE_PATH \
 #  -e testsFlag=$testsFlag \
 #  -us -uc
+#ln -s packages/debian
 debuild \
   -e SOURCE_DIR=$BASE_PATH \
   -e packageName=$packageName \
@@ -180,4 +185,6 @@ fi
 if test $debugFlag -eq 1; then
   /bin/bash
 fi
+
+#TODO: remove
 /bin/bash

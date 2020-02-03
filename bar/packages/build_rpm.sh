@@ -122,7 +122,13 @@ fi
 #trap /bin/bash ERR
 #set -e
 
+# create .spec-file with changelog
+sed -i '/^%changelog/q1' packages/backup-archiver.spec;
+LANG=en_US.utf8 ./packages/changelog.pl --type rpm < ChangeLog >> packages/backup-archiver.spec
+
 # build rpm
+sed -i '/^%changelog/q1' packages/backup-archiver.spec;
+LANG=en_US.utf8 ./packages/changelog.pl --type rpm < ChangeLog >> packages/backup-archiver.spec
 rpmbuild \
   -bb \
   --define "_sourcedir $BASE_PATH" \
@@ -143,4 +149,6 @@ md5sum $BASE_PATH/$rpmFileName
 if test $debugFlag -eq 1; then
   /bin/bash
 fi
+
+#TODO: remove
 /bin/bash
