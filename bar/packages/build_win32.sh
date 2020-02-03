@@ -184,7 +184,7 @@ $wine "$iscc" \
 chown $userGroup $BASE_PATH/${setupName}.exe
 
 # get MD5 hash
-md5sum $BASE_PATH/${œsetupName}.exe
+md5sum $BASE_PATH/${setupName}.exe
 
 # debug
 if test $debugFlag -eq 1; then
