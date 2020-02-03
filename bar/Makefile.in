@@ -295,11 +295,10 @@ help:
 	@$(ECHO) "  install_test_rpm_opensuse-leap-x86_64"
 	@$(ECHO) ""
 	@$(ECHO) "  install_test_deb"
-	@$(ECHO) "  install_test_deb_debian7"
-	@$(ECHO) "  install_test_deb_debian7-x86_64"
 	@$(ECHO) "  install_test_deb_debian8"
 	@$(ECHO) "  install_test_deb_debian8-x86_64"
-	@$(ECHO) "  install_test_deb_ubuntu14.04-x86_64"
+	@$(ECHO) "  install_test_deb_debian9"
+	@$(ECHO) "  install_test_deb_debian9-x86_64"
 	@$(ECHO) "  install_test_deb_ubuntu16.04-x86_64"
 	@$(ECHO) "  install_test_deb_ubuntu17.10-x86_64"
 	@$(ECHO) "  install_test_deb_ubuntu18.04-x86_64"
@@ -709,7 +708,9 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   $(DOC) \
   $(DOC_IMAGES) \
   $(DOC_IMAGES_SMALL) \
-  $(DOC_IMAGES_LARGE)
+  $(DOC_IMAGES_LARGE) \
+  \
+  packages/*
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
                    configure \
@@ -776,6 +777,33 @@ $(DISTRIBUTION_NAME).tar.bz2: \
 	$(INSTALL) -m 664 \
                    doc/images/*.png \
                    tmp/$(DISTRIBUTION_NAME)/doc/images
+	#
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages
+	$(INSTALL) -m 664 \
+                   packages/*.dockerfile \
+                   packages/*.spec \
+                   packages/*.iss \
+                   packages/*.sh \
+                   tmp/$(DISTRIBUTION_NAME)/packages
+	$(INSTALL) -m 775 \
+                   packages/changelog.pl \
+                   tmp/$(DISTRIBUTION_NAME)/packages
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian
+	$(INSTALL) -m 664 \
+                   packages/debian/compat \
+                   packages/debian/conffiles \
+                   packages/debian/control \
+                   packages/debian/copyright \
+                   packages/debian/postinst \
+                   packages/debian/postrm \
+                   packages/debian/preinst \
+                   packages/debian/prerm \
+                   packages/debian/rules \
+                   tmp/$(DISTRIBUTION_NAME)/packages/debian
+	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian/source
+	$(INSTALL) -m 664 \
+                   packages/debian/source/format \
+                   tmp/$(DISTRIBUTION_NAME)/packages/debian/source
 	#
 	($(CD) tmp; $(TAR) cjf ../$@ $(DISTRIBUTION_NAME))
 	$(RMRF) tmp/$(DISTRIBUTION_NAME)
@@ -1122,7 +1150,6 @@ install_test_deb: \
   install_test_deb_debian8-x86_64 \
   install_test_deb_debian9 \
   install_test_deb_debian9-x86_64 \
-  install_test_deb_ubuntu14.04-x86_64 \
   install_test_deb_ubuntu16.04-x86_64 \
   install_test_deb_ubuntu17.10-x86_64 \
   install_test_deb_ubuntu18.04-x86_64 \
@@ -1159,11 +1186,6 @@ install_test_deb_debian10-x86_64:
 	@$(call functionInstallTestDEB,debian:10,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
-.PHONY: install_test_deb_ubuntu14.04-x86_64
-install_test_deb_ubuntu14.04-x86_64:
-	@$(call functionPrintInfo,Test install Ubuntu 14.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:14.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
-	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_ubuntu16.04-x86_64
 install_test_deb_ubuntu16.04-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu 16.04 64bit)
