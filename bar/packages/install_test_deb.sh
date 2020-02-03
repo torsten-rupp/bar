@@ -67,8 +67,8 @@ apt-get -y install systemd
 apt-get -y install default-jre-headless
 
 # install deb
-dpkg -i $BASE_PATH/bar-$suffix.deb
-dpkg -i $BASE_PATH/bar-gui-$suffix.deb
+dpkg -i $BASE_PATH/backup-archiver-$suffix.deb
+dpkg -i $BASE_PATH/backup-archiver-gui-$suffix.deb
 
 # set error handler: execute bash shell
 trap /bin/bash ERR
