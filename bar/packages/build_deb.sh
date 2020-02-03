@@ -176,6 +176,7 @@ if test -n "$debFileNameGUI"; then
   chown $userGroup $BASE_PATH/$debFileNameGUI
 fi
 
+# get MD5 hash
 md5sum $BASE_PATH/$debFileName
 if test -n "$debFileNameGUI"; then
   md5sum $BASE_PATH/$debFileNameGUI

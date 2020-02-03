@@ -143,6 +143,7 @@ rpmbuild \
 cp -f /root/rpmbuild/RPMS/*/backup-archiver-[0-9]*.rpm $BASE_PATH/$rpmFileName
 chown $userGroup $BASE_PATH/$rpmFileName
 
+# get MD5 hash
 md5sum $BASE_PATH/$rpmFileName
 
 # debug

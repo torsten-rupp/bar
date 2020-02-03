@@ -181,10 +181,10 @@ $wine "$iscc" \
   backup-archiver.iss
 
 # get result
-#cp -f /tmp/bar-setup-[0-9]*.exe $BASE_PATH/$setupName
-#chown $userGroup $BASE_PATH/$setupName
+chown $userGroup $BASE_PATH/${œsetupName}.exe
 
-md5sum $BASE_PATH/$setupName
+# get MD5 hash
+md5sum $BASE_PATH/${œsetupName}.exe
 
 # debug
 if test $debugFlag -eq 1; then
