@@ -936,7 +936,7 @@ LOCAL void formatString(struct __String *string,
     struct __String    *string;
   } data;
   char          buffer[64];
-  uint          length;
+  int           length;
   const char    *s;
   ulong         i;
   char          ch;
@@ -960,7 +960,8 @@ LOCAL void formatString(struct __String *string,
         case 'c':
           data.i = va_arg(arguments,int);
           length = snprintf(buffer,sizeof(buffer),formatToken.token,data.i);
-          if (length < sizeof(buffer))
+          assert(length >= 0);
+          if ((uint)length < sizeof(buffer))
           {
             String_appendCString(string,buffer);
           }
@@ -980,7 +981,8 @@ LOCAL void formatString(struct __String *string,
               {
                 data.i = va_arg(arguments,int);
                 length = snprintf(buffer,sizeof(buffer),formatToken.token,data.i);
-                if (length < sizeof(buffer))
+                assert(length >= 0);
+                if ((uint)length < sizeof(buffer))
                 {
                   String_appendCString(string,buffer);
                 }
@@ -997,7 +999,8 @@ LOCAL void formatString(struct __String *string,
               {
                 data.l = va_arg(arguments,long);
                 length = snprintf(buffer,sizeof(buffer),formatToken.token,data.l);
-                if (length < sizeof(buffer))
+                assert(length >= 0);
+                if ((uint)length < sizeof(buffer))
                 {
                   String_appendCString(string,buffer);
                 }
@@ -1015,7 +1018,8 @@ LOCAL void formatString(struct __String *string,
                 #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
                   data.ll = va_arg(arguments,long long);
                   length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ll);
-                  if (length < sizeof(buffer))
+                  assert(length >= 0);
+                  if ((uint)length < sizeof(buffer))
                   {
                     String_appendCString(string,buffer);
                   }
@@ -1048,7 +1052,8 @@ LOCAL void formatString(struct __String *string,
               {
                 data.ui = va_arg(arguments,unsigned int);
                 length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ui);
-                if (length < sizeof(buffer))
+                assert(length >= 0);
+                if ((uint)length < sizeof(buffer))
                 {
                   String_appendCString(string,buffer);
                 }
@@ -1065,7 +1070,8 @@ LOCAL void formatString(struct __String *string,
               {
                 data.ul = va_arg(arguments,unsigned long);
                 length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ul);
-                if (length < sizeof(buffer))
+                assert(length >= 0);
+                if ((uint)length < sizeof(buffer))
                 {
                   String_appendCString(string,buffer);
                 }
@@ -1083,7 +1089,8 @@ LOCAL void formatString(struct __String *string,
                 #if defined(_LONG_LONG) || defined(HAVE_LONG_LONG)
                   data.ull = va_arg(arguments,unsigned long long);
                   length = snprintf(buffer,sizeof(buffer),formatToken.token,data.ull);
-                  if (length < sizeof(buffer))
+                  assert(length >= 0);
+                  if ((uint)length < sizeof(buffer))
                   {
                     String_appendCString(string,buffer);
                   }
@@ -1121,7 +1128,8 @@ LOCAL void formatString(struct __String *string,
               {
                 data.d = va_arg(arguments,double);
                 length = snprintf(buffer,sizeof(buffer),formatToken.token,data.d);
-                if (length < sizeof(buffer))
+                assert(length >= 0);
+                if ((uint)length < sizeof(buffer))
                 {
                   String_appendCString(string,buffer);
                 }
@@ -1203,7 +1211,8 @@ LOCAL void formatString(struct __String *string,
             if (data.s != NULL)
             {
               length = snprintf(buffer,sizeof(buffer),formatToken.token,data.s);
-              if (length < sizeof(buffer))
+              assert(length >= 0);
+              if ((uint)length < sizeof(buffer))
               {
                 String_appendCString(string,buffer);
               }
@@ -1224,7 +1233,8 @@ LOCAL void formatString(struct __String *string,
           if (data.p != NULL)
           {
             length = snprintf(buffer,sizeof(buffer),formatToken.token,data.p);
-            if (length < sizeof(buffer))
+            assert(length >= 0);
+            if ((uint)length < sizeof(buffer))
             {
               String_appendCString(string,buffer);
             }
@@ -1293,7 +1303,8 @@ LOCAL void formatString(struct __String *string,
           {
             // non quoted stringformat
             length = snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
-            if (length < sizeof(buffer))
+            assert(length >= 0);
+            if ((uint)length < sizeof(buffer))
             {
               String_appendCString(string,buffer);
             }
@@ -1376,7 +1387,8 @@ LOCAL void formatString(struct __String *string,
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASEX("format '%s': conversion '%c'",format,formatToken.conversionChar);
 #if 0
           length = snprintf(buffer,sizeof(buffer),formatToken.token);
-          if (length < sizeof(buffer))
+          assert(length >= 0);
+          if ((uint)length < sizeof(buffer))
           {
             String_appendCString(string,buffer);
           }
