@@ -1064,7 +1064,7 @@ $(DISTRIBUTION_NAME)-setup.exe: \
               $(VERSION_MAJOR).$(VERSION_MINOR) \
               $(shell id -u):$(shell id -g) \
               $(WINE) \
-              $(DISTRIBUTION_NAME)-setup.exe; \
+              $(DISTRIBUTION_NAME)-setup; \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
