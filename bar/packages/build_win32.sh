@@ -120,13 +120,15 @@ if test -z "$packageName"; then
 fi
 
 # set error handler: execute bash shell
-trap /bin/bash ERR
-set -e
+#trap /bin/bash ERR
+#set -e
 
-# build Win32
+# extract sources
 cd /tmp
 tar xjf $BASE_PATH/$distributionFileName
 cd $packageName-$version
+
+# build Win32
 ./download-third-party-packages.sh \
   --clean
 ./download-third-party-packages.sh \
@@ -144,10 +146,12 @@ cd $packageName-$version
 make
 make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
+set -x       .
+install packages/backup-archiver.iss backup-archiver.iss
 wine-stable '/media/wine/drive_c/Program Files/Inno Setup 5/ISCC.exe' \
   /O$BASE_PATH \
   /F$setupName \
-  bar.iss
+  backup-archiver.iss
 
 # get result
 #cp -f /tmp/bar-setup-[0-9]*.exe $BASE_PATH/$setupName
@@ -159,4 +163,6 @@ md5sum $BASE_PATH/$setupName
 if test $debugFlag -eq 1; then
   /bin/bash
 fi
+
+#TODO: remove
 /bin/bash
