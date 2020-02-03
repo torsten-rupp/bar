@@ -591,17 +591,19 @@ INTERMEDIATE_HEADERS     = errors.h \
                            archive_format_const.h \
                            index_definition.h \
 
-TARGETS                  = bar@EXEEXT@ \
+TARGETS_INSTALL          = bar@EXEEXT@ \
                            bar-debug@EXEEXT@ \
-                           bar-gcov@EXEEXT@ \
-                           bar-gprof@EXEEXT@ \
-                           bar-valgrind@EXEEXT@ \
                            $(foreach z,$(LANGUAGES),po/$z/LC_MESSAGES/bar.mo) \
                            $(if @HAVE_BREAKPAD@,release/bar.sym debug/bar.sym) \
                            bar-keygen@SHELLEXT@ \
                            bar-sqlite3@EXEEXT@ \
-                           destroyer@EXEEXT@ \
                            $(if @HAVE_BREAKPAD@,bar-minidump@EXEEXT@) \
+
+TARGETS                  = $(TARGETS_INSTALL) \
+                           bar-gcov@EXEEXT@ \
+                           bar-gprof@EXEEXT@ \
+                           bar-valgrind@EXEEXT@ \
+                           destroyer@EXEEXT@ \
 
 #------------------------------ dependencies ---------------------------------
 
@@ -628,7 +630,7 @@ clean: \
 	$(RMF) $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(RMF) /tmp/bar.cfg /tmp/bar-slave.cfg /tmp/bar.log /tmp/bar-slave.log /tmp/pairing
 	$(RMF) bar-gcov.info gmon.out
-	$(RMF) $(TARGETS)
+	$(RMF) $(TARGETS_ALL)
 
 distclean: \
   clean \
@@ -866,7 +868,7 @@ ifeq (@HAVE_BREAKPAD@,1)
 release/bar.sym: bar@EXEEXT@
 	$(DUMP_SYMS) ./bar@EXEEXT@ >$@
 else
-	@$(ECHO) "ERROR: breakpad not configured - cannot build symbol file."
+	@$(ECHO) "Warning: breakpad not configured - cannot build symbol file."
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
@@ -885,14 +887,14 @@ release/bar.sym.bz2.o: release/bar.sym
         )
 	$(RMF) release/bar.sym.bz2
 else
-	@$(ECHO) "ERROR: breakpad not configured - cannot build symbol object file."
+	@$(ECHO) "Warning: breakpad not configured - cannot build symbol object file."
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
 debug/bar.sym: bar-debug@EXEEXT@
 	$(DUMP_SYMS) ./bar-debug@EXEEXT@ >$@
 else
-	@$(ECHO) "ERROR: breakpad not configured - cannot build symbol file."
+	@$(ECHO) "Warning: breakpad not configured - cannot build symbol file."
 endif
 
 ifeq (@HAVE_BREAKPAD@,1)
@@ -911,7 +913,7 @@ debug/bar.sym.bz2.o: debug/bar.sym
         )
 	$(RMF) debug/bar.sym.bz2
 else
-	@$(ECHO) "ERROR: breakpad not configured - cannot build symbol object file."
+	@$(ECHO) "Warning: breakpad not configured - cannot build symbol object file."
 endif
 
 # compile SQLite, xdelta C source without warning flags
@@ -2218,7 +2220,7 @@ testcode_diff:
 .PHONY: install uninstall
 
 install: \
-  $(TARGETS) \
+  $(TARGETS_INSTALL) \
   $(SCRIPTS) \
   $(DOC)
 	$(INSTALL) -d "$(DESTDIR)$(INSTALL_BIN_DIR)"
