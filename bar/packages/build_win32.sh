@@ -181,7 +181,7 @@ $wine "$iscc" \
   backup-archiver.iss
 
 # get result
-chown $userGroup $BASE_PATH/${œsetupName}.exe
+chown $userGroup $BASE_PATH/${setupName}.exe
 
 # get MD5 hash
 md5sum $BASE_PATH/${œsetupName}.exe
