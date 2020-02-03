@@ -82,7 +82,7 @@ trap /bin/bash ERR
 set -e
 
 # install rpm
-rpm -i $BASE_PATH/bar-$suffix.rpm
+rpm -i $BASE_PATH/backup-archiver-$suffix.rpm
 
 # simple command test
 bar --help >/dev/null
