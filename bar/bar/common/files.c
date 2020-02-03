@@ -586,19 +586,21 @@ LOCAL Errors initFileHandle(const char *__fileName__,
 * Purpose: deinitialize file handle
 * Input  : fileHandle     - file handle variable
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-LOCAL void doneFileHandle(FileHandle *fileHandle)
+LOCAL Errors doneFileHandle(FileHandle *fileHandle)
 #else /* not NDEBUG */
-LOCAL void doneFileHandle(const char  *__fileName__,
-                          ulong       __lineNb__,
-                          FileHandle  *fileHandle
-                         )
+LOCAL Errors doneFileHandle(const char  *__fileName__,
+                            ulong       __lineNb__,
+                            FileHandle  *fileHandle
+                           )
 #endif /* NDEBUG */
 {
+  Errors error;
+
   #ifndef NDEBUG
     DebugFileNode *debugFileNode;
   #endif /* not NDEBUG */
@@ -606,8 +608,21 @@ LOCAL void doneFileHandle(const char  *__fileName__,
   assert(fileHandle != NULL);
   assert(fileHandle->file != NULL);
 
+  error = ERROR_NONE;
+
   // close file
   (void)fclose(fileHandle->file);
+
+  // delete on close
+  #ifndef NDEBUG
+    if (fileHandle->deleteOnCloseFlag && (fileHandle->name != NULL))
+    {
+      if (unlink(String_cString(fileHandle->name)) != 0)
+      {
+        if (error == ERROR_NONE) error = ERRORX_(IO,errno,"%E",errno);
+      }
+    }
+  #endif /* not NDEBUG */
 
   // free resources
   StringList_done(&fileHandle->lineBufferList);
@@ -658,6 +673,8 @@ LOCAL void doneFileHandle(const char  *__fileName__,
     }
     pthread_mutex_unlock(&debugFileLock);
   #endif /* not NDEBUG */
+
+  return error;
 }
 
 /***********************************************************************\
@@ -1242,6 +1259,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   }
   stringAppend(s,n,prefix);
   stringAppend(s,n,"-XXXXXX");
+fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,s);
 
   // create temporary file
   #ifdef HAVE_MKSTEMP
@@ -1280,6 +1298,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
     #error mkstemp() nor mktemp() available
   #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
+fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,s);
 
   // remove file from directory (finally deleted on close)
   #ifdef NDEBUG
@@ -1294,6 +1313,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
     fileHandle->name              = String_newCString(s);
     fileHandle->deleteOnCloseFlag = TRUE;
   #endif /* NDEBUG */
+fprintf(stderr,"%s, %d: fileHandle->deleteOnCloseFlag=%d\n",__FILE__,__LINE__,fileHandle->deleteOnCloseFlag);
 
   fileHandle->index = 0LL;
   fileHandle->size  = 0LL;
@@ -1993,22 +2013,10 @@ Errors __File_close(const char *__fileName__,
 
   FILE_CHECK_VALID(fileHandle);
 
-  error = ERROR_NONE;
-
-  #ifndef NDEBUG
-    if (fileHandle->deleteOnCloseFlag && (fileHandle->name != NULL))
-    {
-      if (unlink(String_cString(fileHandle->name)) != 0)
-      {
-        if (error == ERROR_NONE) error = ERRORX_(IO,errno,"%E",errno);
-      }
-    }
-  #endif /* not NDEBUG */
-
   // free caches if requested
   if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
   {
-    File_dropCaches(fileHandle,0LL,0LL,FALSE);
+    (void)File_dropCaches(fileHandle,0LL,0LL,FALSE);
   }
 
   #ifndef HAVE_O_NOATIME
@@ -2023,12 +2031,12 @@ Errors __File_close(const char *__fileName__,
 
   // done stream
   #ifdef NDEBUG
-    doneFileHandle(fileHandle);
+    error = doneFileHandle(fileHandle);
   #else /* not NDEBUG */
-    doneFileHandle(__fileName__,
-                   __lineNb__,
-                   fileHandle
-                  );
+    error = doneFileHandle(__fileName__,
+                           __lineNb__,
+                           fileHandle
+                          );
   #endif /* NDEBUG */
 
   return error;
@@ -2062,6 +2070,7 @@ Errors File_read(FileHandle *fileHandle,
                 )
 {
   ssize_t n;
+int ee;
 
   FILE_CHECK_VALID(fileHandle);
   assert(buffer != NULL);
@@ -2072,8 +2081,10 @@ Errors File_read(FileHandle *fileHandle,
 //TODO: not valid
 //    assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
     n = fread(buffer,1,bufferSize,fileHandle->file);
-    if ((n <= 0) && (ferror(fileHandle->file) != 0))
+//    if ((n <= 0) && (ferror(fileHandle->file) != 0))
+    if ((n <= 0) && ((ee=ferror(fileHandle->file)) != 0))
     {
+fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,n,errno,ee);
       return ERRORX_(IO,errno,"%E",errno);
     }
     fileHandle->index += (uint64)n;
@@ -2084,17 +2095,21 @@ Errors File_read(FileHandle *fileHandle,
   else
   {
     // read all requested data
-    errno=0;
+    errno = 0;
+fprintf(stderr,"%s, %d: 1 bufferSize=%lu fileHandle->size=%llu\n",__FILE__,__LINE__,bufferSize,fileHandle->size);
     while (bufferSize > 0L)
     {
+fprintf(stderr,"%s, %d: ftell=%d\n",__FILE__,__LINE__,ftell(fileHandle->file));
       n = fread(buffer,1,bufferSize,fileHandle->file);
       if (n <= 0)
       {
+fprintf(stderr,"x%s, %d: %d %d %d\n",__FILE__,__LINE__,n,errno,ferror(fileHandle->file));
         if (ferror(fileHandle->file) != 0)
         {
           return ERRORX_(IO,errno,"%E",errno);
         }
-        else
+//        else
+        else if (feof(fileHandle->file) != 0)
         {
           return ERROR_END_OF_FILE;
         }
@@ -2104,13 +2119,14 @@ Errors File_read(FileHandle *fileHandle,
       fileHandle->index += (uint64)n;
 //TODO: not valid when file changed in the meantime
 //      assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+fprintf(stderr,"%s, %d: 2 n=%d bufferSize=%lu\n",__FILE__,__LINE__,n,bufferSize);
     }
   }
 
   // free caches if requested
   if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
   {
-    File_dropCaches(fileHandle,0LL,fileHandle->index,FALSE);
+    (void)File_dropCaches(fileHandle,0LL,fileHandle->index,FALSE);
   }
 
   return ERROR_NONE;
@@ -2132,8 +2148,8 @@ Errors File_write(FileHandle *fileHandle,
     fileHandle->index += (uint64)n;
     // Note: real file index may be different, because of buffer in stream object
     // assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
+    if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   }
-  if (fileHandle->index > fileHandle->size) fileHandle->size = fileHandle->index;
   if (n != (ssize_t)bufferLength)
   {
 //TODO: add file name?    return ERRORX_(IO,errno,"%s: %E",String_cString(fileHandle->name),errno);
@@ -2143,7 +2159,7 @@ Errors File_write(FileHandle *fileHandle,
   // free caches if requested
   if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
   {
-    File_dropCaches(fileHandle,0LL,fileHandle->index,TRUE);
+    (void)File_dropCaches(fileHandle,0LL,fileHandle->index,TRUE);
   }
 
   return ERROR_NONE;
@@ -2330,11 +2346,11 @@ Errors File_transfer(FileHandle *fileHandle,
   // free caches if requested
   if ((fromFileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
   {
-    File_dropCaches(fromFileHandle,0LL,fromFileHandle->index,TRUE);
+    (void)File_dropCaches(fromFileHandle,0LL,fromFileHandle->index,TRUE);
   }
   if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
   {
-    File_dropCaches(fileHandle,0LL,fileHandle->index,TRUE);
+    (void)File_dropCaches(fileHandle,0LL,fileHandle->index,TRUE);
   }
 
   // free resources
