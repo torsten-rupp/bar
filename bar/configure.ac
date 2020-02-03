@@ -170,6 +170,34 @@ EOF
   AC_PROVIDE([$0])dnl
 ])
 
+dnl --- get constant (define)
+dnl usage: AC_CONSTANT_VALUE(<text>,<variable>,<includes>,<source>,[<trim characters>])
+AC_DEFUN([AC_CONSTANT_VALUE],
+[
+  AC_REQUIRE([AC_PROG_CPP])
+  AS_VAR_PUSHDEF([ac_cv_constant_value],[ac_cv_constant_value_$2])dnl
+  AC_CACHE_CHECK(
+    [$1],
+    ac_cv_constant_value,
+    [
+      AC_LANG_CONFTEST([AC_LANG_PROGRAM([[$3]],[[__CONFTEST__ $4]])])
+      if AC_TRY_COMMAND($CPP $CPPFLAGS -P -E conftest.c -o conftest); then
+        ac_cv_constant_value=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+      else
+        ac_cv_constant_value=
+      fi
+      if test -n "AS_ESCAPE([[$5]])"; then
+        ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$5]])"`
+      fi
+      AS_VAR_SET($2,$ac_cv_constant_value)
+
+      rm -f conftest.c conftest
+    ]
+  )dnl
+  AS_VAR_POPDEF([ac_cv_constant_value])dnl
+  AC_PROVIDE([$0])dnl
+])
+
 dnl --- check if constant is available
 dnl usage: AC_CHECK_CONSTANT(<constant>,<if found>,<if not found>,<headers>)
 AC_DEFUN([AC_CHECK_CONSTANT],
@@ -618,31 +646,42 @@ AC_DEFUN([AC_PROG_SUDO_COMMAND],
   AC_PROVIDE([$0])dnl
 ])
 
-dnl --- get constant (define)
-dnl usage: AC_CONSTANT_VALUE(<text>,<variable>,<includes>,<source>,[<trim characters>])
-AC_DEFUN([AC_CONSTANT_VALUE],
+dnl --- detect wine C: drive path
+dnl usage: AC_WINE_C_DRIVE(<variable>)
+AC_DEFUN([AC_WINE_C_DRIVE],
 [
-  AC_REQUIRE([AC_PROG_CPP])
-  AS_VAR_PUSHDEF([ac_cv_constant_value],[ac_cv_constant_value_$2])dnl
   AC_CACHE_CHECK(
-    [$1],
-    ac_cv_constant_value,
+    [wine C: drive],
+    ac_cv_wine_c_drive,
     [
-      AC_LANG_CONFTEST([AC_LANG_PROGRAM([[$3]],[[__CONFTEST__ $4]])])
-      if AC_TRY_COMMAND($CPP $CPPFLAGS -P -E conftest.c -o conftest); then
-        ac_cv_constant_value=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value=
-      fi
-      if test -n "AS_ESCAPE([[$5]])"; then
-        ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$5]])"`
-      fi
-      AS_VAR_SET($2,$ac_cv_constant_value)
-
-      rm -f conftest.c conftest
+      ac_cv_wine_c_drive=`winepath C:`
+      ac_cv_wine_c_drive=`dirname $ac_cv_wine_c_drive`
+      ac_cv_wine_c_drive=`realpath $ac_cv_wine_c_drive/c:`
+      AS_VAR_SET($1,$ac_cv_wine_c_drive)
     ]
-  )dnl
-  AS_VAR_POPDEF([ac_cv_constant_value])dnl
+  )
+  AC_PROVIDE([$0])dnl
+])
+
+dnl --- detect ISCC.exe
+dnl usage: AC_PROG_ISCC(<variable>)
+AC_DEFUN([AC_PROG_ISCC],
+[
+  AC_CACHE_CHECK(
+    [ISCC],
+    ac_cv_prog_iscc,
+    [
+      $WINE c\:/Program\ Files\ \(x86\)/Inno\ Setup\ 5/ISCC.exe /\? 1>/dev/null 2>/dev/null
+      if test $? -lt 2; then
+        ac_cv_prog_iscc=`winepath c\:/Program\ Files\ \(x86\)/Inno\ Setup\ 5/ISCC.exe 2>/dev/null`
+      fi
+      $WINE c\:/Program\ Files/Inno\ Setup\ 5/ISCC.exe \/\? 1>/dev/null 2>/dev/null
+      if test $? -lt 2; then
+        ac_cv_prog_iscc=`winepath c\:/Program\ Files/Inno\ Setup\ 5/ISCC.exe 2>/dev/null`
+      fi
+      AS_VAR_SET($1,$ac_cv_prog_iscc)
+    ]
+  )
   AC_PROVIDE([$0])dnl
 ])
 
@@ -805,6 +844,9 @@ AC_SUBST(MSGMERGE)                          dnl msgmerge command
 AC_SUBST(MSGFMT)                            dnl msgfmt command
 
 AC_SUBST(DOCKER)                            dnl docker
+AC_SUBST(WINE)                              dnl wine
+AC_SUBST(WINE_C_DRIVE)                      dnl wine c:-drive path
+AC_SUBST(ISCC)                              dnl Inno Setup
 
 AC_SUBST(EPM)                               dnl EPM tool
 AC_SUBST(EPM_VERSION_3)                     dnl 1 if EPM version 3, otherwise empty
@@ -1199,8 +1241,6 @@ fi
 
 AC_PATH_PROGS(SVNVERSION,svnversion)
 
-AC_PATH_PROGS(DOCKER,docker)
-
 if test $ENABLE_EPM = "yes"; then
   if test -d epm -o -d "`readlink epm`"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
@@ -1350,6 +1390,20 @@ AC_PATH_PROGS(MKFS_EXT4,    mkfs.ext4,    ,/sbin)
 AC_PATH_PROGS(MKFS_MSDOS,   mkfs.msdos,   ,/sbin)
 AC_PATH_PROGS(MKFS_REISERFS,mkfs.reiserfs,,/sbin)
 AC_PATH_PROGS(MKFS_REISER4, mkfs.reiser4, ,/sbin)
+
+AC_PATH_PROGS(DOCKER,docker)
+AC_PATH_PROGS(WINE, wine)
+AC_PATH_PROGS(WINEPATH, winepath)
+AC_PROVIDE(AC_PROG_WINEPATH)
+if test -n "$WINE" -a -n "$WINEPATH"; then
+  AC_WINE_C_DRIVE(WINE_C_DRIVE)
+  AC_PROG_ISCC(ISCC)
+  if test -z "$ISCC"; then
+    AC_MSG_WARN([No 'ISCC.exe' tool found. Cannot create Win32 build.])
+  fi
+else
+  AC_MSG_WARN([No 'wine' tool found. Cannot create Win32 build.])
+fi
 
 # compiler/link flags/paths
 
@@ -4322,13 +4376,17 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  Crash dump support : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  Stacktrace support : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
                     echo ""
+                    echo "  Docker             : `if test -n "$DOCKER"; then echo yes; else echo no; fi`";
+                    echo "  Inno Setup         : $ISCC";
+                    echo ""
+                    echo ""
                     echo "  Install directory  : $INSTALL_DIR"
                     echo "  Binary directory   : $INSTALL_BIN_DIR"
                     echo "  Config directory   : $CONFIG_DIR"
                     echo "  Runtime directory  : $RUNTIME_DIR"
                     echo "  TLS directory      : $TLS_DIR"
                     echo ""
-                    echo "  Heapview diretory : $HEAPVIEW_DIR"
+                    echo "  Heapview directory : $HEAPVIEW_DIR"
                     echo ""
                     if test    ! "$HAVE_BZ2" \
                             -o ! "$HAVE_LZMA" \
@@ -4379,6 +4437,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    ENABLE_DEBUG=$ENABLE_DEBUG
 
                    EPM="$EPM"
+                   DOCKER="$DOCKER"
+                   ISCC="$ISCC"
 
                    ENABLE_GUI=$ENABLE_GUI
                    ENABLE_GUI_I18N=$ENABLE_GUI_I18N
