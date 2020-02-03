@@ -56,8 +56,12 @@ while test $# != 0; do
           n=4
           ;;
         4)
-          setupName="$1"
+          wine="$1"
           n=5
+          ;;
+        5)
+          setupName="$1"
+          n=6
           ;;
       esac
       shift
@@ -82,6 +86,10 @@ while test $# != 0; do
       userGroup="$1"
       n=4
       ;;
+    4)
+      wine="$1"
+      n=5
+      ;;
     5)
       setupName="$1"
       n=6
@@ -90,7 +98,7 @@ while test $# != 0; do
   shift
 done
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <distribution name> <version> <user:group> <package name>"
+  echo "Usage: $0 [options] <distribution name> <version> <user:group> <iscc> <setup name>"
   echo ""
   echo "Options:  -t|--test  execute tests"
   echo "          -h|--help  print help"
@@ -114,14 +122,33 @@ if test -z "$userGroup"; then
   echo >&2 ERROR: no user:group id given!
   exit 1
 fi
-if test -z "$packageName"; then
-  echo >&2 ERROR: no package name given!
+if test -z "$wine"; then
+  echo >&2 ERROR: no wine name given!
+  exit 1
+fi
+if test -z "$setupName"; then
+  echo >&2 ERROR: no setup name given!
+  exit 1
+fi
+
+# get ISCC
+iscc=""
+$wine '/media/wine/Program Files (x86)/Inno Setup 5/ISCC.exe' '/?' 1>/dev/null 2>/dev/null
+if test $? -lt 2; then
+  iscc='/media/wine/Program Files (x86)/Inno Setup 5/ISCC.exe'
+fi
+$wine '/media/wine/Program Files/Inno Setup 5/ISCC.exe' '/?' 1>/dev/null 2>/dev/null
+if test $? -lt 2; then
+  iscc='/media/wine/Program Files/Inno Setup 5/ISCC.exe'
+fi
+if test -z "$iscc"; then
+  echo >&2 ERROR: ISCC.exe not found!
   exit 1
 fi
 
 # set error handler: execute bash shell
-#trap /bin/bash ERR
-#set -e
+trap /bin/bash ERR
+set -e
 
 # extract sources
 cd /tmp
@@ -148,7 +175,7 @@ make install DESTDIR=$PWD/tmp DIST=1 SYSTEM=Windows
 
 set -x       .
 install packages/backup-archiver.iss backup-archiver.iss
-wine-stable '/media/wine/drive_c/Program Files/Inno Setup 5/ISCC.exe' \
+$wine "$iscc" \
   /O$BASE_PATH \
   /F$setupName \
   backup-archiver.iss
