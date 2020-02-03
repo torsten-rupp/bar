@@ -499,12 +499,32 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 #elif defined(PLATFORM_WINDOWS)
   /* Work-around for Windows:
   */
+#if 1
   #ifndef printf
     #define printf __mingw_printf
+  #endif
+  #ifndef vprintf
+    #define vprintf __mingw_vprintf
   #endif
   #ifndef fprintf
     #define fprintf __mingw_fprintf
   #endif
+  #ifndef vfprintf
+    #define vfprintf __mingw_vfprintf
+  #endif
+  #ifndef sprintf
+    #define sprintf __mingw_sprintf
+  #endif
+  #ifndef vsprintf
+    #define vsprintf __mingw_vsprintf
+  #endif
+  #ifndef snprintf
+    #define snprintf __mingw_snprintf
+  #endif
+  #ifndef vsnprintf
+    #define vsnprintf __mingw_vsnprintf
+  #endif
+#endif
 #endif /* PLATFORM_... */
 
 /***********************************************************************\
