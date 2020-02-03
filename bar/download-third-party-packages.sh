@@ -401,6 +401,7 @@ if test $helpFlag -eq 1; then
   $ECHO " breakpad"
   $ECHO " epm"
   $ECHO " launch4j"
+  $ECHO " pthreads-w32"
   $ECHO " jre-windows"
   exit 0
 fi
