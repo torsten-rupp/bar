@@ -9,7 +9,7 @@
 # $Source: /home/torsten/cvs/bar/osc/changelog.pl,v $
 # $Revision: 1.1 $
 # $Author: torsten $
-# Contents: convert ChangeLog to Debian change log
+# Contents: convert ChangeLog to deb/rpm change log
 # Systems: all
 #
 # ----------------------------------------------------------------------------
@@ -31,10 +31,10 @@ use Getopt::Long;
 GetOptions ("type=s" => \$type,
             "help"   => \$help
            );
-if    ($type eq "debian")
+if    ($type eq "deb")
 {
 }
-elsif ($type eq "spec")
+elsif ($type eq "rpm")
 {
 }
 else
@@ -57,13 +57,13 @@ while ($line=<STDIN>)
   {
     if    ($line =~ /^\s*$/)
     {
-      if    ($type eq "debian")
+      if    ($type eq "deb")
       {
         print "\n";
         print " -- Torsten Rupp <torsten.rupp\@gmx.net>  $date\n";
         print "\n";
       }
-      elsif ($type eq "spec")
+      elsif ($type eq "rpm")
       {
         print "\n";
       }
@@ -72,11 +72,11 @@ while ($line=<STDIN>)
     }
     elsif ($line =~ /\s*\*\s*(\S.*)/)
     {
-      if    ($type eq "debian")
+      if    ($type eq "deb")
       {
         print "  * $1\n";
       }
-      elsif ($type eq "spec")
+      elsif ($type eq "rpm")
       {
         $s = $1;
         $s =~ s/%/%%/g;
@@ -97,7 +97,7 @@ while ($line=<STDIN>)
   {
     if    ($line =~ /^(\S+)\s+(\S+).*\s*$/)
     {
-      if    ($type eq "debian")
+      if    ($type eq "deb")
       {
         open(HANDLE,"date -d $1 '+%a, %d %b %Y %H:%M:%S %z'|");
         read(HANDLE,$date,1024);
@@ -106,7 +106,7 @@ while ($line=<STDIN>)
 
         print "backup-archiver ($2) stable; urgency=low\n";
       }
-      elsif ($type eq "spec")
+      elsif ($type eq "rpm")
       {
         open(HANDLE,"date -d $1 '+%a %b %d %Y'|");
         read(HANDLE,$date,1024);
