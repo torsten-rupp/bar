@@ -103,6 +103,7 @@ LOCAL sighandler_t oldSignalAlarmHandler;
 * Notes  : -
 \***********************************************************************/
 
+#ifdef HAVE_SIGALRM
 LOCAL void signalHandler(int signalNumber)
 {
   /* Note: curl trigger from time to time a SIGALRM. The curl option
@@ -114,6 +115,7 @@ LOCAL void signalHandler(int signalNumber)
   */
   UNUSED_VARIABLE(signalNumber);
 }
+#endif /* HAVE_SIGALRM */
 
 /***********************************************************************\
 * Name   : updateStorageStatusInfo
