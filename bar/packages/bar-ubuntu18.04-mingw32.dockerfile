@@ -31,6 +31,7 @@ RUN apt-get -y install \
   m4 \
   patch \
   pkg-config \
+  rsync \
   subversion \
   sudo \
   tar \
