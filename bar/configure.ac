@@ -1428,6 +1428,18 @@ AC_CC_OPTION(-Wbad-function-cast,          CC_WARN_FLAGS)
 AC_CC_OPTION(-Wsign-compare,               CC_WARN_FLAGS CXX_WARN_FLAGS)
 AC_CC_OPTION(-Wstrict-prototypes,          CC_WARN_FLAGS)
 AC_CC_OPTION(-Wno-unknown-pragmas,         CC_WARN_FLAGS CXX_WARN_FLAGS)
+case "$host_os" in
+  linux-*)
+    ;;
+  windows*|mingw*)
+    # Note: __mingw_printf, __mingw_fprintf are not recognized as format functions by mingw gcc version 7.3?
+    AC_CC_OPTION(-Wno-format,CC_WARN_FLAGS CXX_WARN_FLAGS)
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
+    ;;
+esac
 
 AC_CXX_OPTION(-no-pie,LD_FLAGS_DEBUG LD_FLAGS_GCOV LD_FLAGS_VALGRIND)
 
