@@ -101,6 +101,11 @@ LOCAL const struct
 
 #define DEBUG_MAX_CLOSED_LIST 100
 
+#if   defined(PLATFORM_LINUX)
+  #define O_BINARY 0
+#elif defined(PLATFORM_WINDOWS)
+#endif /* PLATFORM_... */
+
 /***************************** Datatypes *******************************/
 #ifdef HAVE_LSEEK64
   #define SEEK(handle,offset,mode) lseek64(handle,offset,mode)
@@ -1259,7 +1264,6 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   }
   stringAppend(s,n,prefix);
   stringAppend(s,n,"-XXXXXX");
-fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,s);
 
   // create temporary file
   #ifdef HAVE_MKSTEMP
@@ -1298,7 +1302,6 @@ fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,s);
   #else /* not HAVE_MKSTEMP || HAVE_MKTEMP */
     #error mkstemp() nor mktemp() available
   #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
-fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,s);
 
   // remove file from directory (finally deleted on close)
   #ifdef NDEBUG
@@ -1313,7 +1316,6 @@ fprintf(stderr,"%s, %d: s=%s\n",__FILE__,__LINE__,s);
     fileHandle->name              = String_newCString(s);
     fileHandle->deleteOnCloseFlag = TRUE;
   #endif /* NDEBUG */
-fprintf(stderr,"%s, %d: fileHandle->deleteOnCloseFlag=%d\n",__FILE__,__LINE__,fileHandle->deleteOnCloseFlag);
 
   fileHandle->index = 0LL;
   fileHandle->size  = 0LL;
@@ -1456,7 +1458,7 @@ Errors File_getTmpFileNameCString(String     fileName,
       free(s);
       return error;
     }
-    handle = open(s,O_CREAT|O_EXCL);
+    handle = open(s,O_CREAT|O_EXCL|O_BINARY);
     if (handle == -1)
     {
       error = ERRORX_(IO,errno,"%E",errno);
@@ -1719,9 +1721,9 @@ Errors __File_openCString(const char *__fileName__,
 
       // create file
       #ifdef HAVE_O_LARGEFILE
-        #define FLAGS O_RDWR|O_CREAT|O_TRUNC|O_LARGEFILE
+        #define FLAGS O_RDWR|O_CREAT|O_TRUNC|O_BINARY|O_LARGEFILE
       #else
-        #define FLAGS O_RDWR|O_CREAT|O_TRUNC
+        #define FLAGS O_RDWR|O_CREAT|O_TRUNC|O_BINARY
       #endif
       fileDescriptor = open(fileName,FLAGS,0666);
       #undef FLAGS
@@ -1754,38 +1756,31 @@ Errors __File_openCString(const char *__fileName__,
       break;
     case FILE_OPEN_READ:
       // open file for reading with support of NO_ATIME
+      #ifdef HAVE_O_LARGEFILE
+        #define FLAGS O_RDONLY|O_BINARY|O_LARGEFILE
+      #else
+        #define FLAGS O_RDONLY|O_BINARY
+      #endif
       #ifdef HAVE_O_NOATIME
         if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
         {
           // first try with O_NOATIME, then without O_NOATIME
-          #ifdef HAVE_O_LARGEFILE
-            #define FLAGS O_RDONLY|O_LARGEFILE|O_NOATIME
-          #else
-            #define FLAGS O_RDONLY|O_NOATIME
-          #endif
-          fileDescriptor = open(fileName,FLAGS,0);
-          #undef FLAGS
+          fileDescriptor = open(fileName,FLAGS|O_NOATIME,0);
           if (fileDescriptor == -1)
           {
-            fileDescriptor = open(fileName,O_RDONLY|O_LARGEFILE,0);
+            fileDescriptor = open(fileName,FLAGS,0);
           }
         }
         else
         {
-          fileDescriptor = open(fileName,O_RDONLY|O_LARGEFILE,0);
+          fileDescriptor = open(fileName,FLAGS,0);
         }
         if (fileDescriptor == -1)
         {
           return ERRORX_(OPEN_FILE,errno,"%E",errno);
         }
       #else /* not HAVE_O_NOATIME */
-        #ifdef HAVE_O_LARGEFILE
-          #define FLAGS O_RDONLY|O_LARGEFILE
-        #else
-          #define FLAGS O_RDONLY
-        #endif
         fileDescriptor = open(fileName,FLAGS,0);
-        #undef FLAGS
         if (fileDescriptor == -1)
         {
           return ERRORX_(OPEN_FILE,errno,"%E",errno);
@@ -1813,6 +1808,7 @@ Errors __File_openCString(const char *__fileName__,
         #elif defined(PLATFORM_WINDOWS)
         #endif /* PLATFORM_... */
       #endif /* HAVE_O_NOATIME */
+      #undef FLAGS
 
       // init handle
       #ifdef NDEBUG
@@ -1862,9 +1858,9 @@ Errors __File_openCString(const char *__fileName__,
 
       // open file for writing
       #ifdef HAVE_O_LARGEFILE
-        #define FLAGS O_RDWR|O_CREAT|O_LARGEFILE
+        #define FLAGS O_RDWR|O_CREAT|O_BINARY|O_LARGEFILE
       #else
-        #define FLAGS O_RDWR|O_CREAT
+        #define FLAGS O_RDWR|O_CREAT|O_BINARY
       #endif
       fileDescriptor = open(fileName,FLAGS,0666);
       #undef FLAGS
@@ -1915,9 +1911,9 @@ Errors __File_openCString(const char *__fileName__,
 
       // open file for append
       #ifdef HAVE_O_LARGEFILE
-        #define FLAGS O_RDWR|O_CREAT|O_APPEND|O_LARGEFILE
+        #define FLAGS O_RDWR|O_CREAT|O_APPEND|O_BINARY|O_LARGEFILE
       #else
-        #define FLAGS O_RDWR|O_CREAT|O_APPEND
+        #define FLAGS O_RDWR|O_CREAT|O_APPEND|O_BINARY
       #endif
       fileDescriptor = open(fileName,FLAGS,0666);
       #undef FLAGS
@@ -2070,7 +2066,6 @@ Errors File_read(FileHandle *fileHandle,
                 )
 {
   ssize_t n;
-int ee;
 
   FILE_CHECK_VALID(fileHandle);
   assert(buffer != NULL);
@@ -2081,10 +2076,8 @@ int ee;
 //TODO: not valid
 //    assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
     n = fread(buffer,1,bufferSize,fileHandle->file);
-//    if ((n <= 0) && (ferror(fileHandle->file) != 0))
-    if ((n <= 0) && ((ee=ferror(fileHandle->file)) != 0))
+    if ((n <= 0) && (ferror(fileHandle->file) != 0))
     {
-fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,n,errno,ee);
       return ERRORX_(IO,errno,"%E",errno);
     }
     fileHandle->index += (uint64)n;
@@ -2096,20 +2089,16 @@ fprintf(stderr,"%s, %d: %d %d %d\n",__FILE__,__LINE__,n,errno,ee);
   {
     // read all requested data
     errno = 0;
-fprintf(stderr,"%s, %d: 1 bufferSize=%lu fileHandle->size=%llu\n",__FILE__,__LINE__,bufferSize,fileHandle->size);
     while (bufferSize > 0L)
     {
-fprintf(stderr,"%s, %d: ftell=%d\n",__FILE__,__LINE__,ftell(fileHandle->file));
       n = fread(buffer,1,bufferSize,fileHandle->file);
       if (n <= 0)
       {
-fprintf(stderr,"x%s, %d: %d %d %d\n",__FILE__,__LINE__,n,errno,ferror(fileHandle->file));
         if (ferror(fileHandle->file) != 0)
         {
           return ERRORX_(IO,errno,"%E",errno);
         }
-//        else
-        else if (feof(fileHandle->file) != 0)
+        else
         {
           return ERROR_END_OF_FILE;
         }
@@ -2119,7 +2108,6 @@ fprintf(stderr,"x%s, %d: %d %d %d\n",__FILE__,__LINE__,n,errno,ferror(fileHandle
       fileHandle->index += (uint64)n;
 //TODO: not valid when file changed in the meantime
 //      assert(((fileHandle->mode & FILE_STREAM) == FILE_STREAM) || (fileHandle->index == (uint64)FTELL(fileHandle->file)));
-fprintf(stderr,"%s, %d: 2 n=%d bufferSize=%lu\n",__FILE__,__LINE__,n,bufferSize);
     }
   }
 
@@ -2323,6 +2311,7 @@ Errors File_transfer(FileHandle *fileHandle,
   {
     bufferLength = MIN(length,BUFFER_SIZE);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     n = fread(buffer,1,bufferLength,fromFileHandle->file);
     if (n != (ssize_t)bufferLength)
     {
@@ -2551,9 +2540,9 @@ Errors File_touch(ConstString fileName)
   assert(fileName != NULL);
 
   #if defined(HAVE_O_NOCTTY) && defined(HAVE_O_NONBLOCK)
-    #define FLAGS O_WRONLY|O_CREAT|O_NOCTTY|O_NONBLOCK
+    #define FLAGS O_WRONLY|O_CREAT|O_BINARY|O_NOCTTY|O_NONBLOCK
   #else
-    #define FLAGS O_WRONLY|O_CREAT
+    #define FLAGS O_WRONLY|O_CREAT|O_BINARY
   #endif
   handle = open(String_cString(fileName),FLAGS,0666);
   #undef FLAGS
@@ -2710,10 +2699,10 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
     s = !stringIsEmpty(directoryName) ? directoryName : ".";
     #ifdef HAVE_O_NOATIME
       // open directory (try first with O_NOATIME)
-      handle = open(s,O_RDONLY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+      handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
       if (handle == -1)
       {
-        handle = open(s,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
+        handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
       }
       if (handle == -1)
       {
@@ -2724,7 +2713,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
       directoryListHandle->dir = fdopendir(handle);
     #else /* not HAVE_O_NOATIME */
       // open directory
-      directoryListHandle->handle = open(s,O_RDONLY|O_NOCTTY|O_DIRECTORY,0);
+      directoryListHandle->handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
       if (directoryListHandle->handle == -1)
       {
         return ERRORX_(OPEN_DIRECTORY,errno,"%s: %E",s,errno);
@@ -3179,7 +3168,7 @@ Errors File_renameCString(const char *oldFileName,
           free(tmpFileName);
           return error;
         }
-        handle = open(fileName,O_CREAT|O_EXCL);
+        handle = open(fileName,O_CREAT|O_EXCL|O_BINARY);
         if (handle == -1)
         {
           error = ERRORX_(IO,errno,"%E",errno);
@@ -3304,14 +3293,14 @@ Errors File_copyCString(const char *sourceFileName,
   }
 
   // open files
-  sourceFile = FOPEN(sourceFileName,"r");
+  sourceFile = FOPEN(sourceFileName,"rb");
   if (sourceFile == NULL)
   {
     error = ERRORX_(OPEN_FILE,errno,"%s: %E",sourceFileName,errno);
     free(buffer);
     return error;
   }
-  destinationFile = FOPEN(destinationFileName,"w");
+  destinationFile = FOPEN(destinationFileName,"wb");
   if (destinationFile == NULL)
   {
     error = ERRORX_(OPEN_FILE,errno,"%s: %E",destinationFileName,errno);
@@ -3323,6 +3312,7 @@ Errors File_copyCString(const char *sourceFileName,
   // copy data
   do
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     n = fread(buffer,1,BUFFER_SIZE,sourceFile);
     if (n > 0)
     {
@@ -3749,13 +3739,13 @@ Errors File_getAttributesCString(FileAttributes *fileAttributes,
   #ifdef FS_IOC_GETFLAGS
     // open file (first try with O_NOATIME)
     #ifdef HAVE_O_NOATIME
-      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_NOATIME);
+      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_BINARY|O_NOATIME);
       if (handle == -1)
       {
-        handle = open(fileName,O_RDONLY|O_NONBLOCK);
+        handle = open(fileName,O_RDONLY|O_NONBLOCK|O_BINARY);
       }
     #else /* not HAVE_O_NOATIME */
-      handle = open(fileName,O_RDONLY|O_NONBLOCK);
+      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_BINARY);
     #endif /* HAVE_O_NOATIME */
     if (handle == -1)
     {
@@ -3850,13 +3840,13 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
   #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
     // open file (first try with O_NOATIME)
     #ifdef HAVE_O_NOATIME
-      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_NOATIME);
+      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_BINARY|O_NOATIME);
       if (handle == -1)
       {
-        handle = open(fileName,O_RDONLY|O_NONBLOCK);
+        handle = open(fileName,O_RDONLY|O_NONBLOCK|O_BINARY);
       }
     #else /* not HAVE_O_NOATIME */
-      handle = open(fileName,O_RDONLY|O_NONBLOCK);
+      handle = open(fileName,O_RDONLY|O_NONBLOCK|O_BINARY);
     #endif /* HAVE_O_NOATIME */
     if (handle == -1)
     {
