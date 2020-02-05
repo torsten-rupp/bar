@@ -1910,17 +1910,21 @@ Errors Network_accept(SocketHandle             *socketHandle,
 
   // accept
   socketAddressLength = sizeof(socketAddress);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   socketHandle->handle = accept(serverSocketHandle->handle,
                                 (struct sockaddr*)&socketAddress,
                                 &socketAddressLength
                                );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (socketHandle->handle == -1)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
     shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
     close(socketHandle->handle);
     return error;
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   switch (serverSocketHandle->socketType)
   {
@@ -1963,6 +1967,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
           break; /* not reached */
       #endif /* NDEBUG */
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
@@ -1975,6 +1980,7 @@ Errors Network_accept(SocketHandle             *socketHandle,
       ioctlsocket(socketHandle->handle,FIONBIO,&n);
     #endif /* PLATFORM_... */
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }

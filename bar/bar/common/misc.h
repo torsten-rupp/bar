@@ -81,8 +81,8 @@ typedef enum
   #define HANDLE_EVENT_INVALID POLLNVAL
 #elif defined(PLATFORM_WINDOWS)
   #ifdef HAVE_WSAPOLL
-    #define HANDLE_EVENT_INPUT   POLLIN
-    #define HANDLE_EVENT_OUTPUT  POLLOUT
+    #define HANDLE_EVENT_INPUT   POLLRDNORM
+    #define HANDLE_EVENT_OUTPUT  POLLWRNORM
     #define HANDLE_EVENT_ERROR   POLLERR
     #define HANDLE_EVENT_INVALID POLLNVAL
   #else /* not HAVE_WSAPOLL */
@@ -922,7 +922,7 @@ String Misc_expandMacros(String           string,
 
 /***********************************************************************\
 * Name   : Misc_waitHandle
-* Purpose: wait for handle
+* Purpose: wait for single handle
 * Input  : handle     - handle
 *          signalMask - signal mask (can be NULL)
 *          events     - events to wait for
@@ -1067,6 +1067,24 @@ INLINE uint Misc_handleIterate(const WaitHandle *waitHandle, uint i, int *handle
   #endif /* PLATFORM_... */
 
   return i;
+}
+#endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
+
+/***********************************************************************\
+* Name   : Misc_isHandleEvent
+* Purpose: check if event occured
+* Input  : events - events
+*          event  - event to check
+* Output : -
+* Return : TRUE iff event occured
+* Notes  : -
+\***********************************************************************/
+
+INLINE bool Misc_isHandleEvent(uint events, uint event);
+#if defined(NDEBUG) || defined(__MISC_IMPLEMENTATION__)
+INLINE bool Misc_isHandleEvent(uint events, uint event)
+{
+  return (events & event) != 0;
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 

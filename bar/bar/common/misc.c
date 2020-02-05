@@ -1847,7 +1847,7 @@ uint Misc_waitHandle(int        handle,
       pollfds[0].fd      = handle;
       pollfds[0].events  = events;
       pollfds[0].revents = 0;
-      events = (WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout) > 0) ? pollfds[0].revents : 0;
+      events = (WSAPoll(pollfds,1,timeout) > 0) ? pollfds[0].revents : 0;
     #else /* not HAVE_WSAPOLL */
       FD_ZERO(&readfds);
       FD_ZERO(&writefds);
@@ -1965,11 +1965,12 @@ void Misc_waitAdd(WaitHandle *waitHandle, int handle, uint events)
       if (waitHandle->handleCount >= waitHandle->maxHandleCount)
       {
         waitHandle->maxHandleCount += 64;
-        waitHandle->pollfds = (struct pollfd*)realloc(waitHandle->pollfds,waitHandle->maxHandleCount*sizeof(struct WSAPOLLFD));
+        waitHandle->pollfds = (struct pollfd*)realloc(waitHandle->pollfds,waitHandle->maxHandleCount*sizeof(WSAPOLLFD));
         if (waitHandle->pollfds == NULL) HALT_INSUFFICIENT_MEMORY();
       }
       waitHandle->pollfds[waitHandle->handleCount].fd      = handle;
       waitHandle->pollfds[waitHandle->handleCount].events  = events;
+waitHandle->pollfds[waitHandle->handleCount].events  = HANDLE_EVENT_INPUT;//|HANDLE_EVENT_ERROR;
       waitHandle->pollfds[waitHandle->handleCount].revents = 0;
     #else /* not HAVE_WSAPOLL */
       assert(handle < FD_SETSIZE);
@@ -2000,6 +2001,7 @@ int Misc_waitHandles(WaitHandle *waitHandle,
       #endif /* HAVE_PSELECT */
     #endif /* HAVE_WSAPOLL */
   #endif /* PLATFORM_... */
+int ee;
 
   assert(waitHandle != NULL);
 
@@ -2011,7 +2013,20 @@ int Misc_waitHandles(WaitHandle *waitHandle,
     return ppoll(waitHandle->pollfds,waitHandle->handleCount,&pollTimeout,signalMask);
   #elif defined(PLATFORM_WINDOWS)
     #ifdef HAVE_WSAPOLL
-      return WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout);
+//      return WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout);
+ee=WSAPoll(waitHandle->pollfds,waitHandle->handleCount,timeout);
+fprintf(stderr,"%s, %d: h=%d/%d/%d  HANDLE_EVENT_INPUT=%d HANDLE_EVENT_ERROR=%d HANDLE_EVENT_INVALI=%d %d %d waitHandle->handleCount=%d timeout=%d ee=%d\n",__FILE__,__LINE__,
+waitHandle->pollfds[0].fd,
+waitHandle->pollfds[0].events,
+waitHandle->pollfds[0].revents,
+HANDLE_EVENT_INPUT,HANDLE_EVENT_ERROR,HANDLE_EVENT_INVALID,POLLRDNORM,POLLRDBAND,
+waitHandle->handleCount,
+timeout,ee);
+if (ee < 0)
+{
+fprintf(stderr,"%s, %d: WSAGetLastError()=%d\n",__FILE__,__LINE__,WSAGetLastError());
+}
+return ee;
     #else /* not HAVE_WSAPOLL */
       #ifdef HAVE_PSELECT
         selectTimeout.tv_sec  = (long)(timeout/MS_PER_SECOND);
