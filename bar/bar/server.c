@@ -18943,13 +18943,16 @@ exit(1);
     MISC_HANDLES_ITERATE(&waitHandle,handle,events)
     {
       // connect new clients via plain/standard port
+fprintf(stderr,"%s, %d: events=%x %x %d %d\n",__FILE__,__LINE__,events,HANDLE_EVENT_INPUT,handle,Network_getServerSocket(&serverSocketHandle));
       if      (   serverFlag
                && (handle == Network_getServerSocket(&serverSocketHandle))
-               && (events == HANDLE_EVENT_INPUT)
+               && Misc_isHandleEvent(events,HANDLE_EVENT_INPUT)
                && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
               )
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         error = newNetworkClient(&clientNode,&serverSocketHandle);
+fprintf(stderr,"%s, %d: %x error=%s\n",__FILE__,__LINE__,error,Error_getText(error));
         if (error == ERROR_NONE)
         {
           SEMAPHORE_LOCKED_DO(&clientList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -18997,7 +19000,7 @@ exit(1);
       // connect new clients via TLS port
       else if (   serverTLSFlag
                && (handle == Network_getServerSocket(&serverTLSSocketHandle))
-               && (events == HANDLE_EVENT_INPUT)
+               && Misc_isHandleEvent(events,HANDLE_EVENT_INPUT)
                && ((maxConnections == 0) || (List_count(&clientList) < maxConnections))
               )
       {
@@ -19088,7 +19091,7 @@ exit(1);
                                   );
             if (clientNode != NULL)
             {
-              if ((events & HANDLE_EVENT_INPUT) != 0)
+              if (Misc_isHandleEvent(events,HANDLE_EVENT_INPUT))
               {
                 if (ServerIO_receiveData(&clientNode->clientInfo.io))
                 {
@@ -19134,7 +19137,7 @@ exit(1);
                   deleteClient(disconnectClientNode);
                 }
               }
-              else if ((events & (HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID)) != 0)
+              else if (Misc_isHandleEvent(events,HANDLE_EVENT_ERROR|HANDLE_EVENT_INVALID))
               {
                 // error/disconnect -> remove from client list
                 disconnectClientNode = clientNode;

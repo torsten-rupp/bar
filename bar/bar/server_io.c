@@ -330,7 +330,7 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
   assert(serverIO != NULL);
   assert(line != NULL);
 
-  error = ERROR_UNKNOWN;
+  error = ERROR_NETWORK_TIMEOUT_SEND;
   SEMAPHORE_LOCKED_DO(&serverIO->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // get line length
@@ -356,6 +356,7 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 
     // send data
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(serverIO->outputBuffer,n+1,0);
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,serverIO->type);
     switch (serverIO->type)
     {
       case SERVER_IO_TYPE_NONE:
@@ -786,6 +787,7 @@ SOCKET_TYPE_PLAIN,
 
   // get encoded session id
   encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // create new session keys
   n         = String_new();
@@ -822,6 +824,7 @@ SOCKET_TYPE_PLAIN,
 
   // send session data
   error = sendData(serverIO,s);
+fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
   if (error != ERROR_NONE)
   {
     String_delete(s);
@@ -859,6 +862,7 @@ SOCKET_TYPE_PLAIN,
   #else /* NDEBUG */
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
   #endif /* not NDEBUG */
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }
