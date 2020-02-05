@@ -1444,16 +1444,27 @@ esac
 AC_CXX_OPTION(-no-pie,LD_FLAGS_DEBUG LD_FLAGS_GCOV LD_FLAGS_VALGRIND)
 
 CC_FLAGS_OPTIMIZE="$CC_FLAGS_OPTIMIZE"
-CC_DEFINES="$CC_DEFINES"
-
 CC_FLAGS_OPTIMIZE_RELEASE="$CC_FLAGS_OPTIMIZE_RELEASE -O2"
 dnl Check: bug in gcc with -fschedule-insns2? If -O2 is used and -fno-schedule-insns2 is
 dnl        not given, the program either crashes or parsing a string with %y seems to fail.
 AC_CC_OPTION(-fno-schedule-insns2,CC_FLAGS_OPTIMIZE_RELEASE)
-CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
-
 CC_FLAGS_OPTIMIZE_DEBUG="$CC_FLAGS_OPTIMIZE_DEBUG -O0"
+
+CC_DEFINES="$CC_DEFINES"
+CC_DEFINES_RELEASE="$CC_DEFINES_RELEASE NDEBUG"
 CC_DEFINES_DEBUG="$CC_DEFINES_DEBUG"
+
+case $host_os in
+  linux-*)
+    ;;
+  windows*|mingw*)
+    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600"
+    ;;
+  sunos | solaris*)
+    ;;
+  darwin*)
+    ;;
+esac
 
 CC_INCLUDES="$CC_INCLUDES"
 case "$host_os" in
@@ -4150,7 +4161,7 @@ AC_CHECK_FUNCTION(textdomain,    AC_DEFINE(HAVE_TEXTDOMAIN,    1,[textdomain() a
 AC_CHECK_FUNCTION(bindtextdomain,AC_DEFINE(HAVE_BINDTEXTDOMAIN,1,[bindtextdomain() available]))
 AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() available]))
 
-AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,      1,[bfd_init() available]))
+AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]))
 
 if test "$HAVE_SSH2"; then
   AC_CHECK_FUNCTION(CRYPTO_set_id_callback,     ,AC_ERROR([CRYPTO_set_id_callback() required for SSH2]),openssl/crypto.h)
@@ -4169,7 +4180,7 @@ case $host_os in
   linux-*)
     ;;
   windows*|mingw*)
-    AC_CHECK_FUNCTION(WSAPoll,AC_DEFINE(HAVE_WSAPOLL,1,[WSAPoll() available]))
+    AC_CHECK_FUNCTION(WSAPoll,AC_DEFINE(HAVE_WSAPOLL,1,[WSAPoll() available]),,winsock2.h)
     ;;
   sunos | solaris*)
     ;;
