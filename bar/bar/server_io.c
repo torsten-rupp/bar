@@ -356,7 +356,6 @@ LOCAL Errors sendData(ServerIO *serverIO, ConstString line)
 
     // send data
 //fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(serverIO->outputBuffer,n+1,0);
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,serverIO->type);
     switch (serverIO->type)
     {
       case SERVER_IO_TYPE_NONE:
@@ -787,7 +786,6 @@ SOCKET_TYPE_PLAIN,
 
   // get encoded session id
   encodedId = Misc_hexEncode(String_new(),serverIO->sessionId,sizeof(SessionId));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // create new session keys
   n         = String_new();
@@ -824,7 +822,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   // send session data
   error = sendData(serverIO,s);
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
   if (error != ERROR_NONE)
   {
     String_delete(s);
@@ -862,7 +859,6 @@ fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
   #else /* NDEBUG */
     DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,serverIO,ServerIO);
   #endif /* not NDEBUG */
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }

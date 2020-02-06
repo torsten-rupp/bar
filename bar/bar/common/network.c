@@ -613,6 +613,7 @@ Errors Network_connect(SocketHandle *socketHandle,
            )
         {
           error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
           close(socketHandle->handle);
           return error;
@@ -734,6 +735,7 @@ Errors Network_connect(SocketHandle *socketHandle,
            )
         {
           error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
           close(socketHandle->handle);
           return error;
@@ -743,6 +745,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         socketHandle->ssh2.session = libssh2_session_init();
         if (socketHandle->ssh2.session == NULL)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
@@ -775,6 +778,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         {
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
           close(socketHandle->handle);
           return ERROR_SSH_SESSION_FAIL;
@@ -858,6 +862,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         {
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
           close(socketHandle->handle);
           return error;
@@ -882,6 +887,7 @@ Errors Network_connect(SocketHandle *socketHandle,
           }
           libssh2_session_disconnect(socketHandle->ssh2.session,"");
           libssh2_session_free(socketHandle->ssh2.session);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
           close(socketHandle->handle);
           return error;
@@ -923,6 +929,7 @@ Errors Network_connect(SocketHandle *socketHandle,
         UNUSED_VARIABLE(sshPrivateKeyData);
         UNUSED_VARIABLE(sshPrivateKeyLength);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
         close(socketHandle->handle);
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1169,6 +1176,7 @@ Errors Network_connectDescriptor(SocketHandle *socketHandle,
         UNUSED_VARIABLE(sshPrivateKeyData);
         UNUSED_VARIABLE(sshPrivateKeyLength);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
         close(socketHandle->handle);
         return ERROR_FUNCTION_NOT_SUPPORTED;
@@ -1218,6 +1226,7 @@ void Network_disconnect(SocketHandle *socketHandle)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
   close(socketHandle->handle);
 }
@@ -1459,7 +1468,7 @@ Errors Network_send(SocketHandle *socketHandle,
             #else
               #define FLAGS 0
             #endif
-            n = send(socketHandle->handle,((byte*)buffer)+sentBytes,length-sentBytes,FLAGS);
+            n = send(socketHandle->handle,(const char*)(((byte*)buffer)+sentBytes),length-sentBytes,FLAGS);
             #undef FLAGS
             if      (n > 0) sentBytes += (ulong)n;
             else if ((n == -1) && (errno != EAGAIN)) break;
@@ -1620,6 +1629,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
   if (setsockopt(serverSocketHandle->handle,SOL_SOCKET,SO_REUSEADDR,(void*)&n,sizeof(int)) != 0)
   {
     error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
     close(serverSocketHandle->handle);
     return error;
@@ -1636,6 +1646,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
      )
   {
     error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
     close(serverSocketHandle->handle);
     return error;
@@ -1657,18 +1668,21 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         // check if all key files exists
         if (caData == NULL)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CA;
         }
         if (certData == NULL)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_CERTIFICATE;
         }
         if (keyData == NULL)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
           close(serverSocketHandle->handle);
           return ERROR_NO_TLS_KEY;
@@ -1677,6 +1691,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         // check if certificate is valid
         if (gnutls_x509_crt_init(&cert) != GNUTLS_E_SUCCESS)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CERTIFICATE;
@@ -1686,6 +1701,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
         if (gnutls_x509_crt_import(cert,&datum,GNUTLS_X509_FMT_PEM) != GNUTLS_E_SUCCESS)
         {
           gnutls_x509_crt_deinit(cert);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CERTIFICATE;
@@ -1696,6 +1712,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           if (time(NULL) < certActivationTime)
           {
             gnutls_x509_crt_deinit(cert);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
             close(serverSocketHandle->handle);
             return ERRORX_(TLS_CERTIFICATE_NOT_ACTIVE,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certActivationTime,DATE_TIME_FORMAT_LOCALE));
@@ -1707,6 +1724,7 @@ Errors Network_initServer(ServerSocketHandle *serverSocketHandle,
           if (time(NULL) > certExpireTime)
           {
             gnutls_x509_crt_deinit(cert);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
             close(serverSocketHandle->handle);
             return ERRORX_(TLS_CERTIFICATE_EXPIRED,0,"%s",Misc_formatDateTimeCString(buffer,sizeof(buffer),(uint64)certExpireTime,DATE_TIME_FORMAT_LOCALE));
@@ -1731,6 +1749,7 @@ or
         if (result < 0)
         {
           gnutls_certificate_free_credentials(serverSocketHandle->gnuTLSCredentials);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
           close(serverSocketHandle->handle);
           return ERROR_INVALID_TLS_CA;
@@ -1784,6 +1803,7 @@ void Network_doneServer(ServerSocketHandle *serverSocketHandle)
         break; /* not reached */
     #endif /* NDEBUG */
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   shutdown(serverSocketHandle->handle,SHUTDOWN_FLAGS);
   close(serverSocketHandle->handle);
 }
@@ -1910,21 +1930,18 @@ Errors Network_accept(SocketHandle             *socketHandle,
 
   // accept
   socketAddressLength = sizeof(socketAddress);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   socketHandle->handle = accept(serverSocketHandle->handle,
                                 (struct sockaddr*)&socketAddress,
                                 &socketAddressLength
                                );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (socketHandle->handle == -1)
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     error = ERRORX_(CONNECT_FAIL,errno,"%E",errno);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
     close(socketHandle->handle);
     return error;
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   switch (serverSocketHandle->socketType)
   {
@@ -1944,6 +1961,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                        );
         if (error != ERROR_NONE)
         {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
           close(socketHandle->handle);
           return error;
@@ -1955,6 +1973,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         UNUSED_VARIABLE(serverSocketHandle);
         UNUSED_VARIABLE(socketFlags);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         shutdown(socketHandle->handle,SHUTDOWN_FLAGS);
         close(socketHandle->handle);
 
@@ -1967,7 +1986,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           break; /* not reached */
       #endif /* NDEBUG */
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   if ((socketFlags & SOCKET_FLAG_NON_BLOCKING) != 0)
   {
@@ -1980,7 +1998,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       ioctlsocket(socketHandle->handle,FIONBIO,&n);
     #endif /* PLATFORM_... */
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   return ERROR_NONE;
 }

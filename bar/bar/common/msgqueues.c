@@ -155,7 +155,7 @@ LOCAL void initTimespec(struct timespec *timespec, long timeout)
 LOCAL bool waitModified(MsgQueue *msgQueue, const struct timespec *timeout)
 {
   uint lockCount;
-  uint z;
+  uint i;
   int  result;
 
   assert(msgQueue != NULL);
@@ -163,18 +163,29 @@ LOCAL bool waitModified(MsgQueue *msgQueue, const struct timespec *timeout)
 
   lockCount = msgQueue->lockCount;
 
-  for (z = 1; z < lockCount; z++) pthread_mutex_unlock(&msgQueue->lock);
+  for (i = 1; i < lockCount; i++)
+  {
+    pthread_mutex_unlock(&msgQueue->lock);
+//    ReleaseMutex(semaphore->requestLock);
+  }
   msgQueue->lockCount  = 0;
   if (timeout != NULL)
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     result = pthread_cond_timedwait(&msgQueue->modified,&msgQueue->lock,timeout);
   }
   else
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     result = pthread_cond_wait(&msgQueue->modified,&msgQueue->lock);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   }
   msgQueue->lockCount  = lockCount;
-  for (z = 1; z < lockCount; z++) pthread_mutex_lock(&msgQueue->lock);
+  for (i = 1; i < lockCount; i++)
+  {
+    pthread_mutex_lock(&msgQueue->lock);
+//    WaitForSingleObject(semaphore->requestLock,INFINITE);
+  }
 
   return result == 0;
 }
@@ -186,12 +197,22 @@ bool MsgQueue_init(MsgQueue *msgQueue, ulong maxMsgs)
   assert(msgQueue != NULL);
 
   msgQueue->maxMsgs = maxMsgs;
-  pthread_mutexattr_init(&msgQueue->lockAttributes);
-  pthread_mutexattr_settype(&msgQueue->lockAttributes,PTHREAD_MUTEX_RECURSIVE_NP);
-  if (pthread_mutex_init(&msgQueue->lock,&msgQueue->lockAttributes) != 0)
-  {
-    return FALSE;
-  }
+//  #if   defined(PLATFORM_LINUX)
+#if 1
+    pthread_mutexattr_init(&msgQueue->lockAttributes);
+    pthread_mutexattr_settype(&msgQueue->lockAttributes,PTHREAD_MUTEX_RECURSIVE_NP);
+    if (pthread_mutex_init(&msgQueue->lock,&msgQueue->lockAttributes) != 0)
+    {
+      return FALSE;
+    }
+  #elif defined(PLATFORM_WINDOWS)
+xxx
+    msgQueue->lock = CreateMutex(NULL,FALSE,NULL);
+    if (msgQueue->lock == NULL)
+    {
+      return FALSE;
+    }
+  #endif /* PLATFORM_... */
   if (pthread_cond_init(&msgQueue->modified,NULL) != 0)
   {
     pthread_mutex_destroy(&msgQueue->lock);
@@ -228,8 +249,13 @@ void MsgQueue_done(MsgQueue *msgQueue, MsgQueueMsgFreeFunction msgQueueMsgFreeFu
 
   // free resources
   pthread_cond_destroy(&msgQueue->modified);
-  pthread_mutex_destroy(&msgQueue->lock);
-  pthread_mutexattr_destroy(&msgQueue->lockAttributes);
+//  #if   defined(PLATFORM_LINUX)
+#if 1
+    pthread_mutex_destroy(&msgQueue->lock);
+    pthread_mutexattr_destroy(&msgQueue->lockAttributes);
+  #elif defined(PLATFORM_WINDOWS)
+xxx
+  #endif /* PLATFORM_... */
 }
 
 MsgQueue *MsgQueue_new(ulong maxMsgs)
@@ -308,6 +334,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
 
   assert(msgQueue != NULL);
 
+fprintf(stderr,"%s, %d: MsgQueue_get\n",__FILE__,__LINE__);
   MSGQUEUE_LOCKED_DO(msgQueueLock,msgQueue)
   {
     // wait for message
@@ -317,18 +344,22 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
 
       while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         if (!waitModified(msgQueue,&timespec))
         {
           unlock(msgQueue);
           return FALSE;
         }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
     }
     else
     {
       while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) <= 0))
       {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         (void)waitModified(msgQueue,NULL);
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       }
     }
 
@@ -348,6 +379,7 @@ bool MsgQueue_get(MsgQueue *msgQueue, void *msg, ulong *size, ulong maxSize, lon
   memcpy(msg,msgNode->data,n);
   if (size != NULL) (*size) = n;
   free(msgNode);
+fprintf(stderr,"%s, %d: MsgQueue_get done\n",__FILE__,__LINE__);
 
   return TRUE;
 }
@@ -359,6 +391,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
 
   assert(msgQueue != NULL);
 
+fprintf(stderr,"%s, %d: MsgQueue_put\n",__FILE__,__LINE__);
   // allocate message
   msgNode = (MsgNode*)malloc(sizeof(MsgNode)+size);
   if (msgNode == NULL)

@@ -91,10 +91,10 @@ typedef struct Semaphore
 
   #if   defined(PLATFORM_LINUX)              // lock (thread who own lock is allowed to change the following semaphore variables)
     pthread_mutex_t     lock;
+    pthread_mutexattr_t lockAttributes;
   #elif defined(PLATFORM_WINDOWS)
     HANDLE              lock;
   #endif /* PLATFORM_... */
-  pthread_mutexattr_t lockAttributes;
 
   SemaphoreLockTypes  lockType;              // current lock type
   uint                readLockCount;         // current number of read locks
