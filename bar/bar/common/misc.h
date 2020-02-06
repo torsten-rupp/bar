@@ -23,6 +23,7 @@
   #include <poll.h>
 #elif defined(PLATFORM_WINDOWS)
   #include <winsock2.h>
+  #include <windows.h>
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
