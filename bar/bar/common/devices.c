@@ -534,9 +534,9 @@ bool Device_isMounted(ConstString mountPointName)
 {
   bool          mounted;
   String        absoluteName;
-  FILE          *mtab;
-  char          buffer[4096];
   #if   defined(PLATFORM_LINUX)
+    FILE          *mtab;
+    char          buffer[4096];
     struct mntent mountEntry;
     char          *s;
   #elif defined(PLATFORM_WINDOWS)
