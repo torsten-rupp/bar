@@ -758,6 +758,10 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
     nextFormat++;
   }
 
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
   // width, precision
   while (   ((*nextFormat) != NUL)
          && isdigit((int)(*nextFormat))
@@ -790,7 +794,7 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
       && !isalpha(*nextFormat)
       && ((*nextFormat) != '%')
       && (   (*(nextFormat+1) == 's')
-          || (*((nextFormat+1)) == 'S')
+          || (*(nextFormat+1) == 'S')
          )
      )
   {
@@ -859,6 +863,18 @@ LOCAL const char *parseNextFormatToken(const char *format, FormatToken *formatTo
       formatToken->lengthType = FORMAT_LENGTH_TYPE_INTEGER;
       nextFormat++;
     }
+    #if   defined(PLATFORM_LINUX)
+    #elif defined(PLATFORM_WINDOWS)
+      if (stringStartsWith(nextFormat,"I64"))
+      {
+        ADD_CHAR(formatToken,(*(nextFormat+0)));
+        ADD_CHAR(formatToken,(*(nextFormat+1)));
+        ADD_CHAR(formatToken,(*(nextFormat+2)));
+
+        formatToken->lengthType = FORMAT_LENGTH_TYPE_LONGLONG;
+        nextFormat += 3;
+      }
+    #endif /* PLATFORM_... */
   }
 
   // conversion character
