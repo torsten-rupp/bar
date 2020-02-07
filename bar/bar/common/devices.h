@@ -48,10 +48,15 @@ typedef struct
 // device list read handle
 typedef struct
 {
-  FILE *file;
-  char line[256];
-  char deviceName[256];
-  bool readFlag;
+  #if   defined(PLATFORM_LINUX)
+    FILE *file;
+    char line[256];
+    char deviceName[256];
+    bool readFlag;
+  #elif defined(PLATFORM_WINDOWS)
+    DWORD logicalDrives;
+    uint  i;
+  #endif /* PLATFORM_... */
 } DeviceListHandle;
 
 // device types
