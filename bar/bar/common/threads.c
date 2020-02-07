@@ -90,10 +90,12 @@ typedef struct
   LOCAL StackTraceThreadInfo debugThreadStackTraceThreads[256];
   LOCAL uint                 debugThreadStackTraceThreadCount   = 0;
 
-  LOCAL pthread_mutex_t      debugThreadStackTraceLock          = PTHREAD_MUTEX_INITIALIZER;
-  LOCAL pthread_cond_t       debugThreadStackTraceDone          = PTHREAD_COND_INITIALIZER;
-  LOCAL bool                 debugThreadStackTraceRun           = FALSE;
-  LOCAL uint                 debugThreadStackTraceThreadIndex;
+  #ifdef HAVE_SIGQUIT
+    LOCAL pthread_mutex_t      debugThreadStackTraceLock          = PTHREAD_MUTEX_INITIALIZER;
+    LOCAL pthread_cond_t       debugThreadStackTraceDone          = PTHREAD_COND_INITIALIZER;
+    LOCAL bool                 debugThreadStackTraceRun           = FALSE;
+    LOCAL uint                 debugThreadStackTraceThreadIndex;
+  #endif /* HAVE_SIGQUIT */
 #endif /* NDEBUG */
 
 /****************************** Macros *********************************/
