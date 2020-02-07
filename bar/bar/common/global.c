@@ -111,7 +111,7 @@
 #endif /* not NDEBUG */
 
 #ifndef NDEBUG
-  pthread_mutex_t debugConsoleLock  = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+  pthread_mutex_t debugConsoleLock  = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
   const char      *__testCodeName__ = NULL;
 
   LOCAL char      debugTestCodeName[256];
