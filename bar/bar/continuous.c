@@ -588,6 +588,8 @@ LOCAL NotifyInfo *addNotify(ConstString name)
         return NULL;
       }
     #elif defined(PLATFORM_WINDOWS)
+//TODO: NYI
+      return NULL;
     #endif /* PLATFORM_... */
 
     // init notify
