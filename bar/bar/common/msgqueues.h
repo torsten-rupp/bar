@@ -30,6 +30,7 @@
 typedef struct
 {
   ulong               maxMsgs;
+//TODO: use Windows WaitForSingleObject?
 //  #if   defined(PLATFORM_LINUX)              // lock to update request counters, thread info
 #if 1
     pthread_mutex_t     lock;
