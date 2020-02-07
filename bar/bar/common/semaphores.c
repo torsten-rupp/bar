@@ -597,37 +597,6 @@ LOCAL void debugSemaphoreSignalHandler(int signalNumber)
 #endif /* HAVE_SIGQUIT */
 
 /***********************************************************************\
-* Name   : getTime
-* Purpose: get POSIX compatible time
-* Input  : timeOffset - time offset [ms]
-* Output : timespec - time
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL_INLINE void getTime(struct timespec *timespec, ulong timeOffset)
-{
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    __int64 windowsTime;
-  #endif /* PLATFORM_... */
-
-  assert(timespec != NULL);
-
-  #if   defined(PLATFORM_LINUX)
-    clock_gettime(CLOCK_REALTIME,timespec);
-  #elif defined(PLATFORM_WINDOWS)
-    GetSystemTimeAsFileTime((FILETIME*)&windowsTime);
-    windowsTime -= 116444736000000000LL;  // Jan 1 1601 -> Jan 1 1970
-    timespec->tv_sec  = (windowsTime/10000000LL);
-    timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
-  #endif /* PLATFORM_... */
-  timespec->tv_nsec = timespec->tv_nsec+((timeOffset)%1000L)*1000000L; \
-  timespec->tv_sec  = timespec->tv_sec+((timespec->tv_nsec/1000000L)+(timeOffset))/1000L; \
-  timespec->tv_nsec %= 1000000L; \
-}
-
-/***********************************************************************\
 * Name   : debugAddThreadInfo
 * Purpose: add thread to thread info array
 * Input  : threadInfos     - thread info array
@@ -928,6 +897,37 @@ LOCAL void debugPrintSemaphoreState(const char *text, const char *indent, const 
 #endif /* DEBUG_SHOW_LAST_INFO */
 
 #endif /* not NDEBUG */
+
+/***********************************************************************\
+* Name   : getTime
+* Purpose: get POSIX compatible time
+* Input  : timeOffset - time offset [ms]
+* Output : timespec - time
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE void getTime(struct timespec *timespec, ulong timeOffset)
+{
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    __int64 windowsTime;
+  #endif /* PLATFORM_... */
+
+  assert(timespec != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    clock_gettime(CLOCK_REALTIME,timespec);
+  #elif defined(PLATFORM_WINDOWS)
+    GetSystemTimeAsFileTime((FILETIME*)&windowsTime);
+    windowsTime -= 116444736000000000LL;  // Jan 1 1601 -> Jan 1 1970
+    timespec->tv_sec  = (windowsTime/10000000LL);
+    timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
+  #endif /* PLATFORM_... */
+  timespec->tv_nsec = timespec->tv_nsec+((timeOffset)%1000L)*1000000L; \
+  timespec->tv_sec  = timespec->tv_sec+((timespec->tv_nsec/1000000L)+(timeOffset))/1000L; \
+  timespec->tv_nsec %= 1000000L; \
+}
 
 #ifdef NDEBUG
 LOCAL_INLINE void incrementReadRequest(Semaphore  *semaphore)
@@ -1295,7 +1295,6 @@ LOCAL bool lock(const char         *__fileName__,
       break;
 
     case SEMAPHORE_LOCK_TYPE_READ:
-if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: --- lock read\n",__FILE__,__LINE__);
       /* request read lock
          Note: for a read lock the semaphore is locked temporary and a read-lock is stored
       */
@@ -1446,7 +1445,6 @@ if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: --- lock read\n",_
       break;
 
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
-if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: --- lock read/wrote\n",__FILE__,__LINE__);
       /* request write lock
          Note: for a read/write lock the semaphore is locked permanent
       */
@@ -1461,11 +1459,11 @@ if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: --- lock read/wrot
       // write: aquire permanent lock
       if (timeout != WAIT_FOREVER)
       {
-if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: %p timeout=%ld\n",__FILE__,__LINE__,semaphore,timeout);
+//if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: %p timeout=%ld\n",__FILE__,__LINE__,semaphore,timeout);
         __SEMAPHORE_LOCK_TIMEOUT(semaphore,semaphoreLockType,DEBUG_FLAG_READ_WRITE,"RW",timeout,lockedFlag);
         if (!lockedFlag)
         {
-if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+//if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           #ifndef NDEBUG
             decrementReadWriteRequest(semaphore,__fileName__,__lineNb__);
           #else /* NDEBUG */
@@ -1489,7 +1487,7 @@ if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: \n",__FILE__,__LIN
         {
           while (semaphore->readLockCount > 0)
           {
-if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: wait until no more read-locks\n",__FILE__,__LINE__);
+//if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: wait until no more read-locks\n",__FILE__,__LINE__);
 //fprintf(stderr,"%s, %d: thread=%s wiat sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
             __SEMAPHORE_WAIT_TIMEOUT(semaphore,DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock,timeout,lockedFlag);
             if (!lockedFlag)
@@ -1545,7 +1543,7 @@ if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: wait until no more
         assert(Thread_isCurrentThread(semaphore->readWriteLockOwnedBy));
 
         VERIFY_COUNTERS(semaphore);
-if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: %p lockedFlag=%d\n",__FILE__,__LINE__,semaphore,lockedFlag);
+//if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: %p lockedFlag=%d\n",__FILE__,__LINE__,semaphore,lockedFlag);
       }
       break;
 
