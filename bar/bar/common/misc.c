@@ -44,6 +44,7 @@
 #if   defined(PLATFORM_LINUX)
 #elif defined(PLATFORM_WINDOWS)
   #include <windows.h>
+  #include <rpcdce.h>
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
@@ -1454,49 +1455,65 @@ String Misc_getUUID(String string)
 
 const char *Misc_getUUIDCString(char *buffer, uint bufferSize)
 {
-  #if HAVE_UUID_GENERATE
-    uuid_t uuid;
-    char   s[36+1];
-  #else /* not HAVE_UUID_GENERATE */
-    FILE *file;
-    char *s;
-  #endif /* HAVE_UUID_GENERATE */
+  #if   defined(PLATFORM_LINUX)
+    #if HAVE_UUID_GENERATE
+      uuid_t uuid;
+      char   s[36+1];
+    #else /* not HAVE_UUID_GENERATE */
+      FILE *file;
+      char *s;
+    #endif /* HAVE_UUID_GENERATE */
+  #elif defined(PLATFORM_WINDOWS)
+    UUID     uuid;
+    RPC_CSTR *rpcString;
+  #endif /* PLATFORM_... */
 
   assert(buffer != NULL);
   assert(bufferSize > 0);
 
-  buffer[0] = '\0';
+  stringClear(buffer);
 
-  #if HAVE_UUID_GENERATE
-    uuid_generate(uuid);
+  #if   defined(PLATFORM_LINUX)
+    #if HAVE_UUID_GENERATE
+      uuid_generate(uuid);
 
-    uuid_unparse_lower(uuid,s);
-    s[36] = '\0';
+      uuid_unparse_lower(uuid,s);
+      s[36] = '\0';
 
-    strncpy(buffer,s,bufferSize-1);
-    buffer[bufferSize-1] = '\0';
-  #else /* not HAVE_UUID_GENERATE */
-    file = fopen("/proc/sys/kernel/random/uuid","r");
-    if (file != NULL)
+      strncpy(buffer,s,bufferSize-1);
+      buffer[bufferSize-1] = '\0';
+    #else /* not HAVE_UUID_GENERATE */
+      file = fopen("/proc/sys/kernel/random/uuid","r");
+      if (file != NULL)
+      {
+        // read kernel uuid device
+        if (fgets(buffer,bufferSize,file) == NULL) { /* ignored */ };
+        fclose(file);
+
+        // remove trailing white spaces
+        s = buffer;
+        while ((*s) != '\0')
+        {
+          s++;
+        }
+        do
+        {
+          (*s) = '\0';
+          s--;
+        }
+        while ((s >= buffer) && isspace(*s));
+      }
+    #endif /* HAVE_UUID_GENERATE */
+  #elif defined(PLATFORM_WINDOWS)
+    if (UuidCreate(&uuid) == RPC_S_OK)
     {
-      // read kernel uuid device
-      if (fgets(buffer,bufferSize,file) == NULL) { /* ignored */ };
-      fclose(file);
-
-      // remove trailing white spaces
-      s = buffer;
-      while ((*s) != '\0')
+      if (UuidToString(&uuid,&rpcString) == RPC_S_OK)
       {
-        s++;
+        stringSet(buffer,bufferSize,rpcString);
+        RpcStringFree(&rpcString);
       }
-      do
-      {
-        (*s) = '\0';
-        s--;
-      }
-      while ((s >= buffer) && isspace(*s));
     }
-  #endif /* HAVE_UUID_GENERATE */
+  #endif /* PLATFORM_... */
 
   return buffer;
 }
