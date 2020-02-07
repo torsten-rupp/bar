@@ -3450,7 +3450,7 @@ bool File_isReadableCString(const char *fileName)
 {
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
-    DWORD fileAttributes;
+    int fileDescriptor;
   #endif /* PLATFORM_... */
 
   assert(fileName != NULL);
@@ -3459,9 +3459,16 @@ bool File_isReadableCString(const char *fileName)
     return access(fileName,F_OK|R_OK) == 0;
   #elif defined(PLATFORM_WINDOWS)
     // Note: access() does not return correct values on MinGW
-
-    fileAttributes = GetFileAttributes(fileName);
-    return (fileAttributes & (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_NORMAL;
+    fileDescriptor = open(fileName,O_RDONLY,0);
+    if (fileDescriptor != -1)
+    {
+      close(fileDescriptor);
+      return TRUE;
+    }
+    else
+    {
+      return FALSE;
+    }
   #endif /* PLATFORM_... */
 }
 
@@ -3487,6 +3494,11 @@ bool File_isWritableCString(const char *fileName)
     // Note: access() does not return correct values on MinGW
 
     fileAttributes = GetFileAttributes(!stringIsEmpty(fileName) ? fileName : ".");
+    if (fileAttributes == INVALID_FILE_ATTRIBUTES)
+    {
+      return FALSE;
+    }
+
     return    ((fileAttributes & (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_NORMAL)
            || ((fileAttributes & (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_READONLY)) == FILE_ATTRIBUTE_DIRECTORY);
   #endif /* PLATFORM_... */
