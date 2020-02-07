@@ -81,7 +81,9 @@ typedef struct Semaphore
   #endif /* not NDEBUG */
 
   SemaphoreTypes      type;
-  #if   defined(PLATFORM_LINUX)              // lock to update request counters, thread info
+//TODO: use Windows WaitForSingleObject?
+//  #if   defined(PLATFORM_LINUX)              // lock to update request counters, thread info
+#if 1
     pthread_mutex_t     requestLock;
   #elif defined(PLATFORM_WINDOWS)
     HANDLE              requestLock;
@@ -89,7 +91,8 @@ typedef struct Semaphore
   uint                readRequestCount;      // number of pending read locks
   uint                readWriteRequestCount; // number of pending read/write locks
 
-  #if   defined(PLATFORM_LINUX)              // lock (thread who own lock is allowed to change the following semaphore variables)
+//  #if   defined(PLATFORM_LINUX)              // lock (thread who own lock is allowed to change the following semaphore variables)
+#if 1
     pthread_mutex_t     lock;
     pthread_mutexattr_t lockAttributes;
   #elif defined(PLATFORM_WINDOWS)
@@ -101,7 +104,8 @@ typedef struct Semaphore
   uint                readWriteLockCount;    // current number of read/write locks
   ThreadId            readWriteLockOwnedBy;  // current read/write lock owner thread
   uint                waitModifiedCount;     // current number of wait modified calls
-  #if   defined(PLATFORM_LINUX)
+//  #if   defined(PLATFORM_LINUX)
+#if 1
     pthread_cond_t      readLockZero;        // signal read-lock became 0
     pthread_cond_t      modified;            // signal values are modified
   #elif defined(PLATFORM_WINDOWS)
@@ -509,6 +513,29 @@ bool Semaphore_isLockPending(Semaphore *semaphore, SemaphoreLockTypes semaphoreL
 void Semaphore_setEnd(Semaphore *semaphore);
 
 #ifndef NDEBUG
+
+/***********************************************************************\
+* Name   : Semaphore_debugTrace
+* Purpose: debug trace semaphore
+* Input  : semaphore - semaphore
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Semaphore_debugTrace(const Semaphore *semaphore);
+
+/***********************************************************************\
+* Name   : Semaphore_debugTraceClear
+* Purpose: debug trace semaphore
+* Input  : semaphore - semaphore
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Semaphore_debugTraceClear(void);
+
 /***********************************************************************\
 * Name   : Semaphore_debugDump
 * Purpose: print debug info

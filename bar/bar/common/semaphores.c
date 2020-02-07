@@ -22,7 +22,9 @@
 #include <errno.h>
 #include <assert.h>
 
-#if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//#if   defined(PLATFORM_LINUX)
+#if 1
   #include <pthread.h>
 #elif defined(PLATFORM_WINDOWS)
   #include <windows.h>
@@ -47,7 +49,7 @@
   #define DEBUG_MAX_SEMAPHORES  256
 
   #define DEBUG_FLAG_READ       FALSE
-  #define DEBUG_FLAG_READ_WRITE TRUE
+  #define DEBUG_FLAG_READ_WRITE FALSE
   #define DEBUG_FLAG_MODIFIED   FALSE
 
   const char *SEMAPHORE_LOCK_TYPE_NAMES[] =
@@ -71,6 +73,7 @@
 
 #ifndef NDEBUG
   LOCAL pthread_once_t      debugSemaphoreInitFlag = PTHREAD_ONCE_INIT;
+//TODO: use Windows WaitForSingleObject?
 //  #if   defined(PLATFORM_LINUX)
 #if 1
     LOCAL pthread_mutexattr_t debugSemaphoreLockAttribute;
@@ -80,12 +83,18 @@
   #endif /* PLATFORM_... */
   LOCAL ThreadId            debugSemaphoreThreadId;
   LOCAL DebugSemaphoreList  debugSemaphoreList;
-  LOCAL void                (*debugSignalQuitPrevHandler)(int);
+  #ifdef HAVE_SIGQUIT
+    LOCAL void                (*debugSignalQuitPrevHandler)(int);
+  #endif /* HAVE_SIGQUIT */
+
+  LOCAL const Semaphore     *debugTraceSemaphore = NULL;
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
 
-#if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//#if   defined(PLATFORM_LINUX)
+#if 1
   #define __SEMAPHORE_REQUEST_LOCK(semaphore) \
     do \
     { \
@@ -118,7 +127,9 @@
 #ifndef NDEBUG
   #define VERIFY_COUNTERS(semaphore) do { assert((semaphore)->debug.lockedByCount == ((semaphore)->readLockCount+(semaphore)->readWriteLockCount+(semaphore)->waitModifiedCount)); } while (0)
 
-  #if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//  #if   defined(PLATFORM_LINUX)
+#if 1
     #define __SEMAPHORE_LOCK(semaphore,lockType,debugFlag,text) \
       do \
       { \
@@ -156,10 +167,7 @@
           debugCheckForDeadLock(semaphore,lockType,__FILE__,__LINE__); \
         } \
         pthread_mutex_unlock(&debugSemaphoreLock); \
-        clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
-        __tp.tv_nsec %= 1000000L; \
+        getTime(&__tp,timeout); \
         if (pthread_mutex_timedlock(&semaphore->lock,&__tp) != 0) \
         { \
           lockedFlag = FALSE; \
@@ -220,10 +228,7 @@
         assert(timeout != WAIT_FOREVER); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
-        clock_gettime(CLOCK_REALTIME,&__timespec); \
-        __timespec.tv_nsec = __timespec.tv_nsec+((timeout)%1000L)*1000000L; \
-        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
-        __timespec.tv_nsec %= 1000000L; \
+        getTime(&__timespec,timeout); \
         if (pthread_cond_timedwait(condition,mutex,&__timespec) != 0) \
         { \
           lockedFlag = FALSE; \
@@ -324,10 +329,7 @@
         assert(timeout != WAIT_FOREVER); \
         \
         if (debugFlag) fprintf(stderr,"%s, %4d: '%s' (%s) unlock+wait %s\n",__FILE__,__LINE__,Thread_getCurrentName(),Thread_getCurrentIdString(),text); \
-        getTime(&__timespec); \
-        __timespec.tv_nsec = __timespec.tv_nsec+((timeout)%1000L)*1000000L; \
-        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
-        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/10000000L)+(timeout))/1000L; \
+        getTime(&__timespec,timeout); \
         if (pthread_cond_timedwait(condition,mutex,&__timespec) != 0) \
         { \
           lockedFlag = FALSE; \
@@ -356,7 +358,9 @@
 #else /* NDEBUG */
   #define VERIFY_COUNTERS(semaphore) do { } while (0)
 
-  #if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//  #if   defined(PLATFORM_LINUX)
+#if 1
     #define __SEMAPHORE_LOCK(semaphore,lockType,debugFlag,text) \
       do \
       { \
@@ -375,10 +379,7 @@
         UNUSED_VARIABLE(lockType); \
         UNUSED_VARIABLE(text); \
         \
-        clock_gettime(CLOCK_REALTIME,&__tp); \
-        __tp.tv_nsec = __tp.tv_nsec+((timeout)%1000L)*1000000L; \
-        __tp.tv_sec  = __tp.tv_sec+((__tp.tv_nsec/1000000L)+(timeout))/1000L; \
-        __tp.tv_nsec %= 1000000L; \
+        getTime(&__tp,timeout); \
         \
         if (pthread_mutex_timedlock(&semaphore->lock,&__tp) != 0) lockedFlag = FALSE; \
       } \
@@ -424,10 +425,7 @@
         UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
         \
-        clock_gettime(CLOCK_REALTIME,&__timespec); \
-        __timespec.tv_nsec = __timespec.tv_nsec+((timeout)%1000L)*1000000L; \
-        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
-        __timespec.tv_nsec %= 1000000L; \
+        getTime(&__timespec,timeout); \
         if (pthread_cond_timedwait(condition,mutex,&__timespec) != 0) lockedFlag = FALSE; \
       } \
       while (0)
@@ -503,10 +501,7 @@
         UNUSED_VARIABLE(semaphore); \
         UNUSED_VARIABLE(text); \
         \
-        getTime(&__timespec); \
-        __timespec.tv_nsec = __timespec.tv_nsec+((timeout)%1000L)*1000000L; \
-        __timespec.tv_sec  = __timespec.tv_sec+((__timespec.tv_nsec/1000000L)+(timeout))/1000L; \
-        __timespec.tv_nsec %= 1000000L; \
+        getTime(&__timespec,timeout); \
         if (pthread_cond_timedwait(condition,mutex,&__timespec) == ETIMEDOUT) lockedFlag = FALSE; \
       } \
       while (0)
@@ -526,39 +521,15 @@
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(HAVE_SIGQUIT)
   LOCAL void debugSemaphoreSignalHandler(int signalNumber);
-#endif /* not NDEBUG */
+#endif /* !defined(NDEBUG) && defined(HAVE_SIGQUIT) */
 
 /***************************** Functions *******************************/
 
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-#if   defined(PLATFORM_LINUX)
-#elif defined(PLATFORM_WINDOWS)
-/***********************************************************************\
-* Name   : getTime
-* Purpose: get POSIX compatible time
-* Input  : -
-* Output : timespec - time
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void getTime(struct timespec *timespec)
-{
-  __int64 windowsTime;
-
-  assert(timespec != NULL);
-
-  GetSystemTimeAsFileTime((FILETIME*)&windowsTime);
-  windowsTime -= 116444736000000000LL;  // Jan 1 1601 -> Jan 1 1970
-  timespec->tv_sec  = (windowsTime/10000000LL);
-  timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
-}
-#endif /* PLATFORM_... */
 
 #ifndef NDEBUG
 /***********************************************************************\
@@ -577,6 +548,7 @@ LOCAL void debugSemaphoreInit(void)
   List_init(&debugSemaphoreList);
 
   // init lock
+//TODO: use Windows WaitForSingleObject?
 //  #if   defined(PLATFORM_LINUX)
 #if 1
     pthread_mutexattr_init(&debugSemaphoreLockAttribute);
@@ -623,6 +595,37 @@ LOCAL void debugSemaphoreSignalHandler(int signalNumber)
   }
 }
 #endif /* HAVE_SIGQUIT */
+
+/***********************************************************************\
+* Name   : getTime
+* Purpose: get POSIX compatible time
+* Input  : timeOffset - time offset [ms]
+* Output : timespec - time
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL_INLINE void getTime(struct timespec *timespec, ulong timeOffset)
+{
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    __int64 windowsTime;
+  #endif /* PLATFORM_... */
+
+  assert(timespec != NULL);
+
+  #if   defined(PLATFORM_LINUX)
+    clock_gettime(CLOCK_REALTIME,timespec);
+  #elif defined(PLATFORM_WINDOWS)
+    GetSystemTimeAsFileTime((FILETIME*)&windowsTime);
+    windowsTime -= 116444736000000000LL;  // Jan 1 1601 -> Jan 1 1970
+    timespec->tv_sec  = (windowsTime/10000000LL);
+    timespec->tv_nsec = (windowsTime%10000000LL)*100LL;
+  #endif /* PLATFORM_... */
+  timespec->tv_nsec = timespec->tv_nsec+((timeOffset)%1000L)*1000000L; \
+  timespec->tv_sec  = timespec->tv_sec+((timespec->tv_nsec/1000000L)+(timeOffset))/1000L; \
+  timespec->tv_nsec %= 1000000L; \
+}
 
 /***********************************************************************\
 * Name   : debugAddThreadInfo
@@ -1292,6 +1295,7 @@ LOCAL bool lock(const char         *__fileName__,
       break;
 
     case SEMAPHORE_LOCK_TYPE_READ:
+if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: --- lock read\n",__FILE__,__LINE__);
       /* request read lock
          Note: for a read lock the semaphore is locked temporary and a read-lock is stored
       */
@@ -1442,6 +1446,7 @@ LOCAL bool lock(const char         *__fileName__,
       break;
 
     case SEMAPHORE_LOCK_TYPE_READ_WRITE:
+if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: --- lock read/wrote\n",__FILE__,__LINE__);
       /* request write lock
          Note: for a read/write lock the semaphore is locked permanent
       */
@@ -1456,11 +1461,11 @@ LOCAL bool lock(const char         *__fileName__,
       // write: aquire permanent lock
       if (timeout != WAIT_FOREVER)
       {
-fprintf(stderr,"%s, %d: %p timeout=%ld\n",__FILE__,__LINE__,semaphore,timeout);
+if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: %p timeout=%ld\n",__FILE__,__LINE__,semaphore,timeout);
         __SEMAPHORE_LOCK_TIMEOUT(semaphore,semaphoreLockType,DEBUG_FLAG_READ_WRITE,"RW",timeout,lockedFlag);
         if (!lockedFlag)
         {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           #ifndef NDEBUG
             decrementReadWriteRequest(semaphore,__fileName__,__lineNb__);
           #else /* NDEBUG */
@@ -1484,7 +1489,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         {
           while (semaphore->readLockCount > 0)
           {
-fprintf(stderr,"%s, %d: wait until no more read-locks\n",__FILE__,__LINE__);
+if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: wait until no more read-locks\n",__FILE__,__LINE__);
 //fprintf(stderr,"%s, %d: thread=%s wiat sem=%p count=%d owner=%d\n",__FILE__,__LINE__,Thread_getCurrentIdString(),semaphore,semaphore->lock.__data.__count,semaphore->lock.__data.__owner);
             __SEMAPHORE_WAIT_TIMEOUT(semaphore,DEBUG_FLAG_READ_WRITE,"R",&semaphore->readLockZero,&semaphore->lock,timeout,lockedFlag);
             if (!lockedFlag)
@@ -1540,7 +1545,7 @@ fprintf(stderr,"%s, %d: wait until no more read-locks\n",__FILE__,__LINE__);
         assert(Thread_isCurrentThread(semaphore->readWriteLockOwnedBy));
 
         VERIFY_COUNTERS(semaphore);
-fprintf(stderr,"%s, %d: %p lockedFlag=%d\n",__FILE__,__LINE__,semaphore,lockedFlag);
+if (semaphore == debugTraceSemaphore) fprintf(stderr,"%s, %d: %p lockedFlag=%d\n",__FILE__,__LINE__,semaphore,lockedFlag);
       }
       break;
 
@@ -1927,7 +1932,9 @@ bool __Semaphore_init(const char     *__fileName__,
   assert(semaphore != NULL);
 
   semaphore->type                  = semaphoreType;
-  #if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//  #if   defined(PLATFORM_LINUX)
+#if 1
     if (pthread_mutex_init(&semaphore->requestLock,NULL) != 0)
     {
       return FALSE;
@@ -1942,7 +1949,9 @@ bool __Semaphore_init(const char     *__fileName__,
   semaphore->readRequestCount      = 0;
   semaphore->readWriteRequestCount = 0;
 
-  #if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//  #if   defined(PLATFORM_LINUX)
+#if 1
     pthread_mutexattr_init(&semaphore->lockAttributes);
     pthread_mutexattr_settype(&semaphore->lockAttributes,PTHREAD_MUTEX_RECURSIVE);
     if (pthread_mutex_init(&semaphore->lock,&semaphore->lockAttributes) != 0)
@@ -1961,7 +1970,9 @@ bool __Semaphore_init(const char     *__fileName__,
   #endif /* PLATFORM_... */
   if (pthread_cond_init(&semaphore->readLockZero,NULL) != 0)
   {
-    #if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//    #if   defined(PLATFORM_LINUX)
+#if 1
       pthread_mutex_destroy(&semaphore->lock);
       pthread_mutexattr_destroy(&semaphore->lockAttributes);
       pthread_mutex_destroy(&semaphore->requestLock);
@@ -1974,7 +1985,9 @@ bool __Semaphore_init(const char     *__fileName__,
   if (pthread_cond_init(&semaphore->modified,NULL) != 0)
   {
     pthread_cond_destroy(&semaphore->readLockZero);
-    #if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//    #if   defined(PLATFORM_LINUX)
+#if 1
       pthread_mutex_destroy(&semaphore->lock);
       pthread_mutexattr_destroy(&semaphore->lockAttributes);
       pthread_mutex_destroy(&semaphore->requestLock);
@@ -2096,7 +2109,9 @@ void __Semaphore_done(const char *__fileName__,
   // free resources
   pthread_cond_destroy(&semaphore->modified);
   pthread_cond_destroy(&semaphore->readLockZero);
-  #if   defined(PLATFORM_LINUX)
+//TODO: use Windows WaitForSingleObject?
+//  #if   defined(PLATFORM_LINUX)
+#if 1
     pthread_mutex_destroy(&semaphore->lock);
     pthread_mutexattr_destroy(&semaphore->lockAttributes);
     pthread_mutex_destroy(&semaphore->requestLock);
@@ -2378,6 +2393,18 @@ void Semaphore_setEnd(Semaphore *semaphore)
 }
 
 #ifndef NDEBUG
+void Semaphore_debugTrace(const Semaphore *semaphore)
+{
+  assert(semaphore != NULL);
+
+  debugTraceSemaphore = semaphore;
+}
+
+void Semaphore_debugTraceClear(void)
+{
+  debugTraceSemaphore = NULL;
+}
+
 void Semaphore_debugDump(const Semaphore *semaphore, FILE *handle)
 {
   char s[64+1];
@@ -2405,7 +2432,7 @@ void Semaphore_debugDump(const Semaphore *semaphore, FILE *handle)
     switch (semaphore->lockType)
     {
       case SEMAPHORE_LOCK_TYPE_NONE:
-        fprintf(handle,"\n");
+        fprintf(handle,", not locked\n");
         break;
       case SEMAPHORE_LOCK_TYPE_READ:
         fprintf(handle,", locked %s (%d)\n", SEMAPHORE_LOCK_TYPE_NAMES[SEMAPHORE_LOCK_TYPE_READ],semaphore->readLockCount);
