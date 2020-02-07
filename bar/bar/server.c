@@ -7218,7 +7218,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
           }
           else
           {
-            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+            ServerIO_sendResult(&clientInfo->io,id,FALSE,error,
                                 "get file info fail for '%S'",
                                 name
                                );
@@ -7226,7 +7226,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
         }
         else
         {
-          ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
+          ServerIO_sendResult(&clientInfo->io,id,FALSE,error,
                               "read directory entry fail for '%S'",
                               name
                              );
