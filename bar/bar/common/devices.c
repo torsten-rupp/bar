@@ -613,7 +613,6 @@ Errors Device_openDeviceList(DeviceListHandle *deviceListHandle)
       return ERROR_(OPEN_FILE,GetLastError());
     }
     deviceListHandle->i = 0;
-fprintf(stderr,"%s, %d: %x\n",__FILE__,__LINE__,deviceListHandle->logicalDrives);
   #endif /* PLATFORM_... */
 
   return ERROR_NONE;
