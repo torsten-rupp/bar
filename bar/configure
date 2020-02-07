@@ -8545,6 +8545,66 @@ $as_echo "$ac_cv_search_static_getaddrinfo" >&6; }
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES ws2_32"
 fi
 
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for static library containing UuidCreate" >&5
+$as_echo_n "checking for static library containing UuidCreate... " >&6; }
+if ${ac_cv_search_static_UuidCreate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_func_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for ac_library in rpcrt4 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-Wl,-Bstatic -l$ac_library -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo windows.h rpcdce.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "windows.h rpcdce.h"; then echo "extern void UuidCreate();"; fi`
+                                         return (int)UuidCreate;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_static_UuidCreate=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if ${ac_cv_search_static_UuidCreate+:} false; then :
+
+else
+  ac_cv_search_static_UuidCreate=no
+fi
+
+            LIBS=$ac_func_search_static_libraries_save_LIBS
+      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_UuidCreate" >&5
+$as_echo "$ac_cv_search_static_UuidCreate" >&6; }
+  ac_result=$ac_cv_search_static_UuidCreate
+  if test "$ac_result" != no; then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES rpcrt4"
+fi
+
     ;;
   sunos | solaris*)
     ;;

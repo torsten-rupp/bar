@@ -1525,6 +1525,7 @@ case $host_os in
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
     AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
     AC_SEARCH_STATIC_LIBRARIES(getaddrinfo,ws2_32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ws2_32"],,ws2tcpip.h)
+    AC_SEARCH_STATIC_LIBRARIES(UuidCreate,rpcrt4,[STATIC_LIBRARIES="$STATIC_LIBRARIES rpcrt4"],,windows.h rpcdce.h)
     ;;
   sunos | solaris*)
     ;;
