@@ -2515,6 +2515,7 @@ LOCAL void schedulerThreadCode(void)
   DatabaseHandle continuousDatabaseHandle;
   IndexHandle    *indexHandle;
   JobNode        *jobNode;
+  TimeoutInfo    rereadJobTimeout;
   bool           jobListPendingFlag;
   uint64         currentDateTime;
   uint64         dateTime;
@@ -2547,14 +2548,22 @@ LOCAL void schedulerThreadCode(void)
     }
   }
 
+  // write all modified jobs, re-read all job config files
+  Job_writeModifiedAll();
+  Job_rereadAll(globalOptions.jobsDirectory);
+
+  Misc_initTimeout(&rereadJobTimeout,SLEEP_TIME_SCHEDULER_THREAD*MS_PER_SECOND);
   executeScheduleDateTime = 0LL;
   while (!quitFlag)
   {
-    // write all modified jobs
-    Job_writeModifiedAll();
+    if (Misc_isTimeout(&rereadJobTimeout))
+    {
+      // write all modified jobs, re-read all job config files
+      Job_writeModifiedAll();
+      Job_rereadAll(globalOptions.jobsDirectory);
 
-    // re-read all job config files
-    Job_rereadAll(globalOptions.jobsDirectory);
+      Misc_restartTimeout(&rereadJobTimeout,0);
+    }
 
     // check for jobs triggers
     jobListPendingFlag  = FALSE;
@@ -2707,6 +2716,7 @@ LOCAL void schedulerThreadCode(void)
       }
     }
   }
+  Misc_doneTimeout(&rereadJobTimeout);
 
   // done index
   if (Index_isAvailable())
