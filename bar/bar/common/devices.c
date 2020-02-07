@@ -797,9 +797,9 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
   #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
     long     l;
   #endif
-  char          buffer[4096];
   #if   defined(PLATFORM_LINUX)
     struct mntent mountEntry;
+    char          buffer[4096];
     FILE          *mtab;
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
