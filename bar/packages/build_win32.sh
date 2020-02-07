@@ -166,7 +166,6 @@ cd $packageName-$version
   --build=x86_64-linux \
   --disable-link-static \
   --enable-link-dynamic \
-  --disable-iso9660 \
   --disable-bfd \
 --disable-epm \
   ;
