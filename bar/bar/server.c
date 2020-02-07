@@ -5098,7 +5098,6 @@ LOCAL void serverCommand_version(ClientInfo *clientInfo, IndexHandle *indexHandl
 
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   s = NULL;
   switch (serverMode)
@@ -5111,7 +5110,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
         break; /* not reached */
     #endif /* NDEBUG */
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   ServerIO_sendResult(&clientInfo->io,
                       id,
                       TRUE,
@@ -5121,7 +5119,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                       SERVER_PROTOCOL_VERSION_MINOR,
                       s
                      );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 }
 
 /***********************************************************************\
@@ -6213,7 +6210,7 @@ LOCAL void serverCommand_abort(ClientInfo *clientInfo, IndexHandle *indexHandle,
   SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     commandInfoNode = LIST_FIND(&clientInfo->commandInfoList,commandInfoNode,commandInfoNode->id == commandId);
-    if (commandInfoNode != NULL)
+    if ((commandInfoNode != NULL) && (commandInfoNode->indexHandle != NULL))
     {
       Index_interrupt(commandInfoNode->indexHandle);
     }
@@ -13759,7 +13756,6 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
   // get entry pattern, index type, new entries only
   name = String_new();
   if (!StringMap_getString(argumentMap,"name",name,NULL))
@@ -17770,22 +17766,13 @@ LOCAL void networkClientThreadCode(ClientInfo *clientInfo)
          && MsgQueue_get(&clientInfo->commandQueue,&command,NULL,sizeof(command),WAIT_FOREVER)
         )
   {
-fprintf(stderr,"%s, %d: oooooooooooooo %d\n",__FILE__,__LINE__,command.id);
     // check authorization (if not in server debug mode)
     if ((globalOptions.serverDebugLevel >= 1) || IS_SET(command.authorizationStateSet,clientInfo->authorizationState))
     {
       // add command info
       commandInfoNode = NULL;
-Semaphore_debugDump(&clientInfo->lock,stderr);
-fprintf(stderr,"%s, %d: %p\n",__FILE__,__LINE__,&clientInfo->lock);
       SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
       {
-fprintf(stderr,"%s, %d: uuuuuuuuuuuuu\n",__FILE__,__LINE__);
-      }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-      SEMAPHORE_LOCKED_DO(&clientInfo->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
-      {
-fprintf(stderr,"%s, %d: GGGGGGGGGGGG\n",__FILE__,__LINE__);
         commandInfoNode = LIST_NEW_NODE(CommandInfoNode);
         if (commandInfoNode == NULL)
         {
@@ -17795,7 +17782,6 @@ fprintf(stderr,"%s, %d: GGGGGGGGGGGG\n",__FILE__,__LINE__);
         commandInfoNode->indexHandle = indexHandle;
         List_append(&clientInfo->commandInfoList,commandInfoNode);
       }
-fprintf(stderr,"%s, %d: !!!!!!!!!!!\n",__FILE__,__LINE__);
 
       // execute command
       #ifndef NDEBUG
@@ -17805,7 +17791,6 @@ fprintf(stderr,"%s, %d: !!!!!!!!!!!\n",__FILE__,__LINE__);
           t0 = Misc_getTimestamp();
         }
       #endif /* not NDEBUG */
-fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,command.id);
       command.serverCommandFunction(clientInfo,
                                     indexHandle,
                                     command.id,
@@ -18059,10 +18044,13 @@ LOCAL void doneClient(ClientInfo *clientInfo)
     }
   }
 
-  // abort all running commands
+  // abort all running index operations
   LIST_ITERATE(&clientInfo->commandInfoList,commandInfoNode)
   {
-    Index_interrupt(commandInfoNode->indexHandle);
+    if (commandInfoNode->indexHandle != NULL)
+    {
+      Index_interrupt(commandInfoNode->indexHandle);
+    }
   }
 
   // done client
@@ -18435,7 +18423,6 @@ LOCAL void processCommand(ClientInfo *clientInfo, uint id, ConstString name, con
       }
       break;
     case SERVER_IO_TYPE_NETWORK:
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       switch (clientInfo->authorizationState)
       {
         case AUTHORIZATION_STATE_WAITING:
@@ -18443,7 +18430,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
           if ((globalOptions.serverDebugLevel >= 1) || IS_SET(authorizationStateSet,AUTHORIZATION_STATE_WAITING))
           {
             // execute command
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             serverCommandFunction(clientInfo,
                                   indexHandle,
                                   id,
@@ -18959,7 +18945,6 @@ exit(1);
     MISC_HANDLES_ITERATE(&waitHandle,handle,events)
     {
       // connect new clients via plain/standard port
-fprintf(stderr,"%s, %d: events=%x hop=%x in=%x %d %d\n",__FILE__,__LINE__,events,POLLHUP,HANDLE_EVENT_INPUT,handle,Network_getServerSocket(&serverSocketHandle));
       if      (   serverFlag
                && (handle == Network_getServerSocket(&serverSocketHandle))
                && Misc_isHandleEvent(events,HANDLE_EVENT_INPUT)
@@ -19117,7 +19102,6 @@ fprintf(stderr,"%s, %d: events=%x hop=%x in=%x %d %d\n",__FILE__,__LINE__,events
                                             )
                      )
                   {
-fprintf(stderr,"%s, %d: ='%s'\n",__FILE__,__LINE__,String_cString(name));
                     processCommand(&clientNode->clientInfo,id,name,argumentMap);
                   }
                 }
