@@ -927,9 +927,6 @@ uint64 Misc_parseDateTime(const char *string)
     const char *s;
   #endif /* HAVE_STRPTIME */
   uint64     dateTime;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
 
   assert(string != NULL);
 
@@ -1098,27 +1095,33 @@ uint64 Misc_makeDateTime(uint year,
 
 void Misc_udelay(uint64 time)
 {
-  #if   defined(HAVE_USLEEP)
-  #elif defined(HAVE_NANOSLEEP)
-    struct timespec ts;
-  #endif /* HAVE_NANOSLEEP */
+  #if   defined(PLATFORM_LINUX)
+    #if   defined(HAVE_USLEEP)
+    #elif defined(HAVE_NANOSLEEP)
+      struct timespec ts;
+    #endif /* HAVE_NANOSLEEP */
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
-  #if   defined(HAVE_USLEEP)
-    usleep(time);
-  #elif defined(HAVE_NANOSLEEP)
-    ts.tv_sec  = (ulong)(time/1000000LL);
-    ts.tv_nsec = (ulong)((time%1000000LL)*1000);
-    while (   (nanosleep(&ts,&ts) == -1)
-           && (errno == EINTR)
-          )
-    {
-      // nothing to do
-    }
+  // Note: usleep() seems not work on MinGW
+  #if   defined(PLATFORM_LINUX)
+    #if   defined(HAVE_USLEEP)
+      usleep(time);
+    #elif defined(HAVE_NANOSLEEP)
+      ts.tv_sec  = (ulong)(time/1000000LL);
+      ts.tv_nsec = (ulong)((time%1000000LL)*1000);
+      while (   (nanosleep(&ts,&ts) == -1)
+             && (errno == EINTR)
+            )
+      {
+        // nothing to do
+      }
+    #else
+      #error usleep()/nanosleep() not available nor Windows system!
+    #endif
   #elif defined(PLATFORM_WINDOWS)
     Sleep((time+1000L-1L)/1000LL);
-  #else
-    #error usleep()/nanosleep() not available nor Windows system!
-  #endif
+  #endif /* PLATFORM_... */
 }
 
 /*---------------------------------------------------------------------*/

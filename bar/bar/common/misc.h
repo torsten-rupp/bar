@@ -570,7 +570,7 @@ INLINE void Misc_doneTimeout(TimeoutInfo *timeoutInfo)
 * Name   : Misc_restartTimeout
 * Purpose: restart timeout
 * Input  : timeoutInfo - timeout info
-*          timeout     - timeout [ms]
+*          timeout     - timeout [ms] (can be 0)
 * Output : -
 * Return : -
 * Notes  : -
@@ -582,8 +582,11 @@ INLINE void Misc_restartTimeout(TimeoutInfo *timeoutInfo, long timeout)
 {
   assert(timeoutInfo != NULL);
 
-  timeoutInfo->timeout      = timeout;
-  timeoutInfo->endTimestamp = (timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeout*US_PER_MS : 0LL;
+  if (timeout != 0L)
+  {
+    timeoutInfo->timeout = timeout;
+  }
+  timeoutInfo->endTimestamp = (timeoutInfo->timeout != WAIT_FOREVER) ? Misc_getTimestamp()+(uint64)timeoutInfo->timeout*US_PER_MS : 0LL;
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
@@ -626,7 +629,7 @@ INLINE long Misc_getRestTimeout(const TimeoutInfo *timeoutInfo)
   if (timeoutInfo->timeout != WAIT_FOREVER)
   {
     timestamp = Misc_getTimestamp();
-    return (timestamp < timeoutInfo->endTimestamp) ? (long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS) : 0L;
+    return (timestamp <= timeoutInfo->endTimestamp) ? (long)((timeoutInfo->endTimestamp-timestamp)/US_PER_MS) : 0L;
   }
   else
   {
@@ -669,7 +672,7 @@ INLINE bool Misc_isTimeout(const TimeoutInfo *timeoutInfo)
 {
   assert(timeoutInfo != NULL);
 
-  return (Misc_getTimestamp() > timeoutInfo->endTimestamp);
+  return (Misc_getTimestamp() >= timeoutInfo->endTimestamp);
 }
 #endif /* NDEBUG || __MISC_IMPLEMENTATION__ */
 
