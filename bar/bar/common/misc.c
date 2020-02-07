@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <inttypes.h>
 #include <unistd.h>
 #include <sys/types.h>
 #ifdef HAVE_SYS_WAIT_H
@@ -1114,7 +1115,7 @@ void Misc_udelay(uint64 time)
       // nothing to do
     }
   #elif defined(PLATFORM_WINDOWS)
-    Sleep(time/1000LL);
+    Sleep((time+1000L-1L)/1000LL);
   #else
     #error usleep()/nanosleep() not available nor Windows system!
   #endif
@@ -1690,7 +1691,7 @@ String Misc_expandMacros(String           string,
                     stringSet(format,sizeof(format),"%d");
                     break;
                   case TEXT_MACRO_TYPE_INTEGER64:
-                    stringSet(format,sizeof(format),"%lld");
+                    stringSet(format,sizeof(format),"%"PRIi64);
                     break;
                   case TEXT_MACRO_TYPE_DOUBLE:
                     stringSet(format,sizeof(format),"%lf");
