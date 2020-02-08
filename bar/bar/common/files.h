@@ -274,10 +274,6 @@ typedef struct
       struct timespec atime;
     #endif /* not HAVE_O_NOATIME */
   #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    String name;
-  #endif /* PLATFORM_... */
 } DirectoryListHandle;
 
 // file permission

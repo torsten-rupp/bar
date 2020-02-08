@@ -51,6 +51,7 @@
   #include <linux/fs.h>
   #include <linux/magic.h>
 #elif defined(PLATFORM_WINDOWS)
+  #include <winsock2.h>
   #include <windows.h>
 #endif /* PLATFORM_... */
 
@@ -1694,13 +1695,9 @@ Errors __File_openCString(const char *__fileName__,
                          )
 #endif /* NDEBUG */
 {
-  int     fileDescriptor;
-  Errors  error;
-  #ifdef HAVE_O_NOATIME
-  #else /* not HAVE_O_NOATIME */
-    struct stat fileStat;
-  #endif /* HAVE_O_NOATIME */
-  String  directoryName;
+  int    fileDescriptor;
+  Errors error;
+  String directoryName;
 
   assert(fileHandle != NULL);
   assert(fileName != NULL);
@@ -2801,10 +2798,6 @@ fprintf(stderr,"%s, %d: oipen directoryName=%s\n",__FILE__,__LINE__,directoryNam
 
   directoryListHandle->basePath = String_newCString(directoryName);
   directoryListHandle->entry    = NULL;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    directoryListHandle->name = String_new();
-  #endif /* PLATFORM_... */
 
   return ERROR_NONE;
 }
@@ -2826,10 +2819,6 @@ void File_closeDirectoryList(DirectoryListHandle *directoryListHandle)
   closedir(directoryListHandle->dir);
 
   // free resources
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    String_delete(directoryListHandle->name);
-  #endif /* PLATFORM_... */
   File_deleteFileName(directoryListHandle->basePath);
 }
 
@@ -2862,11 +2851,6 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
                               String              fileName
                              )
 {
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    String s;
-  #endif /* PLATFORM_... */
-
   assert(directoryListHandle != NULL);
   assert(directoryListHandle->basePath != NULL);
   assert(directoryListHandle->dir != NULL);
@@ -2892,24 +2876,9 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
     return ERRORX_(IO,errno,"%E",errno);
   }
 
-  #if   defined(PLATFORM_LINUX)
-    // get entry name
-    String_set(fileName,directoryListHandle->basePath);
-    File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
-  #elif defined(PLATFORM_WINDOWS)
-    // repair brain dead Windows names...
-    String_setCString(directoryListHandle->name,directoryListHandle->entry->d_name);
-fprintf(stderr,"%s, %d: a=%s\n",__FILE__,__LINE__,String_cString(directoryListHandle->name));
-    String_replaceAllChar(directoryListHandle->name,STRING_BEGIN,'\\',FILE_PATHNAME_SEPARATOR_CHAR);
-fprintf(stderr,"%s, %d: b=%s\n",__FILE__,__LINE__,String_cString(directoryListHandle->name));
-
-    // get entry name
-    String_set(fileName,directoryListHandle->basePath);
-fprintf(stderr,"%s, %d: fileName1=%s\n",__FILE__,__LINE__,String_cString(fileName));
-    File_appendFileName(fileName,directoryListHandle->name);
-fprintf(stderr,"%s, %d: fileName2=%s\n",__FILE__,__LINE__,String_cString(fileName));
-  #endif /* PLATFORM_... */
-fprintf(stderr,"%s, %d: fileName3=%s\n",__FILE__,__LINE__,String_cString(fileName));
+  // get entry name
+  String_set(fileName,directoryListHandle->basePath);
+  File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
 
   // mark entry read
   directoryListHandle->entry = NULL;
@@ -3914,11 +3883,11 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
                                  const char     *fileName
                                 )
 {
-  long   attributes;
-  #ifdef FS_IOC_GETFLAGS
+  #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
+    long   attributes;
     int    handle;
     Errors error;
-  #endif /* FS_IOC_GETFLAGS */
+  #endif /* FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
   #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
     #ifndef HAVE_O_NOATIME
 //TODO: remove
