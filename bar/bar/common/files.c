@@ -841,11 +841,11 @@ String File_appendFileName(String fileName, ConstString name)
 
   if (!String_isEmpty(fileName))
   {
-    if (   !String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR)
-        && !String_startsWithChar(name,FILES_PATHNAME_SEPARATOR_CHAR)
+    if (   !String_endsWithChar(fileName,FILE_PATHNAME_SEPARATOR_CHAR)
+        && !String_startsWithChar(name,FILE_PATHNAME_SEPARATOR_CHAR)
        )
     {
-      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+      String_appendChar(fileName,FILE_PATHNAME_SEPARATOR_CHAR);
     }
   }
   String_append(fileName,name);
@@ -860,11 +860,11 @@ String File_appendFileNameCString(String fileName, const char *name)
 
   if (!String_isEmpty(fileName))
   {
-    if (   !String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR)
-        && (name[0] != FILES_PATHNAME_SEPARATOR_CHAR)
+    if (   !String_endsWithChar(fileName,FILE_PATHNAME_SEPARATOR_CHAR)
+        && (name[0] != FILE_PATHNAME_SEPARATOR_CHAR)
        )
     {
-      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+      String_appendChar(fileName,FILE_PATHNAME_SEPARATOR_CHAR);
     }
   }
   String_appendCString(fileName,name);
@@ -878,11 +878,11 @@ String File_appendFileNameChar(String fileName, char ch)
 
   if (!String_isEmpty(fileName))
   {
-    if (   !String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR)
-        && (ch != FILES_PATHNAME_SEPARATOR_CHAR)
+    if (   !String_endsWithChar(fileName,FILE_PATHNAME_SEPARATOR_CHAR)
+        && (ch != FILE_PATHNAME_SEPARATOR_CHAR)
        )
     {
-      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+      String_appendChar(fileName,FILE_PATHNAME_SEPARATOR_CHAR);
     }
   }
   String_appendChar(fileName,ch);
@@ -896,11 +896,11 @@ String File_appendFileNameBuffer(String fileName, const char *buffer, ulong buff
 
   if (!String_isEmpty(fileName))
   {
-    if (   !String_endsWithChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR)
-        && ((bufferLength == 0) || (buffer[0] != FILES_PATHNAME_SEPARATOR_CHAR))
+    if (   !String_endsWithChar(fileName,FILE_PATHNAME_SEPARATOR_CHAR)
+        && ((bufferLength == 0) || (buffer[0] != FILE_PATHNAME_SEPARATOR_CHAR))
        )
     {
-      String_appendChar(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+      String_appendChar(fileName,FILE_PATHNAME_SEPARATOR_CHAR);
     }
   }
   String_appendBuffer(fileName,buffer,bufferLength);
@@ -918,7 +918,7 @@ String File_getDirectoryName(String pathName, ConstString fileName)
 
   if (fileName != NULL)
   {
-    n = String_findLastChar(fileName,STRING_END,FILES_PATHNAME_SEPARATOR_CHAR);
+    n = String_findLastChar(fileName,STRING_END,FILE_PATHNAME_SEPARATOR_CHAR);
     if (n >= 0)
     {
       String_sub(pathName,fileName,STRING_BEGIN,n);
@@ -945,7 +945,7 @@ String File_getDirectoryNameCString(String pathName, const char *fileName)
   if (fileName != NULL)
   {
     // find last path separator
-    lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+    lastPathSeparator = strrchr(fileName,FILE_PATHNAME_SEPARATOR_CHAR);
 
     // get path
     if (lastPathSeparator != NULL)
@@ -981,7 +981,7 @@ String File_getBaseNameCString(String baseName, const char *fileName)
   if (fileName != NULL)
   {
     // find last path separator
-    lastPathSeparator = strrchr(fileName,FILES_PATHNAME_SEPARATOR_CHAR);
+    lastPathSeparator = strrchr(fileName,FILE_PATHNAME_SEPARATOR_CHAR);
 
     // get path
     if (lastPathSeparator != NULL)
@@ -1019,9 +1019,9 @@ String File_getRootNameCString(String rootName, const char *fileName)
   {
     n = stringLength(fileName);
     #if   defined(PLATFORM_LINUX)
-      if ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR))
+      if ((n >= 1) && (fileName[0] == FILE_PATHNAME_SEPARATOR_CHAR))
       {
-        String_setChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
+        String_setChar(rootName,FILE_PATHNAME_SEPARATOR_CHAR);
       }
     #elif defined(PLATFORM_WINDOWS)
       if      (   (n >= 2)
@@ -1038,9 +1038,9 @@ String File_getRootNameCString(String rootName, const char *fileName)
       {
         String_clear(rootName);
       }
-      if ((n >= 3) && (fileName[2] == FILES_PATHNAME_SEPARATOR_CHAR))
+      if ((n >= 3) && (fileName[2] == FILE_PATHNAME_SEPARATOR_CHAR))
       {
-        String_appendChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
+        String_appendChar(rootName,FILE_PATHNAME_SEPARATOR_CHAR);
       }
     #endif /* PLATFORM_... */
   }
@@ -1099,7 +1099,7 @@ void File_initSplitFileName(StringTokenizer *stringTokenizer, ConstString fileNa
   assert(stringTokenizer != NULL);
   assert(fileName != NULL);
 
-  String_initTokenizer(stringTokenizer,fileName,STRING_BEGIN,FILES_PATHNAME_SEPARATOR_CHARS,NULL,FALSE);
+  String_initTokenizer(stringTokenizer,fileName,STRING_BEGIN,FILE_PATHNAME_SEPARATOR_CHARS,NULL,FALSE);
 }
 
 void File_doneSplitFileName(StringTokenizer *stringTokenizer)
@@ -1132,7 +1132,7 @@ bool File_isAbsoluteFileNameCString(const char *fileName)
 
   n = stringLength(fileName);
   #if   defined(PLATFORM_LINUX)
-    return ((n >= 1) && (fileName[0] == FILES_PATHNAME_SEPARATOR_CHAR));
+    return ((n >= 1) && (fileName[0] == FILE_PATHNAME_SEPARATOR_CHAR));
   #elif defined(PLATFORM_WINDOWS)
     return    ((n >= 2) && ((toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z') && (fileName[1] == ':')))
            || ((n >= 2) && (strncmp(fileName,"\\\\",2) == 0));
@@ -1239,14 +1239,14 @@ Errors __File_getTmpFileCString(const char *__fileName__,
   // get directory
   if (!stringIsEmpty(directory))
   {
-    n = stringLength(directory)+stringLength(FILE_SEPARATOR_STRING)+stringLength(prefix)+7+1;
+    n = stringLength(directory)+stringLength(FILE_PATHNAME_SEPARATOR_STRING)+stringLength(prefix)+7+1;
     s = (char*)malloc(n);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
     stringSet(s,n,directory);
-    stringAppend(s,n,FILE_SEPARATOR_STRING);
+    stringAppend(s,n,FILE_PATHNAME_SEPARATOR_STRING);
   }
   else
   {
@@ -1261,7 +1261,7 @@ Errors __File_getTmpFileCString(const char *__fileName__,
     if (tmpDirectory != NULL)
     {
       stringSet(s,n,tmpDirectory);
-      stringAppend(s,n,FILE_SEPARATOR_STRING);
+      stringAppend(s,n,FILE_PATHNAME_SEPARATOR_STRING);
     }
     else
     {
@@ -1435,14 +1435,14 @@ Errors File_getTmpFileNameCString(String     fileName,
   if (stringIsEmpty(directory)) directory = "/tmp";
 
   // get template
-  n = stringLength(directory)+stringLength(FILE_SEPARATOR_STRING)+stringLength(prefix)+7+1;
+  n = stringLength(directory)+stringLength(FILE_PATHNAME_SEPARATOR_STRING)+stringLength(prefix)+7+1;
   s = (char*)malloc(n);
   if (s == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
   }
   stringSet(s,n,directory);
-  stringAppend(s,n,FILE_SEPARATOR_STRING);
+  stringAppend(s,n,FILE_PATHNAME_SEPARATOR_STRING);
   stringAppend(s,n,prefix);
   stringAppend(s,n,"-XXXXXX");
 
@@ -1513,14 +1513,14 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
 
   if (!stringIsEmpty(directory))
   {
-    n = stringLength(directory)+stringLength(FILE_SEPARATOR_STRING)+stringLength(prefix)+7+1;
+    n = stringLength(directory)+stringLength(FILE_PATHNAME_SEPARATOR_STRING)+stringLength(prefix)+7+1;
     s = (char*)malloc(n);
     if (s == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
     stringSet(s,n,directory);
-    stringAppend(s,n,FILE_SEPARATOR_STRING);
+    stringAppend(s,n,FILE_PATHNAME_SEPARATOR_STRING);
   }
   else
   {
@@ -2730,6 +2730,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
                                      const char          *directoryName
                                     )
 {
+  Errors error;
   #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
     const char *s;
     #ifdef HAVE_O_NOATIME
@@ -2751,39 +2752,35 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
       {
         handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
       }
-      if (handle == -1)
+      if (handle != -1)
       {
-        return ERRORX_(OPEN_DIRECTORY,errno,"%s: %E",s,errno);
+        // create directory handle
+        directoryListHandle->dir = fdopendir(handle);
       }
-
-      // create directory handle
-      directoryListHandle->dir = fdopendir(handle);
     #else /* not HAVE_O_NOATIME */
       // open directory
       directoryListHandle->handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
-      if (directoryListHandle->handle == -1)
+      if (directoryListHandle->handle != -1)
       {
-        return ERRORX_(OPEN_DIRECTORY,errno,"%s: %E",s,errno);
-      }
+        // store atime
+        if (fstat(directoryListHandle->handle,&stat) == 0)
+        {
+          directoryListHandle->atime.tv_sec  = stat.st_atime;
+          #ifdef HAVE_STAT_ATIM_TV_NSEC
+            directoryListHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
+          #else
+            directoryListHandle->atime.tv_nsec = 0;
+          #endif
+        }
+        else
+        {
+          directoryListHandle->atime.tv_sec  = 0;
+          directoryListHandle->atime.tv_nsec = UTIME_OMIT;
+        }
 
-      // store atime
-      if (fstat(directoryListHandle->handle,&stat) == 0)
-      {
-        directoryListHandle->atime.tv_sec  = stat.st_atime;
-        #ifdef HAVE_STAT_ATIM_TV_NSEC
-          directoryListHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
-        #else
-          directoryListHandle->atime.tv_nsec = 0;
-        #endif
+        // create directory handle
+        directoryListHandle->dir = fdopendir(directoryListHandle->handle);
       }
-      else
-      {
-        directoryListHandle->atime.tv_sec  = 0;
-        directoryListHandle->atime.tv_nsec = UTIME_OMIT;
-      }
-
-      // create directory handle
-      directoryListHandle->dir = fdopendir(directoryListHandle->handle);
     #endif /* HAVE_O_NOATIME */
   #else /* not HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
 fprintf(stderr,"%s, %d: oipen directoryName=%s\n",__FILE__,__LINE__,directoryName);
@@ -2791,16 +2788,23 @@ fprintf(stderr,"%s, %d: oipen directoryName=%s\n",__FILE__,__LINE__,directoryNam
   #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
   if (directoryListHandle->dir == NULL)
   {
+    error = ERRORX_(OPEN_DIRECTORY,errno,"%E",errno);
+
     #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
       #ifndef HAVE_O_NOATIME
         (void)setAccessTime(directoryListHandle->handle,&directoryListHandle->atime);
       #endif /* not HAVE_O_NOATIME */
     #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
-    return ERRORX_(OPEN_DIRECTORY,errno,"%E",errno);
+
+    return error;
   }
 
-  directoryListHandle->name  = String_newCString(directoryName);
-  directoryListHandle->entry = NULL;
+  directoryListHandle->basePath = String_newCString(directoryName);
+  directoryListHandle->entry    = NULL;
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    directoryListHandle->name = String_new();
+  #endif /* PLATFORM_... */
 
   return ERROR_NONE;
 }
@@ -2808,23 +2812,31 @@ fprintf(stderr,"%s, %d: oipen directoryName=%s\n",__FILE__,__LINE__,directoryNam
 void File_closeDirectoryList(DirectoryListHandle *directoryListHandle)
 {
   assert(directoryListHandle != NULL);
-  assert(directoryListHandle->name != NULL);
+  assert(directoryListHandle->basePath != NULL);
   assert(directoryListHandle->dir != NULL);
 
+  // restore access time
   #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
     #ifndef HAVE_O_NOATIME
       (void)setAccessTime(directoryListHandle->handle,&directoryListHandle->atime);
     #endif /* not HAVE_O_NOATIME */
   #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
 
+  // close directory
   closedir(directoryListHandle->dir);
-  File_deleteFileName(directoryListHandle->name);
+
+  // free resources
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String_delete(directoryListHandle->name);
+  #endif /* PLATFORM_... */
+  File_deleteFileName(directoryListHandle->basePath);
 }
 
 bool File_endOfDirectoryList(DirectoryListHandle *directoryListHandle)
 {
   assert(directoryListHandle != NULL);
-  assert(directoryListHandle->name != NULL);
+  assert(directoryListHandle->basePath != NULL);
   assert(directoryListHandle->dir != NULL);
 
   // read entry iff not read
@@ -2850,8 +2862,13 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
                               String              fileName
                              )
 {
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String s;
+  #endif /* PLATFORM_... */
+
   assert(directoryListHandle != NULL);
-  assert(directoryListHandle->name != NULL);
+  assert(directoryListHandle->basePath != NULL);
   assert(directoryListHandle->dir != NULL);
   assert(fileName != NULL);
 
@@ -2875,11 +2892,24 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
     return ERRORX_(IO,errno,"%E",errno);
   }
 
-  // get entry name
-  String_set(fileName,directoryListHandle->name);
-fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
-  File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
-fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
+  #if   defined(PLATFORM_LINUX)
+    // get entry name
+    String_set(fileName,directoryListHandle->basePath);
+    File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
+  #elif defined(PLATFORM_WINDOWS)
+    // repair brain dead Windows names...
+    String_setCString(directoryListHandle->name,directoryListHandle->entry->d_name);
+fprintf(stderr,"%s, %d: a=%s\n",__FILE__,__LINE__,String_cString(directoryListHandle->name));
+    String_replaceAllChar(directoryListHandle->name,STRING_BEGIN,'\\',FILE_PATHNAME_SEPARATOR_CHAR);
+fprintf(stderr,"%s, %d: b=%s\n",__FILE__,__LINE__,String_cString(directoryListHandle->name));
+
+    // get entry name
+    String_set(fileName,directoryListHandle->basePath);
+fprintf(stderr,"%s, %d: fileName1=%s\n",__FILE__,__LINE__,String_cString(fileName));
+    File_appendFileName(fileName,directoryListHandle->name);
+fprintf(stderr,"%s, %d: fileName2=%s\n",__FILE__,__LINE__,String_cString(fileName));
+  #endif /* PLATFORM_... */
+fprintf(stderr,"%s, %d: fileName3=%s\n",__FILE__,__LINE__,String_cString(fileName));
 
   // mark entry read
   directoryListHandle->entry = NULL;
@@ -4273,7 +4303,7 @@ Errors File_makeDirectory(ConstString    pathName,
     }
     else
     {
-      File_setFileNameChar(directoryName,FILES_PATHNAME_SEPARATOR_CHAR);
+      File_setFileNameChar(directoryName,FILE_PATHNAME_SEPARATOR_CHAR);
     }
   }
   if      (!File_exists(directoryName))

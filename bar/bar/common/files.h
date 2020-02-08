@@ -43,13 +43,10 @@
 // temporary directory
 #define FILE_TMP_DIRECTORY File_getSystemTmpDirectory()
 
-#if defined(FILE_SEPARATOR_CHAR) && defined(FILE_SEPARATOR_STRING)
-  #define FILES_PATHNAME_SEPARATOR_CHAR  FILE_SEPARATOR_CHAR
-  #define FILES_PATHNAME_SEPARATOR_CHARS FILE_SEPARATOR_STRING
-#else
-  #define FILES_PATHNAME_SEPARATOR_CHAR  '/'
-  #define FILES_PATHNAME_SEPARATOR_CHARS "/"
-#endif
+// Note: always use '/' and never brain dead '\'
+#define FILE_PATHNAME_SEPARATOR_CHAR   '/'
+#define FILE_PATHNAME_SEPARATOR_CHARS  "/"
+#define FILE_PATHNAME_SEPARATOR_STRING "/"
 
 #define FILE_CAST_SIZE (sizeof(time_t)+sizeof(time_t))
 
@@ -260,23 +257,27 @@ typedef struct
     bool       parseFlag;
     char       name[256];
   #elif defined(PLATFORM_WINDOWS)
-    DWORD logicalDrives;
-    uint  i;
+    DWORD  logicalDrives;
+    uint   i;
   #endif /* PLATFORM_... */
 } RootListHandle;
 
 // directory list handle
 typedef struct
 {
-  String        name;
-  DIR           *dir;
-  struct dirent *entry;
+  String              basePath;
+  DIR                 *dir;
+  const struct dirent *entry;
   #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
     #ifndef HAVE_O_NOATIME
       int             handle;
       struct timespec atime;
     #endif /* not HAVE_O_NOATIME */
   #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+    String name;
+  #endif /* PLATFORM_... */
 } DirectoryListHandle;
 
 // file permission
