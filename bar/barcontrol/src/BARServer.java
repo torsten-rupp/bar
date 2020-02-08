@@ -4008,7 +4008,7 @@ throw new Error("NYI");
       // add root shortcuts
       try
       {
-        BARServer.executeCommand(StringParser.format("ROOT_LIST jobUUID=%s",
+        BARServer.executeCommand(StringParser.format("ROOT_LIST jobUUID=%s allMounts=yes",
                                                      (jobUUID != null) ? jobUUID : ""
                                                     ),
                                  1,  // debugLevel

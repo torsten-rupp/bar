@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -11265,13 +11266,41 @@ throw new Error("NYI");
    */
   private void addDirectoryRoots()
   {
+    // get root names
+    final ArrayList<String> rootNameList = new ArrayList<String>();
+    try
+    {
+      BARServer.executeCommand(StringParser.format("ROOT_LIST allMounts=no"
+                                                  ),
+                               1,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   String name = valueMap.getString("name");
+
+                                   rootNameList.add(name);
+                                 }
+                               }
+                              );
+    }
+    catch (Exception exception)
+    {
+      // ignored
+    }
+    Collections.sort(rootNameList);
+
     Widgets.removeAllTreeItems(widgetFileTree);
-    Widgets.addTreeItem(widgetFileTree,
-                        new FileTreeData("/",BARServer.FileTypes.DIRECTORY,"/",false,false),
-                        IMAGE_DIRECTORY,
-                        Widgets.TREE_ITEM_FLAG_FOLDER,
-                        "/"
-                       );
+    for (String rootName : rootNameList)
+    {
+      Widgets.addTreeItem(widgetFileTree,
+                          new FileTreeData(rootName,BARServer.FileTypes.DIRECTORY,rootName,false,false),
+                          IMAGE_DIRECTORY,
+                          Widgets.TREE_ITEM_FLAG_FOLDER,
+                          rootName
+                         );
+    }
   }
 
   /** close all sub-directories in file tree
