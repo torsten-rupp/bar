@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef HAVE_SYS_WAIT
@@ -632,9 +633,12 @@ void Device_closeDeviceList(DeviceListHandle *deviceListHandle)
 
 bool Device_endOfDeviceList(DeviceListHandle *deviceListHandle)
 {
-  uint        i,j;
-  struct stat fileStat;
-  char        buffer[256];
+  #if   defined(PLATFORM_LINUX)
+    uint        i,j;
+    struct stat fileStat;
+    char        buffer[256];
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   assert(deviceListHandle != NULL);
 
@@ -691,9 +695,12 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
                              String           deviceName
                             )
 {
-  uint        i,j;
-  struct stat fileStat;
-  char        buffer[256];
+  #if   defined(PLATFORM_LINUX)
+    uint        i,j;
+    struct stat fileStat;
+    char        buffer[256];
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   assert(deviceListHandle != NULL);
   assert(deviceName != NULL);
@@ -786,19 +793,20 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
                              bool        sizesFlag
                             )
 {
-  FileStat fileStat;
-  int      handle;
-  #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
-    int      i;
-  #endif
-  #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
-    long     l;
-  #endif
   #if   defined(PLATFORM_LINUX)
+    FileStat      fileStat;
+    int      handle;
+    #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+      int           i;
+    #endif
+    #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+      long          l;
+    #endif
     struct mntent mountEntry;
     char          buffer[4096];
     FILE          *mtab;
   #elif defined(PLATFORM_WINDOWS)
+    ULARGE_INTEGER freeSpace,totalSpace,totalFreeSpace;
   #endif /* PLATFORM_... */
 
   assert(deviceInfo != NULL);
@@ -846,13 +854,13 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
       handle = open(deviceName,O_RDONLY);
       if      (handle != -1)
       {
-      #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
-        if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
-      #endif
-      #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
-        if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
-      #endif
-      close(handle);
+        #if defined(HAVE_IOCTL) && defined(HAVE_BLKSSZGET)
+          if (ioctl(handle,BLKSSZGET, &i) == 0) deviceInfo->blockSize = (ulong)i;
+        #endif
+        #if defined(HAVE_IOCTL) && defined(HAVE_BLKGETSIZE)
+          if (ioctl(handle,BLKGETSIZE,&l) == 0) deviceInfo->size      = (int64)l*512;
+        #endif
+        close(handle);
       }
       else if (!sizesFlag)
       {
@@ -876,6 +884,21 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
     deviceInfo->major           = 0;
     deviceInfo->minor           = 0;
     deviceInfo->id              = 0;
+
+    if      (GetDiskFreeSpaceEx(deviceName,&freeSpace,&totalSpace,&totalFreeSpace))
+    {
+      deviceInfo->blockSize = 0;
+      deviceInfo->size      = (uint64)totalSpace.QuadPart;
+    }
+    else if (!sizesFlag)
+    {
+      deviceInfo->blockSize = 0;
+      deviceInfo->size      = 0LL;
+    }
+    else
+    {
+      return ERRORX_(IO,errno,"%E",errno);
+    }
   #endif /* PLATFORM_... */
 
   // check if mounted
