@@ -2695,18 +2695,18 @@ Errors File_readRootList(RootListHandle *rootListHandle,
       rootListHandle->parseFlag = TRUE;
     }
   #elif defined(PLATFORM_WINDOWS)
-    while ((rootListHandle->logicalDrives >> rootListHandle->i) > 0)
+    while (   ((rootListHandle->logicalDrives >> rootListHandle->i) > 0)
+           && (((1UL << rootListHandle->i) & rootListHandle->logicalDrives) == 0)
+          )
     {
-      if (((1UL << rootListHandle->i) & rootListHandle->logicalDrives) != 0)
-      {
-        String_format(rootName,"%c:/",'A'+rootListHandle->i);
-        rootListHandle->i++;
-        break;
-      }
-      else
-      {
-        rootListHandle->i++;
-      }
+      rootListHandle->i++;
+    }
+
+    if (((1UL << rootListHandle->i) & rootListHandle->logicalDrives) != 0)
+    {
+      String_format(rootName,"%c:/",'A'+rootListHandle->i);
+
+      rootListHandle->i++;
     }
   #endif /* PLATFORM_... */
 
@@ -2780,7 +2780,6 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
       }
     #endif /* HAVE_O_NOATIME */
   #else /* not HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
-fprintf(stderr,"%s, %d: oipen directoryName=%s\n",__FILE__,__LINE__,directoryName);
     directoryListHandle->dir = opendir(directoryName);
   #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
   if (directoryListHandle->dir == NULL)
