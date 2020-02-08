@@ -4256,7 +4256,7 @@ throw new Error("NYI");
       // add root shortcuts
       try
       {
-        BARServer.executeCommand(StringParser.format("ROOT_LIST"),
+        BARServer.executeCommand(StringParser.format("ROOT_LIST allMounts=yes"),
                                  1,  // debugLevel
                                  new Command.ResultHandler()
                                  {
