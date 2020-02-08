@@ -1883,7 +1883,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
         }
         else
         {
-          File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
+          File_setFileNameChar(basePath,FILE_PATHNAME_SEPARATOR_CHAR);
         }
       }
       while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))
@@ -2859,7 +2859,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         }
         else
         {
-          File_setFileNameChar(basePath,FILES_PATHNAME_SEPARATOR_CHAR);
+          File_setFileNameChar(basePath,FILE_PATHNAME_SEPARATOR_CHAR);
         }
       }
       while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))

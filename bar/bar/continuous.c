@@ -1104,7 +1104,7 @@ LOCAL void continuousInitThreadCode(void)
             }
             else
             {
-              File_setFileNameChar(baseName,FILES_PATHNAME_SEPARATOR_CHAR);
+              File_setFileNameChar(baseName,FILE_PATHNAME_SEPARATOR_CHAR);
             }
           }
           while (File_getNextSplitFileName(&fileNameTokenizer,&token) && !Pattern_checkIsPattern(token))

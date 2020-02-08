@@ -5287,7 +5287,7 @@ LOCAL void serverCommand_get(ClientInfo *clientInfo, IndexHandle *indexHandle, u
   // send value
   if (String_equalsCString(name,"FILE_SEPARATOR"))
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%c",FILES_PATHNAME_SEPARATOR_CHAR);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%c",FILE_PATHNAME_SEPARATOR_CHAR);
   }
   else
   {
