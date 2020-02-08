@@ -253,11 +253,16 @@ typedef struct
 // root list handle
 typedef struct
 {
-  StringList fileSystemNames;
-  FILE       *mounts;
-  char       line[1024];
-  bool       parseFlag;
-  char       name[256];
+  #if   defined(PLATFORM_LINUX)
+    StringList fileSystemNames;
+    FILE       *mounts;
+    char       line[1024];
+    bool       parseFlag;
+    char       name[256];
+  #elif defined(PLATFORM_WINDOWS)
+    DWORD logicalDrives;
+    uint  i;
+  #endif /* PLATFORM_... */
 } RootListHandle;
 
 // directory list handle
@@ -381,6 +386,7 @@ typedef bool(*FileDumpInfoFunction)(const FileHandle *fileHandle,
   extern "C" {
 #endif
 
+//TODO: remove!
 /***********************************************************************\
 * Name   : File_newFileName
 * Purpose: create new file name variable
@@ -392,6 +398,7 @@ typedef bool(*FileDumpInfoFunction)(const FileHandle *fileHandle,
 
 String File_newFileName(void);
 
+//TODO: remove!
 /***********************************************************************\
 * Name   : File_duplicateFileName
 * Purpose: duplicate file name
@@ -403,6 +410,7 @@ String File_newFileName(void);
 
 String File_duplicateFileName(ConstString fromFileName);
 
+//TODO: remove!
 /***********************************************************************\
 * Name   : File_deleteFileName
 * Purpose: delete file name variable
@@ -414,6 +422,7 @@ String File_duplicateFileName(ConstString fromFileName);
 
 void File_deleteFileName(String fileName);
 
+//TODO: remove!
 /***********************************************************************\
 * Name   : File_clearFileName
 * Purpose: clear file name variable
@@ -1020,12 +1029,13 @@ Errors File_touch(ConstString fileName);
 * Name   : File_openRootList
 * Purpose: open root list for reading
 * Input  : rootListHandle - root list handle
+*          allMountsFlag  - TRUE to list all mounts, too
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors File_openRootList(RootListHandle *rootListHandle);
+Errors File_openRootList(RootListHandle *rootListHandle, bool allMountsFlag);
 
 /***********************************************************************\
 * Name   : File_closeRootList
@@ -1053,14 +1063,14 @@ bool File_endOfRootList(RootListHandle *rootListHandle);
 * Name   : File_readRootList
 * Purpose: read next directory list entry
 * Input  : rootListHandle - root list handle
-*          name           - name variable
-* Output : name - next name
+*          rootName       - root name variable
+* Output : rootName - next root name
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors File_readRootList(RootListHandle *rootListHandle,
-                         String              name
+                         String         rootName
                         );
 
 /***********************************************************************\

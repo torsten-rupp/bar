@@ -708,6 +708,10 @@ LOCAL bool setAccessTime(int fileDescriptor, const struct timespec *ts)
 
     return futimens(fileDescriptor,times) == 0;
   #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(fileDescriptor);
+    UNUSED_VARIABLE(ts);
+//TODO: NYI
+
     return TRUE;
   #endif /* PLATFORM_... */
 }
@@ -743,6 +747,7 @@ LOCAL void freeExtendedAttributeNode(FileExtendedAttributeNode *fileExtendedAttr
 * Notes  : -
 \***********************************************************************/
 
+#if defined(PLATFORM_LINUX)
 LOCAL void parseRootEntry(RootListHandle *rootListHandle)
 {
   char       *tokenizer;
@@ -782,6 +787,7 @@ LOCAL void parseRootEntry(RootListHandle *rootListHandle)
     }
   }
 }
+#endif /* PLATFORM_... */
 
 /*---------------------------------------------------------------------*/
 
@@ -1032,7 +1038,7 @@ String File_getRootNameCString(String rootName, const char *fileName)
       {
         String_clear(rootName);
       }
-      if ((n >= 3) && (String_index(fileName,2) == FILES_PATHNAME_SEPARATOR_CHAR))
+      if ((n >= 3) && (fileName[2] == FILES_PATHNAME_SEPARATOR_CHAR))
       {
         String_appendChar(rootName,FILES_PATHNAME_SEPARATOR_CHAR);
       }
@@ -2009,6 +2015,8 @@ Errors __File_close(const char *__fileName__,
 
   FILE_CHECK_VALID(fileHandle);
 
+  error = ERROR_NONE;
+
   // free caches if requested
   if ((fileHandle->mode & FILE_OPEN_NO_CACHE) != 0)
   {
@@ -2557,48 +2565,68 @@ Errors File_touch(ConstString fileName)
 
 /*---------------------------------------------------------------------*/
 
-Errors File_openRootList(RootListHandle *rootListHandle)
+Errors File_openRootList(RootListHandle *rootListHandle, bool allMountsFlag)
 {
-  #define FILESYSMTES_FILENAME "/proc/filesystems"
-  #define MOUNTS_FILENAME      "/proc/mounts"
+  #if   defined(PLATFORM_LINUX)
+    const char *FILESYSMTES_FILENAME = "/proc/filesystems";
+    const char *MOUNTS_FILENAME      = "/proc/mounts";
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
-  FILE *handle;
-  char line[1024];
-  char *s,*t;
+  #if   defined(PLATFORM_LINUX)
+    FILE *handle;
+    char line[1024];
+    char *s,*t;
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   assert(rootListHandle != NULL);
 
-  StringList_init(&rootListHandle->fileSystemNames);
-  rootListHandle->mounts    = NULL;
-  rootListHandle->parseFlag = FALSE;
+  #if   defined(PLATFORM_LINUX)
+    StringList_init(&rootListHandle->fileSystemNames);
+    rootListHandle->mounts    = NULL;
+    rootListHandle->parseFlag = FALSE;
 
-  // get file system names
-  handle = fopen(FILESYSMTES_FILENAME,"r");
-  if (handle != NULL)
-  {
-    while (fgets(line,sizeof(line),handle) != NULL)
+    if (allMountsFlag)
     {
-      s = line;
-      if (isspace(*s))
+      // get file system names
+      handle = fopen(FILESYSMTES_FILENAME,"r");
+      if (handle != NULL)
       {
-        while (isspace(*s))
+        while (fgets(line,sizeof(line),handle) != NULL)
         {
-          s++;
+          s = line;
+          if (isspace(*s))
+          {
+            while (isspace(*s))
+            {
+              s++;
+            }
+            t = s;
+            while (!isspace(*t))
+            {
+              t++;
+            }
+            (*t) = NUL;
+            StringList_appendCString(&rootListHandle->fileSystemNames,s);
+          }
         }
-        t = s;
-        while (!isspace(*t))
-        {
-          t++;
-        }
-        (*t) = NUL;
-        StringList_appendCString(&rootListHandle->fileSystemNames,s);
+        (void)fclose(handle);
       }
-    }
-    (void)fclose(handle);
-  }
 
-  // open mount list
-  rootListHandle->mounts = fopen(MOUNTS_FILENAME,"r");
+      // open mount list
+      rootListHandle->mounts = fopen(MOUNTS_FILENAME,"r");
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    UNUSED_VARIABLE(allMountsFlag);
+
+    rootListHandle->logicalDrives = GetLogicalDrives();
+    if (rootListHandle->logicalDrives == 0)
+    {
+      return ERROR_(OPEN_FILE,GetLastError());
+    }
+    rootListHandle->i = 0;
+  #endif /* PLATFORM_... */
 
   return ERROR_NONE;
 }
@@ -2607,64 +2635,83 @@ void File_closeRootList(RootListHandle *rootListHandle)
 {
   assert(rootListHandle != NULL);
 
-  if (rootListHandle->mounts != NULL) fclose(rootListHandle->mounts);
-  StringList_done(&rootListHandle->fileSystemNames);
+  #if   defined(PLATFORM_LINUX)
+    if (rootListHandle->mounts != NULL) fclose(rootListHandle->mounts);
+    StringList_done(&rootListHandle->fileSystemNames);
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 }
 
 bool File_endOfRootList(RootListHandle *rootListHandle)
 {
   assert(rootListHandle != NULL);
 
-  if (rootListHandle->mounts != NULL)
-  {
-    while (   !rootListHandle->parseFlag
-           && (fgets(rootListHandle->line,sizeof(rootListHandle->line),rootListHandle->mounts) != NULL)
-          )
+  #if   defined(PLATFORM_LINUX)
+    if (rootListHandle->mounts != NULL)
     {
-      parseRootEntry(rootListHandle);
-    }
+      while (   !rootListHandle->parseFlag
+             && (fgets(rootListHandle->line,sizeof(rootListHandle->line),rootListHandle->mounts) != NULL)
+            )
+      {
+        parseRootEntry(rootListHandle);
+      }
 
-    return !rootListHandle->parseFlag;
-  }
-  else
-  {
-    return rootListHandle->parseFlag;
-  }
+      return !rootListHandle->parseFlag;
+    }
+    else
+    {
+      return !rootListHandle->parseFlag;
+    }
+  #elif defined(PLATFORM_WINDOWS)
+    return ((rootListHandle->logicalDrives >> rootListHandle->i) <= 0);
+  #endif /* PLATFORM_... */
 }
 
 Errors File_readRootList(RootListHandle *rootListHandle,
-                         String         name
+                         String         rootName
                         )
 {
   assert(rootListHandle != NULL);
 
-  if (rootListHandle->mounts != NULL)
-  {
-    while (   !rootListHandle->parseFlag
-           && (fgets(rootListHandle->line,sizeof(rootListHandle->line),rootListHandle->mounts) != NULL)
-          )
+  #if   defined(PLATFORM_LINUX)
+    if (rootListHandle->mounts != NULL)
     {
-      parseRootEntry(rootListHandle);
+      while (   !rootListHandle->parseFlag
+             && (fgets(rootListHandle->line,sizeof(rootListHandle->line),rootListHandle->mounts) != NULL)
+            )
+      {
+        parseRootEntry(rootListHandle);
+      }
+      if (!rootListHandle->parseFlag)
+      {
+        return ERROR_END_OF_FILE;
+      }
+
+      String_setCString(rootName,rootListHandle->name);
+
+      rootListHandle->parseFlag = FALSE;
     }
-    if (!rootListHandle->parseFlag)
+    else
     {
-      return ERROR_END_OF_FILE;
+      String_setCString(rootName,"/");
+
+      rootListHandle->parseFlag = TRUE;
     }
-
-    String_setCString(name,rootListHandle->name);
-
-    rootListHandle->parseFlag = FALSE;
-  }
-  else
-  {
-    #if   defined(PLATFORM_LINUX)
-      String_setCString(name,"/");
-    #elif defined(PLATFORM_WINDOWS)
-      String_setCString(name,"C:/");
-    #endif /* PLATFORM_... */
-
-    rootListHandle->parseFlag = TRUE;
-  }
+  #elif defined(PLATFORM_WINDOWS)
+    while ((rootListHandle->logicalDrives >> rootListHandle->i) > 0)
+    {
+      if (((1UL << rootListHandle->i) & rootListHandle->logicalDrives) != 0)
+      {
+        String_format(rootName,"%c:/",'A'+rootListHandle->i);
+        rootListHandle->i++;
+        break;
+      }
+      else
+      {
+        rootListHandle->i++;
+      }
+    }
+  #endif /* PLATFORM_... */
 
   return ERROR_NONE;
 }
@@ -2739,6 +2786,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
       directoryListHandle->dir = fdopendir(directoryListHandle->handle);
     #endif /* HAVE_O_NOATIME */
   #else /* not HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
+fprintf(stderr,"%s, %d: oipen directoryName=%s\n",__FILE__,__LINE__,directoryName);
     directoryListHandle->dir = opendir(directoryName);
   #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
   if (directoryListHandle->dir == NULL)
@@ -2829,7 +2877,9 @@ Errors File_readDirectoryList(DirectoryListHandle *directoryListHandle,
 
   // get entry name
   String_set(fileName,directoryListHandle->name);
+fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
   File_appendFileNameCString(fileName,directoryListHandle->entry->d_name);
+fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,String_cString(fileName));
 
   // mark entry read
   directoryListHandle->entry = NULL;
@@ -3560,6 +3610,7 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   // get file meta data
   if (LSTAT(fileName,&fileStat) != 0)
   {
+fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,fileName);
     return ERRORX_(IO,errno,"%E",errno);
   }
   fileInfo->timeLastAccess  = fileStat.st_atime;
@@ -3890,6 +3941,7 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
   #else /* not FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
     UNUSED_VARIABLE(fileAttributes);
     UNUSED_VARIABLE(fileName);
+//TODO: NYI
   #endif /* FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
 
   return ERROR_NONE;
