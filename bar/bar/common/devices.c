@@ -698,6 +698,8 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
   assert(deviceListHandle != NULL);
   assert(deviceName != NULL);
 
+  String_clear(deviceName);
+
   #if   defined(PLATFORM_LINUX)
     assert(deviceListHandle->file != NULL);
 
@@ -749,12 +751,7 @@ Errors Device_readDeviceList(DeviceListHandle *deviceListHandle,
       // mark entry read
       deviceListHandle->readFlag = FALSE;
     }
-    else
-    {
-      String_clear(deviceName);
-    }
   #elif defined(PLATFORM_WINDOWS)
-    String_clear(deviceName);
     while ((deviceListHandle->logicalDrives >> deviceListHandle->i) > 0)
     {
       if (((1UL << deviceListHandle->i) & deviceListHandle->logicalDrives) != 0)
