@@ -6698,7 +6698,8 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobUUID=<uuid>|""
+*            [jobUUID=<uuid>]
+*            mounts=yes|no
 *          Result:
 *            name=<name> size=<n [bytes]>
 \***********************************************************************/
@@ -6706,6 +6707,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
 LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   StaticString   (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool           allMountsFlag;
   const JobNode  *jobNode;
   Errors         error;
   RootListHandle rootListHandle;
@@ -6718,8 +6720,13 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 
   UNUSED_VARIABLE(indexHandle);
 
-  // get job UUID
+  // get job UUID, mounts flag
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  if (!StringMap_getBool(argumentMap,"allMounts",&allMountsFlag,FALSE))
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"allMounts=yes|no");
+    return;
+  }
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -6757,7 +6764,8 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 
                                              return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
                                            },NULL),
-                                           "ROOT_LIST"
+                                           "ROOT_LIST allMounts=%y",
+                                           allMountsFlag
                                           );
         }
       }
@@ -6767,7 +6775,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
       // local directory list
 
       // open root list
-      error = File_openRootList(&rootListHandle);
+      error = File_openRootList(&rootListHandle,allMountsFlag);
       if (error != ERROR_NONE)
       {
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"open root list fail");
