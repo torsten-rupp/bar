@@ -130,7 +130,9 @@ LOCAL DatabaseList databaseList;
   LOCAL pthread_mutex_t     debugDatabaseLock;
   LOCAL ThreadId            debugDatabaseThreadId;
   LOCAL DatabaseHandleList  debugDatabaseHandleList;
-  LOCAL void                (*debugSignalQuitPrevHandler)(int);
+  #ifdef HAVE_SIGQUIT
+    LOCAL void                (*debugSignalQuitPrevHandler)(int);
+  #endif /* HAVE_SIGQUIT */
 #endif /* not NDEBUG */
 
 /****************************** Macros *********************************/
@@ -2235,6 +2237,7 @@ LOCAL void unixTimestamp(sqlite3_context *context, int argc, sqlite3_value *argv
         #ifdef HAVE_STRPTIME
           s = strptime(text,(format != NULL) ? format : "%Y-%m-%d %H:%M:%S",&tmBuffer);
         #else
+UNUSED_VARIABLE(format);
 #ifndef WERROR
 #warning implement strptime
 #endif
