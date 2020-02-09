@@ -47,6 +47,8 @@ import org.eclipse.swt.dnd.DropTargetAdapter;
 import org.eclipse.swt.dnd.DropTargetEvent;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MouseEvent;
@@ -1151,6 +1153,7 @@ class Dialogs
   {
     if (!dialog.isDisposed())
     {
+Dprintf.dprintf("returnValue=%s",returnValue);
       dialog.setData(returnValue);
       dialog.close();
     }
@@ -1335,8 +1338,18 @@ class Dialogs
       {
         public void handleEvent(Event event)
         {
+          // close the dialog
+          dialog.dispose();
+        }
+      });
+
+      // add result handler
+      dialog.addDisposeListener\u200b(new DisposeListener()
+      {
+        public void widgetDisposed(DisposeEvent disposeEvent)
+        {
           // get result
-          result[0] = (T)dialog.getData();
+          result[0] = (T)disposeEvent.widget.getData();
 
           // set escape result if no result set
           if (result[0] == null) result[0] = escapeKeyReturnValue;
@@ -1346,11 +1359,9 @@ class Dialogs
           {
             dialogRunnable.done(result[0]);
           }
-
-          // close the dialog
-          dialog.dispose();
         }
       });
+
 
       // show
       show(dialog);
@@ -4379,6 +4390,7 @@ class Dialogs
       (byte)0xae,(byte)0x42,(byte)0x60,(byte)0x82
     };
 
+    String      result;
     Pane        pane;
     int         row1,row2;
     Composite   composite;
@@ -4390,8 +4402,6 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      final String[] result = new String[1];
-
       // load images
       final Image IMAGE_FOLDER_UP;
       try
@@ -4932,6 +4942,7 @@ class Dialogs
         {
           fileGeometry = dialog.getSize();
           T file = (T)widgetPath.getData();
+Dprintf.dprintf("-------------------");
           close(dialog,
                 (widgetName != null)
                   ? listDirectory.newFileInstance(file,widgetName.getText()).getAbsolutePath()
@@ -5057,7 +5068,7 @@ class Dialogs
                               );
       }
 
-      // enable/disable done button
+      // run
       widgetDone.setEnabled(   ((type == FileDialogTypes.OPEN     ) && !widgetName.getText().isEmpty())
                             || ((type == FileDialogTypes.SAVE     ) && !widgetName.getText().isEmpty())
                             || ((type == FileDialogTypes.DIRECTORY) && !widgetPath.getText().isEmpty())
@@ -5074,12 +5085,14 @@ class Dialogs
         widgetPath.setFocus();
         widgetPath.setSelection(new Point(0,widgetPath.getText().length()));
       }
-      return (String)run(dialog,null);
+      result = (String)run(dialog,null);
     }
     else
     {
-      return null;
+      result = null;
     }
+
+    return result;
   }
 
   /** open a file dialog
@@ -5518,6 +5531,7 @@ class Dialogs
   {
     final Image IMAGE = Widgets.loadImage(parentShell.getDisplay(),"directory.png");
 
+    String    result;
     int       row;
     Composite composite;
     Label     label;
@@ -5525,8 +5539,6 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      final String[] result = new String[1];
-
       final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -5622,13 +5634,16 @@ class Dialogs
         }
       });
 
+      // run
       widgetPath.setFocus();
-      return (String)run(dialog,null);
+      result = (String)run(dialog,null);
     }
     else
     {
-      return null;
+      result = null;
     }
+
+    return result;
   }
 
   /** simple path dialog
@@ -5700,6 +5715,7 @@ class Dialogs
                               String       toolTipText
                              )
   {
+    String    result;
     int       row;
     Composite composite;
     Label     label;
@@ -5707,8 +5723,6 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      final String[] result = new String[1];
-
       final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -5811,13 +5825,16 @@ class Dialogs
 //        dialog.setCursor((Cursor)null);
       }
 
+      // run
       widgetString.setFocus();
-      return (String)run(dialog,null);
+      result = (String)run(dialog,null);
     }
     else
     {
-      return null;
+      result = null;
     }
+
+    return result;
   }
 
   /** string dialog
@@ -5893,6 +5910,7 @@ class Dialogs
                               String toolTipText
                              )
   {
+    String    result;
     int       row;
     Composite composite;
     Label     label;
@@ -5900,8 +5918,6 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      final String[] result = new String[1];
-
       final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -5979,13 +5995,16 @@ class Dialogs
         }
       });
 
+      // run
       widgetString.setFocus();
-      return (String)run(dialog,null);
+      result = (String)run(dialog,null);
     }
     else
     {
-      return null;
+      result = null;
     }
+
+    return result;
   }
 
   /** simple string dialog
@@ -6079,6 +6098,7 @@ class Dialogs
                                 String toolTipText
                                )
   {
+    Integer   result;
     int       row;
     Composite composite;
     Label     label;
@@ -6086,8 +6106,6 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      final String[] result = new String[1];
-
       final Shell dialog = openModal(parentShell,title,120,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -6162,12 +6180,14 @@ class Dialogs
       });
 
       widgetInteger.setFocus();
-      return (Integer)run(dialog,null);
+      result = (Integer)run(dialog,null);
     }
     else
     {
-      return null;
+      result =null;
     }
+
+    return result;
   }
 
   /** simple integer dialog
@@ -6236,6 +6256,7 @@ class Dialogs
                                String    toolTipText
                               )
   {
+    Integer   result;
     int       row;
     Composite composite,subComposite;
     Label     label;
@@ -6245,8 +6266,6 @@ class Dialogs
 
     if (!parentShell.isDisposed())
     {
-      final String[] result = new String[1];
-
       final Shell dialog = openModal(parentShell,title,100,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -6346,13 +6365,16 @@ class Dialogs
         i++;
       }
 
+      // run
       widgetSlider.setFocus();
-      return (Integer)run(dialog,null);
+      result = (Integer)run(dialog,null);
     }
     else
     {
-      return null;
+      result = null;
     }
+
+    return result;
   }
 
   /** simple list select dialog
@@ -6374,14 +6396,13 @@ class Dialogs
                             String       toolTipText
                            )
   {
+    String    result;
     Composite composite;
     Label     label;
     Button    button;
 
     if (!parentShell.isDisposed())
     {
-      final String[] result = new String[1];
-
       final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -6518,15 +6539,17 @@ class Dialogs
         dialog.setCursor((Cursor)null);
       }
 
+      // run
       widgetList.setFocus();
       widgetOkButton.setEnabled(values.size() > 0);
-
-      return (String)run(dialog,null);
+      result = (String)run(dialog,null);
     }
     else
     {
-      return null;
+      result = null;
     }
+
+    return result;
   }
 
   /** simple list select dialog
@@ -6833,14 +6856,13 @@ class Dialogs
                               int    style
                              )
   {
+    Long      result;
     Composite composite;
     Label     label;
     Button    button;
 
     if (!parentShell.isDisposed())
     {
-      final String[] result = new String[1];
-
       final Shell dialog = openModal(parentShell,title,450,SWT.DEFAULT);
       dialog.setLayout(new TableLayout(new double[]{1.0,0.0},1.0));
 
@@ -6969,13 +6991,16 @@ class Dialogs
         }
       });
 
+      // run
       widgetDate.setFocus();
-      return (Long)run(dialog,null);
+      result = (Long)run(dialog,null);
     }
     else
     {
-      return null;
+      result = null;
     }
+
+    return result;
   }
 
   /** simple date/time dialog

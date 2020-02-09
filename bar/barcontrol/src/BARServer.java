@@ -4079,7 +4079,6 @@ throw new Error("NYI");
         shortcutList.add(shortcut);
       }
       Collections.sort(shortcutList,this);
-Dprintf.dprintf("shortcutList=%s",shortcutList);
     }
 
     /** remove shortcut file
