@@ -6832,7 +6832,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobUUID=<uuid>|""
+*            [jobUUID=<uuid>]
 *            name=<name>
 *          Result:
 *            fileType=FILE name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
