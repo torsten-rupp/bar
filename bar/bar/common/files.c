@@ -2728,60 +2728,72 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
                                     )
 {
   Errors error;
-  #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
-    const char *s;
-    #ifdef HAVE_O_NOATIME
-      int    handle;
-    #else /* not HAVE_O_NOATIME */
-      struct stat fileStat;
-    #endif /* HAVE_O_NOATIME */
-  #endif /* defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY) */
+  #if   defined(PLATFORM_LINUX)
+    #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+      const char *s;
+      #ifdef HAVE_O_NOATIME
+        int    handle;
+      #else /* not HAVE_O_NOATIME */
+        struct stat fileStat;
+      #endif /* HAVE_O_NOATIME */
+    #endif /* defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY) */
+  #elif defined(PLATFORM_WINDOWS)
+    String s;
+  #endif /* PLATFORM_... */
 
   assert(directoryListHandle != NULL);
   assert(directoryName != NULL);
 
-  #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
-    s = !stringIsEmpty(directoryName) ? directoryName : ".";
-    #ifdef HAVE_O_NOATIME
-      // open directory (try first with O_NOATIME)
-      handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
-      if (handle == -1)
-      {
-        handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
-      }
-      if (handle != -1)
-      {
-        // create directory handle
-        directoryListHandle->dir = fdopendir(handle);
-      }
-    #else /* not HAVE_O_NOATIME */
-      // open directory
-      directoryListHandle->handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
-      if (directoryListHandle->handle != -1)
-      {
-        // store atime
-        if (fstat(directoryListHandle->handle,&stat) == 0)
+  #if   defined(PLATFORM_LINUX)
+    #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+      s = !stringIsEmpty(directoryName) ? directoryName : ".";
+      #ifdef HAVE_O_NOATIME
+        // open directory (try first with O_NOATIME)
+        handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+        if (handle == -1)
         {
-          directoryListHandle->atime.tv_sec  = stat.st_atime;
-          #ifdef HAVE_STAT_ATIM_TV_NSEC
-            directoryListHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
-          #else
-            directoryListHandle->atime.tv_nsec = 0;
-          #endif
+          handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
         }
-        else
+        if (handle != -1)
         {
-          directoryListHandle->atime.tv_sec  = 0;
-          directoryListHandle->atime.tv_nsec = UTIME_OMIT;
+          // create directory handle
+          directoryListHandle->dir = fdopendir(handle);
         }
+      #else /* not HAVE_O_NOATIME */
+        // open directory
+        directoryListHandle->handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
+        if (directoryListHandle->handle != -1)
+        {
+          // store atime
+          if (fstat(directoryListHandle->handle,&stat) == 0)
+          {
+            directoryListHandle->atime.tv_sec  = stat.st_atime;
+            #ifdef HAVE_STAT_ATIM_TV_NSEC
+              directoryListHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
+            #else
+              directoryListHandle->atime.tv_nsec = 0;
+            #endif
+          }
+          else
+          {
+            directoryListHandle->atime.tv_sec  = 0;
+            directoryListHandle->atime.tv_nsec = UTIME_OMIT;
+          }
 
-        // create directory handle
-        directoryListHandle->dir = fdopendir(directoryListHandle->handle);
-      }
-    #endif /* HAVE_O_NOATIME */
-  #else /* not HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
-    directoryListHandle->dir = opendir(directoryName);
-  #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
+          // create directory handle
+          directoryListHandle->dir = fdopendir(directoryListHandle->handle);
+        }
+      #endif /* HAVE_O_NOATIME */
+    #else /* not HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
+      directoryListHandle->dir = opendir(directoryName);
+    #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
+  #elif defined(PLATFORM_WINDOWS)
+    // Note: on Windows <drive>: and <drive>:/ are different, but <path> and <path>/ are the same...
+    s = String_newCString(directoryName);
+    if (!String_endsWithChar(s,FILE_PATHNAME_SEPARATOR_CHAR)) String_appendChar(s,FILE_PATHNAME_SEPARATOR_CHAR);
+    directoryListHandle->dir = opendir(String_cString(s));
+    String_delete(s);
+  #endif /* PLATFORM_... */
   if (directoryListHandle->dir == NULL)
   {
     error = ERRORX_(OPEN_DIRECTORY,errno,"%E",errno);
@@ -2807,12 +2819,15 @@ void File_closeDirectoryList(DirectoryListHandle *directoryListHandle)
   assert(directoryListHandle->basePath != NULL);
   assert(directoryListHandle->dir != NULL);
 
-  // restore access time
-  #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
-    #ifndef HAVE_O_NOATIME
-      (void)setAccessTime(directoryListHandle->handle,&directoryListHandle->atime);
-    #endif /* not HAVE_O_NOATIME */
-  #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
+  #if   defined(PLATFORM_LINUX)
+    // restore access time
+    #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
+      #ifndef HAVE_O_NOATIME
+        (void)setAccessTime(directoryListHandle->handle,&directoryListHandle->atime);
+      #endif /* not HAVE_O_NOATIME */
+    #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
 
   // close directory
   closedir(directoryListHandle->dir);
@@ -3608,7 +3623,6 @@ Errors File_getInfoCString(FileInfo   *fileInfo,
   // get file meta data
   if (LSTAT(fileName,&fileStat) != 0)
   {
-fprintf(stderr,"%s, %d: fileName=%s\n",__FILE__,__LINE__,fileName);
     return ERRORX_(IO,errno,"%E",errno);
   }
   fileInfo->timeLastAccess  = fileStat.st_atime;
