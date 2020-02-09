@@ -551,6 +551,13 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
 {
   private HashMap<String,T> shortcutMap = new HashMap<String,T>();
 
+  /** create list directory
+   */
+  public ListDirectory()
+  {
+    shortcutMap.put("/",newFileInstance("/"));
+  }
+
   /** get new file instance
    * @param name name
    * @return file instance
@@ -574,7 +581,7 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
    */
   public T newFileInstance(T file, String name)
   {
-    return newFileInstance(new File(file,name).getAbsolutePath());
+    return newFileInstance(new File(file,name).getPath());
   }
 
   /** get new file instance
@@ -586,10 +593,10 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
     return newFileInstance(file.getAbsolutePath());
   }
 
-  /** get root file instance
-   * @return root file instance
+  /** get current directory instance
+   * @return current directory instance
    */
-  public T getRoot()
+  public T getCurrentDirectory()
   {
     return newFileInstance("/");
   }
@@ -624,7 +631,6 @@ abstract class ListDirectory<T extends File> implements Comparator<T>
   public void getShortcuts(java.util.List<T> shortcutList)
   {
     shortcutList.clear();
-    shortcutMap.put("/",getRoot());
     for (T shortcut : shortcutMap.values())
     {
       shortcutList.add(shortcut);
@@ -4185,6 +4191,7 @@ class Dialogs
                   tableItem.setData(file);
                   tableItem.setText(0,file.getName());
                   if (file.isDirectory()) tableItem.setText(1,tr("directory"));
+//TODO:
 //                  else if file.isSymbolicLink())tableItem.setText(1,tr("directory"));
                   else                    tableItem.setText(1,tr("file"));
                   tableItem.setText(2,simpleDateFormat.format(new Date(file.lastModified())));
@@ -5096,7 +5103,9 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    T oldFile = !oldFileName.isEmpty() ? listDirectory.newFileInstance(oldFileName) : listDirectory.getRoot();
+    T oldFile = !oldFileName.isEmpty()
+                  ? listDirectory.newFileInstance(oldFileName)
+                  : listDirectory.getCurrentDirectory();
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,flags,listDirectory);
   }
 
@@ -5141,7 +5150,9 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    T oldFile = !oldFileName.isEmpty() ? listDirectory.newFileInstance(oldFileName) : listDirectory.getRoot();
+    T oldFile = !oldFileName.isEmpty()
+                  ? listDirectory.newFileInstance(oldFileName)
+                  : listDirectory.getCurrentDirectory();
     return file(parentShell,type,title,oldFile,fileExtensions,defaultFileExtension,listDirectory);
   }
 
@@ -5182,7 +5193,9 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    T oldFile = !oldFileName.isEmpty() ? listDirectory.newFileInstance(oldFileName) : listDirectory.getRoot();
+    T oldFile = !oldFileName.isEmpty()
+                  ? listDirectory.newFileInstance(oldFileName)
+                  : listDirectory.getCurrentDirectory();
     return file(parentShell,type,title,oldFile,flags,listDirectory);
   }
 
@@ -5219,7 +5232,9 @@ class Dialogs
                                              ListDirectory<T> listDirectory
                                             )
   {
-    T oldFile = !oldFileName.isEmpty() ? listDirectory.newFileInstance(oldFileName) : listDirectory.getRoot();
+    T oldFile = !oldFileName.isEmpty()
+                  ? listDirectory.newFileInstance(oldFileName)
+                  : listDirectory.getCurrentDirectory();
     return file(parentShell,type,title,oldFile,listDirectory);
   }
 
