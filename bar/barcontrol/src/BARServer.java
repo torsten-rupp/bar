@@ -3821,60 +3821,98 @@ throw new Error("NYI");
    */
   static class RemoteFile extends File
   {
+    private File      absoluteFile;
     private FileTypes fileType;
     private long      size;
     private long      dateTime;
 
     /** create remote file
-     * @param name name
+     * @param absolutePath absolute path
      * @param fileType file type
      * @param size size [bytes]
      * @param dateTime last modified date/time
      */
-    public RemoteFile(String name, FileTypes fileType, long size, long dateTime)
+    public RemoteFile(String absolutePath, FileTypes fileType, long size, long dateTime)
     {
-      super(name);
+      super(absolutePath);
+      assert(   absolutePath.matches("^/.*")          // Unix
+             || absolutePath.matches("^[A-Za-z]:.*")  // Windows
+            );
 
-      this.fileType = fileType;
-      this.size     = size;
-      this.dateTime = dateTime;
+      this.absoluteFile = new File(absolutePath);
+      this.fileType     = fileType;
+      this.size         = size;
+      this.dateTime     = dateTime;
     }
 
     /** create remote file
-     * @param name name
+     * @param absolutePath absolute path
      * @param fileType file type
      * @param dateTime last modified date/time
      */
-    public RemoteFile(String name, FileTypes fileType, long dateTime)
+    public RemoteFile(String absolutePath, FileTypes fileType, long dateTime)
     {
-      this(name,fileType,0,dateTime);
+      this(absolutePath,fileType,0,dateTime);
     }
 
     /** create remote file
-     * @param name name
+     * @param absolutePath absolute path
      * @param fileType file type
      */
-    public RemoteFile(String name, FileTypes fileType)
+    public RemoteFile(String absolutePath, FileTypes fileType)
     {
-      this(name,fileType,0);
+      this(absolutePath,fileType,0);
     }
 
     /** create remote file
-     * @param name name
-     * @param size size [bytes]
+     * @param absolutePath absolute path
+     * @param dateTime last modified date/time
      */
-    public RemoteFile(String name, long size)
+    public RemoteFile(String absolutePath, long dateTime)
     {
-      this(name,FileTypes.DIRECTORY,size,0);
+      this(absolutePath,FileTypes.DIRECTORY,0,dateTime);
     }
 
     /** create remote file
-     * @param name name
+     * @param absolutePath absolute path
      */
-/*    public RemoteFile(String name)
+    public RemoteFile(String absolutePath)
     {
-      this(name,0);
-    }*/
+      this(absolutePath,0);
+    }
+
+    /** get absolute file
+     * @return absolute file
+     */
+    public RemoteFile getAbsoluteFile()
+    {
+      return new RemoteFile(absoluteFile.getPath());
+    }
+
+    /** get absolute path
+     * @return absolute path
+     */
+    @Override
+    public String getAbsolutePath()
+    {
+      return absoluteFile.getPath();
+    }
+
+    /** get absolute file
+     * @return absolute file
+     */
+    public RemoteFile getParentFile()
+    {
+      String parentPath = absoluteFile.getParent();
+      if (parentPath != null)
+      {
+        return new RemoteFile(parentPath);
+      }
+      else
+      {
+        return null;
+      }
+    }
 
     /** get file size
      * @return size [bytes]
@@ -3930,7 +3968,7 @@ throw new Error("NYI");
     @Override
     public String toString()
     {
-      return "RemoteFile {"+getAbsolutePath()+", "+fileType+", "+size+", "+dateTime+"}";
+      return "RemoteFile {"+absoluteFile+", "+fileType+", "+size+", "+dateTime+"}";
     }
   };
 
@@ -3943,6 +3981,11 @@ throw new Error("NYI");
     RemoteListDirectory(String jobUUID)
     {
       this.jobUUID = jobUUID;
+    }
+
+    RemoteListDirectory()
+    {
+      this((String)null);
     }
 
     /** get new file instance
@@ -4018,9 +4061,8 @@ throw new Error("NYI");
                                    public void handle(int i, ValueMap valueMap)
                                    {
                                      String name = valueMap.getString("name");
-                                     long   size = Long.parseLong(valueMap.getString("size"));
 
-                                     shortcutMap.put(name,new RemoteFile(name,size));
+                                     shortcutMap.put(name,new RemoteFile(name));
                                    }
                                  }
                                 );
@@ -4037,6 +4079,7 @@ throw new Error("NYI");
         shortcutList.add(shortcut);
       }
       Collections.sort(shortcutList,this);
+Dprintf.dprintf("shortcutList=%s",shortcutList);
     }
 
     /** remove shortcut file
@@ -4184,248 +4227,16 @@ throw new Error("NYI");
     private Iterator<RemoteFile>  iterator;
   };
 
+  /** create remote list directory
+   * @param jobUUID job UUID
+   * @return remove list directory
+   */
   public static RemoteListDirectory remoteListDirectory(String jobUUID)
   {
     return new RemoteListDirectory(jobUUID);
   }
 
-  /** list remote directory
-   */
-//TODO: obsolete, replace by RemoteListDirectory()
-  public static ListDirectory<RemoteFile> remoteListDirectory = new ListDirectory<RemoteFile>()
-  {
-    /** get new file instance
-     * @param name name
-     * @return file
-     */
-    @Override
-    public RemoteFile newFileInstance(String name)
-    {
-      FileTypes fileType = FileTypes.FILE;
-      long      size     = 0;
-      long      dateTime = 0;
-
-      try
-      {
-        ValueMap valueMap = new ValueMap();
-        BARServer.executeCommand(StringParser.format("FILE_INFO name=%'S",
-                                                     name
-                                                    ),
-                                 1,  // debugLevel
-                                 valueMap
-                                );
-
-        fileType = valueMap.getEnum("fileType",FileTypes.class);
-        switch (fileType)
-        {
-          case FILE:
-          case HARDLINK:
-            size = valueMap.getLong("size");
-            break;
-          case DIRECTORY:
-          case LINK:
-          case SPECIAL:
-            break;
-          default:
-            break;
-        }
-        dateTime = valueMap.getLong("dateTime");
-      }
-      catch (Exception exception)
-      {
-        // ignored
-      }
-
-      return new RemoteFile(name,fileType,size,dateTime);
-    }
-
-    /** get shortcut files
-     * @return shortcut files
-     */
-    @Override
-    public void getShortcuts(List<RemoteFile> shortcutList)
-    {
-      final HashMap<String,RemoteFile> shortcutMap = new HashMap<String,RemoteFile>();
-
-      // add manual shortcuts
-      for (String name : Settings.shortcuts)
-      {
-        shortcutMap.put(name,new RemoteFile(name,FileTypes.DIRECTORY));
-      }
-
-      // add root shortcuts
-      try
-      {
-        BARServer.executeCommand(StringParser.format("ROOT_LIST allMounts=yes"),
-                                 1,  // debugLevel
-                                 new Command.ResultHandler()
-                                 {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
-                                   {
-                                     String name = valueMap.getString("name");
-                                     long   size = Long.parseLong(valueMap.getString("size"));
-
-                                     shortcutMap.put(name,new RemoteFile(name,size));
-                                   }
-                                 }
-                                );
-      }
-      catch (Exception exception)
-      {
-        // ignored
-      }
-
-      // create sorted list
-      shortcutList.clear();
-      for (RemoteFile shortcut : shortcutMap.values())
-      {
-        shortcutList.add(shortcut);
-      }
-      Collections.sort(shortcutList,this);
-    }
-
-    /** remove shortcut file
-     * @param name shortcut name
-     */
-    @Override
-    public void addShortcut(RemoteFile shortcut)
-    {
-      Settings.shortcuts.add(shortcut.getAbsolutePath());
-    }
-
-    /** remove shortcut file
-     * @param shortcut shortcut file
-     */
-    @Override
-    public void removeShortcut(RemoteFile shortcut)
-    {
-      Settings.shortcuts.remove(shortcut.getAbsolutePath());
-    }
-
-    /** open list files in directory
-     * @param pathName path name
-     * @return true iff open
-     */
-    @Override
-    public boolean open(RemoteFile path)
-    {
-      synchronized(fileList)
-      {
-        fileList.clear();
-        try
-        {
-          BARServer.executeCommand(StringParser.format("FILE_LIST directory=%'S",
-                                                       path.getAbsolutePath()
-                                                      ),
-                                   1,  // debugLevel
-                                   new Command.ResultHandler()
-                                   {
-                                     @Override
-                                     public void handle(int i, ValueMap valueMap)
-                                     {
-                                       RemoteFile file = null;
-
-                                       try
-                                       {
-                                         FileTypes fileType = valueMap.getEnum("fileType",FileTypes.class);
-                                         switch (fileType)
-                                         {
-                                           case FILE:
-                                             {
-                                               String  name         = valueMap.getString ("name"         );
-                                               long    size         = valueMap.getLong   ("size"         );
-                                               long    dateTime     = valueMap.getLong   ("dateTime"     );
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                                               file = new RemoteFile(name,FileTypes.FILE,size,dateTime);
-                                             }
-                                             break;
-                                           case DIRECTORY:
-                                             {
-                                               String  name         = valueMap.getString ("name"          );
-                                               long    dateTime     = valueMap.getLong   ("dateTime"      );
-                                               boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                                               file = new RemoteFile(name,FileTypes.DIRECTORY,dateTime);
-                                             }
-                                             break;
-                                           case LINK:
-                                             {
-                                               String  name         = valueMap.getString ("name"    );
-                                               long    dateTime     = valueMap.getLong   ("dateTime");
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                                               file = new RemoteFile(name,FileTypes.LINK,dateTime);
-                                             }
-                                             break;
-                                           case HARDLINK:
-                                             {
-                                               String  name         = valueMap.getString ("name"    );
-                                               long    size         = valueMap.getLong   ("size"    );
-                                               long    dateTime     = valueMap.getLong   ("dateTime");
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump", false);
-
-                                               file = new RemoteFile(name,FileTypes.HARDLINK,size,dateTime);
-                                             }
-                                             break;
-                                           case SPECIAL:
-                                             {
-                                               String  name         = valueMap.getString ("name"          );
-                                               long    size         = valueMap.getLong   ("size",    0L   );
-                                               long    dateTime     = valueMap.getLong   ("dateTime"      );
-                                               boolean noBackupFlag = valueMap.getBoolean("noBackup",false);
-                                               boolean noDumpFlag   = valueMap.getBoolean("noDump",  false);
-
-                                               file = new RemoteFile(name,FileTypes.SPECIAL,dateTime);
-                                             }
-                                             break;
-                                         }
-                                       }
-                                       catch (IllegalArgumentException exception)
-                                       {
-                                         if (Settings.debugLevel > 0)
-                                         {
-                                           BARControl.printInternalError(exception);
-                                         }
-                                       }
-
-                                       fileList.add(file);
-                                     }
-                                   }
-                                  );
-          iterator = fileList.listIterator();
-          return true;
-        }
-        catch (Exception exception)
-        {
-          iterator = null;
-          return false;
-        }
-      }
-    }
-
-    /** close list files in directory
-     */
-    @Override
-    public void close()
-    {
-      iterator = null;
-    }
-
-    /** get next entry in directory
-     * @return entry or null
-     */
-    @Override
-    public RemoteFile getNext()
-    {
-      return iterator.hasNext() ? iterator.next() : null;
-    }
-
-    private ArrayList<RemoteFile> fileList = new ArrayList<RemoteFile>();
-    private Iterator<RemoteFile>  iterator;
-  };
+  public static RemoteListDirectory remoteListDirectory = new RemoteListDirectory();
 
   //-----------------------------------------------------------------------
 
