@@ -580,8 +580,6 @@ LOCAL int logTraceCommandHandler(unsigned int traceCommand, void *context, void 
 }
 #endif /* not NDEBUG */
 
-#if   defined(PLATFORM_LINUX)
-#elif defined(PLATFORM_WINDOWS)
 /***********************************************************************\
 * Name   : getTime
 * Purpose: get POSIX compatible time
@@ -591,6 +589,8 @@ LOCAL int logTraceCommandHandler(unsigned int traceCommand, void *context, void 
 * Notes  : -
 \***********************************************************************/
 
+#if   defined(PLATFORM_LINUX)
+#elif defined(PLATFORM_WINDOWS)
 LOCAL void getTime(struct timespec *timespec)
 {
   __int64 windowsTime;
@@ -634,7 +634,35 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
 }
 
 #ifndef NDEBUG
-#ifndef WERROR
+
+//TODO: debug function for logging?
+#if 0
+/***********************************************************************\
+* Name   : debugPrint
+* Purpose: callback for debugPrint function (Unix epoch, UTC)
+* Input  : context - SQLite3 context
+*          argc    - number of arguments
+*          argv    - argument array
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void debugPrint(sqlite3_context *context, int argc, sqlite3_value *argv[])
+{
+  const char    *text;
+
+  assert(context != NULL);
+  assert(argc >= 1);
+  assert(argv != NULL);
+
+  UNUSED_VARIABLE(argc);
+
+  text   = (const char*)sqlite3_value_text(argv[0]);
+  fprintf(stderr,"DEBUG database: %s\n",text);
+}
+#endif
+
 /***********************************************************************\
 * Name   : debugPrintQueryPlanCallback
 * Purpose: print query plan output
@@ -644,6 +672,7 @@ LOCAL void freeDatabaseNode(DatabaseNode *databaseNode, void *userData)
 * Notes  : -
 \***********************************************************************/
 
+#ifndef WERROR
 LOCAL int debugPrintQueryPlanCallback(void *userData, int argc, char *argv[], char *columns[])
 {
   int i;
@@ -3384,6 +3413,19 @@ void Database_doneAll(void)
                                          NULL
                                         );
   assert(sqliteResult == SQLITE_OK);
+//TODO: debug function for logging?
+#if 0
+  sqliteResult = sqlite3_create_function(databaseHandle->handle,
+                                         "debugPrint",
+                                         1,
+                                         SQLITE_ANY,
+                                         NULL,
+                                         debugPrint,
+                                         NULL,
+                                         NULL
+                                        );
+  assert(sqliteResult == SQLITE_OK);
+#endif
 
   // enable recursive triggers
   sqliteResult = sqlite3_exec(databaseHandle->handle,
