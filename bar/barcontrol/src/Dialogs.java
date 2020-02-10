@@ -1307,7 +1307,7 @@ Dprintf.dprintf("returnValue=%s",returnValue);
 
     if (!dialog.isDisposed())
     {
-      Display display = dialog.getDisplay();
+      final Display display = dialog.getDisplay();
 
       // add escape key handler
       dialog.addTraverseListener(new TraverseListener()
@@ -1343,6 +1343,7 @@ Dprintf.dprintf("returnValue=%s",returnValue);
         }
       });
 
+Dprintf.dprintf("+++++++++++++++++++");
       // add result handler
       dialog.addDisposeListener\u200b(new DisposeListener()
       {
@@ -1350,34 +1351,44 @@ Dprintf.dprintf("returnValue=%s",returnValue);
         {
           // get result
           result[0] = (T)disposeEvent.widget.getData();
+Dprintf.dprintf("result[0]=%s",result[0]);
 
           // set escape result if no result set
           if (result[0] == null) result[0] = escapeKeyReturnValue;
 
+Dprintf.dprintf("");
           // execute dialog runnable
           if (dialogRunnable != null)
           {
             dialogRunnable.done(result[0]);
           }
+Dprintf.dprintf("");
+display.wake();
         }
       });
-
+      
 
       // show
       show(dialog);
 
+Dprintf.dprintf("");
       if ((dialog.getStyle() & SWT.APPLICATION_MODAL) == SWT.APPLICATION_MODAL)
       {
         // run dialog
         try
         {
+Dprintf.dprintf("");
           while (!dialog.isDisposed())
           {
+Dprintf.dprintf("1");
             if (!display.readAndDispatch()) display.sleep();
+Dprintf.dprintf("2");
           }
+Dprintf.dprintf("");
         }
         catch (Throwable throwable)
         {
+Dprintf.dprintf("");
           // close dialog
           if (!dialog.isDisposed())
           {
@@ -1386,12 +1397,14 @@ Dprintf.dprintf("returnValue=%s",returnValue);
             dialog.notifyListeners(SWT.Close,event);
           }
         }
+Dprintf.dprintf("result[0]=%s",result[0]);
 
         // update all
         display.update();
       }
       else
       {
+Dprintf.dprintf("result[0]=%s",result[0]);
         result[0] = null;
       }
     }
@@ -5091,7 +5104,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-
+    
     return result;
   }
 
@@ -5642,7 +5655,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-
+    
     return result;
   }
 
@@ -5833,7 +5846,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-
+    
     return result;
   }
 
@@ -6003,7 +6016,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-
+    
     return result;
   }
 
@@ -6186,7 +6199,7 @@ Dprintf.dprintf("-------------------");
     {
       result =null;
     }
-
+    
     return result;
   }
 
@@ -6373,7 +6386,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-
+    
     return result;
   }
 
@@ -6548,7 +6561,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-
+    
     return result;
   }
 
@@ -6999,7 +7012,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-
+    
     return result;
   }
 
