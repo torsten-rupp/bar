@@ -2552,72 +2552,134 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
   String storageName;
   ulong  n;
 
-  if (verboseFlag) { fprintf(stderr,"Clean-up orphaned:\n"); }
+  if (verboseFlag) { fprintf(stderr,"Clean-up orphaned entries:\n"); }
 
   // initialize variables
   storageName = String_new();
 
+  // clean-up fragments/directory entries/link entries/special entries without storage name
   n = 0L;
-
-  // clean-up entries without storage name
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount
-                         "DELETE FROM fileEntries \
-                            LEFT JOIN storages ON storages.id=fileEntries.storageId \
-                          WHERE storages.name IS NULL OR storages.name=''; \
+                         &n,
+                         "DELETE FROM entryFragments \
+                            LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                          WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
                          "
                         );
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount
-                         "DELETE FROM imageEntries \
-                            LEFT JOIN storages ON storages.id=imageEntries.storageId \
-                          WHERE storages.name IS NULL OR storages.name=''; \
-                         "
-                        );
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount,
+                         &n,
                          "DELETE FROM directoryEntries \
-                            LEFT JOIN storages ON storages.id=directoryEntries.storageId \
-                          WHERE storages.name IS NULL OR storages.name=''; \
+                            LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                          WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
                          "
                         );
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount,
+                         &n,
                          "DELETE FROM linkEntries \
-                            LEFT JOIN storages ON storages.id=linkEntries.storageId \
-                          WHERE storages.name IS NULL OR storages.name=''; \
+                            LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                          WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
                          "
                         );
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount,
-                         "DELETE FROM hardlinkEntries \
-                            LEFT JOIN storages ON storages.id=hardlinkEntries.storageId \
-                          WHERE storages.name IS NULL OR storages.name=''; \
-                         "
-                        );
-  (void)Database_execute(databaseHandle,
-                         CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount,
+                         &n,
                          "DELETE FROM specialEntries \
-                            LEFT JOIN storages ON storages.id=specialEntries.storageId \
-                          WHERE storages.name IS NULL OR storages.name=''; \
+                            LEFT JOIN storages ON storages.id=entryFragments.storageId \
+                          WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
+                         "
+                        );
+  fprintf(stdout,"  %lu without storage name\n",n);
+
+  // clean-up entries without storage
+  n = 0L;
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
+                         "DELETE FROM fileEntries \
+                          WHERE (SELECT COUNT(id) FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId)=0 \
+                         "
+                        );
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
+                         "DELETE FROM imageEntries \
+                          WHERE (SELECT COUNT(id) FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId)=0 \
+                         "
+                        );
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
+                         "DELETE FROM hardlinkEntries \
+                          WHERE (SELECT COUNT(id) FROM entryFragments WHERE entryFragments.entryId=hardlinkEntries.entryId)=0 \
                          "
                         );
 
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
-                         NULL,  // changedRowCount,
+                         &n,
+                         "DELETE FROM entries \
+                          WHERE entries.type=%u AND (SELECT COUNT(id) FROM fileEntries WHERE fileEntries.entryId=entries.id)=0 \
+                         ",
+                         INDEX_CONST_TYPE_FILE
+                        );
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
+                         "DELETE FROM entries \
+                          WHERE entries.type=%u AND (SELECT COUNT(id) FROM imageEntries WHERE imageEntries.entryId=entries.id)=0 \
+                         ",
+                         INDEX_CONST_TYPE_IMAGE
+                        );
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
+                         "DELETE FROM entries \
+                          WHERE entries.type=%u AND (SELECT COUNT(id) FROM directoryEntries WHERE directoryEntries.entryId=entries.id)=0 \
+                         ",
+                         INDEX_CONST_TYPE_DIRECTORY
+                        );
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
+                         "DELETE FROM entries \
+                          WHERE entries.type=%u AND (SELECT COUNT(id) FROM linkEntries WHERE linkEntries.entryId=entries.id)=0 \
+                         ",
+                         INDEX_CONST_TYPE_LINK
+                        );
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
+                         "DELETE FROM entries \
+                          WHERE entries.type=%u AND (SELECT COUNT(id) FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id)=0 \
+                         ",
+                         INDEX_CONST_TYPE_HARDLINK
+                        );
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
+                         "DELETE FROM entries \
+                          WHERE entries.type=%u AND (SELECT COUNT(id) FROM specialEntries WHERE specialEntries.entryId=entries.id)=0 \
+                         ",
+                         INDEX_CONST_TYPE_SPECIAL
+                        );
+  fprintf(stdout,"  %lu without storage\n",n);
+
+  // clean-up storages
+  n = 0L;
+  (void)Database_execute(databaseHandle,
+                         CALLBACK_(NULL,NULL),  // databaseRowFunction
+                         &n,
                          "DELETE FROM storages \
                           WHERE name IS NULL OR name=''; \
                          "
                         );
+  fprintf(stdout,"  %lu storages\n",n);
 
   // clean-up *Entries without entry
+  n = 0L;
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2808,7 +2870,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
-        (void)Database_execute(databaseHandle,
+  (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
                            int64  databaseId;
@@ -2846,8 +2908,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
-
-  fprintf(stdout,"Clean-up %lu orphaned entries\n",n);
+  fprintf(stdout,"  %lu entries\n",n);
 
   // free resources
   String_delete(storageName);
