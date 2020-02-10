@@ -148,7 +148,7 @@ while ($line=<STDIN>)
 
       print "#define $PREFIX_CONST_NAME$name $value\n";
     }
-    elsif ($line =~ /\s*CREATE\s+TABLE\s+.*?(\S+)\s*\(/)
+    elsif ($line =~ /^\s*CREATE\s+TABLE\s+.*?(\S+)\s*\(/)
     {
       # create table
       $type=$TYPE_TABLE;
@@ -165,7 +165,7 @@ while ($line=<STDIN>)
       $databaseTableDefinitionName=$1;
       $databaseTableDefinition=$line;
     }
-    elsif ($line =~ /\s*CREATE\s+INDEX\s+ON\s+(\S+)\s+(.*?);$/)
+    elsif ($line =~ /^\s*CREATE\s+INDEX\s+ON\s+(\S+)\s+(.*?);$/)
     {
       # create anonymous index (single line)
 
@@ -189,7 +189,7 @@ while ($line=<STDIN>)
       $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE INDEX IF NOT EXISTS $index ON $table $definition;\\\n";
       $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."CREATE INDEX IF NOT EXISTS $index ON $table $definition;\\\n";
     }
-    elsif ($line =~ /\s*CREATE\s+INDEX\s+ON\s+(\S+)\s+(.*?)$/)
+    elsif ($line =~ /^\s*CREATE\s+INDEX\s+ON\s+(\S+)\s+(.*?)$/)
     {
       # create anonymous index
       $type=$TYPE_INDEX;
@@ -198,7 +198,7 @@ while ($line=<STDIN>)
       my $table=$1;
       foreach $name (keys %constants)
       {
-        $table =~ s/\$$name/$constants{$name}/g;
+        $table =~ s/^\$$name/$constants{$name}/g;
       }
       $table =~ s/"/\\"/g;
       my $definition=$2;
@@ -214,7 +214,7 @@ while ($line=<STDIN>)
       $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE INDEX IF NOT EXISTS $index ON $table $definition\\\n";
       $allDatabaseIndizesDefinitions=$allDatabaseIndizesDefinitions."CREATE INDEX IF NOT EXISTS $index ON $table $definition\\\n";
     }
-    elsif ($line =~ /\s*CREATE\s+VIRTUAL\s+TABLE\s+(FTS_\S+)\s+USING\s+(FTS.*)\s*\($/)
+    elsif ($line =~ /^\s*CREATE\s+VIRTUAL\s+TABLE\s+(FTS_\S+)\s+USING\s+(FTS.*)\s*\($/)
     {
       # create anonymous FTS
       $type=$TYPE_FTS;
@@ -236,7 +236,7 @@ while ($line=<STDIN>)
       $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE VIRTUAL TABLE $table USING $type(\\\n";
       $allDatabaseFTSDefinitions=$allDatabaseFTSDefinitions."CREATE VIRTUAL TABLE $table USING $type(\\\n";
     }
-    elsif ($line =~ /\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
+    elsif ($line =~ /^\s*CREATE\s+TRIGGER\s+(BEFORE|AFTER)\s+(.*?)$/)
     {
       # create anonymous trigger
       $type=$TYPE_TRIGGER;
@@ -255,7 +255,7 @@ while ($line=<STDIN>)
       $allDatabaseDefinitions=$allDatabaseDefinitions."CREATE TRIGGER $trigger $1 $definition\\\n";
       $allDatabaseTriggerDefinitions=$allDatabaseTriggerDefinitions."CREATE TRIGGER $trigger $1 $2\\\n";
     }
-    elsif ($line =~ /.*END.*/)
+    elsif ($line =~ /^\s*END\s*$/)
     {
       # end trigger
 
