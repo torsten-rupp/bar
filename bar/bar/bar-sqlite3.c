@@ -4600,17 +4600,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
 
 LOCAL bool inputAvailable(void)
 {
-  struct timeval tv;
-  fd_set         fdSet;
-
-  tv.tv_sec  = 0;
-  tv.tv_usec = 0;
-
-  FD_ZERO(&fdSet);
-  FD_SET(STDIN_FILENO,&fdSet);
-  select(STDIN_FILENO+1,&fdSet,NULL,NULL,&tv);
-
-  return FD_ISSET(STDIN_FILENO,&fdSet);
+  return Misc_waitHandle(STDIN_FILENO,NULL,HANDLE_EVENT_INPUT,0) != 0;
 }
 /*---------------------------------------------------------------------*/
 
@@ -5547,6 +5537,7 @@ else if (stringEquals(argv[i],"--xxx"))
           && !inputAvailable())
      )
   {
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     printInfo(&databaseHandle);
   }
 

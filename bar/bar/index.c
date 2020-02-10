@@ -43,6 +43,7 @@
 /****************** Conditional compilation switches *******************/
 #define INDEX_INTIIAL_CLEANUP            // switch off for debugging only!
 #define INDEX_IMPORT_OLD_DATABASE        // switch off for debugging only!
+#warning remove/revert
 #define _INDEX_DEBUG_IMPORT_OLD_DATABASE  // switch off for debugging only!
 #define INDEX_SUPPORT_DELETE             // switch off for debugging only!
 
@@ -64,7 +65,7 @@
 //TODO: use type safe type
 #ifndef __INDEX_ID_TYPE_SAFE
 #else
-const IndexId INDEX_ID_NONE = {INDEX_TYPE_NONE,0LL };
+const IndexId INDEX_ID_NONE = {INDEX_TYPE_NONE, 0LL};
 const IndexId INDEX_ID_ANY  = {INDEX_TYPE_NONE,-1LL};
 #endif
 
@@ -8460,7 +8461,6 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
       }
 
       (*entityId) = INDEX_ID_ENTITY(Database_getLastRowId(&indexHandle->databaseHandle));
-fprintf(stderr,"%s, %d: new entityId=%ld\n",__FILE__,__LINE__,Index_getDatabaseId(*entityId));
 
       return ERROR_NONE;
     });
@@ -8498,7 +8498,6 @@ fprintf(stderr,"%s, %d: new entityId=%ld\n",__FILE__,__LINE__,Index_getDatabaseI
   {
     return error;
   }
-fprintf(stderr,"%s, %d: new entity %"PRIi64"\n",__FILE__,__LINE__,*entityId);
 
   return ERROR_NONE;
 }
@@ -10074,6 +10073,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
             switch (indexType)
             {
               case INDEX_TYPE_NONE:
+              case INDEX_TYPE_ANY:
                 error = Database_prepare(&databaseQueryHandle,
                                          &indexHandle->databaseHandle,
                                          "SELECT TOTAL(entities.totalEntryCountNewest), \
@@ -10193,6 +10193,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
             switch (indexType)
             {
               case INDEX_TYPE_NONE:
+              case INDEX_TYPE_ANY:
                 error = Database_prepare(&databaseQueryHandle,
                                          &indexHandle->databaseHandle,
                                          "SELECT TOTAL(entities.totalEntryCount), \
@@ -12225,6 +12226,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
@@ -12403,6 +12405,7 @@ Errors Index_addFile(IndexHandle *indexHandle,
                                     fragmentSize
                                    );
   }
+fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
 
   return error;
 }

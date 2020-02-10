@@ -3986,9 +3986,10 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
           && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
          )
       {
-        Array_append(&uuidIds,&oldUUIDId);
+fprintf(stderr,"%s, %d: oldUUIDId=%lld\n",__FILE__,__LINE__,oldUUIDId);
+        if (!INDEX_ID_IS_NONE(oldUUIDId)) Array_append(&uuidIds,&oldUUIDId);
         if (!INDEX_ID_IS_DEFAULT_ENTITY(oldEntityId)) Array_append(&entityIds,&oldEntityId);
-        Array_append(&storageIds,&oldStorageId);
+        if (!INDEX_ID_IS_NONE(oldStorageId)) Array_append(&storageIds,&oldStorageId);
       }
     }
     Index_doneList(&indexQueryHandle);

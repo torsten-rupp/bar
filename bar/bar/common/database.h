@@ -76,8 +76,8 @@ typedef enum
 } DatabaseTypes;
 
 // special database ids
-#define DATABASE_ID_NONE  0LL
-#define DATABASE_ID_ANY  -1LL
+#define DATABASE_ID_NONE  0x0000000000000000ULL
+#define DATABASE_ID_ANY   0xFFFFFFFFFFFFFFFFULL
 
 // ordering mode
 typedef enum

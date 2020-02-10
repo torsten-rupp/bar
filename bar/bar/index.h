@@ -42,13 +42,13 @@
 //TODO: use type safe type
 #ifndef __INDEX_ID_TYPE_SAFE
 // special index ids
-#define INDEX_ID_MASK_TYPE         0x000000000000000FLL
+#define INDEX_ID_MASK_TYPE         0x000000000000000FULL
 #define INDEX_ID_SHIFT_TYPE        0
-#define INDEX_ID_MASK_DATABASE_ID  0xFFFFFFFFFFFFFFF0LL
+#define INDEX_ID_MASK_DATABASE_ID  0xFFFFFFFFFFFFFFF0ULL
 #define INDEX_ID_SHIFT_DATABASE_ID 4
 
-#define INDEX_ID_NONE  0LL
-#define INDEX_ID_ANY  -1LL
+#define INDEX_ID_NONE INDEX_ID_(INDEX_TYPE_NONE,DATABASE_ID_NONE)
+#define INDEX_ID_ANY  INDEX_ID_(INDEX_TYPE_ANY, DATABASE_ID_ANY )
 #else
 #endif
 
@@ -164,12 +164,12 @@ typedef enum
   INDEX_TYPE_HARDLINK  = INDEX_CONST_TYPE_HARDLINK,
   INDEX_TYPE_SPECIAL   = INDEX_CONST_TYPE_SPECIAL,
   INDEX_TYPE_HISTORY   = INDEX_CONST_TYPE_HISTORY,
+  
+  INDEX_TYPE_ANY       = 0xF
 } IndexTypes;
 
 #define INDEX_TYPE_MIN INDEX_TYPE_UUID
 #define INDEX_TYPE_MAX INDEX_TYPE_HISTORY
-
-#define INDEX_TYPE_ANY INDEX_TYPE_NONE
 
 #define INDEX_TYPE_SET_NONE 0
 #define INDEX_TYPE_SET_ANY \
@@ -205,12 +205,12 @@ typedef struct
 {
   union
   {
-  struct
-  {
-  IndexTypes type  : 4;
-  int64      value : 60;
-  };
-  uint64 data;
+    struct
+    {
+      IndexTypes type  : 4;
+      int64      value : 60;
+    };
+    uint64 data;
   };
 } IndexId;
 extern const IndexId INDEX_ID_NONE;
@@ -266,8 +266,8 @@ typedef bool(*IndexPauseCallbackFunction)(void *userData);
 #warning TODO: defualt entity
 #endif
 #define INDEX_ID_IS_DEFAULT_ENTITY(id) ((Index_getType(id)==INDEX_TYPE_ENTITY) && Index_getDatabaseId(id)==0)
-#define INDEX_ID_IS_NONE(id) INDEX_ID_EQUALS(id,INDEX_ID_NONE)
-#define INDEX_ID_IS_ANY(id) INDEX_ID_EQUALS(id,INDEX_ID_ANY)
+#define INDEX_ID_IS_NONE(id)           (((id) & INDEX_ID_MASK_DATABASE_ID) == (DATABASE_ID_NONE & INDEX_ID_MASK_DATABASE_ID))
+#define INDEX_ID_IS_ANY(id)            (((id) & INDEX_ID_MASK_DATABASE_ID) == (DATABASE_ID_ANY  & INDEX_ID_MASK_DATABASE_ID))
 
 // create index state set value
 #define INDEX_STATE_SET(indexState) (1U << indexState)
