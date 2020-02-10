@@ -2759,6 +2759,10 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
           // create directory handle
           directoryListHandle->dir = fdopendir(handle);
         }
+        else
+        {
+          directoryListHandle->dir = NULL;
+        }
       #else /* not HAVE_O_NOATIME */
         // open directory
         directoryListHandle->handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
