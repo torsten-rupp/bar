@@ -2657,7 +2657,7 @@ bool File_endOfRootList(RootListHandle *rootListHandle)
     }
     else
     {
-      return !rootListHandle->parseFlag;
+      return rootListHandle->parseFlag;
     }
   #elif defined(PLATFORM_WINDOWS)
     return ((rootListHandle->logicalDrives >> rootListHandle->i) <= 0);
