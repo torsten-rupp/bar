@@ -454,6 +454,7 @@ public class TabRestore
     {
       ID,
       NAME,
+      HOSTNAME,
       CREATED_DATETIME,
       SIZE,
       STATE;
@@ -476,9 +477,10 @@ public class TabRestore
     IndexDataComparator(Tree tree, TreeColumn sortColumn)
     {
       if      (tree.getColumn(0) == sortColumn) this.sortMode = SortModes.NAME;
-      else if (tree.getColumn(1) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
-      else if (tree.getColumn(2) == sortColumn) this.sortMode = SortModes.SIZE;
-      else if (tree.getColumn(3) == sortColumn) this.sortMode = SortModes.STATE;
+      else if (tree.getColumn(1) == sortColumn) this.sortMode = SortModes.HOSTNAME;
+      else if (tree.getColumn(2) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
+      else if (tree.getColumn(3) == sortColumn) this.sortMode = SortModes.SIZE;
+      else if (tree.getColumn(4) == sortColumn) this.sortMode = SortModes.STATE;
       else                                      this.sortMode = SortModes.NAME;
     }
 
@@ -497,9 +499,10 @@ public class TabRestore
     IndexDataComparator(Table table, TableColumn sortColumn)
     {
       if      (table.getColumn(0) == sortColumn) this.sortMode = SortModes.NAME;
-      else if (table.getColumn(1) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
-      else if (table.getColumn(2) == sortColumn) this.sortMode = SortModes.SIZE;
-      else if (table.getColumn(3) == sortColumn) this.sortMode = SortModes.STATE;
+      else if (table.getColumn(1) == sortColumn) this.sortMode = SortModes.HOSTNAME;
+      else if (table.getColumn(2) == sortColumn) this.sortMode = SortModes.CREATED_DATETIME;
+      else if (table.getColumn(3) == sortColumn) this.sortMode = SortModes.SIZE;
+      else if (table.getColumn(4) == sortColumn) this.sortMode = SortModes.STATE;
       else                                       this.sortMode = SortModes.NAME;
     }
 
