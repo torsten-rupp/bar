@@ -2679,7 +2679,14 @@ sslSocket.setEnabledProtocols(new String[]{"SSLv3"});
       {
         // if this is the GUI thread run GUI loop
         final boolean done[] = new boolean[]{ false };
-        display.timerExec(250,new Runnable() { public void run() { done[0] = true; display.wake(); } });
+        display.timerExec(SLEEP_TIME,new Runnable()
+        {
+          public void run()
+          {
+            done[0] = true;
+            display.wake();
+          }
+        });
         while (   !done[0]
                && !display.isDisposed()
                && !display.readAndDispatch())
