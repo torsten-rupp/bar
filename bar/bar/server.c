@@ -6618,6 +6618,7 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
 * Output : -
 * Return : -
 * Notes  : Arguments:
+*            [jobUUID=<uuid>]
 *          Result:
 *            name=<name>
 *            size=<n [bytes]>
@@ -6626,6 +6627,8 @@ LOCAL void serverCommand_continue(ClientInfo *clientInfo, IndexHandle *indexHand
 
 LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  const JobNode    *jobNode;
   Errors           error;
   DeviceListHandle deviceListHandle;
   String           deviceName;
@@ -6637,53 +6640,104 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
   UNUSED_VARIABLE(indexHandle);
   UNUSED_VARIABLE(argumentMap);
 
-  // open device list
-  error = Device_openDeviceList(&deviceListHandle);
-  if (error != ERROR_NONE)
+  // get job UUID
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot open device list");
-    return;
+    // find job
+    if (!String_isEmpty(jobUUID))
+    {
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        return;
+      }
+    }
+    else
+    {
+      jobNode = NULL;
+    }
+
+    if ((jobNode != NULL) && Job_isRemote(jobNode))
+    {
+      // remote device list
+      JOB_CONNECTOR_LOCKED_DO(connectorInfo,jobNode,LOCK_TIMEOUT)
+      {
+        if (Connector_isConnected(connectorInfo))
+        {
+          error = Connector_executeCommand(connectorInfo,
+                                           1,
+                                           10*MS_PER_SECOND,
+                                           CALLBACK_LAMBDA_(Errors,(const StringMap resultMap, void *userData),
+                                           {
+                                             assert(resultMap != NULL);
+
+                                             UNUSED_VARIABLE(userData);
+
+                                             return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
+                                           },NULL),
+                                           "DEVICE_LIST"
+                                          );
+        }
+      }
+    }
+    else
+    {
+      // local device list
+
+      // open device list
+      error = Device_openDeviceList(&deviceListHandle);
+      if (error != ERROR_NONE)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot open device list");
+        return;
+      }
+
+      // read device list entries
+      deviceName = String_new();
+      while (!Device_endOfDeviceList(&deviceListHandle))
+      {
+        // read device list entry
+        error = Device_readDeviceList(&deviceListHandle,deviceName);
+        if (error != ERROR_NONE)
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device list");
+          Device_closeDeviceList(&deviceListHandle);
+          String_delete(deviceName);
+          return;
+        }
+
+        // try get device info
+        error = Device_getInfo(&deviceInfo,deviceName,FALSE);
+        if (error != ERROR_NONE)
+        {
+          ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info");
+          Device_closeDeviceList(&deviceListHandle);
+          String_delete(deviceName);
+          return;
+        }
+
+        if (deviceInfo.type == DEVICE_TYPE_BLOCK)
+        {
+          ServerIO_sendResult(&clientInfo->io,
+                              id,FALSE,ERROR_NONE,
+                              "name=%'S size=%lld mounted=%y",
+                              deviceName,
+                              deviceInfo.size,
+                              deviceInfo.mounted
+                             );
+        }
+      }
+      String_delete(deviceName);
+
+      // close device
+      Device_closeDeviceList(&deviceListHandle);
+    }
   }
 
-  // read device list entries
-  deviceName = String_new();
-  while (!Device_endOfDeviceList(&deviceListHandle))
-  {
-    // read device list entry
-    error = Device_readDeviceList(&deviceListHandle,deviceName);
-    if (error != ERROR_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device list");
-      Device_closeDeviceList(&deviceListHandle);
-      String_delete(deviceName);
-      return;
-    }
-
-    // try get device info
-    error = Device_getInfo(&deviceInfo,deviceName,FALSE);
-    if (error != ERROR_NONE)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"cannot read device info");
-      Device_closeDeviceList(&deviceListHandle);
-      String_delete(deviceName);
-      return;
-    }
-
-    if (deviceInfo.type == DEVICE_TYPE_BLOCK)
-    {
-      ServerIO_sendResult(&clientInfo->io,
-                          id,FALSE,ERROR_NONE,
-                          "name=%'S size=%lld mounted=%y",
-                          deviceName,
-                          deviceInfo.size,
-                          deviceInfo.mounted
-                         );
-    }
-  }
-  String_delete(deviceName);
-
-  // close device
-  Device_closeDeviceList(&deviceListHandle);
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 }
@@ -6764,7 +6818,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
 
                                              return ServerIO_passResult(&clientInfo->io,id,FALSE,ERROR_NONE,resultMap);
                                            },NULL),
-                                           "ROOT_LIST allMounts=%y",
+                                           "ROOT_LIST",
                                            allMountsFlag
                                           );
         }
