@@ -58,7 +58,7 @@
 #endif
 
 #ifndef NDEBUG
-  #define INDEX_DEBUG_LIST_INFO  // enable to output list info
+  #define _INDEX_DEBUG_LIST_INFO  // enable to output list info
 #endif
 
 /***************************** Constants *******************************/
@@ -9537,7 +9537,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                                        totalSpecialCount \
                                 FROM storages \
                                 WHERE     deletedFlag!=1 \
-                                      AND id=%lld \ \
+                                      AND id=%lld \
                                ",
                                Index_getDatabaseId(storageId)
                               );
@@ -9590,7 +9590,6 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
         return error;
       }
 fprintf(stderr,"%s, %d: de;eted storage %lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
-#if 1
 fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu %llu  totalDirectory=%lu  totalLink=%lu  totalHardlink=%lu %llu totalSpecial=%lu\n",__FILE__,__LINE__,
                                totalEntryCount,
                                totalEntrySize,
@@ -9603,9 +9602,8 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
                                totalHardlinkCount,
                                totalHardlinkSize,
                                totalSpecialCount
-
 );
-#if 0
+
       // update aggregates
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -9635,19 +9633,12 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
                                totalHardlinkCount,
                                totalHardlinkSize,
                                totalSpecialCount,
-                               storageId
+                               Index_getDatabaseId(storageId)
                               );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
         return error;
       }
-fprintf(stderr,"%s, %d: llllllllllll\n",__FILE__,__LINE__);
-#else
-
-#endif
-
-#endif
 
       return ERROR_NONE;
     });
