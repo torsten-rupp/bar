@@ -2916,7 +2916,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
   if (verboseFlag) { fprintf(stdout,"  %lu entries\n",n); }
   total += n;
 
-  fprintf(stdout,"Clean-up %lu orphaned entries\n",n);
+  fprintf(stdout,"Clean-up %lu orphaned entries\n",total);
 
   // free resources
   String_delete(storageName);
