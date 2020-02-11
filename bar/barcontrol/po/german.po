@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-02-09 16:46+0100\n"
+"POT-Creation-Date: 2020-02-11 02:57+0100\n"
 "PO-Revision-Date: 2019-10-22 16:50+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -331,12 +331,12 @@ msgstr "Neu versuchen"
 #: src/BARControl.java:3307 src/BARControl.java:3321 src/BARControl.java:3598
 #: src/BARControl.java:3761 src/BARControl.java:4045 src/BARControl.java:5384
 #: src/BARControl.java:5402 src/BARControl.java:5431 src/BARControl.java:5456
-#: src/Dialogs.java:2301 src/Dialogs.java:2400 src/Dialogs.java:3506
-#: src/Dialogs.java:3522 src/Dialogs.java:3719 src/Dialogs.java:3984
-#: src/Dialogs.java:4662 src/Dialogs.java:5695 src/Dialogs.java:5888
-#: src/Dialogs.java:6058 src/Dialogs.java:6245 src/Dialogs.java:6604
-#: src/Dialogs.java:6704 src/Dialogs.java:7058 src/Dialogs.java:7152
-#: src/Dialogs.java:7242 src/ServerSettings.java:2067
+#: src/Dialogs.java:2290 src/Dialogs.java:2389 src/Dialogs.java:3495
+#: src/Dialogs.java:3511 src/Dialogs.java:3708 src/Dialogs.java:3973
+#: src/Dialogs.java:4651 src/Dialogs.java:5684 src/Dialogs.java:5877
+#: src/Dialogs.java:6047 src/Dialogs.java:6234 src/Dialogs.java:6593
+#: src/Dialogs.java:6693 src/Dialogs.java:7047 src/Dialogs.java:7141
+#: src/Dialogs.java:7231 src/ServerSettings.java:2067
 #: src/ServerSettings.java:2691 src/TabJobs.java:10680 src/TabJobs.java:10823
 #: src/TabJobs.java:10979 src/TabJobs.java:12099 src/TabJobs.java:12494
 #: src/TabJobs.java:12975 src/TabJobs.java:13590 src/TabJobs.java:14908
@@ -359,8 +359,8 @@ msgid "TLS"
 msgstr ""
 
 #: src/BARControl.java:3527 src/BARControl.java:5159 src/BARControl.java:5183
-#: src/BARServer.java:1298 src/BARServer.java:1320 src/Dialogs.java:3590
-#: src/Dialogs.java:3843 src/ServerSettings.java:590
+#: src/BARServer.java:1298 src/BARServer.java:1320 src/Dialogs.java:3579
+#: src/Dialogs.java:3832 src/ServerSettings.java:590
 #: src/ServerSettings.java:2504 src/TabJobs.java:6964 src/TabJobs.java:7397
 #: src/TabJobs.java:8067
 msgid "Password"
@@ -393,9 +393,9 @@ msgstr "Kopplung neue Hauptinstanz"
 msgid "Wait for pairing"
 msgstr "Warte auf Kopplung"
 
-#: src/BARControl.java:3947 src/Dialogs.java:3506 src/Dialogs.java:3522
-#: src/Dialogs.java:3719 src/Dialogs.java:3984 src/Dialogs.java:5695
-#: src/Dialogs.java:6245 src/TabStatus.java:2965
+#: src/BARControl.java:3947 src/Dialogs.java:3495 src/Dialogs.java:3511
+#: src/Dialogs.java:3708 src/Dialogs.java:3973 src/Dialogs.java:5684
+#: src/Dialogs.java:6234 src/TabStatus.java:2965
 msgid "OK"
 msgstr "OK"
 
@@ -468,8 +468,8 @@ msgstr "angehalten"
 msgid "Please enter {0} login for: {1}"
 msgstr "Bitte {0} Passwort eingeben für: {1}"
 
-#: src/BARControl.java:5158 src/Dialogs.java:3578 src/Dialogs.java:3834
-#: src/Dialogs.java:4536 src/Dialogs.java:4615 src/ServerSettings.java:608
+#: src/BARControl.java:5158 src/Dialogs.java:3567 src/Dialogs.java:3823
+#: src/Dialogs.java:4525 src/Dialogs.java:4604 src/ServerSettings.java:608
 #: src/ServerSettings.java:2439 src/TabJobs.java:2293 src/TabJobs.java:4098
 #: src/TabJobs.java:10664 src/TabJobs.java:10806 src/TabJobs.java:12867
 #: src/TabRestore.java:4288 src/TabRestore.java:4976 src/TabRestore.java:5279
@@ -1385,8 +1385,8 @@ msgstr "Zeitüberschreitung beim Lesen von Rechner ''{0}''"
 msgid "Lost connection to server ''{0}''"
 msgstr "Verbindung zu Rechner ''{0}'' verloren"
 
-#: src/BARServer.java:1233 src/Dialogs.java:2477 src/Dialogs.java:2580
-#: src/Dialogs.java:2654 src/TabRestore.java:8941 src/TabStatus.java:2798
+#: src/BARServer.java:1233 src/Dialogs.java:2466 src/Dialogs.java:2569
+#: src/Dialogs.java:2643 src/TabRestore.java:8941 src/TabStatus.java:2798
 msgid "Confirmation"
 msgstr "Bestätigung"
 
@@ -1497,46 +1497,46 @@ msgstr ""
 msgid "{0}:{1}: {2}"
 msgstr "{0}:{1}: {2}"
 
-#: src/BARServer.java:2473 src/BARServer.java:3072
+#: src/BARServer.java:2473 src/BARServer.java:3079
 #, java-format
 msgid "input/output error: {0}"
 msgstr "Ein-/Ausgabe fehlgeschlagen: {0}"
 
-#: src/BARServer.java:3779 src/BARServer.java:3812
+#: src/BARServer.java:3786 src/BARServer.java:3819
 msgid "Password encryption fail"
 msgstr "Verschlüsselung von Schlüssel fehlgeschlagen"
 
-#: src/BARServer.java:4598 src/BARServer.java:4696
+#: src/BARServer.java:4605 src/BARServer.java:4703
 msgid "No result from server"
 msgstr "Keine Rückmeldung vom Server"
 
-#: src/BARServer.java:4604
+#: src/BARServer.java:4611
 msgid "Invalid response from server: expected SESSION"
 msgstr "Ungültige Rückmeldung von anderem Rechner: SESSION"
 
-#: src/BARServer.java:4608
+#: src/BARServer.java:4615
 msgid "Invalid response from server: expected parameters"
 msgstr "Ungültige Rückmeldung von anderem Rechner: Parameter erwartet"
 
-#: src/BARServer.java:4613
+#: src/BARServer.java:4620
 msgid "No session id"
 msgstr "Keine Sitzungs-Identifikation"
 
-#: src/BARServer.java:4658
+#: src/BARServer.java:4665
 msgid "Init password cipher fail"
 msgstr "Fehler bei Passwortinitialisierung"
 
-#: src/BARServer.java:4704
+#: src/BARServer.java:4711
 #, java-format
 msgid "Invalid response from server: incomplete response ''{0}''"
 msgstr "Ungültige Rückmeldung von anderem Rechner: unvollständig ''{0}''"
 
-#: src/BARServer.java:4712
+#: src/BARServer.java:4719
 msgid "Invalid response from server: no command id"
 msgstr ""
 "Ungültige Rückmeldung von anderem Rechner: keine Befehls-Identifikation"
 
-#: src/BARServer.java:4724
+#: src/BARServer.java:4731
 msgid "Invalid response from server: parameters"
 msgstr "Ungültige Rückmeldung von anderem Rechner: Parameter"
 
@@ -1572,7 +1572,7 @@ msgstr ""
 msgid "Select path name. Ctrl+Click to select local directory."
 msgstr "Pfad auswählen. Strg+Klick um einen lokalen Pfad auszuwählen."
 
-#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:5592
+#: src/BARWidgets.java:1099 src/BARWidgets.java:1107 src/Dialogs.java:5581
 #: src/TabRestore.java:9423 src/TabRestore.java:9431
 msgid "Select path"
 msgstr "Pfad auswählen"
@@ -1585,57 +1585,57 @@ msgstr "Datei auswählen. Strg+Klick um eine lokale Datei auszuwählen."
 msgid "Select file"
 msgstr "Datei auswählen"
 
-#: src/BusyDialog.java:595 src/Dialogs.java:1514 src/Dialogs.java:1684
-#: src/Dialogs.java:1945
+#: src/BusyDialog.java:595 src/Dialogs.java:1503 src/Dialogs.java:1673
+#: src/Dialogs.java:1934
 msgid "Close"
 msgstr "Schliessen"
 
-#: src/Dialogs.java:1498 src/Dialogs.java:1667 src/Dialogs.java:1928
-#: src/Dialogs.java:2145 src/Dialogs.java:2992
+#: src/Dialogs.java:1487 src/Dialogs.java:1656 src/Dialogs.java:1917
+#: src/Dialogs.java:2134 src/Dialogs.java:2981
 msgid "show again"
 msgstr "wieder anzeigen"
 
-#: src/Dialogs.java:1581
+#: src/Dialogs.java:1570
 msgid "Information"
 msgstr "Information"
 
-#: src/Dialogs.java:1616 src/TabRestore.java:4736
+#: src/Dialogs.java:1605 src/TabRestore.java:4736
 msgid "Error"
 msgstr "Fehler"
 
-#: src/Dialogs.java:1655 src/Dialogs.java:2133
+#: src/Dialogs.java:1644 src/Dialogs.java:2122
 msgid "Extended error"
 msgstr "Erweiterte Fehlermeldung"
 
-#: src/Dialogs.java:1893
+#: src/Dialogs.java:1882
 msgid "Warning"
 msgstr "Warnung"
 
-#: src/Dialogs.java:1916
+#: src/Dialogs.java:1905
 msgid "Extended message"
 msgstr "Erweiterte Meldung"
 
-#: src/Dialogs.java:2417 src/Dialogs.java:2448
+#: src/Dialogs.java:2406 src/Dialogs.java:2437
 msgid "Yes"
 msgstr "Ja"
 
-#: src/Dialogs.java:2417 src/Dialogs.java:2448
+#: src/Dialogs.java:2406 src/Dialogs.java:2437
 msgid "No"
 msgstr "Nein"
 
-#: src/Dialogs.java:4217 src/TabRestore.java:3094
+#: src/Dialogs.java:4206 src/TabRestore.java:3094
 msgid "directory"
 msgstr "Verzeichnis"
 
-#: src/Dialogs.java:4220 src/TabJobs.java:12044 src/TabRestore.java:3092
+#: src/Dialogs.java:4209 src/TabJobs.java:12044 src/TabRestore.java:3092
 msgid "file"
 msgstr "Datei"
 
-#: src/Dialogs.java:4458
+#: src/Dialogs.java:4447
 msgid "Path"
 msgstr "Pfad"
 
-#: src/Dialogs.java:4484 src/ServerSettings.java:783 src/TabJobs.java:3549
+#: src/Dialogs.java:4473 src/ServerSettings.java:783 src/TabJobs.java:3549
 #: src/TabJobs.java:3617 src/TabJobs.java:3727 src/TabJobs.java:3795
 #: src/TabJobs.java:4188 src/TabJobs.java:4256 src/TabJobs.java:5242
 #: src/TabJobs.java:5310 src/TabJobs.java:9862 src/TabJobs.java:9946
@@ -1643,7 +1643,7 @@ msgstr "Pfad"
 msgid "Remove"
 msgstr "Löschen"
 
-#: src/Dialogs.java:4542 src/ServerSettings.java:605 src/TabJobs.java:12037
+#: src/Dialogs.java:4531 src/ServerSettings.java:605 src/TabJobs.java:12037
 #: src/TabJobs.java:15301 src/TabJobs.java:15861 src/TabRestore.java:4686
 #: src/TabRestore.java:4942 src/TabRestore.java:4986 src/TabRestore.java:6469
 #: src/TabRestore.java:9337 src/TabStatus.java:677 src/TabStatus.java:754
@@ -1651,30 +1651,30 @@ msgstr "Löschen"
 msgid "Type"
 msgstr "Typ"
 
-#: src/Dialogs.java:4549 src/TabRestore.java:5680
+#: src/Dialogs.java:4538 src/TabRestore.java:5680
 msgid "Modified"
 msgstr "Letzte Änderung"
 
-#: src/Dialogs.java:4556 src/ServerSettings.java:614 src/TabJobs.java:8626
+#: src/Dialogs.java:4545 src/ServerSettings.java:614 src/TabJobs.java:8626
 #: src/TabJobs.java:9028 src/TabRestore.java:4706 src/TabRestore.java:4996
 #: src/TabRestore.java:5288 src/TabRestore.java:5677 src/TabRestore.java:6472
 #: src/TabRestore.java:9333 src/TabRestore.java:9338
 msgid "Size"
 msgstr "Größe"
 
-#: src/Dialogs.java:4582 src/TabRestore.java:6266 src/TabRestore.java:6797
+#: src/Dialogs.java:4571 src/TabRestore.java:6266 src/TabRestore.java:6797
 msgid "Filter"
 msgstr "Filter"
 
-#: src/Dialogs.java:4596
+#: src/Dialogs.java:4585
 msgid "show hidden"
 msgstr "versteckte Einträge anzeigen"
 
-#: src/Dialogs.java:4648
+#: src/Dialogs.java:4637
 msgid "Open"
 msgstr "Öffnen"
 
-#: src/Dialogs.java:4651 src/Dialogs.java:5904 src/Dialogs.java:6075
+#: src/Dialogs.java:4640 src/Dialogs.java:5893 src/Dialogs.java:6064
 #: src/ServerSettings.java:690 src/ServerSettings.java:2064
 #: src/TabJobs.java:12281 src/TabJobs.java:12668 src/TabJobs.java:13218
 #: src/TabJobs.java:13762 src/TabJobs.java:14905 src/TabJobs.java:15555
@@ -1682,25 +1682,25 @@ msgstr "Öffnen"
 msgid "Save"
 msgstr "Speichern"
 
-#: src/Dialogs.java:4655 src/Dialogs.java:6620 src/Dialogs.java:6722
+#: src/Dialogs.java:4644 src/Dialogs.java:6609 src/Dialogs.java:6711
 msgid "Select"
 msgstr "Auswählen"
 
-#: src/Dialogs.java:4751
+#: src/Dialogs.java:4740
 #, java-format
 msgid "''{0}'' is not a directory!"
 msgstr "''{0}'' ist kein Verzeichnis!"
 
-#: src/Dialogs.java:4755
+#: src/Dialogs.java:4744
 #, java-format
 msgid "''{0}'' does not exists"
 msgstr "''{0}'' existiert nicht"
 
-#: src/Dialogs.java:6771 src/Dialogs.java:6810
+#: src/Dialogs.java:6760 src/Dialogs.java:6799
 msgid "Busy"
 msgstr "Vorgang"
 
-#: src/Dialogs.java:6840
+#: src/Dialogs.java:6829
 msgid "Progress"
 msgstr "Fortschritt"
 

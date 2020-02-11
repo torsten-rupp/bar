@@ -1153,9 +1153,10 @@ class Dialogs
   {
     if (!dialog.isDisposed())
     {
-Dprintf.dprintf("returnValue=%s",returnValue);
       dialog.setData(returnValue);
       dialog.close();
+      // Note: sometimes it seems the close() does not generate a wake-up of the main event loop?
+      dialog.getDisplay().wake();
     }
   }
 
@@ -1343,7 +1344,6 @@ Dprintf.dprintf("returnValue=%s",returnValue);
         }
       });
 
-Dprintf.dprintf("+++++++++++++++++++");
       // add result handler
       dialog.addDisposeListener\u200b(new DisposeListener()
       {
@@ -1351,44 +1351,34 @@ Dprintf.dprintf("+++++++++++++++++++");
         {
           // get result
           result[0] = (T)disposeEvent.widget.getData();
-Dprintf.dprintf("result[0]=%s",result[0]);
 
           // set escape result if no result set
           if (result[0] == null) result[0] = escapeKeyReturnValue;
 
-Dprintf.dprintf("");
           // execute dialog runnable
           if (dialogRunnable != null)
           {
             dialogRunnable.done(result[0]);
           }
-Dprintf.dprintf("");
-display.wake();
         }
       });
-      
+
 
       // show
       show(dialog);
 
-Dprintf.dprintf("");
       if ((dialog.getStyle() & SWT.APPLICATION_MODAL) == SWT.APPLICATION_MODAL)
       {
         // run dialog
         try
         {
-Dprintf.dprintf("");
           while (!dialog.isDisposed())
           {
-Dprintf.dprintf("1");
             if (!display.readAndDispatch()) display.sleep();
-Dprintf.dprintf("2");
           }
-Dprintf.dprintf("");
         }
         catch (Throwable throwable)
         {
-Dprintf.dprintf("");
           // close dialog
           if (!dialog.isDisposed())
           {
@@ -1397,7 +1387,6 @@ Dprintf.dprintf("");
             dialog.notifyListeners(SWT.Close,event);
           }
         }
-Dprintf.dprintf("result[0]=%s",result[0]);
 
         // update all
         display.update();
@@ -4955,7 +4944,6 @@ Dprintf.dprintf("result[0]=%s",result[0]);
         {
           fileGeometry = dialog.getSize();
           T file = (T)widgetPath.getData();
-Dprintf.dprintf("-------------------");
           close(dialog,
                 (widgetName != null)
                   ? listDirectory.newFileInstance(file,widgetName.getText()).getAbsolutePath()
@@ -5104,7 +5092,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-    
+
     return result;
   }
 
@@ -5655,7 +5643,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-    
+
     return result;
   }
 
@@ -5846,7 +5834,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-    
+
     return result;
   }
 
@@ -6016,7 +6004,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-    
+
     return result;
   }
 
@@ -6199,7 +6187,7 @@ Dprintf.dprintf("-------------------");
     {
       result =null;
     }
-    
+
     return result;
   }
 
@@ -6386,7 +6374,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-    
+
     return result;
   }
 
@@ -6561,7 +6549,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-    
+
     return result;
   }
 
@@ -7012,7 +7000,7 @@ Dprintf.dprintf("-------------------");
     {
       result = null;
     }
-    
+
     return result;
   }
 
