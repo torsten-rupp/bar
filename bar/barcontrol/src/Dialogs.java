@@ -1345,7 +1345,7 @@ class Dialogs
       });
 
       // add result handler
-      dialog.addDisposeListener\u200b(new DisposeListener()
+      dialog.addDisposeListener(new DisposeListener()
       {
         public void widgetDisposed(DisposeEvent disposeEvent)
         {
