@@ -10456,6 +10456,9 @@ TODO: implement delete entity
       {
         JobData jobData = (JobData)event.data;
         setSelectedJob(jobData);
+
+        addDirectoryRoots();
+        addDevicesList();
       }
     });
 
@@ -11270,7 +11273,8 @@ throw new Error("NYI");
     final ArrayList<String> rootNameList = new ArrayList<String>();
     try
     {
-      BARServer.executeCommand(StringParser.format("ROOT_LIST allMounts=no"
+      BARServer.executeCommand(StringParser.format("ROOT_LIST jobUUID=%s allMounts=no",
+                                                   (selectedJobData != null) ? selectedJobData.uuid : ""
                                                   ),
                                1,  // debugLevel
                                new Command.ResultHandler()
@@ -11285,7 +11289,11 @@ throw new Error("NYI");
                                }
                               );
     }
-    catch (Exception exception)
+    catch (BARException exception)
+    {
+      // ignored
+    }
+    catch (IOException exception)
     {
       // ignored
     }
@@ -11834,7 +11842,9 @@ throw new Error("NYI");
     try
     {
       final DeviceDataComparator deviceDataComparator = new DeviceDataComparator(widgetDeviceTable);
-      BARServer.executeCommand(StringParser.format("DEVICE_LIST"),
+      BARServer.executeCommand(StringParser.format("DEVICE_LIST jobUUID=%s",
+                                                   (selectedJobData != null) ? selectedJobData.uuid : ""
+                                                  ),
                                1,  // debugLevel
                                new Command.ResultHandler()
                                {
@@ -11868,7 +11878,14 @@ throw new Error("NYI");
                                }
                               );
     }
-    catch (Exception exception)
+    catch (BARException exception)
+    {
+      if (!shell.isDisposed())
+      {
+        Dialogs.error(shell,BARControl.tr("Cannot get device list (error: {0})",exception.getMessage()));
+      }
+    }
+    catch (IOException exception)
     {
       if (!shell.isDisposed())
       {
