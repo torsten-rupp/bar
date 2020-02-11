@@ -2551,11 +2551,13 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
 {
   String storageName;
   ulong  n;
+  ulong  total;
 
   if (verboseFlag) { fprintf(stderr,"Clean-up orphaned entries:\n"); }
 
   // initialize variables
   storageName = String_new();
+  total       = 0;
 
   // clean-up fragments/directory entries/link entries/special entries without storage name
   n = 0L;
@@ -2591,7 +2593,8 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
                          "
                         );
-  fprintf(stdout,"  %lu without storage name\n",n);
+  if (verboseFlag) { fprintf(stdout,"  %lu without storage name\n",n); }
+  total += n;
 
   // clean-up entries without storage
   n = 0L;
@@ -2665,7 +2668,8 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          ",
                          INDEX_CONST_TYPE_SPECIAL
                         );
-  fprintf(stdout,"  %lu without storage\n",n);
+  if (verboseFlag) { fprintf(stdout,"  %lu without storage\n",n); }
+  total += n;
 
   // clean-up storages
   n = 0L;
@@ -2676,7 +2680,8 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE name IS NULL OR name=''; \
                          "
                         );
-  fprintf(stdout,"  %lu storages\n",n);
+  if (verboseFlag) { fprintf(stdout,"  %lu storages\n",n); }
+  total += n;
 
   // clean-up *Entries without entry
   n = 0L;
@@ -2908,7 +2913,10 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
-  fprintf(stdout,"  %lu entries\n",n);
+  if (verboseFlag) { fprintf(stdout,"  %lu entries\n",n); }
+  total += n;
+
+  fprintf(stdout,"Clean-up %lu orphaned entries\n",n);
 
   // free resources
   String_delete(storageName);
@@ -3000,6 +3008,7 @@ LOCAL void cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
 //              && Storage_equalNames(storageName,duplicateStorageName)
 //          error = Index_deleteStorage(indexHandle,deleteStorageIndexId);
 #endif
+
   fprintf(stdout,"Clean-up %lu duplicate entries\n",n);
 
   // free resources
