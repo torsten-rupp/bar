@@ -2659,8 +2659,6 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
   assert ((databaseHandle->databaseNode->readCount > 0) || (databaseHandle->databaseNode->readWriteCount > 0));
   assert(databaseHandle->handle != NULL);
 
-  if (changedRowCount != NULL) (*changedRowCount) = 0L;
-
   maxRetryCount = (timeout != WAIT_FOREVER) ? (uint)((timeout+SLEEP_TIME-1L)/SLEEP_TIME) : 0;
   sqlCommand    = stringTrimBegin(sqlString);
   error         = ERROR_NONE;
@@ -6029,9 +6027,6 @@ Errors Database_vexecute(DatabaseHandle      *databaseHandle,
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
   assert(databaseHandle->handle != NULL);
   assert(command != NULL);
-
-  // init variables
-  if (changedRowCount != NULL) (*changedRowCount) = 0L;
 
   // format SQL command string
   sqlString = vformatSQLString(String_new(),
