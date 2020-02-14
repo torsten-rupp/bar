@@ -1153,10 +1153,13 @@ class Dialogs
   {
     if (!dialog.isDisposed())
     {
+      Display display = dialog.getDisplay();
+
       dialog.setData(returnValue);
       dialog.close();
+
       // Note: sometimes it seems the close() does not generate a wake-up of the main event loop?
-      dialog.getDisplay().wake();
+      display.wake();
     }
   }
 
