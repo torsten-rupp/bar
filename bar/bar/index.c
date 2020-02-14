@@ -8649,7 +8649,8 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                           IndexId     entityId
                          )
 {
-  Errors error;
+  Errors     error;
+  DatabaseId uuidId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
@@ -8665,15 +8666,47 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-      return Database_execute(&indexHandle->databaseHandle,
-                              CALLBACK_(NULL,NULL),  // databaseRowFunction
-                              NULL,  // changedRowCount
-                              "UPDATE entities \
-                               SET deletedFlag=1 \
-                               WHERE id=%lld \
-                              ",
-                              Index_getDatabaseId(entityId)
-                             );
+      // get UUID id
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &uuidId,
+                             "entities LEFT JOIN uuids ON uuiuds.jobUUID=entities.jobUUID",
+                             "uuids.id",
+                             "WHERE entities.id=%lld \
+                             ",
+                             Index_getDatabaseId(entityId)
+                            );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // set deleted flag
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "UPDATE entities \
+                                SET deletedFlag=1 \
+                                WHERE id=%lld \
+                               ",
+                               Index_getDatabaseId(entityId)
+                              );
+      if (error == ERROR_NONE)
+      {
+        return error;
+      }
+
+      // prune UUID
+      error = pruneUUID(indexHandle,
+                         NULL,  // doneFlag
+                         NULL,  // deletedCounter
+                         uuidId
+                        );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      return ERROR_NONE;
     });
     if (error == ERROR_NONE)
     {
@@ -9494,6 +9527,7 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
                           )
 {
   Errors              error;
+  DatabaseId          entityId;
   DatabaseQueryHandle databaseQueryHandle;
   ulong               totalEntryCount;
   uint64              totalEntrySize;
@@ -9521,6 +9555,20 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
+      // get entity id
+      error = Database_getId(&indexHandle->databaseHandle,
+                             &entityId,
+                             "storages",
+                             "entityId",
+                             "WHERE id=%lld \
+                             ",
+                             Index_getDatabaseId(storageId)
+                            );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
       // get aggregate data
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
@@ -9633,8 +9681,19 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
                                totalHardlinkCount,
                                totalHardlinkSize,
                                totalSpecialCount,
-                               Index_getDatabaseId(storageId)
+                               entityId
                               );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // prune entity
+      error = pruneEntity(indexHandle,
+                          NULL,  // doneFlag
+                          NULL,  // deletedCounter
+                          entityId
+                         );
       if (error != ERROR_NONE)
       {
         return error;
