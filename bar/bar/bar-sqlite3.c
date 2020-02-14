@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <inttypes.h>
 #include <time.h>
 #include <sys/time.h>
@@ -114,6 +115,29 @@ bool xxxFlag = FALSE;
 #endif
 
 /***********************************************************************\
+* Name   : printError
+* Purpose: print error message
+* Input  : format - printf-format string
+*          ...    - optional arguments
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void printError(const char *format, ...)
+{
+  va_list arguments;
+
+  assert(format != NULL);
+
+  va_start(arguments,format);
+  fprintf(stderr,"ERROR: ");
+  vfprintf(stderr,format,arguments);
+  fprintf(stderr,"\n");
+  va_end(arguments);
+}
+
+/***********************************************************************\
 * Name   : printUsage
 * Purpose: print usage
 * Input  : programName - program name
@@ -188,7 +212,7 @@ LOCAL int sqlProgressHandler(void *userData)
   {
     if (verboseFlag)
     {
-      fprintf(stderr,"%c\b",WHEEL[count%4]); fflush(stderr); count++;
+      fprintf(stdout,"%c\b",WHEEL[count%4]); count++; fflush(stdout);
     }
     lastTimestamp = timestamp;
   }
@@ -259,7 +283,7 @@ LOCAL void printPercentage(ulong n, ulong count)
   percentage = (count > 0) ? (uint)(((double)n*100.0)/(double)count) : 0;
   if (percentage > 100) percentage = 100;
 
-  fprintf(stderr,"%3u%%\b\b\b\b",percentage); fflush(stderr);
+  fprintf(stdout,"%3u%%\b\b\b\b",percentage); fflush(stdout);
 }
 
 /***********************************************************************\
@@ -275,12 +299,12 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
 {
   Errors error;
 
-  if (verboseFlag) { fprintf(stderr,"Create..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stdout,"Create..."); fflush(stdout); }
 
   // check if exists
   if (!forceFlag && File_existsCString(databaseFileName))
   {
-    fprintf(stderr,"ERROR: database file already exists! Use --force if needed.\n");
+    printError("database file already exists! Use --force if needed.");
     return ERROR_DATABASE_EXISTS;
   }
 
@@ -291,7 +315,7 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
   error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_CREATE,WAIT_FOREVER);
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create database fail: %s!\n",Error_getText(error));
+    printError("create database fail: %s!",Error_getText(error));
     return error;
   }
 
@@ -303,11 +327,11 @@ LOCAL Errors createDatabase(DatabaseHandle *databaseHandle, const char *database
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create database fail: %s!\n",Error_getText(error));
+    printError("create database fail: %s!",Error_getText(error));
     return error;
   }
 
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  if (verboseFlag) fprintf(stdout,"OK  \n"); fflush(stdout);
 
   return ERROR_NONE;
 }
@@ -325,17 +349,17 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFi
 {
   Errors error;
 
-  if (verboseFlag) { fprintf(stderr,"Open database '%s'...",databaseFileName); fflush(stderr); }
+  if (verboseFlag) { fprintf(stdout,"Open database '%s'...",databaseFileName); fflush(stdout); }
 
   error = Database_open(databaseHandle,databaseFileName,DATABASE_OPENMODE_READWRITE,WAIT_FOREVER);
   if (error != ERROR_NONE)
   {
     if (verboseFlag) fprintf(stderr,"FAIL\n");
-    fprintf(stderr,"ERROR: cannot open database '%s' (Error: %s)!\n",databaseFileName,Error_getText(error));
+    printError("cannot open database '%s' (Error: %s)!",databaseFileName,Error_getText(error));
     return error;
   }
 
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  if (verboseFlag) fprintf(stdout,"OK  \n"); fflush(stdout);
 
   return ERROR_NONE;
 }
@@ -351,9 +375,9 @@ LOCAL Errors openDatabase(DatabaseHandle *databaseHandle, const char *databaseFi
 
 LOCAL void closeDatabase(DatabaseHandle *databaseHandle)
 {
-  if (verboseFlag) { fprintf(stderr,"Close database..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stdout,"Close database..."); fflush(stdout); }
   Database_close(databaseHandle);
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  if (verboseFlag) fprintf(stdout,"OK  \n"); fflush(stdout);
 }
 
 /***********************************************************************\
@@ -371,7 +395,7 @@ LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
 
   printf("Check:\n");
 
-  fprintf(stderr,"  Quick integrity...");
+  fprintf(stdout,"  Quick integrity..."); fflush(stdout);
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -379,14 +403,14 @@ LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    fprintf(stderr,"ok\n");
+    fprintf(stdout,"ok\n"); fflush(stdout);
   }
   else
   {
     fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
   }
 
-  fprintf(stderr,"  Foreign key...");
+  fprintf(stdout,"  Foreign key..."); fflush(stdout);
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -394,15 +418,15 @@ LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    fprintf(stderr,"ok\n");
+    fprintf(stdout,"ok\n"); fflush(stdout);
   }
   else
   {
     fprintf(stderr,"FAIL: %s!\n",Error_getText(error));
   }
 
-  if (verboseFlag) { fprintf(stderr,"Create triggers..."); fflush(stderr); }
-  fprintf(stderr,"  Full integrity...");
+  if (verboseFlag) { fprintf(stdout,"Create triggers..."); fflush(stdout); }
+  fprintf(stdout,"  Full integrity..."); fflush(stdout);
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -410,7 +434,7 @@ LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
                           );
   if (error == ERROR_NONE)
   {
-    fprintf(stderr,"ok\n");
+    fprintf(stdout,"ok\n"); fflush(stdout);
   }
   else
   {
@@ -498,7 +522,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   Errors error;
   char   name[1024];
 
-  if (verboseFlag) { fprintf(stderr,"Create triggers..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stdout,"Create triggers..."); fflush(stdout); }
 
   // delete all existing triggers
   do
@@ -537,7 +561,7 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create triggers fail: %s!\n",Error_getText(error));
+    printError("create triggers fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -550,11 +574,11 @@ LOCAL void createTriggers(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create triggers fail: %s!\n",Error_getText(error));
+    printError("create triggers fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  if (verboseFlag) fprintf(stdout,"OK  \n"); fflush(stdout);
 }
 
 /***********************************************************************\
@@ -571,7 +595,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   Errors error;
   char   name[1024];
 
-  if (verboseFlag) { fprintf(stderr,"Create indizes:\n"); }
+  if (verboseFlag) { fprintf(stdout,"Create indizes:\n"); fflush(stdout); }
 
   // start transaction
   error = Database_execute(databaseHandle,
@@ -582,12 +606,12 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
   // delete all existing indizes
-  if (verboseFlag) { fprintf(stderr,"  Discard indizes..."); }
+  if (verboseFlag) { fprintf(stdout,"  Discard indizes..."); fflush(stdout); }
   do
   {
     stringClear(name);
@@ -624,7 +648,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -667,10 +691,10 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
+  if (verboseFlag) { fprintf(stdout,"OK  \n"); fflush(stdout); }
 
   // end transaction
   error = Database_execute(databaseHandle,
@@ -681,7 +705,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -694,12 +718,12 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
   // create new indizes
-  if (verboseFlag) { fprintf(stderr,"  Create new indizes..."); }
+  if (verboseFlag) { fprintf(stdout,"  Create new indizes..."); fflush(stdout); }
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -709,12 +733,12 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
+  if (verboseFlag) { fprintf(stdout,"OK  \n"); fflush(stdout); }
 
-  if (verboseFlag) { fprintf(stderr,"  Create new FTS..."); }
+  if (verboseFlag) { fprintf(stdout,"  Create new FTS..."); fflush(stdout); }
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -724,13 +748,13 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create FTS fail: %s!\n",Error_getText(error));
+    printError("create FTS fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  if (verboseFlag) { fprintf(stderr,"OK\n"); }
+  if (verboseFlag) { fprintf(stdout,"OK\n"); fflush(stdout); }
 
   // clear FTS names
-  if (verboseFlag) { fprintf(stderr,"  Discard FTS indizes..."); }
+  if (verboseFlag) { fprintf(stdout,"  Discard FTS indizes..."); fflush(stdout); }
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -739,7 +763,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
@@ -751,13 +775,13 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
+  if (verboseFlag) { fprintf(stdout,"OK  \n"); fflush(stdout); }
 
   // create FTS names
-  if (verboseFlag) { fprintf(stderr,"  Create new storage FTS index..."); }
+  if (verboseFlag) { fprintf(stdout,"  Create new storage FTS index..."); fflush(stdout); }
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -766,11 +790,11 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
-  if (verboseFlag) { fprintf(stderr,"  Create new entries FTS index..."); }
+  if (verboseFlag) { fprintf(stdout,"OK  \n"); fflush(stdout); }
+  if (verboseFlag) { fprintf(stdout,"  Create new entries FTS index..."); fflush(stdout); }
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -780,10 +804,10 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  if (verboseFlag) { fprintf(stderr,"OK  \n"); }
+  if (verboseFlag) { fprintf(stdout,"OK  \n"); fflush(stdout); }
 
   // end transaction
   error = Database_execute(databaseHandle,
@@ -794,7 +818,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: recreate indizes fail: %s!\n",Error_getText(error));
+    printError("recreate indizes fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 }
@@ -822,12 +846,12 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
+    printError("create newest fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
   // set entries offset/size
-  if (verboseFlag) { fprintf(stderr,"Create newest entries..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stdout,"Create newest entries..."); fflush(stdout); }
 
   // get total counts
   totalEntriesCount       = 0L;
@@ -853,7 +877,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
+    printError("create newest fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
@@ -877,7 +901,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
+    printError("create newest fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -892,14 +916,14 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                              "DELETE FROM entriesNewest LIMIT 0,1000"
                             );
     n += m;
-//fprintf(stderr,"%s, %d: m=%llu\n",__FILE__,__LINE__,m);
+//fprintf(stdout,"%s, %d: m=%llu\n",__FILE__,__LINE__,m);
     if (verboseFlag) printPercentage(n,totalEntriesCount+totalEntriesNewestCount);
   }
   while ((error == ERROR_NONE) && (m > 0));
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
+    printError("create newest fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -971,8 +995,8 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create newest fail for entries (error: %s)!\n",Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create newest fail for entries (error: %s)!",Error_getText(error));
                                return error;
                              }
 #if 0
@@ -1024,8 +1048,8 @@ String_delete(s);
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create newest fail for entries (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create newest fail for entries (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1053,10 +1077,10 @@ String_delete(s);
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
+    printError("create newest fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  if (verboseFlag) fprintf(stdout,"OK  \n"); fflush(stdout);
 
   // end transaction
   error = Database_execute(databaseHandle,
@@ -1066,7 +1090,7 @@ String_delete(s);
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create newest fail: %s!\n",Error_getText(error));
+    printError("create newest fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 }
@@ -1096,12 +1120,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
   // calculate directory content size/count aggregated data
-  if (verboseFlag) { fprintf(stderr,"Create aggregates for directory content..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stdout,"Create aggregates for directory content..."); }
 
   // get total count
   totalCount = 0L;
@@ -1131,7 +1155,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   n = 0L;
@@ -1151,7 +1175,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -1200,8 +1224,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1229,7 +1253,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
@@ -1273,8 +1297,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1302,7 +1326,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -1342,8 +1366,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1368,7 +1392,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
@@ -1388,7 +1412,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                              storageId = (DatabaseId)atoll(values[0]);
                              name      = String_newCString(values[1]);
-      //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -1406,8 +1430,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1432,7 +1456,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -1454,12 +1478,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                              storageId = (DatabaseId)atoll(values[0]);
                              name      = String_newCString(values[1]);
-      //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
                              {
-      //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
@@ -1473,8 +1497,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1499,7 +1523,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
@@ -1519,12 +1543,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                              storageId = (DatabaseId)atoll(values[0]);
                              name      = String_newCString(values[1]);
-      //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
                              {
-      //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
@@ -1538,8 +1562,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1564,7 +1588,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -1589,12 +1613,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              storageId = (DatabaseId)atoll(values[0]);
                              name      = String_newCString(values[1]);
                              totalSize = (uint64)atoll(values[2]);
-      //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
                              {
-      //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
@@ -1610,8 +1634,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1639,7 +1663,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -1662,12 +1686,12 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                              storageId = (DatabaseId)atoll(values[0]);
                              name      = String_newCString(values[1]);
                              totalSize = (uint64)atoll(values[2]);
-      //fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s fragmentSize=%llu\n",__FILE__,__LINE__,storageId,String_cString(name),fragmentSize);
 
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
                              {
-      //fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
+//fprintf(stderr,"%s, %d: name=%s\n",__FILE__,__LINE__,String_cString(name));
                                error = Database_execute(databaseHandle,
                                                         CALLBACK_(NULL,NULL),  // databaseRowFunction
                                                         NULL,  // changedRowCount
@@ -1683,8 +1707,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1712,7 +1736,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -1734,7 +1758,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                              storageId = (DatabaseId)atoll(values[0]);
                              name      = String_newCString(values[1]);
-      //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -1752,8 +1776,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1778,7 +1802,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -1798,7 +1822,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 
                              storageId = (DatabaseId)atoll(values[0]);
                              name      = String_newCString(values[1]);
-      //fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
+//fprintf(stderr,"%s, %d: storageId=%llu name=%s\n",__FILE__,__LINE__,storageId,String_cString(name));
 
                              // update directory content count/size aggregates in all directories
                              while (!String_isEmpty(File_getDirectoryName(name,name)))
@@ -1816,8 +1840,8 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                                                        );
                                if (error != ERROR_NONE)
                                {
-                                 if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                                 fprintf(stderr,"ERROR: create aggregates fail for entries: (error: %s)!\n",Error_getText(error));
+                                 if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                                 printError("create aggregates fail for entries: (error: %s)!",Error_getText(error));
                                  return error;
                                }
                              }
@@ -1842,7 +1866,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -1856,7 +1880,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
 }
@@ -1894,12 +1918,12 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
   // calculate storage total count/size aggregates
-  if (verboseFlag) { fprintf(stderr,"Create aggregates for entities..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stderr,"Create aggregates for entities..."); }
 
   // get entities total count
   totalCount = 0L;
@@ -1930,7 +1954,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   if (error != ERROR_NONE)
   {
     String_delete(entityIdsString);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
   n = 0L;
@@ -2022,8 +2046,8 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create aggregates fail for entity #%"PRIi64" (error: %s)!\n",entityId,Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
                                return error;
                              }
 
@@ -2046,8 +2070,8 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create aggregates fail for entity #%"PRIi64": (error: %s)!\n",entityId,Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create aggregates fail for entity #%"PRIi64": (error: %s)!",entityId,Error_getText(error));
                                return error;
                              }
 
@@ -2125,8 +2149,8 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create newest aggregates fail for entity #%"PRIi64" (error: %s)!\n",entityId,Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
                                return error;
                              }
 
@@ -2149,8 +2173,8 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create newest aggregates fail for entity #%"PRIi64" (error: %s)!\n",entityId,Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create newest aggregates fail for entity #%"PRIi64" (error: %s)!",entityId,Error_getText(error));
                                return error;
                              }
 
@@ -2173,10 +2197,10 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
     String_delete(entityIdsString);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  if (verboseFlag) { fprintf(stdout,"OK  \n"); fflush(stdout); }
 
   // end transaction
   error = Database_execute(databaseHandle,
@@ -2187,7 +2211,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
   if (error != ERROR_NONE)
   {
     String_delete(entityIdsString);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -2228,12 +2252,12 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
   // calculate storage total count/size aggregates
-  if (verboseFlag) { fprintf(stderr,"Create aggregates for storages..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stdout,"Create aggregates for storages..."); }
 
   // get storage total count
   totalCount = 0L;
@@ -2264,7 +2288,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   if (error != ERROR_NONE)
   {
     String_delete(storageIdsString);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
   n = 0L;
@@ -2362,8 +2386,8 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create aggregates fail for storage #%"PRIi64" (error: %s)!\n",storageId,Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create aggregates fail for storage #%"PRIi64" (error: %s)!",storageId,Error_getText(error));
                                return error;
                              }
 
@@ -2386,8 +2410,8 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create aggregates fail for storage #%"PRIi64": (error: %s)!\n",storageId,Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create aggregates fail for storage #%"PRIi64": (error: %s)!",storageId,Error_getText(error));
                                return error;
                              }
 
@@ -2468,8 +2492,8 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create newest aggregates fail for storage #%"PRIi64" (error: %s)!\n",storageId,Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create newest aggregates fail for storage #%"PRIi64" (error: %s)!",storageId,Error_getText(error));
                                return error;
                              }
 
@@ -2492,8 +2516,8 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
                                                      );
                              if (error != ERROR_NONE)
                              {
-                               if (verboseFlag) fprintf(stderr,"FAIL!\n");
-                               fprintf(stderr,"ERROR: create newest aggregates fail for storage #%"PRIi64" (error: %s)!\n",storageId,Error_getText(error));
+                               if (verboseFlag) fprintf(stdout,"FAIL!\n");
+                               printError("create newest aggregates fail for storage #%"PRIi64" (error: %s)!",storageId,Error_getText(error));
                                return error;
                              }
 
@@ -2516,10 +2540,10 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
     String_delete(storageIdsString);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  if (verboseFlag) { fprintf(stdout,"OK  \n"); fflush(stdout); }
 
   // end transaction
   error = Database_execute(databaseHandle,
@@ -2530,7 +2554,7 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
   if (error != ERROR_NONE)
   {
     String_delete(storageIdsString);
-    fprintf(stderr,"ERROR: create aggregates fail: %s!\n",Error_getText(error));
+    printError("create aggregates fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -2549,17 +2573,29 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
 LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
 {
+  Errors error;
   String storageName;
   ulong  n;
   ulong  total;
-
-  if (verboseFlag) { fprintf(stderr,"Clean-up orphaned entries:\n"); }
 
   // initialize variables
   storageName = String_new();
   total       = 0;
 
+  // start transaction
+  error = Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "BEGIN TRANSACTION"
+                          );
+  if (error != ERROR_NONE)
+  {
+    printError("clean fail: %s!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+
   // clean-up fragments/directory entries/link entries/special entries without storage name
+  if (verboseFlag) { fprintf(stdout,"Clean-up entries without storage name..."); fflush(stdout); }
   n = 0L;
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -2593,10 +2629,11 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE storages.id IS NULL OR storages.name IS NULL OR storages.name=''; \
                          "
                         );
-  if (verboseFlag) { fprintf(stdout,"  %lu without storage name\n",n); }
+  if (verboseFlag) { fprintf(stdout,"%lu\n",n); fflush(stdout); }
   total += n;
 
   // clean-up entries without storage
+  if (verboseFlag) { fprintf(stdout,"Clean-up entries without storage..."); fflush(stdout); }
   n = 0L;
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -2605,6 +2642,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE (SELECT COUNT(id) FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId)=0 \
                          "
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2612,6 +2650,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE (SELECT COUNT(id) FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId)=0 \
                          "
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2620,6 +2659,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          "
                         );
 
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2628,6 +2668,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          ",
                          INDEX_CONST_TYPE_FILE
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2636,6 +2677,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          ",
                          INDEX_CONST_TYPE_IMAGE
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2644,6 +2686,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          ",
                          INDEX_CONST_TYPE_DIRECTORY
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2652,6 +2695,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          ",
                          INDEX_CONST_TYPE_LINK
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2660,6 +2704,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          ",
                          INDEX_CONST_TYPE_HARDLINK
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2668,10 +2713,11 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                          ",
                          INDEX_CONST_TYPE_SPECIAL
                         );
-  if (verboseFlag) { fprintf(stdout,"  %lu without storage\n",n); }
+  if (verboseFlag) { fprintf(stdout,"%lu\n",n); }
   total += n;
 
   // clean-up storages
+  if (verboseFlag) { fprintf(stdout,"Clean-up storages..."); fflush(stdout); }
   n = 0L;
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -2680,10 +2726,11 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE name IS NULL OR name=''; \
                          "
                         );
-  if (verboseFlag) { fprintf(stdout,"  %lu storages\n",n); }
+  if (verboseFlag) { fprintf(stdout,"%lu\n",n); }
   total += n;
 
   // clean-up *Entries without entry
+  if (verboseFlag) { fprintf(stdout,"Clean-up orphaned entries..."); fflush(stdout); }
   n = 0L;
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
@@ -2723,6 +2770,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2761,6 +2809,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2799,6 +2848,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2837,6 +2887,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2875,6 +2926,7 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2913,10 +2965,22 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE entries.id IS NULL \
                          "
                         );
-  if (verboseFlag) { fprintf(stdout,"  %lu entries\n",n); }
+  if (verboseFlag) { fprintf(stdout,"%lu\n",n); }
   total += n;
 
-  fprintf(stdout,"Clean-up %lu orphaned entries\n",total);
+  // start transaction
+  error = Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           NULL,  // changedRowCount
+                           "END TRANSACTION"
+                          );
+  if (error != ERROR_NONE)
+  {
+    printError("clean fail: %s!",Error_getText(error));
+    exit(EXITCODE_FAIL);
+  }
+
+  fprintf(stdout,"Clean-up total %lu orphaned entries\n",total);
 
   // free resources
   String_delete(storageName);
@@ -2935,7 +2999,7 @@ LOCAL void cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
 {
   ulong n;
 
-  if (verboseFlag) { fprintf(stderr,"Clean-up duplicates:\n"); }
+  if (verboseFlag) { fprintf(stdout,"Clean-up duplicates:\n"); fflush(stdout); }
 
   // init variables
 
@@ -3027,7 +3091,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 {
   ulong n;
 
-  if (verboseFlag) { fprintf(stderr,"Purge deleted storages:\n"); }
+  if (verboseFlag) { fprintf(stdout,"Purge deleted storages:\n"); fflush(stdout); }
 
   // init variables
 
@@ -3048,7 +3112,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 
                            databaseId  = (int64)atoll(values[0]);
 
-                           if (verboseFlag) { fprintf(stderr,"  %ld...",databaseId); }
+                           if (verboseFlag) { fprintf(stdout,"  %ld...",databaseId); fflush(stdout); }
                            (void)Database_execute(databaseHandle,
                                                   CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                                                   {
@@ -3085,7 +3149,7 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
                                                   databaseId
                                                  );
 
-                           if (verboseFlag) { fprintf(stderr,"  OK\n"); }
+                           if (verboseFlag) { fprintf(stdout,"  OK\n"); fflush(stdout); }
 
                            return ERROR_NONE;
                          },NULL),
@@ -3112,7 +3176,7 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle)
 {
   Errors error;
 
-  if (verboseFlag) { fprintf(stderr,"Vacuum..."); fflush(stderr); }
+  if (verboseFlag) { fprintf(stdout,"Vacuum..."); fflush(stdout); }
 
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -3121,11 +3185,11 @@ LOCAL void vacuum(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: vacuum fail: %s!\n",Error_getText(error));
+    printError("vacuum fail: %s!",Error_getText(error));
     exit(1);
   }
 
-  if (verboseFlag) fprintf(stderr,"OK  \n");
+  if (verboseFlag) fprintf(stdout,"OK\n");
 }
 
 /***********************************************************************\
@@ -3263,7 +3327,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get meta data fail: %s!\n",Error_getText(error));
+    printError("get meta data fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -3279,7 +3343,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                                  );
     if (error != ERROR_NONE)
     {
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+      printError("get storage data fail: %s!",Error_getText(error));
       exit(1);
     }
     printf(": %"PRIi64,n);
@@ -3308,7 +3372,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    printError("get storage data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3334,7 +3398,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    printError("get storage data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3360,7 +3424,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    printError("get storage data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3385,7 +3449,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    printError("get storage data fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -3401,7 +3465,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                                  );
     if (error != ERROR_NONE)
     {
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+      printError("get storage data fail: %s!",Error_getText(error));
       exit(1);
     }
     printf(" %"PRIi64,n);
@@ -3439,7 +3503,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3471,7 +3535,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3503,7 +3567,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3532,7 +3596,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3561,7 +3625,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3593,7 +3657,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3622,7 +3686,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -3638,7 +3702,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                                  );
     if (error != ERROR_NONE)
     {
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+      printError("get storage data fail: %s!",Error_getText(error));
       exit(1);
     }
     printf(" %"PRIi64,n);
@@ -3673,7 +3737,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3705,7 +3769,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3737,7 +3801,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3766,7 +3830,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3795,7 +3859,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3827,7 +3891,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3856,7 +3920,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entries data fail: %s!\n",Error_getText(error));
+    printError("get entries data fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -3872,7 +3936,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                                  );
     if (error != ERROR_NONE)
     {
-      fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+      printError("get storage data fail: %s!",Error_getText(error));
       exit(1);
     }
     printf(" %"PRIi64,n);
@@ -3901,7 +3965,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entities data fail: %s!\n",Error_getText(error));
+    printError("get entities data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3927,7 +3991,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entities data fail: %s!\n",Error_getText(error));
+    printError("get entities data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3953,7 +4017,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entities data fail: %s!\n",Error_getText(error));
+    printError("get entities data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -3979,7 +4043,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entities data fail: %s!\n",Error_getText(error));
+    printError("get entities data fail: %s!",Error_getText(error));
     exit(1);
   }
   error = Database_execute(databaseHandle,
@@ -4005,7 +4069,7 @@ LOCAL void printInfo(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entities data fail: %s!\n",Error_getText(error));
+    printError("get entities data fail: %s!",Error_getText(error));
     exit(1);
   }
 }
@@ -4177,7 +4241,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get UUID data fail: %s!\n",Error_getText(error));
+    printError("get UUID data fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -4340,7 +4404,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entity data fail: %s!\n",Error_getText(error));
+    printError("get entity data fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -4491,7 +4555,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get storage data fail: %s!\n",Error_getText(error));
+    printError("get storage data fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -4660,7 +4724,7 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: get entity data fail: %s!\n",Error_getText(error));
+    printError("get entity data fail: %s!",Error_getText(error));
     exit(1);
   }
 
@@ -4698,7 +4762,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle)
                           );
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 
@@ -4728,7 +4792,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle)
                                UNUSED_VARIABLE(count);
                                UNUSED_VARIABLE(userData);
 
-//fprintf(stderr,"%s, %d: xadff %s %s %s %s\n",__FILE__,__LINE__,values[0 ],values[1 ],values[2 ],values[3 ]);
+//fprintf(stderr,"%s, %d: %s %s %s %s\n",__FILE__,__LINE__,values[0 ],values[1 ],values[2 ],values[3 ]);
 
                                return Database_execute(databaseHandle,
                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -4790,7 +4854,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle)
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   error = Database_execute(databaseHandle,
@@ -4807,7 +4871,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle)
                                UNUSED_VARIABLE(count);
                                UNUSED_VARIABLE(userData);
 
-//fprintf(stderr,"%s, %d: xadff %s %s %s %s\n",__FILE__,__LINE__,values[0 ],values[1 ],values[2 ],values[3 ]);
+//fprintf(stderr,"%s, %d: %s %s %s %s\n",__FILE__,__LINE__,values[0 ],values[1 ],values[2 ],values[3 ]);
 
                              return Database_execute(databaseHandle,
                                                      CALLBACK_(NULL,NULL),  // databaseRowFunction
@@ -4869,7 +4933,7 @@ LOCAL void xxx(DatabaseHandle *databaseHandle)
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -4949,7 +5013,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -5029,7 +5093,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 #if 0
@@ -5066,7 +5130,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -5103,7 +5167,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -5141,7 +5205,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     printf("FAIL\n");
     (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
@@ -5156,7 +5220,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   if (error != ERROR_NONE)
   {
     printf("FAIL\n");
-    fprintf(stderr,"ERROR: xxx fail: %s!\n",Error_getText(error));
+    printError("fail: %s!",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 }
@@ -5180,13 +5244,13 @@ LOCAL void initAll(void)
   error = Thread_initAll();
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: %s\n",Error_getText(error));
+    printError("%s",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
   error = Database_initAll();
   if (error != ERROR_NONE)
   {
-    fprintf(stderr,"ERROR: %s\n",Error_getText(error));
+    printError("%s",Error_getText(error));
     exit(EXITCODE_FAIL);
   }
 }
@@ -5454,7 +5518,7 @@ int main(int argc, const char *argv[])
     {
       if ((i+1) >= (uint)argc)
       {
-        fprintf(stderr,"ERROR: expected path name for option --tmp-directory!\n");
+        printError("expected path name for option --tmp-directory!");
         String_delete(commands);
         exit(EXITCODE_INVALID_ARGUMENT);
       }
@@ -5493,7 +5557,7 @@ else if (stringEquals(argv[i],"--xxx"))
     }
     else if (stringStartsWith(argv[i],"-"))
     {
-      fprintf(stderr,"ERROR: unknown option '%s'!\n",argv[i]);
+      printError("unknown option '%s'!",argv[i]);
       String_delete(commands);
       exit(EXITCODE_INVALID_ARGUMENT);
     }
@@ -5534,7 +5598,7 @@ else if (stringEquals(argv[i],"--xxx"))
   // check arguments
   if (databaseFileName == NULL)
   {
-    fprintf(stderr,"ERROR: no database file name given!\n");
+    printError("no database file name given!");
     String_delete(commands);
     exit(EXITCODE_INVALID_ARGUMENT);
   }
@@ -5617,7 +5681,6 @@ else if (stringEquals(argv[i],"--xxx"))
           && !inputAvailable())
      )
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     printInfo(&databaseHandle);
   }
 
@@ -5924,7 +5987,7 @@ if (xxxFlag)
         if (error != ERROR_NONE)
         {
           printf("FAIL\n");
-          fprintf(stderr,"ERROR: start transaction fail: %s!\n",Error_getText(error));
+          printError("start transaction fail: %s!",Error_getText(error));
           String_delete(commands);
           exit(EXITCODE_FAIL);
         }
@@ -5937,7 +6000,7 @@ if (xxxFlag)
         {
           if (statementHandleCount > SIZE_OF_ARRAY(statementHandles))
           {
-            fprintf(stderr,"ERROR: too many SQL commands (limit %lu)!\n",SIZE_OF_ARRAY(statementHandles));
+            printError("too many SQL commands (limit %lu)!",SIZE_OF_ARRAY(statementHandles));
             String_delete(commands);
             exit(EXITCODE_FAIL);
           }
@@ -5952,7 +6015,7 @@ if (xxxFlag)
           if (sqliteResult != SQLITE_OK)
           {
             (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-//TODO          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,command,sqlite3_errmsg(databaseHandle));
+//TODO          printError("SQL command #%u: '%s' fail: %s!",i+1,command,sqlite3_errmsg(databaseHandle));
             String_delete(commands);
             exit(EXITCODE_FAIL);
           }
@@ -6009,7 +6072,7 @@ if (xxxFlag)
               {
                 String_delete(s);
                 (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-                fprintf(stderr,"ERROR: Invalid data '%s'!\n",String_cString(string));
+                printError("Invalid data '%s'!",String_cString(string));
                 String_delete(commands);
                 exit(EXITCODE_FAIL);
               }
@@ -6041,7 +6104,7 @@ if (xxxFlag)
           {
             String_delete(s);
             (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-//TODO          fprintf(stderr,"ERROR: SQL command #%u: '%s' fail: %s!\n",i+1,String_cString(commands),sqlite3_errmsg(databaseHandle));
+//TODO          printError("SQL command #%u: '%s' fail: %s!",i+1,String_cString(commands),sqlite3_errmsg(databaseHandle));
             String_delete(commands);
             exit(EXITCODE_FAIL);
           }
@@ -6063,7 +6126,7 @@ if (xxxFlag)
                                 );
         if (error != ERROR_NONE)
         {
-          fprintf(stderr,"ERROR: end transaction fail: %s!\n",Error_getText(error));
+          printError("end transaction fail: %s!",Error_getText(error));
           String_delete(commands);
           exit(EXITCODE_FAIL);
         }
@@ -6085,7 +6148,7 @@ if (xxxFlag)
         String_delete(s);
         if (error != ERROR_NONE)
         {
-          fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",String_cString(commands),Error_getText(error));
+          printError("SQL command '%s' fail: %s!",String_cString(commands),Error_getText(error));
           String_delete(commands);
           exit(EXITCODE_FAIL);
         }
@@ -6109,7 +6172,7 @@ if (xxxFlag)
     }
     else
     {
-      fprintf(stderr,"ERROR: SQL command '%s' fail: %s!\n",l,Error_getText(error));
+      printError("SQL command '%s' fail: %s!",l,Error_getText(error));
       String_delete(commands);
       exit(EXITCODE_FAIL);
     }
