@@ -4774,7 +4774,6 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
   // delete storage index
   if (error == ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxx\n",__FILE__,__LINE__);
     error = Database_execute(&indexHandle->databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              NULL,  // changedRowCount
@@ -12408,7 +12407,6 @@ Errors Index_addFile(IndexHandle *indexHandle,
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(name != NULL);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   // check init error
   if (indexHandle->upgradeError != ERROR_NONE)
   {
@@ -12587,7 +12585,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                     fragmentSize
                                    );
   }
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
 
   return error;
 }
