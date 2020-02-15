@@ -53,7 +53,6 @@
 
 // different timeouts [ms]
 #define WEBDAV_TIMEOUT (30*1000)
-#define READ_TIMEOUT   (60*1000)
 
 #define INITIAL_BUFFER_SIZE   (64*1024)
 #define INCREMENT_BUFFER_SIZE ( 8*1024)
@@ -1853,23 +1852,24 @@ LOCAL Errors StorageWebDAV_read(StorageHandle *storageHandle,
               )
         {
           // wait for socket
-          error = waitCurlSocket(storageHandle->webdav.curlMultiHandle);
+          waitCurlSocketRead(storageHandle->webdav.curlMultiHandle);
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
 
           // perform curl action
-          if (error == ERROR_NONE)
+          do
           {
-            do
-            {
-              curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
+            curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
 //fprintf(stderr,"%s, %d: curlmCode=%d %ld receive=%ld length=%ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.sendBuffer.index,storageHandle->webdav.receiveBuffer.length,length,runningHandles);
-            }
-            while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                   && (runningHandles > 0)
-                  );
-            if (curlmCode != CURLM_OK)
-            {
-              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-            }
+          }
+          while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                 && (runningHandles > 0)
+                );
+          if (curlmCode != CURLM_OK)
+          {
+            error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
           }
         }
         if      (error != ERROR_NONE)
@@ -1994,23 +1994,24 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
             )
       {
         // wait for socket
-        error = waitCurlSocket(storageHandle->webdav.curlMultiHandle);
+        waitCurlSocketWrite(storageHandle->webdav.curlMultiHandle);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
 
         // perform curl action
-        if (error == ERROR_NONE)
+        do
         {
-          do
-          {
-            curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
+          curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
 //fprintf(stderr,"%s, %d: curlmCode=%d %ld %ld runningHandles=%d\n",__FILE__,__LINE__,curlmCode,storageHandle->webdav.sendBuffer.index,storageHandle->webdav.sendBuffer.length,runningHandles);
-          }
-          while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                 && (runningHandles > 0)
-                );
-          if (curlmCode != CURLM_OK)
-          {
-            error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
-          }
+        }
+        while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+               && (runningHandles > 0)
+              );
+        if (curlmCode != CURLM_OK)
+        {
+          error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
         }
       }
       if (error != ERROR_NONE)
@@ -2182,7 +2183,7 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
                 )
           {
             // wait for socket
-            error = waitCurlSocket(storageHandle->webdav.curlMultiHandle);
+            waitCurlSocketRead(storageHandle->webdav.curlMultiHandle);
             if (error != ERROR_NONE)
             {
               break;
@@ -2776,6 +2777,7 @@ LOCAL bool StorageWebDAV_endOfDirectoryList(StorageDirectoryListHandle *storageD
   assert(storageDirectoryListHandle->type == STORAGE_TYPE_WEBDAV);
 
   endOfDirectoryFlag = TRUE;
+
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
     if (storageDirectoryListHandle->webdav.currentNode == NULL)
     {
