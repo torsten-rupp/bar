@@ -5167,7 +5167,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       if (error == ERROR_NONE)
       {
         // delete all matching storage files which are unknown
-        (void)Storage_forAll(pattern,
+        (void)Storage_forAll(&createInfo->storageInfo.storageSpecifier,
+                             pattern,
                              CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                              {
                                StorageSpecifier storageSpecifier;
