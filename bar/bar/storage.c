@@ -39,6 +39,7 @@
 #include "common/network.h"
 #include "common/semaphores.h"
 #include "common/passwords.h"
+#include "common/patterns.h"
 #include "common/misc.h"
 
 #include "errors.h"
@@ -53,18 +54,19 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-const StorageFlags STORAGE_FLAGS_NONE       = { .noStorage=FALSE, .dryRun=FALSE };
-const StorageFlags STORAGE_FLAGS_NO_STORAGE = { .noStorage=TRUE, .dryRun=FALSE };
+const StorageFlags            STORAGE_FLAGS_NONE       = { .noStorage=FALSE, .dryRun=FALSE };
+const StorageFlags            STORAGE_FLAGS_NO_STORAGE = { .noStorage=TRUE, .dryRun=FALSE };
 
 /* file data buffer size */
-#define BUFFER_SIZE (64*1024)
+#define BUFFER_SIZE           (64*1024)
 
 // max. number of password input requests
 #define MAX_PASSWORD_REQUESTS 3
 
 // different timeouts [ms]
-#define SSH_TIMEOUT    (30*1000)
-#define READ_TIMEOUT   (60*1000)
+#define SSH_TIMEOUT           (30*MS_PER_SECOND)
+#define READ_TIMEOUT          (60*MS_PER_SECOND)
+#define WRITE_TIMEOUT         (60*MS_PER_SECOND)
 
 #define INITIAL_BUFFER_SIZE   (64*1024)
 #define INCREMENT_BUFFER_SIZE ( 8*1024)
@@ -173,15 +175,15 @@ LOCAL size_t curlNopDataCallback(void   *buffer,
 }
 
 /***********************************************************************\
-* Name   : waitCurlSocket
-* Purpose: wait for Curl socket
+* Name   : waitCurlSocketRead
+* Purpose: wait for Curl socket read
 * Input  : curlMultiHandle - Curl multi handle
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
+LOCAL Errors waitCurlSocketRead(CURLM *curlMultiHandle)
 {
   CURLMcode curlmCode;
   long      curlTimeout;
@@ -192,18 +194,65 @@ LOCAL Errors waitCurlSocket(CURLM *curlMultiHandle)
 
   // get a suitable timeout
   curl_multi_timeout(curlMultiHandle,&curlTimeout);
+//fprintf(stderr,"%s, %d: curlTimeout=%ld \n",__FILE__,__LINE__,curlTimeout);
 
   // wait
   curlmCode = curl_multi_poll(curlMultiHandle,
                               NULL,0,  // extra fds
-                              (curlTimeout > (long)READ_TIMEOUT) ? curlTimeout : READ_TIMEOUT,
+                              MAX(curlTimeout,READ_TIMEOUT),
                               &fdCount
                              );
   switch (curlmCode)
   {
     case CURLM_OK:
-      // OK/timeout
-      error = (fdCount > 0) ? ERROR_NONE : ERROR_NETWORK_TIMEOUT_RECEIVE;
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,fdCount);
+      // OK
+      error = ERROR_NONE;
+      break;
+    default:
+      // error
+      error = ERROR_NETWORK_RECEIVE;
+      break;
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : waitCurlSocketWrite
+* Purpose: wait for Curl socket write
+* Input  : curlMultiHandle - Curl multi handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors waitCurlSocketWrite(CURLM *curlMultiHandle)
+{
+  CURLMcode curlmCode;
+  long      curlTimeout;
+  Errors    error;
+  int       fdCount;
+
+  assert(curlMultiHandle != NULL);
+
+  // get a suitable timeout
+  curl_multi_timeout(curlMultiHandle,&curlTimeout);
+//fprintf(stderr,"%s, %d: curlTimeout=%ld \n",__FILE__,__LINE__,curlTimeout);
+
+  // wait
+  fdCount=0;
+  curlmCode = curl_multi_poll(curlMultiHandle,
+                              NULL,0,  // extra fds
+                              MAX(curlTimeout,WRITE_TIMEOUT),
+                              &fdCount
+                             );
+  switch (curlmCode)
+  {
+    case CURLM_OK:
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,fdCount);
+      // OK
+      error = ERROR_NONE;
       break;
     default:
       // error
@@ -3963,17 +4012,18 @@ NULL, // masterIO
   return ERROR_NONE;
 }
 
-Errors Storage_forAll(ConstString             storagePatternString,
+Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
+                      ConstString             patternString,
                       StorageFunction         storageFunction,
                       void                    *storageUserData,
                       StorageProgressFunction storageProgressFunction,
                       void                    *storageProgressUserData
                      )
 {
-  StorageSpecifier           storageSpecifier;
   JobOptions                 jobOptions;
   StringList                 directoryList;
   String                     name;
+  Pattern                    pattern;
   FileSystemInfo             fileSystemInfo;
   ulong                      totalCount;
   Errors                     error;
@@ -3981,98 +4031,116 @@ Errors Storage_forAll(ConstString             storagePatternString,
   ulong                      doneCount;
   FileInfo                   fileInfo;
 
-  assert(storagePatternString != NULL);
+  assert(storageSpecifier != NULL);
+  assert(patternString != NULL);
   assert(storageFunction != NULL);
 
   // init variables
-  Storage_initSpecifier(&storageSpecifier);
   Job_initOptions(&jobOptions);
   StringList_init(&directoryList);
   name = String_new();
 
-  // scan directories
-  error = Storage_parseName(&storageSpecifier,storagePatternString);
-  if (error == ERROR_NONE)
+  // parse pattern
+  if (patternString != NULL)
   {
-    // get file system info (if possible)
-    if (File_getFileSystemInfo(&fileSystemInfo,storageSpecifier.archiveName) == ERROR_NONE)
+    error = Pattern_init(&pattern,
+                         patternString,
+                         PATTERN_TYPE_GLOB,
+                         PATTERN_FLAG_NONE
+                        );
+    if (error != ERROR_NONE)
     {
-      totalCount = fileSystemInfo.totalFiles;
+      String_delete(name);
+      StringList_done(&directoryList);
+      Job_doneOptions(&jobOptions);
+      return error;
     }
-    else
+  }
+
+  // get total number of files (if possible)
+  if (File_getFileSystemInfo(&fileSystemInfo,storageSpecifier->archiveName) == ERROR_NONE)
+  {
+    totalCount = fileSystemInfo.totalFiles;
+  }
+  else
+  {
+    totalCount = 0L;
+  }
+
+  // read directory and scan all sub-directories
+  StringList_append(&directoryList,storageSpecifier->archiveName);
+  doneCount = 0L;
+  while (!StringList_isEmpty(&directoryList))
+  {
+    StringList_removeLast(&directoryList,name);
+
+    // open directory
+    error = Storage_openDirectoryList(&storageDirectoryListHandle,
+                                      storageSpecifier,
+                                      name,
+                                      &jobOptions,
+                                      SERVER_CONNECTION_PRIORITY_LOW
+                                     );
+
+    if (error == ERROR_NONE)
     {
-      totalCount = 0L;
-    }
-
-    // read directory and scan all sub-directories
-    StringList_append(&directoryList,storageSpecifier.archiveName);
-    doneCount = 0L;
-    while (!StringList_isEmpty(&directoryList))
-    {
-      StringList_removeLast(&directoryList,name);
-
-      // open directory
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        name,
-                                        &jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_LOW
-                                       );
-
-      if (error == ERROR_NONE)
+      // read directory
+      while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
+             && (error == ERROR_NONE)
+            )
       {
-        // read directory
-        while (   !Storage_endOfDirectoryList(&storageDirectoryListHandle)
-               && (error == ERROR_NONE)
-              )
+        // read next directory entry
+        error = Storage_readDirectoryList(&storageDirectoryListHandle,name,&fileInfo);
+        if (error != ERROR_NONE)
         {
-          // read next directory entry
-          error = Storage_readDirectoryList(&storageDirectoryListHandle,name,&fileInfo);
-          if (error != ERROR_NONE)
-          {
-            continue;
-          }
-
-          // check if sub-directory
-          if (fileInfo.type == FILE_TYPE_DIRECTORY)
-          {
-            StringList_append(&directoryList,name);
-          }
-
-          // match pattern and call storage callback
-          if (   (storageFunction != NULL)
-              && (   ((storageSpecifier.archivePatternString == NULL) && String_equals(storageSpecifier.archiveName,name))
-                  || ((storageSpecifier.archivePatternString != NULL) && Pattern_match(&storageSpecifier.archivePattern,name,PATTERN_MATCH_MODE_EXACT))
-                 )
-             )
-          {
-            // callback
-            error = storageFunction(Storage_getName(NULL,&storageSpecifier,name),
-                                    &fileInfo,
-                                    storageUserData
-                                   );
-          }
-
-          // call progress callback
-          if (storageProgressFunction != NULL)
-          {
-            storageProgressFunction(doneCount,totalCount,storageProgressUserData);
-          }
-
-          doneCount++;
+          break;
         }
 
-        // close directory
-        Storage_closeDirectoryList(&storageDirectoryListHandle);
+        // check if sub-directory
+        if (fileInfo.type == FILE_TYPE_DIRECTORY)
+        {
+          StringList_append(&directoryList,name);
+        }
+
+        // match pattern and call storage callback on match
+        if (   (storageFunction != NULL)
+            && (   (   (patternString == NULL)
+                    && String_equals(storageSpecifier->archiveName,name)
+                   )
+                || (   (patternString != NULL)
+                    && Pattern_match(&pattern,name,PATTERN_MATCH_MODE_EXACT)
+                   )
+               )
+           )
+        {
+          error = storageFunction(Storage_getName(NULL,storageSpecifier,name),
+                                  &fileInfo,
+                                  storageUserData
+                                 );
+        }
+
+        // call progress callback
+        if (storageProgressFunction != NULL)
+        {
+          storageProgressFunction(doneCount,totalCount,storageProgressUserData);
+        }
+
+        doneCount++;
       }
+
+      // close directory
+      Storage_closeDirectoryList(&storageDirectoryListHandle);
     }
   }
 
   // free resources
+  if (patternString != NULL)
+  {
+    Pattern_done(&pattern);
+  }
   String_delete(name);
   StringList_done(&directoryList);
   Job_doneOptions(&jobOptions);
-  Storage_doneSpecifier(&storageSpecifier);
 
   return error;
 }

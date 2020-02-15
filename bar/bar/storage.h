@@ -1703,7 +1703,8 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
 /***********************************************************************\
 * Name   : Storage_forAll
 * Purpose: execute callback for all storage files
-* Input  : storagePatternString    - storage pattern string
+* Input  : storageSpecifier        - storage specifier
+*          patternString           - pattern string (can be NULL)
 *          storageFunction         - storage callback function (can be
 *                                    NULL)
 *          storageUserData         - storage callback user data
@@ -1715,7 +1716,8 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
 * Notes  : -
 \***********************************************************************/
 
-Errors Storage_forAll(ConstString             storagePatternString,
+Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
+                      ConstString             patternString,
                       StorageFunction         storageFunction,
                       void                    *storageUserData,
                       StorageProgressFunction storageProgressFunction,
