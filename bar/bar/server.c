@@ -4286,7 +4286,8 @@ LOCAL void autoIndexThreadCode(void)
                            String_cString(printableStorageName)
                           );
                 File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
-                (void)Storage_forAll(pattern,
+                (void)Storage_forAll(&storageSpecifier,
+                                     pattern,
                                      CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                      {
                                        Errors error;
@@ -16246,7 +16247,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   // try to open as directory: add all matching entries
   if (error != ERROR_NONE)
   {
-    error = Storage_forAll(pattern,
+    error = Storage_forAll(&storageSpecifier,
+                           pattern,
                            CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                            {
                              String printableStorageName;
