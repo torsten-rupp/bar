@@ -52,10 +52,6 @@
 /* file data buffer size */
 #define BUFFER_SIZE (64*1024)
 
-// different timeouts [ms]
-#define SSH_TIMEOUT    (30*1000)
-#define READ_TIMEOUT   (60*1000)
-
 #define INITIAL_BUFFER_SIZE   (64*1024)
 #define INCREMENT_BUFFER_SIZE ( 8*1024)
 #define MAX_BUFFER_SIZE       (64*1024)

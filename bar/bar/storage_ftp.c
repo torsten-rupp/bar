@@ -1987,22 +1987,23 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
               )
         {
           // wait for socket
-          error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
+          error = waitCurlSocketRead(storageHandle->ftp.curlMultiHandle);
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
 
           // perform curl action
-          if (error == ERROR_NONE)
+          do
           {
-            do
-            {
-              curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
-            }
-            while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                   && (runningHandles > 0)
-                  );
-            if (curlmCode != CURLM_OK)
-            {
-              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-            }
+            curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
+          }
+          while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                 && (runningHandles > 0)
+                );
+          if (curlmCode != CURLM_OK)
+          {
+            error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
           }
         }
         if (error != ERROR_NONE)
@@ -2040,22 +2041,23 @@ LOCAL Errors StorageFTP_read(StorageHandle *storageHandle,
               )
         {
           // wait for socket
-          error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
+          error = waitCurlSocketRead(storageHandle->ftp.curlMultiHandle);
+          if (error != ERROR_NONE)
+          {
+            break;
+          }
 
           // perform curl action
-          if (error == ERROR_NONE)
+          do
           {
-            do
-            {
-              curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
-            }
-            while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                   && (runningHandles > 0)
-                  );
-            if (curlmCode != CURLM_OK)
-            {
-              error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-            }
+            curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
+          }
+          while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+                 && (runningHandles > 0)
+                );
+          if (curlmCode != CURLM_OK)
+          {
+            error = ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
           }
         }
         if (error != ERROR_NONE)
@@ -2161,23 +2163,24 @@ LOCAL Errors StorageFTP_write(StorageHandle *storageHandle,
             )
       {
         // wait for socket
-        error = waitCurlSocket(storageHandle->ftp.curlMultiHandle);
+        error = waitCurlSocketWrite(storageHandle->ftp.curlMultiHandle);
+        if (error != ERROR_NONE)
+        {
+          break;
+        }
 
         // perform curl action
-        if (error == ERROR_NONE)
+        do
         {
-          do
-          {
-            curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
+          curlmCode = curl_multi_perform(storageHandle->ftp.curlMultiHandle,&runningHandles);
 //fprintf(stderr,"%s, %d: %ld %ld\n",__FILE__,__LINE__,storageHandle->ftp.transferedBytes,storageHandle->ftp.length);
-          }
-          while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-                 && (runningHandles > 0)
-                );
-          if (curlmCode != CURLM_OK)
-          {
-            error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
-          }
+        }
+        while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+               && (runningHandles > 0)
+              );
+        if (curlmCode != CURLM_OK)
+        {
+          error = ERRORX_(NETWORK_SEND,0,"%s",curl_multi_strerror(curlmCode));
         }
       }
       if (error != ERROR_NONE)
