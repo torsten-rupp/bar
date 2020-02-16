@@ -2338,7 +2338,6 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
       }
 
       // delete file
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
       if (deleteFileDirectory(curlHandle,url))
       {
         error = ERROR_NONE;
