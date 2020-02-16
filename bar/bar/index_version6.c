@@ -65,7 +65,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
                                               )
 {
   typedef union
-  { 
+  {
     void       *value;
     DatabaseId *id;
   } ValueData;
@@ -338,7 +338,7 @@ LOCAL Errors upgradeFromVersion6_importEntries(IndexHandle *oldIndexHandle,
           error = Database_execute(&newIndexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
-                                   "INSERT INTO entryFragmentes \
+                                   "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
                                        storageId, \

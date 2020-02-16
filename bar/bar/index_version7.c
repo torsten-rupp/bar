@@ -133,7 +133,7 @@ LOCAL Errors upgradeFromVersion7_importFileEntry(IndexHandle *oldIndexHandle,
           error = Database_execute(&newIndexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
-                                   "INSERT INTO entryFragmentes \
+                                   "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
                                        storageId, \
@@ -255,7 +255,7 @@ LOCAL Errors upgradeFromVersion7_importImageEntry(IndexHandle *oldIndexHandle,
           error = Database_execute(&newIndexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
-                                   "INSERT INTO entryFragmentes \
+                                   "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
                                        storageId, \
@@ -377,7 +377,7 @@ LOCAL Errors upgradeFromVersion7_importHardlinkEntry(IndexHandle *oldIndexHandle
           error = Database_execute(&newIndexHandle->databaseHandle,
                                    CALLBACK_(NULL,NULL),  // databaseRowFunction
                                    NULL,  // changedRowCount
-                                   "INSERT INTO entryFragmentes \
+                                   "INSERT INTO entryFragments \
                                       ( \
                                        entryId, \
                                        storageId, \
