@@ -16079,7 +16079,7 @@ archiveHandle->archiveInitUserData              = NULL;
             if (!dryRun)
             {
               parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-              if (!File_exists(parentDirectoryName))
+              if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
               {
                 // create directory
                 error = File_makeDirectory(parentDirectoryName,
@@ -16370,7 +16370,7 @@ archiveHandle->archiveInitUserData              = NULL;
               if (!dryRun)
               {
                 parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-                if (!File_exists(parentDirectoryName))
+                if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
                 {
                   // create directory
                   error = File_makeDirectory(parentDirectoryName,
@@ -16797,7 +16797,7 @@ archiveHandle->archiveInitUserData              = NULL;
             if (!dryRun)
             {
               parentDirectoryName = File_getFilePathName(String_new(),destinationFileName);
-              if (!File_exists(parentDirectoryName))
+              if (!String_isEmpty(parentDirectoryName) && !File_exists(parentDirectoryName))
               {
                 // create directory
                 error = File_makeDirectory(parentDirectoryName,
