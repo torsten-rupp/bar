@@ -4400,10 +4400,6 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  Crash dump support : `if test "$HAVE_BREAKPAD"; then echo yes; else echo no; fi`";
                     echo "  Stacktrace support : `if test "$HAVE_BFD"; then echo yes; else echo no; fi`";
                     echo ""
-                    echo "  Docker             : `if test -n "$DOCKER"; then echo yes; else echo no; fi`";
-                    echo "  Inno Setup         : $ISCC";
-                    echo ""
-                    echo ""
                     echo "  Install directory  : $INSTALL_DIR"
                     echo "  Binary directory   : $INSTALL_BIN_DIR"
                     echo "  Config directory   : $CONFIG_DIR"
