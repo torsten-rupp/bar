@@ -726,11 +726,11 @@ typedef struct
   PasswordModes               cryptPasswordMode;              // crypt password mode
   Password                    cryptPassword;                  // default crypt password if none set in job options
   Password                    cryptNewPassword;               // new crypt password
-  Key                         cryptPublicKey;
-  Key                         cryptPrivateKey;
+  Key                         cryptPublicKey;                 // crypt public key
+  Key                         cryptPrivateKey;                // crypt private key (possible encryped with pass phrase, thus no CryptKey here)
 
-  CryptKey                    signaturePublicKey;
-  CryptKey                    signaturePrivateKey;
+  CryptKey                    signaturePublicKey;             // signature public key (not encrypted)
+  CryptKey                    signaturePrivateKey;            // signature private key (not encrypted)
 
   Server                      *fileServer;                    // current selected file server
   Server                      *defaultFileServer;             // default file server
