@@ -43,8 +43,7 @@
 /****************** Conditional compilation switches *******************/
 #define INDEX_INTIIAL_CLEANUP            // switch off for debugging only!
 #define INDEX_IMPORT_OLD_DATABASE        // switch off for debugging only!
-#warning remove/revert
-#define _INDEX_DEBUG_IMPORT_OLD_DATABASE  // switch off for debugging only!
+#define INDEX_DEBUG_IMPORT_OLD_DATABASE  // switch off for debugging only!
 #define INDEX_SUPPORT_DELETE             // switch off for debugging only!
 
 #ifndef INDEX_IMPORT_OLD_DATABASE
@@ -9636,7 +9635,8 @@ Errors Index_deleteStorage(IndexHandle *indexHandle,
       {
         return error;
       }
-fprintf(stderr,"%s, %d: de;eted storage %lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
+#if 0
+fprintf(stderr,"%s, %d: deleted storage %lld\n",__FILE__,__LINE__,Index_getDatabaseId(storageId));
 fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu %llu  totalDirectory=%lu  totalLink=%lu  totalHardlink=%lu %llu totalSpecial=%lu\n",__FILE__,__LINE__,
                                totalEntryCount,
                                totalEntrySize,
@@ -9650,6 +9650,7 @@ fprintf(stderr,"%s, %d: totalEntry=%lu %llu  totalFile=%lu %llu  totalImage=%lu 
                                totalHardlinkSize,
                                totalSpecialCount
 );
+#endif
 
       // update aggregates
       error = Database_execute(&indexHandle->databaseHandle,
@@ -10529,7 +10530,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                 indexHandle,
       {
 #warning remove/revert
-#if 0
+#if 1
         // get entry content size
         if (newestOnly)
         {
