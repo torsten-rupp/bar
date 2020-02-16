@@ -414,10 +414,12 @@ CREATE INDEX ON entryFragments (storageId);
 //TODO
 // --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
-  id       INTEGER PRIMARY KEY,
-  entityId INTEGER NOT NULL REFERENCES storages(id),
-  name     TEXT NOT NULL,
-  type     INTEGER
+  id          INTEGER PRIMARY KEY,
+  entityId    INTEGER NOT NULL REFERENCES entities(id),
+  name        TEXT NOT NULL,
+  type        INTEGER,
+
+  deletedFlag INTEGER DEFAULT 0
 );
 CREATE INDEX ON skippedEntries (entityId,type,name);
 CREATE INDEX ON skippedEntries (name);
