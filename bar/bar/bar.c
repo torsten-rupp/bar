@@ -188,7 +188,6 @@ LOCAL bool               batchFlag;
 
 LOCAL const char         *pidFileName;
 
-LOCAL String             generateKeyFileName;
 LOCAL uint               generateKeyBits;
 LOCAL uint               generateKeyMode;
 
@@ -453,7 +452,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_INTEGER      ("generate-keys-bits",                0,  1,1,generateKeyBits,                                 0,MIN_ASYMMETRIC_CRYPT_KEY_BITS,
                                                                                                                            MAX_ASYMMETRIC_CRYPT_KEY_BITS,COMMAND_LINE_BITS_UNITS,       "key bits",NULL                                                            ),
   CMD_OPTION_SELECT       ("generate-keys-mode",                0,  1,2,generateKeyMode,                                 0,COMMAND_LINE_OPTIONS_GENERATE_KEY_MODES,                     "select generate key mode mode"                                            ),
-  CMD_OPTION_STRING       ("job",                               0,  0,1,jobUUIDName,                                     0,                                                             "set/execute job","name or UUID"                                           ),
+  CMD_OPTION_STRING       ("job",                               0,  0,1,jobUUIDName,                                     0,                                                             "execute job","name or UUID"                                               ),
 
   CMD_OPTION_ENUM         ("normal",                            0,  1,2,globalOptions.archiveType,                       0,ARCHIVE_TYPE_NORMAL,                                         "create normal archive (no incremental list file, default)"                ),
   CMD_OPTION_ENUM         ("full",                              'f',0,2,globalOptions.archiveType,                       0,ARCHIVE_TYPE_FULL,                                           "create full archive and incremental list file"                            ),
@@ -3801,7 +3800,7 @@ LOCAL void printUsage(const char *programName, uint level)
 {
   assert(programName != NULL);
   printf("Usage: %s [<options>] [--] <archive name> [<files>|<device>...]\n",programName);
-  printf("       %s [<options>] [--] <key file name>\n",programName);
+  printf("       %s [<options>] --generate-keys|--generate-signature-keys [--] [<key file base name>]\n",programName);
   printf("\n");
   printf("Archive name:  <file name>\n");
   printf("               file://<file name>\n");
@@ -4295,7 +4294,6 @@ LOCAL Errors initAll(void)
 
   pidFileName                            = NULL;
 
-  generateKeyFileName                    = NULL;
   generateKeyBits                        = MIN_ASYMMETRIC_CRYPT_KEY_BITS;
   generateKeyMode                        = CRYPT_KEY_MODE_NONE;
 
@@ -4564,7 +4562,6 @@ LOCAL void doneAll(void)
 
   Thread_doneLocalVariable(&outputLineHandle,outputLineDone,NULL);
   StringList_done(&configFileNameList);
-  String_delete(generateKeyFileName);
   doneHash(&serverPasswordHash);
   doneServer(&defaultWebDAVServer);
   doneServer(&defaultSSHServer);
