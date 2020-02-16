@@ -1633,8 +1633,6 @@ Errors Crypt_deriveKey(CryptKey            *cryptKey,
         }
 
 //TODO: create key?
-#warning remove/revert
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 #if 0
         // create key
         gcryptError = gcry_sexp_new(&key,
