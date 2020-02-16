@@ -18654,7 +18654,7 @@ Errors Server_run(ServerModes       mode,
   // create jobs directory if necessary
   if (mode == SERVER_MODE_MASTER)
   {
-    if (!File_exists(globalOptions.jobsDirectory))
+    if (!String_isEmpty(globalOptions.jobsDirectory) && !File_exists(globalOptions.jobsDirectory))
     {
       error = File_makeDirectory(globalOptions.jobsDirectory,
                                  FILE_DEFAULT_USER_ID,
