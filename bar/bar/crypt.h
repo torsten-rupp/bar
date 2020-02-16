@@ -284,23 +284,23 @@ typedef struct
   ((uint16)(cryptMACAlgorithm))
 
 #ifndef NDEBUG
-  #define Crypt_initKey(...)    __Crypt_initKey   (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_doneKey(...)    __Crypt_doneKey   (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_newKey(...)     __Crypt_newKey    (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_deleteKey(...)  __Crypt_deleteKey (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_copyKey(...)    __Crypt_copyKey   (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_init(...)       __Crypt_init      (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_done(...)       __Crypt_done      (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_new(...)        __Crypt_new       (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_delete(...)     __Crypt_delete    (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_initHash(...)   __Crypt_initHash  (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_doneHash(...)   __Crypt_doneHash  (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_newHash(...)    __Crypt_newHash   (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_deleteHash(...) __Crypt_deleteHash(__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_initMAC(...)    __Crypt_initMAC   (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_doneMAC(...)    __Crypt_doneMAC   (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_newMAC(...)     __Crypt_newMAC    (__FILE__,__LINE__, ## __VA_ARGS__)
-  #define Crypt_deleteMAC(...)  __Crypt_deleteMAC (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initKey(...)      __Crypt_initKey     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_duplicateKey(...) __Crypt_duplicateKey(__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneKey(...)      __Crypt_doneKey     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_newKey(...)       __Crypt_newKey      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_deleteKey(...)    __Crypt_deleteKey   (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_init(...)         __Crypt_init        (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_done(...)         __Crypt_done        (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_new(...)          __Crypt_new         (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_delete(...)       __Crypt_delete      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initHash(...)     __Crypt_initHash    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneHash(...)     __Crypt_doneHash    (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_newHash(...)      __Crypt_newHash     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_deleteHash(...)   __Crypt_deleteHash  (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_initMAC(...)      __Crypt_initMAC     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_doneMAC(...)      __Crypt_doneMAC     (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_newMAC(...)       __Crypt_newMAC      (__FILE__,__LINE__, ## __VA_ARGS__)
+  #define Crypt_deleteMAC(...)    __Crypt_deleteMAC   (__FILE__,__LINE__, ## __VA_ARGS__)
 #endif /* not NDEBUG */
 
 /***************************** Forwards ********************************/
@@ -546,13 +546,25 @@ Errors Crypt_getBlockLength(CryptAlgorithms cryptAlgorithm,
 /***********************************************************************\
 * Name   : Crypt_initSalt
 * Purpose: init crypt salt
-* Input  : cryptSalt - crypt salt
+* Input  : cryptSalt - crypt salt variable
 * Output : -
 * Return : cryptSalt
 * Notes  : -
 \***********************************************************************/
 
 CryptSalt *Crypt_initSalt(CryptSalt *cryptSalt);
+
+/***********************************************************************\
+* Name   : Crypt_duplicateSalt
+* Purpose: duplicate crypt salt
+* Input  : cryptSalt     - crypt salt variable
+*          fromCryptSalt - from crypt salt
+* Output : -
+* Return : crypt salt
+* Notes  : -
+\***********************************************************************/
+
+CryptSalt *Crypt_duplicateSalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt);
 
 /***********************************************************************\
 * Name   : Crypt_doneSalt
@@ -612,6 +624,18 @@ CryptSalt *Crypt_setSalt(CryptSalt *cryptSalt, const byte *data, uint length);
 CryptSalt *Crypt_clearSalt(CryptSalt *cryptSalt);
 
 /***********************************************************************\
+* Name   : Crypt_copySalt
+* Purpose: cioy crypt salt
+* Input  : cryptSalt     - crypt salt
+*          fromCryptSalt - from crypt salt
+* Output : -
+* Return : crypt salt
+* Notes  : -
+\***********************************************************************/
+
+CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt);
+
+/***********************************************************************\
 * Name   : Crypt_randomSalt
 * Purpose: get random crypt salt
 * Input  : cryptSalt - crypt salt
@@ -621,18 +645,6 @@ CryptSalt *Crypt_clearSalt(CryptSalt *cryptSalt);
 \***********************************************************************/
 
 CryptSalt *Crypt_randomSalt(CryptSalt *cryptSalt);
-
-/***********************************************************************\
-* Name   : Crypt_copySalt
-* Purpose: copy crypt salt
-* Input  : cryptSalt     - crypt salt
-*          fromCryptSalt - from crypt salt
-* Output : -
-* Return : crypt salt
-* Notes  : -
-\***********************************************************************/
-
-CryptSalt *Crypt_copySalt(CryptSalt *cryptSalt, const CryptSalt *fromCryptSalt);
 
 /***********************************************************************\
 * Name   : Crypt_isSalt
@@ -892,6 +904,28 @@ INLINE bool Crypt_isAsymmetricSupported(void);
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Crypt_duplicateKey
+* Purpose: duplicate public/private key
+* Input  : cryptKey     - crypt key variable
+*          fromCryptKey - from crypt key
+* Output : cryptKey - crypt key
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+#ifdef NDEBUG
+  Errors Crypt_duplicateKey(CryptKey       *cryptKey,
+                            const CryptKey *fromCryptKey
+                           );
+#else /* not NDEBUG */
+  Errors __Crypt_duplicateKey(const char     *__fileName__,
+                              ulong          __lineNb__,
+                              CryptKey       *cryptKey,
+                              const CryptKey *fromCryptKey
+                             );
+#endif /* NDEBUG */
+
+/***********************************************************************\
 * Name   : Crypt_doneKey
 * Purpose: deinitialize public/private key
 * Input  : cryptKey - crypt key
@@ -946,6 +980,17 @@ INLINE bool Crypt_isAsymmetricSupported(void);
 #endif /* NDEBUG */
 
 /***********************************************************************\
+* Name   : Crypt_clearKey
+* Purpose: clear key
+* Input  : cryptKey - crypt key
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void Crypt_clearKey(CryptKey *cryptKey);
+
+/***********************************************************************\
 * Name   : Crypt_isKeyAvailable
 * Purpose: check if key available
 * Input  : cryptKey - crypt key
@@ -958,37 +1003,9 @@ INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey);
 #if defined(NDEBUG) || defined(__CRYPT_IMPLEMENTATION__)
 INLINE bool Crypt_isKeyAvailable(const CryptKey *cryptKey)
 {
-  #ifdef HAVE_GCRYPT
-    return cryptKey->key != NULL;
-  #else /* not HAVE_GCRYPT */
-    UNUSED_VARIABLE(cryptKey);
-
-    return FALSE;
-  #endif /* HAVE_GCRYPT */
+  return cryptKey->data != NULL;
 }
 #endif /* NDEBUG || __CRYPT_IMPLEMENTATION__ */
-
-/***********************************************************************\
-* Name   : Crypt_copyKey
-* Purpose: copy public/private key
-* Input  : cryptKey     - crypt key
-*          fromCryptKey - from crypt key
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-#ifdef NDEBUG
-  Errors Crypt_copyKey(CryptKey       *cryptKey,
-                       const CryptKey *fromCryptKey
-                      );
-#else /* not NDEBUG */
-  Errors __Crypt_copyKey(const char     *__fileName__,
-                         ulong          __lineNb__,
-                         CryptKey       *cryptKey,
-                         const CryptKey *fromCryptKey
-                        );
-#endif /* NDEBUG */
 
 /***********************************************************************\
 * Name   : Crypt_deriveKey
