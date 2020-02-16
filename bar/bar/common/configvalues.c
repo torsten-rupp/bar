@@ -1848,7 +1848,15 @@ bool ConfigValue_parse(const char           *name,
 
   // find config value
   i = ConfigValue_valueIndex(configValues,sectionName,name);
-  if (i < 0) return FALSE;
+  if (i < 0)
+  {
+    reportMessage(errorReportFunction,
+                  errorReportUserData,
+                  "Unknown value '%s'!",
+                  name
+                 );
+    return FALSE;
+  }
 
   // process value
   if (!processValue(&configValues[i],
