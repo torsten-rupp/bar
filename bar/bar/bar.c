@@ -1698,25 +1698,25 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              CONFIG_VALUES,
-                              "file-server",
-                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "file-server",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,"file-server",String_cString(fileName),lineNb);
-                                failFlag = TRUE;
-                              },NULL),
-                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"file-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"file-server",String_cString(fileName),lineNb);
-                              },NULL),
-                              &serverNode->server
-                             );
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"file-server",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    &serverNode->server
+                                   );
             if (failFlag) break;
           }
           else
@@ -1767,27 +1767,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              CONFIG_VALUES,
-                              "ftp-server",
-                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "ftp-server",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,"ftp-server",String_cString(fileName),lineNb);
-                                failFlag = TRUE;
-                              },NULL),
-                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"ftp-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ftp-server",String_cString(fileName),lineNb);
-                              },NULL),
-                              &serverNode->server
-                             );
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ftp-server",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    &serverNode->server
+                                   );
             if (failFlag) break;
           }
           else
@@ -1838,27 +1838,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              CONFIG_VALUES,
-                              "ssh-server",
-                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "ssh-server",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,"ssh-server",String_cString(fileName),lineNb);
-                                failFlag = TRUE;
-                              },NULL),
-                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"ssh-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ssh-server",String_cString(fileName),lineNb);
-                              },NULL),
-                              &serverNode->server
-                             );
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ssh-server",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    &serverNode->server
+                                   );
             if (failFlag) break;
           }
           else
@@ -1909,27 +1909,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              CONFIG_VALUES,
-                              "webdav-server",
-                              CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "webdav-server",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,"webdav-server",String_cString(fileName),lineNb);
-                                failFlag = TRUE;
-                              },NULL),
-                              CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"webdav-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"webdav-server",String_cString(fileName),lineNb);
-                              },NULL),
-                              &serverNode->server
-                             );
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"webdav-server",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    &serverNode->server
+                                   );
             if (failFlag) break;
           }
           else
@@ -1972,27 +1972,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              CONFIG_VALUES,
-                              "device",
-                              LAMBDA(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "device",
+                                    LAMBDA(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,"device-server",String_cString(fileName),lineNb);
-                                failFlag = TRUE;
-                              }),NULL,
-                              LAMBDA(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"device-server",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    }),NULL,
+                                    LAMBDA(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
-                              }),NULL,
-                              &deviceNode->device
-                             );
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
+                                    }),NULL,
+                                    &deviceNode->device
+                                   );
             if (failFlag) break;
           }
           else
@@ -2025,27 +2025,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
         {
           if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
           {
-            ConfigValue_parse(String_cString(name),
-                              String_cString(value),
-                              CONFIG_VALUES,
-                              "master",
-                              LAMBDA(void,(const char *errorMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "master",
+                                    LAMBDA(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printError("%s in section '%s' in %s, line %ld",errorMessage,"master",String_cString(fileName),lineNb);
-                                failFlag = TRUE;
-                              }),NULL,
-                              LAMBDA(void,(const char *warningMessage, void *userData),
-                              {
-                                UNUSED_VARIABLE(userData);
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"master",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    }),NULL,
+                                    LAMBDA(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
 
-                                if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                                printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
-                              }),NULL,
-                              &globalOptions.masterInfo
-                             );
+                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
+                                    }),NULL,
+                                    &globalOptions.masterInfo
+                                   );
             if (failFlag) break;
           }
           else
@@ -2072,27 +2072,27 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       }
       else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
       {
-        ConfigValue_parse(String_cString(name),
-                          String_cString(value),
-                          CONFIG_VALUES,
-                          NULL, // section name
-                          LAMBDA(void,(const char *errorMessage, void *userData),
-                          {
-                            UNUSED_VARIABLE(userData);
+        (void)ConfigValue_parse(String_cString(name),
+                                String_cString(value),
+                                CONFIG_VALUES,
+                                NULL, // section name
+                                LAMBDA(void,(const char *errorMessage, void *userData),
+                                {
+                                  UNUSED_VARIABLE(userData);
 
-                            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                            printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
-                            failFlag = TRUE;
-                          }),NULL,
-                          LAMBDA(void,(const char *warningMessage, void *userData),
-                          {
-                            UNUSED_VARIABLE(userData);
+                                  if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                  printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                                  failFlag = TRUE;
+                                }),NULL,
+                                LAMBDA(void,(const char *warningMessage, void *userData),
+                                {
+                                  UNUSED_VARIABLE(userData);
 
-                            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
-                            printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
-                          }),NULL,
-                          NULL  // variable
-                         );
+                                  if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                  printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
+                                }),NULL,
+                                NULL  // variable
+                               );
         if (failFlag) break;
       }
       else
@@ -9622,27 +9622,27 @@ LOCAL bool readFromJob(ConstString fileName)
     }
     else if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
     {
-      ConfigValue_parse(String_cString(name),
-                        String_cString(value),
-                        JOB_CONFIG_VALUES,
-                        NULL, // sectionName,
-                        LAMBDA(void,(const char *errorMessage, void *userData),
-                        {
-                          UNUSED_VARIABLE(userData);
+      (void)ConfigValue_parse(String_cString(name),
+                              String_cString(value),
+                              JOB_CONFIG_VALUES,
+                              NULL, // sectionName,
+                              LAMBDA(void,(const char *errorMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
 
-                          if (printInfoFlag) printf("FAIL!\n");
-                          printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
-                          failFlag = TURE;
-                        }),NULL,
-                        LAMBDA(void,(const char *warningMessage, void *userData),
-                        {
-                          UNUSED_VARIABLE(userData);
+                                if (printInfoFlag) printf("FAIL!\n");
+                                printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
+                                failFlag = TRUE;
+                              }),NULL,
+                              LAMBDA(void,(const char *warningMessage, void *userData),
+                              {
+                                UNUSED_VARIABLE(userData);
 
-                          if (printInfoFlag) printf("FAIL!\n");
-                          printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
-                        }),NULL,
-                        NULL  // variable
-                       );
+                                if (printInfoFlag) printf("FAIL!\n");
+                                printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
+                              }),NULL,
+                              NULL  // variable
+                             );
     }
     else
     {
@@ -9843,12 +9843,25 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   {
     // create directory if it does not exists
     directoryName = File_getDirectoryNameCString(String_new(),keyFileBaseName);
-    if      (!File_exists(directoryName))
+    if (!String_isEmpty(directoryName))
     {
-      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
-      if (error != ERROR_NONE)
+      if      (!File_exists(directoryName))
       {
-        printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
+        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+        if (error != ERROR_NONE)
+        {
+          printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
+          String_delete(directoryName);
+          Crypt_doneKey(&privateKey);
+          Crypt_doneKey(&publicKey);
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
+          return error;
+        }
+      }
+      else if (!File_isDirectory(directoryName))
+      {
+        printError(_("'%s' is not a directory!"),String_cString(directoryName));
         String_delete(directoryName);
         Crypt_doneKey(&privateKey);
         Crypt_doneKey(&publicKey);
@@ -9856,16 +9869,6 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
         String_delete(publicKeyFileName);
         return error;
       }
-    }
-    else if (!File_isDirectory(directoryName))
-    {
-      printError(_("'%s' is not a directory!"),String_cString(directoryName));
-      String_delete(directoryName);
-      Crypt_doneKey(&privateKey);
-      Crypt_doneKey(&publicKey);
-      String_delete(privateKeyFileName);
-      String_delete(publicKeyFileName);
-      return error;
     }
     String_delete(directoryName);
 
@@ -10037,12 +10040,25 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   {
     // create directory if it does not exists
     directoryName = File_getDirectoryNameCString(String_new(),keyFileBaseName);
-    if      (!File_exists(directoryName))
+    if (!String_isEmpty(directoryName))
     {
-      error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
-      if (error != ERROR_NONE)
+      if      (!File_exists(directoryName))
       {
-        printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
+        error = File_makeDirectory(directoryName,FILE_DEFAULT_USER_ID,FILE_DEFAULT_GROUP_ID,FILE_DEFAULT_PERMISSION);
+        if (error != ERROR_NONE)
+        {
+          printError(_("Cannot create directory '%s' (error: %s)!"),String_cString(directoryName),Error_getText(error));
+          String_delete(directoryName);
+          Crypt_doneKey(&privateKey);
+          Crypt_doneKey(&publicKey);
+          String_delete(privateKeyFileName);
+          String_delete(publicKeyFileName);
+          return error;
+        }
+      }
+      else if (!File_isDirectory(directoryName))
+      {
+        printError(_("'%s' is not a directory!"),String_cString(directoryName));
         String_delete(directoryName);
         Crypt_doneKey(&privateKey);
         Crypt_doneKey(&publicKey);
@@ -10050,16 +10066,6 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
         String_delete(publicKeyFileName);
         return error;
       }
-    }
-    else if (!File_isDirectory(directoryName))
-    {
-      printError(_("'%s' is not a directory!"),String_cString(directoryName));
-      String_delete(directoryName);
-      Crypt_doneKey(&privateKey);
-      Crypt_doneKey(&publicKey);
-      String_delete(privateKeyFileName);
-      String_delete(publicKeyFileName);
-      return error;
     }
     String_delete(directoryName);
 
