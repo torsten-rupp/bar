@@ -3986,7 +3986,6 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
           && Storage_equalSpecifiers(storageSpecifier,archiveName,&oldStorageSpecifier,NULL)
          )
       {
-fprintf(stderr,"%s, %d: oldUUIDId=%lld\n",__FILE__,__LINE__,oldUUIDId);
         if (!INDEX_ID_IS_NONE(oldUUIDId)) Array_append(&uuidIds,&oldUUIDId);
         if (!INDEX_ID_IS_DEFAULT_ENTITY(oldEntityId)) Array_append(&entityIds,&oldEntityId);
         if (!INDEX_ID_IS_NONE(oldStorageId)) Array_append(&storageIds,&oldStorageId);
