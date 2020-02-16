@@ -6402,6 +6402,7 @@ bool Archive_eof(ArchiveHandle *archiveHandle,
                                                                       cryptPrivateKey->data,
                                                                       cryptPrivateKey->length,
                                                                       CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+//TODO
 //CRYPT_KEY_DERIVE_NONE,//                                                                      archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
 CRYPT_KEY_DERIVE_FUNCTION,//
                                                                       NULL,  // salt
@@ -6427,6 +6428,7 @@ CRYPT_KEY_DERIVE_FUNCTION,//
                                                                           cryptPrivateKey->data,
                                                                           cryptPrivateKey->length,
                                                                           CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+//TODO
 //archiveHandle->archiveCryptInfo->cryptMode,
 //                                                                          archiveHandle->archiveCryptInfo->cryptKeyDeriveType,
 //CRYPT_KEY_DERIVE_NONE,
