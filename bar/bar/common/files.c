@@ -3379,7 +3379,6 @@ Errors File_copyCString(const char *sourceFileName,
   // copy data
   do
   {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     n = fread(buffer,1,BUFFER_SIZE,sourceFile);
     if (n > 0)
     {
