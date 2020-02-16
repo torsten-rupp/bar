@@ -2076,6 +2076,10 @@ endif
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --verbose=2 --signature-public-key="`$(CAT) intermediate/keys/key-signature.public`" $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-keys --generate-keys-mode=transient --crypt-password=foo $(LOG))
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys --generate-keys-mode=transient $(LOG))
+	@$(RMRF) intermediate/keys
+	@$(INSTALL) -d intermediate/keys
+	($(CD) intermediate/keys; $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-keys --generate-keys-mode=transient --crypt-password=foo key-crypt $(LOG)))
+	($(CD) intermediate/keys; $(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --generate-signature-keys --generate-keys-mode=transient key-signature $(LOG)))
 	@#
 	$(BAR_DIR)/bar-keygen --tls-directory=intermediate/keys --private-directory=intermediate/keys --certs-directory=intermediate/keys --openssl --force $(LOG)
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) --server-ca-file=intermediate/keys/bar-ca.pem  --server-cert-file=intermediate/keys/bar-server-cert.pem --server-key-file=intermediate/keys/bar-server-key.pem $(LOG))
@@ -2091,7 +2095,7 @@ endif
 ifeq (@HAVE_XDELTA3@,1)
 	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) $(TEST_OPTIONS) -c intermediate/test.bar $(TEST_FILES) --delta-source=does-not-exists --compress-algorithm=xdelta9 --force-delta-compression --overwrite-archive-files $(LOG))
 endif
-	$(call functionTestCheckExitcode,6,6,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test-not-exists.cfg -l intermediate/test*.bar $(LOG))
+	$(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test-not-exists.cfg -l intermediate/test*.bar $(LOG))
 	@#
 	# deprecated command line options
 	@$(call functionCleanTestFiles)
@@ -2117,9 +2121,10 @@ endif
 	$(ECHO) "remote-host-force-ssl = no" >intermediate/test-deprecated.cfg
 	$(call functionTestCheckExitcode,0,0,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(LOG))
 	@#
-	# wrong configuration values
-	$(ECHO) "does-not-exist = foo" >intermediate/test-deprecated.cfg
-	$(call functionTestCheckExitcode,6,6,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg --config=intermediate/test-deprecated.cfg $(LOG))
+	# wrong configuration value
+	@$(call functionCleanTestFiles)
+	$(ECHO) "does-not-exist = foo" >intermediate/test.cfg
+	$(call functionTestCheckExitcode,6,6,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) --no-default-config --config=intermediate/test.cfg $(LOG))
 	@#
 	# test not implemented functions
 	@$(call functionCleanTestFiles)
