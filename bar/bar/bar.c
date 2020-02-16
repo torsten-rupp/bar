@@ -231,7 +231,7 @@ LOCAL bool cmdOptionParseHashData(void *userData, void *variable, const char *na
 LOCAL bool cmdOptionReadCertificateFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionReadKeyFile(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
-LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
+LOCAL bool cmdOptionParsePublicPrivateKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseRestoreEntryModeOverwrite(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
 LOCAL bool cmdOptionParseStorageFlagDryRun(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize);
@@ -556,19 +556,20 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_SELECT       ("crypt-type",                        0,  0,2,globalOptions.cryptType,                         0,COMMAND_LINE_OPTIONS_CRYPT_TYPES,                            "select crypt type"                                                        ),
   CMD_OPTION_SPECIAL      ("crypt-password",                    0,  0,2,&globalOptions.cryptPassword,                    0,cmdOptionParsePassword,NULL,1,                               "crypt password (use with care!)","password"                               ),
   CMD_OPTION_SPECIAL      ("crypt-new-password",                0,  0,2,&globalOptions.cryptNewPassword,                 0,cmdOptionParsePassword,NULL,1,                               "new crypt password (use with care!)","password"                           ),
+//#warning remove/revert
   CMD_OPTION_SPECIAL      ("crypt-public-key",                  0,  0,2,&globalOptions.cryptPublicKey,                   0,cmdOptionParseKeyData,NULL,1,                                "public key for asymmetric encryption","file name|data"                    ),
   CMD_OPTION_SPECIAL      ("crypt-private-key",                 0,  0,2,&globalOptions.cryptPrivateKey,                  0,cmdOptionParseKeyData,NULL,1,                                "private key for asymmetric decryption","file name|data"                   ),
-  CMD_OPTION_SPECIAL      ("signature-public-key",              0,  0,1,&globalOptions.signaturePublicKey,               0,cmdOptionParseCryptKey,NULL,1,                               "public key for signature check","file name|data"                          ),
-  CMD_OPTION_SPECIAL      ("signature-private-key",             0,  0,2,&globalOptions.signaturePrivateKey,              0,cmdOptionParseCryptKey,NULL,1,                               "private key for signature generation","file name|data"                    ),
+  CMD_OPTION_SPECIAL      ("signature-public-key",              0,  0,1,&globalOptions.signaturePublicKey,               0,cmdOptionParsePublicPrivateKey,NULL,1,                       "public key for signature check","file name|data"                          ),
+  CMD_OPTION_SPECIAL      ("signature-private-key",             0,  0,2,&globalOptions.signaturePrivateKey,              0,cmdOptionParsePublicPrivateKey,NULL,1,                       "private key for signature generation","file name|data"                    ),
 
 //TODO
-//  CMD_OPTION_INTEGER64    ("file-max-storage-size",              0,  0,2,defaultFileServer.maxStorageSize,             0,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on file server","unlimited"                  ),
+//  CMD_OPTION_INTEGER64    ("file-max-storage-size",              0,  0,2,defaultFileServer.maxStorageSize,               0,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on file server","unlimited"                  ),
 
   CMD_OPTION_STRING       ("ftp-login-name",                    0,  0,2,defaultFTPServer.ftp.loginName,                  0,                                                             "ftp login name","name"                                                    ),
   CMD_OPTION_SPECIAL      ("ftp-password",                      0,  0,2,&defaultFTPServer.ftp.password,                  0,cmdOptionParsePassword,NULL,1,                               "ftp password (use with care!)","password"                                 ),
   CMD_OPTION_INTEGER      ("ftp-max-connections",               0,  0,2,defaultFTPServer.maxConnectionCount,             0,0,MAX_INT,NULL,                                              "max. number of concurrent ftp connections","unlimited"                    ),
 //TODO
-//  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",              0,  0,2,defaultFTPServer.maxStorageSize,                 NULL,0LL,MAX_INT64,NULL,                                          "max. number of bytes to store on ftp server","unlimited"                  ),
+//  CMD_OPTION_INTEGER64    ("ftp-max-storage-size",              0,  0,2,defaultFTPServer.maxStorageSize,                 NULL,0LL,MAX_INT64,NULL,                                       "max. number of bytes to store on ftp server","unlimited"                  ),
 
   CMD_OPTION_INTEGER      ("ssh-port",                          0,  0,2,defaultSSHServer.ssh.port,                       0,0,65535,NULL,                                                "ssh port",NULL                                                            ),
   CMD_OPTION_STRING       ("ssh-login-name",                    0,  0,2,defaultSSHServer.ssh.loginName,                  0,                                                             "ssh login name","name"                                                    ),
@@ -942,8 +943,8 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_SPECIAL           ("crypt-password",                   &globalOptions.cryptPassword,-1,                               configValueParsePassword,configValueFormatInitPassord,configValueFormatDonePassword,configValueFormatPassword,NULL),
   CONFIG_VALUE_SPECIAL           ("crypt-public-key",                 &globalOptions.cryptPublicKey,-1,                              configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_SPECIAL           ("crypt-private-key",                &globalOptions.cryptPrivateKey,-1,                             configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("signature-public-key",             &globalOptions.signaturePublicKey,-1,                          configValueParseKeyData,NULL,NULL,NULL,NULL),
-  CONFIG_VALUE_SPECIAL           ("signature-private-key",            &globalOptions.signaturePrivateKey,-1,                         configValueParseKeyData,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("signature-public-key",             &globalOptions.signaturePublicKey,-1,                          configValueParsePublicPrivateKey,NULL,NULL,NULL,NULL),
+  CONFIG_VALUE_SPECIAL           ("signature-private-key",            &globalOptions.signaturePrivateKey,-1,                         configValueParsePublicPrivateKey,NULL,NULL,NULL,NULL),
 
   CONFIG_VALUE_SPECIAL           ("include-file",                     &includeEntryList,-1,                                          configValueParseFileEntryPattern,NULL,NULL,NULL,&globalOptions.patternType),
   CONFIG_VALUE_STRING            ("include-file-list",                &globalOptions.includeFileListFileName,-1                      ),
@@ -2318,7 +2319,7 @@ LOCAL Errors readKeyFile(Key *key, const char *fileName)
   key->data   = data;
   key->length = dataLength;
 
-  printInfo(2,"Read key file '%s'\n",fileName);
+  printInfo(3,"Read key file '%s'\n",fileName);
 
   return ERROR_NONE;
 }
@@ -3251,7 +3252,7 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
   }
   else if (stringStartsWith(value,"base64:"))
   {
-    // get key data from string and decode base64 encoded key data
+    // base64-prefixed key string
 
     // get key data length
     dataLength = Misc_base64DecodeLengthCString(&value[7]);
@@ -3309,16 +3310,16 @@ LOCAL bool cmdOptionParseKeyData(void *userData, void *variable, const char *nam
 }
 
 /***********************************************************************\
-* Name   : cmdOptionParseCryptKey
-* Purpose: command line option call back for get crypt key (without
-*          password and salt)
+* Name   : cmdOptionParsePublicPrivateKey
+* Purpose: command line option call back for get public/private key
+*          (without password and salt)
 * Input  : -
 * Output : -
 * Return : TRUE iff parsed, FALSE otherwise
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
+LOCAL bool cmdOptionParsePublicPrivateKey(void *userData, void *variable, const char *name, const char *value, const void *defaultValue, char errorMessage[], uint errorMessageSize)
 {
   CryptKey *cryptKey = (CryptKey*)variable;
   Errors   error;
@@ -3332,11 +3333,14 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
   UNUSED_VARIABLE(defaultValue);
 
   // get key data
+fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
   if (File_existsCString(value))
   {
-    // read key file (base64 encoded)
+    // key file base64 encoded
 
+    // read key file
     fileName = String_newCString(value);
+fprintf(stderr,"%s, %d: xxxxx %s\n",__FILE__,__LINE__,String_cString(fileName));
     error = Crypt_readPublicPrivateKeyFile(cryptKey,
                                            fileName,
                                            CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
@@ -3344,6 +3348,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                            NULL,  // cryptSalt
                                            NULL  // password
                                           );
+fprintf(stderr,"%s, %d: %d %p %d\n",__FILE__,__LINE__,cryptKey->cryptPaddingType,cryptKey->data,cryptKey->dataLength);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -3354,7 +3359,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
   }
   else if (stringStartsWith(value,"base64:"))
   {
-    // base64-prefixed key
+    // base64-prefixed key string
 
     // set crypt key data
     error = Crypt_setPublicPrivateKeyData(cryptKey,
@@ -3365,6 +3370,7 @@ LOCAL bool cmdOptionParseCryptKey(void *userData, void *variable, const char *na
                                           NULL,  // cryptSalt
                                           NULL  // password
                                          );
+fprintf(stderr,"%s, %d: %d %p %d\n",__FILE__,__LINE__,cryptKey->cryptPaddingType,cryptKey->data,cryptKey->dataLength);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -8830,6 +8836,83 @@ bool configValueParseKeyData(void *userData, void *variable, const char *name, c
 
   return TRUE;
 }
+bool configValueParsePublicPrivateKey(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  CryptKey *cryptKey = (CryptKey*)variable;
+  Errors   error;
+  String   fileName;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+  UNUSED_VARIABLE(errorMessage);
+  UNUSED_VARIABLE(errorMessageSize);
+
+  if (File_existsCString(value))
+  {
+    // read key data from file
+
+    // read key file
+    fileName = String_newCString(value);
+    error = Crypt_readPublicPrivateKeyFile(cryptKey,
+                                           fileName,
+                                           CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+                                           CRYPT_KEY_DERIVE_NONE,
+                                           NULL,  // cryptSalt
+                                           NULL  // password
+                                          );
+
+    if (error != ERROR_NONE)
+    {
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
+      String_delete(fileName);
+      return FALSE;
+    }
+    String_delete(fileName);
+  }
+  else if (stringStartsWith(value,"base64:"))
+  {
+    // base64-prefixed key string
+
+    // set crypt key data
+    error = Crypt_setPublicPrivateKeyData(cryptKey,
+                                          &value[7],
+                                          stringLength(value)-7,
+                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+                                          CRYPT_KEY_DERIVE_NONE,
+                                          NULL,  // cryptSalt
+                                          NULL  // password
+                                         );
+    if (error != ERROR_NONE)
+    {
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
+      return FALSE;
+    }
+  }
+  else
+  {
+    // get plain key data
+
+    // set crypt key data
+    error = Crypt_setPublicPrivateKeyData(cryptKey,
+                                          value,
+                                          stringLength(value),
+                                          CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
+                                          CRYPT_KEY_DERIVE_NONE,
+                                          NULL,  // cryptSalt
+                                          NULL  // password
+                                         );
+    if (error != ERROR_NONE)
+    {
+      stringSet(errorMessage,errorMessageSize,Error_getText(error));
+      return FALSE;
+    }
+  }
+
+  return TRUE;
+}
 
 void configValueFormatInitKeyData(void **formatUserData, void *userData, void *variable)
 {
@@ -9821,7 +9904,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   }
 
   // generate new key pair for encryption
-  printInfo(1,"Create keys (collecting entropie)...");
+  printInfo(1,"Generate keys (collecting entropie)...");
   Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
   Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
@@ -10020,7 +10103,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
 
   // generate new key pair for signature
-  printInfo(1,"Create keys (collecting entropie)...");
+  printInfo(1,"Generate keys (collecting entropie)...");
   Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
   Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);

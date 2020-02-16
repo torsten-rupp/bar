@@ -2073,6 +2073,7 @@ bool configValueParseCertificate(void *userData, void *variable, const char *nam
 \***********************************************************************/
 
 bool configValueParseKeyData(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+bool configValueParsePublicPrivateKey(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
 
 /***********************************************************************\
 * Name   : configValueFormatInitKeyData
