@@ -3810,15 +3810,15 @@ LOCAL void printUsage(const char *programName, uint level)
   printf("\n");
   printf("Archive name:  <file name>\n");
   printf("               file://<file name>\n");
-  printf("               ftp:// [<login name>[:<password>]@]<host name>/<file name>\n");
-  printf("               scp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
-  printf("               sftp:// [<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
-  printf("               webdav:// [<login name>[:<password>]@]<host name>/<file name>\n");
-  printf("               webdavs:// [<login name>[:<password>]@]<host name>/<file name>\n");
-  printf("               cd:// [<device name>:]<file name>\n");
-  printf("               dvd:// [<device name>:]<file name>\n");
-  printf("               bd:// [<device name>:]<file name>\n");
-  printf("               device:// [<device name>:]<file name>\n");
+  printf("               ftp://[<login name>[:<password>]@]<host name>/<file name>\n");
+  printf("               scp://[<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
+  printf("               sftp://[<login name>[:<password>]@]<host name>[:<port>]/<file name>\n");
+  printf("               webdav://[<login name>[:<password>]@]<host name>/<file name>\n");
+  printf("               webdavs://[<login name>[:<password>]@]<host name>/<file name>\n");
+  printf("               cd://[<device name>:]<file name>\n");
+  printf("               dvd://[<device name>:]<file name>\n");
+  printf("               bd://[<device name>:]<file name>\n");
+  printf("               device://[<device name>:]<file name>\n");
   printf("\n");
   CmdOption_printHelp(stdout,
                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
