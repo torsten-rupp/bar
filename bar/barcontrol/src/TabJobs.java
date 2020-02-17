@@ -10442,7 +10442,7 @@ TODO: implement delete entity
     });
 
     // listeners
-    shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+    shell.addListener(BARControl.USER_EVENT_SELECT_SERVER,new Listener()
     {
       public void handleEvent(Event event)
       {
@@ -10454,36 +10454,32 @@ TODO: implement delete entity
     {
       public void handleEvent(Event event)
       {
-Dprintf.dprintf("new jobUUID=%s",event.text);
-//        JobData jobData = (JobData)event.data;
-//        setSelectedJob(jobData);
-
-//        addDirectoryRoots();
-//        addDevicesList();
+        assert(event.text != null);
       }
     });
     shell.addListener(BARControl.USER_EVENT_UPDATE_JOB,new Listener()
     {
       public void handleEvent(Event event)
       {
-        JobData jobData = (JobData)event.data;
-Dprintf.dprintf("jobData=%s",jobData);
+        assert(event.data != null);
       }
     });
     shell.addListener(BARControl.USER_EVENT_DELETE_JOB,new Listener()
     {
       public void handleEvent(Event event)
       {
-        JobData jobData = (JobData)event.data;
-Dprintf.dprintf("jobData=%s",jobData);
+        assert(event.text != null);
+
+        clearSelectedJob();
       }
     });
     shell.addListener(BARControl.USER_EVENT_SELECT_JOB,new Listener()
     {
       public void handleEvent(Event event)
       {
+        assert(event.data != null);
+
         JobData jobData = (JobData)event.data;
-Dprintf.dprintf("select jobData=%s",jobData);
         setSelectedJob(jobData);
 
         addDirectoryRoots();
@@ -10509,7 +10505,6 @@ Dprintf.dprintf("select jobData=%s",jobData);
    */
   public void updateJobList(final Collection<JobData> jobData_)
   {
-Dprintf.dprintf("------------- ");
     display.syncExec(new Runnable()
     {
       @Override
@@ -10545,6 +10540,9 @@ Dprintf.dprintf("------------- ");
           {
             Widgets.removeOptionMenuItem(widgetJobList,jobData);
           }
+
+          // select job
+          Widgets.setSelectedOptionMenuItem(widgetJobList,selectedJobData);
         }
       }
     });
@@ -10763,6 +10761,7 @@ throw new Error("NYI");
                                   );
 
           String newJobUUID = valueMap.getString("jobUUID");
+Dprintf.dprintf("xxxxxxxxxxxxxxx1");
           Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,newJobUUID);
         }
         catch (Exception exception)
@@ -10909,6 +10908,7 @@ throw new Error("NYI");
                                   );
           String newJobUUID = valueMap.getString("jobUUID");
 Dprintf.dprintf("newJobUUID=%s",newJobUUID);
+Dprintf.dprintf("xxxxxxxxxxxxxxx2");
           Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,newJobUUID);
         }
         catch (Exception exception)
@@ -11107,10 +11107,6 @@ throw new Error("NYI");
       try
       {
         BARServer.executeCommand(StringParser.format("JOB_DELETE jobUUID=%s",jobData.uuid),0);
-
-        clear();
-        selectJobEvent.trigger();
-        Widgets.notify(shell,BARControl.USER_EVENT_DELETE_JOB,jobData.uuid);
       }
       catch (Exception exception)
       {
@@ -11122,6 +11118,8 @@ throw new Error("NYI");
         Dialogs.error(shell,BARControl.tr("Cannot delete job ''{0}'':\n\n{1}",jobData.name.replaceAll("&","&&"),error.getMessage()));
         return false;
       }
+
+      Widgets.notify(shell,BARControl.USER_EVENT_DELETE_JOB,jobData.uuid);
 
       return true;
     }
@@ -11219,16 +11217,6 @@ throw new Error("NYI");
       Widgets.clearSelectedOptionMenuItem(widgetJobList);
     }
 
-    clear();
-    update();
-
-    selectJobEvent.trigger();
-  }
-
-  /** clear selected
-   */
-  private void clearSelectedJob()
-  {
     closeAllFileTree();
     clearIncludeList();
     clearExcludeList();
@@ -11236,6 +11224,49 @@ throw new Error("NYI");
     clearCompressExcludeList();
     clearScheduleTable();
     clearPersistenceTable();
+
+    Background.run(new BackgroundRunnable()
+    {
+      public void run()
+      {
+        // update data
+        try
+        {
+          updateJobData();
+        }
+        catch (ConnectionError error)
+        {
+          // ignored
+        }
+
+        // trigger selected job
+        display.syncExec(new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            selectJobEvent.trigger();
+          }
+        });
+      }
+    });
+  }
+
+  /** clear selected
+   */
+  private void clearSelectedJob()
+  {
+    selectedJobData = null;
+
+    closeAllFileTree();
+    clearIncludeList();
+    clearExcludeList();
+    clearSourceList();
+    clearCompressExcludeList();
+    clearScheduleTable();
+    clearPersistenceTable();
+
+    selectJobEvent.trigger();
   }
 
   //-----------------------------------------------------------------------
@@ -16497,14 +16528,7 @@ throw new Error("NYI");
 
   // ----------------------------------------------------------------------
 
-  /** clear all data
-   */
-  private void clear()
-  {
-    clearSelectedJob();
-  }
-
-  /** update all data
+  /** start update all data
    */
   private void update()
   {

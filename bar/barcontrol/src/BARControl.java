@@ -1644,11 +1644,11 @@ public class BARControl
   };
 
   // user events
-  final static int USER_EVENT_NEW_SERVER = 0xFFFF+0;
-  final static int USER_EVENT_NEW_JOB    = 0xFFFF+1;
-  final static int USER_EVENT_UPDATE_JOB = 0xFFFF+2;
-  final static int USER_EVENT_DELETE_JOB = 0xFFFF+3;
-  final static int USER_EVENT_SELECT_JOB = 0xFFFF+1;
+  final static int USER_EVENT_SELECT_SERVER = 0xFFFF+0;
+  final static int USER_EVENT_NEW_JOB       = 0xFFFF+1;
+  final static int USER_EVENT_UPDATE_JOB    = 0xFFFF+2;
+  final static int USER_EVENT_DELETE_JOB    = 0xFFFF+3;
+  final static int USER_EVENT_SELECT_JOB    = 0xFFFF+4;
 
   // string with "all files" extension
   public static final String ALL_FILE_EXTENSION;
@@ -2638,7 +2638,7 @@ if (false) {
               updateServerMenu();
 
               // notify new server
-              Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+              Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
             }
           }
         });
@@ -2886,7 +2886,7 @@ if (false) {
           }
         }
       });
-      shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+      shell.addListener(BARControl.USER_EVENT_SELECT_SERVER,new Listener()
       {
         public void handleEvent(Event event)
         {
@@ -3348,7 +3348,7 @@ if (false) {
       tabFolder.setSelection(currentTabItemIndex);
 
       // notifiy new server
-      Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+      Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
     }
     else
     {
@@ -3370,7 +3370,7 @@ if (false) {
     shell.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
 
     // listeners
-    shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+    shell.addListener(BARControl.USER_EVENT_SELECT_SERVER,new Listener()
     {
       public void handleEvent(Event event)
       {
@@ -3395,7 +3395,7 @@ if (false) {
       JobData jobData = tabStatus.getJobByName(Settings.selectedJobName);
       if (jobData != null)
       {
-        Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+        Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,jobData);
       }
     }
 
@@ -3833,7 +3833,7 @@ if (false) {
               updateServerMenu();
 
               // notify new server
-              Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+              Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
             }
             else
             {
@@ -5478,7 +5478,7 @@ Dprintf.dprintf("still not supported");
           createMenu();
 
           // notify new server
-          Widgets.notify(shell,BARControl.USER_EVENT_NEW_SERVER);
+          Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
 
           // run
           run();

@@ -5420,7 +5420,7 @@ Dprintf.dprintf("");
             {
               if      (indexData instanceof UUIDIndexData)
               {
-                Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,((UUIDIndexData)indexData).jobUUID);
+                Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,((UUIDIndexData)indexData).jobUUID);
 
                 if (selectionEvent.detail == SWT.CHECK)
                 {
@@ -6921,7 +6921,7 @@ Dprintf.dprintf("");
     }
 
     // listeners
-    shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+    shell.addListener(BARControl.USER_EVENT_SELECT_SERVER,new Listener()
     {
       public void handleEvent(Event event)
       {

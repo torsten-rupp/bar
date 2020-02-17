@@ -627,7 +627,7 @@ public class TabStatus
       public void widgetSelected(SelectionEvent selectionEvent)
       {
         JobData jobData = (JobData)selectionEvent.item.getData();
-        Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+        Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,jobData);
       }
     });
     SelectionListener jobListColumnSelectionListener = new SelectionListener()
@@ -1973,7 +1973,7 @@ public class TabStatus
     }
 
     // listeners
-    shell.addListener(BARControl.USER_EVENT_NEW_SERVER,new Listener()
+    shell.addListener(BARControl.USER_EVENT_SELECT_SERVER,new Listener()
     {
       public void handleEvent(Event event)
       {
@@ -1985,37 +1985,41 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
-Dprintf.dprintf("new jobUUID=%s",event.text);
+        assert(event.text != null);
+
         updateJobList();
 
         JobData jobData = jobDataMap.get(event.text);
-Dprintf.dprintf("new job=%s",jobData);
-        setSelectedJob(jobData);
+        Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,jobData);
       }
     });
     shell.addListener(BARControl.USER_EVENT_UPDATE_JOB,new Listener()
     {
       public void handleEvent(Event event)
       {
-Dprintf.dprintf("update jobData=%s",event.data);
+        assert(event.data != null);
+
         updateJobList();
+        setSelectedJob(selectedJobData);
       }
     });
     shell.addListener(BARControl.USER_EVENT_DELETE_JOB,new Listener()
     {
       public void handleEvent(Event event)
       {
-Dprintf.dprintf("delete jobUUID=%s",event.text);
-        clearSelectedJob();
+        assert(event.text != null);
+
         updateJobList();
+        clearSelectedJob();
       }
     });
     shell.addListener(BARControl.USER_EVENT_SELECT_JOB,new Listener()
     {
       public void handleEvent(Event event)
       {
+        assert(event.data != null);
+
         JobData jobData = (JobData)event.data;
-Dprintf.dprintf("select jobData=%s",jobData);
         setSelectedJob(jobData);
       }
     });
@@ -3041,7 +3045,6 @@ Dprintf.dprintf("select jobData=%s",jobData);
   private void jobNew()
   {
     tabJobs.jobNew();
-    updateJobList();
   }
 
   /** clone selected job
@@ -3051,7 +3054,6 @@ Dprintf.dprintf("select jobData=%s",jobData);
     assert selectedJobData != null;
 
     tabJobs.jobClone(selectedJobData);
-    updateJobList();
   }
 
   /** rename selected job
@@ -3062,7 +3064,7 @@ Dprintf.dprintf("select jobData=%s",jobData);
 
     if (tabJobs.jobRename(selectedJobData))
     {
-      updateJobList();
+      Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,selectedJobData);
     }
   }
 
@@ -3076,8 +3078,7 @@ Dprintf.dprintf("select jobData=%s",jobData);
     {
       if (tabJobs.jobDelete(selectedJobData))
       {
-        clearSelectedJob();
-        updateJobList();
+        Widgets.notify(shell,BARControl.USER_EVENT_DELETE_JOB,selectedJobData.uuid);
       }
     }
   }
