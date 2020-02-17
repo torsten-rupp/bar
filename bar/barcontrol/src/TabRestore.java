@@ -5420,7 +5420,9 @@ Dprintf.dprintf("");
             {
               if      (indexData instanceof UUIDIndexData)
               {
-                tabStatus.setSelectedJob(((UUIDIndexData)indexData).jobUUID);
+//TODO
+                Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,((UUIDIndexData)indexData).jobUUID);
+//                tabStatus.setSelectedJob(((UUIDIndexData)indexData).jobUUID);
 
                 if (selectionEvent.detail == SWT.CHECK)
                 {

@@ -1985,7 +1985,36 @@ public class TabStatus
     {
       public void handleEvent(Event event)
       {
+Dprintf.dprintf("new jobUUID=%s",event.text);
+        updateJobList();
+
+        JobData jobData = jobDataMap.get(event.text);
+        setSelectedJob(jobData);
+      }
+    });
+    shell.addListener(BARControl.USER_EVENT_UPDATE_JOB,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+Dprintf.dprintf("update jobUUID=%s",event.text);
+        updateJobList();
+      }
+    });
+    shell.addListener(BARControl.USER_EVENT_DELETE_JOB,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+Dprintf.dprintf("delete jobUUID=%s",event.text);
+        clearSelectedJob();
+        updateJobList();
+      }
+    });
+    shell.addListener(BARControl.USER_EVENT_SELECT_JOB,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
         JobData jobData = (JobData)event.data;
+Dprintf.dprintf("select jobData=%s",jobData);
         setSelectedJob(jobData);
       }
     });
@@ -2011,9 +2040,63 @@ public class TabStatus
     tabStatusUpdateThread.start();
   }
 
+  /** get job by name
+   * @param name job name
+   * @return job data or null
+   */
+  public JobData getJobByName(String name)
+  {
+    for (JobData jobData : jobDataMap.values())
+    {
+      if (jobData.name.equals(name)) return jobData;
+    }
+    return null;
+  }
+
+  /** set selected job by UUID
+   * @param jobUUID job UUID
+   */
+
+  public void XXXsetSelectedJob(String jobUUID)
+  {
+    if ((selectedJobData == null) || !selectedJobData.uuid.equals(jobUUID))
+    {
+      JobData jobData = jobDataMap.get(jobUUID);
+      if (jobData != null)
+      {
+        Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
+      }
+    }
+  }
+
+  /** clear selected job
+   */
+  public void clearSelectedJob()
+  {
+    Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,(JobData)null);
+  }
+
+  /** add update job state listener
+   * @param updateJobStateLister update job state listener
+   */
+  public void addUpdateJobStateListener(UpdateJobStateListener updateJobStateListener)
+  {
+    updateJobStateListeners.add(updateJobStateListener);
+  }
+
+  /** remove update job state listener
+   * @param updateJobStateLister update job state listener
+   */
+  public void removeUpdateJobStateListener(UpdateJobStateListener updateJobStateListener)
+  {
+    updateJobStateListeners.remove(updateJobStateListener);
+  }
+
+  //-----------------------------------------------------------------------
+
   /** update job list
    */
-  public void updateJobList()
+  private void updateJobList()
   {
     try
     {
@@ -2206,59 +2289,6 @@ public class TabStatus
     // update tab jobs list
     tabJobs.updateJobList(jobDataMap.values());
   }
-
-  /** get job by name
-   * @param name job name
-   * @return job data or null
-   */
-  public JobData getJobByName(String name)
-  {
-    for (JobData jobData : jobDataMap.values())
-    {
-      if (jobData.name.equals(name)) return jobData;
-    }
-    return null;
-  }
-
-  /** set selected job by UUID
-   * @param jobUUID job UUID
-   */
-  public void setSelectedJob(String jobUUID)
-  {
-    if ((selectedJobData == null) || !selectedJobData.uuid.equals(jobUUID))
-    {
-      JobData jobData = jobDataMap.get(jobUUID);
-      if (jobData != null)
-      {
-        Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
-      }
-    }
-  }
-
-  /** clear selected job
-   */
-  public void clearSelectedJob()
-  {
-    Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,(JobData)null);
-  }
-
-  /** add update job state listener
-   * @param updateJobStateLister update job state listener
-   */
-  public void addUpdateJobStateListener(UpdateJobStateListener updateJobStateListener)
-  {
-    updateJobStateListeners.add(updateJobStateListener);
-  }
-
-  /** remove update job state listener
-   * @param updateJobStateLister update job state listener
-   */
-  public void removeUpdateJobStateListener(UpdateJobStateListener updateJobStateListener)
-  {
-    updateJobStateListeners.remove(updateJobStateListener);
-  }
-
-  //-----------------------------------------------------------------------
 
   /** update job trigger
    */

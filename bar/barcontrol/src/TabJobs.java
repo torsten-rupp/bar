@@ -2311,7 +2311,7 @@ public class TabJobs
           if (index >= 0)
           {
             selectedJobData = Widgets.getSelectedOptionMenuItem(widgetJobList,null);
-            Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,selectedJobData);
+            Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,selectedJobData);
           }
         }
       });
@@ -10461,6 +10461,34 @@ TODO: implement delete entity
         addDevicesList();
       }
     });
+    shell.addListener(BARControl.USER_EVENT_UPDATE_JOB,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        JobData jobData = (JobData)event.data;
+Dprintf.dprintf("jobData=%s",jobData);
+      }
+    });
+    shell.addListener(BARControl.USER_EVENT_DELETE_JOB,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        JobData jobData = (JobData)event.data;
+Dprintf.dprintf("jobData=%s",jobData);
+      }
+    });
+    shell.addListener(BARControl.USER_EVENT_SELECT_JOB,new Listener()
+    {
+      public void handleEvent(Event event)
+      {
+        JobData jobData = (JobData)event.data;
+Dprintf.dprintf("select jobData=%s",jobData);
+        setSelectedJob(jobData);
+
+        addDirectoryRoots();
+        addDevicesList();
+      }
+    });
 
     // add roots to file tree, add device list
     addDirectoryRoots();
@@ -10476,10 +10504,11 @@ TODO: implement delete entity
   }
 
   /** update job list
-   * @param jobData_ job data
+   * @param jobData_ job data to update
    */
   public void updateJobList(final Collection<JobData> jobData_)
   {
+Dprintf.dprintf("------------- ");
     display.syncExec(new Runnable()
     {
       @Override
@@ -10500,7 +10529,7 @@ TODO: implement delete entity
             for (JobData jobData : jobData_)
             {
               if (Widgets.updateInsertOptionMenuItem(widgetJobList,
-                                                     (Object)jobData,
+                                                     jobData,
                                                      jobData.name
                                                     )
                  )
@@ -10620,9 +10649,9 @@ TODO: implement delete entity
   /** set selected job by UUID
    * @param jobUUID job UUID
    */
-  public void setSelectedJob(String jobUUID)
+  private void XXXsetSelectedJob(String jobUUID)
   {
-    tabStatus.setSelectedJob(jobUUID);
+    tabStatus.XXXsetSelectedJob(jobUUID);
   }
 
   /** clear selected
@@ -10748,8 +10777,7 @@ throw new Error("NYI");
                                   );
 
           String newJobUUID = valueMap.getString("jobUUID");
-          updateJobList();
-          setSelectedJob(newJobUUID);
+          Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,newJobUUID);
         }
         catch (Exception exception)
         {
@@ -10894,8 +10922,8 @@ throw new Error("NYI");
                                    valueMap
                                   );
           String newJobUUID = valueMap.getString("jobUUID");
-          updateJobList();
-          setSelectedJob(newJobUUID);
+Dprintf.dprintf("newJobUUID=%s",newJobUUID);
+          Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,newJobUUID);
         }
         catch (Exception exception)
         {
@@ -11047,8 +11075,7 @@ throw new Error("NYI");
                                                       ),
                                    0  // debugLevel
                                   );
-            updateJobList();
-            setSelectedJob(jobData.uuid);
+          Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,jobData.uuid);
         }
         catch (Exception exception)
         {
@@ -11093,9 +11120,9 @@ throw new Error("NYI");
       {
         BARServer.executeCommand(StringParser.format("JOB_DELETE jobUUID=%s",jobData.uuid),0);
 
-        updateJobList();
         clear();
         selectJobEvent.trigger();
+        Widgets.notify(shell,BARControl.USER_EVENT_DELETE_JOB,jobData.uuid);
       }
       catch (Exception exception)
       {
@@ -11221,13 +11248,6 @@ throw new Error("NYI");
     clearCompressExcludeList();
     clearScheduleTable();
     clearPersistenceTable();
-  }
-
-  /** update job list
-   */
-  private void updateJobList()
-  {
-    tabStatus.updateJobList();
   }
 
   //-----------------------------------------------------------------------

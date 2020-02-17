@@ -1646,6 +1646,9 @@ public class BARControl
   // user events
   final static int USER_EVENT_NEW_SERVER = 0xFFFF+0;
   final static int USER_EVENT_NEW_JOB    = 0xFFFF+1;
+  final static int USER_EVENT_UPDATE_JOB = 0xFFFF+2;
+  final static int USER_EVENT_DELETE_JOB = 0xFFFF+3;
+  final static int USER_EVENT_SELECT_JOB = 0xFFFF+1;
 
   // string with "all files" extension
   public static final String ALL_FILE_EXTENSION;
