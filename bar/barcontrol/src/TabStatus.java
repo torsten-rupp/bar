@@ -1989,6 +1989,7 @@ Dprintf.dprintf("new jobUUID=%s",event.text);
         updateJobList();
 
         JobData jobData = jobDataMap.get(event.text);
+Dprintf.dprintf("new job=%s",jobData);
         setSelectedJob(jobData);
       }
     });
@@ -1996,7 +1997,7 @@ Dprintf.dprintf("new jobUUID=%s",event.text);
     {
       public void handleEvent(Event event)
       {
-Dprintf.dprintf("update jobUUID=%s",event.text);
+Dprintf.dprintf("update jobData=%s",event.data);
         updateJobList();
       }
     });
@@ -2051,29 +2052,6 @@ Dprintf.dprintf("select jobData=%s",jobData);
       if (jobData.name.equals(name)) return jobData;
     }
     return null;
-  }
-
-  /** set selected job by UUID
-   * @param jobUUID job UUID
-   */
-
-  public void XXXsetSelectedJob(String jobUUID)
-  {
-    if ((selectedJobData == null) || !selectedJobData.uuid.equals(jobUUID))
-    {
-      JobData jobData = jobDataMap.get(jobUUID);
-      if (jobData != null)
-      {
-        Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,jobData);
-      }
-    }
-  }
-
-  /** clear selected job
-   */
-  public void clearSelectedJob()
-  {
-    Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,(JobData)null);
   }
 
   /** add update job state listener
@@ -2404,6 +2382,17 @@ Dprintf.dprintf("select jobData=%s",jobData);
                                                                 : ""
                                                              )+"'"
                              );
+  }
+
+  /** clear selected job
+   */
+  private void clearSelectedJob()
+  {
+    selectedJobData = null;
+
+    Widgets.clearSelectedTableItems(widgetJobTable);
+    updateJobTrigger();
+    widgetSelectedJob.setText(BARControl.tr("Selected")+" ''");
   }
 
   /** getProgress

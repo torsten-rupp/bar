@@ -10454,11 +10454,12 @@ TODO: implement delete entity
     {
       public void handleEvent(Event event)
       {
-        JobData jobData = (JobData)event.data;
-        setSelectedJob(jobData);
+Dprintf.dprintf("new jobUUID=%s",event.text);
+//        JobData jobData = (JobData)event.data;
+//        setSelectedJob(jobData);
 
-        addDirectoryRoots();
-        addDevicesList();
+//        addDirectoryRoots();
+//        addDevicesList();
       }
     });
     shell.addListener(BARControl.USER_EVENT_UPDATE_JOB,new Listener()
@@ -10640,25 +10641,10 @@ Dprintf.dprintf("------------- ");
         @Override
         public void run()
         {
-          clearJobData();
+          clearSelectedJob();
         }
       });
     }
-  }
-
-  /** set selected job by UUID
-   * @param jobUUID job UUID
-   */
-  private void XXXsetSelectedJob(String jobUUID)
-  {
-    tabStatus.XXXsetSelectedJob(jobUUID);
-  }
-
-  /** clear selected
-   */
-  public void clearSelectedJob()
-  {
-    tabStatus.clearSelectedJob();
   }
 
   /** create new job
@@ -11075,7 +11061,6 @@ throw new Error("NYI");
                                                       ),
                                    0  // debugLevel
                                   );
-          Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,jobData.uuid);
         }
         catch (Exception exception)
         {
@@ -11098,6 +11083,9 @@ throw new Error("NYI");
           return false;
         }
       }
+
+      Widgets.notify(shell,BARControl.USER_EVENT_UPDATE_JOB,jobData);
+
       return true;
     }
     else
@@ -11237,9 +11225,9 @@ throw new Error("NYI");
     selectJobEvent.trigger();
   }
 
-  /** clear job data
+  /** clear selected
    */
-  private void clearJobData()
+  private void clearSelectedJob()
   {
     closeAllFileTree();
     clearIncludeList();
@@ -11267,7 +11255,10 @@ throw new Error("NYI");
   {
     assert selectedJobData != null;
 
-    jobRename(selectedJobData);
+    if (jobRename(selectedJobData))
+    {
+Dprintf.dprintf("xxxxxxxxxxxxxxxxxx");
+    }
   }
 
   /** delete selected job
@@ -16510,7 +16501,7 @@ throw new Error("NYI");
    */
   private void clear()
   {
-    clearJobData();
+    clearSelectedJob();
   }
 
   /** update all data
