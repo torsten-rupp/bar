@@ -2311,7 +2311,7 @@ public class TabJobs
           if (index >= 0)
           {
             selectedJobData = Widgets.getSelectedOptionMenuItem(widgetJobList,null);
-            Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,selectedJobData);
+            Widgets.notify(shell,BARControl.USER_EVENT_SELECT_JOB,selectedJobData.uuid);
           }
         }
       });
@@ -10477,13 +10477,17 @@ TODO: implement delete entity
     {
       public void handleEvent(Event event)
       {
-        assert(event.data != null);
+        assert(event.text != null);
 
-        JobData jobData = (JobData)event.data;
-        setSelectedJob(jobData);
+        for (JobData jobData : (JobData[])Widgets.getOptionMenuItems(widgetJobList,JobData.class))
+        {
+          if (jobData.uuid.equals(event.text))
+          {
+            setSelectedJob(jobData);
+            break;
+          }
+        }
 
-        addDirectoryRoots();
-        addDevicesList();
       }
     });
 
@@ -11245,6 +11249,9 @@ throw new Error("NYI");
           @Override
           public void run()
           {
+            addDirectoryRoots();
+            addDevicesList();
+
             selectJobEvent.trigger();
           }
         });
