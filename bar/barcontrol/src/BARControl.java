@@ -2998,7 +2998,9 @@ if (false) {
         {
           Dialogs.info(shell,
                        BARControl.tr("About"),
-                       "BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+".\n\n"+BARControl.tr("Written by Torsten Rupp")+"\n"
+                       "BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_REVISION+").\n"+
+                       "\n"+
+                       BARControl.tr("Written by Torsten Rupp")+"\n"
                       );
         }
       });
@@ -3572,7 +3574,7 @@ if (false) {
     {
       widgetLoginButton = Widgets.newButton(composite);
       widgetLoginButton.setText(BARControl.tr("Login"));
-      Widgets.layout(widgetLoginButton,0,0,TableLayoutData.W,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(widgetLoginButton,0,0,TableLayoutData.W,0,0,0,0,80,SWT.DEFAULT);
       widgetLoginButton.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -3599,7 +3601,7 @@ if (false) {
 
       button = Widgets.newButton(composite);
       button.setText(BARControl.tr("Cancel"));
-      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,60,SWT.DEFAULT);
+      Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,80,SWT.DEFAULT);
       button.addSelectionListener(new SelectionListener()
       {
         @Override
