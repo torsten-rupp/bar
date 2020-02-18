@@ -4501,7 +4501,7 @@ public class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -4528,7 +4528,7 @@ public class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -4564,7 +4564,7 @@ public class TabJobs
                 if (!(Boolean)widget.getData("showedErrorDialog"))
                 {
                   widget.setData("showedErrorDialog",true);
-                  Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                  Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                   widget.forceFocus();
                 }
               }
@@ -6666,7 +6666,7 @@ public class TabJobs
                     {
                       widget.setData("showedErrorDialog",true);
                       Dialogs.error(shell,
-                                    BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
+                                    BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
                                    );
                       widget.forceFocus();
                     }
@@ -6695,7 +6695,7 @@ public class TabJobs
                     {
                       widget.setData("showedErrorDialog",true);
                       Dialogs.error(shell,
-                                    BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
+                                    BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
                                    );
                       widget.forceFocus();
                     }
@@ -6733,7 +6733,7 @@ public class TabJobs
                     {
                       widget.setData("showedErrorDialog",true);
                       Dialogs.error(shell,
-                                    BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
+                                    BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string)
                                    );
                       widget.forceFocus();
                     }
@@ -8686,7 +8686,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -8726,7 +8726,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -8774,7 +8774,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -9074,7 +9074,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -9100,7 +9100,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
@@ -9135,7 +9135,7 @@ public class TabJobs
                   if (!(Boolean)widget.getData("showedErrorDialog"))
                   {
                     widget.setData("showedErrorDialog",true);
-                    Dialogs.error(shell,BARControl.tr("''{0}'' is not valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
+                    Dialogs.error(shell,BARControl.tr("''{0}'' is not a valid size!\n\nEnter a number in the format ''n'' or ''n.m''. Optional units are KB, MB, or GB.",string));
                     widget.forceFocus();
                   }
                 }
