@@ -96,6 +96,7 @@
   * BARControl: added option --index-database-entries-newest
   * BARControl: added option --index-database-history-list
   * BARControl: added option --config
+  * BARControl: added option --geometry
   * BARControl: fixed options --index-database-list-entities,
     --index-database-list-storages: allow empty text
   * BARControl: fixed search entries in restore tab
