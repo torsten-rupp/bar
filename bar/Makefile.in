@@ -164,6 +164,7 @@ DOC_IMAGES           = doc/images/archivename-editor.png \
                        doc/images/restore-dialog.png \
                        doc/images/restore.png \
                        doc/images/schedule.png \
+                       doc/images/persistence.png \
                        doc/images/scripts.png \
                        doc/images/server-commands.png \
                        doc/images/server-general.png \
