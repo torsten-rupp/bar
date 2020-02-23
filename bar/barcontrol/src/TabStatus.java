@@ -1346,7 +1346,7 @@ public class TabStatus
       label = Widgets.newNumberView(composite);
       Widgets.layout(label,0,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,doneCount));
-      label = Widgets.newLabel(composite,BARControl.tr("files"));
+      label = Widgets.newLabel(composite,BARControl.tr("entries"));
       Widgets.layout(label,0,2,TableLayoutData.W);
       label = Widgets.newNumberView(composite);
       Widgets.layout(label,0,3,TableLayoutData.WE);
@@ -1530,7 +1530,7 @@ public class TabStatus
       label = Widgets.newNumberView(composite);
       Widgets.layout(label,2,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,skippedEntryCount));
-      label = Widgets.newLabel(composite,BARControl.tr("files"));
+      label = Widgets.newLabel(composite,BARControl.tr("entries"));
       Widgets.layout(label,2,2,TableLayoutData.W);
       label = Widgets.newNumberView(composite);
       Widgets.layout(label,2,3,TableLayoutData.WE);
@@ -1572,7 +1572,7 @@ public class TabStatus
       label = Widgets.newNumberView(composite);
       Widgets.layout(label,3,1,TableLayoutData.WE);
       Widgets.addModifyListener(new WidgetModifyListener(label,errorEntryCount));
-      label = Widgets.newLabel(composite,BARControl.tr("files"));
+      label = Widgets.newLabel(composite,BARControl.tr("entries"));
       Widgets.layout(label,3,2,TableLayoutData.W);
       label = Widgets.newNumberView(composite);
       Widgets.layout(label,3,3,TableLayoutData.WE);
@@ -1623,7 +1623,7 @@ public class TabStatus
           control.setForeground(widgetVariable.getBoolean() ? null : COLOR_IN_PROGRESS);
         }
       });
-      label = Widgets.newLabel(composite,BARControl.tr("files"));
+      label = Widgets.newLabel(composite,BARControl.tr("entries"));
       Widgets.layout(label,4,2,TableLayoutData.W);
       label = Widgets.newNumberView(composite);
       Widgets.layout(label,4,3,TableLayoutData.WE);
