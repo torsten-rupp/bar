@@ -6542,6 +6542,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
     {
       return error;
     }
+//Database_debugPrintQueryInfo(&databaseQueryHandle);
 
     storageName = String_new();
     Storage_initSpecifier(&storageSpecifier);
