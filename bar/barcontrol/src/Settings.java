@@ -389,6 +389,34 @@ public class Settings
     }
   }
 
+  /** window geometry
+   */
+  static class Geometry
+  {
+    public int width;
+    public int height;
+    public int x;
+    public int y;
+
+    /** create geometry
+     */
+    public Geometry()
+    {
+      this.width  = -1;
+      this.height = -1;
+      this.x      = -1;
+      this.y      = -1;
+    }
+
+    /** convert to string
+     * @return string
+     */
+    public String toString()
+    {
+      return "Geometry {"+x+" "+y+" "+width+" "+height+"}";
+    }
+  }
+
   // --------------------------- constants --------------------------------
   static final String DEFAULT_SERVER_NAME                 = "localhost";
   static final int    DEFAULT_SERVER_PORT                 = 38523;
@@ -439,6 +467,8 @@ public class Settings
   public static boolean                        serverForceTLS                  = false;
   @SettingValue(name="role")
   public static BARControl.Roles               role                            = BARControl.Roles.BASIC;
+
+  public static Geometry                       geometry                        = new Geometry();
 
   // file requester shortcuts
   @SettingComment(text={"","Shortcuts"})

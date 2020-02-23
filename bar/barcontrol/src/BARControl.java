@@ -1679,6 +1679,42 @@ public class BARControl
     new OptionEnumeration("expert",Roles.EXPERT),
   };
 
+  private static final OptionSpecial OPTION_GEOMETRY = new OptionSpecial()
+  {
+    public void parse(String string, Object userData)
+    {
+      final Pattern PATTERN1 = Pattern.compile("^(\\d+)x(\\d+)$",Pattern.CASE_INSENSITIVE);
+      final Pattern PATTERN2 = Pattern.compile("^\\+(\\d+)\\+(\\d+)$",Pattern.CASE_INSENSITIVE);
+      final Pattern PATTERN3 = Pattern.compile("^(\\d+)x(\\d+)\\+(\\d+)\\+(\\d+)$",Pattern.CASE_INSENSITIVE);
+
+      Settings.Geometry geometry = (Settings.Geometry)userData;
+
+      Matcher matcher;
+
+      if      ((matcher = PATTERN1.matcher(string)).matches())
+      {
+        geometry.width  = Integer.parseInt(matcher.group(1));
+        geometry.height = Integer.parseInt(matcher.group(2));
+      }
+      else if ((matcher = PATTERN2.matcher(string)).matches())
+      {
+        geometry.x      = Integer.parseInt(matcher.group(1));
+        geometry.y      = Integer.parseInt(matcher.group(2));
+      }
+      else if ((matcher = PATTERN3.matcher(string)).matches())
+      {
+        geometry.width  = Integer.parseInt(matcher.group(1));
+        geometry.height = Integer.parseInt(matcher.group(2));
+        geometry.x      = Integer.parseInt(matcher.group(3));
+        geometry.y      = Integer.parseInt(matcher.group(4));
+      }
+      else
+      {
+        throw new Error("Invalid geometry '"+string+"'");
+      }
+    }
+  };
+
   private static final Option[] OPTIONS =
   {
     new Option("--config",                       null,Options.Types.STRING,     "configFileName"),
@@ -1718,6 +1754,8 @@ public class BARControl
     new Option("--overwrite-entries",            null,Options.Types.BOOLEAN,    "overwriteEntriesFlag"),
 
     new Option("--role",                         null,Options.Types.ENUMERATION,"role",ROLE_ENUMERATION),
+
+    new Option("--geometry",                     null,Options.Types.SPECIAL,    "geometry",OPTION_GEOMETRY),
 
     new Option("--version",                      null,Options.Types.BOOLEAN,    "versionFlag"),
     new Option("--help",                         "-h",Options.Types.BOOLEAN,    "helpFlag"),
@@ -2064,6 +2102,8 @@ public class BARControl
     System.out.println("                                                        basic (default)");
     System.out.println("                                                        normal");
     System.out.println("                                                        expert");
+    System.out.println("");
+    System.out.println("         --geometry=<x>x<y>[+x0+y0]                 - windows geometry");
     System.out.println("");
     System.out.println("         --version                                  - output version");
     System.out.println("         -h|--help                                  - print this help");
@@ -3365,10 +3405,21 @@ if (false) {
    */
   private void run()
   {
-    // set window size+title, manage window (approximate height according to height of a text line)
-    shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
+    if (Settings.geometry.width  < 0) Settings.geometry.width  = 840;
+    if (Settings.geometry.height < 0) Settings.geometry.height = 600+5*(Widgets.getTextHeight(shell)+4);
+
+    // set window size/location+title, manage window (approximate height according to height of a text line)
+    shell.setSize(Settings.geometry.width,Settings.geometry.height);
+    if ((Settings.geometry.x >= 0) && (Settings.geometry.y >= 0))
+    {
+      shell.setLocation(Settings.geometry.x,Settings.geometry.y);
+    }
     shell.open();
-    shell.setSize(840,600+5*(Widgets.getTextHeight(shell)+4));
+    shell.setSize(Settings.geometry.width,Settings.geometry.height);
+    if ((Settings.geometry.x >= 0) && (Settings.geometry.y >= 0))
+    {
+      shell.setLocation(Settings.geometry.x,Settings.geometry.y);
+    }
     shell.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
 
     // listeners
