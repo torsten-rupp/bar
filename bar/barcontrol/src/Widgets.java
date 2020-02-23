@@ -8540,7 +8540,6 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
                                             Object...     values
                                            )
   {
-Dprintf.dprintf("");
     return insertTreeItem(treeItem,
                           getTreeItemIndex(treeItem,comparator,data),
                           data,
