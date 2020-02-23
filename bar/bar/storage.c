@@ -1488,6 +1488,14 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
       return error;
     }
   }
+  else
+  {
+    if (storageSpecifier->archivePatternString != NULL)
+    {
+      String_delete(storageSpecifier->archivePatternString);
+    }
+    storageSpecifier->archivePatternString = NULL;
+  }
 
   // free resources
   String_delete(archiveName);

@@ -518,7 +518,7 @@ LOCAL String StorageOptical_getName(String                 string,
   assert((storageSpecifier->type == STORAGE_TYPE_CD) || (storageSpecifier->type == STORAGE_TYPE_DVD) || (storageSpecifier->type == STORAGE_TYPE_BD));
 
   // get file to use
-  if      (!String_isEmpty(archiveName))
+  if      (archiveName != NULL)
   {
     storageFileName = archiveName;
   }
@@ -2312,6 +2312,9 @@ LOCAL void StorageOptical_closeDirectoryList(StorageDirectoryListHandle *storage
 
 LOCAL bool StorageOptical_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
+  #ifdef HAVE_ISO9660
+    const iso9660_stat_t* iso9660Stat;
+  #endif /* HAVE_ISO9660 */
   bool endOfDirectoryFlag;
 
   assert(storageDirectoryListHandle != NULL);
@@ -2319,6 +2322,24 @@ LOCAL bool StorageOptical_endOfDirectoryList(StorageDirectoryListHandle *storage
 
   endOfDirectoryFlag = TRUE;
   #ifdef HAVE_ISO9660
+    if (storageDirectoryListHandle->opticalDisk.cdioNextNode != NULL)
+    {
+      // skip directory "." and ".."
+      iso9660Stat = (iso9660_stat_t*)_cdio_list_node_data(storageDirectoryListHandle->opticalDisk.cdioNextNode);
+      assert(iso9660Stat != NULL);
+      while (   (storageDirectoryListHandle->opticalDisk.cdioNextNode != NULL)
+             && (iso9660Stat->type == _STAT_DIR)
+             && ((stringEquals(iso9660Stat->filename,".") || stringEquals(iso9660Stat->filename,"..")))
+            )
+      {
+        storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_node_next(storageDirectoryListHandle->opticalDisk.cdioNextNode);
+        if (storageDirectoryListHandle->opticalDisk.cdioNextNode != NULL)
+        {
+          iso9660Stat = (iso9660_stat_t*)_cdio_list_node_data(storageDirectoryListHandle->opticalDisk.cdioNextNode);
+          assert(iso9660Stat != NULL);
+        }
+      }
+    }
     endOfDirectoryFlag = (storageDirectoryListHandle->opticalDisk.cdioNextNode == NULL);
   #else /* not HAVE_ISO9660 */
     endOfDirectoryFlag = File_endOfDirectoryList(&storageDirectoryListHandle->opticalDisk.directoryListHandle);
@@ -2340,54 +2361,73 @@ LOCAL Errors StorageOptical_readDirectoryList(StorageDirectoryListHandle *storag
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
     {
-      iso9660_stat_t *iso9660Stat;
-      char           *s;
+      const iso9660_stat_t *iso9660Stat;
+      char                 *s;
 
       if (storageDirectoryListHandle->opticalDisk.cdioNextNode != NULL)
       {
+        // skip directory "." and ".."
         iso9660Stat = (iso9660_stat_t*)_cdio_list_node_data(storageDirectoryListHandle->opticalDisk.cdioNextNode);
-        assert(iso9660Stat != NULL);
-
-        s = (char*)malloc(strlen(iso9660Stat->filename)+1);
-        if (s != NULL)
+        while (   (storageDirectoryListHandle->opticalDisk.cdioNextNode != NULL)
+               && (iso9660Stat->type == _STAT_DIR)
+               && ((stringEquals(iso9660Stat->filename,".") || stringEquals(iso9660Stat->filename,"..")))
+              )
         {
-          // Note: enable Joliet extension to avoid conversion to lower case
-          iso9660_name_translate_ext(iso9660Stat->filename,s,ISO_EXTENSION_JOLIET_LEVEL1);
-          String_set(fileName,storageDirectoryListHandle->opticalDisk.pathName);
-          File_appendFileNameCString(fileName,s);
-          free(s);
-
-          if (fileInfo != NULL)
-          {
-            if      (iso9660Stat->type == _STAT_FILE)
-            {
-              fileInfo->type = FILE_TYPE_FILE;
-            }
-            else if (iso9660Stat->type == _STAT_DIR)
-            {
-              fileInfo->type = FILE_TYPE_DIRECTORY;
-            }
-            else
-            {
-              fileInfo->type = FILE_TYPE_UNKNOWN;
-            }
-            fileInfo->size            = iso9660Stat->size;
-            fileInfo->timeLastAccess  = (uint64)mktime(&iso9660Stat->tm);
-            fileInfo->timeModified    = (uint64)mktime(&iso9660Stat->tm);
-            fileInfo->timeLastChanged = 0LL;
-            fileInfo->userId          = iso9660Stat->xa.user_id;
-            fileInfo->groupId         = iso9660Stat->xa.group_id;
-            fileInfo->permission      = iso9660Stat->xa.attributes;
-            fileInfo->major           = 0;
-            fileInfo->minor           = 0;
-            memClear(&fileInfo->cast,sizeof(FileCast));
-          }
-
           storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_node_next(storageDirectoryListHandle->opticalDisk.cdioNextNode);
+          if (storageDirectoryListHandle->opticalDisk.cdioNextNode != NULL)
+          {
+            iso9660Stat = (iso9660_stat_t*)_cdio_list_node_data(storageDirectoryListHandle->opticalDisk.cdioNextNode);
+          }
+        }
+        if (storageDirectoryListHandle->opticalDisk.cdioNextNode != NULL)
+        {
+          assert(iso9660Stat != NULL);
+
+          s = (char*)malloc(strlen(iso9660Stat->filename)+1);
+          if (s != NULL)
+          {
+            // Note: enable Joliet extension to avoid conversion to lower case
+            iso9660_name_translate_ext(iso9660Stat->filename,s,ISO_EXTENSION_JOLIET_LEVEL1);
+            String_set(fileName,storageDirectoryListHandle->opticalDisk.pathName);
+            File_appendFileNameCString(fileName,s);
+            free(s);
+
+            if (fileInfo != NULL)
+            {
+              if      (iso9660Stat->type == _STAT_FILE)
+              {
+                fileInfo->type = FILE_TYPE_FILE;
+              }
+              else if (iso9660Stat->type == _STAT_DIR)
+              {
+                fileInfo->type = FILE_TYPE_DIRECTORY;
+              }
+              else
+              {
+                fileInfo->type = FILE_TYPE_UNKNOWN;
+              }
+              fileInfo->size            = iso9660Stat->size;
+              fileInfo->timeLastAccess  = (uint64)mktime(&iso9660Stat->tm);
+              fileInfo->timeModified    = (uint64)mktime(&iso9660Stat->tm);
+              fileInfo->timeLastChanged = 0LL;
+              fileInfo->userId          = iso9660Stat->xa.user_id;
+              fileInfo->groupId         = iso9660Stat->xa.group_id;
+              fileInfo->permission      = iso9660Stat->xa.attributes;
+              fileInfo->major           = 0;
+              fileInfo->minor           = 0;
+              memClear(&fileInfo->cast,sizeof(FileCast));
+            }
+
+            storageDirectoryListHandle->opticalDisk.cdioNextNode = _cdio_list_node_next(storageDirectoryListHandle->opticalDisk.cdioNextNode);
+          }
+          else
+          {
+            error = ERROR_INSUFFICIENT_MEMORY;
+          }
         }
         else
         {
-          error = ERROR_INSUFFICIENT_MEMORY;
+          error = ERROR_END_OF_DIRECTORY;
         }
       }
       else

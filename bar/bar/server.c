@@ -60,7 +60,7 @@
 #define _NO_SESSION_ID
 #define _SIMULATOR
 #warning remove/revert
-#define SIMULATE_PURGE
+#define _SIMULATE_PURGE
 #define _NO_AUTO_INDEX
 
 /***************************** Constants *******************************/
@@ -89,7 +89,9 @@
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
-#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*60)  // [s]
+#warning remove/revert
+//#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*60)  // [s]
+#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10)  // [s]
 #define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*60)  // [s]
 
 // id none
@@ -4151,18 +4153,24 @@ LOCAL void indexThreadCode(void)
 
 LOCAL void getStorageDirectories(StringList *storageDirectoryList)
 {
-  String        storageDirectoryName;
-  const JobNode *jobNode;
+  StorageSpecifier storageSpecifier;
+  String           directoryName,storageDirectoryName;
+  const JobNode    *jobNode;
+
+  // init variables
+  Storage_initSpecifier(&storageSpecifier);
+  directoryName        = String_new();
+  storageDirectoryName = String_new();
 
   // collect storage locations to check for BAR files
-  storageDirectoryName = String_new();
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
     JOB_LIST_ITERATE(jobNode)
     {
-      File_getDirectoryName(storageDirectoryName,jobNode->job.archiveName);
-      if (!String_isEmpty(storageDirectoryName))
+      if (Storage_parseName(&storageSpecifier,jobNode->job.archiveName) == ERROR_NONE)
       {
+        File_getDirectoryName(directoryName,storageSpecifier.archiveName);
+        Storage_getName(storageDirectoryName,&storageSpecifier,directoryName);
         if (!StringList_contains(storageDirectoryList,storageDirectoryName))
         {
           StringList_append(storageDirectoryList,storageDirectoryName);
@@ -4170,7 +4178,11 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
       }
     }
   }
+
+  // free resources
   String_delete(storageDirectoryName);
+  String_delete(directoryName);
+  Storage_doneSpecifier(&storageSpecifier);
 }
 
 /***********************************************************************\
@@ -7095,11 +7107,11 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
 *            fileType=DIRECTORY name=<name> dateTime=<time stamp> noBackup=yes|no noDump=yes|no
 *            fileType=LINK destinationFileType=<type> name=<name> dateTime=<time stamp> noDump=yes|no
 *            fileType=HARDLINK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            fileType=DEVICE CHARACTER name=<name> dateTime=<time stamp> noDump=yes|no
-*            fileType=DEVICE BLOCK name=<name> size=<n [bytes]> dateTime=<time stamp> noDump=yes|no
-*            fileType=FIFO name=<name> dateTime=<time stamp> noDump=yes|no
-*            fileType=SOCKET name=<name> dateTime=<time stamp> noDump=yes|no
-*            fileType=SPECIAL name=<name> dateTime=<time stamp> noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=DEVICE_CHARACTER dateTime=<time stamp> noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=DEVICE_BLOCK dateTime=<time stamp> noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=FIFO dateTime=<time stamp> noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=SOCKET dateTime=<time stamp> noDump=yes|no
+*            fileType=SPECIAL name=<name> specialType=OTHER dateTime=<time stamp> noDump=yes|no
 \***********************************************************************/
 
 LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
@@ -9104,7 +9116,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            archiveSize=<n [bytes]>
 *            compressionRatio=<ratio>
 *            entryName=<name>
-*            entryBytes=<n [bytes]>
+*            entryDoneSize=<n [bytes]>
 *            entryTotalSize=<n [bytes]>
 *            storageName=<name>
 *            storageDoneSize=<n [bytes]>
@@ -14704,7 +14716,7 @@ LOCAL void serverCommand_restoreContinue(ClientInfo *clientInfo, IndexHandle *in
 *            uuidId=<n>
 *            jobUUID=<uuid> \
 *            name=<name> \
-*            lastCreatedDateTime=<time stamp [s]> \
+*            lastExecutedDateTime=<time stamp [s]> \
 *            lastErrorMessage=<text> \
 *            totalSize=<n> \
 *            totalEntryCount=<n> \
@@ -16148,14 +16160,21 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   // init variables
   Storage_initSpecifier(&storageSpecifier);
 
+  // parse storage specifier
+  error = Storage_parseName(&storageSpecifier,pattern);
+  if (error != ERROR_NONE)
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"invalid storage specifier");
+    String_delete(pattern);
+    return;
+  }
+
   error = ERROR_UNKNOWN;
 
   // try to open as storage file
   if (error != ERROR_NONE)
   {
-    if (   (Storage_parseName(&storageSpecifier,pattern) == ERROR_NONE)
-        && !Storage_isPatternSpecifier(&storageSpecifier)
-       )
+    if (!Storage_isPatternSpecifier(&storageSpecifier))
     {
       if (Storage_init(&storageInfo,
                        NULL, // masterIO
@@ -16248,10 +16267,10 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   if (error != ERROR_NONE)
   {
     error = Storage_forAll(&storageSpecifier,
-                           pattern,
+                           storageSpecifier.archivePatternString,
                            CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                            {
-                             String printableStorageName;
+                             ConstString printableStorageName;
 
                              UNUSED_VARIABLE(fileInfo);
                              UNUSED_VARIABLE(userData);
@@ -16261,7 +16280,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                              {
                                if (String_endsWithCString(storageSpecifier.archiveName,FILE_NAME_EXTENSION_ARCHIVE_FILE))
                                {
-                                 printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,storageName);
+                                 printableStorageName = Storage_getPrintableName(NULL,&storageSpecifier,NULL);
 
                                  if (Index_findStorageByName(indexHandle,
                                                              &storageSpecifier,
@@ -16330,7 +16349,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                    return error;
                                  }
 
-                                 String_delete(printableStorageName);
+//                                 String_delete(printableStorageName);
                                }
                              }
 

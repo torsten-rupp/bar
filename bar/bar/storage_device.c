@@ -319,7 +319,7 @@ LOCAL String StorageDevice_getName(String                 string,
   assert(storageSpecifier != NULL);
 
   // get file to use
-  if      (!String_isEmpty(archiveName))
+  if      (archiveName != NULL)
   {
     storageFileName = archiveName;
   }

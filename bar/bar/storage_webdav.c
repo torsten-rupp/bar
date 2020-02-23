@@ -731,7 +731,7 @@ LOCAL String StorageWebDAV_getName(String                 string,
   assert(storageSpecifier->type == STORAGE_TYPE_WEBDAV);
 
   // get file to use
-  if      (!String_isEmpty(archiveName))
+  if      (archiveName != NULL)
   {
     storageFileName = archiveName;
   }
