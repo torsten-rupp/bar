@@ -15212,12 +15212,13 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
       break;
     }
 
-    // auto flush index list
-    error = autoFlushArchiveIndexList(&archiveHandle,
-                                      uuidId,
-                                      entityId,
-                                      storageId
-                                     );
+    // flush index list
+    error = flushArchiveIndexList(&archiveHandle,
+                                  uuidId,
+                                  entityId,
+                                  storageId,
+                                  64*1024
+                                 );
     if (error != ERROR_NONE)
     {
       break;
