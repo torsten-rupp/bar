@@ -89,9 +89,7 @@
 #define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
 #define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
 #define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
-#warning remove/revert
-//#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*60)  // [s]
-#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10)  // [s]
+#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*60)  // [s]
 #define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*60)  // [s]
 
 // id none
