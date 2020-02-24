@@ -1396,7 +1396,6 @@ class Dialogs
       }
       else
       {
-Dprintf.dprintf("result[0]=%s",result[0]);
         result[0] = null;
       }
     }
