@@ -3311,10 +3311,10 @@ LOCAL void indexThreadCode(void)
     {
       while (   !quitFlag
              && (sleepTime < SLEEP_TIME_INDEX_CLEANUP_THREAD)
-             && !Semaphore_waitModified(&indexThreadTrigger,5*MS_PER_SECOND)
+             && !Semaphore_waitModified(&indexThreadTrigger,10*MS_PER_SECOND)
         )
       {
-        sleepTime += 5;
+        sleepTime += 10;
       }
     }
   }
