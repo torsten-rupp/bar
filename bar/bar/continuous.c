@@ -556,6 +556,29 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 }
 
 /***********************************************************************\
+* Name   : freeNotifyDictionary
+* Purpose: free notify info dictionary entry
+* Input  : data     - data
+*          length   - length (not used)
+*          userData - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeNotifyDictionary(const void *data, ulong length, void *userData)
+{
+  NotifyInfo *notifyInfo = (NotifyInfo*)data;
+  assert(notifyInfo != NULL);
+
+  UNUSED_VARIABLE(length);
+  UNUSED_VARIABLE(userData);
+
+  freeNotifyInfo(notifyInfo,NULL);
+  free(notifyInfo);
+}
+
+/***********************************************************************\
 * Name   : addNotify
 * Purpose: add notify for directory
 * Input  : directory - directory
@@ -1552,7 +1575,8 @@ Errors Continuous_initAll(void)
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
                   CALLBACK_(NULL,NULL),  // dictionaryCopyFunction
-                  CALLBACK_(NULL,NULL),  // freeNotifyDictionary
+//TODO: test
+                  CALLBACK_(freeNotifyDictionary,NULL),
                   CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
                  );
   Dictionary_init(&notifyNames,
