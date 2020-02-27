@@ -2854,24 +2854,27 @@ Dprintf.dprintf("");
       {
         public void run()
         {
-          TableColumn tableColumn = widgetStorageTable.getSortColumn();
-          if (tableColumn != null)
+          if (!widgetStorageTable.isDisposed())
           {
-            switch (widgetStorageTable.indexOf(tableColumn))
+            TableColumn tableColumn = widgetStorageTable.getSortColumn();
+            if (tableColumn != null)
             {
-              case 0:  sortMode[0] = "NAME";     break;
-              case 1:  sortMode[0] = "HOSTNAME"; break;
-              case 2:  sortMode[0] = "SIZE";     break;
-              case 3:  sortMode[0] = "MODIFIED"; break;
-              case 4:  sortMode[0] = "STATE";    break;
-              default: sortMode[0] = "NAME";     break;
-            }
+              switch (widgetStorageTable.indexOf(tableColumn))
+              {
+                case 0:  sortMode[0] = "NAME";     break;
+                case 1:  sortMode[0] = "HOSTNAME"; break;
+                case 2:  sortMode[0] = "SIZE";     break;
+                case 3:  sortMode[0] = "MODIFIED"; break;
+                case 4:  sortMode[0] = "STATE";    break;
+                default: sortMode[0] = "NAME";     break;
+              }
 
-            switch (widgetStorageTable.getSortDirection())
-            {
-              case SWT.UP  : ordering[0] = "ASCENDING";  break;
-              case SWT.DOWN: ordering[0] = "DESCENDING"; break;
-              case SWT.NONE: ordering[0] = "NONE";       break;
+              switch (widgetStorageTable.getSortDirection())
+              {
+                case SWT.UP  : ordering[0] = "ASCENDING";  break;
+                case SWT.DOWN: ordering[0] = "DESCENDING"; break;
+                case SWT.NONE: ordering[0] = "NONE";       break;
+              }
             }
           }
         }
@@ -7318,8 +7321,9 @@ Dprintf.dprintf("");
   /** update assign-to sub-menu
    * @param menu menu
    */
-  private void updateAssignToMenu(final Menu menu)
+  private synchronized void updateAssignToMenu(final Menu menu)
   {
+Dprintf.dprintf("-----------------------------------------------------------------------------");
     // discard old menu items
     for (MenuItem menuItem : menu.getItems())
     {
@@ -7331,6 +7335,7 @@ Dprintf.dprintf("");
     {
       final ArrayList<UUIDIndexData> uuidIndexDataList = uuidIndexDataListCache.getData();
 
+      // update cache every 30s
       if (uuidIndexDataListCache.isExpired(30*1000))
       {
         // get UUID index data list
@@ -7471,9 +7476,9 @@ Dprintf.dprintf("");
       ArrayListCache<EntityIndexData>  entityIndexDataListCache = entityIndexDataListCacheMap.get(jobUUID);
       final ArrayList<EntityIndexData> entityIndexDataList      = entityIndexDataListCache.getData();
 
+      // update cache every 30s
       if (entityIndexDataListCache.isExpired(30*1000))
       {
-        // update entity index data list
         entityIndexDataList.clear();
         BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
                                                      jobUUID
