@@ -6922,17 +6922,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
-  if (!archiveHandle->storageFlags.dryRun)
-  {
-    // write header
-    error = writeFileChunks(archiveEntryInfo);
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-  }
-
   // done resources
   AutoFree_done(&autoFreeList);
 
@@ -7286,17 +7275,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
-
-  if (!archiveHandle->storageFlags.dryRun)
-  {
-    // write header
-    error = writeImageChunks(archiveEntryInfo);
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-  }
 
   // done resources
   AutoFree_done(&autoFreeList);
@@ -8195,17 +8173,6 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
-
-  if (!archiveHandle->storageFlags.dryRun)
-  {
-    // create new part
-    error = writeHardLinkChunks(archiveEntryInfo);
-    if (error != ERROR_NONE)
-    {
-      AutoFree_cleanup(&autoFreeList);
-      return error;
-    }
-  }
 
   // done resources
   AutoFree_done(&autoFreeList);
