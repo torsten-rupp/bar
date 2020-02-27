@@ -4578,14 +4578,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
     // pause, check abort
     Storage_pause(&createInfo->storageInfo);
-    if (isAborted(createInfo))
+    if ((createInfo->failError != ERROR_NONE) || isAborted(createInfo))
     {
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       break;
     }
 
     // get next archive to store
     if (!MsgQueue_get(&createInfo->storageMsgQueue,&storageMsg,NULL,sizeof(storageMsg),WAIT_FOREVER))
     {
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
       break;
     }
     AUTOFREE_ADD(&autoFreeList,&storageMsg,
@@ -4596,11 +4598,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                    freeStorageMsg(&storageMsg,NULL);
                  }
                 );
+    if ((createInfo->failError != ERROR_NONE) || isAborted(createInfo))
+    {
+      AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+      break;
+    }
 
-    if (   (createInfo->failError == ERROR_NONE)
-        && !createInfo->storageFlags.dryRun
-        && !isAborted(createInfo)
-       )
+    if (!createInfo->storageFlags.dryRun)
     {
       // get printable storage name
       Storage_getPrintableName(printableStorageName,&createInfo->storageInfo.storageSpecifier,storageMsg.archiveName);
@@ -4609,14 +4613,15 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->createdDateTime,FALSE);
       if (error != ERROR_NONE)
       {
+        if (createInfo->failError != ERROR_NONE) createInfo->failError = error;
+
         printError("Cannot pre-process file '%s' (error: %s)!",
                    String_cString(printableStorageName),
                    Error_getText(error)
                   );
-        createInfo->failError = error;
 
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
+        break;
       }
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
@@ -4624,14 +4629,15 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = File_getInfo(&fileInfo,storageMsg.fileName);
       if (error != ERROR_NONE)
       {
+        if (createInfo->failError != ERROR_NONE) createInfo->failError = error;
+
         printError("Cannot get information for file '%s' (error: %s)",
                    String_cString(storageMsg.fileName),
                    Error_getText(error)
                   );
-        createInfo->failError = error;
 
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
+        break;
       }
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
 
@@ -4672,20 +4678,22 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
       if (error != ERROR_NONE)
       {
+        if (createInfo->failError != ERROR_NONE) createInfo->failError = error;
+
         printInfo(0,"FAIL!\n");
         printError("Cannot open file '%s' (error: %s)!",
                    String_cString(storageMsg.fileName),
                    Error_getText(error)
                   );
-        createInfo->failError = error;
 
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
+        break;
       }
       AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
       // create storage
+      AUTOFREE_ADD(&autoFreeList,&storageHandle, { Storage_delete(&createInfo->storageInfo,storageMsg.archiveName); });
       retryCount  = 0;
       appendFlag  = FALSE;
       archiveSize = 0LL;
@@ -4696,7 +4704,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         // pause, check abort
         Storage_pause(&createInfo->storageInfo);
-        if (isAborted(createInfo))
+        if ((createInfo->failError != ERROR_NONE) || isAborted(createInfo))
         {
           break;
         }
@@ -4741,7 +4749,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         // pause, check abort
         Storage_pause(&createInfo->storageInfo);
-        if (isAborted(createInfo))
+        if ((createInfo->failError != ERROR_NONE) || isAborted(createInfo))
         {
           Storage_close(&storageHandle);
           break;
@@ -4772,7 +4780,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
         // pause, check abort
         Storage_pause(&createInfo->storageInfo);
-        if (isAborted(createInfo))
+        if ((createInfo->failError != ERROR_NONE) || isAborted(createInfo))
         {
           Storage_close(&storageHandle);
           break;
@@ -4794,9 +4802,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       if (error != ERROR_NONE)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
-
+      }
+      if (createInfo->failError != ERROR_NONE)
+      {
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
+        break;
       }
 
       // close file to store
@@ -4808,18 +4818,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         printInfo(1,"ABORTED\n");
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
+        break;
       }
-
-      // done
-      printInfo(1,"OK (%llu bytes)\n",archiveSize);
-      logMessage(createInfo->logHandle,
-                 LOG_TYPE_STORAGE,
-                 "%s '%s' (%llu bytes)",
-                 appendFlag ? "Appended to" : "Stored",
-                 String_cString(printableStorageName),
-                 archiveSize
-                );
 
       // update index database and set state
       if (!INDEX_ID_IS_NONE(storageMsg.storageId))
@@ -4858,8 +4858,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           {
             if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
+            printInfo(1,"FAIL\n");
+            printError("Cannot update index for storage '%s' (error: %s)!",
+                       String_cString(printableStorageName),
+                       Error_getText(error)
+                      );
+
             AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-            continue;
+            break;
           }
           AUTOFREE_ADD(&autoFreeList,&storageMsg.storageId,
           {
@@ -4884,14 +4890,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                 );
           if (error != ERROR_NONE)
           {
+            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+            printInfo(1,"FAIL\n");
             printError("Cannot update index for storage '%s' (error: %s)!",
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
-            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
             AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-            continue;
+            break;
           }
 
           // prune storage (maybe empty now)
@@ -4918,14 +4926,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                    );
           if (error != ERROR_NONE)
           {
+            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+            printInfo(1,"FAIL\n");
             printError("Cannot delete old index for storage '%s' (error: %s)!",
                        String_cString(printableStorageName),
                        Error_getText(error)
                       );
-            if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
             AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-            continue;
+            break;
           }
 
           // append storage to existing entity which has the same storage directory
@@ -4959,7 +4969,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
               if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
               AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-              continue;
+              break;
             }
             while (Index_getNextStorage(&indexQueryHandle,
                                         NULL,  // uuidId
@@ -5007,8 +5017,14 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             {
               if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
+              printInfo(1,"FAIL\n");
+              printError("Cannot delete old index for storage '%s' (error: %s)!",
+                         String_cString(printableStorageName),
+                         Error_getText(error)
+                        );
+
               AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-              continue;
+              break;
             }
 
             // prune entity (maybe empty now)
@@ -5048,19 +5064,31 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         }
         if (error != ERROR_NONE)
         {
+          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
+
+          printInfo(1,"FAIL\n");
           printError("Cannot update index for storage '%s' (error: %s)!",
                      String_cString(printableStorageName),
                      Error_getText(error)
                     );
-          if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
           AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-          continue;
+          break;
         }
         DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
         AUTOFREE_REMOVE(&autoFreeList,&storageMsg.storageId);
       }
+
+      // done
+      printInfo(1,"OK (%llu bytes)\n",archiveSize);
+      logMessage(createInfo->logHandle,
+                 LOG_TYPE_STORAGE,
+                 "%s '%s' (%llu bytes)",
+                 appendFlag ? "Appended to" : "Stored",
+                 String_cString(printableStorageName),
+                 archiveSize
+                );
 
       // post-process
       error = Storage_postProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->createdDateTime,FALSE);
@@ -5073,9 +5101,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        continue;
+        break;
       }
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
+
+      AUTOFREE_REMOVE(&autoFreeList,&storageHandle);
 
       // delete temporary storage file
       error = File_delete(storageMsg.fileName,FALSE);
