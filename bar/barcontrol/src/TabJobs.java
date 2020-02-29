@@ -11982,55 +11982,59 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxx");
    */
   private void updateIncludeList(JobData jobData)
   {
-    includeHashMap.clear();
-    Widgets.removeAllTableItems(widgetIncludeTable);
+    final EntryDataComparator entryDataComparator = new EntryDataComparator(widgetIncludeTable);
 
-    try
+    synchronized(includeHashMap)
     {
-      final EntryDataComparator entryDataComparator = new EntryDataComparator(widgetIncludeTable);
-      BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
-                                                   jobData.uuid
-                                                  ),
-                               0,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
+      includeHashMap.clear();
+      try
+      {
+        BARServer.executeCommand(StringParser.format("INCLUDE_LIST jobUUID=%s",
+                                                     jobData.uuid
+                                                    ),
+                                 0,  // debugLevel
+                                 new Command.ResultHandler()
                                  {
-                                   final EntryTypes   entryType   = valueMap.getEnum  ("entryType",  EntryTypes.class  );
-                                   final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
-                                   final String       pattern     = valueMap.getString("pattern"                       );
-
-                                   if (!pattern.isEmpty())
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
                                    {
-                                     final EntryData entryData = new EntryData(entryType,pattern);
+                                     final EntryTypes   entryType   = valueMap.getEnum  ("entryType",  EntryTypes.class  );
+                                     final PatternTypes patternType = valueMap.getEnum  ("patternType",PatternTypes.class);
+                                     final String       pattern     = valueMap.getString("pattern"                       );
 
-                                     if (!widgetIncludeTable.isDisposed())
+                                     if (!pattern.isEmpty())
                                      {
-                                       display.syncExec(new Runnable()
-                                       {
-                                         @Override
-                                         public void run()
-                                         {
-                                           Widgets.insertTableItem(widgetIncludeTable,
-                                                                   entryDataComparator,
-                                                                   entryData,
-                                                                   entryData.getImage(),
-                                                                   entryData.pattern
-                                                                  );
-                                         }
-                                       });
+                                       includeHashMap.put(pattern,new EntryData(entryType,pattern));
                                      }
-
-                                     includeHashMap.put(pattern,entryData);
                                    }
                                  }
-                               }
-                              );
-    }
-    catch (Exception exception)
-    {
-      // ignored
+                                );
+      }
+      catch (Exception exception)
+      {
+        // ignored
+      }
+
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          if (!widgetIncludeTable.isDisposed())
+          {
+            Widgets.removeAllTableItems(widgetIncludeTable);
+            for (EntryData entryData : includeHashMap.values())
+            {
+              Widgets.insertTableItem(widgetIncludeTable,
+                                      entryDataComparator,
+                                      entryData,
+                                      entryData.getImage(),
+                                      entryData.pattern
+                                     );
+            }
+          }
+        }
+      });
     }
   }
 
@@ -12239,15 +12243,19 @@ throw new Error("NYI");
     }
 
     // update hash map
-    includeHashMap.put(entryData.pattern,entryData);
+    synchronized(includeHashMap)
+    {
+      includeHashMap.put(entryData.pattern,entryData);
 
-    // update/insert table widget
-    Widgets.updateInsertTableItem(widgetIncludeTable,
-                                  entryDataComparator,
-                                  entryData,
-                                  entryData.getImage(),
-                                  entryData.pattern
-                                 );
+      // update/insert table widget
+      Widgets.updateInsertTableItem(widgetIncludeTable,
+                                    entryDataComparator,
+                                    entryData,
+                                    entryData.getImage(),
+                                    entryData.pattern
+                                   );
+
+    }
 
     // update file tree/device images
     updateFileTreeImages();
@@ -12259,50 +12267,68 @@ throw new Error("NYI");
    */
   private void includeListRemove(String[] patterns)
   {
+    final EntryDataComparator entryDataComparator = new EntryDataComparator(widgetIncludeTable);
+
     assert selectedJobData != null;
 
-    // remove patterns from hash map
-    for (String pattern : patterns)
+    synchronized(includeHashMap)
     {
-      includeHashMap.remove(pattern);
-    }
-
-    // update include list
-    try
-    {
-      final EntryDataComparator entryDataComparator = new EntryDataComparator(widgetIncludeTable);
-      BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobUUID=%s",
-                                                   selectedJobData.uuid
-                                                  ),
-                               0  // debugLevel
-                              );
-      Widgets.removeAllTableItems(widgetIncludeTable);
-      for (EntryData entryData : includeHashMap.values())
+      // remove patterns from hash map
+      for (String pattern : patterns)
       {
-        BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
-                                                     selectedJobData.uuid,
-                                                     entryData.entryType.toString(),
-                                                     "GLOB",
-                                                     entryData.pattern
+        includeHashMap.remove(pattern);
+      }
+
+      // update include list
+      try
+      {
+        BARServer.executeCommand(StringParser.format("INCLUDE_LIST_CLEAR jobUUID=%s",
+                                                     selectedJobData.uuid
                                                     ),
                                  0  // debugLevel
                                 );
-        Widgets.insertTableItem(widgetIncludeTable,
-                                entryDataComparator,
-                                entryData,
-                                entryData.getImage(),
-                                entryData.pattern
-                               );
+        for (EntryData entryData : includeHashMap.values())
+        {
+          BARServer.executeCommand(StringParser.format("INCLUDE_LIST_ADD jobUUID=%s entryType=%s patternType=%s pattern=%'S",
+                                                       selectedJobData.uuid,
+                                                       entryData.entryType.toString(),
+                                                       "GLOB",
+                                                       entryData.pattern
+                                                      ),
+                                   0  // debugLevel
+                                  );
+        }
       }
-    }
-    catch (Exception exception)
-    {
-      Dialogs.error(shell,
-                    BARControl.tr("Cannot remove include entry:\n\n{0}",
-                                  exception.getMessage()
-                                 )
-                   );
-      return;
+      catch (Exception exception)
+      {
+        Dialogs.error(shell,
+                      BARControl.tr("Cannot remove include entry:\n\n{0}",
+                                    exception.getMessage()
+                                   )
+                     );
+        return;
+      }
+
+      display.syncExec(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          if (!widgetIncludeTable.isDisposed())
+          {
+            Widgets.removeAllTableItems(widgetIncludeTable);
+            for (EntryData entryData : includeHashMap.values())
+            {
+              Widgets.insertTableItem(widgetIncludeTable,
+                                      entryDataComparator,
+                                      entryData,
+                                      entryData.getImage(),
+                                      entryData.pattern
+                                     );
+            }
+          }
+        }
+      });
     }
 
     // update file tree/device images
