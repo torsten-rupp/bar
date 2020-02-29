@@ -43,7 +43,6 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL uint id = 0;
 
 /****************************** Macros *********************************/
 
@@ -54,22 +53,6 @@ LOCAL uint id = 0;
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : getNewId
-* Purpose: get new id
-* Input  : -
-* Output : -
-* Return : id
-* Notes  : -
-\***********************************************************************/
-
-LOCAL uint getNewId(void)
-{
-  id++;
-
-  return id;
-}
 
 /***********************************************************************\
 * Name   : duplicateDeltaSourceNode
@@ -96,7 +79,7 @@ LOCAL DeltaSourceNode *duplicateDeltaSourceNode(DeltaSourceNode *deltaSourceNode
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  newDeltaSourceNode->id          = getNewId();
+  newDeltaSourceNode->id          = Misc_getId();
   newDeltaSourceNode->storageName = String_duplicate(deltaSourceNode->storageName);
   newDeltaSourceNode->patternType = deltaSourceNode->patternType;
   newDeltaSourceNode->locked      = FALSE;
@@ -270,7 +253,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = getNewId();
+    deltaSourceNode->id          = Misc_getId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -321,7 +304,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          deltaSourceNode->id          = getNewId();
+          deltaSourceNode->id          = Misc_getId();
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
           deltaSourceNode->locked      = FALSE;
@@ -348,7 +331,7 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = getNewId();
+    deltaSourceNode->id          = Misc_getId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -414,7 +397,7 @@ UNUSED_VARIABLE(id);
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = getNewId();
+    deltaSourceNode->id          = Misc_getId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;
@@ -465,7 +448,7 @@ UNUSED_VARIABLE(id);
           {
             HALT_INSUFFICIENT_MEMORY();
           }
-          deltaSourceNode->id          = getNewId();
+          deltaSourceNode->id          = Misc_getId();
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
           deltaSourceNode->locked      = FALSE;
@@ -492,7 +475,7 @@ UNUSED_VARIABLE(id);
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    deltaSourceNode->id          = getNewId();
+    deltaSourceNode->id          = Misc_getId();
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
     deltaSourceNode->locked      = FALSE;

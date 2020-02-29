@@ -39,7 +39,6 @@
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL uint id = 0;
 
 /****************************** Macros *********************************/
 
@@ -50,22 +49,6 @@ LOCAL uint id = 0;
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : getNewId
-* Purpose: get new id
-* Input  : -
-* Output : -
-* Return : id
-* Notes  : -
-\***********************************************************************/
-
-LOCAL uint getNewId(void)
-{
-  id++;
-
-  return id;
-}
 
 /***********************************************************************\
 * Name   : duplicatePatternNode
@@ -93,7 +76,7 @@ LOCAL PatternNode *duplicatePatternNode(PatternNode *patternNode,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  newPatternNode->id     = getNewId();
+  newPatternNode->id     = Misc_getId();
   newPatternNode->string = String_duplicate(patternNode->string);
 
   // create pattern
@@ -231,7 +214,7 @@ Errors PatternList_appendCString(PatternList  *patternList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  patternNode->id     = getNewId();
+  patternNode->id     = Misc_getId();
   patternNode->string = String_newCString(string);
 
   // init pattern

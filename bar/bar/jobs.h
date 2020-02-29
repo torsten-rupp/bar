@@ -706,7 +706,7 @@ INLINE void __Job_listUnlock(const char *__fileName__,
     dt = Misc_getTimestamp()-jobList.lockTimestamp;
     if ((dt > 2*US_PER_S) && (Semaphore_lockCount(&jobList.lock) == 1))
     {
-fprintf(stderr,"%s, %d: %"PRIu64" "PRIu64"\n",__FILE__,__LINE__,jobList.lockTimestamp,Misc_getTimestamp());
+//fprintf(stderr,"%s, %d: %"PRIu64" %"PRIu64"\n",__FILE__,__LINE__,jobList.lockTimestamp,Misc_getTimestamp());
       fprintf(stderr,"Warning: long job list lock: %"PRIu64"ms\n",dt/US_PER_MS);
       #ifdef HAVE_BACKTRACE
         debugDumpStackTrace(stderr,

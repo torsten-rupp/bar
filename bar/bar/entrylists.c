@@ -50,7 +50,6 @@ LOCAL const struct
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
-LOCAL uint id = 0;
 
 /****************************** Macros *********************************/
 
@@ -61,22 +60,6 @@ LOCAL uint id = 0;
 #ifdef __cplusplus
   extern "C" {
 #endif
-
-/***********************************************************************\
-* Name   : getNewId
-* Purpose: get new id
-* Input  : -
-* Output : -
-* Return : id
-* Notes  : -
-\***********************************************************************/
-
-LOCAL uint getNewId(void)
-{
-  id++;
-
-  return id;
-}
 
 /***********************************************************************\
 * Name   : duplicateEntryNode
@@ -110,7 +93,7 @@ LOCAL EntryNode *duplicateEntryNode(EntryNode *entryNode,
   }
 
   // create entry
-  newEntryNode->id          = getNewId();
+  newEntryNode->id          = Misc_getId();
   newEntryNode->type        = entryNode->type;
   newEntryNode->string      = String_duplicate(entryNode->string);
   newEntryNode->patternType = entryNode->patternType;
@@ -331,7 +314,7 @@ Errors EntryList_appendCString(EntryList    *entryList,
   {
     HALT_INSUFFICIENT_MEMORY();
   }
-  entryNode->id          = getNewId();
+  entryNode->id          = Misc_getId();
   entryNode->type        = type;
   entryNode->string      = String_newCString(string);
   entryNode->patternType = patternType;

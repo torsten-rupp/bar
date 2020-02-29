@@ -561,6 +561,7 @@ LOCAL PersistenceNode *duplicatePersistenceNode(PersistenceNode *fromPersistence
   {
     HALT_INSUFFICIENT_MEMORY();
   }
+  persistenceNode->id          = Misc_getId();
   persistenceNode->archiveType = fromPersistenceNode->archiveType;
   persistenceNode->minKeep     = fromPersistenceNode->minKeep;
   persistenceNode->maxKeep     = fromPersistenceNode->maxKeep;
