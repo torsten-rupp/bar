@@ -2246,7 +2246,7 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
         }
         Database_finalize(&databaseQueryHandle);
 
-        // delete entity index
+        // delete entity from index
         error = Database_execute(&indexHandle->databaseHandle,
                                  CALLBACK_(NULL,NULL),  // databaseRowFunction
                                  NULL,  // changedRowCount
