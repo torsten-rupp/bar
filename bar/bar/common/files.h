@@ -1630,14 +1630,16 @@ String File_getCurrentDirectory(String pathName);
 /***********************************************************************\
 * Name   : File_readLink
 * Purpose: read link
-* Input  : linkName - link name
+* Input  : linkName         - link name
+*          absolutePathFlag - TRUE to get absolute path
 * Output : fileName - file name link references
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
 Errors File_readLink(String      fileName,
-                     ConstString linkName
+                     ConstString linkName,
+                     bool        absolutePathFlag
                     );
 
 /***********************************************************************\

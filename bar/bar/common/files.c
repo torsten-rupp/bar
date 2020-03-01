@@ -4503,7 +4503,8 @@ Errors File_makeDirectoryCString(const char     *pathName,
 }
 
 Errors File_readLink(String      fileName,
-                     ConstString linkName
+                     ConstString linkName,
+                     bool        absolutePathFlag
                     )
 {
   #define BUFFER_SIZE  256
@@ -4538,19 +4539,29 @@ Errors File_readLink(String      fileName,
         HALT_INSUFFICIENT_MEMORY();
       }
     }
-
-    if (result != -1)
-    {
-      String_setBuffer(fileName,buffer,result);
-      free(buffer);
-      return ERROR_NONE;
-    }
-    else
+    if (result == -1)
     {
       error = ERRORX_(IO,errno,"%E",errno);
       free(buffer);
       return error;
     }
+
+    if (absolutePathFlag && !File_isAbsoluteFileName(fileName))
+    {
+      // absolute name
+      File_getDirectoryName(fileName,linkName);
+      File_appendFileNameBuffer(fileName,buffer,result);
+    }
+    else
+    {
+      // absolute or relative name
+      String_setBuffer(fileName,buffer,result);
+    }
+
+    // free resources
+    free(buffer);
+
+    return ERROR_NONE;
   #else /* not HAVE_READLINK */
     UNUSED_VARIABLE(fileName);
     UNUSED_VARIABLE(linkName);
