@@ -81,20 +81,16 @@
 #endif
 
 #ifdef HAVE_STAT64
-  #define STAT  stat64
-  #define LSTAT lstat64
+  #define STAT stat64
   typedef struct stat64 FileStat;
 #elif HAVE___STAT64
-  #define STAT  stat64
-  #define LSTAT lstat64
+  #define STAT stat64
   typedef struct __stat64 FileStat;
 #elif HAVE__STATI64
-  #define STAT  _stati64
-  #define LSTAT _stati64
+  #define STAT _stati64
   typedef struct _stati64 FileStat;
 #elif HAVE_STAT
-  #define STAT  stat
-  #define LSTAT lstat
+  #define STAT stat
   typedef struct stat FileStat;
 #else
   #error No struct stat64 nor struct __stat64
@@ -823,7 +819,7 @@ Errors Device_getInfoCString(DeviceInfo *deviceInfo,
 
   #if   defined(PLATFORM_LINUX)
     // get device meta data
-    if (LSTAT(deviceName,&fileStat) != 0)
+    if (STAT(deviceName,&fileStat) != 0)
     {
       return ERRORX_(IO,errno,"%E",errno);
     }
