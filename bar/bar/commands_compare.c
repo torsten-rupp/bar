@@ -1099,7 +1099,7 @@ LOCAL Errors compareLinkEntry(ArchiveHandle     *archiveHandle,
 
     // check link
     localFileName = String_new();
-    error = File_readLink(localFileName,linkName);
+    error = File_readLink(localFileName,linkName,FALSE);
     if (error != ERROR_NONE)
     {
       printError("Cannot read local file '%s' (error: %s)!",

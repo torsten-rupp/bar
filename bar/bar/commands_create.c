@@ -2080,7 +2080,29 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     }
                                     break;
                                   case ENTRY_TYPE_IMAGE:
-                                    // nothing to do
+                                    {
+                                      DeviceInfo deviceInfo;
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+                                      if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
+                                      {
+                                        // get device info
+                                        error = Device_getInfo(&deviceInfo,fileName,FALSE);
+                                        if (error != ERROR_NONE)
+                                        {
+                                          continue;
+                                        }
+
+                                        if (deviceInfo.type == DEVICE_TYPE_BLOCK)
+                                        {
+                                          STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                                          {
+                                            createInfo->statusInfo.total.count++;
+                                            createInfo->statusInfo.total.size += deviceInfo.size;
+                                          }
+                                        }
+                                      }
+                                    }
                                     break;
                                   default:
                                     #ifndef NDEBUG
@@ -2255,7 +2277,28 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         }
                         break;
                       case ENTRY_TYPE_IMAGE:
-                        // nothing to do
+                        {
+                          DeviceInfo deviceInfo;
+
+                          if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
+                          {
+                            // get device info
+                            error = Device_getInfo(&deviceInfo,fileName,FALSE);
+                            if (error != ERROR_NONE)
+                            {
+                              continue;
+                            }
+
+                            if (deviceInfo.type == DEVICE_TYPE_BLOCK)
+                            {
+                              STATUS_INFO_UPDATE(createInfo,fileName,NULL)
+                              {
+                                createInfo->statusInfo.total.count++;
+                                createInfo->statusInfo.total.size += deviceInfo.size;
+                              }
+                            }
+                          }
+                        }
                         break;
                       default:
                         #ifndef NDEBUG
@@ -3129,7 +3172,41 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                     }
                                     break;
                                   case ENTRY_TYPE_IMAGE:
-                                    // nothing to do
+                                    {
+                                      DeviceInfo deviceInfo;
+
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+                                      if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
+                                      {
+                                        // get device info
+                                        error = Device_getInfo(&deviceInfo,fileName,TRUE);
+                                        if (error != ERROR_NONE)
+                                        {
+                                          printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                                          logMessage(createInfo->logHandle,
+                                                     LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                                     "Access denied '%s' (error: %s)",
+                                                     String_cString(name),
+                                                     Error_getText(error)
+                                                    );
+
+                                          STATUS_INFO_UPDATE(createInfo,name,NULL)
+                                          {
+                                            createInfo->statusInfo.error.count++;
+                                          }
+
+                                          continue;
+                                        }
+
+                                        // add to entry list
+                                        appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                                                 ENTRY_TYPE_IMAGE,
+                                                                 name,
+                                                                 deviceInfo.size,
+                                                                 !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                                );
+                                      }
+                                    }
                                     break;
                                   default:
                                     #ifndef NDEBUG
@@ -3360,7 +3437,40 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         }
                         break;
                       case ENTRY_TYPE_IMAGE:
-                        // nothing to do
+                        {
+                          DeviceInfo deviceInfo;
+
+                          if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
+                          {
+                            // get device info
+                            error = Device_getInfo(&deviceInfo,fileName,TRUE);
+                            if (error != ERROR_NONE)
+                            {
+                              printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+                              logMessage(createInfo->logHandle,
+                                         LOG_TYPE_ENTRY_ACCESS_DENIED,
+                                         "Access denied '%s' (error: %s)",
+                                         String_cString(name),
+                                         Error_getText(error)
+                                        );
+
+                              STATUS_INFO_UPDATE(createInfo,name,NULL)
+                              {
+                                createInfo->statusInfo.error.count++;
+                              }
+
+                              continue;
+                            }
+
+                            // add to entry list
+                            appendSpecialToEntryList(&createInfo->entryMsgQueue,
+                                                     ENTRY_TYPE_IMAGE,
+                                                     name,
+                                                     deviceInfo.size,
+                                                     !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
+                                                    );
+                          }
+                        }
                         break;
                       default:
                         #ifndef NDEBUG
@@ -6560,7 +6670,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   {
     // read link
     fileName = String_new();
-    error = File_readLink(fileName,linkName);
+    error = File_readLink(fileName,linkName,FALSE);
     if (error != ERROR_NONE)
     {
       if (createInfo->jobOptions->skipUnreadableFlag)
