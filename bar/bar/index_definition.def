@@ -593,6 +593,7 @@ CREATE TABLE IF NOT EXISTS history(
 );
 CREATE INDEX ON history (jobUUID,created,type);
 CREATE INDEX ON history (created);
+CREATE INDEX ON history (errorMessage);
 
 // --- debug only ------------------------------------------------------
 CREATE TABLE IF NOT EXISTS log(
