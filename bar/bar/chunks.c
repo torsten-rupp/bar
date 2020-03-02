@@ -2861,7 +2861,7 @@ Errors Chunk_writeData(ChunkInfo  *chunkInfo,
   error = chunkInfo->io->write(chunkInfo->ioUserData,data,size);
   if (error != ERROR_NONE)
   {
-    return ERROR_(IO,errno);
+    return error;
   }
 
   // increment indizes and increase sizes
