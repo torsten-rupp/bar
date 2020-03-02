@@ -4803,7 +4803,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
       // create storage
-      AUTOFREE_ADD(&autoFreeList,&storageHandle, { Storage_delete(&createInfo->storageInfo,storageMsg.archiveName); });
       retryCount  = 0;
       appendFlag  = FALSE;
       archiveSize = 0LL;
@@ -4870,6 +4869,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         if (error != ERROR_NONE)
         {
           Storage_close(&storageHandle);
+          Storage_delete(&createInfo->storageInfo,storageMsg.archiveName);
+
           if (retryCount < MAX_RETRIES)
           {
             // retry
@@ -4886,7 +4887,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             break;
           }
         }
-        DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
+        DEBUG_TESTCODE() { Storage_close(&storageHandle); Storage_delete(&createInfo->storageInfo,storageMsg.archiveName); error = DEBUG_TESTCODE_ERROR(); break; }
 
         // pause, check abort
         Storage_pause(&createInfo->storageInfo);
@@ -5214,8 +5215,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         break;
       }
       DEBUG_TESTCODE() { createInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
-
-      AUTOFREE_REMOVE(&autoFreeList,&storageHandle);
 
       // delete temporary storage file
       error = File_delete(storageMsg.fileName,FALSE);
