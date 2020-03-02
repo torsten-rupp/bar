@@ -5710,6 +5710,14 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
               }
               offset += bufferLength;
             }
+            else
+            {
+              logMessage(createInfo->logHandle,
+                         LOG_TYPE_ERROR,
+                         "Write archive failed (error: %s)",
+                         Error_getText(error)
+                        );
+            }
 
             if (isPrintInfo(2))
             {
@@ -5732,6 +5740,15 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
             size = 0;
           }
         }
+        else
+        {
+          logMessage(createInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Read file failed '%s' (error: %s)",
+                     String_cString(fileName),
+                     Error_getText(error)
+                    );
+        }
 
         // wait for temporary file space
         waitForTemporaryFileSpace(createInfo);
@@ -5751,12 +5768,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       if (createInfo->jobOptions->skipUnreadableFlag)
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-        logMessage(createInfo->logHandle,
-                   LOG_TYPE_ENTRY_ACCESS_DENIED,
-                   "Access file failed '%s' (error: %s)",
-                   String_cString(fileName),
-                   Error_getText(error)
-                  );
 
         STATUS_INFO_UPDATE(createInfo,fileName,NULL)
         {
@@ -6181,6 +6192,14 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           }
           blockOffset += (uint64)bufferBlockCount;
         }
+        else
+        {
+          logMessage(createInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Write archive failed (error: %s)",
+                     Error_getText(error)
+                    );
+        }
 
         if (isPrintInfo(2))
         {
@@ -6193,6 +6212,15 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
           }
           printInfo(2,"%3d%%\b\b\b\b",percentageDone);
         }
+      }
+      else
+      {
+        logMessage(createInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "Read device failed '%s' (error: %s)",
+                   String_cString(deviceName),
+                   Error_getText(error)
+                  );
       }
 
       // wait for temporary file space
@@ -6212,12 +6240,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       if (createInfo->jobOptions->skipUnreadableFlag)
       {
         printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-        logMessage(createInfo->logHandle,
-                   LOG_TYPE_ENTRY_ACCESS_DENIED,
-                   "Access device failed '%s' (error: %s)",
-                   String_cString(deviceName),
-                   Error_getText(error)
-                  );
 
         STATUS_INFO_UPDATE(createInfo,deviceName,NULL)
         {
@@ -6238,6 +6260,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
         printError("Cannot store image entry (error: %s)!",
                    Error_getText(error)
                   );
+
         (void)Archive_closeEntry(&archiveEntryInfo);
         if (fileSystemFlag) FileSystem_done(&fileSystemHandle);
         Device_close(&deviceHandle);
@@ -7065,6 +7088,14 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
               }
               offset += bufferLength;
             }
+            else
+            {
+              logMessage(createInfo->logHandle,
+                         LOG_TYPE_ERROR,
+                         "Write archive failed (error: %s)",
+                         Error_getText(error)
+                        );
+            }
 
             if (isPrintInfo(2))
             {
@@ -7087,6 +7118,15 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
             size = 0;
           }
         }
+        else
+        {
+          logMessage(createInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Read hardlink failed '%s' (error: %s)",
+                     String_cString(fileName),
+                     Error_getText(error)
+                    );
+        }
 
         // wait for temporary file space
         waitForTemporaryFileSpace(createInfo);
@@ -7103,15 +7143,36 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
     if (error != ERROR_NONE)
     {
-      printInfo(1,"FAIL\n");
-      printError("Cannot store hardlink entry (error: %s)!",
-                 Error_getText(error)
-                );
-      (void)Archive_closeEntry(&archiveEntryInfo);
-      (void)File_close(&fileHandle);
-      fragmentDone(createInfo,StringList_first(fileNameList,NULL));
-      File_doneExtendedAttributes(&fileExtendedAttributeList);
-      return error;
+      if (createInfo->jobOptions->skipUnreadableFlag)
+      {
+        printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
+
+        STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
+        {
+          createInfo->statusInfo.error.count++;
+          createInfo->statusInfo.error.size += fragmentSize;
+        }
+
+        (void)Archive_closeEntry(&archiveEntryInfo);
+        (void)File_close(&fileHandle);
+        fragmentDone(createInfo,StringList_first(fileNameList,NULL));
+        File_doneExtendedAttributes(&fileExtendedAttributeList);
+
+        return ERROR_NONE;
+      }
+      else
+      {
+        printInfo(1,"FAIL\n");
+        printError("Cannot store hardlink entry (error: %s)!",
+                   Error_getText(error)
+                  );
+
+        (void)Archive_closeEntry(&archiveEntryInfo);
+        (void)File_close(&fileHandle);
+        fragmentDone(createInfo,StringList_first(fileNameList,NULL));
+        File_doneExtendedAttributes(&fileExtendedAttributeList);
+        return error;
+      }
     }
     printInfo(2,"    \b\b\b\b");
 
