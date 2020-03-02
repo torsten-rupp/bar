@@ -559,6 +559,7 @@ sub writeC()
 #include <limits.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <pthread.h>
 #include <errno.h>
 
 #include \"common/global.h\"
@@ -584,9 +585,10 @@ typedef struct
   #endif /* not NDEBUG */
 } ErrorData;
 
-static ErrorData errorData[$ERROR_DATA_INDEX_MAX_COUNT];   // last error data
-static uint      errorDataCount = 0;                       // last error data count (=max. when all data entries are used; recycle oldest entry if required)
-static uint      errorDataId    = 0;                       // total number of error data
+static pthread_mutex_t errorTextLock  = PTHREAD_MUTEX_INITIALIZER;
+static ErrorData       errorData[$ERROR_DATA_INDEX_MAX_COUNT];   // last error data
+static uint            errorDataCount = 0;                       // last error data count (=max. when all data entries are used; recycle oldest entry if required)
+static uint            errorDataId    = 0;                       // total number of error data
 
 LOCAL void vformatErrorText(char *string, ulong n, const char *format, va_list arguments)
 {
@@ -834,58 +836,62 @@ int _Error_dataToIndex(const char *format, ...)
     stringClear(text);
   }
 
-  // get new error data id
-  errorDataId++;
+  pthread_mutex_lock(&errorTextLock);
+  {
+    // get new error data id
+    errorDataId++;
 
-  // get error data index
-  index = -1;
-  z = 0;
-  while ((z < errorDataCount) && (index == -1))
-  {
-    if (stringEquals(errorData[z].text,text))
+    // get error data index
+    index = -1;
+    z = 0;
+    while ((z < errorDataCount) && (index == -1))
     {
-      index = z;
-    }
-    z++;
-  }
-  if (index == -1)
-  {
-    if (errorDataCount < $ERROR_DATA_INDEX_MAX_COUNT)
-    {
-      // use next entry
-      index = errorDataCount;
-      errorDataCount++;
-    }
-    else
-    {
-      // recycle oldest entry (entry with smallest id)
-      index = 0;
-      minId = INT_MAX;
-      for (z = 0; z < $ERROR_DATA_INDEX_MAX_COUNT; z++)
+      if (stringEquals(errorData[z].text,text))
       {
-        if (errorData[z].id < minId)
+        index = z;
+      }
+      z++;
+    }
+    if (index == -1)
+    {
+      if (errorDataCount < $ERROR_DATA_INDEX_MAX_COUNT)
+      {
+        // use next entry
+        index = errorDataCount;
+        errorDataCount++;
+      }
+      else
+      {
+        // recycle oldest entry (entry with smallest id)
+        index = 0;
+        minId = INT_MAX;
+        for (z = 0; z < $ERROR_DATA_INDEX_MAX_COUNT; z++)
         {
-          index = z;
-          minId = errorData[z].id;
+          if (errorData[z].id < minId)
+          {
+            index = z;
+            minId = errorData[z].id;
+          }
         }
       }
     }
-  }
 
-  // init error data
-  errorData[index].id = errorDataId;
-  z = 0;
-  i = 0;
-  while ((z < strlen(text)) && (i < ERROR_MAX_TEXT_LENGTH-1))
-  {
-    if (!iscntrl(text[z])) { errorData[index].text[i] = text[z]; i++; }
-    z++;
+    // init error data
+    errorData[index].id = errorDataId;
+    z = 0;
+    i = 0;
+    while ((z < stringLength(text)) && (i < ERROR_MAX_TEXT_LENGTH-1))
+    {
+      if (!iscntrl(text[z])) { errorData[index].text[i] = text[z]; i++; }
+      z++;
+    }
+    errorData[index].text[i] = '\\0';
+    #ifndef NDEBUG
+      errorData[index].fileName = fileName;
+      errorData[index].lineNb   = lineNb;
+    #endif /* not NDEBUG */
   }
-  errorData[index].text[i] = '\\0';
-  #ifndef NDEBUG
-    errorData[index].fileName = fileName;
-    errorData[index].lineNb   = lineNb;
-  #endif /* not NDEBUG */
+  pthread_mutex_unlock(&errorTextLock);
 
   return index+1;
 }
