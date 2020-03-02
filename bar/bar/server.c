@@ -18736,29 +18736,6 @@ Errors Server_run(ServerModes       mode,
     AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
   }
 
-#if 0
-{
-ulong totalEntryCount;
-uint64 totalEntrySize;
-uint64 totalEntryContentSize;
-String name = String_newCString("torsten.rupp");
-#warning remove/revert
-Index_getEntriesInfo(indexHandle,
-                                NULL,
-                                0L,
-                               NULL,
-                               0L,
-                               INDEX_TYPE_ANY,
-                               name,
-                               FALSE,
-                               &totalEntryCount,
-                               &totalEntrySize,
-                               &totalEntryContentSize
-                              );
-exit(1);
-}
-#endif
-
   // init server sockets
   serverFlag    = FALSE;
   serverTLSFlag = FALSE;
@@ -18968,6 +18945,7 @@ exit(1);
   }
 
   // Note: ignore SIGALRM in Misc_waitHandles()
+  printInfo(1,"Ready\n");
   MISC_SIGNAL_MASK_CLEAR(signalMask);
   #ifdef HAVE_SIGALRM
     MISC_SIGNAL_MASK_SET(signalMask,SIGALRM);
