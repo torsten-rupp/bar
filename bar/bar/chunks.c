@@ -2313,6 +2313,7 @@ void Chunk_tell(ChunkInfo *chunkInfo, uint64 *index)
   #endif /* NDEBUG */
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->tell != NULL);
   assert(index != NULL);
@@ -2331,6 +2332,7 @@ Errors Chunk_seek(ChunkInfo *chunkInfo, uint64 index)
   Errors error;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->seek != NULL);
 
@@ -2364,6 +2366,7 @@ Errors __Chunk_open(const char        *__fileName__,
   ulong  bytesRead;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->id == chunkHeader->id);
   assert(chunkInfo->data != NULL);
@@ -2441,13 +2444,6 @@ chunkInfo->chunkSize = ALIGN(dataSize,chunkInfo->alignment);
 
   // transform
 
-  // Note: use chunkInfo->mode because chunkInfo is already used in Chunk_init()
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(&chunkInfo->mode,ChunkModes);
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,&chunkInfo->mode,ChunkModes);
-  #endif /* NDEBUG */
-
   return ERROR_NONE;
 }
 
@@ -2466,6 +2462,7 @@ Errors __Chunk_create(const char *__fileName__,
   ulong       bytesWritten;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->id != CHUNK_ID_NONE);
@@ -2537,13 +2534,6 @@ Errors __Chunk_create(const char *__fileName__,
     }
   }
 
-  // Note: use chunkInfo->mode because chunkInfo is already used in Chunk_init()
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(&chunkInfo->mode,ChunkModes);
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,&chunkInfo->mode,ChunkModes);
-  #endif /* NDEBUG */
-
   return ERROR_NONE;
 }
 
@@ -2555,6 +2545,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
   ulong       bytesWritten;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->io->seek != NULL);
@@ -2565,8 +2556,6 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
     case CHUNK_MODE_UNKNOWN:
       break;
     case CHUNK_MODE_WRITE:
-      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode,ChunkModes);
-
       // save offset
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
       if (error != ERROR_NONE)
@@ -2604,8 +2593,6 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       }
       break;
     case CHUNK_MODE_READ:
-      DEBUG_REMOVE_RESOURCE_TRACE(&chunkInfo->mode,ChunkModes);
-
       // check chunk size value
       error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
       if (error != ERROR_NONE)
@@ -2647,6 +2634,7 @@ Errors Chunk_nextSub(ChunkInfo   *chunkInfo,
   const ChunkTransformInfo *chunkTransformInfo;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->tell != NULL);
   assert(chunkHeader != NULL);
@@ -2717,6 +2705,7 @@ Errors Chunk_skipSub(ChunkInfo         *chunkInfo,
   Errors error;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->getSize != NULL);
   assert(chunkInfo->io->seek != NULL);
@@ -2753,6 +2742,7 @@ Errors Chunk_update(ChunkInfo *chunkInfo)
   ulong  bytesWritten;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->io->seek != NULL);
@@ -2806,6 +2796,7 @@ Errors Chunk_readData(ChunkInfo *chunkInfo,
   ulong  n;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->read != NULL);
   assert(data != NULL);
@@ -2854,6 +2845,7 @@ Errors Chunk_writeData(ChunkInfo  *chunkInfo,
   Errors error;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->write != NULL);
 
@@ -2884,6 +2876,7 @@ Errors Chunk_skipData(ChunkInfo *chunkInfo,
   uint64 offset;
 
   assert(chunkInfo != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(chunkInfo);
   assert(chunkInfo->io != NULL);
   assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->io->seek != NULL);
