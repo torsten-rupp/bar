@@ -121,8 +121,6 @@ typedef enum
   COMMAND_RESTORE,
   COMMAND_CONVERT,
 
-//  COMMAND_VERIFY_SIGNATURES,
-
   COMMAND_GENERATE_ENCRYPTION_KEYS,
   COMMAND_GENERATE_SIGNATURE_KEYS,
   COMMAND_NEW_KEY_PASSWORD,
@@ -153,7 +151,7 @@ LOCAL MountedList        mountedList;                      // list of mounts
 LOCAL Commands           command;
 LOCAL String             jobUUIDName;
 
-LOCAL String             jobUUID;
+LOCAL String             jobUUID;                          // UUID of job to execute
 LOCAL String             storageName;
 LOCAL EntryList          includeEntryList;                 // included entries
 LOCAL PatternList        excludePatternList;               // excluded entry patterns
@@ -889,10 +887,10 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
 
   CONFIG_VALUE_BEGIN_SECTION     ("master",-1),
 //TODO
-  CONFIG_VALUE_STRING            ("name",                             &globalOptions.masterInfo.name,-1                              ),
-  CONFIG_VALUE_SPECIAL           ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
+    CONFIG_VALUE_STRING          ("name",                             &globalOptions.masterInfo.name,-1                              ),
+    CONFIG_VALUE_SPECIAL         ("uuid-hash",                        &globalOptions.masterInfo.uuidHash,-1,                         configValueParseHashData,configValueFormatInitHashData,configValueFormatDoneHashData,configValueFormatHashData,NULL),
 //TODO: required to save?
-  CONFIG_VALUE_SPECIAL           ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueParseKeyData,NULL,NULL,NULL,NULL),
+    CONFIG_VALUE_SPECIAL         ("public-key",                       &globalOptions.masterInfo.publicKey,-1,                        configValueParseKeyData,NULL,NULL,NULL,NULL),
   CONFIG_VALUE_END_SECTION(),
 
   CONFIG_VALUE_STRING            ("tmp-directory",                    &globalOptions.tmpDirectory,-1                                 ),
@@ -8999,7 +8997,7 @@ bool configValueParseHashData(void *userData, void *variable, const char *name, 
       }
 
       // decode base64
-//TODO: salt?
+//TODO: use salt?
       if (!Misc_base64DecodeCString((byte*)data,dataLength,NULL,&value[offset]))
       {
         freeSecure(data);
@@ -10369,74 +10367,57 @@ LOCAL Errors runBatch(void)
 /***********************************************************************\
 * Name   : runJob
 * Purpose: run job
-* Input  : -
+* Input  : jobUUID - UUID of job to execute
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors runJob(void)
+LOCAL Errors runJob(ConstString jobUUIDName)
 {
-  JobOptions jobOptions;
-  Errors error;
+  const JobNode *jobNode;
+  ArchiveTypes  archiveType;
+  StorageFlags  storageFlags;
+  JobOptions    jobOptions;
+  Errors        error;
 
-  // get include/excluded entries from file list
-  if (!String_isEmpty(globalOptions.includeFileListFileName))
+  // get job to execute
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
   {
-    error = addIncludeListFromFile(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileListFileName));
-    if (error != ERROR_NONE)
+    // find job by name or UUID
+    jobNode = NULL;
+    if (jobNode == NULL) jobNode = Job_findByName(jobUUIDName);
+    if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
+    if      (jobNode != NULL)
     {
-      return error;
+//      String_set(jobUUID,jobNode->job.uuid);
     }
-  }
-  if (!String_isEmpty(globalOptions.includeImageListFileName))
-  {
-    error = addIncludeListFromFile(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageListFileName));
-    if (error != ERROR_NONE)
+    else if (String_matchCString(jobUUIDName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
     {
-      return error;
+//      String_set(jobUUID,jobUUIDName);
     }
-  }
-  if (!String_isEmpty(globalOptions.excludeListFileName))
-  {
-    error = addExcludeListFromFile(&excludePatternList,String_cString(globalOptions.excludeListFileName));
-    if (error != ERROR_NONE)
+    else
     {
-      return error;
+      printError(_("Cannot find job '%s'!"),
+                 String_cString(jobUUIDName)
+                );
+      Job_listUnlock();
+      return ERROR_CONFIG;
     }
-  }
 
-  // get include/excluded entries from commands
-  if (!String_isEmpty(globalOptions.includeFileCommand))
-  {
-    error = addIncludeListFromCommand(ENTRY_TYPE_FILE,&includeEntryList,String_cString(globalOptions.includeFileCommand));
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-  if (!String_isEmpty(globalOptions.includeImageCommand))
-  {
-    error = addIncludeListFromCommand(ENTRY_TYPE_IMAGE,&includeEntryList,String_cString(globalOptions.includeImageCommand));
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
-  }
-  if (!String_isEmpty(globalOptions.excludeCommand))
-  {
-    error = addExcludeListFromCommand(&excludePatternList,String_cString(globalOptions.excludeCommand));
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+    // get job data
+    String_set(storageName,jobNode->job.storageName);
+    EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,NULL,NULL);
+    PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,NULL,NULL);
+    archiveType = jobNode->archiveType;
+    storageFlags = jobNode->storageFlags;
+    Job_duplicateOptions(&jobOptions,&jobNode->job.options);
   }
 
   // start job execution
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
   // create archive
-  Job_initOptions(&jobOptions);
   error = Command_create(NULL, // masterIO
                          NULL, // job UUID
                          NULL, // schedule UUID
@@ -10445,10 +10426,8 @@ LOCAL Errors runJob(void)
                          storageName,
                          &includeEntryList,
                          &excludePatternList,
-//                         &compressExcludePatternList,
-//                         &deltaSourceList,
                          &jobOptions,
-                         globalOptions.archiveType,
+                         archiveType,
                          Misc_getCurrentDateTime(),
                          storageFlags,
                          CALLBACK_(getCryptPasswordFromConsole,NULL),
@@ -10608,9 +10587,6 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
                                  storageName,
                                  &includeEntryList,
                                  &excludePatternList,
-//TODO
-//                                 &compressExcludePatternList,
-//                                 &deltaSourceList,
                                  &jobOptions,
                                  globalOptions.archiveType,
                                  Misc_getCurrentDateTime(),
@@ -10814,24 +10790,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   const JobNode *jobNode;
   bool          printInfoFlag;
 
-//TODO remove
-#if 0
-{
-CryptKey p,s;
-String n,e;
-
-Crypt_createKeyPair(&p,&s,1024);
-Crypt_dumpKey(&p);
-//Crypt_dumpKey(&s);
-n = Crypt_getKeyModulus(&p);
-e = Crypt_getKeyExponent(&p);
-fprintf(stderr,"%s, %d: n=%s\n",__FILE__,__LINE__,String_cString(n));
-fprintf(stderr,"%s, %d: e=%s\n",__FILE__,__LINE__,String_cString(e));
-
-exit(1);
-}
-#endif
-
   // parse command line: pre-options
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
@@ -10923,13 +10881,14 @@ exit(1);
   {
     return ERROR_INVALID_ARGUMENT;
   }
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   if (serverMode == SERVER_MODE_MASTER)
   {
     // read jobs (if possible)
     (void)Job_rereadAll(globalOptions.jobsDirectory);
 
-    // read options from job file (if job is given)
+    // get UUID of job to execute
     if (!String_isEmpty(jobUUIDName))
     {
       JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
@@ -10940,12 +10899,10 @@ exit(1);
         if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDName);
         if      (jobNode != NULL)
         {
-          // get job uuid
           String_set(jobUUID,jobNode->job.uuid);
         }
         else if (String_matchCString(jobUUIDName,STRING_BEGIN,"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[-0-9a-fA-F]{12}",NULL,NULL))
         {
-          // get job uuid
           String_set(jobUUID,jobUUIDName);
         }
         else
@@ -10956,6 +10913,9 @@ exit(1);
           Job_listUnlock();
           return ERROR_CONFIG;
         }
+
+        // get job options
+
       }
     }
   }
@@ -10999,9 +10959,9 @@ exit(1);
   {
     error = runBatch();
   }
-  else if (!String_isEmpty(jobUUIDName) && (command == COMMAND_NONE))
+  else if (!String_isEmpty(jobUUID) && (command == COMMAND_NONE))
   {
-    error = runJob();
+    error = runJob(jobUUID);
   }
   else
   {
