@@ -2083,7 +2083,6 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                     {
                                       DeviceInfo deviceInfo;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
                                       if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
                                       {
                                         // get device info
@@ -3175,7 +3174,6 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                     {
                                       DeviceInfo deviceInfo;
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
                                       if (File_readLink(fileName,name,TRUE) == ERROR_NONE)
                                       {
                                         // get device info
