@@ -144,7 +144,7 @@ const ConfigValue JOB_CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_STRUCT_VALUE_STRING      ("slave-host-name",           JobNode,job.slaveHost.name                       ),
   CONFIG_STRUCT_VALUE_INTEGER     ("slave-host-port",           JobNode,job.slaveHost.port,                      0,65535,NULL),
   CONFIG_STRUCT_VALUE_BOOLEAN     ("slave-host-force-tls",      JobNode,job.slaveHost.forceTLS                   ),
-  CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.archiveName                          ),
+  CONFIG_STRUCT_VALUE_STRING      ("archive-name",              JobNode,job.storageName                          ),
   CONFIG_STRUCT_VALUE_SELECT      ("archive-type",              JobNode,job.options.archiveType,                 CONFIG_VALUE_ARCHIVE_TYPES),
 
   CONFIG_STRUCT_VALUE_STRING      ("incremental-list-file",     JobNode,job.options.incrementalListFileName      ),
@@ -2479,7 +2479,7 @@ void Job_init(Job *job)
   job->slaveHost.name          = String_new();
   job->slaveHost.port          = 0;
   job->slaveHost.forceTLS      = FALSE;
-  job->archiveName             = String_new();
+  job->storageName             = String_new();
   job->storageNameListStdin    = FALSE;
   job->storageNameListFileName = String_new();
   job->storageNameCommand      = String_new();
@@ -2502,7 +2502,7 @@ void Job_initDuplicate(Job *job, const Job *fromJob)
   job->slaveHost.port          = fromJob->slaveHost.port;
   job->slaveHost.forceTLS      = fromJob->slaveHost.forceTLS;
 
-  job->archiveName             = String_duplicate(fromJob->archiveName);
+  job->storageName             = String_duplicate(fromJob->storageName);
   job->storageNameListStdin    = fromJob->storageNameListStdin;
   job->storageNameListFileName = String_duplicate(fromJob->storageNameListFileName);
   job->storageNameCommand      = String_duplicate(fromJob->storageNameCommand);
@@ -2535,7 +2535,7 @@ void Job_done(Job *job)
 
   String_delete(job->storageNameCommand);
   String_delete(job->storageNameListFileName);
-  String_delete(job->archiveName);
+  String_delete(job->storageName);
 
   String_delete(job->slaveHost.name);
   String_delete(job->uuid);
@@ -3150,7 +3150,7 @@ bool Job_read(JobNode *jobNode)
   String_clear(jobNode->job.slaveHost.name);
   jobNode->job.slaveHost.port          = 0;
   jobNode->job.slaveHost.forceTLS      = FALSE;
-  String_clear(jobNode->job.archiveName);
+  String_clear(jobNode->job.storageName);
   EntryList_clear(&jobNode->job.includeEntryList);
   PatternList_clear(&jobNode->job.excludePatternList);
   clearOptions(&jobNode->job.options);

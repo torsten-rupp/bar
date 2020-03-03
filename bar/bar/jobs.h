@@ -129,8 +129,7 @@ typedef struct
     bool   forceTLS;
   }                   slaveHost;                        // slave host
 
-//TODO: rename: storageName
-  String              archiveName;                      // archive name
+  String              storageName;                      // storage name
 
   bool                storageNameListStdin;             // read storage names from stdin
   String              storageNameListFileName;          // storage names list file name
