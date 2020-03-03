@@ -1521,7 +1521,7 @@ LOCAL void jobThreadCode(void)
 
       // get copy of mandatory job data
       String_set(jobName,jobNode->name);
-      String_set(storageName,jobNode->job.archiveName);
+      String_set(storageName,jobNode->job.storageName);
       String_set(jobUUID,jobNode->job.uuid);
       EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
@@ -1851,7 +1851,7 @@ NULL,//                                                        scheduleTitle,
         {
           // init storage
           jobNode->runningInfo.error = Connector_initStorage(connectorInfo,
-                                                             jobNode->job.archiveName,
+                                                             jobNode->job.storageName,
                                                              &jobNode->job.options,
                                                              storageFlags
                                                             );
@@ -4165,7 +4165,7 @@ LOCAL void getStorageDirectories(StringList *storageDirectoryList)
   {
     JOB_LIST_ITERATE(jobNode)
     {
-      if (Storage_parseName(&storageSpecifier,jobNode->job.archiveName) == ERROR_NONE)
+      if (Storage_parseName(&storageSpecifier,jobNode->job.storageName) == ERROR_NONE)
       {
         File_getDirectoryName(directoryName,storageSpecifier.archiveName);
         Storage_getName(storageDirectoryName,&storageSpecifier,directoryName);
