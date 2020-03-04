@@ -1601,7 +1601,9 @@ LOCAL bool StorageOptical_exists(const StorageInfo *storageInfo, ConstString arc
     pathName = File_getDirectoryName(String_new(),archiveName);
     fileName = File_getBaseName(String_new(),archiveName);
 
-    iso9660Handle = iso9660_open_ext(String_cString(storageInfo->storageSpecifier.deviceName),ISO_EXTENSION_ALL);
+    iso9660Handle = iso9660_open_ext(String_cString(storageInfo->storageSpecifier.deviceName),
+                                     ISO_EXTENSION_ALL
+                                    );
     cdioList = iso9660_ifs_readdir(iso9660Handle,String_cString(pathName));
     if (cdioList != NULL)
     {
@@ -1781,61 +1783,61 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
   assert(!String_isEmpty(archiveName));
 
   #ifdef HAVE_ISO9660
+    // initialize variables
+    storageHandle->opticalDisk.read.iso9660Handle     = NULL;
+    storageHandle->opticalDisk.read.iso9660Stat       = NULL;
+    storageHandle->opticalDisk.read.index             = 0LL;
+    storageHandle->opticalDisk.read.buffer.blockIndex = 0LL;
+    storageHandle->opticalDisk.read.buffer.length     = 0L;
+
+    storageHandle->opticalDisk.read.buffer.data = (byte*)malloc(ISO_BLOCKSIZE);
+    if (storageHandle->opticalDisk.read.buffer.data == NULL)
     {
-      // initialize variables
-      storageHandle->opticalDisk.read.iso9660Handle     = NULL;
-      storageHandle->opticalDisk.read.iso9660Stat       = NULL;
-      storageHandle->opticalDisk.read.index             = 0LL;
-      storageHandle->opticalDisk.read.buffer.blockIndex = 0LL;
-      storageHandle->opticalDisk.read.buffer.length     = 0L;
-
-      storageHandle->opticalDisk.read.buffer.data = (byte*)malloc(ISO_BLOCKSIZE);
-      if (storageHandle->opticalDisk.read.buffer.data == NULL)
-      {
-        HALT_INSUFFICIENT_MEMORY();
-      }
-
-      // check if device exists
-      if (String_isEmpty(storageHandle->storageInfo->storageSpecifier.deviceName))
-      {
-        free(storageHandle->opticalDisk.read.buffer.data);
-        return ERROR_NO_DEVICE_NAME;
-      }
-      if (!File_exists(storageHandle->storageInfo->storageSpecifier.deviceName))
-      {
-        free(storageHandle->opticalDisk.read.buffer.data);
-        return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));
-      }
-
-      // open optical disk/ISO 9660 file
-      storageHandle->opticalDisk.read.iso9660Handle = iso9660_open_ext(String_cString(storageHandle->storageInfo->storageSpecifier.deviceName),ISO_EXTENSION_ROCK_RIDGE);//ISO_EXTENSION_ALL);
-      if (storageHandle->opticalDisk.read.iso9660Handle == NULL)
-      {
-        if (File_isFile(storageHandle->storageInfo->storageSpecifier.deviceName))
-        {
-          free(storageHandle->opticalDisk.read.buffer.data);
-          return ERRORX_(OPEN_ISO9660_FILE,errno,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));
-        }
-        else
-        {
-          free(storageHandle->opticalDisk.read.buffer.data);
-          return ERRORX_(OPEN_OPTICAL_DISK,errno,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));
-        }
-      }
-
-      // prepare file for reading
-      storageHandle->opticalDisk.read.iso9660Stat = iso9660_ifs_stat_translate(storageHandle->opticalDisk.read.iso9660Handle,
-                                                                               String_cString(archiveName)
-                                                                              );
-      if (storageHandle->opticalDisk.read.iso9660Stat == NULL)
-      {
-        iso9660_close(storageHandle->opticalDisk.read.iso9660Handle);
-        free(storageHandle->opticalDisk.read.buffer.data);
-        return ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(archiveName));
-      }
-
-      DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,StorageHandleOpticalDisk);
+      HALT_INSUFFICIENT_MEMORY();
     }
+
+    // check if device exists
+    if (String_isEmpty(storageHandle->storageInfo->storageSpecifier.deviceName))
+    {
+      free(storageHandle->opticalDisk.read.buffer.data);
+      return ERROR_NO_DEVICE_NAME;
+    }
+    if (!File_exists(storageHandle->storageInfo->storageSpecifier.deviceName))
+    {
+      free(storageHandle->opticalDisk.read.buffer.data);
+      return ERRORX_(OPTICAL_DISK_NOT_FOUND,0,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));
+    }
+
+    // open optical disk/ISO 9660 file
+    storageHandle->opticalDisk.read.iso9660Handle = iso9660_open_ext(String_cString(storageHandle->storageInfo->storageSpecifier.deviceName),
+                                                                     ISO_EXTENSION_ALL
+                                                                    );
+    if (storageHandle->opticalDisk.read.iso9660Handle == NULL)
+    {
+      if (File_isFile(storageHandle->storageInfo->storageSpecifier.deviceName))
+      {
+        free(storageHandle->opticalDisk.read.buffer.data);
+        return ERRORX_(OPEN_ISO9660_FILE,errno,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));
+      }
+      else
+      {
+        free(storageHandle->opticalDisk.read.buffer.data);
+        return ERRORX_(OPEN_OPTICAL_DISK,errno,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));
+      }
+    }
+
+    // prepare file for reading
+    storageHandle->opticalDisk.read.iso9660Stat = iso9660_ifs_stat_translate(storageHandle->opticalDisk.read.iso9660Handle,
+                                                                             String_cString(archiveName)
+                                                                            );
+    if (storageHandle->opticalDisk.read.iso9660Stat == NULL)
+    {
+      iso9660_close(storageHandle->opticalDisk.read.iso9660Handle);
+      free(storageHandle->opticalDisk.read.buffer.data);
+      return ERRORX_(FILE_NOT_FOUND_,errno,"%s",String_cString(archiveName));
+    }
+
+    DEBUG_ADD_RESOURCE_TRACE(&storageHandle->opticalDisk,StorageHandleOpticalDisk);
 
     return ERROR_NONE;
   #else /* not HAVE_ISO9660 */
@@ -1861,8 +1863,9 @@ LOCAL void StorageOptical_close(StorageHandle *storageHandle)
         assert(storageHandle->opticalDisk.read.iso9660Handle != NULL);
         assert(storageHandle->opticalDisk.read.iso9660Stat != NULL);
 
-        free(storageHandle->opticalDisk.read.iso9660Stat);
+        iso9660_stat_free(storageHandle->opticalDisk.read.iso9660Stat);
         iso9660_close(storageHandle->opticalDisk.read.iso9660Handle);
+        free(storageHandle->opticalDisk.read.buffer.data);
       #endif /* HAVE_ISO9660 */
       break;
     case STORAGE_MODE_WRITE:
@@ -2244,7 +2247,9 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
     }
 
     // open optical disk/ISO 9660 device
-    storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open_ext(String_cString(storageDirectoryListHandle->storageSpecifier.deviceName),ISO_EXTENSION_ALL);
+    storageDirectoryListHandle->opticalDisk.iso9660Handle = iso9660_open_ext(String_cString(storageDirectoryListHandle->storageSpecifier.deviceName),
+                                                                             ISO_EXTENSION_ALL
+                                                                            );
     if (storageDirectoryListHandle->opticalDisk.iso9660Handle == NULL)
     {
       if (File_isFile(storageDirectoryListHandle->storageSpecifier.deviceName))
@@ -2361,8 +2366,8 @@ LOCAL Errors StorageOptical_readDirectoryList(StorageDirectoryListHandle *storag
   error = ERROR_NONE;
   #ifdef HAVE_ISO9660
     {
-      const iso9660_stat_t *iso9660Stat;
-      char                 *s;
+      iso9660_stat_t *iso9660Stat;
+      char           *s;
 
       if (storageDirectoryListHandle->opticalDisk.cdioNextNode != NULL)
       {
