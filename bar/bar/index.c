@@ -2518,7 +2518,7 @@ LOCAL Errors pruneStorage(IndexHandle *indexHandle,
                               )
          )
       {
-        error = ERROR_DATABASE;
+        error = ERRORX_(DATABASE,0,"prune storages");
       }
       Database_finalize(&databaseQueryHandle);
     }
@@ -4657,7 +4657,7 @@ LOCAL Errors assignStorageEntriesToStorage(IndexHandle *indexHandle,
                               )
          )
       {
-        error = ERROR_DATABASE;
+        error = ERRORX_(DATABASE,0,"assign storage entries");
       }
       Database_finalize(&databaseQueryHandle);
     }
@@ -4954,7 +4954,7 @@ LOCAL Errors assignStorageToEntity(IndexHandle *indexHandle,
                               )
          )
       {
-        error = ERROR_DATABASE;
+        error = ERRORX_(DATABASE,0,"assign storages");
       }
       Database_finalize(&databaseQueryHandle);
     }
@@ -10502,7 +10502,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_DATABASE;
+          return ERRORX_(DATABASE,0,"get entries count/size");
         }
         assert(totalEntrySize_ >= 0.0);
         if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
@@ -10529,8 +10529,6 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
       INDEX_DOX(error,
                 indexHandle,
       {
-#warning remove/revert
-#if 1
         // get entry content size
         if (newestOnly)
         {
@@ -10600,15 +10598,12 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_DATABASE;
+          return ERRORX_(DATABASE,0,"get entries content size");
         }
 //TODO: may happend?
 //        assert(totalEntryContentSize_ >= 0.0);
         if (totalEntryContentSize != NULL) (*totalEntryContentSize) = (totalEntryContentSize_ >= 0.0) ? (ulong)totalEntryContentSize_ : 0L;
         Database_finalize(&databaseQueryHandle);
-#else
-if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
-#endif
 
         return ERROR_NONE;
       });
@@ -10696,7 +10691,7 @@ if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_DATABASE;
+          return ERRORX_(DATABASE,0,"get entries count/size");
         }
         assert(totalEntrySize_ >= 0.0);
         if (totalEntryCount != NULL) (*totalEntryCount) = (ulong)totalEntryCount_;
@@ -10773,7 +10768,7 @@ if (totalEntryContentSize != NULL) (*totalEntryContentSize) = 0LL;
            )
         {
           Database_finalize(&databaseQueryHandle);
-          return ERROR_DATABASE;
+          return ERRORX_(DATABASE,0,"get entries content size");
         }
 //TODO: may happend?
 //        assert(totalEntryContentSize_ >= 0.0);
