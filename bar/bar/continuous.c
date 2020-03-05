@@ -1632,7 +1632,7 @@ void Continuous_doneAll(void)
     #elif defined(PLATFORM_WINDOWS)
     #endif /* PLATFORM_... */
 
-    // done dictionaries
+    // remove inotifies
     Dictionary_initIterator(&dictionaryIterator,&notifyNames);
     while (Dictionary_getNext(&dictionaryIterator,
                               NULL,  // keyData,
@@ -1653,12 +1653,10 @@ void Continuous_doneAll(void)
         (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
       #elif defined(PLATFORM_WINDOWS)
       #endif /* PLATFORM_... */
-
-      // free resources
-      freeNotifyInfo(notifyInfo,NULL);
-      free(notifyInfo);
     }
     Dictionary_doneIterator(&dictionaryIterator);
+
+    // done dictionaries
     Dictionary_done(&notifyNames);
     Dictionary_done(&notifyHandles);
 
