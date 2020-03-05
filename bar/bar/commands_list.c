@@ -52,9 +52,7 @@
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_PREFIX         "%storageName"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG          "%type:-8s %user:-12s %group:-12s %permission:-10s %size:-12s %dateTime:-32s %part:-32s %compress:-15s %ratio:-7s  %crypt:-10s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_LONG           "%storageName:-20s" DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL               "%type:-8s %size:-12s %dateTime:-32s %name:s"
-#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP                "%storageName:-20s" DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX        "%storageName"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
@@ -78,16 +76,6 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK       "%type:-8s %    :12s %        :-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO        "%type:-8s %    :12s %        :-32s %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET      "%type:-8s %    :12s %        :-32s %name:S"
-
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE                 "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_IMAGE                "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_DIR                  "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LINK                 "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_HARDLINK             "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_CHAR         "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_BLOCK        "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_FIFO         "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_SOCKET       "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET
 
 #define DEFAULT_DIRECTORY_LIST_FORMAT_TITLE                    "%type:-8s %size:-12s %dateTime:-32s %name:s"
 
@@ -605,7 +593,6 @@ LOCAL void printFileInfo(uint               prefixWidth,
   }
   else
   {
-//    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE;
     template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE;
   }
 
@@ -795,7 +782,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
   }
   else
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_IMAGE : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE;
   }
 
   if (   (   Compress_isCompressed(deltaCompressAlgorithm)
@@ -950,7 +937,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   }
   else
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_DIR : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR;
   }
 
   TEXT_MACROS_INIT(textMacros)
@@ -1077,7 +1064,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   }
   else
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LINK : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK;
   }
 
   TEXT_MACROS_INIT(textMacros)
@@ -1264,7 +1251,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   }
   else
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_HARDLINK : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK;
   }
 
   if (   (   Compress_isCompressed(deltaCompressAlgorithm)
@@ -1410,7 +1397,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
       }
       else
       {
-        template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_CHAR : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR;
       }
       type = "CHAR";
       break;
@@ -1422,7 +1409,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
       }
       else
       {
-        template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_BLOCK : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK;
       }
       type = "BLOCK";
       break;
@@ -1434,7 +1421,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
       }
       else
       {
-        template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_FIFO : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO;
       }
       type = "FIFO";
       break;
@@ -1446,7 +1433,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
       }
       else
       {
-        template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_SOCKET : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET;
       }
       type = "SOCKET";
       break;
