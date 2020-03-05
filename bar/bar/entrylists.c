@@ -26,6 +26,7 @@
 
 #include "common/global.h"
 #include "common/lists.h"
+#include "common/misc.h"
 #include "common/strings.h"
 #include "common/stringlists.h"
 
