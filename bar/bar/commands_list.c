@@ -67,16 +67,6 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG   "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG "%type:-8s %user:-12s %group:-12s %permission:-10s %    :12s %        :-32s %                         :32s %        :-15s %       :7s  %crypt:-10S %name:S"
 
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE_LONG            "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_IMAGE_LONG           "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_DIR_LONG             "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LINK_LONG            "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_HARDLINK_LONG        "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_CHAR_LONG    "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_BLOCK_LONG   "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_FIFO_LONG    "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG
-#define DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_SOCKET_LONG  "%storageName:-20S" DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG
-
 #define DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE                     "                                                                     source: %deltaSource:S, %deltaSourceSize:s"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE                "%type:-8s %size:12s %dateTime:-32S %name:S"
@@ -580,7 +570,6 @@ LOCAL void printFileInfo(uint               prefixWidth,
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
   if (globalOptions.longFormatFlag)
   {
-//    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG;
     template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
@@ -771,7 +760,7 @@ LOCAL void printImageInfo(uint               prefixWidth,
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
   if (globalOptions.longFormatFlag)
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_IMAGE_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
       String_appendFormat(compressString,
@@ -956,7 +945,7 @@ LOCAL void printDirectoryInfo(uint            prefixWidth,
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
   if (globalOptions.longFormatFlag)
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_DIR_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_DIR_LONG;
     String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
@@ -1083,7 +1072,7 @@ LOCAL void printLinkInfo(uint            prefixWidth,
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
   if (globalOptions.longFormatFlag)
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_LINK_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_LINK_LONG;
     String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
   }
   else
@@ -1240,7 +1229,7 @@ LOCAL void printHardLinkInfo(uint               prefixWidth,
   prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_GROUP_PREFIX : NULL;
   if (globalOptions.longFormatFlag)
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_HARDLINK_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_HARDLINK_LONG;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
       String_appendFormat(compressString,
@@ -1416,7 +1405,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
     case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
       if (globalOptions.longFormatFlag)
       {
-        template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_CHAR_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_CHAR_LONG;
         String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
@@ -1428,7 +1417,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
     case FILE_SPECIAL_TYPE_BLOCK_DEVICE:
       if (globalOptions.longFormatFlag)
       {
-        template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_BLOCK_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_BLOCK_LONG;
         String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
@@ -1440,7 +1429,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
     case FILE_SPECIAL_TYPE_FIFO:
       if (globalOptions.longFormatFlag)
       {
-        template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_FIFO_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_FIFO_LONG;
         String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
@@ -1452,7 +1441,7 @@ LOCAL void printSpecialInfo(uint             prefixWidth,
     case FILE_SPECIAL_TYPE_SOCKET:
       if (globalOptions.longFormatFlag)
       {
-        template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_SPECIAL_SOCKET_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG;
+        template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_SPECIAL_SOCKET_LONG;
         String_appendFormat(cryptString,"%s%c",Crypt_algorithmToString(cryptAlgorithm,"unknown"),(cryptType == CRYPT_TYPE_ASYMMETRIC) ? '*' : ' ');
       }
       else
