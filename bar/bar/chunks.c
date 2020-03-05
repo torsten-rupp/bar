@@ -2372,6 +2372,9 @@ Errors __Chunk_open(const char        *__fileName__,
   assert(chunkInfo->data != NULL);
   assert(chunkHeader != NULL);
 
+  UNUSED_VARIABLE(__fileName__);
+  UNUSED_VARIABLE(__lineNb__);
+
   // init
   chunkInfo->chunkSize = 0L;
   chunkInfo->size      = chunkHeader->size;
@@ -2467,6 +2470,9 @@ Errors __Chunk_create(const char *__fileName__,
   assert(chunkInfo->io->tell != NULL);
   assert(chunkInfo->id != CHUNK_ID_NONE);
   assert(chunkInfo->data != NULL);
+
+  UNUSED_VARIABLE(__fileName__);
+  UNUSED_VARIABLE(__lineNb__);
 
   // init
   chunkInfo->size   = 0LL;
