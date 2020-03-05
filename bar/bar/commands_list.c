@@ -54,6 +54,7 @@
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_LONG           "%storageName:-20s" DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL               "%type:-8s %size:-12s %dateTime:-32s %name:s"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP                "%storageName:-20s" DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL
+#define DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_PREFIX         "%storageName"
 
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG           "%type:-8s %user:-12s %group:-12s %permission:-10s %size:12s %dateTime:-32S %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
 #define DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_IMAGE_LONG          "%type:-8s %    :-12s %     :-12s %          :-10s %size:12s %        :-32s %partFrom:15llu..%partTo:15llu %compress:-15S %ratio:7.1f%% %crypt:-10S %name:S"
@@ -198,7 +199,7 @@ typedef struct ArchiveContentNode
     } special;
   };
 
-  String       name;
+//  String       name;
   SocketHandle socketHandle;
 } ArchiveContentNode;
 
@@ -254,6 +255,7 @@ LOCAL void printSeparator(char ch)
   line = String_new();
 
   printConsole(stdout,
+               0,
                "%s\n",
                String_cString(String_fillChar(line,
                                               Misc_getConsoleColumns(),
@@ -282,14 +284,14 @@ LOCAL void printArchiveName(ConstString printableStorageName, bool showEntriesFl
   {
     if (!globalOptions.groupFlag && !globalOptions.noHeaderFooterFlag)
     {
-      printConsole(stdout,"List storage '%s':\n",String_cString(printableStorageName));
+      printConsole(stdout,0,"List storage '%s':\n",String_cString(printableStorageName));
     }
   }
   else
   {
     if (!globalOptions.groupFlag)
     {
-      printConsole(stdout,"Storage '%s': ",String_cString(printableStorageName));
+      printConsole(stdout,0,"Storage '%s': ",String_cString(printableStorageName));
     }
   }
 }
@@ -335,39 +337,39 @@ LOCAL void printMetaInfo(ConstString          hostName,
   dateTime = String_new();
 
   // print info
-  printConsole(stdout,"\n");
-  printConsole(stdout,"Host name    : %s\n",String_cString(hostName));
-  printConsole(stdout,"User name    : %s\n",String_cString(userName));
-  printConsole(stdout,"Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
-  printConsole(stdout,"Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
-  printConsole(stdout,"Type         : %s\n",Archive_archiveTypeToString(archiveType));
-  printConsole(stdout,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
-  printConsole(stdout,"Signatures   : ");
+  printConsole(stdout,0,"\n");
+  printConsole(stdout,0,"Host name    : %s\n",String_cString(hostName));
+  printConsole(stdout,0,"User name    : %s\n",String_cString(userName));
+  printConsole(stdout,0,"Job UUID     : %s\n",!String_isEmpty(jobUUID) ? String_cString(jobUUID) : "-");
+  printConsole(stdout,0,"Schedule UUID: %s\n",!String_isEmpty(scheduleUUID) ? String_cString(scheduleUUID) : "-");
+  printConsole(stdout,0,"Type         : %s\n",Archive_archiveTypeToString(archiveType));
+  printConsole(stdout,0,"Created at   : %s\n",String_cString(Misc_formatDateTime(dateTime,createdDateTime,NULL)));
+  printConsole(stdout,0,"Signatures   : ");
   switch (allCryptSignatureState)
   {
-    case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,"none available\n"); break;
-    case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,"OK\n");             break;
-    case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,"INVALID!\n");       break;
-    case CRYPT_SIGNATURE_STATE_SKIPPED: printConsole(stdout,"skipped\n");        break;
+    case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,0,"none available\n"); break;
+    case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,0,"OK\n");             break;
+    case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,0,"INVALID!\n");       break;
+    case CRYPT_SIGNATURE_STATE_SKIPPED: printConsole(stdout,0,"skipped\n");        break;
     default:
       #ifndef NDEBUG
         HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
       #endif /* NDEBUG */
       break; /* not reached */
   }
-  printConsole(stdout,"Comment      :");
+  printConsole(stdout,0,"Comment      :");
   String_initTokenizer(&stringTokenizer,comment,STRING_BEGIN,"\n",STRING_QUOTES,FALSE);
   if (String_getNextToken(&stringTokenizer,&s,NULL))
   {
-    printConsole(stdout," %s",String_cString(s));
+    printConsole(stdout,0," %s",String_cString(s));
     while (String_getNextToken(&stringTokenizer,&s,NULL))
     {
-      printConsole(stdout,"\n");
-      printConsole(stdout,"               %s",String_cString(s));
+      printConsole(stdout,0,"\n");
+      printConsole(stdout,0,"               %s",String_cString(s));
     }
   }
   String_doneTokenizer(&stringTokenizer);
-  printConsole(stdout,"\n");
+  printConsole(stdout,0,"\n");
 
   // free resources
   String_delete(dateTime);
@@ -382,7 +384,7 @@ LOCAL void printMetaInfo(ConstString          hostName,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printArchiveContentListHeader(void)
+LOCAL void printArchiveContentListHeader(uint prefixWidth)
 {
   const TextMacro MACROS[] =
   {
@@ -401,7 +403,7 @@ LOCAL void printArchiveContentListHeader(void)
   };
 
   String     line;
-  const char *template;
+  const char *prefixTemplate,*template;
 
   if (!globalOptions.noHeaderFooterFlag)
   {
@@ -409,16 +411,32 @@ LOCAL void printArchiveContentListHeader(void)
     line = String_new();
 
     // title line
+    prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_PREFIX : NULL;
     if (globalOptions.longFormatFlag)
     {
-      template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG;
+      template = DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL_LONG;
     }
     else
     {
-      template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP : DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL;
+      template = DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_NORMAL;
     }
-    printConsole(stdout,"\n");
+    printConsole(stdout,0,"\n");
+if (prefixTemplate != NULL)
+{
     printConsole(stdout,
+                 prefixWidth+1,
+                 "%s",
+                 String_cString(Misc_expandMacros(line,
+                                                  prefixTemplate,
+                                                  EXPAND_MACRO_MODE_STRING,
+                                                  MACROS,SIZE_OF_ARRAY(MACROS),
+                                                  TRUE
+                                                 )
+                               )
+                );
+}
+    printConsole(stdout,
+                 0,
                  "%s\n",
                  String_cString(Misc_expandMacros(line,
                                                   template,
@@ -453,8 +471,8 @@ LOCAL void printArchiveContentListFooter(ulong fileCount)
     line = String_new();
 
     printSeparator('-');
-    printConsole(stdout,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
-    printConsole(stdout,"\n");
+    printConsole(stdout,0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
+    printConsole(stdout,0,"\n");
 
     String_delete(line);
   }
@@ -485,7 +503,8 @@ LOCAL void printArchiveContentListFooter(ulong fileCount)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printFileInfo(ConstString        storageName,
+LOCAL void printFileInfo(uint               prefixWidth,
+                         ConstString        storageName,
                          ConstString        fileName,
                          uint64             size,
                          uint64             timeModified,
@@ -512,7 +531,7 @@ LOCAL void printFileInfo(ConstString        storageName,
   char       userName[12],groupName[12];
   char       permissionString[10];
   char       deltaSourceSizeString[32];
-  const char *template;
+  const char *prefixTemplate,*template;
   TextMacros (textMacros,15);
 
   assert(fileName != NULL);
@@ -556,9 +575,11 @@ LOCAL void printFileInfo(ConstString        storageName,
     File_permissionToString(permissionString,sizeof(permissionString),permission);
   }
 
+  prefixTemplate = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_TITLE_GROUP_PREFIX : NULL;
   if (globalOptions.longFormatFlag)
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG;
+//    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE_LONG : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE_LONG;
     if      ((Compress_isCompressed(deltaCompressAlgorithm) && Compress_isCompressed(byteCompressAlgorithm)))
     {
       String_appendFormat(compressString,
@@ -593,7 +614,8 @@ LOCAL void printFileInfo(ConstString        storageName,
   }
   else
   {
-    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE;
+//    template = (globalOptions.groupFlag) ? DEFAULT_ARCHIVE_LIST_FORMAT_GROUP_FILE : DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE;
+    template = DEFAULT_ARCHIVE_LIST_FORMAT_NORMAL_FILE;
   }
 
   if (   (   Compress_isCompressed(deltaCompressAlgorithm)
@@ -629,7 +651,23 @@ LOCAL void printFileInfo(ConstString        storageName,
   }
 
   // print
+if (prefixTemplate != NULL)
+{
+    printConsole(stdout,
+                 prefixWidth+1,
+                 "%s",
+                 String_cString(Misc_expandMacros(line,
+                                                  prefixTemplate,
+                                                  EXPAND_MACRO_MODE_STRING,
+                                                  textMacros.data,
+                                                  textMacros.count,
+                                                  TRUE
+                                                 )
+                               )
+                );
+}
   printConsole(stdout,
+               0,
                "%s\n",
                String_cString(Misc_expandMacros(line,
                                                 template,
@@ -643,6 +681,7 @@ LOCAL void printFileInfo(ConstString        storageName,
   if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
     printConsole(stdout,
+                 0,
                  "%s\n",
                  String_cString(Misc_expandMacros(line,
                                                   DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
@@ -795,6 +834,7 @@ LOCAL void printImageInfo(ConstString        storageName,
 
   // print
   printConsole(stdout,
+               0,
                "%s\n",
                String_cString(Misc_expandMacros(line,
                                                 template,
@@ -808,6 +848,7 @@ LOCAL void printImageInfo(ConstString        storageName,
   if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
     printConsole(stdout,
+                 0,
                  "%s\n",
                  String_cString(Misc_expandMacros(line,
                                                   DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
@@ -914,6 +955,7 @@ LOCAL void printDirectoryInfo(ConstString     storageName,
 
   // print
   printConsole(stdout,
+               0,
                "%s\n",
                String_cString(Misc_expandMacros(String_clear(line),
                                                 template,
@@ -1023,6 +1065,7 @@ LOCAL void printLinkInfo(ConstString     storageName,
 
   // print
   printConsole(stdout,
+               0,
                "%s\n",
                String_cString(Misc_expandMacros(line,
                                                 template,
@@ -1210,6 +1253,7 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
 
   // print
   printConsole(stdout,
+               0,
                "%s\n",
                String_cString(Misc_expandMacros(String_clear(line),
                                                 template,
@@ -1223,6 +1267,7 @@ LOCAL void printHardLinkInfo(ConstString        storageName,
   if (Compress_isCompressed(deltaCompressAlgorithm) && isPrintInfo(2))
   {
     printConsole(stdout,
+                 0,
                  "%s\n",
                  String_cString(Misc_expandMacros(line,
                                                   DEFAULT_ARCHIVE_LIST_FORMAT_SOURCE,
@@ -1380,6 +1425,7 @@ LOCAL void printSpecialInfo(ConstString      storageName,
 
   // print
   printConsole(stdout,
+               0,
                "%s\n",
                String_cString(Misc_expandMacros(String_clear(line),
                                                 template,
@@ -1980,13 +2026,13 @@ LOCAL int compareArchiveContentNode(const ArchiveContentNode *archiveContentNode
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printArchiveContentList(void)
+LOCAL void printArchiveContentList(uint prefixWidth)
 {
   const ArchiveContentNode *prevArchiveContentNode,*archiveContentNode;
   ArchiveEntryTypes        prevArchiveEntryType;
   ConstString              prevName;
   uint64                   partTo,fragmentSize;
-bool newFlag;
+  bool                     newFlag;
 
   // sort list
   List_sort(&archiveContentList,
@@ -1994,10 +2040,10 @@ bool newFlag;
            );
 
   // output list
-  prevName = NULL;
-  partTo   = 0LL;
-  fragmentSize = 0LL;
-  archiveContentNode   = archiveContentList.head;
+  prevName           = NULL;
+  partTo             = 0LL;
+  fragmentSize       = 0LL;
+  archiveContentNode = archiveContentList.head;
   while (archiveContentNode != NULL)
   {
     prevArchiveContentNode = archiveContentNode;
@@ -2078,7 +2124,6 @@ bool newFlag;
                 || (prevArchiveEntryType != ARCHIVE_ENTRY_TYPE_IMAGE)
                 || !String_equals(prevName,archiveContentNode->image.name)
                 || partTo < (archiveContentNode->image.blockOffset*(uint64)archiveContentNode->image.blockSize)
-    //            || (archiveContentNode->next == NULL)
                )
             {
               newFlag = TRUE;
@@ -2165,8 +2210,9 @@ bool newFlag;
         #endif /* NDEBUG */
         break; /* not reached */
       case ARCHIVE_ENTRY_TYPE_FILE:
-        printFileInfo(prevArchiveContentNode->storageName,
-                      prevArchiveContentNode->file.name,
+        printFileInfo(prefixWidth,
+                      prevArchiveContentNode->storageName,
+                      prefixWidthprevArchiveContentNode->file.name,
                       prevArchiveContentNode->file.size,
                       prevArchiveContentNode->file.timeModified,
                       prevArchiveContentNode->file.userId,
@@ -2522,9 +2568,9 @@ NULL, // masterSocketHandle
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printFileInfo(NULL,
@@ -2636,9 +2682,9 @@ NULL, // masterSocketHandle
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printImageInfo(NULL,
@@ -2727,9 +2773,9 @@ NULL, // masterSocketHandle
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printDirectoryInfo(NULL,
@@ -2818,9 +2864,9 @@ NULL, // masterSocketHandle
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printLinkInfo(NULL,
@@ -2931,9 +2977,9 @@ NULL, // masterSocketHandle
                       else
                       {
                         // output info
-                        if (!printedHeaderFlag)
+                        if (!printedHeaderFlag && !globalOptions.groupFlag)
                         {
-                          printArchiveContentListHeader();
+                          printArchiveContentListHeader(0);
                           printedHeaderFlag = TRUE;
                         }
                         printHardLinkInfo(NULL,
@@ -3029,9 +3075,9 @@ NULL, // masterSocketHandle
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printSpecialInfo(NULL,
@@ -3491,12 +3537,13 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
-                      printFileInfo(NULL,
+                      printFileInfo(0,
+                                    NULL,
                                     fileName,
                                     fileSize,
                                     dateTime,
@@ -3587,9 +3634,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printImageInfo(NULL,
@@ -3663,9 +3710,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printDirectoryInfo(NULL,
@@ -3737,9 +3784,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printLinkInfo(NULL,
@@ -3834,9 +3881,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printHardLinkInfo(NULL,
@@ -3920,9 +3967,9 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                     else
                     {
                       // output info
-                      if (!printedHeaderFlag)
+                      if (!printedHeaderFlag && !globalOptions.groupFlag)
                       {
-                        printArchiveContentListHeader();
+                        printArchiveContentListHeader(0);
                         printedHeaderFlag = TRUE;
                       }
                       printSpecialInfo(NULL,
@@ -4018,10 +4065,10 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   {
     switch (allCryptSignatureState)
     {
-      case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,"no signatures available\n"); break;
-      case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,"signatures OK\n");           break;
-      case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,"signatures INVALID!\n");     break;
-      case CRYPT_SIGNATURE_STATE_SKIPPED: printConsole(stdout,"signatures skipped\n");      break;
+      case CRYPT_SIGNATURE_STATE_NONE   : printConsole(stdout,0,"no signatures available\n"); break;
+      case CRYPT_SIGNATURE_STATE_OK     : printConsole(stdout,0,"signatures OK\n");           break;
+      case CRYPT_SIGNATURE_STATE_INVALID: printConsole(stdout,0,"signatures INVALID!\n");     break;
+      case CRYPT_SIGNATURE_STATE_SKIPPED: printConsole(stdout,0,"signatures skipped\n");      break;
       default:
         #ifndef NDEBUG
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
@@ -4072,12 +4119,13 @@ LOCAL void printDirectoryListHeader(ConstString storageName)
     // header
     if (storageName != NULL)
     {
-      printConsole(stdout,"List directory '%s':\n",String_cString(storageName));
-      printConsole(stdout,"\n");
+      printConsole(stdout,0,"List directory '%s':\n",String_cString(storageName));
+      printConsole(stdout,0,"\n");
     }
 
     // print title line
     printConsole(stdout,
+                 0,
                  "%s\n",
                  String_cString(Misc_expandMacros(line,
                                                   DEFAULT_DIRECTORY_LIST_FORMAT_TITLE,
@@ -4112,8 +4160,8 @@ LOCAL void printDirectoryListFooter(ulong fileCount)
     line = String_new();
 
     printSeparator('-');
-    printConsole(stdout,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
-    printConsole(stdout,"\n");
+    printConsole(stdout,0,"%lu %s\n",fileCount,(fileCount == 1) ? "entry" : "entries");
+    printConsole(stdout,0,"\n");
 
     String_delete(line);
   }
@@ -4137,16 +4185,51 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
                                   const PatternList          *excludePatternList
                                  )
 {
-  String     printableStorageName;
-  String     fileName,dateTimeString;
-  ulong      fileCount;
-  String     line;
-  char       userName[12],groupName[12];
-  char       permissionString[10];
-  TextMacros (textMacros,7);
-  Errors     error;
-  FileInfo   fileInfo;
-  char       buffer[16];
+  typedef struct DirectoryEntryNode
+  {
+    LIST_NODE_HEADER(struct DirectoryEntryNode);
+
+    String   fileName;
+    FileInfo fileInfo;
+  } DirectoryEntryNode;
+  
+  typedef struct
+  {
+    LIST_HEADER(DirectoryEntryNode);
+  } DirectoryEntryList;
+
+  /***********************************************************************\
+  * Name   : freeEntryNode
+  * Purpose: free entry node
+  * Input  : entryNode - entry node
+  *          userData  - not used
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
+
+  auto void freeDirectoryEntryNode(DirectoryEntryNode *directoryEntryNode, void *userData);
+  void freeDirectoryEntryNode(DirectoryEntryNode *directoryEntryNode, void *userData)
+  {
+    assert(directoryEntryNode != NULL);
+    
+    UNUSED_VARIABLE(userData);
+
+    String_delete(directoryEntryNode->fileName);
+  }
+
+  String             printableStorageName;
+  DirectoryEntryList directoryEntryList;
+  Errors             error;
+  FileInfo           fileInfo;
+  String             fileName;
+  DirectoryEntryNode *directoryEntryNode;
+  String             dateTimeString;
+  String             line;
+  char               userName[12],groupName[12];
+  char               permissionString[10];
+  TextMacros         (textMacros,7);
+  char               buffer[16];
 
   assert(storageDirectoryListHandle != NULL);
   assert(storageSpecifier != NULL);
@@ -4155,15 +4238,15 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
 
   // init variables
   printableStorageName = String_new();
+  List_init(&directoryEntryList);
   fileName             = String_new();
   dateTimeString       = String_new();
-  fileCount            = 0;
   line                 = String_new();
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,storageSpecifier,NULL);
 
-  printDirectoryListHeader(printableStorageName);
+  // read directory content
   while (!Storage_endOfDirectoryList(storageDirectoryListHandle))
   {
     // read next directory entry
@@ -4173,6 +4256,8 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
       String_delete(line);
       String_delete(dateTimeString);
       String_delete(fileName);
+      List_done(&directoryEntryList,(ListNodeFreeFunction)freeDirectoryEntryNode,NULL);
+      String_delete(printableStorageName);
       return error;
     }
 
@@ -4180,96 +4265,120 @@ LOCAL Errors listDirectoryContent(StorageDirectoryListHandle *storageDirectoryLi
         && !PatternList_match(excludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
        )
     {
-      TEXT_MACROS_INIT(textMacros)
+      directoryEntryNode = LIST_NEW_NODE(DirectoryEntryNode);
+      if (directoryEntryNode == NULL)
       {
-        // format
-        switch (fileInfo.type)
-        {
-          case FILE_TYPE_NONE:
-            break;
-          case FILE_TYPE_FILE:
-          case FILE_TYPE_HARDLINK:
-            TEXT_MACRO_X_CSTRING("%type","FILE",NULL);
-            if (globalOptions.humanFormatFlag)
-            {
-              getHumanSizeString(buffer,sizeof(buffer),fileInfo.size);
-            }
-            else
-            {
-              stringFormat(buffer,sizeof(buffer),"%"PRIu64,fileInfo.size);
-            }
-            TEXT_MACRO_X_CSTRING("%size",buffer,NULL);
-            break;
-          case FILE_TYPE_DIRECTORY:
-            TEXT_MACRO_X_CSTRING("%type","DIR",NULL);
-            TEXT_MACRO_X_CSTRING("%size","",   NULL);
-            break;
-          case FILE_TYPE_LINK:
-            TEXT_MACRO_X_CSTRING("%type","LINK",NULL);
-            TEXT_MACRO_X_CSTRING("%size","",    NULL);
-            break;
-          case FILE_TYPE_SPECIAL:
-            TEXT_MACRO_X_CSTRING("%type","SEPCIAL",NULL);
-            TEXT_MACRO_X_CSTRING("%size","",       NULL);
-            break;
-          default:
-            #ifndef NDEBUG
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            #endif /* NDEBUG */
-            break;
-        }
-        Misc_formatDateTime(String_clear(dateTimeString),fileInfo.timeModified,NULL);
-
-
-        if (globalOptions.numericUIDGIDFlag)
-        {
-          stringFormat(userName,sizeof(userName),"%d",fileInfo.userId);
-          stringFormat(groupName,sizeof(groupName),"%d",fileInfo.groupId);
-        }
-        else
-        {
-          Misc_userIdToUserName(userName,sizeof(userName),fileInfo.userId);
-          Misc_groupIdToGroupName(groupName,sizeof(groupName),fileInfo.groupId);
-        }
-        if (globalOptions.numericPermissionsFlag)
-        {
-          stringFormat(permissionString,sizeof(permissionString),"%4o",fileInfo.permission & FILE_PERMISSION_ALL);
-        }
-        else
-        {
-          File_permissionToString(permissionString,sizeof(permissionString),fileInfo.permission);
-        }
-
-        TEXT_MACRO_X_STRING ("%dateTime",  dateTimeString,  NULL);
-        TEXT_MACRO_X_CSTRING("%user",      userName,        NULL);
-        TEXT_MACRO_X_CSTRING("%group",     groupName,       NULL);
-        TEXT_MACRO_X_STRING ("%permission",permissionString,NULL);
-        TEXT_MACRO_X_STRING ("%name",      fileName,        NULL);
+        HALT_INSUFFICIENT_MEMORY();
       }
 
-      // print
-      printConsole(stdout,
-                   "%s\n",
-                   String_cString(Misc_expandMacros(String_clear(line),
-                                                    DEFAULT_DIRECTORY_LIST_FORMAT,
-                                                    EXPAND_MACRO_MODE_STRING,
-                                                    textMacros.data,
-                                                    textMacros.count,
-                                                    TRUE
-                                                   )
-                                 )
-                  );
+      directoryEntryNode->fileName = String_duplicate(fileName);
+      directoryEntryNode->fileInfo = fileInfo;
 
-      // next
-      fileCount++;
+      List_append(&directoryEntryList,directoryEntryNode);
     }
   }
+  
+  // sort
+  List_sort(&directoryEntryList,(ListNodeCompareFunction)CALLBACK_INLINE(int,(const DirectoryEntryNode *directoryEntryNode1, const DirectoryEntryNode *directoryEntryNode2, void *userData),
+  {
+    assert(directoryEntryNode1 != NULL);
+    assert(directoryEntryNode2 != NULL);
+
+    UNUSED_VARIABLE(userData);
+
+    return String_compare(directoryEntryNode1->fileName,directoryEntryNode2->fileName,NULL,NULL);
+  },NULL));
+
+  // output directory content
+  printDirectoryListHeader(printableStorageName);
+  LIST_ITERATE(&directoryEntryList,directoryEntryNode)
+  {
+    TEXT_MACROS_INIT(textMacros)
+    {
+      // format
+      switch (directoryEntryNode->fileInfo.type)
+      {
+        case FILE_TYPE_NONE:
+          break;
+        case FILE_TYPE_FILE:
+        case FILE_TYPE_HARDLINK:
+          TEXT_MACRO_X_CSTRING("%type","FILE",NULL);
+          if (globalOptions.humanFormatFlag)
+          {
+            getHumanSizeString(buffer,sizeof(buffer),directoryEntryNode->fileInfo.size);
+          }
+          else
+          {
+            stringFormat(buffer,sizeof(buffer),"%"PRIu64,directoryEntryNode->fileInfo.size);
+          }
+          TEXT_MACRO_X_CSTRING("%size",buffer,NULL);
+          break;
+        case FILE_TYPE_DIRECTORY:
+          TEXT_MACRO_X_CSTRING("%type","DIR",NULL);
+          TEXT_MACRO_X_CSTRING("%size","",   NULL);
+          break;
+        case FILE_TYPE_LINK:
+          TEXT_MACRO_X_CSTRING("%type","LINK",NULL);
+          TEXT_MACRO_X_CSTRING("%size","",    NULL);
+          break;
+        case FILE_TYPE_SPECIAL:
+          TEXT_MACRO_X_CSTRING("%type","SPECIAL",NULL);
+          TEXT_MACRO_X_CSTRING("%size","",       NULL);
+          break;
+        default:
+          #ifndef NDEBUG
+            HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+          #endif /* NDEBUG */
+          break;
+      }
+      Misc_formatDateTime(String_clear(dateTimeString),directoryEntryNode->fileInfo.timeModified,NULL);
+      if (globalOptions.numericUIDGIDFlag)
+      {
+        stringFormat(userName,sizeof(userName),"%d",directoryEntryNode->fileInfo.userId);
+        stringFormat(groupName,sizeof(groupName),"%d",directoryEntryNode->fileInfo.groupId);
+      }
+      else
+      {
+        Misc_userIdToUserName(userName,sizeof(userName),directoryEntryNode->fileInfo.userId);
+        Misc_groupIdToGroupName(groupName,sizeof(groupName),directoryEntryNode->fileInfo.groupId);
+      }
+      if (globalOptions.numericPermissionsFlag)
+      {
+        stringFormat(permissionString,sizeof(permissionString),"%4o",directoryEntryNode->fileInfo.permission & FILE_PERMISSION_ALL);
+      }
+      else
+      {
+        File_permissionToString(permissionString,sizeof(permissionString),directoryEntryNode->fileInfo.permission);
+      }
+      TEXT_MACRO_X_STRING ("%dateTime",  dateTimeString,              NULL);
+      TEXT_MACRO_X_CSTRING("%user",      userName,                    NULL);
+      TEXT_MACRO_X_CSTRING("%group",     groupName,                   NULL);
+      TEXT_MACRO_X_STRING ("%permission",permissionString,            NULL);
+      TEXT_MACRO_X_STRING ("%name",      directoryEntryNode->fileName,NULL);
+    }
+
+    // print
+    printConsole(stdout,
+                 0,
+                 "%s\n",
+                 String_cString(Misc_expandMacros(String_clear(line),
+                                                  DEFAULT_DIRECTORY_LIST_FORMAT,
+                                                  EXPAND_MACRO_MODE_STRING,
+                                                  textMacros.data,
+                                                  textMacros.count,
+                                                  TRUE
+                                                 )
+                               )
+                );
+  }
+  printDirectoryListFooter(List_count(&directoryEntryList));
+
+  // free resources
   String_delete(line);
   String_delete(dateTimeString);
   String_delete(fileName);
+  List_done(&directoryEntryList,(ListNodeFreeFunction)freeDirectoryEntryNode,NULL);
   String_delete(printableStorageName);
-
-  printDirectoryListFooter(fileCount);
 
   return ERROR_NONE;
 }
@@ -4423,8 +4532,15 @@ Errors Command_list(StringList              *storageNameList,
   // output grouped list
   if (globalOptions.groupFlag)
   {
-    printArchiveContentListHeader();
-    printArchiveContentList();
+uint prefixWidth=0;
+const ArchiveContentNode *archiveContentNode;
+    LIST_ITERATE(&archiveContentList,archiveContentNode)
+    {
+      prefixWidth = MAX(String_length(archiveContentNode->storageName),prefixWidth);
+    }
+fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,prefixWidth);
+    printArchiveContentListHeader(prefixWidth);
+    printArchiveContentList(prefixWidth);
     printArchiveContentListFooter(List_count(&archiveContentList));
   }
 

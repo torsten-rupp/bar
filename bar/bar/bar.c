@@ -1664,7 +1664,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
   value      = String_new();
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
-    if (printInfoFlag) { printConsole(stdout,"Reading configuration file '%s'...",String_cString(fileName)); }
+    if (printInfoFlag) { printConsole(stdout,0,"Reading configuration file '%s'...",String_cString(fileName)); }
     while (   !failFlag
            && File_getLine(&fileHandle,line,&lineNb,"#")
           )
@@ -1720,7 +1720,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           }
           else
           {
-            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
             printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
                        lineNb,
@@ -1774,7 +1774,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printError("%s in section '%s' in %s, line %ld",errorMessage,"ftp-server",String_cString(fileName),lineNb);
                                       failFlag = TRUE;
                                     },NULL),
@@ -1782,7 +1782,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ftp-server",String_cString(fileName),lineNb);
                                     },NULL),
                                     &serverNode->server
@@ -1791,7 +1791,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           }
           else
           {
-            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
             printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
                        lineNb,
@@ -1845,7 +1845,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printError("%s in section '%s' in %s, line %ld",errorMessage,"ssh-server",String_cString(fileName),lineNb);
                                       failFlag = TRUE;
                                     },NULL),
@@ -1853,7 +1853,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"ssh-server",String_cString(fileName),lineNb);
                                     },NULL),
                                     &serverNode->server
@@ -1862,7 +1862,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           }
           else
           {
-            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
             printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
                        lineNb,
@@ -1916,7 +1916,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printError("%s in section '%s' in %s, line %ld",errorMessage,"webdav-server",String_cString(fileName),lineNb);
                                       failFlag = TRUE;
                                     },NULL),
@@ -1924,7 +1924,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"webdav-server",String_cString(fileName),lineNb);
                                     },NULL),
                                     &serverNode->server
@@ -1933,7 +1933,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           }
           else
           {
-            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
             printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
                        lineNb,
@@ -1979,7 +1979,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printError("%s in section '%s' in %s, line %ld",errorMessage,"device-server",String_cString(fileName),lineNb);
                                       failFlag = TRUE;
                                     }),NULL,
@@ -1987,7 +1987,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"device-server",String_cString(fileName),lineNb);
                                     }),NULL,
                                     &deviceNode->device
@@ -1996,7 +1996,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           }
           else
           {
-            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
             printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
                        lineNb,
@@ -2032,7 +2032,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printError("%s in section '%s' in %s, line %ld",errorMessage,"master",String_cString(fileName),lineNb);
                                       failFlag = TRUE;
                                     }),NULL,
@@ -2040,7 +2040,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                     {
                                       UNUSED_VARIABLE(userData);
 
-                                      if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                      if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                       printWarning("%s in section '%s' in %s, line %ld",warningMessage,"master",String_cString(fileName),lineNb);
                                     }),NULL,
                                     &globalOptions.masterInfo
@@ -2049,7 +2049,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           }
           else
           {
-            if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
             printError(_("Syntax error in '%s', line %ld: '%s'"),
                        String_cString(fileName),
                        lineNb,
@@ -2079,7 +2079,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                 {
                                   UNUSED_VARIABLE(userData);
 
-                                  if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                   printError("%s in %s, line %ld",errorMessage,String_cString(fileName),lineNb);
                                   failFlag = TRUE;
                                 }),NULL,
@@ -2087,7 +2087,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
                                 {
                                   UNUSED_VARIABLE(userData);
 
-                                  if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+                                  if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
                                   printWarning("%s in %s, line %ld",warningMessage,String_cString(fileName),lineNb);
                                 }),NULL,
                                 NULL  // variable
@@ -2096,7 +2096,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
       }
       else
       {
-        if (printInfoFlag) printConsole(stdout,"FAIL!\n");
+        if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
         printError(_("Unknown config entry '%s' in %s, line %ld"),
                    String_cString(line),
                    String_cString(fileName),
@@ -2108,7 +2108,7 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
     }
     if (!failFlag)
     {
-      if (printInfoFlag) { printConsole(stdout,"OK\n"); }
+      if (printInfoFlag) { printConsole(stdout,0,"OK\n"); }
     }
   }
 
@@ -5070,7 +5070,7 @@ void restoreConsole(FILE *file, const String *saveLine)
   String_delete(*saveLine);
 }
 
-void printConsole(FILE *file, const char *format, ...)
+void printConsole(FILE *file, uint width, const char *format, ...)
 {
   String  line;
   va_list arguments;
@@ -5084,6 +5084,17 @@ void printConsole(FILE *file, const char *format, ...)
   va_start(arguments,format);
   String_vformat(line,format,arguments);
   va_end(arguments);
+  if (width > 0)
+  {
+    if (String_length(line) < width)
+    {
+      String_padRight(line,width,' ');
+    }
+    else
+    {
+      String_truncate(line,STRING_BEGIN,width);
+    }
+  }
 
   // output
   SEMAPHORE_LOCKED_DO(&consoleLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -10881,7 +10892,6 @@ LOCAL Errors bar(int argc, const char *argv[])
   {
     return ERROR_INVALID_ARGUMENT;
   }
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
 
   if (serverMode == SERVER_MODE_MASTER)
   {

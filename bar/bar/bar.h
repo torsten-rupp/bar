@@ -271,6 +271,7 @@ void restoreConsole(FILE *file, const String *saveLine);
 * Name   : printConsole
 * Purpose: output to console
 * Input  : file         - stdout or stderr
+*          width        - width (can be 0)
 *          format       - format string (like printf)
 *          ...          - optional arguments (like printf)
 *          arguments    - arguments
@@ -279,7 +280,7 @@ void restoreConsole(FILE *file, const String *saveLine);
 * Notes  : -
 \***********************************************************************/
 
-void printConsole(FILE *file, const char *format, ...);
+void printConsole(FILE *file, uint width, const char *format, ...);
 
 /***********************************************************************\
 * Name   : printWarning
