@@ -16347,8 +16347,6 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                  {
                                    return error;
                                  }
-
-//                                 String_delete(printableStorageName);
                                }
                              }
 
