@@ -7120,7 +7120,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
           logMessage(createInfo->logHandle,
                      LOG_TYPE_ERROR,
                      "Read hardlink failed '%s' (error: %s)",
-                     String_cString(fileName),
+                     String_cString(StringList_first(fileNameList,NULL)),
                      Error_getText(error)
                     );
         }
