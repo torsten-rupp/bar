@@ -2372,8 +2372,10 @@ Errors __Chunk_open(const char        *__fileName__,
   assert(chunkInfo->data != NULL);
   assert(chunkHeader != NULL);
 
-  UNUSED_VARIABLE(__fileName__);
-  UNUSED_VARIABLE(__lineNb__);
+  #ifndef NDEBUG
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
+  #endif /* not NDEBUG */
 
   // init
   chunkInfo->chunkSize = 0L;
@@ -2471,8 +2473,10 @@ Errors __Chunk_create(const char *__fileName__,
   assert(chunkInfo->id != CHUNK_ID_NONE);
   assert(chunkInfo->data != NULL);
 
-  UNUSED_VARIABLE(__fileName__);
-  UNUSED_VARIABLE(__lineNb__);
+  #ifndef NDEBUG
+    UNUSED_VARIABLE(__fileName__);
+    UNUSED_VARIABLE(__lineNb__);
+  #endif /* not NDEBUG */
 
   // init
   chunkInfo->size   = 0LL;
