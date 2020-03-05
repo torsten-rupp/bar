@@ -2642,7 +2642,6 @@ LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
                           WHERE (SELECT COUNT(id) FROM entryFragments WHERE entryFragments.entryId=fileEntries.entryId)=0 \
                          "
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2650,7 +2649,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           WHERE (SELECT COUNT(id) FROM entryFragments WHERE entryFragments.entryId=imageEntries.entryId)=0 \
                          "
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2659,7 +2657,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                          "
                         );
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2668,7 +2665,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                          ",
                          INDEX_CONST_TYPE_FILE
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2677,7 +2673,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                          ",
                          INDEX_CONST_TYPE_IMAGE
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2686,7 +2681,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                          ",
                          INDEX_CONST_TYPE_DIRECTORY
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2695,7 +2689,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                          ",
                          INDEX_CONST_TYPE_LINK
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2704,7 +2697,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                          ",
                          INDEX_CONST_TYPE_HARDLINK
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_(NULL,NULL),  // databaseRowFunction
                          &n,
@@ -2770,7 +2762,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           WHERE entries.id IS NULL \
                          "
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2809,7 +2800,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           WHERE entries.id IS NULL \
                          "
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2848,7 +2838,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           WHERE entries.id IS NULL \
                          "
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2887,7 +2876,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           WHERE entries.id IS NULL \
                          "
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
@@ -2926,7 +2914,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                           WHERE entries.id IS NULL \
                          "
                         );
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
   (void)Database_execute(databaseHandle,
                          CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
                          {
