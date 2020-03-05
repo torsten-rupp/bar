@@ -1451,6 +1451,7 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
     {
       Pattern_done(&storageSpecifier->archivePattern);
       String_delete(storageSpecifier->archivePatternString);
+      storageSpecifier->archivePatternString = NULL;
     }
 
     // get file pattern string
@@ -1490,11 +1491,13 @@ Errors Storage_parseName(StorageSpecifier *storageSpecifier,
   }
   else
   {
+    // free pattern
     if (storageSpecifier->archivePatternString != NULL)
     {
+      Pattern_done(&storageSpecifier->archivePattern);
       String_delete(storageSpecifier->archivePatternString);
+      storageSpecifier->archivePatternString = NULL;
     }
-    storageSpecifier->archivePatternString = NULL;
   }
 
   // free resources
@@ -4040,7 +4043,6 @@ Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
   FileInfo                   fileInfo;
 
   assert(storageSpecifier != NULL);
-  assert(patternString != NULL);
   assert(storageFunction != NULL);
 
   // init variables

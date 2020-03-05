@@ -14842,7 +14842,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     String_delete(lastErrorMessage);
     List_done(&uuidList,(ListNodeFreeFunction)freeUUIDNode,NULL);
 
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE,"init uuid list fail");
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"init uuid list fail");
 
     String_delete(name);
     return;
@@ -16163,6 +16163,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"invalid storage specifier");
+    Storage_doneSpecifier(&storageSpecifier);
     String_delete(pattern);
     return;
   }
