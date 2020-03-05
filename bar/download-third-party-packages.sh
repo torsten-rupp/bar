@@ -53,7 +53,7 @@ SQLITE_VERSION=3270200
 #              compiled on older 32bit systems, e. g. CentOS 6
 ICU_VERSION=58.2
 MTX_VERSION=1.3.12
-LIBCDIO_VERSION=2.0.0
+LIBCDIO_VERSION=2.1.0
 BINUTILS_VERSION=2.32
 BREAKPAD_REVISION=1430
 EPM_VERSION=4.2
@@ -945,7 +945,7 @@ if test $cleanFlag -eq 0; then
     $ECHO_NO_NEW_LINE "Get libcdio..."
     (
      cd $destination/extern
-     fileName=libcdio-$LIBCDIO_VERSION.tar.gz
+     fileName=libcdio-$LIBCDIO_VERSION.tar.bz2
      url="https://ftp.gnu.org/gnu/libcdio/$fileName"
      if test ! -f $fileName; then
        $CURL $curlOptions --output $fileName $url
@@ -954,7 +954,7 @@ if test $cleanFlag -eq 0; then
        fi
      fi
      if test $noDecompressFlag -eq 0; then
-       $TAR xzf $fileName
+       $TAR xjf $fileName
      fi
     )
     if test $? -ne 0; then
