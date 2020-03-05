@@ -504,6 +504,19 @@ String String_insertBuffer(String string, ulong index, const char *buffer, ulong
 String String_remove(String string, ulong index, ulong length);
 
 /***********************************************************************\
+* Name   : String_truncate
+* Purpose: truncate string
+* Input  : string - string
+*          index  - index of first character
+*          length - length of string
+* Output : -
+* Return : string
+* Notes  : -
+\***********************************************************************/
+
+String String_truncate(String string, ulong index, ulong length);
+
+/***********************************************************************\
 * Name   : String_replace, String_replaceCString, String_replaceChar,
 *          String_replaceBuffer
 * Purpose: replace part of string with other string

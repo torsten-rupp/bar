@@ -3323,6 +3323,27 @@ String String_remove(String string, ulong index, ulong length)
   return string;
 }
 
+String String_truncate(String string, ulong index, ulong length)
+{
+  STRING_CHECK_VALID(string);
+  STRING_CHECK_ASSIGNABLE(string);
+
+  if (string != NULL)
+  {
+    assert(string->data != NULL);
+
+    if ((index+length) < string->length)
+    {
+      string->data[index+length] = NUL;
+      string->length             = index+length;
+    }
+
+    STRING_UPDATE_VALID(string);
+  }
+
+  return string;
+}
+
 String String_replace(String string, ulong index, ulong length, ConstString insertString)
 {
   STRING_CHECK_VALID(string);
