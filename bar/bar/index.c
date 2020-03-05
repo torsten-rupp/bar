@@ -2209,90 +2209,89 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
       return error;
     }
 
-    if (lockedCount == 0LL)
+    // prune if not locked entity and empty
+    if ((lockedCount == 0LL) && isEmptyEntity(indexHandle,entityId))
     {
-      // prune entity if empty
-      if (isEmptyEntity(indexHandle,entityId))
+#warning remove/revert
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+      // get uuid id, job UUID, created date/time, archive type
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT uuids.id, \
+                                       entities.jobUUID, \
+                                       UNIXTIMESTAMP(entities.created), \
+                                       entities.type \
+                                FROM entities \
+                                LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
+                                WHERE entities.id=%lld \
+                               ",
+                               entityId
+                              );
+      if (error != ERROR_NONE)
       {
-        // get uuid id, job UUID, crated date/time, archive type
-        error = Database_prepare(&databaseQueryHandle,
-                                 &indexHandle->databaseHandle,
-                                 "SELECT uuids.id, \
-                                         entities.jobUUID, \
-                                         UNIXTIMESTAMP(entities.created), \
-                                         entities.type \
-                                  FROM entities \
-                                  LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
-                                  WHERE entities.id=%lld \
-                                 ",
-                                 entityId
-                                );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-        if (!Database_getNextRow(&databaseQueryHandle,
-                                 "%llu %S %llu %u",
-                                 &uuidId,
-                                 jobUUID,
-                                 &createdDateTime,
-                                 &archiveType
-                                )
-           )
-        {
-          String_clear(jobUUID);
-          createdDateTime = 0LL;
-          archiveType     = ARCHIVE_TYPE_NONE;
-        }
-        Database_finalize(&databaseQueryHandle);
+        return error;
+      }
+      if (!Database_getNextRow(&databaseQueryHandle,
+                               "%llu %S %llu %u",
+                               &uuidId,
+                               jobUUID,
+                               &createdDateTime,
+                               &archiveType
+                              )
+         )
+      {
+        String_clear(jobUUID);
+        createdDateTime = 0LL;
+        archiveType     = ARCHIVE_TYPE_NONE;
+      }
+      Database_finalize(&databaseQueryHandle);
 
-        // delete entity from index
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "DELETE FROM entities WHERE id=%lld",
-                                 entityId
-                                );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
+      // delete entity from index
+      error = Database_execute(&indexHandle->databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               NULL,  // changedRowCount
+                               "DELETE FROM entities WHERE id=%lld",
+                               entityId
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
 
-        // purge skipped entries of entity
-        error = purge(indexHandle,
-                      doneFlag,
-                      deletedCounter,
-                      "skippedEntries",
-                      "entityId=%lld",
-                      entityId
-                     );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-
-        plogMessage(NULL,  // logHandle
-                    LOG_TYPE_INDEX,
-                    "INDEX",
-                    "Purged entity #%llu, %s, %llu, %u: no archives",
-                    entityId,
-                    String_cString(jobUUID),
-                    createdDateTime,
-                    archiveType
+      // purge skipped entries of entity
+      error = purge(indexHandle,
+                    doneFlag,
+                    deletedCounter,
+                    "skippedEntries",
+                    "entityId=%lld",
+                    entityId
                    );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
 
-        // prune UUID
-        if (uuidId != DATABASE_ID_NONE)
+      plogMessage(NULL,  // logHandle
+                  LOG_TYPE_INDEX,
+                  "INDEX",
+                  "Purged entity #%llu, %s, %llu, %u: no archives",
+                  entityId,
+                  String_cString(jobUUID),
+                  createdDateTime,
+                  archiveType
+                 );
+
+      // prune UUID
+      if (uuidId != DATABASE_ID_NONE)
+      {
+        error = pruneUUID(indexHandle,
+                          doneFlag,
+                          deletedCounter,
+                          uuidId
+                         );
+        if (error != ERROR_NONE)
         {
-          error = pruneUUID(indexHandle,
-                            doneFlag,
-                            deletedCounter,
-                            uuidId
-                           );
-          if (error != ERROR_NONE)
-          {
-            return error;
-          }
+          return error;
         }
       }
     }
