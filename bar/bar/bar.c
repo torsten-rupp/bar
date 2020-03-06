@@ -10393,6 +10393,8 @@ LOCAL Errors runJob(ConstString jobUUIDName)
   Errors        error;
 
   // get job to execute
+  archiveType  = ARCHIVE_TYPE_NONE;
+  storageFlags = STORAGE_FLAGS_NONE;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
   {
     // find job by name or UUID
@@ -10420,7 +10422,7 @@ LOCAL Errors runJob(ConstString jobUUIDName)
     String_set(storageName,jobNode->job.storageName);
     EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,NULL,NULL);
     PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,NULL,NULL);
-    archiveType = jobNode->archiveType;
+    archiveType  = jobNode->archiveType;
     storageFlags = jobNode->storageFlags;
     Job_duplicateOptions(&jobOptions,&jobNode->job.options);
   }
