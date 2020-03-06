@@ -3916,9 +3916,8 @@ LOCAL void indexThreadCode(void)
             }
           }
         }
+        addIndexCryptPasswordNode(&indexCryptPasswordList,&globalOptions.cryptPassword,NULL);
         addIndexCryptPasswordNode(&indexCryptPasswordList,NULL,NULL);  // no password
-#warning
-//        addIndexCryptPasswordNode(&indexCryptPasswordList,globalOptions.cryptPassword,NULL);
 
         // update index entries
         while (   !quitFlag
