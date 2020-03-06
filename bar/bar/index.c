@@ -2212,8 +2212,6 @@ LOCAL Errors pruneEntity(IndexHandle *indexHandle,
     // prune if not locked entity and empty
     if ((lockedCount == 0LL) && isEmptyEntity(indexHandle,entityId))
     {
-#warning remove/revert
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
       // get uuid id, job UUID, created date/time, archive type
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
