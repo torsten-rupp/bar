@@ -2525,6 +2525,8 @@ LOCAL void connectorCommand_indexSetState(ConnectorInfo *connectorInfo, IndexHan
 *          Result:
 \***********************************************************************/
 
+#if 0
+//TODO: still not used
 LOCAL void connectorCommand_indexUUIDUpdateInfos(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId uuidId;
@@ -2569,6 +2571,7 @@ LOCAL void connectorCommand_indexUUIDUpdateInfos(ConnectorInfo *connectorInfo, I
 
   // free resources
 }
+#endif
 
 /***********************************************************************\
 * Name   : connectorCommand_indexEntityUpdateInfos
