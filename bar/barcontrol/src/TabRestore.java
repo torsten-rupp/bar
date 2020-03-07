@@ -7323,7 +7323,6 @@ Dprintf.dprintf("");
    */
   private synchronized void updateAssignToMenu(final Menu menu)
   {
-Dprintf.dprintf("-----------------------------------------------------------------------------");
     // discard old menu items
     for (MenuItem menuItem : menu.getItems())
     {
