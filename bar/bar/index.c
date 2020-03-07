@@ -1581,7 +1581,7 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
 
 /***********************************************************************\
 * Name   : cleanUpStorageNoEntity
-* Purpose: assign entity to storage entries without any entity
+* Purpose: clean-up storage entries without any entity
 * Input  : indexHandle - index handle
 * Output : -
 * Return : ERROR_NONE or error code
@@ -1766,6 +1766,167 @@ fprintf(stderr,"%s, %d: new entityId=%d\n",__FILE__,__LINE__,entityId);
             }
             Database_finalize(&databaseQueryHandle2);
           }
+        }
+      }
+      Database_finalize(&databaseQueryHandle1);
+    }
+
+    return ERROR_NONE;
+  });
+
+  // free resources
+  String_delete(name2);
+  String_delete(name1);
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Clean-up no entity-entries"
+             );
+#else
+UNUSED_VARIABLE(indexHandle);
+return ERROR_NONE;
+#endif
+}
+
+/***********************************************************************\
+* Name   : cleanUpDuplicateStorages
+* Purpose: clean-up duplicate storages
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpDuplicateStorages(IndexHandle *indexHandle)
+{
+//TODO
+#if 0
+  Errors              error;
+  String              name1,name2;
+  DatabaseQueryHandle databaseQueryHandle1,databaseQueryHandle2;
+  DatabaseId          storageDatabaseId;
+  StaticString        (uuid,MISC_UUID_STRING_LENGTH);
+  uint64              createdDateTime;
+  DatabaseId          entityDatabaseId;
+  bool                equalsFlag;
+  ulong               i;
+  String              oldDatabaseFileName;
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up duplicate storages"
+             );
+
+  // init variables
+  name1 = String_new();
+  name2 = String_new();
+
+  // try to set entityId in storage entries
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    error = Database_prepare(&databaseQueryHandle1,
+                             &indexHandle->databaseHandle,
+                             "SELECT id, \
+                                     name, \
+                                     UNIXTIMESTAMP(created) \
+                              FROM storages \
+                              WHERE entityId=0 \
+                              ORDER BY name ASC \
+                             "
+                            );
+    if (error == ERROR_NONE)
+    {
+      while (Database_getNextRow(&databaseQueryHandle1,
+                                 "%S %llu",
+                                 uuid,
+                                 name1,
+                                 &createdDateTime
+                                )
+         )
+      {
+        // find matching entity/create default entity
+        error = Database_prepare(&databaseQueryHandle2,
+                                 &oldIndexHandle->databaseHandle,
+                                 "SELECT id, \
+                                         name \
+                                  FROM storages \
+                                  WHERE uuid=%'S \
+                                 ",
+                                 uuid
+                                );
+        if (error == ERROR_NONE)
+        {
+          while (Database_getNextRow(&databaseQueryHandle2,
+                                     "%lld %S",
+                                     &storageId,
+                                     name2
+                                    )
+                )
+          {
+            // compare names (equals except digits)
+            equalsFlag = String_length(name1) == String_length(name2);
+            i = STRING_BEGIN;
+            while (equalsFlag
+                   && (i < String_length(name1))
+                   && (   isdigit(String_index(name1,i))
+                       || (String_index(name1,i) == String_index(name2,i))
+                      )
+                  )
+            {
+              i++;
+            }
+            if (equalsFlag)
+            {
+              // assign entity id
+              (void)Database_execute(&newIndexHandle->databaseHandle,
+                                     CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                     NULL,  // changedRowCount
+                                     "UPDATE storages \
+                                      SET entityId=%lld \
+                                      WHERE id=%lld \
+                                     ",
+                                     entityDatabaseId,
+                                     storageDatabaseId
+                                    );
+            }
+          }
+          Database_finalize(&databaseQueryHandle2);
+        }
+
+        error = Database_execute(&newIndexHandle->databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "INSERT INTO entities \
+                                    ( \
+                                     jobUUID, \
+                                     created, \
+                                     type \
+                                    ) \
+                                  VALUES \
+                                    ( \
+                                     %'S, \
+                                     DATETIME(%llu,'unixepoch'), \
+                                     %d\
+                                    ) \
+                                 ",
+                                 uuid,
+                                 createdDateTime,
+                                 ARCHIVE_TYPE_FULL
+                                );
+        if (error == ERROR_NONE)
+        {
+          // get entity id
+          entityId = Database_getLastRowId(&newIndexHandle->databaseHandle);
+fprintf(stderr,"%s, %d: new entityId=%d\n",__FILE__,__LINE__,entityId);
         }
       }
       Database_finalize(&databaseQueryHandle1);
@@ -9438,82 +9599,116 @@ Errors Index_updateStorage(IndexHandle  *indexHandle,
     return indexHandle->upgradeError;
   }
 
-  INDEX_DOX(error,
-            indexHandle,
+  if (indexHandle->masterIO == NULL)
   {
-    if (userName != NULL)
+    INDEX_DOX(error,
+              indexHandle,
     {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "UPDATE storages \
+      if (userName != NULL)
+      {
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "UPDATE storages \
                                   SET userName=%'S \
                                   WHERE id=%lld \
-                               ",
-                               userName,
-                               Index_getDatabaseId(storageId)
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
+                                 ",
+                                 userName,
+                                 Index_getDatabaseId(storageId)
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
-    }
 
-    if (storageName != NULL)
-    {
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "UPDATE storages \
+      if (storageName != NULL)
+      {
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "UPDATE storages \
                                   SET name=%'S \
                                   WHERE id=%lld \
-                               ",
-                               storageName,
-                               Index_getDatabaseId(storageId)
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
+                                 ",
+                                 storageName,
+                                 Index_getDatabaseId(storageId)
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
       }
-    }
 
-    error = Database_execute(&indexHandle->databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             "UPDATE storages \
-                                SET created=DATETIME(%llu,'unixepoch'), \
-                                    size=%llu \
-                                WHERE id=%lld \
-                             ",
-                             createdDateTime,
-                             size,
-                             Index_getDatabaseId(storageId)
-                            );
-    if (error != ERROR_NONE)
-    {
-      return error;
-    }
+      if (createdDateTime != 0LL)
+      {
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "UPDATE storages \
+                                  SET created=DATETIME(%llu,'unixepoch') \
+                                  WHERE id=%lld \
+                                 ",
+                                 createdDateTime,
+                                 Index_getDatabaseId(storageId)
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
 
-    if (comment != NULL)
-    {
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
                                "UPDATE storages \
-                                  SET comment=%'S \
-                                  WHERE id=%lld \
+                                SET size=%llu \
+                                WHERE id=%lld \
                                ",
-                               comment,
+                               size,
                                Index_getDatabaseId(storageId)
                               );
       if (error != ERROR_NONE)
       {
         return error;
       }
-    }
 
-    return ERROR_NONE;
-  });
+      if (comment != NULL)
+      {
+        error = Database_execute(&indexHandle->databaseHandle,
+                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                 NULL,  // changedRowCount
+                                 "UPDATE storages \
+                                  SET comment=%'S \
+                                  WHERE id=%lld \
+                                 ",
+                                 comment,
+                                 Index_getDatabaseId(storageId)
+                                );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+      }
+
+      return ERROR_NONE;
+    });
+  }
+  else
+  {
+    error = ServerIO_executeCommand(indexHandle->masterIO,
+                                    SERVER_IO_DEBUG_LEVEL,
+                                    SERVER_IO_TIMEOUT,
+                                    CALLBACK_(NULL,NULL),  // commandResultFunction
+                                    "INDEX_STORAGE_UPDATE storageId=%lld Index_updateStorage=%'S storageName=%'S createdDateTime=%llu storageSize=%llu comment=%'S",
+                                    storageId,
+                                    userName,
+                                    storageName,
+                                    createdDateTime,
+                                    size,
+                                    comment
+                                   );
+  }
 
   return error;
 }
@@ -10062,86 +10257,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
   });
 
   return error;
-}
-
-Errors Index_storageUpdate(IndexHandle *indexHandle,
-                           IndexId     storageId,
-                           ConstString storageName,
-                           uint64      storageSize
-                          )
-{
-  Errors error;
-
-  assert(indexHandle != NULL);
-  assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
-
-  // check init error
-  if (indexHandle->upgradeError != ERROR_NONE)
-  {
-    return indexHandle->upgradeError;
-  }
-
-  if (indexHandle->masterIO == NULL)
-  {
-    INDEX_DOX(error,
-              indexHandle,
-    {
-      // update name
-      if (storageName != NULL)
-      {
-        error = Database_execute(&indexHandle->databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "UPDATE storages \
-                                  SET name=%'S \
-                                  WHERE id=%lld \
-                                 ",
-                                 storageName,
-                                 Index_getDatabaseId(storageId)
-                                );
-        if (error != ERROR_NONE)
-        {
-          return error;
-        }
-      }
-
-      // update size
-      error = Database_execute(&indexHandle->databaseHandle,
-                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                               NULL,  // changedRowCount
-                               "UPDATE storages \
-                                SET size=%llu \
-                                WHERE id=%lld \
-                               ",
-                               storageSize,
-                               Index_getDatabaseId(storageId)
-                              );
-      if (error != ERROR_NONE)
-      {
-        return error;
-      }
-
-      return ERROR_NONE;
-    });
-  }
-  else
-  {
-    error = ServerIO_executeCommand(indexHandle->masterIO,
-                                    SERVER_IO_DEBUG_LEVEL,
-                                    SERVER_IO_TIMEOUT,
-                                    CALLBACK_(NULL,NULL),  // commandResultFunction
-                                    "INDEX_STORAGE_UPDATE storageId=%lld storageName=%'S storageSize=%llu",
-                                    storageId,
-                                    storageName,
-                                    storageSize
-                                   );
-  }
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
-  return ERROR_NONE;
 }
 
 Errors Index_getEntriesInfo(IndexHandle   *indexHandle,

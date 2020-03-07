@@ -164,7 +164,7 @@ typedef enum
   INDEX_TYPE_HARDLINK  = INDEX_CONST_TYPE_HARDLINK,
   INDEX_TYPE_SPECIAL   = INDEX_CONST_TYPE_SPECIAL,
   INDEX_TYPE_HISTORY   = INDEX_CONST_TYPE_HISTORY,
-  
+
   INDEX_TYPE_ANY       = 0xF
 } IndexTypes;
 
@@ -1694,9 +1694,9 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 *          storageId       - index id of storage
 *          userName        - user name (can be NULL)
 *          storageName     - storage name (can be NULL)
-*          createdDateTime - create date/time
+*          createdDateTime - create date/time (can be 0)
 *          size            - size [bytes]
-*          comment         - comment
+*          comment         - comment (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1805,24 +1805,6 @@ Errors Index_getStorage(IndexHandle  *indexHandle,
                         uint64       *totalEntryCount,
                         uint64       *totalEntrySize
                        );
-
-/***********************************************************************\
-* Name   : Index_storageUpdate
-* Purpose: update storage index name/size
-* Input  : indexHandle - index handle
-*          storageId   - index id of storage
-*          storageName - storage name (can be NULL)
-*          storageSize - storage size [bytes] (can be 0)
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-Errors Index_storageUpdate(IndexHandle *indexHandle,
-                           IndexId     storageId,
-                           ConstString storageName,
-                           uint64      storageSize
-                          );
 
 // ---------------------------------------------------------------------
 

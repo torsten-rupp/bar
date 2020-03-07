@@ -2710,8 +2710,11 @@ LOCAL void connectorCommand_indexEntityDelete(ConnectorInfo *connectorInfo, Inde
 LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
+  String  userName;
   String  storageName;
+  uint64  createdDateTime;
   uint64  storageSize;
+  String  comment;
   Errors  error;
 
   assert(connectorInfo != NULL);
@@ -2729,27 +2732,31 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
     sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
+  userName = String_new();
+  StringMap_getString(argumentMap,"userName",userName,NULL);
   storageName = String_new();
-  if (!StringMap_getString(argumentMap,"storageName",storageName,NULL))
-  {
-    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageName=<name>");
-    String_delete(storageName);
-    return;
-  }
+  StringMap_getString(argumentMap,"storageName",storageName,NULL);
+  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
   if (!StringMap_getUInt64(argumentMap,"storageSize",&storageSize,0LL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageSize=<n>");
     String_delete(storageName);
+    String_delete(userName);
     return;
   }
+  comment = String_new();
+  StringMap_getString(argumentMap,"comment",comment,NULL);
 
   if (indexHandle != NULL)
   {
     // update storage
-    error = Index_storageUpdate(indexHandle,
+    error = Index_updateStorage(indexHandle,
                                 storageId,
+                                userName,
                                 storageName,
-                                storageSize
+                                createdDateTime,
+                                storageSize,
+                                comment
                                );
     if (error != ERROR_NONE)
     {
@@ -2768,7 +2775,9 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   }
 
   // free resources
+  String_delete(comment);
   String_delete(storageName);
+  String_delete(userName);
 }
 
 /***********************************************************************\

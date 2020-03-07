@@ -4616,7 +4616,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
   Server           server;
   FileHandle       fileHandle;
   uint             retryCount;
-  uint64           archiveSize;
+  uint64           storageSize;
   bool             appendFlag;
   StorageHandle    storageHandle;
 //  ulong            bufferLength;
@@ -4803,7 +4803,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       // create storage
       retryCount  = 0;
       appendFlag  = FALSE;
-      archiveSize = 0LL;
+      storageSize = 0LL;
       do
       {
         // next try
@@ -4897,8 +4897,8 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
 
 //TODO: on error restore to original size/delete
 
-        // get archive size
-        archiveSize = Storage_getSize(&storageHandle);
+        // get storage size
+        storageSize = Storage_getSize(&storageHandle);
 
         // close storage
         Storage_close(&storageHandle);
@@ -5141,13 +5141,16 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
         }
 
-        // update index database archive name and size
+        // update index database storage name and size
         if (error == ERROR_NONE)
         {
-          error = Index_storageUpdate(createInfo->indexHandle,
+          error = Index_updateStorage(createInfo->indexHandle,
                                       storageId,
+                                      NULL,  // userName
                                       printableStorageName,
-                                      archiveSize
+                                      0,  // createDateTime
+                                      storageSize,
+                                      NULL  // comment
                                      );
         }
 
@@ -5190,13 +5193,13 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // done
-      printInfo(1,"OK (%llu bytes)\n",archiveSize);
+      printInfo(1,"OK (%llu bytes)\n",storageSize);
       logMessage(createInfo->logHandle,
                  LOG_TYPE_STORAGE,
                  "%s '%s' (%llu bytes)",
                  appendFlag ? "Appended to" : "Stored",
                  String_cString(printableStorageName),
-                 archiveSize
+                 storageSize
                 );
 
       // post-process

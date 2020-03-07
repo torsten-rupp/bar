@@ -15253,13 +15253,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                  );
   }
 
-  // update size (ignore error)
-  (void)Index_storageUpdate(indexHandle,
-                            storageId,
-                            NULL,  // storageName
-                            size
-                           );
-
   // close archive
   Archive_close(&archiveHandle);
 
@@ -15274,22 +15267,25 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
   else
   {
+    // update size
+    if (error == ERROR_NONE)
+    {
+      error = Index_updateStorage(indexHandle,
+                                  storageId,
+                                  NULL,  // userName
+                                  NULL,  // storageName
+                                  0,  // createdDateTime
+                                  size,
+                                  NULL  // comment
+                                 );
+    }
+
     // update storages info (aggregated values)
     if (error == ERROR_NONE)
     {
       error = Index_updateStorageInfos(indexHandle,
                                        storageId
                                       );
-    }
-
-    // update name/size
-    if (error == ERROR_NONE)
-    {
-      error = Index_storageUpdate(indexHandle,
-                                  storageId,
-                                  printableStorageName,
-                                  size
-                                 );
     }
   }
 
