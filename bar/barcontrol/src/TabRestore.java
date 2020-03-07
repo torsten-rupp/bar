@@ -2649,12 +2649,15 @@ Dprintf.dprintf("");
             {
               for (TreeItem treeItem : removeTreeItemSet)
               {
-                IndexData indexData = (IndexData)treeItem.getData();
-                Widgets.removeTreeItem(treeItem);
-
-                if (indexData != null)
+                if (!treeItem.isDisposed())
                 {
-                  setStorageList(indexData.id,false);
+                  IndexData indexData = (IndexData)treeItem.getData();
+                  Widgets.removeTreeItem(treeItem);
+
+                  if (indexData != null)
+                  {
+                    setStorageList(indexData.id,false);
+                  }
                 }
               }
             }
