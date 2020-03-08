@@ -7678,7 +7678,6 @@ Dprintf.dprintf("");
   {
     final SimpleDateFormat DATE_FORMATS[] = {new SimpleDateFormat("yyyy-MM-dd")};
 
-
     if (!indexDataHashSet.isEmpty())
     {
       Long dateTime = new Long(0);
@@ -7719,11 +7718,16 @@ Dprintf.dprintf("");
         }
       }
 
+      final BusyDialog busyDialog;
       {
         BARControl.waitCursor();
+        busyDialog = new BusyDialog(shell,BARControl.tr("Assign storages"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        busyDialog.setMaximum(1+indexDataHashSet.size());
       }
       try
       {
+        int n = 0;
+
         long entityId = 0;
         try
         {
@@ -7738,6 +7742,9 @@ Dprintf.dprintf("");
                                    valueMap
                                   );
           entityId = valueMap.getLong("entityId");
+
+          busyDialog.updateProgressBar(n);
+          n++;
         }
         catch (Exception exception)
         {
@@ -7750,52 +7757,64 @@ Dprintf.dprintf("");
           return;
         }
 
-        for (IndexData indexData : indexDataHashSet)
+        if (!busyDialog.isAborted())
         {
-          String info = indexData.getInfo();
+          for (IndexData indexData : indexDataHashSet)
+          {
+            String info = indexData.getInfo();
 
-          try
-          {
-            ValueMap valueMap = new ValueMap();
-            if      (indexData instanceof UUIDIndexData)
+            try
             {
-              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s jobUUID=%'S",
-                                                           entityId,
-                                                           archiveType.toString(),
-                                                           ((UUIDIndexData)indexData).jobUUID
-                                                          ),
-                                       0  // debugLevel
-                                      );
+              ValueMap valueMap = new ValueMap();
+              if      (indexData instanceof UUIDIndexData)
+              {
+                BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s jobUUID=%'S",
+                                                             entityId,
+                                                             archiveType.toString(),
+                                                             ((UUIDIndexData)indexData).jobUUID
+                                                            ),
+                                         0  // debugLevel
+                                        );
+              }
+              else if (indexData instanceof EntityIndexData)
+              {
+                BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
+                                                             entityId,
+                                                             archiveType.toString(),
+                                                             indexData.id
+                                                            ),
+                                         0  // debugLevel
+                                        );
+              }
+              else if (indexData instanceof StorageIndexData)
+              {
+                BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s storageId=%lld",
+                                                             entityId,
+                                                             archiveType.toString(),
+                                                             indexData.id
+                                                            ),
+                                         0  // debugLevel
+                                        );
+              }
             }
-            else if (indexData instanceof EntityIndexData)
+            catch (Exception exception)
             {
-              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s entityId=%lld",
-                                                           entityId,
-                                                           archiveType.toString(),
-                                                           indexData.id
-                                                          ),
-                                       0  // debugLevel
-                                      );
+              Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
             }
-            else if (indexData instanceof StorageIndexData)
+
+            if (busyDialog.isAborted())
             {
-              BARServer.executeCommand(StringParser.format("INDEX_ASSIGN toEntityId=%lld archiveType=%s storageId=%lld",
-                                                           entityId,
-                                                           archiveType.toString(),
-                                                           indexData.id
-                                                          ),
-                                       0  // debugLevel
-                                      );
+              break;
             }
-          }
-          catch (Exception exception)
-          {
-            Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+
+            busyDialog.updateProgressBar(n);
+            n++;
           }
         }
       }
       finally
       {
+        busyDialog.close();
         BARControl.resetCursor();
       }
 
@@ -7845,11 +7864,16 @@ Dprintf.dprintf("");
   {
     if (!indexDataHashSet.isEmpty())
     {
+      final BusyDialog busyDialog;
       {
         BARControl.waitCursor();
+        busyDialog = new BusyDialog(shell,BARControl.tr("Assign storages"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        busyDialog.setMaximum(indexDataHashSet.size());
       }
       try
       {
+        int n = 0;
+
         for (IndexData indexData : indexDataHashSet)
         {
           final String info = indexData.getInfo();
@@ -7885,6 +7909,14 @@ Dprintf.dprintf("");
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
           }
+
+          if (busyDialog.isAborted())
+          {
+            break;
+          }
+
+          busyDialog.updateProgressBar(n);
+          n++;
         }
       }
       catch (CommunicationError error)
@@ -7893,6 +7925,7 @@ Dprintf.dprintf("");
       }
       finally
       {
+        busyDialog.close();
         BARControl.resetCursor();
       }
       updateStorageTreeTableThread.triggerUpdate();
@@ -7928,11 +7961,16 @@ Dprintf.dprintf("");
   {
     if (!indexDataHashSet.isEmpty())
     {
+      final BusyDialog busyDialog;
       {
         BARControl.waitCursor();
+        busyDialog = new BusyDialog(shell,BARControl.tr("Assign storages"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        busyDialog.setMaximum(indexDataHashSet.size());
       }
       try
       {
+        int n = 0;
+
         for (IndexData indexData : indexDataHashSet)
         {
           final String info = indexData.getInfo();
@@ -7973,6 +8011,14 @@ Dprintf.dprintf("");
           {
             Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
           }
+
+          if (busyDialog.isAborted())
+          {
+            break;
+          }
+
+          busyDialog.updateProgressBar(n);
+          n++;
         }
       }
       catch (CommunicationError error)
@@ -7981,6 +8027,7 @@ Dprintf.dprintf("");
       }
       finally
       {
+        busyDialog.close();
         BARControl.resetCursor();
       }
       updateStorageTreeTableThread.triggerUpdate();
@@ -8016,11 +8063,16 @@ Dprintf.dprintf("");
   {
     if (!indexDataHashSet.isEmpty())
     {
+      final BusyDialog busyDialog;
       {
         BARControl.waitCursor();
+        busyDialog = new BusyDialog(shell,BARControl.tr("Set archive type"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        busyDialog.setMaximum(indexDataHashSet.size());
       }
       try
       {
+        int n = 0;
+
         for (IndexData indexData : indexDataHashSet)
         {
           final String info = indexData.getInfo();
@@ -8062,6 +8114,14 @@ Dprintf.dprintf("");
           {
             Dialogs.error(shell,BARControl.tr("Cannot set entity type for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
           }
+
+          if (busyDialog.isAborted())
+          {
+            break;
+          }
+
+          busyDialog.updateProgressBar(n);
+          n++;
         }
       }
       catch (CommunicationError error)
@@ -8070,6 +8130,7 @@ Dprintf.dprintf("");
       }
       finally
       {
+        busyDialog.close();
         BARControl.resetCursor();
       }
       updateStorageTreeTableThread.triggerUpdate();

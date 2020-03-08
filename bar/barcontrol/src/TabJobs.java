@@ -11890,42 +11890,45 @@ Dprintf.dprintf("xxxxxxxxxxxxxxxxxx");
 
     try
     {
-      final DeviceDataComparator deviceDataComparator = new DeviceDataComparator(widgetDeviceTable);
-      BARServer.executeCommand(StringParser.format("DEVICE_LIST jobUUID=%s",
-                                                   (selectedJobData != null) ? selectedJobData.uuid : ""
-                                                  ),
-                               1,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
+      if (!widgetDeviceTable.isDisposed())
+      {
+        final DeviceDataComparator deviceDataComparator = new DeviceDataComparator(widgetDeviceTable);
+        BARServer.executeCommand(StringParser.format("DEVICE_LIST jobUUID=%s",
+                                                     (selectedJobData != null) ? selectedJobData.uuid : ""
+                                                    ),
+                                 1,  // debugLevel
+                                 new Command.ResultHandler()
                                  {
-                                   String  name    = valueMap.getString ("name"   );
-                                   long    size    = valueMap.getLong   ("size"   );
-                                   boolean mounted = valueMap.getBoolean("mounted");
-
-                                   final DeviceData deviceData = new DeviceData(name,size);
-
-                                   if (!widgetDeviceTable.isDisposed())
+                                   @Override
+                                   public void handle(int i, ValueMap valueMap)
                                    {
-                                     display.syncExec(new Runnable()
+                                     String  name    = valueMap.getString ("name"   );
+                                     long    size    = valueMap.getLong   ("size"   );
+                                     boolean mounted = valueMap.getBoolean("mounted");
+
+                                     final DeviceData deviceData = new DeviceData(name,size);
+
+                                     if (!widgetDeviceTable.isDisposed())
                                      {
-                                       @Override
-                                       public void run()
+                                       display.syncExec(new Runnable()
                                        {
-                                         Widgets.insertTableItem(widgetDeviceTable,
-                                                                 deviceDataComparator,
-                                                                 deviceData,
-                                                                 IMAGE_DEVICE,
-                                                                 deviceData.name,
-                                                                 Units.formatByteSize(deviceData.size)
-                                                                );
-                                       }
-                                     });
+                                         @Override
+                                         public void run()
+                                         {
+                                           Widgets.insertTableItem(widgetDeviceTable,
+                                                                   deviceDataComparator,
+                                                                   deviceData,
+                                                                   IMAGE_DEVICE,
+                                                                   deviceData.name,
+                                                                   Units.formatByteSize(deviceData.size)
+                                                                  );
+                                         }
+                                       });
+                                     }
                                    }
                                  }
-                               }
-                              );
+                                );
+      }
     }
     catch (BARException exception)
     {
