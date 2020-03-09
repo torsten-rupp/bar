@@ -2396,7 +2396,6 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   DEBUG_CHECK_RESOURCE_TRACE(archiveHandle);
   assert(archiveHandle->storageInfo != NULL);
   assert(archiveHandle->storageInfo->jobOptions != NULL);
-//  assert(archiveHandle->archiveCryptInfo != NULL);
 
   // init BAR chunk
   error = Chunk_init(&chunkBAR.info,
@@ -2413,11 +2412,6 @@ LOCAL Errors writeHeader(ArchiveHandle *archiveHandle)
   {
     return error;
   }
-//TODO: remove
-#if 0
-  assert(sizeof(chunkBAR.salt) == archiveHandle->archiveCryptInfo->cryptSalt.length);
-  Crypt_getSalt(chunkBAR.salt,sizeof(chunkBAR.salt),&archiveHandle->archiveCryptInfo->cryptSalt);
-#endif
 
   // write header chunks
   error = Chunk_create(&chunkBAR.info);
