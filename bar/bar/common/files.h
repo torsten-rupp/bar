@@ -253,9 +253,9 @@ typedef struct
   #if   defined(PLATFORM_LINUX)
     StringList fileSystemNames;
     FILE       *mounts;
-    char       line[1024];
+    char       line[FILE_MAX_PATH_MAX_LENGTH+256];
     bool       parseFlag;
-    char       name[256];
+    char       name[FILE_MAX_PATH_MAX_LENGTH];
   #elif defined(PLATFORM_WINDOWS)
     DWORD  logicalDrives;
     uint   i;
@@ -481,7 +481,7 @@ String File_getDirectoryNameCString(String path, const char *fileName);
 * Input  : baseName - basename variable
 *          fileName - file name
 * Output : -
-* Return : basename variable
+* Return : base name variable
 * Notes  : -
 \***********************************************************************/
 
@@ -491,15 +491,43 @@ String File_getBaseNameCString(String baseName, const char *fileName);
 /***********************************************************************\
 * Name   : File_getRootName, File_getRootNameCString
 * Purpose: get root of file
-* Input  : rootName - rootname variable
+* Input  : rootName - root name variable
 *          fileName - file name
 * Output : -
-* Return : rootName variable
-* Notes  : -
+* Return : root name variable
+* Notes  : if file name is absolute then
+*            on Unix: /
+*            on Windows: <drive>:
 \***********************************************************************/
 
 String File_getRootName(String rootName, ConstString fileName);
 String File_getRootNameCString(String rootName, const char *fileName);
+
+/***********************************************************************\
+* Name   : File_getDeviceName, File_getDeviceNameCString
+* Purpose: get device name where file is located
+* Input  : deviceName - device name variable
+*          fileName   - file name
+* Output : -
+* Return : device name variable
+* Notes  : on Unix: <mount point name>
+*          on Windows: <drive>:
+\***********************************************************************/
+
+String File_getDeviceName(String deviceName, ConstString fileName);
+String File_getDeviceNameCString(String deviceName, const char *fileName);
+
+/***********************************************************************\
+* Name   : File_isAbsoluteFileName, File_isAbsoluteFileNameCString
+* Purpose: check if file name is absolute
+* Input  : fileName - file name
+* Output : -
+* Return : TRUE if file name is absolute, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool File_isAbsoluteFileName(ConstString fileName);
+bool File_isAbsoluteFileNameCString(const char *fileName);
 
 /***********************************************************************\
 * Name   : File_getAbsoluteFileName, File_getAbsoluteFileNameCString
@@ -549,18 +577,6 @@ void File_doneSplitFileName(StringTokenizer *stringTokenizer);
 \***********************************************************************/
 
 bool File_getNextSplitFileName(StringTokenizer *stringTokenizer, ConstString *name);
-
-/***********************************************************************\
-* Name   : File_isAbsoluteFileName, File_isAbsoluteFileNameCString
-* Purpose: check if file name is absolute
-* Input  : fileName - file name
-* Output : -
-* Return : TRUE if file name is absolute, FALSE otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool File_isAbsoluteFileName(ConstString fileName);
-bool File_isAbsoluteFileNameCString(const char *fileName);
 
 /*---------------------------------------------------------------------*/
 
