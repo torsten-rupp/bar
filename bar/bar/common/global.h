@@ -2171,6 +2171,21 @@ static inline bool stringEquals(const char *s1, const char *s2)
 }
 
 /***********************************************************************\
+* Name   : stringEqualsPrefix
+* Purpose: compare string prefixes for equal
+* Input  : s1, s2 - strings
+*          n      - prefix length
+* Output : -
+* Return : TRUE iff equals
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringEqualsPrefix(const char *s1, const char *s2, uint n)
+{
+  return strncmp(s1,s2,n) == 0;
+}
+
+/***********************************************************************\
 * Name   : stringEqualsIgnoreCase
 * Purpose: compare strings for equal and ignore case
 * Input  : s1, s2 - strings
@@ -2182,6 +2197,21 @@ static inline bool stringEquals(const char *s1, const char *s2)
 static inline bool stringEqualsIgnoreCase(const char *s1, const char *s2)
 {
   return strcasecmp(s1,s2) == 0;
+}
+
+/***********************************************************************\
+* Name   : stringEqualsPrefixIgnoreCase
+* Purpose: compare string prefixes for equal and ignore case
+* Input  : s1, s2 - strings
+*          n      - prefix length
+* Output : -
+* Return : TRUE iff equals
+* Notes  : -
+\***********************************************************************/
+
+static inline bool stringEqualsPrefixIgnoreCase(const char *s1, const char *s2, uint n)
+{
+  return strncasecmp(s1,s2,n) == 0;
 }
 
 /***********************************************************************\
