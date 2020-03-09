@@ -4809,9 +4809,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         // next try
         retryCount++;
 
-        // pause, check abort
+        // pause, check abort/error
         Storage_pause(&createInfo->storageInfo);
-        if ((createInfo->failError != ERROR_NONE) || isAborted(createInfo))
+        if (isAborted(createInfo) || (createInfo->failError != ERROR_NONE))
         {
           break;
         }
@@ -4837,12 +4837,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
           else
           {
-            // abort
-            printInfo(0,"FAIL!\n");
-            printError("Cannot store '%s' (error: %s)",
-                       String_cString(printableStorageName),
-                       Error_getText(error)
-                      );
+            // create file -> abort
             break;
           }
         }
@@ -4854,11 +4849,11 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           String_set(createInfo->statusInfo.storage.name,printableStorageName);
         }
 
-        // pause, check abort
+        // pause, check abort/error
         Storage_pause(&createInfo->storageInfo);
-        if ((createInfo->failError != ERROR_NONE) || isAborted(createInfo))
+        if (isAborted(createInfo) || (createInfo->failError != ERROR_NONE))
         {
-          Storage_close(&storageHandle);
+          (void)Storage_close(&storageHandle);
           break;
         }
 
@@ -4876,22 +4871,17 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
           }
           else
           {
-            // abort
-            printInfo(0,"FAIL!\n");
-            printError("Cannot store '%s' (error: %s)!",
-                       String_cString(printableStorageName),
-                       Error_getText(error)
-                      );
+            // write fail -> abort
             break;
           }
         }
         DEBUG_TESTCODE() { Storage_close(&storageHandle); Storage_delete(&createInfo->storageInfo,storageMsg.archiveName); error = DEBUG_TESTCODE_ERROR(); break; }
 
-        // pause, check abort
+        // pause, check abort/error
         Storage_pause(&createInfo->storageInfo);
-        if ((createInfo->failError != ERROR_NONE) || isAborted(createInfo))
+        if (isAborted(createInfo) || (createInfo->failError != ERROR_NONE))
         {
-          Storage_close(&storageHandle);
+          (void)Storage_close(&storageHandle);
           break;
         }
 
@@ -4912,20 +4902,25 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
       }
-      if (createInfo->failError != ERROR_NONE)
-      {
-        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
-        break;
-      }
 
       // close file to store
       File_close(&fileHandle);
       AUTOFREE_REMOVE(&autoFreeList,&fileHandle);
 
-      // check if aborted
-      if (isAborted(createInfo))
+      // check if aborted/error
+      if      (isAborted(createInfo))
       {
         printInfo(1,"ABORTED\n");
+        AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
+        break;
+      }
+      else if (createInfo->failError != ERROR_NONE)
+      {
+        printInfo(0,"FAIL!\n");
+        printError("Cannot store '%s' (error: %s)!",
+                   String_cString(printableStorageName),
+                   Error_getText(createInfo->failError)
+                  );
         AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE);
         break;
       }
