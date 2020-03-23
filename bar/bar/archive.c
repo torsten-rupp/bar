@@ -3225,13 +3225,6 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
     }
   }
 
-  // create new archive
-  error = createArchiveFile(archiveHandle);
-  if (error != ERROR_NONE)
-  {
-    return error;
-  }
-
   return ERROR_NONE;
 }
 
@@ -3440,7 +3433,7 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      // write header (if not already written)
+      // write file header (if not already written)
       if (!archiveEntryInfo->file.headerWrittenFlag)
       {
         error = writeFileChunks(archiveEntryInfo);
@@ -3449,6 +3442,7 @@ LOCAL Errors flushFileDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
           return error;
         }
       }
+      assert(archiveEntryInfo->file.headerWrittenFlag);
 
       // get max. number of byte-compressed data blocks to write
       maxBlockCount = MIN(archiveEntryInfo->file.byteBufferSize/archiveEntryInfo->file.byteCompressInfo.blockLength,
@@ -3569,7 +3563,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
-        // write header (if not already written)
+        // write file header (if not already written)
         if (!archiveEntryInfo->file.headerWrittenFlag)
         {
           error = writeFileChunks(archiveEntryInfo);
@@ -3815,7 +3809,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
 
-        // write header (if not already written)
+        // write file header (if not already written)
         if (!archiveEntryInfo->file.headerWrittenFlag)
         {
           error = writeFileChunks(archiveEntryInfo);
@@ -4181,7 +4175,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
-        // create new part (if not already created)
+        // write image header (if not already written)
         if (!archiveEntryInfo->image.headerWrittenFlag)
         {
           error = writeImageChunks(archiveEntryInfo);
@@ -4423,7 +4417,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
 
-        // write header (if not already written)
+        // write image header (if not already written)
         if (!archiveEntryInfo->image.headerWrittenFlag)
         {
           error = writeImageChunks(archiveEntryInfo);
@@ -4432,6 +4426,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             return error;
           }
         }
+        assert(archiveEntryInfo->image.headerWrittenFlag);
 
         // encrypt block
         error = Crypt_encryptBytes(&archiveEntryInfo->image.cryptInfo,
@@ -4699,7 +4694,7 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
 
     if (blockCount > 0)
     {
-      // write header (if not already written)
+      // write hardlink header (if not already written)
       if (!archiveEntryInfo->hardLink.headerWrittenFlag)
       {
         error = writeHardLinkChunks(archiveEntryInfo);
@@ -4708,6 +4703,7 @@ LOCAL Errors flushHardLinkDataBlocks(ArchiveEntryInfo   *archiveEntryInfo,
           return error;
         }
       }
+      assert(archiveEntryInfo->hardLink.headerWrittenFlag);
 
       // get max. number of byte-compressed data blocks to write
       maxBlockCount = MIN(archiveEntryInfo->hardLink.byteBufferSize/archiveEntryInfo->hardLink.byteCompressInfo.blockLength,
@@ -4829,7 +4825,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
       // split
       if (newPartFlag)
       {
-        // create new part (if not already created)
+        // write hardlink header (if not already written)
         if (!archiveEntryInfo->hardLink.headerWrittenFlag)
         {
           error = writeHardLinkChunks(archiveEntryInfo);
@@ -6093,18 +6089,6 @@ UNUSED_VARIABLE(storageInfo);
     switch (archiveHandle->mode)
     {
       case ARCHIVE_MODE_CREATE:
-        // flush index list
-        error = flushArchiveIndexList(archiveHandle,
-                                      archiveHandle->uuidId,
-                                      archiveHandle->entityId,
-                                      archiveHandle->storageId,
-                                      0
-                                     );
-        if (error != ERROR_NONE)
-        {
-          if (result == ERROR_NONE) result = error;
-        }
-
         // close archive
         error = closeArchiveFile(archiveHandle,
                                  &storageId,
@@ -6112,6 +6096,18 @@ UNUSED_VARIABLE(storageInfo);
                                  &partNumber,
                                  &archiveSize
                                 );
+        if (error != ERROR_NONE)
+        {
+          if (result == ERROR_NONE) result = error;
+        }
+
+        // flush index list
+        error = flushArchiveIndexList(archiveHandle,
+                                      archiveHandle->uuidId,
+                                      archiveHandle->entityId,
+                                      archiveHandle->storageId,
+                                      0
+                                     );
         if (error != ERROR_NONE)
         {
           if (result == ERROR_NONE) result = error;
@@ -6916,6 +6912,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // find next suitable archive part
   findNextArchivePart(archiveHandle);
 
+  // write file header
+  error = writeFileChunks(archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  assert(archiveEntryInfo->file.headerWrittenFlag);
+
   // done resources
   AutoFree_done(&autoFreeList);
 
@@ -7273,6 +7277,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // done resources
   AutoFree_done(&autoFreeList);
 
+  // write image header
+  error = writeImageChunks(archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  assert(archiveEntryInfo->image.headerWrittenFlag);
+
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
@@ -7442,13 +7454,22 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   if (!archiveHandle->storageFlags.dryRun)
   {
-    // lock archive (Note: directory entries are created with permanent lock)
+    // lock archive (Note: directory entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
                                headerLength
                               );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveHandle->lock);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    // create new archive file
+    error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveHandle->lock);
@@ -7673,13 +7694,22 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   if (!archiveHandle->storageFlags.dryRun)
   {
-    // lock archive (Note: link entries are created with permanent lock)
+    // lock archive (Note: link entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
                                headerLength
                               );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveHandle->lock);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    // create new archive file
+    error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveHandle->lock);
@@ -8171,6 +8201,14 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
   // done resources
   AutoFree_done(&autoFreeList);
 
+  // write hardlink header
+  error = writeHardLinkChunks(archiveEntryInfo);
+  if (error != ERROR_NONE)
+  {
+    return error;
+  }
+  assert(archiveEntryInfo->hardLink.headerWrittenFlag);
+
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(archiveEntryInfo,ArchiveEntryInfo);
   #else /* not NDEBUG */
@@ -8343,13 +8381,22 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   if (!archiveHandle->storageFlags.dryRun)
   {
-    // lock archive (Note: special entries are created with permanent lock)
+    // lock archive (Note: special entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
                                headerLength
                               );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveHandle->lock);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    // create new archive file
+    error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveHandle->lock);
@@ -8541,13 +8588,22 @@ archiveHandle->jobOptions->cryptAlgorithms[3]
 
   if (!archiveHandle->storageFlags.dryRun)
   {
-    // lock archive
+    // lock archive (Note: meta entries are created direct without intermediate file)
     Semaphore_forceLock(&archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE);
 
     // ensure space in archive
     error = ensureArchiveSpace(archiveHandle,
                                headerLength
                               );
+    if (error != ERROR_NONE)
+    {
+      Semaphore_unlock(&archiveHandle->lock);
+      AutoFree_cleanup(&autoFreeList);
+      return error;
+    }
+
+    // create new archive file
+    error = createArchiveFile(archiveHandle);
     if (error != ERROR_NONE)
     {
       Semaphore_unlock(&archiveHandle->lock);
@@ -12764,7 +12820,8 @@ Errors Archive_verifySignatureEntry(ArchiveHandle        *archiveHandle,
               SEMAPHORE_LOCKED_DO(&archiveEntryInfo->archiveHandle->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
               {
                 // create archive file (if not already exists and open)
-                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle);
+                tmpError = createArchiveFile(archiveEntryInfo->archiveHandle
+                );
                 if (tmpError != ERROR_NONE)
                 {
                   if (error == ERROR_NONE) error = tmpError;
