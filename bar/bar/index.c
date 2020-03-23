@@ -1951,6 +1951,73 @@ return ERROR_NONE;
 }
 
 /***********************************************************************\
+* Name   : cleanUpNoUUID
+* Purpose: purge UUID entries without jobUUID
+* Input  : indexHandle - index handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors cleanUpNoUUID(IndexHandle *indexHandle)
+{
+  ulong  n;
+  Errors error;
+
+  assert(indexHandle != NULL);
+
+  // check init error
+  if (indexHandle->upgradeError != ERROR_NONE)
+  {
+    return indexHandle->upgradeError;
+  }
+
+  plogMessage(NULL,  // logHandle
+              LOG_TYPE_INDEX,
+              "INDEX",
+              "Start clean-up indizes without UUID"
+             );
+
+  // init variables
+
+  // clean-up
+  n = 0L;
+  INDEX_DOX(error,
+            indexHandle,
+  {
+    return Database_execute(&indexHandle->databaseHandle,
+                            CALLBACK_(NULL,NULL),  // databaseRowFunction
+                            &n,
+                            "DELETE FROM uuids \
+                             WHERE uuids.jobUUID='' \
+                            "
+                           );
+  });
+
+  // free resource
+
+  if (n > 0L)
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Cleaned %lu indizes without UUID",
+                n
+               );
+  }
+  else
+  {
+    plogMessage(NULL,  // logHandle
+                LOG_TYPE_INDEX,
+                "INDEX",
+                "Clean-up indizes without UUID"
+               );
+  }
+
+  return ERROR_NONE;
+}
+
+/***********************************************************************\
 * Name   : purge
 * Purpose: purge with delay/check if index-usage
 * Input  : indexHandle    - index handle
@@ -6019,6 +6086,7 @@ Errors Index_init(const char *fileName)
     (void)cleanUpIncompleteCreate(&indexHandle);
     (void)cleanUpStorageNoName(&indexHandle);
     (void)cleanUpStorageNoEntity(&indexHandle);
+    (void)cleanUpNoUUID(&indexHandle);
     (void)pruneStorages(&indexHandle);
     (void)pruneEntities(&indexHandle,NULL,NULL);
     (void)pruneUUIDs(&indexHandle,NULL,NULL);
@@ -8033,7 +8101,8 @@ Errors Index_initListUUIDs(IndexQueryHandle *indexQueryHandle,
                              FROM uuids \
                                LEFT JOIN entities ON entities.jobUUID=uuids.jobUUID \
                                LEFT JOIN storages ON storages.entityId=entities.id AND storages.deletedFlag!=1 \
-                             WHERE %S \
+                             WHERE     %S \
+                                   AND uuids.jobUUID!='' \
                              GROUP BY uuids.id \
                              LIMIT %llu,%llu \
                             ",
