@@ -556,29 +556,6 @@ LOCAL NotifyInfo *getNotifyInfoByDirectory(ConstString directory)
 }
 
 /***********************************************************************\
-* Name   : freeNotifyDictionary
-* Purpose: free notify info dictionary entry
-* Input  : data     - data
-*          length   - length (not used)
-*          userData - user data (not used)
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeNotifyDictionary(const void *data, ulong length, void *userData)
-{
-  NotifyInfo *notifyInfo = (NotifyInfo*)data;
-  assert(notifyInfo != NULL);
-
-  UNUSED_VARIABLE(length);
-  UNUSED_VARIABLE(userData);
-
-  freeNotifyInfo(notifyInfo,NULL);
-  free(notifyInfo);
-}
-
-/***********************************************************************\
 * Name   : addNotify
 * Purpose: add notify for directory
 * Input  : directory - directory
@@ -642,15 +619,15 @@ LOCAL NotifyInfo *addNotify(ConstString name)
 }
 
 /***********************************************************************\
-* Name   : removeNotify
-* Purpose: remove notify for directory
+* Name   : deleteNotify
+* Purpose: remove and delete notify for directory
 * Input  : notifyInfo - file notify
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void removeNotify(NotifyInfo *notifyInfo)
+LOCAL void deleteNotify(NotifyInfo *notifyInfo)
 {
   assert(notifyInfo != NULL);
 
@@ -658,13 +635,13 @@ LOCAL void removeNotify(NotifyInfo *notifyInfo)
 
   DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
 
-  // remove notify
+  // remove notify watch
   #if   defined(PLATFORM_LINUX)
     (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
   #elif defined(PLATFORM_WINDOWS)
   #endif /* PLATFORM_... */
 
-  // delete notify
+  // remove notify
   Dictionary_remove(&notifyNames,
                     String_cString(notifyInfo->name),
                     String_length(notifyInfo->name)
@@ -813,19 +790,18 @@ LOCAL void addNotifySubDirectories(const char *jobUUID, const char *scheduleUUID
 }
 
 /***********************************************************************\
-* Name   : removeNotifySubDirectories
-* Purpose: remove notify for directorty and all sub-directories
+* Name   : deleteNotifySubDirectories
+* Purpose: remove and delete notify for directorty and all
+*          sub-directories
 * Input  : name - name
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void removeNotifySubDirectories(ConstString name)
+LOCAL void deleteNotifySubDirectories(ConstString name)
 {
   DictionaryIterator dictionaryIterator;
-//  const void         *keyData;
-//  ulong              keyLength;
   void               *data;
   ulong              length;
   NotifyInfo         *notifyInfo;
@@ -851,7 +827,7 @@ LOCAL void removeNotifySubDirectories(ConstString name)
         && String_startsWith(notifyInfo->name,name)
        )
     {
-      removeNotify(notifyInfo);
+      deleteNotify(notifyInfo);
     }
   }
   Dictionary_doneIterator(&dictionaryIterator);
@@ -965,10 +941,10 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
         }
       }
 
-      // remove notify if no more uuids
+      // delete notify if no more uuids
       if (List_isEmpty(&notifyInfo->uuidList))
       {
-        removeNotify(notifyInfo);
+        deleteNotify(notifyInfo);
       }
       else
       {
@@ -980,8 +956,8 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
 }
 
 /***********************************************************************\
-* Name   : removeNotifies
-* Purpose: remove notifies for job and schedule
+* Name   : purgeNotifies
+* Purpose: purge notifies for job and schedule
 * Input  : jobUUID      - job UUID
 *          scheduleUUID - schedule UUID
 * Output : -
@@ -989,7 +965,7 @@ LOCAL void cleanNotifies(const char *jobUUID, const char *scheduleUUID)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
+LOCAL void purgeNotifies(const char *jobUUID, const char *scheduleUUID)
 {
   DictionaryIterator dictionaryIterator;
   NotifyInfo         *notifyInfo;
@@ -1039,7 +1015,7 @@ LOCAL void removeNotifies(const char *jobUUID, const char *scheduleUUID)
       // remove notify if no more uuids
       if (List_isEmpty(&notifyInfo->uuidList))
       {
-        removeNotify(notifyInfo);
+        deleteNotify(notifyInfo);
       }
     }
     Dictionary_doneIterator(&dictionaryIterator);
@@ -1152,7 +1128,7 @@ LOCAL void continuousInitThreadCode(void)
                    );
         break;
       case DONE:
-        removeNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
+        purgeNotifies(initNotifyMsg.jobUUID,initNotifyMsg.scheduleUUID);
         break;
     }
 
@@ -1227,7 +1203,6 @@ LOCAL Errors addEntry(DatabaseHandle *databaseHandle,
                            ",
                            jobUUID,
                            scheduleUUID,
-                           name,
                            name
                           );
   if (error != ERROR_NONE)
@@ -1423,14 +1398,15 @@ fprintf(stderr,"\n");
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
             {
-              // remove directory and sub-directories from notify
+              // remove and delete directory and sub-directories from notify
+//TODO: required notifyInfo =?
               notifyInfo = getNotifyInfo(inotifyEvent->wd);
-              removeNotifySubDirectories(absoluteName);
+              deleteNotifySubDirectories(absoluteName);
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_FROM))
             {
-              // remove directory and sub-directories from notify
-              removeNotifySubDirectories(absoluteName);
+              // remove and delete directory and sub-directories from notify
+              deleteNotifySubDirectories(absoluteName);
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_TO))
             {
@@ -1575,8 +1551,7 @@ Errors Continuous_initAll(void)
   Semaphore_init(&notifyLock,SEMAPHORE_TYPE_BINARY);
   Dictionary_init(&notifyHandles,
                   CALLBACK_(NULL,NULL),  // dictionaryCopyFunction
-//TODO: test
-                  CALLBACK_(freeNotifyDictionary,NULL),
+                  CALLBACK_(NULL,NULL),  // dictionaryFreeFunction
                   CALLBACK_(NULL,NULL)  // dictionaryCompareFunction
                  );
   Dictionary_init(&notifyNames,
@@ -1649,10 +1624,15 @@ void Continuous_doneAll(void)
 
       DEBUG_REMOVE_RESOURCE_TRACE(notifyInfo,NotifyInfo);
 
+      // remove notify watch
       #if   defined(PLATFORM_LINUX)
         (void)inotify_rm_watch(inotifyHandle,notifyInfo->watchHandle);
       #elif defined(PLATFORM_WINDOWS)
       #endif /* PLATFORM_... */
+
+      // free resources
+      freeNotifyInfo(notifyInfo,NULL);
+      free(notifyInfo);
     }
     Dictionary_doneIterator(&dictionaryIterator);
 
