@@ -3368,6 +3368,21 @@ if test $ENABLE_ISO9660 = "yes"; then
       AC_MSG_COMPILE([libcdio])
       result2=1
       if test $result2 -eq 1; then
+        # patch to fix gcc pragma for older gcc
+        #   diff -u libcdio-2.1.0.org/lib/iso9660/iso9660.c libcdio-2.1.0/lib/iso9660/iso9660.c > ../misc/libcdio-2.1.0-gcc-pragma.patch
+        (cd extern/libcdio-2.1.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libcdio-2.1.0-gcc-pragma.patch) 1>/dev/null 2>/dev/null
+        case $host_os in
+          linux-*)
+            ;;
+          windows*|mingw*)
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+        esac
+      fi
+      if test $result2 -eq 1; then
         if test "$ENABLE_DEBUG" = "yes"; then
           (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
             --host=$host \

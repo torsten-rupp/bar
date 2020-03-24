@@ -941,7 +941,7 @@ if test $cleanFlag -eq 0; then
     fi
     $ECHO "ok"
 
-    # libcdio 0.92
+    # libcdio
     $ECHO_NO_NEW_LINE "Get libcdio..."
     (
      cd $destination/extern
