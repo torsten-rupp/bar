@@ -1,0 +1,12 @@
+--- pthreads-w32-2-9-1-release.org/semaphore.h	2011-05-30 02:31:01.000000000 +0200
++++ pthreads-w32-2-9-1-release/semaphore.h	2019-11-04 14:42:11.154413538 +0100
+@@ -107,6 +107,9 @@
+  *
+  */
+
++/* required for mode_t, 2019-11-05 tr */
++#include <sys/types.h>
++
+ #if PTW32_SEMAPHORE_LEVEL >= PTW32_SEMAPHORE_LEVEL_MAX
+ #if defined(NEED_ERRNO)
+ #include "need_errno.h"
