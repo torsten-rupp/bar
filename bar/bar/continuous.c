@@ -1285,8 +1285,8 @@ LOCAL void continuousThreadCode(void)
   SignalMask                 signalMask;
   ssize_t                    n;
   const struct inotify_event *inotifyEvent;
-  NotifyInfo                 *notifyInfo;
-  UUIDNode                   *uuidNode;
+  const NotifyInfo           *notifyInfo;
+  const UUIDNode             *uuidNode;
 
   // init variables
   buffer = malloc(BUFFER_SIZE);
@@ -1399,8 +1399,6 @@ fprintf(stderr,"\n");
             else if (IS_INOTIFY(inotifyEvent->mask,IN_DELETE))
             {
               // remove and delete directory and sub-directories from notify
-//TODO: required notifyInfo =?
-              notifyInfo = getNotifyInfo(inotifyEvent->wd);
               deleteNotifySubDirectories(absoluteName);
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_FROM))
@@ -1410,68 +1408,58 @@ fprintf(stderr,"\n");
             }
             else if (IS_INOTIFY(inotifyEvent->mask,IN_MOVED_TO))
             {
-              // add directory and sub-directories to notify
-//              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle.timeout),
-//                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//              {
-                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+              LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+              {
+                // store into notify database
+                error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                if (error == ERROR_NONE)
                 {
-                  // store into notify database
-                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                  if (error == ERROR_NONE)
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                LOG_PREFIX,
-                                "Marked for storage '%s'",
-                                String_cString(absoluteName)
-                               );
-                  }
-                  else
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                LOG_PREFIX,
-                                "Store continuous entry fail (error: %s)",
-                                Error_getText(error)
-                               );
-                  }
-
-                  // add directory and sub-directories to notify
-                  addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_CONTINUOUS,
+                              LOG_PREFIX,
+                              "Marked for storage '%s'",
+                              String_cString(absoluteName)
+                             );
                 }
-//              });
+                else
+                {
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_CONTINUOUS,
+                              LOG_PREFIX,
+                              "Store continuous entry fail (error: %s)",
+                              Error_getText(error)
+                             );
+                }
+
+                // add directory and sub-directories to notify
+                addNotifySubDirectories(uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+              }
             }
             else
             {
-//              // add directory and sub-directories to notify
-//              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle.timeout),
-//                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//              {
-                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+              LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+              {
+                // store into notify database
+                error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                if (error == ERROR_NONE)
                 {
-                  // store into notify database
-                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                  if (error == ERROR_NONE)
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                LOG_PREFIX,
-                                "Marked for storage '%s'",
-                                String_cString(absoluteName)
-                               );
-                  }
-                  else
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                LOG_PREFIX,
-                                "Store continuous entry fail (error: %s)",
-                                Error_getText(error)
-                               );
-                  }
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_CONTINUOUS,
+                              LOG_PREFIX,
+                              "Marked for storage '%s'",
+                              String_cString(absoluteName)
+                             );
                 }
-//              });
+                else
+                {
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_CONTINUOUS,
+                              LOG_PREFIX,
+                              "Store continuous entry fail (error: %s)",
+                              Error_getText(error)
+                             );
+                }
+              }
             }
           }
           else
@@ -1487,33 +1475,28 @@ fprintf(stderr,"\n");
             }
             else
             {
-              // file move or changed -> store into notify database
-//              BLOCK_DO(Database_lock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE,databaseHandle.timeout),
-//                       Database_unlock(&databaseHandle,SEMAPHORE_LOCK_TYPE_READ_WRITE),
-//              {
-                LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+              LIST_ITERATE(&notifyInfo->uuidList,uuidNode)
+              {
+                error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
+                if (error == ERROR_NONE)
                 {
-                  error = addEntry(&databaseHandle,uuidNode->jobUUID,uuidNode->scheduleUUID,absoluteName);
-                  if (error == ERROR_NONE)
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                LOG_PREFIX,
-                                "Marked for storage '%s'",
-                                String_cString(absoluteName)
-                               );
-                  }
-                  else
-                  {
-                    plogMessage(NULL,  // logHandle
-                                LOG_TYPE_CONTINUOUS,
-                                LOG_PREFIX,
-                                "Store continuous entry fail (error: %s)",
-                                Error_getText(error)
-                               );
-                  }
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_CONTINUOUS,
+                              LOG_PREFIX,
+                              "Marked for storage '%s'",
+                              String_cString(absoluteName)
+                             );
                 }
-//              });
+                else
+                {
+                  plogMessage(NULL,  // logHandle
+                              LOG_TYPE_CONTINUOUS,
+                              LOG_PREFIX,
+                              "Store continuous entry fail (error: %s)",
+                              Error_getText(error)
+                             );
+                }
+              }
             }
           }
         }
