@@ -3331,14 +3331,12 @@ LOCAL bool cmdOptionParsePublicPrivateKey(void *userData, void *variable, const 
   UNUSED_VARIABLE(defaultValue);
 
   // get key data
-fprintf(stderr,"%s, %d: value=%s\n",__FILE__,__LINE__,value);
   if (File_existsCString(value))
   {
     // key file base64 encoded
 
     // read key file
     fileName = String_newCString(value);
-fprintf(stderr,"%s, %d: xxxxx %s\n",__FILE__,__LINE__,String_cString(fileName));
     error = Crypt_readPublicPrivateKeyFile(cryptKey,
                                            fileName,
                                            CRYPT_MODE_CBC_|CRYPT_MODE_CTS_,
@@ -3346,7 +3344,6 @@ fprintf(stderr,"%s, %d: xxxxx %s\n",__FILE__,__LINE__,String_cString(fileName));
                                            NULL,  // cryptSalt
                                            NULL  // password
                                           );
-fprintf(stderr,"%s, %d: %d %p %d\n",__FILE__,__LINE__,cryptKey->cryptPaddingType,cryptKey->data,cryptKey->dataLength);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
@@ -3368,7 +3365,6 @@ fprintf(stderr,"%s, %d: %d %p %d\n",__FILE__,__LINE__,cryptKey->cryptPaddingType
                                           NULL,  // cryptSalt
                                           NULL  // password
                                          );
-fprintf(stderr,"%s, %d: %d %p %d\n",__FILE__,__LINE__,cryptKey->cryptPaddingType,cryptKey->data,cryptKey->dataLength);
     if (error != ERROR_NONE)
     {
       stringSet(errorMessage,errorMessageSize,Error_getText(error));
