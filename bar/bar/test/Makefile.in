@@ -72,12 +72,8 @@ PERL           = @PERL@
 PGREP          = pgrep
 READLINK       = readlink
 RMDIR          = rmdir
-#TODO: revert
-#RMF            = rm -f
-RMF            = rm -fv
-#TODO: revert
-#RMRF           = rm -rf
-RMRF           = rm -rfv
+RMF            = rm -f
+RMRF           = rm -rf
 SCP            = scp
 SED            = sed
 SETFATTR       = @SETFATTR@
