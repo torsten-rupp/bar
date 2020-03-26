@@ -2567,13 +2567,6 @@ Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
     byte         randomBuffer[32];
     uint         i,j;
     Errors       error;
-#if 0
-    gcry_sexp_t  sexpData;
-    gcry_sexp_t  sexpEncryptData;
-    const char   *encryptedData;
-    size_t       encryptedDataLength;
-    gcry_error_t gcryptError;
-#endif
   #endif /* HAVE_GCRYPT */
 
   assert(cryptKey != NULL);
@@ -2652,7 +2645,6 @@ Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
 fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODED_MESSAGE_LENGTH); debugDumpMemory(pkcs1EncodedMessage,PKCS1_ENCODED_MESSAGE_LENGTH,0);
 #endif
 
-#if 1
     error = Crypt_encryptWithPublicKey(publicKey,
                                        pkcs1EncodedMessage,
                                        PKCS1_ENCODED_MESSAGE_LENGTH,
@@ -2666,73 +2658,13 @@ fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS
       freeSecure(data);
       return error;
     }
-#else
-// old
-    // create S-expression with data
-    gcryptError = gcry_sexp_build(&sexpData,NULL,"(data (flags raw) (value %b))",PKCS1_ENCODED_MESSAGE_LENGTH,(char*)pkcs1EncodedMessage);
-    if (gcryptError != 0)
-    {
-      freeSecure(pkcs1EncodedMessage);
-      freeSecure(data);
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-//fprintf(stderr,"%s,%d: --- randomkey plain data \n",__FILE__,__encryptedKeyLengthLINE__);
-//gcry_sexp_dump(sexpData);encryptedKeyLength
-
-    // encrypt
-    gcryptError = gcry_pk_encrypt(&sexpEncryptData,sexpData,publicKey->key);
-    if (gcryptError != 0)
-    {
-//fprintf(stderr,"%s,%d: %x %s %d\n",__FILE__,__LINE__,gcryptError,gcry_strerror(gcryptError),bufferLength);
-      gcry_sexp_release(sexpData);
-      freeSecure(pkcs1EncodedMessage);
-      freeSecure(data);
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-//fprintf(stderr,"%s,%d: --- randomkey encrypted data \n",__FILE__,__LINE__);
-//gcry_sexp_dump(sexpEncryptData);
-
-    // get encrypted data
-    sexpToken = gcry_sexp_find_token(sexpEncryptData,"a",0);
-    if (sexpToken == NULL)
-    {
-      gcry_sexp_release(sexpEncryptData);
-      gcry_sexp_release(sexpData);
-      freeSecure(pkcs1EncodedMessage);
-      freeSecure(data);
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-//gcry_sexp_dump(sexpToken);
-    encryptedData = gcry_sexp_nth_data(sexpToken,1,&encryptedDataLength);
-    if (encryptedData == NULL)
-    {
-      gcry_sexp_release(sexpEncryptData);
-      gcry_sexp_release(sexpData);
-      freeSecure(pkcs1EncodedMessage);
-      freeSecure(data);
-      return ERROR_KEY_ENCRYPT_FAIL;
-    }
-#ifdef DEBUG_ASYMMETRIC_CRYPT
-fprintf(stderr,"%s, %d: encrypted pkcs1EncodedMessage %d\n",__FILE__,__LINE__,encryptedDataLength); debugDumpMemory(encryptedData,encryptedDataLength,0);
-#endif
-    (*encryptedKeyLength) = MIN(encryptedDataLength,maxEncryptedKeyLength);
-    memCopyFast(encryptedKey,*encryptedKeyLength,encryptedData,*encryptedKeyLength);
-    gcry_sexp_release(sexpToken);
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); debugDumpMemory(encryptBuffer,*encryptBufferLength,0);
-#endif //old
 
     // set key
     if (cryptKey->data != NULL) freeSecure(cryptKey->data);
     cryptKey->data       = data;
-fprintf(stderr,"%s, %d: mmm %p\n",__FILE__,__LINE__,cryptKey->data);
     cryptKey->dataLength = ALIGN(keyLength,8)/8;
 
     // free resources
-#if 0
-//old
-    gcry_sexp_release(sexpEncryptData);
-    gcry_sexp_release(sexpData);
-#endif
     freeSecure(pkcs1EncodedMessage);
 
     return ERROR_NONE;
@@ -2880,7 +2812,6 @@ fprintf(stderr,"%s, %d: key data %d\n",__FILE__,__LINE__,keyLength); debugDumpMe
     // set key
     if (cryptKey->data != NULL) freeSecure(cryptKey->data);
     cryptKey->data       = data;
-fprintf(stderr,"%s, %d: mmm %p\n",__FILE__,__LINE__,cryptKey->data);
     cryptKey->dataLength = ALIGN(keyLength,8)/8;
 
     // free resources
