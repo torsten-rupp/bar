@@ -2293,11 +2293,11 @@ data/linkdata.dat data/link.dat:
 	$(DD) if=$(DEVICE_RANDOM) of=data/linkdata.dat bs=1k count=512 2>/dev/null
 	($(CD) $(@D); $(RMF) link.dat; $(LN) -s linkdata.dat link.dat)
 data/link_not_existing_file.dat:
-	@# Note: work-around for dead link: check if exists and only output info and create if if not
+	@# Note: work-around for dead link: check if exists and only output info and create it if not
 	@if test ! -L $@; then \
-          $(ECHO) "$(INSTALL) -d $(@D)"; \
+          $(ECHO) "$(INSTALL) -d $(@D)" $(LOG); \
           $(INSTALL) -d $(@D); \
-          $(ECHO) "($(CD) data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat)"; \
+          $(ECHO) "($(CD) data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat)" $(LOG); \
           ($(CD) data; $(RMF) link_not_existing_file.dat; $(LN) -s not-existing-file link_not_existing_file.dat); \
         fi
 data/circular_link.dat.marker:
@@ -2363,26 +2363,26 @@ data/fifo:
 data/name\'.dat:
 	@# Note: work-around for special name, do not use '$@'
 	@if test ! -f data/name\'.dat; then \
-          $(ECHO) $(INSTALL) -d $(@D); $(INSTALL) -d $(@D); \
-          $(ECHO) $(ECHO) Hello World \>data/name\\\'.dat; $(ECHO) Hello World >data/name\'.dat; \
+          $(ECHO) $(INSTALL) -d $(@D) $(LOG); $(INSTALL) -d $(@D); \
+          $(ECHO) $(ECHO) Hello World \>data/name\\\'.dat $(LOG); $(ECHO) Hello World >data/name\'.dat; \
         fi
 data/name\".dat:
 	@# Note: work-around for special name, do not use '$@'
 	@if test ! -f data/name\".dat; then \
-          $(ECHO) $(INSTALL) -d $(@D); $(INSTALL) -d $(@D); \
-          $(ECHO) $(ECHO) Hello World \>data/name\\\".dat; $(ECHO) Hello World >data/name\".dat; \
+          $(ECHO) $(INSTALL) -d $(@D) $(LOG); $(INSTALL) -d $(@D); \
+          $(ECHO) $(ECHO) Hello World \>data/name\\\".dat $(LOG); $(ECHO) Hello World >data/name\".dat; \
         fi
 data/name\\.dat:
 	@# Note: work-around for special name, do not use '$@'
 	@if test ! -f data/name\\.dat; then \
-          $(ECHO) $(INSTALL) -d $(@D); $(INSTALL) -d $(@D); \
-          $(ECHO) $(ECHO) Hello World \>data/name\\\\.dat; $(ECHO) Hello World >data/name\\.dat; \
+          $(ECHO) $(INSTALL) -d $(@D) $(LOG); $(INSTALL) -d $(@D); \
+          $(ECHO) $(ECHO) Hello World \>data/name\\\\.dat $(LOG); $(ECHO) Hello World >data/name\\.dat; \
         fi
 data/'name'$$'\n''.dat':
 	@# Note: work-around for special name, do not use '$@'
 	@if test ! -f 'data/name'$$'\n''.dat'; then \
-          $(ECHO) $(INSTALL) -d $(@D); $(INSTALL) -d $(@D); \
-          $(ECHO) $(ECHO) Hello World \>data/name\\\n.dat; $(ECHO) Hello World >'data/name'$$'\n''.dat'; \
+          $(ECHO) $(INSTALL) -d $(@D) $(LOG); $(INSTALL) -d $(@D); \
+          $(ECHO) $(ECHO) Hello World \>data/name\\\n.dat $(LOG); $(ECHO) Hello World >'data/name'$$'\n''.dat'; \
         fi
 data/name%d%f%s%p.dat:
 	$(INSTALL) -d $(@D)
