@@ -2525,6 +2525,7 @@ NULL, // masterSocketHandle
                         );
               (void)Archive_close(&archiveHandle);
               (void)Storage_done(&storageInfo);
+              String_delete(printableStorageName);
               return ERROR_INVALID_SIGNATURE;
             }
             else
