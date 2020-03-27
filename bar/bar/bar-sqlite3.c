@@ -910,6 +910,7 @@ LOCAL void createNewest(DatabaseHandle *databaseHandle)
   // delete all newest entries
   do
   {
+    m = 0L;
     error = Database_execute(databaseHandle,
                              CALLBACK_(NULL,NULL),  // databaseRowFunction
                              &m,
