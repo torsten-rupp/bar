@@ -4067,15 +4067,15 @@ test_index_operations: \
 	@#
 	# bar-sqlite3 operations
 	@$(call functionCleanTestFiles)
-	$(TEST_BAR_SQLITE3) --create intermediate/index.db 1>/dev/null
-	$(TEST_BAR_SQLITE3) --info intermediate/index.db
-	$(TEST_BAR_SQLITE3) --create-triggers intermediate/index.db
-	$(TEST_BAR_SQLITE3) --create-newest intermediate/index.db
-	$(TEST_BAR_SQLITE3) --create-indizes intermediate/index.db
-	$(TEST_BAR_SQLITE3) --create-aggregates intermediate/index.db
-	$(TEST_BAR_SQLITE3) --check intermediate/index.db
-	$(TEST_BAR_SQLITE3) --clean intermediate/index.db
-	$(TEST_BAR_SQLITE3) --vacuum intermediate/index.db
+	$(TEST_BAR_SQLITE3) --create intermediate/index.db $(LOG)
+	$(TEST_BAR_SQLITE3) --info intermediate/index.db $(LOG)
+	$(TEST_BAR_SQLITE3) --create-triggers intermediate/index.db $(LOG)
+	$(TEST_BAR_SQLITE3) --create-newest intermediate/index.db $(LOG)
+	$(TEST_BAR_SQLITE3) --create-indizes intermediate/index.db $(LOG)
+	$(TEST_BAR_SQLITE3) --create-aggregates intermediate/index.db $(LOG)
+	$(TEST_BAR_SQLITE3) --check intermediate/index.db $(LOG)
+	$(TEST_BAR_SQLITE3) --clean intermediate/index.db $(LOG)
+	$(TEST_BAR_SQLITE3) --vacuum intermediate/index.db $(LOG)
 	@#
 	# bar index operations
 	( \
@@ -4095,7 +4095,7 @@ test_index_operations: \
             ; \
         ) $(LOG)
 	for i in 1 2 3 4 6; do \
-          $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql..."; \
+          $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql..." $(LOG); \
           $(RMF) intermediate/index.db; $(SQLITE3) intermediate/index.db < $(UP_DIR)/archive/index$$i.sql; \
 	  ( \
             $(CD) $(UP_DIR); \
