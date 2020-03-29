@@ -397,6 +397,10 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
 // mask and shift value
 #define MASKSHIFT(n,maskShift) (((n) & maskShift.mask) >> maskShift.shift)
 
+// stringify
+#define STRINGIFY(s) __STRINGIFY(s)
+#define __STRINGIFY(s) #s
+
 /***********************************************************************\
 * Name   : EXECUTE_ONCE
 * Purpose: execute block once
