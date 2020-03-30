@@ -31,6 +31,7 @@
 /***************************** Constants *******************************/
 
 #define POSITION_RANDOM -1
+#define MAX_FIND_LENGTH 256
 
 typedef enum
 {
@@ -46,6 +47,8 @@ typedef struct
 {
   DefinitionTypes type;
   int64           position;
+  byte            find[MAX_FIND_LENGTH];
+  uint            findLength;
   union
   {
     String value;
@@ -91,10 +94,10 @@ LOCAL void printUsage(const char *programName)
   printf("Usage: %s [<options>] [--] <input file> [<command>...]\n",programName);
   printf("\n");
   printf("Commands:\n");
-  printf("  m:<position>:<value>  - modify byte at <position> into <value>\n");
-  printf("  r:<position>:<length> - randomize <length> byte from <position>\n");
-  printf("  d:<position>:<length> - delete <length> bytes from <position>\n");
-  printf("  i:<position>:<value>  - insert at <position> byte <value>\n");
+  printf("  m:[<position>|<find text>]:<value>  - modify byte at <position> into <value>\n");
+  printf("  r:[<position>|<find text>]:<length> - randomize <length> byte from <position>\n");
+  printf("  d:[<position>|<find text>]:<length> - delete <length> bytes from <position>\n");
+  printf("  i:[<position>|<find text>]:<value>  - insert at <position> byte <value>\n");
   printf("\n");
   CmdOption_printHelp(stdout,
                       COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
@@ -197,13 +200,19 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
   ConstString     w;
   uint            length;
   char            buffer[1024];
+  char            find[MAX_FIND_LENGTH];
 
   assert(definition != NULL);
 
+  // init variables
+  definition->position   = 0LL;
+  definition->findLength = 0;
+
+  // parse
   t = String_newCString(s);
   String_initTokenizer(&stringTokenizer,t,STRING_BEGIN,":",NULL,FALSE);
 
-  /* get type */
+  // get type
   if (String_getNextToken(&stringTokenizer,&w,NULL))
   {
     if      (String_equalsCString(w,"m")) definition->type = DEFINITION_TYPE_MODIFY;
@@ -226,10 +235,23 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
     return FALSE;
   }
 
-  /* get position */
+  // get position
   if (String_getNextToken(&stringTokenizer,&w,NULL))
   {
-    if (!String_scan(w,STRING_BEGIN,"%llu",&definition->position))
+    if      (String_scan(w,STRING_BEGIN,"%llu",&definition->position))
+    {
+    }
+    else if (String_scan(w,STRING_BEGIN,"\"%"STRINGIFY(MAX_FIND_LENGTH)"s\"",find))
+    {
+      definition->findLength = stringLength(find);
+      memCopy(definition->find,sizeof(definition->find),find,definition->findLength);
+    }
+    else if (String_scan(w,STRING_BEGIN,"'%"STRINGIFY(MAX_FIND_LENGTH)"s'",find))
+    {
+      definition->findLength = stringLength(find);
+      memCopy(definition->find,sizeof(definition->find),find,definition->findLength);
+    }
+    else
     {
       String_doneTokenizer(&stringTokenizer);
       String_delete(t);
@@ -242,7 +264,7 @@ LOCAL bool parseDefinition(const char *s, Definition *definition, uint64 maxPosi
     definition->position = getRandomInteger64(maxPosition);
   }
 
-  /* get value/length */
+  // get value/length
   if (String_getNextToken(&stringTokenizer,&w,NULL))
   {
     switch (definition->type)
@@ -347,16 +369,18 @@ int main(int argc, const char *argv[])
   Definition  definition;
   Definition  definitions[MAX_DEFINITIONS];
   uint        definitionCount;
-  uint        z;
+  uint        i;
   struct stat statBuffer;
   uint64      size;
   const char  *inputFileName;
   FILE        *inputHandle;
+  byte        find[MAX_FIND_LENGTH];
+  uint        findLength;
   uint        deleteCount;
   byte        data;
   uint64      n;
 
-  /* parse command line */
+  // parse command line
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
   if (!CmdOption_parse(argv,&argc,
                        COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS),
@@ -385,7 +409,7 @@ int main(int argc, const char *argv[])
   }
   inputFileName = argv[1];
 
-  /* get file size */
+  // get file size
   if (stat(inputFileName,&statBuffer) != 0)
   {
     fprintf(stderr,"ERROR: Cannot detect size of file '%s' (error: %s)\n",
@@ -396,12 +420,12 @@ int main(int argc, const char *argv[])
   }
   size = statBuffer.st_size;
 
-  /* parse definitions */
+  // parse definitions
   initRandom(size);
   definitionCount = 0;
-  for (z = 2; z < (uint)argc; z++)
+  for (i = 2; i < (uint)argc; i++)
   {
-    if (!parseDefinition(argv[z],&definition,size))
+    if (!parseDefinition(argv[i],&definition,size))
     {
       exit(1);
     }
@@ -413,7 +437,7 @@ int main(int argc, const char *argv[])
     definitionCount++;
   }
 
-  /* open input file */
+  // open input file
   inputHandle = fopen(inputFileName,"r");
   if (inputHandle == NULL)
   {
@@ -424,38 +448,48 @@ int main(int argc, const char *argv[])
     exit(1);
   }
 
-  /* destroy and write to stdout */
+  // destroy and write to stdout
   deleteCount = 0;
+  findLength  = 0;
   for (n = 0; n < size; n++)
   {
-    /* read byte */
+    // read byte
     data = fgetc(inputHandle);
 
     if (deleteCount == 0)
     {
-      /* find matching definition */
-      z = 0;
-      while ((z < definitionCount) && (n != (uint64)definitions[z].position))
+      memCopy(&find[0],sizeof(find),&find[1],sizeof(find)-1);
+      find[sizeof(find)-1] = data;
+      if (findLength < MAX_FIND_LENGTH) findLength++;
+
+      // find matching definition
+      i = 0;
+      while (   (i < definitionCount)
+//TODO: NYI
+             && (   ((definitions[i].findLength >  0) && memEquals(find,sizeof(find),definitions[i].find,definitions[i].findLength))
+                 || ((definitions[i].findLength == 0) && (n != (uint64)definitions[i].position))
+                )
+            )
       {
-        z++;
+        i++;
       }
 
-      /* output byte */
-      if (z < definitionCount)
+      // output byte
+      if (i < definitionCount)
       {
-        switch (definitions[z].type)
+        switch (definitions[i].type)
         {
           case DEFINITION_TYPE_MODIFY:
           case DEFINITION_TYPE_RANDOMIZE:
-            fwrite(String_cString(definitions[z].value),1,String_length(definitions[z].value),stdout);
-            deleteCount = String_length(definitions[z].value)-1;
+            fwrite(String_cString(definitions[i].value),1,String_length(definitions[i].value),stdout);
+            deleteCount = String_length(definitions[i].value)-1;
             break;
           case DEFINITION_TYPE_INSERT:
-            fwrite(String_cString(definitions[z].value),1,String_length(definitions[z].value),stdout);
+            fwrite(String_cString(definitions[i].value),1,String_length(definitions[i].value),stdout);
             fputc(data,stdout);
             break;
           case DEFINITION_TYPE_DELETE:
-            deleteCount = definitions[z].length-1;
+            deleteCount = definitions[i].length-1;
             break;
         }
       }
@@ -470,10 +504,10 @@ int main(int argc, const char *argv[])
     }
   }
 
-  /* close files */
+  // close files
   fclose(inputHandle);
 
-  /* free resources */
+  // free resources
   CmdOption_done(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
   return 0;
