@@ -2342,7 +2342,7 @@ bool Misc_getYesNo(const char *message)
       tcgetattr(File_getDescriptor(stdin),&oldTermioSettings);
 
       // set raw mode
-      memcpy(&termioSettings,&oldTermioSettings,sizeof(struct termios));
+      memCopy(&termioSettings,sizeof(termioSettings),&oldTermioSettings,sizeof(oldTermioSettings));
       cfmakeraw(&termioSettings);
       tcsetattr(File_getDescriptor(stdin),TCSANOW,&termioSettings);
 
