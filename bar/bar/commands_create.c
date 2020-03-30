@@ -4721,7 +4721,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = Storage_preProcess(&createInfo->storageInfo,storageMsg.archiveName,createInfo->createdDateTime,FALSE);
       if (error != ERROR_NONE)
       {
-        if (createInfo->failError != ERROR_NONE) createInfo->failError = error;
+        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         printError("Cannot pre-process file '%s' (error: %s)!",
                    String_cString(printableStorageName),
@@ -4737,7 +4737,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = File_getInfo(&fileInfo,storageMsg.fileName);
       if (error != ERROR_NONE)
       {
-        if (createInfo->failError != ERROR_NONE) createInfo->failError = error;
+        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         printError("Cannot get information for file '%s' (error: %s)",
                    String_cString(storageMsg.fileName),
@@ -4786,7 +4786,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       error = File_open(&fileHandle,storageMsg.fileName,FILE_OPEN_READ);
       if (error != ERROR_NONE)
       {
-        if (createInfo->failError != ERROR_NONE) createInfo->failError = error;
+        if (createInfo->failError == ERROR_NONE) createInfo->failError = error;
 
         printInfo(0,"FAIL!\n");
         printError("Cannot open file '%s' (error: %s)!",
