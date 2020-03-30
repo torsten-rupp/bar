@@ -4,3 +4,9 @@ test/archives
 *-shm
 *-wal
 bar-log-*
+*.deb
+*.rpm
+*.log
+*.bar
+
+
