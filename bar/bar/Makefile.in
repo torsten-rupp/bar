@@ -1390,7 +1390,7 @@ rundev_test: bar@EXEEXT@ /tmp/bar.cfg ../bar-ca.pem ../bar-server-cert.pem ../ba
 # ----------------------------------------------------------------------------
 
 # tests
-.PHONY: test test_clean test_distclean
+.PHONY: test test_min test_clean test_distclean
 test: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
@@ -1399,7 +1399,16 @@ test: \
   bar-valgrind@EXEEXT@ \
   bar-keygen@SHELLEXT@
 	@$(RMF) bar-test.log
-	@$(MAKE) -C test LOGFILE=$(abspath bar-test.log) $@
+	@$(MAKE) -C test $@ TEST_EMULATION=1 </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
+test_min: \
+  bar@EXEEXT@ \
+  bar-debug@EXEEXT@ \
+  bar-gcov@EXEEXT@ \
+  bar-gprof@EXEEXT@ \
+  bar-valgrind@EXEEXT@ \
+  bar-keygen@SHELLEXT@
+	@$(RMF) bar-test.log
+	@$(MAKE) -C test $@ TEST_EMULATION=1 CRYPT_NAMES=$(MIN_CRYPT_NAMES) COMPRESS_NAMES=$(MIN_COMPRESS_NAMES) IMAGE_FILESYSTEM_NAMES=raw </dev/null | $(SED) 's/....\x08\x08\x08\x08//g' > $(abspath bar-test.log)
 test%: \
   bar@EXEEXT@ \
   bar-debug@EXEEXT@ \
