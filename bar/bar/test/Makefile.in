@@ -115,13 +115,13 @@ GENHTML        = genhtml
 VALGRIND       = valgrind
 VALGRIND_FLAGS = --gen-suppressions=no --track-fds=yes --suppressions=$(BAR_DIR)/valgrind.supp --error-exitcode=$(VALGRIND_ERROR_EXITCODE)
 
+INFO           = echo >&2
+INFO_NO_LF     = echo -n >&2
+
 #------------------------ specific variables/settings ------------------------
 
 # quiet (no output)
 QUIET ?=
-
-# logfile
-LOGFILE ?=
 
 # supported compress algorithms
 ifeq ($(MIN_COMPRESS_NAMES),)
@@ -198,6 +198,10 @@ endif
 # image compress algorithms
 IMAGE_COMPRESS_NAMES ?= none zip9
 
+ifeq ($(IMAGE_FILESYSTEM_NAMES),)
+  IMAGE_FILESYSTEM_NAMES = raw ext fat reiser
+endif
+
 # supported crypt algorithms
 MIN_CRYPT_NAMES  = none
 ifeq (@HAVE_GCRYPT@,1)
@@ -261,6 +265,7 @@ TEST_SLAVE_LOG_FILE              = $(TEST_SLAVE_DIRECTORY)/bar.log
 TEST_HOST                        ?= localhost
 TEST_LOGIN_NAME                  ?= $(LOGNAME)
 TEST_PASSWORD                    =
+TEST_EMULATION                   =
 
 TEST_HOST_FTP                    ?= $(TEST_HOST)
 TEST_LOGIN_NAME_FTP              ?= $(TEST_LOGIN_NAME)
@@ -291,11 +296,11 @@ TEST_HOST_WEBDAV                 ?= $(TEST_HOST)
 TEST_LOGIN_NAME_WEBDAV           ?= $(TEST_LOGIN_NAME)
 TEST_PASSWORD_WEBDAV             ?= $(TEST_PASSWORD)
 
-TEST_OPTICAL_EMULATION           =
-TEST_OPTICAL_SLEEP_TIME          ?= 30
+TEST_OPTICAL_EMULATION           ?= $(TEST_EMULATION)
+TEST_OPTICAL_SLEEP_TIME          ?= $(if $(TEST_OPTICAL_EMULATION),5,30)
 
-TEST_DEVICE_EMULATION            =
-TEST_DEVICE_SLEEP_TIME           ?= 30
+TEST_DEVICE_EMULATION            ?= $(TEST_EMULATION)
+TEST_DEVICE_SLEEP_TIME           ?= $(if $(TEST_DEVICE_EMULATION),5,30)
 
 TEST_PASSWORD_CRYPT              =  Franz_Kafka:Die_Verwandlung
 TEST_PASSWORD_CRYPT_OTHER        =  Heinrich_Böll:Ansichten_eines_Clown
@@ -372,10 +377,10 @@ all: $(TARGETS)
 # clean
 clean:
 ifeq (@HAVE_SUDO_COMMAND_CHATTR_A@,1)
-	-$(SUDO) -n $(CHATTR) -a data/append-only.dat 2>/dev/null
+	$(SUDO) -n $(CHATTR) -a data/append-only.dat 2>/dev/null || true
 endif
 ifeq (@HAVE_SUDO_COMMAND_CHATTR_I@,1)
-	-$(SUDO) -n $(CHATTR) -i data/immutable.dat 2>/dev/null
+	$(SUDO) -n $(CHATTR) -i data/immutable.dat 2>/dev/null || true
 endif
 	$(RMRF) data
 	$(RMRF) restore
@@ -477,44 +482,47 @@ help_output:
 
 .PHONY: $(BAR_DIR)/bar@EXEEXT@
 $(BAR_DIR)/bar@EXEEXT@:
-	$(MAKE) -C $(@D) $(@F)
+	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 .PHONY: $(BAR_DIR)/bar-debug@EXEEXT@
 $(BAR_DIR)/bar-debug@EXEEXT@:
-	$(MAKE) -C $(@D) $(@F)
+	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 .PHONY: $(BAR_DIR)/bar-gcov@EXEEXT@
 $(BAR_DIR)/bar-gcov@EXEEXT@:
-	$(MAKE) -C $(@D) $(@F)
+	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 .PHONY: $(BAR_DIR)/bar-gprof@EXEEXT@
 $(BAR_DIR)/bar-gprof@EXEEXT@:
-	$(MAKE) -C $(@D) $(@F)
+	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 .PHONY: $(BAR_DIR)/bar-valgrind@EXEEXT@
 $(BAR_DIR)/bar-valgrind@EXEEXT@:
-	$(MAKE) -C $(@D) $(@F)
+	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 .PHONY: $(BAR_DIR)/bar-sqlite3@EXEEXT@
 $(BAR_DIR)/bar-sqlite3@EXEEXT@:
-	$(MAKE) -C $(@D) $(@F)
+	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 .PHONY: $(BAR_DIR)/destroyer@EXEEXT@
 $(BAR_DIR)/destroyer@EXEEXT@:
-	$(MAKE) -C $(@D) $(@F)
+	@$(MAKE) -C $(@D) $(@F) >/dev/null
 
 # ----------------------------------------------------------------------------
 
 COLUMNS := $(shell tput cols)
 
 # log redirection
-LOG = $(if $(QUIET),</dev/null) $(if $(LOGFILE),| $(TEE) -a $(LOGFILE)) $(if $(QUIET),1>/dev/null)
+LOG = $(if $(QUIET),</dev/null 1>/dev/null)
 
-# helper function to output a info line
-functionInfo = $(ECHO) `$(ECHO) "--- $1 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" | $(HEAD) -c $(COLUMNS)` $(if $(QUIET),1>/dev/null)
+# helper function to output info lines
+functionInfoBegin = $(ECHO_NO_LF) >&2 "$1..."; $(ECHO) "$1" $(if $(QUIET),1>/dev/null)
+functionInfoEnd = $(ECHO) >&2 "$1"
+functionInfoHeader = $(ECHO) `$(ECHO) "--- $1 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" | $(HEAD) -c $(COLUMNS)` $(if $(QUIET),1>/dev/null)
+functionInfoFooter = $(ECHO) `$(ECHO) "---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" | $(HEAD) -c $(COLUMNS)` $(if $(QUIET),1>/dev/null)
 
 # helper function for names, suffixes
-functionNames    = $(foreach name,$1,$(name) $(addprefix $(name),-debug -gcov -gprof -valgrind))
+functionNames = $(foreach name,$1,$(name) $(addprefix $(name),-debug -gcov -gprof -valgrind))
 SUFFIXEX = $(subst $() $(),|,-debug -gcov -gprof -valgrind)
 
 # helper function for test files
@@ -657,9 +665,11 @@ functionTestDeviceDump = \
 # call functionWaitProcess,<pid file>,<timeout [s]>
 functionWaitProcess = \
   ( \
-    pid=`$(PGREP) --pidfile $1`; \
-    $(TIMEOUT) --signal=KILL $2 $(TAIL) --pid=$$pid -f /dev/null 2>/dev/null; \
-    $(KILL) $$pid 2>/dev/null; \
+    if test -f "$1"; then \
+      pid=`$(PGREP) --pidfile $1 2>/dev/null`; \
+      $(TIMEOUT) --signal=KILL $2 $(TAIL) --pid=$$pid -f /dev/null 2>/dev/null; \
+      $(KILL) $$pid 2>/dev/null; \
+    fi; \
     true; \
   )
 
@@ -790,7 +800,8 @@ TEST_OPTIONS = --no-default-config
 TEST_ENVIRONMENT = DISPLAY= SSH_ASKPASS=
 
 # test timeout command (Note: older versions of the timeout command may not support --kill-after)
-TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 1200 $(TIMEOUT) --signal=ABRT 800 $(TIMEOUT) --signal=QUIT 600
+#TEST_TIMEOUT            = $(TIMEOUT) --signal=KILL 1200 $(TIMEOUT) --signal=ABRT 800 $(TIMEOUT) --signal=QUIT 600
+TEST_TIMEOUT = $(TIMEOUT) --foreground --signal=KILL 1200 $(TIMEOUT) --foreground --signal=ABRT 800 $(TIMEOUT) --foreground --signal=QUIT 600
 
 .PHONY: test test_win
 .PHONY: test-debug test_win-debug
@@ -822,7 +833,7 @@ TEST_TIMEOUT = $(TIMEOUT) --signal=KILL 1200 $(TIMEOUT) --signal=ABRT 800 $(TIME
 .PHONY: test_keys test_keys_clean test_keys_distclean
 .PHONY: test_data test_data_clean test_data_distclean
 test:
-	@$(MAKE) QUIET=1 --no-print-directory -s \
+	@$(MAKE) --no-print-directory \
           test_basic \
           test_compress \
           test_crypt \
@@ -831,8 +842,6 @@ test:
           test_split \
           test_convert \
           test_image \
-          test_optical \
-          test_device \
           test_index \
           test_server \
           test_combined \
@@ -897,7 +906,7 @@ test_data_dist_clean: \
 	$(RMRF) data
 
 test1 test_basic:
-	@$(ECHO_NO_LF) "Test 1: basic..."
+	@$(call functionInfoBegin,Test 1: basic)
 	@$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -916,7 +925,7 @@ test1 test_basic:
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --index-database=intermediate/index.db --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test1-debug test_basic-debug: \
   $(TEST_BAR_DEBUG)
@@ -935,7 +944,7 @@ test1-valgrind test_basic-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_basic
 
 test2 test_compress:
-	@$(ECHO_NO_LF) "Test 2: compress..."
+	@$(call functionInfoBegin,Test 2: compress)
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -968,7 +977,7 @@ test2 test_compress:
             exit $$rc; \
           fi; \
         done
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test2-debug test_compress-debug: \
   $(TEST_BAR_DEBUG)
@@ -987,7 +996,7 @@ test2-valgrind test_compress-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_compress
 
 test_delta_compress:
-	@$(ECHO_NO_LF) "Test 2: delta compress..."
+	@$(call functionInfoBegin,Test 2: delta compress)
 	for compress in $(COMPRESS_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -1010,7 +1019,7 @@ test_delta_compress:
             exit $$rc; \
           fi; \
         done
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test_delta_compress-debug: \
   $(TEST_BAR_DEBUG)
@@ -1030,7 +1039,7 @@ test_delta_compress-valgrind: \
 
 test3 test_crypt: \
   $(TEST_KEYS)
-	@$(ECHO_NO_LF) "Test 3: crypt..."
+	@$(call functionInfoBegin,Test 3: crypt)
 	for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -1063,7 +1072,7 @@ test3 test_crypt: \
             exit $$rc; \
           fi; \
         done
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 # multi-crypt
 #	$(MAKE) \
@@ -1091,7 +1100,7 @@ test3-valgrind test_crypt-valgrind: \
 
 test4 test_asymmetric_crypt: \
   $(TEST_KEYS)
-	@$(ECHO_NO_LF) "Test 4: asymmetric crypt..."
+	@$(call functionInfoBegin,Test 4: asymmetric crypt)
 	@for crypt in $(CRYPT_NAMES); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -1140,7 +1149,7 @@ test4 test_asymmetric_crypt: \
             fi; \
           fi; \
         done
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test4-debug test_asymmetric_crypt-debug: \
   $(TEST_BAR_DEBUG)
@@ -1160,7 +1169,7 @@ test4-valgrind test_asymmetric_crypt-valgrind: \
 
 test5 test_signatures: \
   $(TEST_KEYS)
-	@$(ECHO_NO_LF) "Test 5: signatures..."
+	@$(call functionInfoBegin,Test 5: signatures)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1188,7 +1197,7 @@ test5 test_signatures: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --signature-public-key=$(CURDIR)/$(TEST_KEY_SIGNATURE_OTHER_PUBLIC) --info --force-verify-signatures intermediate/test.bar)) $(LOG)
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(TEST_OPTIONS) --info --force-verify-signatures intermediate/test.bar)) $(LOG)
 	@$(call functionDoneTestFiles)
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test5-debug test_signatures-debug: \
   $(TEST_BAR_DEBUG)
@@ -1207,7 +1216,7 @@ test5-valgrind test_signatures-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_signatures
 
 test6 test_split:
-	@$(ECHO_NO_LF) "Test 6: split..."
+	@$(call functionInfoBegin,Test 6: split)
 	$(MAKE) \
           BAR_FILE="test-###" \
           BAR_PATTERN="test-*" \
@@ -1226,7 +1235,7 @@ test6 test_split:
           BAR_OPTIONS="$(TEST_OPTIONS) --archive-part-size=100000 --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_file_operations_dryrun \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test6-debug test_split-debug: \
   $(TEST_BAR_DEBUG)
@@ -1245,14 +1254,14 @@ test6-valgrind test_split-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_split
 
 test7 test_convert:
-	@$(ECHO_NO_LF) "Test 7: convert..."
+	@$(call functionInfoBegin,Test 7: convert)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --max-threads=1 $(OPTIONS)" \
           test_convert_operations \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test7-debug test_convert-debug: \
   $(TEST_BAR_DEBUG)
@@ -1271,7 +1280,7 @@ test7-valgrind test_convert-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_convert
 
 test8 test_image:
-	@$(ECHO_NO_LF) "Test 8: image..."
+	@$(call functionInfoBegin,Test 8: image)
 	if test @HAVE_SUDO_COMMAND_MOUNT_UMOUNT@ -a @HAVE_SUDO_COMMAND_LOSETUP@ -a @HAVE_SUDO_COMMAND_MKFS@; then \
 	  for compress in $(IMAGE_COMPRESS_NAMES); do \
             $(MAKE) \
@@ -1294,10 +1303,10 @@ test8 test_image:
             if test $$rc -ne 0; then \
               exit $$rc; \
             fi; \
-	    $(ECHO) "ok"; \
           done; \
+          $(call functionInfoEnd,OK); \
         else \
-          $(ECHO) "FAIL (error: no sudo-commands)"; \
+          $(call functionInfoEnd,FAIL (error: no sudo-commands)); \
         fi; \
 
 test8-debug test_image-debug: \
@@ -1548,7 +1557,7 @@ test_storage_webdav-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_storage_webdav
 
 test10 test_hugefiles:
-	@$(ECHO_NO_LF) "Test 10: huge files..."
+	@$(call functionInfoBegin,Test 10: huge files)
 	for compress in $(COMPRESS_NAMES_HUGE); do \
           $(MAKE) \
             BAR_FILE="test" \
@@ -1561,7 +1570,7 @@ test10 test_hugefiles:
             exit $$rc; \
           fi; \
         done
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test10-debug test_hugefiles-debug: \
   $(TEST_BAR_DEBUG)
@@ -1580,14 +1589,14 @@ test10-valgrind test_hugefiles-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_hugefiles
 
 test11 test_optical:
-	@$(ECHO_NO_LF) "Test 11: optical..."
+	@$(call functionInfoBegin,Test 11: optical)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_optical_operations \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test11-debug test_optical-debug: \
   $(TEST_BAR_DEBUG)
@@ -1606,14 +1615,14 @@ test11-valgrind test_optical-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_optical
 
 test12 test_device:
-	@$(ECHO_NO_LF) "Test 12: device..."
+	@$(call functionInfoBegin,Test 12: device)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_device_operations \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test12-debug test_device-debug: \
   $(TEST_BAR_DEBUG)
@@ -1632,14 +1641,14 @@ test12-valgrind test_device-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_device
 
 test13 test_index:
-	@$(ECHO_NO_LF) "Test 13: index..."
+	@$(call functionInfoBegin,Test 13: index)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_index_operations \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test13-debug test_index-debug: \
   $(TEST_BAR_DEBUG)
@@ -1658,7 +1667,7 @@ test13-valgrind test_index-valgrind: \
 	@$(MAKE) TEST_BAR_PREFIX="$(VALGRIND) --tool=memcheck $(VALGRIND_FLAGS) --leak-check=full --show-leak-kinds=all" TEST_BAR=$(TEST_BAR_VALGRIND) test_index
 
 test14 test_server:
-	@$(ECHO_NO_LF) "Test 14: server..."
+	@$(call functionInfoBegin,Test 14: server)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
@@ -1671,7 +1680,7 @@ test14 test_server:
           BAR_OPTIONS="$(TEST_OPTIONS) --server-mode=slave --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_server_operations \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test14-debug test_server-debug: \
   $(TEST_BAR_DEBUG)
@@ -1692,14 +1701,14 @@ test14-valgrind test_server-valgrind: \
 test15_master test_master: \
   $(TEST_MASTER_CONFIG) \
   $(TEST_MASTER_JOBS_DIRECTORY)
-	@$(ECHO_NO_LF) "Test 14: master..."
+	@$(call functionInfoBegin,Test 14: master)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_master_slave_operations_master \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test15_master-debug test_master-debug: \
   $(TEST_BAR_DEBUG)
@@ -1720,14 +1729,14 @@ test15_master-valgrind test_master-valgrind: \
 test15_slave test_slave: \
   $(TEST_SLAVE_CONFIG) \
   $(TEST_SLAVE_JOBS_DIRECTORY)
-	@$(ECHO_NO_LF) "Test 14: slave..."
+	@$(call functionInfoBegin,Test 14: slave)
 	$(MAKE) \
           BAR_FILE="test" \
           BAR_PATTERN="test" \
           BAR_OPTIONS="$(TEST_OPTIONS) --compress-algorithm=none --crypt-algorithm=none --skip-verify-signatures $(OPTIONS)" \
           test_master_slave_operations_slave \
           ;
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test15_slave-debug test_slave-debug: \
   $(TEST_BAR_DEBUG)
@@ -1747,7 +1756,7 @@ test15_slave-valgrind test_slave-valgrind: \
 
 test_combined: \
   $(TEST_KEYS)
-	@$(ECHO_NO_LF) "Test combined..."
+	@$(call functionInfoBegin,Test combined)
 	for compress in $(COMBINED_COMPRESS_NAMES); do \
           for crypt in $(COMBINED_CRYPT_NAMES); do \
             $(MAKE) \
@@ -1782,7 +1791,7 @@ test_combined: \
         if test $$rc -ne 0; then \
           exit $$rc; \
         fi
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test_combined-debug: \
   $(TEST_BAR_DEBUG)
@@ -1820,7 +1829,7 @@ test_arguments: \
   $(TEST_CONFIG) \
   $(TEST_KEYS) \
   $(TEST_FILES)
-	@$(ECHO_NO_LF) "Test arguments..."
+	@$(call functionInfoBegin,Test arguments)
 	@$(ECHO) "# test config" >intermediate/test.cfg
 	@#
 	# short/long options
@@ -2132,7 +2141,7 @@ endif
 	@$(RMF) intermediate/test.cfg
 	@$(RMF) intermediate/test-deprecated.cfg
 	@$(call functionDoneTestFiles)
-	@$(ECHO) "ok"
+	@$(call functionInfoEnd,OK)
 
 test_arguments-debug: \
   $(TEST_BAR_DEBUG)
@@ -2463,7 +2472,7 @@ $(TEST_SERVER_DATABASE): \
 	@$(call functionVerifyParameter,TEST_SERVER_DATABASE)
 	@
 	$(INSTALL) -d $(@D)
-	$(TEST_BAR_SQLITE3) --create $(TEST_SERVER_DATABASE) "INSERT INTO entities (id,jobUUID) VALUES (1,'test')"
+	$(TEST_BAR_SQLITE3) --force --create $(TEST_SERVER_DATABASE) "INSERT INTO entities (id,jobUUID) VALUES (1,'test')"
 
 data/zero128.dat:
 
@@ -2492,7 +2501,7 @@ test_file_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	@# normal tests
-	@$(call functionInfo,test file operations base)
+	@$(call functionInfoHeader,test file operations base)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -2533,11 +2542,12 @@ test_file_operations_base: \
 	test `$(STAT) --format "%h" restore/data/hardlink1.dat 2>/dev/null` -eq 3 $(LOG)
 	test `$(STAT) --format "%h" restore/data/hardlink2.dat 2>/dev/null` -eq 3 $(LOG)
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 test_file_operations_delta: \
   $(TEST_BAR) \
   $(TEST_FILES)
-	@$(call functionInfo,test file operations delta)
+	@$(call functionInfoHeader,test file operations delta)
 ifeq (@HAVE_XDELTA3@,1)
 	@# delta tests
 	@$(call functionVerifyParameter,TEST_BAR)
@@ -2592,12 +2602,13 @@ ifeq (@HAVE_LZMA@,1)
 endif
 endif
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 test_file_operations_dryrun: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	@# normal tests
-	@$(call functionInfo,test file operations dryrun)
+	@$(call functionInfoHeader,test file operations dryrun)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -2605,12 +2616,13 @@ test_file_operations_dryrun: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c $(BAR_STORAGE)intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --dry-run --verbose=2 $(LOG))
 	test ! -f $(BAR_STORAGE)intermediate/$(BAR_FILE).bar
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 test_file_operations_incremental: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	@# incremental tests
-	@$(call functionInfo,test file operations incremental)
+	@$(call functionInfoHeader,test file operations incremental)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -2622,12 +2634,13 @@ test_file_operations_incremental: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-incremental.bar $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -x intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-incremental.bar $(BAR_OPTIONS) --destination restore $(LOG))
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 test_file_operations_differential: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	@# differential tests
-	@$(call functionInfo,test file operations differential)
+	@$(call functionInfoHeader,test file operations differential)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -2639,6 +2652,7 @@ test_file_operations_differential: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-differential.bar $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -x intermediate/$(BAR_PATTERN)-full.bar intermediate/$(BAR_PATTERN)-differential.bar $(BAR_OPTIONS) --destination restore $(LOG))
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 .PHONY: test_file_operations_destroyed
 test_file_operations_destroyed: \
@@ -2646,38 +2660,41 @@ test_file_operations_destroyed: \
   $(TEST_DESTROYER) \
   $(TEST_FILES)
 	@# tests which must cause errors
-	@$(call functionInfo,test file operations destroyed)
+	@$(call functionInfoHeader,test file operations destroyed)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
 	@$(call functionCleanTestFiles)
-	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null))
-	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0 >$${fileName}_destroyed; done
-	-($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/test*.bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXX >$${fileName}_destroyed; done
-	-($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:32:XXXX >$${fileName}_destroyed; done
-	-($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
-	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1000:10 >$${fileName}_destroyed; done
-	-($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) </dev/null 1>/dev/null 2>/dev/null) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -c intermediate/$(BAR_FILE).bar $(TEST_FILES) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 2>/dev/null $(LOG))
+	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:16:FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0FIL0 >$${fileName}_destroyed; done
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/test*.bar_destroyed $(BAR_OPTIONS) 2>/dev/null) $(LOG))
+	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:20:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) 2>/dev/null) $(LOG))
+	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName m:128:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX >$${fileName}_destroyed; done
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) 2>/dev/null) $(LOG))
+#TODO: detect wrong data
+	$(LS) intermediate/*.bar|while read fileName; do $(TEST_DESTROYER) $$fileName d:1024:10 >$${fileName}_destroyed; done
+	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -t intermediate/$(BAR_FILE).bar_destroyed $(BAR_OPTIONS) 2>/dev/null) $(LOG))
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 .PHONY: test_directory_operations
 test_directory_operations: \
   $(TEST_BAR)
-	@$(call functionInfo,test directory operations)
+	@$(call functionInfoHeader,test directory operations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@#
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(BAR_STORAGE)intermediate $(BAR_OPTIONS) $(LOG))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) $(BAR_STORAGE)intermediate/ $(BAR_OPTIONS) $(LOG))
 	@#
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR)  $(BAR_STORAGE)intermediate/not_existing $(BAR_OPTIONS) $(LOG)))
+	@$(call functionInfoFooter)
 
 .PHONY: test_convert_operations
 test_convert_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
-	@$(call functionInfo,test file operations convert)
+	@$(call functionInfoHeader,test file operations convert)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -2725,13 +2742,11 @@ ifeq (@HAVE_GCRYPT@,1)
 	#($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(call functionTestCheckExitcode,1,1,$(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) --crypt-password='$(TEST_PASSWORD_CRYPT)' --crypt-private-key=$(CURDIR)/$(TEST_KEY_CRYPT_PRIVATE) --verbose=2 $(LOG)))
 endif
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 .PHONY: test_image_operations
 test_image_operations: \
-  test_image_operations_raw \
-  test_image_operations_ext \
-  test_image_operations_fat \
-  test_image_operations_reiser
+  $(foreach fileSystem,$(IMAGE_FILESYSTEM_NAMES),test_image_operations_$(fileSystem))
 
 .PHONY: test_image_operations_raw
 test_image_operations_raw:  \
@@ -3796,7 +3811,7 @@ endif
 test_image_operations_dryrun: \
   $(TEST_CONFIG)
 	# delta tests
-	@$(call functionInfo,test image operation dryrun)
+	@$(call functionInfoHeader,test image operation dryrun)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@#
 	$(INSTALL) -d intermediate
@@ -3827,13 +3842,14 @@ test_image_operations_dryrun: \
           test_image_operations_create
 	$(RMF) $(IMAGE1)
 	$(RMF) $(IMAGE0)
+	@$(call functionInfoFooter)
 
 .PHONY: test_image_operations_base test_image_operations_check test_image_operations_diff_image test_image_operations_create
 test_image_operations_base: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# normal tests
-	@$(call functionInfo,test image operation base)
+	@$(call functionInfoHeader,test image operation base)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,IMAGE0)
 	@$(call functionVerifyParameter,IMAGE1)
@@ -3856,12 +3872,13 @@ test_image_operations_base: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -x intermediate/test*.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
 	@$(call functionTestDeviceDelete,$(DEVICE1))
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 test_image_operations_delta: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# delta tests
-	@$(call functionInfo,test image operation delta)
+	@$(call functionInfoHeader,test image operation delta)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,IMAGE0_A)
 	@$(call functionVerifyParameter,IMAGE0_B)
@@ -3909,10 +3926,11 @@ endif
 	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -x intermediate/$(BAR_PATTERN)-B.bar $(BAR_OPTIONS) --destination $(DEVICE1) $(LOG))
 	@$(call functionTestDeviceDelete,$(DEVICE1))
+	@$(call functionInfoFooter)
 
 test_image_operations_check:
 	# check file systems and compare file content
-	@$(call functionInfo,test image operation check)
+	@$(call functionInfoHeader,test image operation check)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,IMAGE0)
 	@$(call functionVerifyParameter,IMAGE1)
@@ -3923,11 +3941,11 @@ test_image_operations_check:
 	@$(call functionTestDeviceReset)
 	@#
 	@$(call functionTestDeviceCreate,$(DEVICE0),$(IMAGE0))
-	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE0) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
+	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE0) 2>/dev/null $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE0))
 	@#
 	@$(call functionTestDeviceCreate,$(DEVICE1),$(IMAGE1))
-	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE1) $(if $(QUIET),</dev/null 1>/dev/null 2>/dev/null)
+	$(FSCK) $(if $(FSCK_OPTIONS),$(FSCK_OPTIONS),-n) $(DEVICE1) 2>/dev/null $(LOG)
 	@$(call functionTestDeviceDelete,$(DEVICE1))
 	@#
 	@$(call functionDeviceMount,$(DEVICE0),$(IMAGE0),$(MOUNT_POINT0))
@@ -3935,10 +3953,11 @@ test_image_operations_check:
 	$(SUDO) -n $(DIFF) -r $(MOUNT_POINT0) $(MOUNT_POINT1) $(LOG)
 	@$(call functionDeviceUmount,$(DEVICE0),$(MOUNT_POINT0))
 	@$(call functionDeviceUmount,$(DEVICE1),$(MOUNT_POINT1))
+	@$(call functionInfoFooter)
 
 test_image_operations_diff_image:
 	# compare devices
-	@$(call functionInfo,test image operation diff image)
+	@$(call functionInfoHeader,test image operation diff image)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,IMAGE0)
 	@$(call functionVerifyParameter,IMAGE1)
@@ -3960,12 +3979,13 @@ test_image_operations_diff_image:
 	@#
 	@$(RMF) $(DUMP0) $(DUMP1)
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 test_image_operations_create: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# normal tests
-	@$(call functionInfo,test image operation create only)
+	@$(call functionInfoHeader,test image operation create only)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,IMAGE0)
 	@$(call functionVerifyParameter,DEVICE0)
@@ -3979,13 +3999,14 @@ test_image_operations_create: \
 	($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -m intermediate/$(BAR_FILE).bar $(DEVICE0) $(BAR_OPTIONS) --overwrite-archive-files --verbose=2 $(LOG))
 	@$(call functionTestDeviceDelete,$(DEVICE0))
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 .PHONY: test_hugefiles_operations
 test_hugefiles_operations: \
   $(TEST_BAR) \
   $(TEST_HUGEFILES)
 	# normal tests
-	@$(call functionInfo,test huge file opertations)
+	@$(call functionInfoHeader,test huge file opertations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -4004,13 +4025,14 @@ test_hugefiles_operations: \
         ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) $(LOG)); \
         ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -x $(BAR_STORAGE)intermediate/$(BAR_PATTERN).bar $(BAR_OPTIONS) --destination restore $(LOG)); \
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 .PHONY: test_optical_operations
 test_optical_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# create optical
-	@$(call functionInfo,test optical opertations)
+	@$(call functionInfoHeader,test optical opertations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -4031,13 +4053,14 @@ test_optical_operations: \
 	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d dvd:///$(BAR_FILE).bar $(LOG))
 	test ! -z "$(TEST_OPTICAL_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L dvd:///$(BAR_FILE).bar $(LOG))
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 .PHONY: test_device_operations
 test_device_operations: \
   $(TEST_BAR) \
   $(TEST_FILES)
 	# create device
-	@$(call functionInfo,test device opertations)
+	@$(call functionInfoHeader,test device opertations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@$(call functionVerifyParameter,BAR_FILE)
 	@#
@@ -4054,6 +4077,7 @@ test_device_operations: \
 	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -d device:///$(BAR_FILE).bar $(LOG))
 	test ! -z "$(TEST_DEVICE_EMULATION)" || ($(CD) $(UP_DIR); $(ULIMIT) -Sv $(MEMORY_LIMIT); $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) -C $(SUB_DIR) -L device:///$(BAR_FILE).bar $(LOG))
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 .PHONY: test_index_operations
 test_index_operations: \
@@ -4062,7 +4086,7 @@ test_index_operations: \
   $(TEST_SERVER_JOBS_DIRECTORY) \
   $(TEST_FILES)
 	# create device
-	@$(call functionInfo,test index opertations)
+	@$(call functionInfoHeader,test index opertations)
 	@$(call functionVerifyParameter,TEST_BAR)
 	@#
 	# bar-sqlite3 operations
@@ -4092,7 +4116,7 @@ test_index_operations: \
             --server-debug-index-operations \
             --quiet \
             $(ADDITIONAL_OPTIONS) \
-            ; \
+            2>/dev/null; \
         ) $(LOG)
 	for i in 1 2 3 4 6; do \
           $(ECHO) "Import $(UP_DIR)/archive/index$$i.sql..." $(LOG); \
@@ -4111,10 +4135,11 @@ test_index_operations: \
               --server-debug-index-operations \
               --quiet \
               $(ADDITIONAL_OPTIONS) \
-              ; \
+              2>/dev/null; \
           ) $(LOG); \
         done
 	@$(call functionDoneTestFiles)
+	@$(call functionInfoFooter)
 
 # send command to server
 functionServerCommandSocket = \
@@ -4163,7 +4188,7 @@ test_server_operations_socket_server: \
             --max-threads=1 \
             --server-debug \
             $(ADDITIONAL_OPTIONS) \
-            ; \
+            2>/dev/null; \
           if test $$? -eq 0; then \
             $(SLEEP) 10; \
           else \
@@ -4312,7 +4337,7 @@ test_server_operations_socket: \
 	$(call functionCreateFileZero,$(IMAGE0),32,1M)
 	$(call functionTestDeviceCreate,$(LOOP0),$(IMAGE0))
 	@#
-	@-$(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null
+	@$(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null || true
 	@$(MAKE) test_server_operations_socket_server TEST_DETACH=1
 	@$(MAKE) test_server_operations_socket_client
 	$(call functionWaitProcess,$(TEST_SERVER_PID_FILE),60)
@@ -4445,11 +4470,13 @@ test_server_operations_batch: \
           $(call functionServerCommandBatch,9999,QUIT); \
         ) | \
         ( \
+          $(CD) $(UP_DIR); \
           $(ULIMIT) -Sv $(MEMORY_LIMIT); \
           \
           $(INSTALL) -d $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY); \
           $(RMF) $(SUB_DIR)/$(TEST_SERVER_JOBS_DIRECTORY)/$(TEST_JOB_NAME); \
           $(TEST_ENVIRONMENT) $(TEST_TIMEOUT) $(TEST_BAR_PREFIX) $(TEST_BAR) \
+            -C $(SUB_DIR) \
             --index-database=$(TEST_SERVER_DATABASE) \
             --jobs-directory=$(TEST_SERVER_JOBS_DIRECTORY) \
             --log-file=$(TEST_SERVER_LOG_FILE) \
@@ -4459,7 +4486,7 @@ test_server_operations_batch: \
             --batch \
             --server-debug \
             $(ADDITIONAL_OPTIONS) \
-            ; \
+            2>/dev/null; \
         ) $(LOG)
 	$(RMF) intermediate/$(BAR_FILE).bar
 	$(call functionTestDeviceDelete,$(LOOP0))
@@ -4499,7 +4526,7 @@ test_master_slave_operations_master: \
             --max-threads=1 \
             --server-debug \
             $(ADDITIONAL_OPTIONS) \
-            ; \
+            2>/dev/null; \
           if test $$? -eq 0; then \
             $(SLEEP) 10; \
           else \
@@ -4522,7 +4549,7 @@ test_master_slave_operations_slave: \
           \
           : start slave server; \
           if test -n "$(TEST_SLAVE_HOST)"; then \
-            $(call functionSlaveExecute,$(KILLALL) $(TEST_BAR)) || true; \
+            $(call functionSlaveExecute,$(KILLALL) $(TEST_BAR) 2>/dev/null) || true; \
             $(call functionSlaveCopy,$(TEST_BAR),$(TEST_BAR)); \
             $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_DIRECTORY)); \
             $(call functionSlaveExecute,$(INSTALL) -d $(TEST_SLAVE_JOBS_DIRECTORY)); \
@@ -4545,6 +4572,7 @@ test_master_slave_operations_slave: \
               --max-threads=1 \
               --server-debug \
               $(ADDITIONAL_OPTIONS) \
+              2>/dev/null; \
             ); \
           else \
             $(INSTALL) -d $(SUB_DIR)/$(TEST_SLAVE_DIRECTORY); \
@@ -4567,7 +4595,8 @@ test_master_slave_operations_slave: \
               --log=all \
               --max-threads=1 \
               --server-debug \
-              $(ADDITIONAL_OPTIONS); \
+              $(ADDITIONAL_OPTIONS) \
+              2>/dev/null; \
           fi; \
           if test $$? -eq 0; then \
             $(SLEEP) 10; \
@@ -4583,7 +4612,7 @@ test_master_slave_operations_create: \
 	@#
 	@$(call functionCleanTestFiles)
 	@#
-	@-$(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null
+	@$(KILLALL) -9 $(shell basename $(TEST_BAR)) 2>/dev/null || true
 	$(MAKE) test_master_slave_operations_slave TEST_DETACH=1
 	$(MAKE) test_master_slave_operations_master TEST_DETACH=1
 	@#
