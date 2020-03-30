@@ -696,7 +696,7 @@ ERROR EXEC_FAIL
   }
   if (ERROR_ERRNO != 0)
   {
-    stringFormatAppend(errorText,sizeof(errorText)," (exitcode: %d)",ERROR_ERRNO);
+    stringFormatAppend(errorText,sizeof(errorText),", exitcode: %d",ERROR_ERRNO);
   }
 
 ERROR EXEC_TERMINATE
@@ -707,7 +707,7 @@ ERROR EXEC_TERMINATE
   }
   if (ERROR_ERRNO != 0)
   {
-    stringFormatAppend(errorText,sizeof(errorText)," (signal: %d)",ERROR_ERRNO);
+    stringFormatAppend(errorText,sizeof(errorText),", signal: %d",ERROR_ERRNO);
   }
 
 // --- BARControl protocol ----------------------------------------------
