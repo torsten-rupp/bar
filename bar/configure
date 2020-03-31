@@ -24720,6 +24720,88 @@ fi
 
 
 
+    if test -n ""; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking " >&5
+$as_echo_n "checking ... " >&6; }
+if ${ac_cv_constant_value_VERSION_CURL_NUMBER+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "curl/curl.h"
+
+int
+main ()
+{
+__CONFTEST__ LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_CURL_NUMBER=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_CURL_NUMBER=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_CURL_NUMBER=`echo $ac_cv_constant_value_VERSION_CURL_NUMBER|tr -d " \""`
+        fi
+        VERSION_CURL_NUMBER=$ac_cv_constant_value_VERSION_CURL_NUMBER
+
+        rm -f conftest.c conftest
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_CURL_NUMBER" >&5
+$as_echo "$ac_cv_constant_value_VERSION_CURL_NUMBER" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_CURL_NUMBER+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "curl/curl.h"
+
+int
+main ()
+{
+__CONFTEST__ LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_CURL_NUMBER=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_CURL_NUMBER=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_CURL_NUMBER=`echo $ac_cv_constant_value_VERSION_CURL_NUMBER|tr -d " \""`
+        fi
+        VERSION_CURL_NUMBER=$ac_cv_constant_value_VERSION_CURL_NUMBER
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
+if test $VERSION_CURL_NUMBER -lt 7660; then
+  as_fn_error $? "Required libcurl 7.66 (0x076600) or newer - found $LIBCURL_VERSION" "$LINENO" 5
+fi
+
+
     if test -n "cdio version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking cdio version" >&5
 $as_echo_n "checking cdio version... " >&6; }

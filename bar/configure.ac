@@ -4328,9 +4328,18 @@ AC_CONSTANT_VALUE([ssh2 version],
 AC_CONSTANT_VALUE([curl version],
                   VERSION_CURL,
                   [#include "curl/curl.h"
-                   ],
+                  ],
                   [LIBCURL_VERSION],
                   [ "])
+AC_CONSTANT_VALUE([],
+                  VERSION_CURL_NUMBER,
+                  [#include "curl/curl.h"
+                  ],
+                  [LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH],
+                  [ "])
+if test $VERSION_CURL_NUMBER -lt 7660; then
+  AC_ERROR([Required libcurl 7.66 (0x076600) or newer - found $LIBCURL_VERSION])
+fi
 AC_CONSTANT_VALUE([cdio version],
                   VERSION_CDIO,
                   [#include "cdio/cdio.h"
