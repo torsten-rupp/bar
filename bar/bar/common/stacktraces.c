@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <limits.h>
+#include <inttypes.h>
 #ifdef HAVE_BFD_H
   #include <bfd.h>
 #endif
