@@ -1148,12 +1148,17 @@ AC_ARG_ENABLE(
   [ENABLE_EXTERN_COMPILE=$enableval]
 )
 
+# check dependencies of enabled packages
 if test $ENABLE_TLS = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
   AC_MSG_WARN([gcrypt not enabled, disabled TLS.])
   ENABLE_TLS=no
 fi
 if test $ENABLE_CURL = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
   AC_MSG_WARN([gcrypt not enabled, disabled curl support.])
+  ENABLE_CURL=no
+fi
+if test $ENABLE_CURL = "yes" -a ! "$HAVE_GNU_TLS" = "1"; then
+  AC_MSG_WARN([gnuTLS not enabled, disabled curl support.])
   ENABLE_CURL=no
 fi
 if test $ENABLE_CURL = "yes" -a ! $ENABLE_SSH = "yes"; then
@@ -4264,105 +4269,123 @@ AC_CONSTANT_VALUE([zlib version],
                   ],
                   [ZLIB_VERSION],
                   [ "])
-# Note: bz2 does not have a define for version
-AC_TRY_LINK([#include <stdio.h>
-             #include "bzlib.h"
-            ],
-            [printf("%s",BZ2_bzlibVersion());],
-            VERSION_BZ2=`./conftest$ac_exeext`,
-            VERSION_BZ2=
-           )
-AC_CONSTANT_VALUE([lzma version],
-                  VERSION_LZMA,
-                  [#include "lzma.h"
-                  ],
-                  [LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH],
-                  [ "])
-AC_CONSTANT_VALUE([lzo version],
-                  VERSION_LZO,
-                  [#include "lzo/lzoconf.h"
-                  ],
-                  [LZO_VERSION_STRING],
-                  [ "])
-AC_CONSTANT_VALUE([lz4 version],
-                  VERSION_LZ4,
-                  [#include "lz4.h"
-                  ],
-                  [LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE],
-                  [ "])
-AC_CONSTANT_VALUE([zstd version],
-                  VERSION_ZSTD,
-                  [#include "zstd.h"
-                  ],
-                  [ZSTD_VERSION_MAJOR.ZSTD_VERSION_MINOR.ZSTD_VERSION_RELEASE],
-                  [ "])
-AC_CONSTANT_VALUE([gcrypt version],
-                  VERSION_GCRYPT,
-                  [#include "gcrypt.h"
-                  ],
-                  [GCRYPT_VERSION],
-                  [ "])
-AC_CONSTANT_VALUE([GMP version],
-                  VERSION_GMP,
-                  [#include "gmp.h"
-                  ],
-                  [__GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL],
-                  [ "])
-AC_CONSTANT_VALUE([GNU TLS version],
-                  VERSION_GNUTLS,
-                  [#include "gnutls/gnutls.h"
-                  ],
-                  [GNUTLS_VERSION],
-                  [ "])
-AC_CONSTANT_VALUE([openssl version],
-                  VERSION_OPENSSL,
-                  [#include "openssl/opensslv.h"],
-                  [OPENSSL_VERSION_TEXT],
-                  ["])
-AC_CONSTANT_VALUE([ssh2 version],
-                  VERSION_LIBSSH2,
-                  [#include "libssh2.h"
-                  ],
-                  [LIBSSH2_VERSION],
-                  [ "])
-AC_CONSTANT_VALUE([curl version],
-                  VERSION_CURL,
-                  [#include "curl/curl.h"
-                  ],
-                  [LIBCURL_VERSION],
-                  [ "])
-AC_CONSTANT_VALUE([],
-                  VERSION_CURL_NUMBER,
-                  [#include "curl/curl.h"
-                  ],
-                  [LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH],
-                  [ "])
-if test $VERSION_CURL_NUMBER -lt 7660; then
-  AC_ERROR([Required libcurl 7.66 (0x076600) or newer - found $LIBCURL_VERSION])
+if test $ENABLE_BZ2 = "yes"; then
+  # Note: bz2 does not have a define for version
+  AC_TRY_LINK([#include <stdio.h>
+               #include "bzlib.h"
+              ],
+              [printf("%s",BZ2_bzlibVersion());],
+              VERSION_BZ2=`./conftest$ac_exeext`,
+              VERSION_BZ2=
+             )
 fi
-AC_CONSTANT_VALUE([cdio version],
-                  VERSION_CDIO,
-                  [#include "cdio/cdio.h"
-                  ],
-                  [CDIO_VERSION],
-                  [ "])
-AC_CONSTANT_VALUE([],
-                  VERSION_CDIO_NUMBER,
-                  [#include "cdio/cdio.h"
-                  ],
-                  [LIBCDIO_VERSION_NUM],
-                  [ "])
-if test $VERSION_CDIO_NUMBER -lt 10100; then
-  AC_ERROR([Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
+if test $ENABLE_LZMA = "yes"; then
+  AC_CONSTANT_VALUE([lzma version],
+                    VERSION_LZMA,
+                    [#include "lzma.h"
+                    ],
+                    [LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH],
+                    [ "])
 fi
-# Note: PCRE does not have a define for version
-AC_TRY_LINK([#include <stdio.h>
-             #include "pcre.h"
-            ],
-            [printf("%s",pcre_version());],
-            VERSION_PCRE=`./conftest$ac_exeext`,
-            VERSION_PCRE=unknown
-           )
+if test $ENABLE_LZO = "yes"; then
+  AC_CONSTANT_VALUE([lzo version],
+                    VERSION_LZO,
+                    [#include "lzo/lzoconf.h"
+                    ],
+                    [LZO_VERSION_STRING],
+                    [ "])
+fi
+if test $ENABLE_LZ4 = "yes"; then
+  AC_CONSTANT_VALUE([lz4 version],
+                    VERSION_LZ4,
+                    [#include "lz4.h"
+                    ],
+                    [LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE],
+                    [ "])
+fi
+if test $ENABLE_ZSTD = "yes"; then
+  AC_CONSTANT_VALUE([zstd version],
+                    VERSION_ZSTD,
+                    [#include "zstd.h"
+                    ],
+                    [ZSTD_VERSION_MAJOR.ZSTD_VERSION_MINOR.ZSTD_VERSION_RELEASE],
+                    [ "])
+fi
+if test $ENABLE_GCRYPT = "yes"; then
+  AC_CONSTANT_VALUE([gcrypt version],
+                    VERSION_GCRYPT,
+                    [#include "gcrypt.h"
+                    ],
+                    [GCRYPT_VERSION],
+                    [ "])
+  AC_CONSTANT_VALUE([GMP version],
+                    VERSION_GMP,
+                    [#include "gmp.h"
+                    ],
+                    [__GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL],
+                    [ "])
+  AC_CONSTANT_VALUE([GNU TLS version],
+                    VERSION_GNUTLS,
+                    [#include "gnutls/gnutls.h"
+                    ],
+                    [GNUTLS_VERSION],
+                    [ "])
+  AC_CONSTANT_VALUE([openssl version],
+                    VERSION_OPENSSL,
+                    [#include "openssl/opensslv.h"],
+                    [OPENSSL_VERSION_TEXT],
+                    ["])
+  AC_CONSTANT_VALUE([ssh2 version],
+                    VERSION_LIBSSH2,
+                    [#include "libssh2.h"
+                    ],
+                    [LIBSSH2_VERSION],
+                    [ "])
+fi
+if test $ENABLE_CURL = "yes"; then
+  AC_CONSTANT_VALUE([curl version],
+                    VERSION_CURL,
+                    [#include "curl/curl.h"
+                    ],
+                    [LIBCURL_VERSION],
+                    [ "])
+  AC_CONSTANT_VALUE([],
+                    VERSION_CURL_NUMBER,
+                    [#include "curl/curl.h"
+                    ],
+                    [LIBCURL_VERSION_MAJOR LIBCURL_VERSION_MINOR LIBCURL_VERSION_PATCH],
+                    [ "])
+  if test $VERSION_CURL_NUMBER -lt 7660; then
+    AC_ERROR([Required libcurl 7.66 (0x076600) or newer - found $LIBCURL_VERSION])
+  fi
+fi
+if test $ENABLE_ISO9660 = "yes"; then
+  AC_CONSTANT_VALUE([cdio version],
+                    VERSION_CDIO,
+                    [#include "cdio/cdio.h"
+                    ],
+                    [CDIO_VERSION],
+                    [ "])
+  AC_CONSTANT_VALUE([],
+                    VERSION_CDIO_NUMBER,
+                    [#include "cdio/cdio.h"
+                    ],
+                    [LIBCDIO_VERSION_NUM],
+                    [ "])
+  if test $VERSION_CDIO_NUMBER -lt 10100; then
+    AC_ERROR([Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
+  fi
+fi
+if test $ENABLE_PCRE = "yes"; then
+  # Note: PCRE does not have a define for version
+  AC_TRY_LINK([#include <stdio.h>
+               #include "pcre.h"
+              ],
+              [printf("%s",pcre_version());],
+              VERSION_PCRE=`./conftest$ac_exeext`,
+              VERSION_PCRE=unknown
+             )
+fi
 
 dnl ------------ autoheader: top/bottom include for config.h -----------
 

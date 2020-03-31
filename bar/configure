@@ -2974,6 +2974,7 @@ if test "${enable_extern_compile+set}" = set; then :
 fi
 
 
+# check dependencies of enabled packages
 if test $ENABLE_TLS = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gcrypt not enabled, disabled TLS." >&5
 $as_echo "$as_me: WARNING: gcrypt not enabled, disabled TLS." >&2;}
@@ -2982,6 +2983,11 @@ fi
 if test $ENABLE_CURL = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gcrypt not enabled, disabled curl support." >&5
 $as_echo "$as_me: WARNING: gcrypt not enabled, disabled curl support." >&2;}
+  ENABLE_CURL=no
+fi
+if test $ENABLE_CURL = "yes" -a ! "$HAVE_GNU_TLS" = "1"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gnuTLS not enabled, disabled curl support." >&5
+$as_echo "$as_me: WARNING: gnuTLS not enabled, disabled curl support." >&2;}
   ENABLE_CURL=no
 fi
 if test $ENABLE_CURL = "yes" -a ! $ENABLE_SSH = "yes"; then
@@ -23908,11 +23914,12 @@ _ACEOF
 fi
   fi
 
-# Note: bz2 does not have a define for version
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+if test $ENABLE_BZ2 = "yes"; then
+  # Note: bz2 does not have a define for version
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
-             #include "bzlib.h"
+               #include "bzlib.h"
 
 int
 main ()
@@ -23930,6 +23937,8 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+fi
+if test $ENABLE_LZMA = "yes"; then
 
 
     if test -n "lzma version"; then
@@ -24009,6 +24018,8 @@ _ACEOF
 fi
   fi
 
+fi
+if test $ENABLE_LZO = "yes"; then
 
 
     if test -n "lzo version"; then
@@ -24088,6 +24099,8 @@ _ACEOF
 fi
   fi
 
+fi
+if test $ENABLE_LZ4 = "yes"; then
 
 
     if test -n "lz4 version"; then
@@ -24167,6 +24180,8 @@ _ACEOF
 fi
   fi
 
+fi
+if test $ENABLE_ZSTD = "yes"; then
 
 
     if test -n "zstd version"; then
@@ -24246,6 +24261,8 @@ _ACEOF
 fi
   fi
 
+fi
+if test $ENABLE_GCRYPT = "yes"; then
 
 
     if test -n "gcrypt version"; then
@@ -24639,6 +24656,8 @@ _ACEOF
 fi
   fi
 
+fi
+if test $ENABLE_CURL = "yes"; then
 
 
     if test -n "curl version"; then
@@ -24797,9 +24816,11 @@ _ACEOF
 fi
   fi
 
-if test $VERSION_CURL_NUMBER -lt 7660; then
-  as_fn_error $? "Required libcurl 7.66 (0x076600) or newer - found $LIBCURL_VERSION" "$LINENO" 5
+  if test $VERSION_CURL_NUMBER -lt 7660; then
+    as_fn_error $? "Required libcurl 7.66 (0x076600) or newer - found $LIBCURL_VERSION" "$LINENO" 5
+  fi
 fi
+if test $ENABLE_ISO9660 = "yes"; then
 
 
     if test -n "cdio version"; then
@@ -24958,14 +24979,16 @@ _ACEOF
 fi
   fi
 
-if test $VERSION_CDIO_NUMBER -lt 10100; then
-  as_fn_error $? "Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO" "$LINENO" 5
+  if test $VERSION_CDIO_NUMBER -lt 10100; then
+    as_fn_error $? "Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO" "$LINENO" 5
+  fi
 fi
-# Note: PCRE does not have a define for version
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+if test $ENABLE_PCRE = "yes"; then
+  # Note: PCRE does not have a define for version
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <stdio.h>
-             #include "pcre.h"
+               #include "pcre.h"
 
 int
 main ()
@@ -24983,6 +25006,7 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+fi
 
 
 ac_config_headers="$ac_config_headers bar/config.h"
