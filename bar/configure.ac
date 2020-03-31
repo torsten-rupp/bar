@@ -1157,10 +1157,6 @@ if test $ENABLE_CURL = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
   AC_MSG_WARN([gcrypt not enabled, disabled curl support.])
   ENABLE_CURL=no
 fi
-if test $ENABLE_CURL = "yes" -a ! "$HAVE_GNU_TLS" = "1"; then
-  AC_MSG_WARN([gnuTLS not enabled, disabled curl support.])
-  ENABLE_CURL=no
-fi
 if test $ENABLE_CURL = "yes" -a ! $ENABLE_SSH = "yes"; then
   AC_MSG_WARN([ssh not enabled, disabled curl support.])
   ENABLE_CURL=no

@@ -2985,11 +2985,6 @@ if test $ENABLE_CURL = "yes" -a ! $ENABLE_GCRYPT = "yes"; then
 $as_echo "$as_me: WARNING: gcrypt not enabled, disabled curl support." >&2;}
   ENABLE_CURL=no
 fi
-if test $ENABLE_CURL = "yes" -a ! "$HAVE_GNU_TLS" = "1"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: gnuTLS not enabled, disabled curl support." >&5
-$as_echo "$as_me: WARNING: gnuTLS not enabled, disabled curl support." >&2;}
-  ENABLE_CURL=no
-fi
 if test $ENABLE_CURL = "yes" -a ! $ENABLE_SSH = "yes"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: ssh not enabled, disabled curl support." >&5
 $as_echo "$as_me: WARNING: ssh not enabled, disabled curl support." >&2;}
