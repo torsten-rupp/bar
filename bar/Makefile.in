@@ -716,17 +716,17 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   packages/*
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)
 	$(INSTALL) -m 775 \
+                   -t tmp/$(DISTRIBUTION_NAME) \
                    configure \
                    download-third-party-packages.sh \
-                   $(OTHER_SOURCES) \
-                   tmp/$(DISTRIBUTION_NAME)
+                   $(OTHER_SOURCES)
 	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME) \
                    configure.ac \
                    Makefile.in \
                    epm.list.in \
                    ToDo \
-                   ChangeLog \
-                   tmp/$(DISTRIBUTION_NAME)
+                   ChangeLog
 	( \
           $(GREP) MINOR version; \
           $(GREP) MAJOR version; \
@@ -734,65 +734,66 @@ $(DISTRIBUTION_NAME).tar.bz2: \
         ) > tmp/$(DISTRIBUTION_NAME)/version
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
 	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/bin \
                    bin/config.guess \
                    bin/config.sub \
-                   bin/install-sh \
-                   tmp/$(DISTRIBUTION_NAME)/bin
+                   bin/install-sh
 	$(MAKE) -C bar dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
 	$(MAKE) -C barcontrol dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
 	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/bin \
                    bin/config.guess \
-                   bin/config.sub bin/install-sh \
-                   tmp/$(DISTRIBUTION_NAME)/bin
+                   bin/config.sub bin/install-sh
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/certtool
 	$(INSTALL) -m 664 \
-                   ssl/certtool/*.tmpl \
-                   tmp/$(DISTRIBUTION_NAME)/ssl/certtool
+                   -t tmp/$(DISTRIBUTION_NAME)/ssl/certtool \
+                   ssl/certtool/*.tmpl
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/ssl/openssl
 	$(INSTALL) -m 664 \
-                   ssl/openssl/*.tmpl \
-                   tmp/$(DISTRIBUTION_NAME)/ssl/openssl
+                   -t tmp/$(DISTRIBUTION_NAME)/ssl/openssl \
+                   ssl/openssl/*.tmpl
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/scripts
 	$(INSTALL) -m 664 \
-                   $(SCRIPTS) \
-                   tmp/$(DISTRIBUTION_NAME)/scripts
+                   -t tmp/$(DISTRIBUTION_NAME)/scripts \
+                   $(SCRIPTS)
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/misc
 	$(INSTALL) -m 664 \
-                   misc/*.patch \
-                   tmp/$(DISTRIBUTION_NAME)/misc
+                   -t tmp/$(DISTRIBUTION_NAME)/misc \
+                   misc/*.patch
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc
 	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/doc \
                    doc/README \
                    doc/COPYING \
                    doc/bar.odt \
                    doc/bar.pdf \
                    doc/*.txt \
-                   doc/bar.7 \
-                   tmp/$(DISTRIBUTION_NAME)/doc
+                   doc/bar.7
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/doc/images
 	$(INSTALL) -m 664 \
-                   doc/images/*.png \
-                   tmp/$(DISTRIBUTION_NAME)/doc/images
+                   -t tmp/$(DISTRIBUTION_NAME)/doc/images \
+                   doc/images/*.png
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages
 	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/packages \
                    packages/*.dockerfile \
                    packages/*.spec \
                    packages/*.iss \
-                   packages/*.sh \
-                   tmp/$(DISTRIBUTION_NAME)/packages
+                   packages/*.sh
 	$(INSTALL) -m 775 \
-                   packages/changelog.pl \
-                   tmp/$(DISTRIBUTION_NAME)/packages
+                   -t tmp/$(DISTRIBUTION_NAME)/packages \
+                   packages/changelog.pl
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian
 	$(INSTALL) -m 664 \
+                   -t tmp/$(DISTRIBUTION_NAME)/packages/debian \
                    packages/debian/compat \
                    packages/debian/conffiles \
                    packages/debian/control \
@@ -801,12 +802,11 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    packages/debian/postrm \
                    packages/debian/preinst \
                    packages/debian/prerm \
-                   packages/debian/rules \
-                   tmp/$(DISTRIBUTION_NAME)/packages/debian
+                   packages/debian/rules
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/packages/debian/source
 	$(INSTALL) -m 664 \
-                   packages/debian/source/format \
-                   tmp/$(DISTRIBUTION_NAME)/packages/debian/source
+                   -t tmp/$(DISTRIBUTION_NAME)/packages/debian/source \
+                   packages/debian/source/format
 	#
 	($(CD) tmp; $(TAR) cjf ../$@ $(DISTRIBUTION_NAME))
 	$(RMRF) tmp/$(DISTRIBUTION_NAME)

@@ -8622,8 +8622,8 @@ if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 fi
 (cd extern; rm -f lib64; ln -s lib lib64 2>/dev/null)
 
-# add extern include/library search directory
-CC_INCLUDES="$CC_INCLUDES $cwd/extern/include"
+# add extern include/library+local include search directory
+CC_INCLUDES="$CC_INCLUDES $cwd/extern/include $cwd/bar"
 LIBRARY_PATHS="$cwd/extern/lib $LIBRARY_PATHS"
 
 # set variables for compile extern
@@ -11975,7 +11975,104 @@ $as_echo "done" >&6; }
 $as_echo "#define HAVE_SSH2 1" >>confdefs.h
 
     fi
-  else
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_id_callback" >&5
+$as_echo_n "checking for CRYPTO_set_id_callback... " >&6; }
+if ${ac_cv_func_CRYPTO_set_id_callback+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_CRYPTO_set_id_callback="no"
+      echo > conftest.log
+
+      for ac_headers in openssl/crypto.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_id_callback();"; fi`
+                                         #ifdef CRYPTO_set_id_callback
+                                         #else
+                                           return (int)CRYPTO_set_id_callback;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_CRYPTO_set_id_callback=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_id_callback" >&5
+$as_echo "$ac_cv_func_CRYPTO_set_id_callback" >&6; }
+  if test "$ac_cv_func_CRYPTO_set_id_callback" != no; then :
+
+elif :; then :
+  as_fn_error $? "CRYPTO_set_id_callback() required for SSH2" "$LINENO" 5
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_locking_callback" >&5
+$as_echo_n "checking for CRYPTO_set_locking_callback... " >&6; }
+if ${ac_cv_func_CRYPTO_set_locking_callback+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_CRYPTO_set_locking_callback="no"
+      echo > conftest.log
+
+      for ac_headers in openssl/crypto.h ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_locking_callback();"; fi`
+                                         #ifdef CRYPTO_set_locking_callback
+                                         #else
+                                           return (int)CRYPTO_set_locking_callback;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_CRYPTO_set_locking_callback=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_locking_callback" >&5
+$as_echo "$ac_cv_func_CRYPTO_set_locking_callback" >&6; }
+  if test "$ac_cv_func_CRYPTO_set_locking_callback" != no; then :
+
+elif :; then :
+  as_fn_error $? "CRYPTO_set_locking_callback() required for SSH2" "$LINENO" 5
+fi
+
+      else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 
@@ -13075,9 +13172,13 @@ $as_echo "$as_me: WARNING: gnutls not compiled: gnutls package missing" >&2;}
   fi
 fi
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: ----------------------------------------------" >&5
+$as_echo "$as_me: WARNING: ----------------------------------------------" >&2;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_GPG_ERROR=$HAVE_GPG_ERROR" >&5
+$as_echo "$as_me: WARNING: HAVE_GPG_ERROR=$HAVE_GPG_ERROR" >&2;}
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
-  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
+  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 
       cwd=`pwd`
@@ -13488,6 +13589,199 @@ $as_echo "#define HAVE_MXML 1" >>confdefs.h
   done
 
     fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gpg_strerror" >&5
+$as_echo_n "checking for gpg_strerror... " >&6; }
+if ${ac_cv_func_gpg_strerror+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_gpg_strerror="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void gpg_strerror();"; fi`
+                                         #ifdef gpg_strerror
+                                         #else
+                                           return (int)gpg_strerror;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_gpg_strerror=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gpg_strerror" >&5
+$as_echo "$ac_cv_func_gpg_strerror" >&6; }
+  if test "$ac_cv_func_gpg_strerror" != no; then :
+
+elif :; then :
+  as_fn_error $? "gpg_strerror() required for curl" "$LINENO" 5
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gcry_control" >&5
+$as_echo_n "checking for gcry_control... " >&6; }
+if ${ac_cv_func_gcry_control+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_gcry_control="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void gcry_control();"; fi`
+                                         #ifdef gcry_control
+                                         #else
+                                           return (int)gcry_control;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_gcry_control=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gcry_control" >&5
+$as_echo "$ac_cv_func_gcry_control" >&6; }
+  if test "$ac_cv_func_gcry_control" != no; then :
+
+elif :; then :
+  as_fn_error $? "gcry_control() required for curl" "$LINENO" 5
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gnutls_global_init" >&5
+$as_echo_n "checking for gnutls_global_init... " >&6; }
+if ${ac_cv_func_gnutls_global_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_gnutls_global_init="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void gnutls_global_init();"; fi`
+                                         #ifdef gnutls_global_init
+                                         #else
+                                           return (int)gnutls_global_init;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_gnutls_global_init=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gnutls_global_init" >&5
+$as_echo "$ac_cv_func_gnutls_global_init" >&6; }
+  if test "$ac_cv_func_gnutls_global_init" != no; then :
+
+elif :; then :
+  as_fn_error $? "gnutls_global_init() required for curl" "$LINENO" 5
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SSL_new" >&5
+$as_echo_n "checking for SSL_new... " >&6; }
+if ${ac_cv_func_SSL_new+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+      ac_cv_func_SSL_new="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main ()
+{
+`if test -z "$ac_headers"; then echo "extern void SSL_new();"; fi`
+                                         #ifdef SSL_new
+                                         #else
+                                           return (int)SSL_new;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_func_SSL_new=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_SSL_new" >&5
+$as_echo "$ac_cv_func_SSL_new" >&6; }
+  if test "$ac_cv_func_SSL_new" != no; then :
+
+elif :; then :
+  as_fn_error $? "SSL_new() required for curl" "$LINENO" 5
+fi
+
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
@@ -23200,300 +23494,6 @@ elif :; then :
 
 fi
 
-
-if test "$HAVE_SSH2"; then
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_id_callback" >&5
-$as_echo_n "checking for CRYPTO_set_id_callback... " >&6; }
-if ${ac_cv_func_CRYPTO_set_id_callback+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_CRYPTO_set_id_callback="no"
-      echo > conftest.log
-
-      for ac_headers in openssl/crypto.h ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_id_callback();"; fi`
-                                         #ifdef CRYPTO_set_id_callback
-                                         #else
-                                           return (int)CRYPTO_set_id_callback;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_CRYPTO_set_id_callback=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_id_callback" >&5
-$as_echo "$ac_cv_func_CRYPTO_set_id_callback" >&6; }
-  if test "$ac_cv_func_CRYPTO_set_id_callback" != no; then :
-
-elif :; then :
-  as_fn_error $? "CRYPTO_set_id_callback() required for SSH2" "$LINENO" 5
-fi
-
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_locking_callback" >&5
-$as_echo_n "checking for CRYPTO_set_locking_callback... " >&6; }
-if ${ac_cv_func_CRYPTO_set_locking_callback+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_CRYPTO_set_locking_callback="no"
-      echo > conftest.log
-
-      for ac_headers in openssl/crypto.h ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void CRYPTO_set_locking_callback();"; fi`
-                                         #ifdef CRYPTO_set_locking_callback
-                                         #else
-                                           return (int)CRYPTO_set_locking_callback;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_CRYPTO_set_locking_callback=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_CRYPTO_set_locking_callback" >&5
-$as_echo "$ac_cv_func_CRYPTO_set_locking_callback" >&6; }
-  if test "$ac_cv_func_CRYPTO_set_locking_callback" != no; then :
-
-elif :; then :
-  as_fn_error $? "CRYPTO_set_locking_callback() required for SSH2" "$LINENO" 5
-fi
-
-  fi
-
-if test "$HAVE_CURL"; then
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gpg_strerror" >&5
-$as_echo_n "checking for gpg_strerror... " >&6; }
-if ${ac_cv_func_gpg_strerror+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_gpg_strerror="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void gpg_strerror();"; fi`
-                                         #ifdef gpg_strerror
-                                         #else
-                                           return (int)gpg_strerror;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_gpg_strerror=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gpg_strerror" >&5
-$as_echo "$ac_cv_func_gpg_strerror" >&6; }
-  if test "$ac_cv_func_gpg_strerror" != no; then :
-
-elif :; then :
-  as_fn_error $? "gpg_strerror() required for curl" "$LINENO" 5
-fi
-
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gcry_control" >&5
-$as_echo_n "checking for gcry_control... " >&6; }
-if ${ac_cv_func_gcry_control+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_gcry_control="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void gcry_control();"; fi`
-                                         #ifdef gcry_control
-                                         #else
-                                           return (int)gcry_control;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_gcry_control=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gcry_control" >&5
-$as_echo "$ac_cv_func_gcry_control" >&6; }
-  if test "$ac_cv_func_gcry_control" != no; then :
-
-elif :; then :
-  as_fn_error $? "gcry_control() required for curl" "$LINENO" 5
-fi
-
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gnutls_global_init" >&5
-$as_echo_n "checking for gnutls_global_init... " >&6; }
-if ${ac_cv_func_gnutls_global_init+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_gnutls_global_init="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void gnutls_global_init();"; fi`
-                                         #ifdef gnutls_global_init
-                                         #else
-                                           return (int)gnutls_global_init;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_gnutls_global_init=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_gnutls_global_init" >&5
-$as_echo "$ac_cv_func_gnutls_global_init" >&6; }
-  if test "$ac_cv_func_gnutls_global_init" != no; then :
-
-elif :; then :
-  as_fn_error $? "gnutls_global_init() required for curl" "$LINENO" 5
-fi
-
-
-
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for SSL_new" >&5
-$as_echo_n "checking for SSL_new... " >&6; }
-if ${ac_cv_func_SSL_new+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-      ac_cv_func_SSL_new="no"
-      echo > conftest.log
-
-      for ac_headers in  ""; do
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main ()
-{
-`if test -z "$ac_headers"; then echo "extern void SSL_new();"; fi`
-                                         #ifdef SSL_new
-                                         #else
-                                           return (int)SSL_new;
-                                         #endif
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_func_SSL_new=yes; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_SSL_new" >&5
-$as_echo "$ac_cv_func_SSL_new" >&6; }
-  if test "$ac_cv_func_SSL_new" != no; then :
-
-elif :; then :
-  as_fn_error $? "SSL_new() required for curl" "$LINENO" 5
-fi
-
-fi
 
 case $host_os in
   linux-*)

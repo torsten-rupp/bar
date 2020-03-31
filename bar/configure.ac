@@ -1544,8 +1544,8 @@ if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
 fi
 (cd extern; rm -f lib64; ln -s lib lib64 2>/dev/null)
 
-# add extern include/library search directory
-CC_INCLUDES="$CC_INCLUDES $cwd/extern/include"
+# add extern include/library+local include search directory
+CC_INCLUDES="$CC_INCLUDES $cwd/extern/include $cwd/bar"
 LIBRARY_PATHS="$cwd/extern/lib $LIBRARY_PATHS"
 
 # set variables for compile extern
@@ -2652,6 +2652,11 @@ if test $ENABLE_SSH = "yes"; then
       HAVE_SSH2=1
       AC_DEFINE(HAVE_SSH2,1,[ssh2 installed (local)])
     fi
+
+    # required functions for ssh2
+    AC_CHECK_FUNCTION(CRYPTO_set_id_callback,     ,AC_ERROR([CRYPTO_set_id_callback() required for SSH2]),openssl/crypto.h)
+    AC_CHECK_FUNCTION(CRYPTO_set_locking_callback,,AC_ERROR([CRYPTO_set_locking_callback() required for SSH2]),openssl/crypto.h)
+    dnl AC_CHECK_FUNCTION(CRYPTO_THREADID_set_callback,AC_DEFINE(HAVE_CRYPTO_THREADID_SET_CALLBACK,1,[CRYPTO_THREADID_set_callback() required for SSH2]),,openssl/crypto.h)
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
@@ -2951,9 +2956,11 @@ if test $ENABLE_TLS = "yes"; then
   fi
 fi
 
+AC_WARN([----------------------------------------------])
+AC_WARN([HAVE_GPG_ERROR=$HAVE_GPG_ERROR])
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
-  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
+  if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR"; then
     if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
       dnl compile c-ares, curl, mxml libraries
 
@@ -3261,6 +3268,12 @@ if test $ENABLE_CURL = "yes"; then
                                 $STATIC_LIBRARIES,
                                 $LIBRARIES)
     fi
+
+    # required functions for curl
+    AC_CHECK_FUNCTION(gpg_strerror,,AC_ERROR([gpg_strerror() required for curl]))
+    AC_CHECK_FUNCTION(gcry_control,,AC_ERROR([gcry_control() required for curl]))
+    AC_CHECK_FUNCTION(gnutls_global_init,,AC_ERROR([gnutls_global_init() required for curl]))
+    AC_CHECK_FUNCTION(SSL_new,,AC_ERROR([SSL_new() required for curl]))
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
@@ -4178,19 +4191,6 @@ AC_CHECK_FUNCTION(bindtextdomain,AC_DEFINE(HAVE_BINDTEXTDOMAIN,1,[bindtextdomain
 AC_CHECK_FUNCTION(gettext,       AC_DEFINE(HAVE_GETTEXT,       1,[gettext() available]))
 
 AC_CHECK_FUNCTION(bfd_init,AC_DEFINE(HAVE_BFD_INIT,1,[bfd_init() available]))
-
-if test "$HAVE_SSH2"; then
-  AC_CHECK_FUNCTION(CRYPTO_set_id_callback,     ,AC_ERROR([CRYPTO_set_id_callback() required for SSH2]),openssl/crypto.h)
-  AC_CHECK_FUNCTION(CRYPTO_set_locking_callback,,AC_ERROR([CRYPTO_set_locking_callback() required for SSH2]),openssl/crypto.h)
-  dnl AC_CHECK_FUNCTION(CRYPTO_THREADID_set_callback,AC_DEFINE(HAVE_CRYPTO_THREADID_SET_CALLBACK,1,[CRYPTO_THREADID_set_callback() required for SSH2]),,openssl/crypto.h)
-fi
-
-if test "$HAVE_CURL"; then
-  AC_CHECK_FUNCTION(gpg_strerror,,AC_ERROR([gpg_strerror() required for curl]))
-  AC_CHECK_FUNCTION(gcry_control,,AC_ERROR([gcry_control() required for curl]))
-  AC_CHECK_FUNCTION(gnutls_global_init,,AC_ERROR([gnutls_global_init() required for curl]))
-  AC_CHECK_FUNCTION(SSL_new,,AC_ERROR([SSL_new() required for curl]))
-fi
 
 case $host_os in
   linux-*)

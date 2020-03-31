@@ -805,53 +805,54 @@ uninstall:
 dist:
 ifneq ($(DIRECTORY),)
 	$(INSTALL) -d $(DIRECTORY)/barcontrol
+	$(INSTALL) -m 664 \
+                   -t $(DIRECTORY)/barcontrol \
+                   Makefile.in \
+                   barcontrol.cfg
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/src
 	$(INSTALL) -m 664 \
-                   Makefile.in \
-                   barcontrol.cfg \
-                   $(DIRECTORY)/barcontrol
-	$(INSTALL) -m 664 \
+                   -t $(DIRECTORY)/barcontrol/src \
                    $(sort $(SOURCES)) \
-                   src/Config.java.in \
-                   $(DIRECTORY)/barcontrol/src
+                   src/Config.java.in
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/classes
 	#
 	$(INSTALL) -m 664 \
-                   $(sort $(OTHER_SOURCES)) \
-                   $(DIRECTORY)/barcontrol
+                   -t $(DIRECTORY)/barcontrol \
+                   $(sort $(OTHER_SOURCES) \
+                    )
 	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/images
 	$(INSTALL) -m 664 \
-                   images/*.png \
-                   $(DIRECTORY)/barcontrol/images
+                   -t $(DIRECTORY)/barcontrol/images \
+                   images/*.png
 	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/po
 	$(INSTALL) -m 664 \
+                   -t $(DIRECTORY)/barcontrol/po \
                    $(sort po/*.pot \
                           po/*.po \
-                   ) \
-                   $(DIRECTORY)/barcontrol/po
+                   )
 	#
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars
 	$(INSTALL) -m 664 \
-                   jars/*.jar \
-                   $(DIRECTORY)/barcontrol/jars
+                   -t $(DIRECTORY)/barcontrol/jars \
+                   jars/*.jar
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/linux
 	$(INSTALL) -m 664 \
-                   jars/linux/*.jar \
-                   $(DIRECTORY)/barcontrol/jars/linux
+                   -t $(DIRECTORY)/barcontrol/jars/linux \
+                   jars/linux/*.jar
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/solaris
 	$(INSTALL) -m 664 \
-                   jars/solaris/*.jar \
-                   $(DIRECTORY)/barcontrol/jars/solaris
+                   -t $(DIRECTORY)/barcontrol/jars/solaris \
+                   jars/solaris/*.jar
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/macosx
 	$(INSTALL) -m 664 \
-                   jars/macosx/*.jar \
-                   $(DIRECTORY)/barcontrol/jars/macosx
+                   -t $(DIRECTORY)/barcontrol/jars/macosx \
+                   jars/macosx/*.jar
 	$(INSTALL) -d $(DIRECTORY)/barcontrol/jars/windows
 	$(INSTALL) -m 664 \
-                   jars/windows/*.jar \
-                   $(DIRECTORY)/barcontrol/jars/windows
+                   -t $(DIRECTORY)/barcontrol/jars/windows \
+                   jars/windows/*.jar
 else
 	@$(ECHO) "Please call 'make dist' from top-level directory to create a distribution."
 endif
