@@ -11976,6 +11976,7 @@ $as_echo "#define HAVE_SSH2 1" >>confdefs.h
 
     fi
 
+    # required functions for ssh2
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for CRYPTO_set_id_callback" >&5
@@ -13172,10 +13173,6 @@ $as_echo "$as_me: WARNING: gnutls not compiled: gnutls package missing" >&2;}
   fi
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: ----------------------------------------------" >&5
-$as_echo "$as_me: WARNING: ----------------------------------------------" >&2;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_GPG_ERROR=$HAVE_GPG_ERROR" >&5
-$as_echo "$as_me: WARNING: HAVE_GPG_ERROR=$HAVE_GPG_ERROR" >&2;}
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
   if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR"; then
@@ -13590,6 +13587,7 @@ $as_echo "#define HAVE_MXML 1" >>confdefs.h
 
     fi
 
+    # required functions for curl
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for gpg_strerror" >&5
@@ -23593,13 +23591,93 @@ _ACEOF
 # get and check version numbers (Note: keep closing ) at the end!)
 
 
+    if test -n "SQLite version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking SQLite version" >&5
 $as_echo_n "checking SQLite version... " >&6; }
 if ${ac_cv_constant_value_VERSION_SQLITE+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "sqlite3.h"
+
+int
+main ()
+{
+__CONFTEST__ SQLITE_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_SQLITE=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_SQLITE=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_SQLITE=`echo $ac_cv_constant_value_VERSION_SQLITE|tr -d " \""`
+        fi
+        VERSION_SQLITE=$ac_cv_constant_value_VERSION_SQLITE
+
+        rm -f conftest.c conftest
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_SQLITE" >&5
+$as_echo "$ac_cv_constant_value_VERSION_SQLITE" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_SQLITE+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "sqlite3.h"
+
+int
+main ()
+{
+__CONFTEST__ SQLITE_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_SQLITE=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_SQLITE=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_SQLITE=`echo $ac_cv_constant_value_VERSION_SQLITE|tr -d " \""`
+        fi
+        VERSION_SQLITE=$ac_cv_constant_value_VERSION_SQLITE
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
+
+
+    if test -n ""; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking " >&5
+$as_echo_n "checking ... " >&6; }
+if ${ac_cv_constant_value_VERSION_SQLITE_NUMBER+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "sqlite3.h"
 
@@ -23611,39 +23689,77 @@ __CONFTEST__ SQLITE_VERSION_NUMBER
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_SQLITE=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_SQLITE=
-      fi
-      if test -n ""; then
-        ac_cv_constant_value_VERSION_SQLITE=`echo $ac_cv_constant_value_VERSION_SQLITE|tr -d ""`
-      fi
-      VERSION_SQLITE=$ac_cv_constant_value_VERSION_SQLITE
+          ac_cv_constant_value_VERSION_SQLITE_NUMBER=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_SQLITE_NUMBER=
+        fi
+        if test -n ""; then
+          ac_cv_constant_value_VERSION_SQLITE_NUMBER=`echo $ac_cv_constant_value_VERSION_SQLITE_NUMBER|tr -d ""`
+        fi
+        VERSION_SQLITE_NUMBER=$ac_cv_constant_value_VERSION_SQLITE_NUMBER
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_SQLITE" >&5
-$as_echo "$ac_cv_constant_value_VERSION_SQLITE" >&6; }
-if test $VERSION_SQLITE -lt 3024000; then
-  as_fn_error $? "Required SQLite 3.24 or newer - found $VERSION_SQLITE" "$LINENO" 5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_SQLITE_NUMBER" >&5
+$as_echo "$ac_cv_constant_value_VERSION_SQLITE_NUMBER" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_SQLITE_NUMBER+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "sqlite3.h"
+
+int
+main ()
+{
+__CONFTEST__ SQLITE_VERSION_NUMBER
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_SQLITE_NUMBER=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_SQLITE_NUMBER=
+        fi
+        if test -n ""; then
+          ac_cv_constant_value_VERSION_SQLITE_NUMBER=`echo $ac_cv_constant_value_VERSION_SQLITE_NUMBER|tr -d ""`
+        fi
+        VERSION_SQLITE_NUMBER=$ac_cv_constant_value_VERSION_SQLITE_NUMBER
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
+if test $VERSION_SQLITE_NUMBER -lt 3024000; then
+  as_fn_error $? "Required SQLite 3.24 (3024000) or newer - found $VERSION_SQLITE" "$LINENO" 5
 fi
 
 
+    if test -n "ICU version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking ICU version" >&5
 $as_echo_n "checking ICU version... " >&6; }
 if ${ac_cv_constant_value_VERSION_ICU+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "unicode/uvernum.h"
 
@@ -23655,36 +23771,74 @@ __CONFTEST__ U_ICU_VERSION
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_ICU=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_ICU=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_ICU=`echo $ac_cv_constant_value_VERSION_ICU|tr -d " \""`
-      fi
-      VERSION_ICU=$ac_cv_constant_value_VERSION_ICU
+          ac_cv_constant_value_VERSION_ICU=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_ICU=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_ICU=`echo $ac_cv_constant_value_VERSION_ICU|tr -d " \""`
+        fi
+        VERSION_ICU=$ac_cv_constant_value_VERSION_ICU
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_ICU" >&5
-$as_echo "$ac_cv_constant_value_VERSION_ICU" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_ICU" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_ICU+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "unicode/uvernum.h"
+
+int
+main ()
+{
+__CONFTEST__ U_ICU_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_ICU=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_ICU=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_ICU=`echo $ac_cv_constant_value_VERSION_ICU|tr -d " \""`
+        fi
+        VERSION_ICU=$ac_cv_constant_value_VERSION_ICU
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "zlib version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking zlib version" >&5
 $as_echo_n "checking zlib version... " >&6; }
 if ${ac_cv_constant_value_VERSION_Z+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "zlib.h"
 
@@ -23696,27 +23850,64 @@ __CONFTEST__ ZLIB_VERSION
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_Z=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_Z=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_Z=`echo $ac_cv_constant_value_VERSION_Z|tr -d " \""`
-      fi
-      VERSION_Z=$ac_cv_constant_value_VERSION_Z
+          ac_cv_constant_value_VERSION_Z=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_Z=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_Z=`echo $ac_cv_constant_value_VERSION_Z|tr -d " \""`
+        fi
+        VERSION_Z=$ac_cv_constant_value_VERSION_Z
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_Z" >&5
-$as_echo "$ac_cv_constant_value_VERSION_Z" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_Z" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_Z+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "zlib.h"
+
+int
+main ()
+{
+__CONFTEST__ ZLIB_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_Z=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_Z=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_Z=`echo $ac_cv_constant_value_VERSION_Z|tr -d " \""`
+        fi
+        VERSION_Z=$ac_cv_constant_value_VERSION_Z
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
 # Note: bz2 does not have a define for version
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -23741,13 +23932,14 @@ rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 
 
+    if test -n "lzma version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking lzma version" >&5
 $as_echo_n "checking lzma version... " >&6; }
 if ${ac_cv_constant_value_VERSION_LZMA+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "lzma.h"
 
@@ -23759,36 +23951,74 @@ __CONFTEST__ LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_LZMA=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_LZMA=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_LZMA=`echo $ac_cv_constant_value_VERSION_LZMA|tr -d " \""`
-      fi
-      VERSION_LZMA=$ac_cv_constant_value_VERSION_LZMA
+          ac_cv_constant_value_VERSION_LZMA=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LZMA=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_LZMA=`echo $ac_cv_constant_value_VERSION_LZMA|tr -d " \""`
+        fi
+        VERSION_LZMA=$ac_cv_constant_value_VERSION_LZMA
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_LZMA" >&5
-$as_echo "$ac_cv_constant_value_VERSION_LZMA" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_LZMA" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_LZMA+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "lzma.h"
+
+int
+main ()
+{
+__CONFTEST__ LZMA_VERSION_MAJOR.LZMA_VERSION_MINOR.LZMA_VERSION_PATCH
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_LZMA=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LZMA=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_LZMA=`echo $ac_cv_constant_value_VERSION_LZMA|tr -d " \""`
+        fi
+        VERSION_LZMA=$ac_cv_constant_value_VERSION_LZMA
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "lzo version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking lzo version" >&5
 $as_echo_n "checking lzo version... " >&6; }
 if ${ac_cv_constant_value_VERSION_LZO+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "lzo/lzoconf.h"
 
@@ -23800,36 +24030,74 @@ __CONFTEST__ LZO_VERSION_STRING
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_LZO=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_LZO=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_LZO=`echo $ac_cv_constant_value_VERSION_LZO|tr -d " \""`
-      fi
-      VERSION_LZO=$ac_cv_constant_value_VERSION_LZO
+          ac_cv_constant_value_VERSION_LZO=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LZO=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_LZO=`echo $ac_cv_constant_value_VERSION_LZO|tr -d " \""`
+        fi
+        VERSION_LZO=$ac_cv_constant_value_VERSION_LZO
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_LZO" >&5
-$as_echo "$ac_cv_constant_value_VERSION_LZO" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_LZO" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_LZO+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "lzo/lzoconf.h"
+
+int
+main ()
+{
+__CONFTEST__ LZO_VERSION_STRING
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_LZO=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LZO=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_LZO=`echo $ac_cv_constant_value_VERSION_LZO|tr -d " \""`
+        fi
+        VERSION_LZO=$ac_cv_constant_value_VERSION_LZO
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "lz4 version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking lz4 version" >&5
 $as_echo_n "checking lz4 version... " >&6; }
 if ${ac_cv_constant_value_VERSION_LZ4+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "lz4.h"
 
@@ -23841,36 +24109,74 @@ __CONFTEST__ LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_LZ4=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_LZ4=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_LZ4=`echo $ac_cv_constant_value_VERSION_LZ4|tr -d " \""`
-      fi
-      VERSION_LZ4=$ac_cv_constant_value_VERSION_LZ4
+          ac_cv_constant_value_VERSION_LZ4=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LZ4=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_LZ4=`echo $ac_cv_constant_value_VERSION_LZ4|tr -d " \""`
+        fi
+        VERSION_LZ4=$ac_cv_constant_value_VERSION_LZ4
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_LZ4" >&5
-$as_echo "$ac_cv_constant_value_VERSION_LZ4" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_LZ4" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_LZ4+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "lz4.h"
+
+int
+main ()
+{
+__CONFTEST__ LZ4_VERSION_MAJOR.LZ4_VERSION_MINOR.LZ4_VERSION_RELEASE
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_LZ4=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LZ4=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_LZ4=`echo $ac_cv_constant_value_VERSION_LZ4|tr -d " \""`
+        fi
+        VERSION_LZ4=$ac_cv_constant_value_VERSION_LZ4
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "zstd version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking zstd version" >&5
 $as_echo_n "checking zstd version... " >&6; }
 if ${ac_cv_constant_value_VERSION_ZSTD+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "zstd.h"
 
@@ -23882,36 +24188,74 @@ __CONFTEST__ ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_ZSTD=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_ZSTD=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_ZSTD=`echo $ac_cv_constant_value_VERSION_ZSTD|tr -d " \""`
-      fi
-      VERSION_ZSTD=$ac_cv_constant_value_VERSION_ZSTD
+          ac_cv_constant_value_VERSION_ZSTD=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_ZSTD=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_ZSTD=`echo $ac_cv_constant_value_VERSION_ZSTD|tr -d " \""`
+        fi
+        VERSION_ZSTD=$ac_cv_constant_value_VERSION_ZSTD
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_ZSTD" >&5
-$as_echo "$ac_cv_constant_value_VERSION_ZSTD" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_ZSTD" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_ZSTD+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "zstd.h"
+
+int
+main ()
+{
+__CONFTEST__ ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_ZSTD=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_ZSTD=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_ZSTD=`echo $ac_cv_constant_value_VERSION_ZSTD|tr -d " \""`
+        fi
+        VERSION_ZSTD=$ac_cv_constant_value_VERSION_ZSTD
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "gcrypt version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking gcrypt version" >&5
 $as_echo_n "checking gcrypt version... " >&6; }
 if ${ac_cv_constant_value_VERSION_GCRYPT+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "gcrypt.h"
 
@@ -23923,36 +24267,74 @@ __CONFTEST__ GCRYPT_VERSION
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_GCRYPT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_GCRYPT=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_GCRYPT=`echo $ac_cv_constant_value_VERSION_GCRYPT|tr -d " \""`
-      fi
-      VERSION_GCRYPT=$ac_cv_constant_value_VERSION_GCRYPT
+          ac_cv_constant_value_VERSION_GCRYPT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_GCRYPT=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_GCRYPT=`echo $ac_cv_constant_value_VERSION_GCRYPT|tr -d " \""`
+        fi
+        VERSION_GCRYPT=$ac_cv_constant_value_VERSION_GCRYPT
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_GCRYPT" >&5
-$as_echo "$ac_cv_constant_value_VERSION_GCRYPT" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_GCRYPT" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_GCRYPT+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "gcrypt.h"
+
+int
+main ()
+{
+__CONFTEST__ GCRYPT_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_GCRYPT=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_GCRYPT=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_GCRYPT=`echo $ac_cv_constant_value_VERSION_GCRYPT|tr -d " \""`
+        fi
+        VERSION_GCRYPT=$ac_cv_constant_value_VERSION_GCRYPT
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "GMP version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking GMP version" >&5
 $as_echo_n "checking GMP version... " >&6; }
 if ${ac_cv_constant_value_VERSION_GMP+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "gmp.h"
 
@@ -23964,36 +24346,74 @@ __CONFTEST__ __GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_GMP=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_GMP=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_GMP=`echo $ac_cv_constant_value_VERSION_GMP|tr -d " \""`
-      fi
-      VERSION_GMP=$ac_cv_constant_value_VERSION_GMP
+          ac_cv_constant_value_VERSION_GMP=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_GMP=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_GMP=`echo $ac_cv_constant_value_VERSION_GMP|tr -d " \""`
+        fi
+        VERSION_GMP=$ac_cv_constant_value_VERSION_GMP
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_GMP" >&5
-$as_echo "$ac_cv_constant_value_VERSION_GMP" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_GMP" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_GMP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "gmp.h"
+
+int
+main ()
+{
+__CONFTEST__ __GNU_MP_VERSION.__GNU_MP_VERSION_MINOR.__GNU_MP_VERSION_PATCHLEVEL
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_GMP=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_GMP=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_GMP=`echo $ac_cv_constant_value_VERSION_GMP|tr -d " \""`
+        fi
+        VERSION_GMP=$ac_cv_constant_value_VERSION_GMP
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "GNU TLS version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking GNU TLS version" >&5
 $as_echo_n "checking GNU TLS version... " >&6; }
 if ${ac_cv_constant_value_VERSION_GNUTLS+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "gnutls/gnutls.h"
 
@@ -24005,36 +24425,74 @@ __CONFTEST__ GNUTLS_VERSION
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_GNUTLS=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_GNUTLS=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_GNUTLS=`echo $ac_cv_constant_value_VERSION_GNUTLS|tr -d " \""`
-      fi
-      VERSION_GNUTLS=$ac_cv_constant_value_VERSION_GNUTLS
+          ac_cv_constant_value_VERSION_GNUTLS=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_GNUTLS=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_GNUTLS=`echo $ac_cv_constant_value_VERSION_GNUTLS|tr -d " \""`
+        fi
+        VERSION_GNUTLS=$ac_cv_constant_value_VERSION_GNUTLS
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_GNUTLS" >&5
-$as_echo "$ac_cv_constant_value_VERSION_GNUTLS" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_GNUTLS" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_GNUTLS+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "gnutls/gnutls.h"
+
+int
+main ()
+{
+__CONFTEST__ GNUTLS_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_GNUTLS=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_GNUTLS=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_GNUTLS=`echo $ac_cv_constant_value_VERSION_GNUTLS|tr -d " \""`
+        fi
+        VERSION_GNUTLS=$ac_cv_constant_value_VERSION_GNUTLS
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "openssl version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking openssl version" >&5
 $as_echo_n "checking openssl version... " >&6; }
 if ${ac_cv_constant_value_VERSION_OPENSSL+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "openssl/opensslv.h"
 int
@@ -24045,36 +24503,73 @@ __CONFTEST__ OPENSSL_VERSION_TEXT
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_OPENSSL=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_OPENSSL=
-      fi
-      if test -n "\""; then
-        ac_cv_constant_value_VERSION_OPENSSL=`echo $ac_cv_constant_value_VERSION_OPENSSL|tr -d "\""`
-      fi
-      VERSION_OPENSSL=$ac_cv_constant_value_VERSION_OPENSSL
+          ac_cv_constant_value_VERSION_OPENSSL=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_OPENSSL=
+        fi
+        if test -n "\""; then
+          ac_cv_constant_value_VERSION_OPENSSL=`echo $ac_cv_constant_value_VERSION_OPENSSL|tr -d "\""`
+        fi
+        VERSION_OPENSSL=$ac_cv_constant_value_VERSION_OPENSSL
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_OPENSSL" >&5
-$as_echo "$ac_cv_constant_value_VERSION_OPENSSL" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_OPENSSL" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_OPENSSL+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "openssl/opensslv.h"
+int
+main ()
+{
+__CONFTEST__ OPENSSL_VERSION_TEXT
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_OPENSSL=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_OPENSSL=
+        fi
+        if test -n "\""; then
+          ac_cv_constant_value_VERSION_OPENSSL=`echo $ac_cv_constant_value_VERSION_OPENSSL|tr -d "\""`
+        fi
+        VERSION_OPENSSL=$ac_cv_constant_value_VERSION_OPENSSL
+
+        rm -f conftest.c conftest
 
 
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking SQLite version" >&5
-$as_echo_n "checking SQLite version... " >&6; }
+fi
+  fi
+
+
+
+    if test -n "ssh2 version"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking ssh2 version" >&5
+$as_echo_n "checking ssh2 version... " >&6; }
 if ${ac_cv_constant_value_VERSION_LIBSSH2+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "libssh2.h"
 
@@ -24086,36 +24581,74 @@ __CONFTEST__ LIBSSH2_VERSION
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_LIBSSH2=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_LIBSSH2=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_LIBSSH2=`echo $ac_cv_constant_value_VERSION_LIBSSH2|tr -d " \""`
-      fi
-      VERSION_LIBSSH2=$ac_cv_constant_value_VERSION_LIBSSH2
+          ac_cv_constant_value_VERSION_LIBSSH2=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LIBSSH2=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_LIBSSH2=`echo $ac_cv_constant_value_VERSION_LIBSSH2|tr -d " \""`
+        fi
+        VERSION_LIBSSH2=$ac_cv_constant_value_VERSION_LIBSSH2
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_LIBSSH2" >&5
-$as_echo "$ac_cv_constant_value_VERSION_LIBSSH2" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_LIBSSH2" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_LIBSSH2+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "libssh2.h"
+
+int
+main ()
+{
+__CONFTEST__ LIBSSH2_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_LIBSSH2=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_LIBSSH2=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_LIBSSH2=`echo $ac_cv_constant_value_VERSION_LIBSSH2|tr -d " \""`
+        fi
+        VERSION_LIBSSH2=$ac_cv_constant_value_VERSION_LIBSSH2
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "curl version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking curl version" >&5
 $as_echo_n "checking curl version... " >&6; }
 if ${ac_cv_constant_value_VERSION_CURL+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "curl/curl.h"
 
@@ -24127,68 +24660,225 @@ __CONFTEST__ LIBCURL_VERSION
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_CURL=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_CURL=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_CURL=`echo $ac_cv_constant_value_VERSION_CURL|tr -d " \""`
-      fi
-      VERSION_CURL=$ac_cv_constant_value_VERSION_CURL
+          ac_cv_constant_value_VERSION_CURL=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_CURL=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_CURL=`echo $ac_cv_constant_value_VERSION_CURL|tr -d " \""`
+        fi
+        VERSION_CURL=$ac_cv_constant_value_VERSION_CURL
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_CURL" >&5
-$as_echo "$ac_cv_constant_value_VERSION_CURL" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_CURL" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_CURL+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "curl/curl.h"
+
+int
+main ()
+{
+__CONFTEST__ LIBCURL_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_CURL=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_CURL=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_CURL=`echo $ac_cv_constant_value_VERSION_CURL|tr -d " \""`
+        fi
+        VERSION_CURL=$ac_cv_constant_value_VERSION_CURL
+
+        rm -f conftest.c conftest
 
 
+fi
+  fi
+
+
+
+    if test -n "cdio version"; then
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking cdio version" >&5
 $as_echo_n "checking cdio version... " >&6; }
 if ${ac_cv_constant_value_VERSION_CDIO+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include "cdio/cdio.h"
 
 int
 main ()
 {
-__CONFTEST__ CDIO_VERSION);
+__CONFTEST__ CDIO_VERSION
   ;
   return 0;
 }
 _ACEOF
-      if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
   { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
   (eval $ac_try) 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; }; then
-        ac_cv_constant_value_VERSION_CDIO=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value_VERSION_CDIO=
-      fi
-      if test -n " \""; then
-        ac_cv_constant_value_VERSION_CDIO=`echo $ac_cv_constant_value_VERSION_CDIO|tr -d " \""`
-      fi
-      VERSION_CDIO=$ac_cv_constant_value_VERSION_CDIO
+          ac_cv_constant_value_VERSION_CDIO=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_CDIO=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_CDIO=`echo $ac_cv_constant_value_VERSION_CDIO|tr -d " \""`
+        fi
+        VERSION_CDIO=$ac_cv_constant_value_VERSION_CDIO
 
-      rm -f conftest.c conftest
+        rm -f conftest.c conftest
 
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_CDIO" >&5
-$as_echo "$ac_cv_constant_value_VERSION_CDIO" >&6; }
+$as_echo "$ac_cv_constant_value_VERSION_CDIO" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_CDIO+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "cdio/cdio.h"
+
+int
+main ()
+{
+__CONFTEST__ CDIO_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_CDIO=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_CDIO=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_CDIO=`echo $ac_cv_constant_value_VERSION_CDIO|tr -d " \""`
+        fi
+        VERSION_CDIO=$ac_cv_constant_value_VERSION_CDIO
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
+
+
+    if test -n ""; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking " >&5
+$as_echo_n "checking ... " >&6; }
+if ${ac_cv_constant_value_VERSION_CDIO_NUMBER+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "cdio/cdio.h"
+
+int
+main ()
+{
+__CONFTEST__ LIBCDIO_VERSION_NUM
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_CDIO_NUMBER=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_CDIO_NUMBER=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_CDIO_NUMBER=`echo $ac_cv_constant_value_VERSION_CDIO_NUMBER|tr -d " \""`
+        fi
+        VERSION_CDIO_NUMBER=$ac_cv_constant_value_VERSION_CDIO_NUMBER
+
+        rm -f conftest.c conftest
+
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_CDIO_NUMBER" >&5
+$as_echo "$ac_cv_constant_value_VERSION_CDIO_NUMBER" >&6; }  else
+    if ${ac_cv_constant_value_VERSION_CDIO_NUMBER+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "cdio/cdio.h"
+
+int
+main ()
+{
+__CONFTEST__ LIBCDIO_VERSION_NUM
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_CDIO_NUMBER=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_CDIO_NUMBER=
+        fi
+        if test -n " \""; then
+          ac_cv_constant_value_VERSION_CDIO_NUMBER=`echo $ac_cv_constant_value_VERSION_CDIO_NUMBER|tr -d " \""`
+        fi
+        VERSION_CDIO_NUMBER=$ac_cv_constant_value_VERSION_CDIO_NUMBER
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
+if test $VERSION_CDIO_NUMBER -lt 10100; then
+  as_fn_error $? "Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO" "$LINENO" 5
+fi
 # Note: PCRE does not have a define for version
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */

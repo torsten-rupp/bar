@@ -176,24 +176,44 @@ AC_DEFUN([AC_CONSTANT_VALUE],
 [
   AC_REQUIRE([AC_PROG_CPP])
   AS_VAR_PUSHDEF([ac_cv_constant_value],[ac_cv_constant_value_$2])dnl
-  AC_CACHE_CHECK(
-    [$1],
-    ac_cv_constant_value,
-    [
-      AC_LANG_CONFTEST([AC_LANG_PROGRAM([[$3]],[[__CONFTEST__ $4]])])
-      if AC_TRY_COMMAND($CPP $CPPFLAGS -P -E conftest.c -o conftest); then
-        ac_cv_constant_value=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
-      else
-        ac_cv_constant_value=
-      fi
-      if test -n "AS_ESCAPE([[$5]])"; then
-        ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$5]])"`
-      fi
-      AS_VAR_SET($2,$ac_cv_constant_value)
+  if test -n "$1"; then
+    AC_CACHE_CHECK(
+      [$1],
+      ac_cv_constant_value,
+      [
+        AC_LANG_CONFTEST([AC_LANG_PROGRAM([[$3]],[[__CONFTEST__ $4]])])
+        if AC_TRY_COMMAND($CPP $CPPFLAGS -P -E conftest.c -o conftest); then
+          ac_cv_constant_value=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value=
+        fi
+        if test -n "AS_ESCAPE([[$5]])"; then
+          ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$5]])"`
+        fi
+        AS_VAR_SET($2,$ac_cv_constant_value)
 
-      rm -f conftest.c conftest
-    ]
-  )dnl
+        rm -f conftest.c conftest
+      ]
+    )dnl
+  else
+    AC_CACHE_VAL(
+      ac_cv_constant_value,
+      [
+        AC_LANG_CONFTEST([AC_LANG_PROGRAM([[$3]],[[__CONFTEST__ $4]])])
+        if AC_TRY_COMMAND($CPP $CPPFLAGS -P -E conftest.c -o conftest); then
+          ac_cv_constant_value=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value=
+        fi
+        if test -n "AS_ESCAPE([[$5]])"; then
+          ac_cv_constant_value=`echo $ac_cv_constant_value|tr -d "AS_ESCAPE([[$5]])"`
+        fi
+        AS_VAR_SET($2,$ac_cv_constant_value)
+
+        rm -f conftest.c conftest
+      ]
+    )dnl
+  fi
   AS_VAR_POPDEF([ac_cv_constant_value])dnl
   AC_PROVIDE([$0])dnl
 ])
@@ -2956,8 +2976,6 @@ if test $ENABLE_TLS = "yes"; then
   fi
 fi
 
-AC_WARN([----------------------------------------------])
-AC_WARN([HAVE_GPG_ERROR=$HAVE_GPG_ERROR])
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
   if test \( -d curl -o -d "`readlink curl`" \) -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d mxml -o -d "`readlink mxml`" \) -a "$HAVE_GPG_ERROR"; then
@@ -4224,9 +4242,15 @@ AC_CONSTANT_VALUE([SQLite version],
                   VERSION_SQLITE,
                   [#include "sqlite3.h"
                   ],
+                  [SQLITE_VERSION],
+                  [ "])
+AC_CONSTANT_VALUE([],
+                  VERSION_SQLITE_NUMBER,
+                  [#include "sqlite3.h"
+                  ],
                   [SQLITE_VERSION_NUMBER])
-if test $VERSION_SQLITE -lt 3024000; then
-  AC_ERROR([Required SQLite 3.24 or newer - found $VERSION_SQLITE])
+if test $VERSION_SQLITE_NUMBER -lt 3024000; then
+  AC_ERROR([Required SQLite 3.24 (3024000) or newer - found $VERSION_SQLITE])
 fi
 AC_CONSTANT_VALUE([ICU version],
                   VERSION_ICU,
@@ -4295,7 +4319,7 @@ AC_CONSTANT_VALUE([openssl version],
                   [#include "openssl/opensslv.h"],
                   [OPENSSL_VERSION_TEXT],
                   ["])
-AC_CONSTANT_VALUE([SQLite version],
+AC_CONSTANT_VALUE([ssh2 version],
                   VERSION_LIBSSH2,
                   [#include "libssh2.h"
                   ],
@@ -4311,8 +4335,17 @@ AC_CONSTANT_VALUE([cdio version],
                   VERSION_CDIO,
                   [#include "cdio/cdio.h"
                   ],
-                  [CDIO_VERSION);],
+                  [CDIO_VERSION],
                   [ "])
+AC_CONSTANT_VALUE([],
+                  VERSION_CDIO_NUMBER,
+                  [#include "cdio/cdio.h"
+                  ],
+                  [LIBCDIO_VERSION_NUM],
+                  [ "])
+if test $VERSION_CDIO_NUMBER -lt 10100; then
+  AC_ERROR([Required libcdio 1.10 (10100) or newer - found $VERSION_CDIO])
+fi
 # Note: PCRE does not have a define for version
 AC_TRY_LINK([#include <stdio.h>
              #include "pcre.h"
