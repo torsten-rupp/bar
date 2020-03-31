@@ -4294,7 +4294,7 @@ AC_CONSTANT_VALUE([zstd version],
                   VERSION_ZSTD,
                   [#include "zstd.h"
                   ],
-                  [ZSTD_VERSION_MAJOR,ZSTD_VERSION_MINOR,ZSTD_VERSION_RELEASE],
+                  [ZSTD_VERSION_MAJOR.ZSTD_VERSION_MINOR.ZSTD_VERSION_RELEASE],
                   [ "])
 AC_CONSTANT_VALUE([gcrypt version],
                   VERSION_GCRYPT,
