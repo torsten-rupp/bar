@@ -54,6 +54,7 @@ creating automated backups in the background.
 ./download-third-party-packages.sh \
   --clean
 ./download-third-party-packages.sh \
+  --local-directory=/media/home \
   --no-verbose \
   %{ADDITIONAL_DOWNLOAD_FLAGS}
 
@@ -62,6 +63,7 @@ creating automated backups in the background.
   --enable-extern-check \
   --disable-crashdump \
   --disable-epm \
+  --enable-extern-check \
   %ADDITIONAL_CONFIGURE_FLAGS
 %{__make} OPTFLAGS="%{optflags}" -C bar %{?_smp_mflags} all
 %{__make} OPTFLAGS="%{optflags}" all

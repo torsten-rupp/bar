@@ -24,6 +24,7 @@ build-stamp:
 	./download-third-party-packages.sh \
           --clean
 	./download-third-party-packages.sh \
+          --local-directory=/media/home \
           --no-verbose \
           $(ADDITIONAL_DOWNLOAD_FLAGS)
 	./configure \
@@ -36,6 +37,7 @@ build-stamp:
           --enable-extern-check \
           --disable-crashdump \
           --disable-epm \
+          --enable-extern-check \
           $(ADDITIONAL_CONFIGURE_FLAGS)
 	$(MAKE) all
 	#$(MAKE) test1-debug test2-debug test3-debug test4-debug test5-debug COMPRESS_NAMES_LZMA="lzma1 lzma2 lzma3 lzma4 lzma5 lzma6 lzma7"

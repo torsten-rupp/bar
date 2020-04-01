@@ -77,6 +77,7 @@ fatalError()
 
 # parse arguments
 destination=$PWD
+localDirectory=
 noDecompressFlag=0
 verboseFlag=1
 cleanFlag=0
@@ -116,6 +117,11 @@ while test $# != 0; do
       ;;
     -d | --destination)
       destination=$2
+      shift
+      shift
+      ;;
+    -l | --local-directory)
+      localDirectory=$2
       shift
       shift
       ;;
@@ -368,12 +374,13 @@ if test $helpFlag -eq 1; then
   $ECHO ""
   $ECHO "Usage: download-third-party-packages.sh [<options>] all|<package> ..."
   $ECHO ""
-  $ECHO "Options: -d|--destination=<path>"
-  $ECHO "         -n|--no-decompress"
-  $ECHO "         --verbose"
-  $ECHO "         --no-verbose"
-  $ECHO "         -c|--clean"
-  $ECHO "         --help"
+  $ECHO "Options: -d|--destination=<path>      - destination directory"
+  $ECHO "         -l|--local-directory=<path>  - local directory to get packages from"
+  $ECHO "         -n|--no-decompress           - do not decompress archives"
+  $ECHO "         --verbose                    - verbose output"
+  $ECHO "         --no-verbose                 - disable verbose output"
+  $ECHO "         -c|--clean                   - delete all packages in destination directory"
+  $ECHO "         --help                       - print this help"
   $ECHO ""
   $ECHO "Packages (included in 'all'):"
   $ECHO ""
@@ -464,11 +471,15 @@ if test $cleanFlag -eq 0; then
      cd $destination/extern
      fileName=`ls zlib-*.tar.gz 2>/dev/null|cat -`
      if test ! -f "$fileName"; then
-       fileName=`$CURL $CURL_OPTIONS --silent --output - 'http://www.zlib.net'|grep -E -e 'http://.*/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://.*/\(.*\.tar\.gz\).*|\1|g'`
-       url="http://www.zlib.net/$fileName"
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/zlib-*.tar.gz; then
+         fileName=`ls $localDirectory/zlib-*.tar.gz 2>/dev/null|cat -`
+       else
+         fileName=`$CURL $CURL_OPTIONS --silent --output - 'http://www.zlib.net'|grep -E -e 'http://.*/zlib-.*\.tar\.gz'|head -1|sed 's|.*http://.*/\(.*\.tar\.gz\).*|\1|g'`
+         url="http://www.zlib.net/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -492,9 +503,13 @@ if test $cleanFlag -eq 0; then
      fileName=bzip2-$BZIP2_VERSION.tar.gz
      url="https://downloads.sourceforge.net/project/bzip2/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/bzip2-$BZIP2_VERSION.tar.gz; then
+         fileName=$localDirectory/bzip2-$BZIP2_VERSION.tar.gz
+       else
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -517,11 +532,15 @@ if test $cleanFlag -eq 0; then
      cd $destination/extern
      fileName=`ls xz-*.tar.gz 2>/dev/null|cat -`
      if test ! -f "$fileName"; then
-       fileName=`$CURL $CURL_OPTIONS --silent --output - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|head -1|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`
-       url="http://tukaani.org/xz/$fileName"
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/xz-*.tar.gz; then
+         fileName=`ls $localDirectory/xz-*.tar.gz 2>/dev/null|cat -`
+       else
+         fileName=`$CURL $CURL_OPTIONS --silent --output - 'http://tukaani.org/xz'|grep -E -e 'xz-.*\.tar\.gz'|head -1|sed 's|.*href="\(xz.*\.tar\.gz\)".*|\1|g'`
+         url="http://tukaani.org/xz/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -545,9 +564,13 @@ if test $cleanFlag -eq 0; then
      fileName=lzo-$LZO_VERSION.tar.gz
      url="http://www.oberhumer.com/opensource/lzo/download/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/lzo-$LZO_VERSION.tar.gz; then
+         fileName=$localDirectory/lzo-$LZO_VERSION.tar.gz
+       else
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -570,15 +593,19 @@ if test $cleanFlag -eq 0; then
      cd $destination/extern
      fileName=`ls lz4-*.tar.gz 2>/dev/null|cat -`
      if test ! -f "$fileName"; then
-#       url=`$CURL $curlOptions --silent --output - 'http://code.google.com/p/lz4'|grep -E -e 'lz4-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/lz4-.*\.tar\.gz\)".*|\1|g'`
+       if test -n "$localDirectory" -a -f $localDirectory/lz4-*.tar.gz; then
+         fileName=`ls $localDirectory/lz4-*.tar.gz 2>/dev/null|cat -`
+       else
+#         url=`$CURL $curlOptions --silent --output - 'http://code.google.com/p/lz4'|grep -E -e 'lz4-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/lz4-.*\.tar\.gz\)".*|\1|g'`
 #
-#       fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
-#       $CURL $curlOptions -O "$url"
-       fileName="lz4-$LZ4_VERSION.tar.gz"
-       url="https://github.com/Cyan4973/lz4/archive/$LZ4_VERSION.tar.gz"
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+#         fileName=`echo $URL|sed 's|.*/\(lz4-.*\.tar\.gz\).*|\1|g'`
+#         $CURL $curlOptions -O "$url"
+         fileName="lz4-$LZ4_VERSION.tar.gz"
+         url="https://github.com/Cyan4973/lz4/archive/$LZ4_VERSION.tar.gz"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -601,15 +628,19 @@ if test $cleanFlag -eq 0; then
      cd $destination/extern
      fileName=`ls zstd-*.zip 2>/dev/null|cat -`
      if test ! -f "$fileName"; then
-#       url=`$CURL $curlOptions --silent --output - 'http://code.google.com/p/zstd'|grep -E -e 'zstd-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/zstd-.*\.tar\.gz\)".*|\1|g'`
+       if test -n "$localDirectory" -a -f $localDirectory/zstd-*.zip; then
+         fileName=`ls $localDirectory/zstd-*.zip 2>/dev/null|cat -`
+       else
+#         url=`$CURL $curlOptions --silent --output - 'http://code.google.com/p/zstd'|grep -E -e 'zstd-.*\.tar\.gz'|head -1|sed 's|.*"\(http.*/zstd-.*\.tar\.gz\)".*|\1|g'`
 #
-#       fileName=`echo $URL|sed 's|.*/\(zstd-.*\.tar\.gz\).*|\1|g'`
-#       $CURL $curlOptions -O "$url"
-       fileName="zstd-$ZSTD_VERSION.zip"
-       url="https://github.com/facebook/zstd/archive/v$ZSTD_VERSION.zip"
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+#         fileName=`echo $URL|sed 's|.*/\(zstd-.*\.tar\.gz\).*|\1|g'`
+#         $CURL $curlOptions -O "$url"
+         fileName="zstd-$ZSTD_VERSION.zip"
+         url="https://github.com/facebook/zstd/archive/v$ZSTD_VERSION.zip"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -631,11 +662,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=xdelta3-$XDELTA3_VERSION.tar.gz
-     url="https://github.com/jmacd/xdelta-gpl/releases/download/v$XDELTA3_VERSION/$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/xdelta3-$XDELTA3_VERSION.tar.gz; then
+         fileName=$localDirectory/xdelta3-$XDELTA3_VERSION.tar.gz
+       else
+         url="https://github.com/jmacd/xdelta-gpl/releases/download/v$XDELTA3_VERSION/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -657,11 +694,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
-     url="https://www.gnupg.org/ftp/gcrypt/libgpg-error//$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2; then
+         fileName=$localDirectory/libgpg-error-$LIBGPG_ERROR_VERSION.tar.bz2
+       else
+         url="https://www.gnupg.org/ftp/gcrypt/libgpg-error//$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -669,11 +712,15 @@ if test $cleanFlag -eq 0; then
      fi
 
      fileName=libgcrypt-$LIBGCRYPT_VERSION.tar.bz2
-     url="https://www.gnupg.org/ftp/gcrypt/libgcrypt/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2; then
+         fileName=$localDirectory/libgcrypt-$LIBGCRYPT_VERSION.tar.bz2
+       else
+         url="https://www.gnupg.org/ftp/gcrypt/libgcrypt/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -696,11 +743,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=c-ares-$C_ARES_VERSION.tar.gz
-     url="http://c-ares.haxx.se/download/$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/c-ares-$C_ARES_VERSION.tar.gz; then
+         fileName=$localDirectory/c-ares-$C_ARES_VERSION.tar.gz
+       else
+         url="http://c-ares.haxx.se/download/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -720,11 +773,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=curl-$CURL_VERSION.tar.bz2
-     url="http://curl.haxx.se/download/$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/curl-$CURL_VERSION.tar.bz2; then
+         fileName=$localDirectory/curl-$CURL_VERSION.tar.bz2
+       else
+         url="http://curl.haxx.se/download/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -746,11 +805,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=mxml-$MXML_VERSION.tar.gz
-     url="https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/mxml-$MXML_VERSION.tar.gz; then
+         fileName=$localDirectory/mxml-$MXML_VERSION.tar.gz
+       else
+         url="https://github.com/michaelrsweet/mxml/releases/download/v$MXML_VERSION/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -772,11 +837,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=openssl-$OPENSSL_VERSION.tar.gz
-     url="http://www.openssl.org/source/$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/openssl-$OPENSSL_VERSION.tar.gz; then
+         fileName=$localDirectory/openssl-$OPENSSL_VERSION.tar.gz
+       else
+         url="http://www.openssl.org/source/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -798,11 +869,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=libssh2-$LIBSSH2_VERSION.tar.gz
-     url="http://www.libssh2.org/download/$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz; then
+         fileName=$localDirectory/libssh2-$LIBSSH2_VERSION.tar.gz
+       else
+         url="http://www.libssh2.org/download/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -824,11 +901,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=nettle-$NETTLE_VERSION.tar.gz
-     url="https://ftp.gnu.org/gnu/nettle/$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/nettle-$NETTLE_VERSION.tar.gz; then
+         fileName=$localDirectory/nettle-$NETTLE_VERSION.tar.gz
+       else
+         url="https://ftp.gnu.org/gnu/nettle/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -848,11 +931,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=gmp-$GMP_VERSION.tar.xz
-     url="https://gmplib.org/download/gmp/$fileName"
-     if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+     if test ! -f "$fileName"; then
+       if test -n "$localDirectory" -a -f $localDirectory/gmp-$GMP_VERSION.tar.xz; then
+         fileName=$localDirectory/gmp-$GMP_VERSION.tar.xz
+       else
+         url="https://gmplib.org/download/gmp/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -872,11 +961,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=libidn2-$LIBIDN2_VERSION.tar.gz
-     url="https://ftp.gnu.org/gnu/libidn/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz; then
+         fileName=$localDirectory/libidn2-$LIBIDN2_VERSION.tar.gz
+       else
+         url="https://ftp.gnu.org/gnu/libidn/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -896,11 +989,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=gnutls-$GNU_TLS_VERSION.tar.xz
-     url="https://www.gnupg.org/ftp/gcrypt/gnutls/$GNU_TLS_SUB_DIRECTORY/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/gnutls-$GNU_TLS_VERSION.tar.xz; then
+         fileName=$localDirectory/gnutls-$GNU_TLS_VERSION.tar.xz
+       else
+         url="https://www.gnupg.org/ftp/gcrypt/gnutls/$GNU_TLS_SUB_DIRECTORY/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -922,11 +1019,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=libiconv-$LIBICONV_VERSION.tar.gz
-     url="https://ftp.gnu.org/pub/gnu/libiconv/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/libiconv-$LIBICONV_VERSION.tar.gz; then
+         fileName=$localDirectory/libiconv-$LIBICONV_VERSION.tar.gz
+       else
+         url="https://ftp.gnu.org/pub/gnu/libiconv/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -946,11 +1047,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=libcdio-$LIBCDIO_VERSION.tar.bz2
-     url="https://ftp.gnu.org/gnu/libcdio/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2; then
+         fileName=$localDirectory/libcdio-$LIBCDIO_VERSION.tar.bz2
+       else
+         url="https://ftp.gnu.org/gnu/libcdio/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -972,11 +1077,17 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=mtx-$MTX_VERSION.tar.gz
-     url="http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/mtx-$MTX_VERSION.tar.gz; then
+         fileName=$localDirectory/mtx-$MTX_VERSION.tar.gz
+       else
+         url="http://sourceforge.net/projects/mtx/files/mtx-stable/$MTX_VERSION/$fileName"
+         if test ! -f $fileName; then
+           $CURL $curlOptions --output $fileName $url
+           if test $? -ne 0; then
+             fatalError "$url -> $fileName"
+           fi
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -998,11 +1109,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=pcre-$PCRE_VERSION.tar.bz2
-     url="https://ftp.pcre.org/pub/pcre/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/pcre-$PCRE_VERSION.tar.bz2; then
+         fileName=$localDirectory/pcre-$PCRE_VERSION.tar.bz2
+       else
+         url="https://ftp.pcre.org/pub/pcre/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -1024,11 +1139,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=sqlite-src-$SQLITE_VERSION.zip
-     url="https://www.sqlite.org/$SQLITE_YEAR/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/sqlite-src-$SQLITE_VERSION.zip; then
+         fileName=$localDirectory/sqlite-src-$SQLITE_VERSION.zip
+       else
+         url="https://www.sqlite.org/$SQLITE_YEAR/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -1050,11 +1169,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz
-     url="http://download.icu-project.org/files/icu4c/$ICU_VERSION/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz; then
+         fileName=$localDirectory/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz
+       else
+         url="http://download.icu-project.org/files/icu4c/$ICU_VERSION/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -1076,11 +1199,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=binutils-$BINUTILS_VERSION.tar.bz2
-     url="http://ftp.gnu.org/gnu/binutils/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/binutils-$BINUTILS_VERSION.tar.bz2; then
+         fileName=$localDirectory/binutils-$BINUTILS_VERSION.tar.bz2
+       else
+         url="http://ftp.gnu.org/gnu/binutils/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -1104,9 +1231,13 @@ if test $cleanFlag -eq 0; then
      fileName=pthreads-w32-2-9-1-release.tar.gz
      url="ftp://sourceware.org/pub/pthreads-win32/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/pthreads-w32-2-9-1-release.tar.gz; then
+         fileName=$localDirectory/pthreads-w32-2-9-1-release.tar.gz
+       else
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -1129,9 +1260,13 @@ if test $cleanFlag -eq 0; then
      cd $destination/extern
      fileName=breakpad
      if test ! -d $fileName; then
-       $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk', revision $BREAKPAD_REVISION..."
-       $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' $fileName -r$BREAKPAD_REVISION >/dev/null
-       $ECHO "done"
+       if test -n "$localDirectory" -a -f $localDirectory/breakpad; then
+         fileName=$localDirectory/breakpad
+       else
+         $ECHO_NO_NEW_LINE "Checkout 'http://google-breakpad.googlecode.com/svn/trunk', revision $BREAKPAD_REVISION..."
+         $SVN checkout 'http://google-breakpad.googlecode.com/svn/trunk' $fileName -r$BREAKPAD_REVISION >/dev/null
+         $ECHO "done"
+       fi
      fi
     )
     if test $? -ne 0; then
@@ -1149,11 +1284,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=epm-$EPM_VERSION-source.tar.bz2
-     url="http://www.msweet.org/files/project2/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/epm-$EPM_VERSION-source.tar.bz2; then
+         fileName=$localDirectory/epm-$EPM_VERSION-source.tar.bz2
+       else
+         url="http://www.msweet.org/files/project2/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -1175,11 +1314,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=launch4j-3.1.0-beta2-linux.tgz
-     url="http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/launch4j-3.1.0-beta2-linux.tgz; then
+         fileName=$localDirectory/launch4j-3.1.0-beta2-linux.tgz
+       else
+         url="http://downloads.sourceforge.net/project/launch4j/launch4j-3/3.1.0-beta2/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -1201,11 +1344,15 @@ if test $cleanFlag -eq 0; then
     (
      cd $destination/extern
      fileName=openjdk-1.6.0-unofficial-b30-windows-i586-image.zip
-     url="https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip; then
+         fileName=$localDirectory/openjdk-1.6.0-unofficial-b30-windows-i586-image.zip
+       else
+         url="https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
@@ -1213,11 +1360,15 @@ if test $cleanFlag -eq 0; then
      fi
 
      fileName=openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip
-     url="https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/$fileName"
      if test ! -f $fileName; then
-       $CURL $curlOptions --output $fileName $url
-       if test $? -ne 0; then
-         fatalError "$url -> $fileName"
+       if test -n "$localDirectory" -a -f $localDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip; then
+         fileName=$localDirectory/openjdk-1.6.0-unofficial-b30-windows-amd64-image.zip
+       else
+         url="https://bitbucket.org/alexkasko/openjdk-unofficial-builds/downloads/$fileName"
+         $CURL $curlOptions --output $fileName $url
+         if test $? -ne 0; then
+           fatalError "$url -> $fileName"
+         fi
        fi
      fi
      if test $noDecompressFlag -eq 0; then
