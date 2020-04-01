@@ -54,7 +54,7 @@ creating automated backups in the background.
 ./download-third-party-packages.sh \
   --clean
 ./download-third-party-packages.sh \
-  --local-directory /media/home \
+  --local-directory /media/home/extern \
   --no-verbose \
   %{ADDITIONAL_DOWNLOAD_FLAGS}
 
