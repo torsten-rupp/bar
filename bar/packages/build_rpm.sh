@@ -123,12 +123,10 @@ fi
 #set -e
 
 # create .spec-file with changelog
-sed -i '/^%changelog/q1' packages/backup-archiver.spec;
-LANG=en_US.utf8 ./packages/changelog.pl --type rpm < ChangeLog >> packages/backup-archiver.spec
+sed '/^%changelog/q1' < $BASE_PATH/packages/backup-archiver.spec > backup-archiver.spec
+LANG=en_US.utf8 $BASE_PATH/packages/changelog.pl --type rpm < $BASE_PATH/ChangeLog >> backup-archiver.spec
 
 # build rpm
-sed -i '/^%changelog/q1' packages/backup-archiver.spec;
-LANG=en_US.utf8 ./packages/changelog.pl --type rpm < ChangeLog >> packages/backup-archiver.spec
 rpmbuild \
   -bb \
   --define "_sourcedir $BASE_PATH" \
@@ -137,7 +135,7 @@ rpmbuild \
   --define "version $version" \
   --define "rpmFileName $rpmFileName" \
   --define "testsFlag $testsFlag" \
-  $BASE_PATH/packages/backup-archiver.spec
+  backup-archiver.spec
 
 # get result
 cp -f /root/rpmbuild/RPMS/*/backup-archiver-[0-9]*.rpm $BASE_PATH/$rpmFileName

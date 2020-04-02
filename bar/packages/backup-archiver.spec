@@ -2,7 +2,7 @@
 
 Name:          %{packageName}
 Version:       %{version}
-Release:       76.1
+Release:       0
 Summary:       Backup ARchiver
 Source:        http://www.kigen.de/projects/bar/%{distributionFileName}
 URL:           http://www.kigen.de/projects/bar/index.html
@@ -182,6 +182,115 @@ rm -f /etc/init.d/barserver
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
+* Sun Jan 20 2019 Torsten Rupp <torsten.rupp@gmx.net> 0.21
+  - parallel test, compare
+  - fragmented and parallel processing of huge files.
+    Speed-up storage of huge files
+  - added meta-data chunk with host, name, UUID, created,
+    comment
+  - added signature chunk with public-key signature SHA512
+    (see options --generate-signature-keys,
+    --signature-prive-key, --signature-public-key,
+    --no-signatures, --skip-verify-signatures)
+  - added meta info chunk: store user name, host name,
+    job UUID, schedule UUID, type, created date/time,
+    comment into archives
+  - hardend encryption: added salt to crypt
+  - hardend encryption: use key derivation function
+  - store only hash of server password in configuration file
+  - support immutable, append-only file attributes
+  - added Zstandard compression
+  - added option --comment
+  - added option --info
+  - added option --generate-keys-mode
+  - added option --directory, -C
+  - added option --convert
+  - added option --no-stop-on-attribute-error
+  - added option --storage-list-stdin, --storage-list,
+    --storage-command
+  - added option --include-file-list, --include-image-list,
+    --exclude-list
+  - renamed option numeric-permission -> numeric-permissions
+  - support SSL WebDAV: webdavs
+  - renamed options --server-jobs-directory to --jobs-directory;
+    option --server-jobs-directory is now deprecated
+  - added option --incremental-data-directory
+  - incremental data is now written to incremental data directory
+    in server mode by default
+  - added option --continuous-min-time-delta
+  - reworked index database: separate fragments of entries; show
+    only entries in GUI and restore fragments automatically if
+    entry is restored
+  - fixed memory leak if archive is broken and cannot be read
+    completely
+  - fixed multiple schedule types for job
+  - fixed command line option: override settings in
+    configuration/job files
+  - upgraded libgcrypt 1.8.0, libgpg-error 1.25
+  - fixed newest entries: name only
+  - fixed delete from index: directories
+  - fixed schedule info on job clone
+  - fixed parsing passwords in SSH/SFTP/WebDav specifiers
+  - fixed checking if archive exists
+  - support SSH password authorization
+  - create common source diretory to avoid name clashes
+  - archive name date/time: schedule date/time
+  - fixed error error message and exit code when no matching
+    storage archives are found
+  - moved index clean-up functions to delete orphaned entries,
+    duplicate entries into bar-sqlite3
+  - CD/DVD/BD: use dvdisaster RS03 encodiung with multiple
+    threads (Note: change or delete settings in bar.cfg to get
+    new default commands!)
+  - continuous is now an optional feature
+  - fixed FTP upload: directory path
+  - fixed FTP upload: avoid abort
+  - fixed SFTP upload: stop/append/overwrite
+  - fixed SFTP URL preset password
+  - fixed SFTP directory list
+  - fixed parse numeric permissions
+  - fixed parse owner
+  - fixed download-third-party.sh: use curl instead of wget,
+    because of a bug in wget under Debian (TLS error)
+  - change CD/DVD/BD write commands: added Joliet
+  - improved database delete: FTS entries
+  - ignore unknown chunks when update index
+  - use C99
+  - upgrade lzo 2.10
+  - upgrade OpenSSL 1.1.1f
+  - upgrade ICU 63.1
+  - upgrade GnuTLS 3.5.19
+  - upgrade mxml 2.12
+  - upgrade libgcrypt 1.8.4
+  - upgrade libcdio 2.1.0
+  - upgrade c-reas 1.15.0
+  - upgrade curl 7.67.0
+  - upgrade SQLite 3.27: UPSERT
+  - upgrade libssh2 1.9.0
+  - upgrade binutils 2.32
+  - added patch to fix memory leak in libssh2
+  - removed ftplib
+  - added debug option --server-debug-index-operations
+  - BARControl: read keys from .pem files, JKS is now
+    obsolete
+  - BARControl: added roles basic/normal/expert
+  - BARControl: pause unit s/m/h for option --pause
+  - BARControl restore tab: select job
+  - BARControl: reset job state via context menu
+  - BARControl: show entities with no job/schedule info
+  - BARControl: added option --index-database-entries-newest
+  - BARControl: added option --index-database-history-list
+  - BARControl: added option --config
+  - BARControl: added option --geometry
+  - BARControl: fixed options --index-database-list-entities,
+    --index-database-list-storages: allow empty text
+  - BARControl: fixed search entries in restore tab
+  - BARControl: require now OpenJDK JRE 1.8
+  - change package build system to docker; build RPM on CentOS 6,
+    DEB on Debian 7
+  - Note: change package name to backup-archiver due to name
+    clash!
+
 * Sat Aug 18 2018 Torsten Rupp <torsten.rupp@gmx.net> 0.20h
   - fixed crash on connection to server
   - fixed process file patterns
@@ -249,7 +358,7 @@ rm -f /etc/init.d/barserver
   - fixed possible read-error on SSL connections
   - BARControl: fixed file requester
 
-* Sat Dec 03 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20b
+* Sun Dec 11 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20b
   - BARControl: fixed SSL encryption. Please re-generate
     the BAR key files with bar-keygen (generate now a
     self-signed certificate)
@@ -259,6 +368,7 @@ rm -f /etc/init.d/barserver
   - BARControl: fixed possible widget dispose error
   - fixed "archive-type" unknown error when edit schedule
     entry
+  - build problem ICU: upgraded to 58.1
 
 * Wed Nov 09 2016 Torsten Rupp <torsten.rupp@gmx.net> 0.20a
   - fixed restore into original path

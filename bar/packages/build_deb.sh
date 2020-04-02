@@ -149,7 +149,9 @@ install packages/debian/compat \
         debian
 install packages/debian/source/format \
         debian/source
-LANG=en_US.utf8 ./packages/changelog.pl --type deb < ChangeLog > debian/changelog
+
+# create changelog
+LANG=en_US.utf8 ./packages/changelog.pl --type deb < $BASE_PATH/ChangeLog > debian/changelog
 
 # build deb
 #debuild \
