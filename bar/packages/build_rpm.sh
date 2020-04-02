@@ -152,4 +152,4 @@ if test $debugFlag -eq 1; then
 fi
 
 #TODO: remove
-/bin/bash
+#/bin/bash
