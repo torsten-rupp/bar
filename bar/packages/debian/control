@@ -38,7 +38,7 @@ Description: Archiver program for compressed and encrypted archives.
 
 Package: backup-archiver-gui
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, bar, java-common
+Depends: ${shlibs:Depends}, ${misc:Depends}, backup-archiver, java-common
 Description: GUI front end for bar
  BAR is backup archiver program. It can create compressed and
  encrypted archives of files and harddisk images which can be

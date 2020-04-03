@@ -178,7 +178,7 @@ rm -f /etc/init.d/barserver
 %lang(jp) %{_datadir}/locale/jp/LC_MESSAGES/bar.mo
 
 %doc ChangeLog doc/README
-%doc doc/bar.pdf
+%doc doc/backup-archiver.pdf
 %doc %{_mandir}/man7/bar.7.gz
 
 %changelog
