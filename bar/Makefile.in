@@ -155,7 +155,7 @@ TARGETS              = bar/bar@EXEEXT@ \
                        ) \
 
 DOC                  = $(if $(TXT2MAN),doc/bar.7) \
-                       $(if $(UNOCONV),doc/bar.pdf) \
+                       $(if $(UNOCONV),doc/backup-archiver.pdf) \
 
 DOC_IMAGES           = doc/images/archivename-editor.png \
                        doc/images/entries.png \
@@ -673,6 +673,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   doc/README \
   doc/COPYING \
   doc/backup-archiver.odt \
+  doc/backup-archiver.pdf \
   doc/*.txt \
   $(DOC) \
   $(DOC_IMAGES) \
