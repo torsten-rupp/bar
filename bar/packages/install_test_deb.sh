@@ -61,10 +61,11 @@ if test -z "$suffix"; then
   exit 1
 fi
 
+set -x
 # install required base packages
-apt-get -y update
-apt-get -y install systemd
-apt-get -y install default-jre-headless
+DEBIAN_FRONTEND=noninteractive apt-get -yq update
+DEBIAN_FRONTEND=noninteractive apt-get -yq install systemd
+DEBIAN_FRONTEND=noninteractive apt-get -yq install default-jre-headless
 
 # install deb
 dpkg -i $BASE_PATH/backup-archiver-$suffix.deb
