@@ -270,6 +270,8 @@ sub writeH()
 #ifndef __ERRORS__
 #define __ERRORS__
 
+#include <stdint.h>
+
 /***********************************************************************\
 * Name   : ERROR_
 * Purpose: create error
