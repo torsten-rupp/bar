@@ -1823,6 +1823,9 @@ Errors __File_openCString(const char *__fileName__,
   int    fileDescriptor;
   Errors error;
   String directoryName;
+  #ifndef HAVE_O_NOATIME
+    struct stat fileStat;
+  #endif /* not HAVE_O_NOATIME */
 
   assert(fileHandle != NULL);
   assert(fileName != NULL);
@@ -1918,11 +1921,11 @@ Errors __File_openCString(const char *__fileName__,
           // store atime
           if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
           {
-            if (fstat(fileDescriptor,&statBuffer) == 0)
+            if (fstat(fileDescriptor,&fileStat) == 0)
             {
-              fileHandle->atime.tv_sec  = stat.st_atime;
+              fileHandle->atime.tv_sec  = fileStat.st_atime;
               #ifdef HAVE_STAT_ATIM_TV_NSEC
-                fileHandle->atime.tv_nsec = stat.st_atim.tv_nsec;
+                fileHandle->atime.tv_nsec = fileStat.st_atim.tv_nsec;
               #else
                 fileHandle->atime.tv_nsec = 0;
               #endif
@@ -3955,11 +3958,11 @@ Errors File_getAttributesCString(FileAttributes *fileAttributes,
 
     #ifndef HAVE_O_NOATIME
       // store atime
-      if (fstat(handle,&stat) == 0)
+      if (fstat(handle,&fileStat) == 0)
       {
-        atime.tv_sec    = stat.st_atime;
+        atime.tv_sec    = fileStat.st_atime;
         #ifdef HAVE_STAT_ATIM_TV_NSEC
-          atime.tv_nsec = stat.st_atim.tv_nsec;
+          atime.tv_nsec = fileStat.st_atim.tv_nsec;
         #else
           atime.tv_nsec = 0;
         #endif
