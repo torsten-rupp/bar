@@ -10867,7 +10867,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     return ERROR_INVALID_ARGUMENT;
   }
 
-  // if daemon then print info
+  // if daemon: print info
   printInfoFlag = !globalOptions.quietFlag && daemonFlag;
 
   // read all configuration files
@@ -10877,6 +10877,13 @@ LOCAL Errors bar(int argc, const char *argv[])
     {
       return ERROR_CONFIG;
     }
+  }
+
+  // if not daemon: reset verbose/quiet flag (overwrite defaults by command line options)
+  if (!daemonFlag)
+  {
+    globalOptions.quietFlag    = FALSE;
+    globalOptions.verboseLevel = 0;
   }
 
   // parse command line: pre+post-options
