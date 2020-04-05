@@ -43,8 +43,9 @@
 /****************** Conditional compilation switches *******************/
 #define INDEX_INTIIAL_CLEANUP            // switch off for debugging only!
 #define INDEX_IMPORT_OLD_DATABASE        // switch off for debugging only!
-#define INDEX_DEBUG_IMPORT_OLD_DATABASE  // switch off for debugging only!
 #define INDEX_SUPPORT_DELETE             // switch off for debugging only!
+
+#define _INDEX_DEBUG_IMPORT_OLD_DATABASE  // switch on for debugging only!
 
 #ifndef INDEX_IMPORT_OLD_DATABASE
   #warning Index import old databases disabled!
