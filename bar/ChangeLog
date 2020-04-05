@@ -1,4 +1,4 @@
-2019-04-02 0.21
+2020-04-05 0.21
   * parallel test, compare
   * fragmented and parallel processing of huge files.
     Speed-up storage of huge files
