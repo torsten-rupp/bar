@@ -1883,46 +1883,6 @@ NULL,//                                                        scheduleTitle,
     }
     Index_endInUse();
 
-    // post-process command
-    if (!String_isEmpty(jobNode->job.options.postProcessScript))
-    {
-      TEXT_MACROS_INIT(textMacros)
-      {
-        TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
-        TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
-        TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
-        TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
-        TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
-        TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
-        TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
-        TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                    NULL);
-        TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
-      }
-      error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
-                              executeStartDateTime,
-                              textMacros.data,
-                              textMacros.count
-                             );
-      if (error == ERROR_NONE)
-      {
-        logMessage(&logHandle,
-                   LOG_TYPE_INFO,
-                   "Executed post-command for '%s'",
-                   String_cString(jobName)
-                  );
-      }
-      else
-      {
-        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
-        logMessage(&logHandle,
-                   LOG_TYPE_ALWAYS,
-                   "Aborted job '%s': post-command fail (error: %s)",
-                   String_cString(jobName),
-                   Error_getText(jobNode->runningInfo.error)
-                  );
-      }
-    }
-
     // get end date/time
     executeEndDateTime = Misc_getCurrentDateTime();
 
@@ -2100,6 +2060,46 @@ NULL,//                                                        scheduleTitle,
           HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
           break;
       #endif /* NDEBUG */
+    }
+
+    // post-process command
+    if (!String_isEmpty(jobNode->job.options.postProcessScript))
+    {
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_STRING ("%name",     jobName,                                                      NULL);
+        TEXT_MACRO_X_STRING ("%archive",  storageName,                                                  NULL);
+        TEXT_MACRO_X_CSTRING("%type",     Archive_archiveTypeToString(archiveType),                     NULL);
+        TEXT_MACRO_X_CSTRING("%T",        Archive_archiveTypeToShortString(archiveType),                NULL);
+        TEXT_MACRO_X_STRING ("%directory",File_getDirectoryName(directory,storageSpecifier.archiveName),NULL);
+        TEXT_MACRO_X_STRING ("%file",     storageSpecifier.archiveName,                                 NULL);
+        TEXT_MACRO_X_CSTRING("%state",    Job_getStateText(jobNode->jobState,jobNode->storageFlags),    NULL);
+        TEXT_MACRO_X_INTEGER("%error",    Error_getCode(jobNode->runningInfo.error),                    NULL);
+        TEXT_MACRO_X_CSTRING("%message",  Error_getText(jobNode->runningInfo.error),                    NULL);
+      }
+      error = executeTemplate(String_cString(jobNode->job.options.postProcessScript),
+                              executeStartDateTime,
+                              textMacros.data,
+                              textMacros.count
+                             );
+      if (error == ERROR_NONE)
+      {
+        logMessage(&logHandle,
+                   LOG_TYPE_INFO,
+                   "Executed post-command for '%s'",
+                   String_cString(jobName)
+                  );
+      }
+      else
+      {
+        if (jobNode->runningInfo.error == ERROR_NONE) jobNode->runningInfo.error = error;
+        logMessage(&logHandle,
+                   LOG_TYPE_ALWAYS,
+                   "Aborted job '%s': post-command fail (error: %s)",
+                   String_cString(jobName),
+                   Error_getText(jobNode->runningInfo.error)
+                  );
+      }
     }
 
     // close index
