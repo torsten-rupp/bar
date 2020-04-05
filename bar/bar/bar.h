@@ -761,10 +761,18 @@ INLINE bool keyEquals(const Key *key0, const Key *key1);
 #if defined(NDEBUG) || defined(__BAR_IMPLEMENTATION__)
 INLINE bool keyEquals(const Key *key0, const Key *key1)
 {
-  assert(key0 != NULL);
-  assert(key1 != NULL);
-
-  return memEquals(key0->data,key0->length,key1->data,key1->length);
+  if      ((key0 != NULL) && (key1 != NULL))
+  {
+    return memEquals(key0->data,key0->length,key1->data,key1->length);
+  }
+  else if ((key0 == NULL) && (key1 == NULL))
+  {
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
 }
 #endif /* NDEBUG || __BAR_IMPLEMENTATION__ */
 
