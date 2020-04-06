@@ -59,7 +59,6 @@
 
 #define _NO_SESSION_ID
 #define _SIMULATOR
-#warning remove/revert
 #define _SIMULATE_PURGE
 #define _NO_AUTO_INDEX
 
@@ -142,8 +141,6 @@ typedef struct
 // aggregate info
 typedef struct
 {
-  uint64 lastExecutedDateTime;
-  String lastErrorMessage;
   struct
   {
     ulong normal;
@@ -1072,8 +1069,6 @@ LOCAL const char *getSlaveStateText(SlaveStates slaveState)
 LOCAL void initAggregateInfo(AggregateInfo *aggregateInfo)
 {
   assert(aggregateInfo != NULL);
-
-  aggregateInfo->lastErrorMessage = String_new();
 }
 
 /***********************************************************************\
@@ -1088,8 +1083,6 @@ LOCAL void initAggregateInfo(AggregateInfo *aggregateInfo)
 LOCAL void doneAggregateInfo(AggregateInfo *aggregateInfo)
 {
   assert(aggregateInfo != NULL);
-
-  String_delete(aggregateInfo->lastErrorMessage);
 }
 
 /***********************************************************************\
@@ -1109,12 +1102,9 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                            )
 {
   assert(aggregateInfo != NULL);
-  assert(aggregateInfo->lastErrorMessage != NULL);
   assert(jobUUID != NULL);
 
   // init variables
-  aggregateInfo->lastExecutedDateTime         = 0LL;
-  String_clear(aggregateInfo->lastErrorMessage);
   aggregateInfo->executionCount.normal        = 0L;
   aggregateInfo->executionCount.full          = 0L;
   aggregateInfo->executionCount.incremental   = 0L;
@@ -1138,8 +1128,6 @@ LOCAL void getAggregateInfo(AggregateInfo *aggregateInfo,
                          jobUUID,
                          scheduleUUID,
                          NULL,  // uuidId
-                         &aggregateInfo->lastExecutedDateTime,
-                         aggregateInfo->lastErrorMessage,
                          &aggregateInfo->executionCount.normal,
                          &aggregateInfo->executionCount.full,
                          &aggregateInfo->executionCount.incremental,
@@ -1875,6 +1863,10 @@ NULL,//                                                        scheduleTitle,
 
     // get end date/time
     executeEndDateTime = Misc_getCurrentDateTime();
+
+    // store last executed date/time, last error message
+    jobNode->runningInfo.lastExecutedDateTime = executeEndDateTime;
+    String_setCString(jobNode->runningInfo.lastErrorMessage,Error_getText(jobNode->runningInfo.error));
 
     // add index history information
     switch (jobNode->jobType)
@@ -3162,8 +3154,6 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                       jobUUID,
                       NULL,  // findScheduleUUID
                       &uuidId,
-                      NULL,  // lastCreatedDateTime,
-                      NULL,  // lastErrorMessage,
                       NULL,  // executionCountNormal,
                       NULL,  // executionCountFull,
                       NULL,  // executionCountIncremental,
@@ -8320,7 +8310,7 @@ LOCAL void serverCommand_jobOptionDelete(ClientInfo *clientInfo, IndexHandle *in
 *            cryptType=<crypt type> \
 *            cryptPasswordMode=<password mode> \
 *            lastExecutedDateTime=<timestamp> \
-*            lastErrorMessage=<test> \
+*            lastErrorMessage=<text> \
 *            estimatedRestTime=<n [s]>
 \***********************************************************************/
 
@@ -18838,8 +18828,6 @@ Errors Server_run(ServerModes       mode,
                        jobNode->job.uuid,
                        NULL  // scheduleUUID
                       );
-      jobNode->runningInfo.lastExecutedDateTime = jobAggregateInfo.lastExecutedDateTime;
-      String_set(jobNode->runningInfo.lastErrorMessage,jobAggregateInfo.lastErrorMessage);
       jobNode->executionCount.normal            = jobAggregateInfo.executionCount.normal;
       jobNode->executionCount.full              = jobAggregateInfo.executionCount.full;
       jobNode->executionCount.incremental       = jobAggregateInfo.executionCount.incremental;
@@ -18862,7 +18850,6 @@ Errors Server_run(ServerModes       mode,
                          jobNode->job.uuid,
                          scheduleNode->uuid
                         );
-        scheduleNode->lastExecutedDateTime = scheduleAggregateInfo.lastExecutedDateTime;
         scheduleNode->totalEntityCount     = scheduleAggregateInfo.totalEntityCount;
         scheduleNode->totalStorageCount    = scheduleAggregateInfo.totalStorageCount;
         scheduleNode->totalStorageSize     = scheduleAggregateInfo.totalStorageSize;
