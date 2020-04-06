@@ -6323,8 +6323,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     ConstString  findJobUUID,
                     ConstString  findScheduleUUID,
                     IndexId      *uuidId,
-                    uint64       *lastExecutedDateTime,
-                    String       lastErrorMessage,
                     ulong        *executionCountNormal,
                     ulong        *executionCountFull,
                     ulong        *executionCountIncremental,
@@ -6370,8 +6368,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       error = Database_prepare(&databaseQueryHandle,
                                &indexHandle->databaseHandle,
                                "SELECT uuids.id, \
-                                       (SELECT UNIXTIMESTAMP(storages.created) FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1), \
-                                       (SELECT storages.errorMessage FROM entities LEFT JOIN storages ON storages.entityId=entities.id WHERE entities.jobUUID=uuids.jobUUID ORDER BY storages.created DESC LIMIT 0,1), \
                                        (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%u), \
                                        (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%u), \
                                        (SELECT COUNT(history.id) FROM history WHERE history.jobUUID=uuids.jobUUID AND history.type=%u), \
@@ -6414,10 +6410,8 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       #endif
 
       if (!Database_getNextRow(&databaseQueryHandle,
-                               "%lld %lld %S %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
+                               "%lld %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
                                &uuidDatabaseId,
-                               lastExecutedDateTime,
-                               lastErrorMessage,
                                executionCountNormal,
                                executionCountFull,
                                executionCountIncremental,
@@ -6469,8 +6463,9 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                       StringMap_getInt64 (resultMap,"uuidId",uuidId,INDEX_ID_NONE);
                                       if (!INDEX_ID_IS_NONE(*uuidId))
                                       {
-                                        if (lastExecutedDateTime        != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",       lastExecutedDateTime,       0LL );
-                                        if (lastErrorMessage            != NULL) StringMap_getString(resultMap,"lastErrorMessage",           lastErrorMessage,           NULL);
+#warning remove/revert
+//                                        if (lastExecutedDateTime        != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",       lastExecutedDateTime,       0LL );
+//                                        if (lastErrorMessage            != NULL) StringMap_getString(resultMap,"lastErrorMessage",           lastErrorMessage,           NULL);
                                         if (executionCountNormal        != NULL) StringMap_getULong (resultMap,"executionCountNormal",       executionCountNormal,       0L  );
                                         if (executionCountFull          != NULL) StringMap_getULong (resultMap,"executionCountFull",         executionCountFull,         0L  );
                                         if (executionCountIncremental   != NULL) StringMap_getULong (resultMap,"executionCountIncremental",  executionCountIncremental,  0L  );

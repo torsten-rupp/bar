@@ -7934,8 +7934,6 @@ Errors Command_create(ServerIO                     *masterIO,
                         jobUUID,
                         NULL,  // scheduleUUID
                         &uuidId,
-                        NULL,  // lastCreatedDateTime,
-                        NULL,  // lastErrorMessage,
                         NULL,  // executionCountNormal,
                         NULL,  // executionCountFull,
                         NULL,  // executionCountIncremental,

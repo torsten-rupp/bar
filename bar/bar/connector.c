@@ -1017,8 +1017,6 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
   StaticString (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString (scheduleUUUID,MISC_UUID_STRING_LENGTH);
   IndexId      uuidId;
-  uint64       lastExecutedDateTime;
-  String       lastErrorMessage;
   ulong        executionCountNormal,executionCountFull,executionCountIncremental,executionCountDifferential,executionCountContinuous;
   uint64       averageDurationNormal,averageDurationFull,averageDurationIncremental,averageDurationDifferential,averageDurationContinuous;
   ulong        totalEntityCount;
@@ -1043,8 +1041,6 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
     return;
   }
 
-  lastErrorMessage = String_new();
-
   if (indexHandle != NULL)
   {
     // find job data
@@ -1052,8 +1048,6 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
                        jobUUID,
                        scheduleUUUID,
                        &uuidId,
-                       &lastExecutedDateTime,
-                       lastErrorMessage,
                        &executionCountNormal,
                        &executionCountFull,
                        &executionCountIncremental,
@@ -1076,10 +1070,8 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
                           id,
                           TRUE,
                           ERROR_NONE,
-                          "uuidId=%lld lastExecutedDateTime=%llu lastErrorMessage=%'S executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
+                          "uuidId=%lld executionCountNormal=%lu executionCountFull=%lu executionCountIncremental=%lu executionCountDifferential=%lu executionCountContinuous=%lu averageDurationNormal=%llu averageDurationFull=%llu averageDurationIncremental=%llu averageDurationDifferential=%llu averageDurationContinuous=%llu totalEntityCount=%lu totalStorageCount=%lu totalStorageSize=%llu totalEntryCount=%lu totalEntrySize=%llu",
                           uuidId,
-                          lastExecutedDateTime,
-                          lastErrorMessage,
                           executionCountNormal,
                           executionCountFull,
                           executionCountIncremental,
@@ -1113,9 +1105,6 @@ LOCAL void connectorCommand_indexFindUUID(ConnectorInfo *connectorInfo, IndexHan
     // send result
     sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
   }
-
-  // free resources
-  String_delete(lastErrorMessage);
 }
 
 /***********************************************************************\

@@ -710,9 +710,6 @@ INLINE DatabaseId Index_getDatabaseId(IndexId indexId)
 *          findScheduleUUID - unique schedule UUID to find (can be NULL)
 * Output : uuidId                      - index id of UUID entry (can be
 *                                        NULL)
-*          lastExecutedDateTime        - last executed date/time stamp
-*                                        [s] (can be NULL)
-*          lastErrorMessage            - last error message (can be NULL)
 *          executionCount              - number job execution (can be
 *                                        NULL)
 *          averageCountNormal          - normal number job execution
@@ -753,8 +750,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                     ConstString  findJobUUID,
                     ConstString  findScheduleUUID,
                     IndexId      *uuidId,
-                    uint64       *lastExecutedDateTime,
-                    String       lastErrorMessage,
                     ulong        *executionCountNormal,
                     ulong        *executionCountFull,
                     ulong        *executionCountIncremental,
