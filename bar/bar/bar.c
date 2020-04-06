@@ -1335,7 +1335,7 @@ LOCAL void signalHandler(int signalNumber)
   // delete temporary directory (Note: do a simple validity check in case something serious went wrong...)
   if (!String_isEmpty(tmpDirectory) && !String_equalsCString(tmpDirectory,"/"))
   {
-    File_delete(tmpDirectory,TRUE);
+    (void)File_delete(tmpDirectory,TRUE);
   }
 
   // Note: do not free resources to avoid further errors
@@ -5194,7 +5194,7 @@ Errors initLog(LogHandle *logHandle)
   if (logHandle->logFile == NULL)
   {
     error = ERRORX_(CREATE_FILE,errno,"%s",String_cString(logHandle->logFileName));
-    File_delete(logHandle->logFileName,FALSE);
+    (void)File_delete(logHandle->logFileName,FALSE);
     String_delete(logHandle->logFileName); logHandle->logFileName = NULL;
     return error;
   }
@@ -5209,7 +5209,7 @@ void doneLog(LogHandle *logHandle)
   if (logHandle->logFile != NULL)
   {
     fclose(logHandle->logFile); logHandle->logFile = NULL;
-    File_delete(logHandle->logFileName,FALSE);
+    (void)File_delete(logHandle->logFileName,FALSE);
     String_delete(logHandle->logFileName); logHandle->logFileName = NULL;
   }
 }
@@ -9800,7 +9800,7 @@ LOCAL void deletePIDFile(void)
 {
   if (pidFileName != NULL)
   {
-    File_deleteCString(pidFileName,FALSE);
+    (void)File_deleteCString(pidFileName,FALSE);
   }
 }
 
@@ -10984,7 +10984,7 @@ LOCAL Errors bar(int argc, const char *argv[])
   }
 
   // delete temporary directory
-  File_delete(tmpDirectory,TRUE);
+  (void)File_delete(tmpDirectory,TRUE);
 
   return error;
 }
