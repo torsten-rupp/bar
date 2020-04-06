@@ -6463,9 +6463,6 @@ bool Index_findUUID(IndexHandle  *indexHandle,
                                       StringMap_getInt64 (resultMap,"uuidId",uuidId,INDEX_ID_NONE);
                                       if (!INDEX_ID_IS_NONE(*uuidId))
                                       {
-#warning remove/revert
-//                                        if (lastExecutedDateTime        != NULL) StringMap_getUInt64(resultMap,"lastExecutedDateTime",       lastExecutedDateTime,       0LL );
-//                                        if (lastErrorMessage            != NULL) StringMap_getString(resultMap,"lastErrorMessage",           lastErrorMessage,           NULL);
                                         if (executionCountNormal        != NULL) StringMap_getULong (resultMap,"executionCountNormal",       executionCountNormal,       0L  );
                                         if (executionCountFull          != NULL) StringMap_getULong (resultMap,"executionCountFull",         executionCountFull,         0L  );
                                         if (executionCountIncremental   != NULL) StringMap_getULong (resultMap,"executionCountIncremental",  executionCountIncremental,  0L  );
