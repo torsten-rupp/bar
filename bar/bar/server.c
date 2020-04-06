@@ -1816,16 +1816,6 @@ NULL,//                                                        scheduleTitle,
               #endif /* NDEBUG */
             }
           #endif /* SIMULATOR */
-
-          logPostProcess(&logHandle,
-                         &jobNode->job.options,
-                         archiveType,
-                         scheduleCustomText,
-                         jobName,
-                         jobNode->jobState,
-                         jobNode->storageFlags,
-                         jobNode->statusInfo.message
-                        );
         }
       }
       else
@@ -2109,6 +2099,18 @@ NULL,//                                                        scheduleTitle,
     }
 
     // done log
+    if      (!Job_isRemote(jobNode))
+    {
+        logPostProcess(&logHandle,
+                       &jobNode->job.options,
+                       archiveType,
+                       scheduleCustomText,
+                       jobName,
+                       jobNode->jobState,
+                       jobNode->storageFlags,
+                       jobNode->statusInfo.message
+                      );
+    }
     doneLog(&logHandle);
 
     // get statistics data
