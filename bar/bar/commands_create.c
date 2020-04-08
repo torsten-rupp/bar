@@ -1036,7 +1036,7 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
   assert(name != NULL);
 
   fragmentCount  = (maxFragmentSize > 0LL)
-                     ? 1+size/maxFragmentSize
+                     ? (size+maxFragmentSize-1)/maxFragmentSize
                      : 1;
   fragmentNumber = 0;
   fragmentOffset = 0LL;
@@ -1177,7 +1177,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   assert(!StringList_isEmpty(nameList));
 
   fragmentCount     = (maxFragmentSize > 0LL)
-                        ? 1+size/maxFragmentSize
+                        ? (size+maxFragmentSize-1)/maxFragmentSize
                         : 1;
   fragmentNumber    = 0;
   fragmentOffset    = 0LL;
@@ -1241,7 +1241,7 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
   assert(name != NULL);
 
   fragmentCount  = (maxFragmentSize > 0LL)
-                     ? 1+size/maxFragmentSize
+                     ? (size+maxFragmentSize-1)/maxFragmentSize
                      : 1;
   fragmentNumber = 0;
   fragmentOffset = 0LL;
