@@ -198,6 +198,21 @@ bzip9       265M 64.03 30.35s    80M
 lzma1       233M 68.33 32.44s   114M
 lzma9       213M 71.04 69.02s  1796M
 
+Algorithm  Size  Ratio Time     Memory
+--------------------------------------
+none       5770M -0.01 132.50s     15M
+lzo1       4865M 15.68 154.78s     16M
+lzo5       4645M 19.49 1188.28s    16M
+lz4-1      4733M 17.97 315.05s     16M
+lz4-16     4733M 17.97 309.41s     15M
+zstd1      4623M 19.87 233.02s     17M
+zstd19     4427M 23.27 5172.18s    71M
+zip9       4550M 21.13 744.11s     17M
+bzip1      4564M 20.89 1525.49s    16M
+bzip9      4536M 21.38 1684.05s    21M
+lzma1      4426M 23.28 2097.76s    22M
+lzma9      4355M 24.52 3888.69s   654M
+
 The compression of lzma9 is usually better than for bzip9 or zip9,
 lzo, lz4, or zstd but the compression time and the required memory
 also increased significantly.
