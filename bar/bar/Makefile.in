@@ -714,7 +714,10 @@ help:
 	@$(ECHO) "  performance2, performance_zip_compress"
 	@$(ECHO) "  performance3, performance_bzip2_compress"
 	@$(ECHO) "  performance4, performance_lzma_compress"
-	@$(ECHO) "  performance5, performance_delta_compress"
+	@$(ECHO) "  performance5, performance_lzo_compress"
+	@$(ECHO) "  performance6, performance_lz4_compress"
+	@$(ECHO) "  performance7, performance_zstd_compress"
+	@$(ECHO) "  performance8, performance_delta_compress"
 	@$(ECHO) ""
 	@$(ECHO) "  crashdump MINIDUMP=<file name>"
 	@$(ECHO) ""
@@ -1881,6 +1884,9 @@ memcheck8: \
 
 # ----------------------------------------------------------------------------
 
+DEVICE_ZERO    = /dev/zero
+DEVICE_RANDOM  = /dev/urandom
+
 # different performance files
 PERFORMANCE_FILES = \
   $(TEST_DATA_DIR)/data/zero100M.dat \
@@ -1923,14 +1929,14 @@ performance:
 	@$(MAKE) \
           $(if $(CHECK),\
             performance$(CHECK),\
-            performance_none performance_zip_compress performance_bzip2_compress performance_lzma_compress performance_delta_compress \
+            performance_none performance_zip_compress performance_bzip2_compress performance_lzma_compress performance_lzo_compress performance_lz4_compress performance_zstd_compress performance_delta_compress \
            )
 
 .PHONY: performance1 performance_none
 performance1 performance_none: \
   $(PERFORMANCE_BAR) \
   $(PERFORMANCE_FILES)
-	@$(ECHO) "None (100M zero, 100M random):"
+	@$(ECHO) "none (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
 	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
@@ -1944,7 +1950,7 @@ performance1 performance_none: \
 performance2 performance_zip_compress: \
   $(PERFORMANCE_BAR) \
   $(PERFORMANCE_FILES)
-	@$(ECHO) "ZIP (100M zero, 100M random):"
+	@$(ECHO) "zip (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
 	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=zip9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
@@ -1958,7 +1964,7 @@ performance2 performance_zip_compress: \
 performance3 performance_bzip2_compress: \
   $(PERFORMANCE_BAR) \
   $(PERFORMANCE_FILES)
-	@$(ECHO) "BZIP2 (100M zero, 100M random):"
+	@$(ECHO) "bzip2 (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
 	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=bzip9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
@@ -1972,7 +1978,7 @@ performance3 performance_bzip2_compress: \
 performance4 performance_lzma_compress: \
   $(PERFORMANCE_BAR) \
   $(PERFORMANCE_FILES)
-	@$(ECHO) "LZMA (100M zero, 100M random):"
+	@$(ECHO) "lzma (100M zero, 100M random):"
 	@$(ECHO_NO_LF) "  Create : "
 	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzma9 1>/dev/null 2>/dev/null"
 	@$(ECHO_NO_LF) "  Test   : "
@@ -1982,12 +1988,54 @@ performance4 performance_lzma_compress: \
 	@$(ECHO_NO_LF) "  Extract: "
 	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
 
-.PHONY: performance5 performance_delta_compress
-performance5 performance_delta_compress: \
+.PHONY: performance5 performance_lzo_compress
+performance5 performance_lzo_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "lyo (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lzo5 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance6 performance_lz4_compress
+performance6 performance_lz4_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "lz4 (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=lz4-16 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance7 performance_zstd_compress
+performance7 performance_zstd_compress: \
+  $(PERFORMANCE_BAR) \
+  $(PERFORMANCE_FILES)
+	@$(ECHO) "zstd (100M zero, 100M random):"
+	@$(ECHO_NO_LF) "  Create : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -c intermediate/test.bar $(TEST_DATA_DIR)/data/zero100M.dat $(TEST_DATA_DIR)/data/random100M.dat --overwrite-archive-files --compress-algorithm=zstd19 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Test   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -t intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Diff   : "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -d intermediate/test.bar 1>/dev/null 2>/dev/null"
+	@$(ECHO_NO_LF) "  Extract: "
+	@$(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "$(PERFORMANCE_BAR) -x intermediate/test.bar --destination=intermediate/restore --overwrite-files 1>/dev/null 2>/dev/null"
+
+.PHONY: performance8 performance_delta_compress
+performance8 performance_delta_compress: \
   $(PERFORMANCE_BAR) \
   $(PERFORMANCE_FILES)
 ifeq (@HAVE_XDELTA3@,1)
-	@$(ECHO) "XDELTA (100M random):"
+	@$(ECHO) "delta (100M random):"
 	@($(CD) $(TEST_DATA_DIR)/data/delta1; ../../../$(PERFORMANCE_BAR) -c ../../test-A.bar test100M.dat --overwrite-archive-files --compress-algorithm=none 1>/dev/null 2>/dev/null)
 	@$(ECHO_NO_LF) "  Create : "
 	@($(CD) $(TEST_DATA_DIR)/data/delta2; $(TEST_ENVIRONMENT) $(TIME) --format="%E" sh -c "../../../$(PERFORMANCE_BAR) -c ../../test-B.bar test100M.dat --overwrite-archive-files --compress-algorithm=xdelta9+lzma9 --delta-source=../../test-A.bar 1>/dev/null 2>/dev/null")
