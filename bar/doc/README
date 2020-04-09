@@ -183,21 +183,6 @@ compression algorithms offer different levels of compression ration and
 time. The following values give a rough impression for compression of
 some arbitary data:
 
-Algorithm  Size  Ratio Time   Memory
----------------------------------------
-none        738M -     31.59s    11M
-lzo1        400M 45.75 36.71s    11M
-lzo5        315M 57.30 38.59s    17M
-lz4-1       357M 51.63 41.39s    14M
-lz4-16      357M 51.63 34.40s    14M
-zstd-1      309M 58.08 23.27s    18M
-zstd-19     237M 67.85 58.28s   657M
-zip9        281M 61.89 41.55s    13M
-bzip1       273M 62.98 29.12s    20M
-bzip9       265M 64.03 30.35s    80M
-lzma1       233M 68.33 32.44s   114M
-lzma9       213M 71.04 69.02s  1796M
-
 Algorithm  Size  Ratio Time     Memory
 --------------------------------------
 none       5770M -0.01 132.50s     15M
