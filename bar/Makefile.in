@@ -246,8 +246,10 @@ help:
 	@$(ECHO) "  keys"
 	@$(ECHO) ""
 	@$(ECHO) "  doc"
+	@$(ECHO) "  clean_doc"
 	@$(ECHO) "  man"
 	@$(ECHO) "  showman"
+	@$(ECHO) "  pdf"
 	@$(ECHO) ""
 	@$(ECHO) "  install"
 	@$(ECHO) ""
@@ -318,15 +320,6 @@ help:
 	@$(ECHO) "  clean_gui"
 
 # ----------------------------------------------------------------------------
-# create main
-
-.PHONY: all
-all: \
-  bar \
-  bar-debug \
-  bar-keygen \
-  barcontrol
-
 # create bar
 .PHONY: bar bar-debug
 
@@ -393,53 +386,27 @@ $(KEY_FILES):
 # ----------------------------------------------------------------------------
 # create documentation
 
-.PHONY: doc clean_doc
-
-doc: \
-  $(DOC) \
-  $(DOC_IMAGES) \
-  $(DOC_IMAGES_SMALL) \
-  $(DOC_IMAGES_LARGE)
+.PHONY: doc clean_doc showman pdf
+doc:
+	@$(MAKE) -C doc
 
 clean_doc:
-	$(RMF) $(DOC)
-	$(RMF) $(DOC_IMAGES)
-	$(RMF) $(DOC_IMAGES_SMALL)
-	$(RMF) $(DOC_IMAGES_LARGE)
+	@$(MAKE) -C doc clean
 
 # create man-page
-
 .PHONY: man clean_man showman
-
-man: \
-  doc/bar.7
+man doc/bar.7:
+	@$(MAKE) -C doc man
 
 clean_man:
-	$(RMF) doc/bar.7
+	@$(MAKE) -C doc clean_man
 
-doc/bar.7: \
-  $(SOURCE_DIR)/doc/bar.txt
-ifneq ($(TXT2MAN),)
-	$(INSTALL) -d $(@D)
-	$(CAT) $(SOURCE_DIR)/doc/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" > $@
-else
-	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
-endif
-
-showman: doc/bar.7
-	$(NROFF) -man doc/bar.7
+showman:
+	@$(MAKE) -C doc showman
 
 # create manual
-
-doc/backup-archiver.pdf: \
-  $(SOURCE_DIR)/doc/backup-archiver.odt \
-  $(DOC_IMAGES)
-ifneq ($(UNOCONV),)
-	$(INSTALL) -d $(@D)
-	($(UNOCONV) -f pdf --stdout $(SOURCE_DIR)/doc/backup-archiver.odt > $@; if test $$? -ne 0; then $(RMF) $@; fi)
-else
-	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."
-endif
+pdf doc/backup-archiver.pdf:
+	@$(MAKE) -C doc backup-archiver.pdf
 
 # ----------------------------------------------------------------------------
 # install/uninstall

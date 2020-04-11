@@ -25051,6 +25051,8 @@ ac_config_files="$ac_config_files bar/po/Makefile"
 
 ac_config_files="$ac_config_files barcontrol/Makefile"
 
+ac_config_files="$ac_config_files doc/Makefile"
+
 
 ac_config_files="$ac_config_files barcontrol/src/Config.java"
 
@@ -25825,6 +25827,7 @@ do
     "bar/test/Makefile") CONFIG_FILES="$CONFIG_FILES bar/test/Makefile" ;;
     "bar/po/Makefile") CONFIG_FILES="$CONFIG_FILES bar/po/Makefile" ;;
     "barcontrol/Makefile") CONFIG_FILES="$CONFIG_FILES barcontrol/Makefile" ;;
+    "doc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
     "barcontrol/src/Config.java") CONFIG_FILES="$CONFIG_FILES barcontrol/src/Config.java" ;;
     "epm.list") CONFIG_FILES="$CONFIG_FILES epm.list" ;;
     "BUILD_NOTE") CONFIG_COMMANDS="$CONFIG_COMMANDS BUILD_NOTE" ;;
