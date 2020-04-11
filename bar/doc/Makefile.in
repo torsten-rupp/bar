@@ -1,0 +1,174 @@
+# ----------------------------------------------------------------------------
+#
+# $Source: /home/torsten/cvs/bar/Makefile.in,v $
+# $Revision: 10654 $
+# $Author: torsten $
+# Contents: Makefile for bar
+# Systems: all
+#
+# ----------------------------------------------------------------------------
+
+#----------------------------- external variables ----------------------------
+
+
+#---------------------------------- settings ---------------------------------
+
+PLATFORM        = @PLATFORM@
+
+#------------------------------------ paths ----------------------------------
+
+SOURCE_DIR             = $(abspath @srcdir@)
+
+#--------------------------------- tool chain --------------------------------
+
+TXT2MAN      = @TXT2MAN@
+UNOCONV      = @UNOCONV@
+
+#---------------------------------- commands----------------------------------
+
+CAT          = cat
+CD           = cd
+CHMOD        = chmod
+CONVERT      = convert
+CP           = cp
+DIFF         = diff
+DOCKER       = @DOCKER@
+ECHO         = echo
+ECHO_NO_LF   = echo -n
+EPM          = @EPM@
+GREP         = grep
+INSTALL      = @INSTALL@
+LN           = ln
+MD5SUM       = @MD5SUM@
+MKDIR        = mkdir
+MV           = mv
+NROFF        = nroff
+PERL         = @PERL@
+PRINTF       = printf
+RMDIR        = rmdir
+RMF          = rm -f
+RMRF         = rm -rf
+SED          = sed
+TAR          = tar
+WINE         = @WINE@
+WINE_C_DRIVE = @WINE_C_DRIVE@
+ZIP          = zip
+
+#------------------------ specific variables/settings ------------------------
+
+SHELL = bash
+
+#-------------------------------- functions ----------------------------------
+
+# print info line
+# $(call functionPrintInfo,text)
+functionPrintInfo = \
+  $(if $(QUIET), \
+    $(ECHO_NO_LF) "$1...",\
+    $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
+   )
+
+# print result
+# $(call functionPrintResult,text)
+functionPrintResult = \
+  $(if $(QUIET), \
+    $(ECHO) "$1",\
+    $(PRINTF) -vl "%$${COLUMNS:-`tput cols 2>&-||$(ECHO) 80`}s\n" && $(PRINTF) -vl -- "--- $1 $${l// /-}\n" && $(ECHO) $${l:0:`tput cols 2>&-||$(ECHO) 80`}\
+   )
+
+#---------------------------------- rules ------------------------------------
+
+# convert images
+images/%.png: images/%.xcf
+	$(CONVERT) $^ -layers flatten $@
+
+images/%-small.png: images/%.xcf
+	$(CONVERT) $^ -delete 1--1 -resize 200x200 $@
+
+images/%-large.png: images/%.xcf
+	$(CONVERT) $^ -delete 1--1 $@
+
+#--------------------------------- objects -----------------------------------
+
+DOC                  = $(if $(TXT2MAN),bar.7) \
+                       $(if $(UNOCONV),backup-archiver.pdf) \
+
+DOC_IMAGES           = images/archivename-editor.png \
+                       images/entries.png \
+                       images/images.png \
+                       images/filters+mounts.png \
+                       images/restore-dialog.png \
+                       images/restore.png \
+                       images/schedule.png \
+                       images/persistence.png \
+                       images/scripts.png \
+                       images/server-commands.png \
+                       images/server-general.png \
+                       images/server-servers.png \
+                       images/server-verbosity+log.png \
+                       images/status.png \
+                       images/storage.png \
+
+DOC_IMAGES_SMALL     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-small.png)
+DOC_IMAGES_LARGE     = $(foreach z,$(patsubst %.png,%,$(DOC_IMAGES)),$z-large.png)
+
+#------------------------------ dependencies ---------------------------------
+
+.PHONY: all clean distclean
+all: \
+  $(DOC) \
+  $(DOC_IMAGES) \
+  $(DOC_IMAGES_SMALL) \
+  $(DOC_IMAGES_LARGE) \
+
+clean:
+	$(RMF) $(DOC)
+	$(RMF) $(DOC_IMAGES)
+	$(RMF) $(DOC_IMAGES_SMALL)
+	$(RMF) $(DOC_IMAGES_LARGE)
+
+distclean: clean
+
+# help
+.PHONY: help
+help:
+	@$(ECHO) "Help targets:"
+	@$(ECHO) ""
+	@$(ECHO) "  all "
+	@$(ECHO) "  clean "
+	@$(ECHO) "  distclean"
+	@$(ECHO) ""
+	@$(ECHO) "  doc"
+	@$(ECHO) "  man"
+	@$(ECHO) "  showman"
+
+# create man-page
+.PHONY: man clean_man showman
+man: \
+  bar.7
+
+bar.7: \
+  $(SOURCE_DIR)/bar.txt
+ifneq ($(TXT2MAN),)
+	$(INSTALL) -d $(@D)
+	$(CAT) $(SOURCE_DIR)/bar.txt | $(TXT2MAN) -t bar -r $(VERSION_MAJOR).$(VERSION_MINOR) -s 7 -v "Linux User's Manual" > $@
+else
+	@$(ECHO) "ERROR: no 'txt2man' tool available! Cannot create man page."
+endif
+
+showman: doc/bar.7
+	$(NROFF) -man doc/bar.7
+
+# create manual
+.PHONY: pdf
+pdf backup-archiver.pdf: \
+  $(SOURCE_DIR)/backup-archiver.odt \
+  $(DOC_IMAGES)
+ifneq ($(UNOCONV),)
+	$(INSTALL) -d $(@D)
+	($(UNOCONV) -f pdf --stdout $(SOURCE_DIR)/backup-archiver.odt > $@; if test $$? -ne 0; then $(RMF) $@; fi)
+else
+	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."
+endif
+
+# end of file
