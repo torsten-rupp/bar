@@ -2930,14 +2930,17 @@ if (false) {
       {
         public void handleEvent(Event event)
         {
-          switch (BARServer.getMode())
+          if (!masterMenuItem.isDisposed())
           {
-            case MASTER:
-              masterMenuItem.setEnabled(false);
-              break;
-            case SLAVE:
-              masterMenuItem.setEnabled(true);
-              break;
+            switch (BARServer.getMode())
+            {
+              case MASTER:
+                masterMenuItem.setEnabled(false);
+                break;
+              case SLAVE:
+                masterMenuItem.setEnabled(true);
+                break;
+            }
           }
         }
       });

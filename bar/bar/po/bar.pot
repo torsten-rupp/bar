@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2020-04-08 13:14+0200\n"
+"POT-Creation-Date: 2020-04-11 10:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -333,7 +333,7 @@ msgstr ""
 msgid "end of compressed file"
 msgstr ""
 
-#: errors.def:287 errors.def:854
+#: errors.def:287 errors.def:861
 msgid "delta source not found"
 msgstr ""
 
@@ -793,102 +793,106 @@ msgstr ""
 msgid "invalid value"
 msgstr ""
 
-#: errors.def:780
+#: errors.def:783
+msgid "deprecated or ignored value"
+msgstr ""
+
+#: errors.def:787
 msgid "authorization fail"
 msgstr ""
 
-#: errors.def:784
+#: errors.def:791
 msgid "job not found"
 msgstr ""
 
-#: errors.def:791
+#: errors.def:798
 msgid "schedule not found"
 msgstr ""
 
-#: errors.def:804
+#: errors.def:811
 msgid "persistence not found"
 msgstr ""
 
-#: errors.def:814
+#: errors.def:821
 msgid "server not found"
 msgstr ""
 
-#: errors.def:824
+#: errors.def:831
 msgid "entry not found"
 msgstr ""
 
-#: errors.def:834
+#: errors.def:841
 msgid "pattern not found"
 msgstr ""
 
-#: errors.def:844
+#: errors.def:851
 msgid "mount not found"
 msgstr ""
 
-#: errors.def:859
+#: errors.def:866
 msgid "database"
 msgstr ""
 
-#: errors.def:863
+#: errors.def:870
 msgid "database already exists"
 msgstr ""
 
-#: errors.def:864
+#: errors.def:871
 msgid "unknown version on index"
 msgstr ""
 
-#: errors.def:868
+#: errors.def:875
 msgid "missing table"
 msgstr ""
 
-#: errors.def:875
+#: errors.def:882
 msgid "missing column"
 msgstr ""
 
-#: errors.def:882
+#: errors.def:889
 msgid "obsolete table"
 msgstr ""
 
-#: errors.def:889
+#: errors.def:896
 msgid "obsolete column"
 msgstr ""
 
-#: errors.def:896
+#: errors.def:903
 msgid "type mismatch"
 msgstr ""
 
-#: errors.def:900
+#: errors.def:907
 msgid "error creating index"
 msgstr ""
 
-#: errors.def:901
+#: errors.def:908
 msgid "index not found"
 msgstr ""
 
-#: errors.def:902
+#: errors.def:909
 msgid "index still not initialized"
 msgstr ""
 
-#: errors.def:906
+#: errors.def:913
 msgid "invalid index"
 msgstr ""
 
-#: errors.def:913
+#: errors.def:920
 msgid "parse index id fail"
 msgstr ""
 
-#: errors.def:917
+#: errors.def:924
 msgid "timeout accessing index"
 msgstr ""
 
-#: errors.def:920
+#: errors.def:927
 msgid "master disconnected"
 msgstr ""
 
-#: errors.def:921
+#: errors.def:928
 msgid "slave disconnected"
 msgstr ""
 
-#: errors.def:922
+#: errors.def:929
 msgid "slave is not paired"
 msgstr ""
