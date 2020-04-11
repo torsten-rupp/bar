@@ -5490,7 +5490,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(fileName != NULL);
-  assert(fragmentNumber < fragmentCount);
+  assert((fragmentCount == 0) || (fragmentNumber < fragmentCount));
   assert(buffer != NULL);
 
   printInfo(1,"Add file      '%s'...",String_cString(fileName));
@@ -5975,7 +5975,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(deviceName != NULL);
-  assert(fragmentNumber < fragmentCount);
+  assert((fragmentCount == 0) || (fragmentNumber < fragmentCount));
   assert(buffer != NULL);
 
   printInfo(1,"Add image     '%s'...",String_cString(deviceName));
@@ -6872,7 +6872,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   assert(createInfo != NULL);
   assert(fileNameList != NULL);
   assert(!StringList_isEmpty(fileNameList));
-  assert(fragmentNumber < fragmentCount);
+  assert((fragmentCount == 0) || (fragmentNumber < fragmentCount));
   assert(buffer != NULL);
 
   printInfo(1,"Add hardlink  '%s'...",String_cString(StringList_first(fileNameList,NULL)));
