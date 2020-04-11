@@ -467,6 +467,7 @@ LOCAL Errors readIncrementalList(const CreateInfo *createInfo,
   IncrementalListInfo incrementalListInfo;
   uint16              keyLength;
 
+  assert(createInfo != NULL);
   assert(fileName != NULL);
   assert(namesDictionary != NULL);
 
@@ -577,6 +578,7 @@ LOCAL Errors writeIncrementalList(const CreateInfo *createInfo,
   uint16                    n;
   const IncrementalListInfo *incrementalListInfo;
 
+  assert(createInfo != NULL);
   assert(fileName != NULL);
   assert(namesDictionary != NULL);
 
@@ -3825,6 +3827,8 @@ LOCAL void storageInfoDecrement(CreateInfo *createInfo, uint64 size)
 
 LOCAL void waitForTemporaryFileSpace(CreateInfo *createInfo)
 {
+  assert(createInfo != NULL);
+
   // wait for space in temporary directory
   if (globalOptions.maxTmpSize > 0)
   {
@@ -5364,6 +5368,10 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, u
 {
   FragmentNode *fragmentNode;
 
+  assert(createInfo != NULL);
+  assert(name != NULL);
+  assert((size == 0LL) || (fragmentCount > 0));
+
   STATUS_INFO_UPDATE(createInfo,name,NULL)
   {
     // get/create fragment node
@@ -5408,14 +5416,20 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 {
   FragmentNode *fragmentNode;
 
+  assert(createInfo != NULL);
+  assert(name != NULL);
+
   SEMAPHORE_LOCKED_DO(&createInfo->statusInfoLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
   {
     // get fragment node
     fragmentNode = FragmentList_find(&createInfo->statusInfoFragmentList,name);
     if (fragmentNode != NULL)
     {
-      // unlock
-      FragmentList_unlockNode(fragmentNode);
+      if (fragmentNode->size > 0LL)
+      {
+        // unlock
+        FragmentList_unlockNode(fragmentNode);
+      }
 
       // check if fragment complete
       if (FragmentList_isComplete(fragmentNode))
@@ -5476,6 +5490,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(fileName != NULL);
+  assert(fragmentNumber < fragmentCount);
   assert(buffer != NULL);
 
   printInfo(1,"Add file      '%s'...",String_cString(fileName));
@@ -5511,6 +5526,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       return error;
     }
   }
+  assert((fileInfo.size == 0LL) || (fragmentCount > 0));
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
@@ -5959,6 +5975,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(deviceName != NULL);
+  assert(fragmentNumber < fragmentCount);
   assert(buffer != NULL);
 
   printInfo(1,"Add image     '%s'...",String_cString(deviceName));
@@ -5995,6 +6012,7 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       return error;
     }
   }
+  assert((deviceInfo.size == 0LL) || (fragmentCount > 0));
 
   // check device block size, get max. blocks in buffer
   if (deviceInfo.blockSize > bufferSize)
@@ -6854,6 +6872,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   assert(createInfo != NULL);
   assert(fileNameList != NULL);
   assert(!StringList_isEmpty(fileNameList));
+  assert(fragmentNumber < fragmentCount);
   assert(buffer != NULL);
 
   printInfo(1,"Add hardlink  '%s'...",String_cString(StringList_first(fileNameList,NULL)));
@@ -6890,6 +6909,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       return error;
     }
   }
+  assert((fileInfo.size == 0LL) || (fragmentCount > 0));
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
