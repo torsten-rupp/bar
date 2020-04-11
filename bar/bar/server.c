@@ -5344,12 +5344,9 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
     String_delete(name);
     return;
   }
-  assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE);
   assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-  if (   (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE)
-      && (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
-     )
+  if (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
   {
     // send value
     value = String_new();
@@ -8113,12 +8110,9 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
       String_delete(name);
       return;
     }
-    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE);
     assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-    if (   (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE)
-        && (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
-       )
+    if (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
     {
       // send value
       s = String_new();
@@ -11977,12 +11971,9 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
       String_delete(name);
       return;
     }
-    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE);
     assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-    if (   (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE)
-        && (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
-       )
+    if (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
     {
       // send value
       s = String_new();
