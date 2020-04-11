@@ -777,6 +777,13 @@ ERROR INVALID_VALUE
     stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
   }
 
+ERROR DEPRECATED_OR_IGNORED_VALUE
+  stringSet(errorText,sizeof(errorText),TR("deprecated or ignored value"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringFormatAppend(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
 ERROR AUTHORIZATION                    TR("authorization fail")
 ERROR JOB_NOT_FOUND
   stringSet(errorText,sizeof(errorText),TR("job not found"));

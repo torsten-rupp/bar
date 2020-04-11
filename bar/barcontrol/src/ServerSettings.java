@@ -279,7 +279,7 @@ public class ServerSettings
     WidgetVariable          maxThreads                 = new WidgetVariable<Integer>("max-threads",                   0    );
 //    WidgetVariable          maxBandWidth               = new WidgetVariable<String >("max-band-width",              ""   );
     WidgetVariable          compressMinSize            = new WidgetVariable<String >("compress-min-size",             ""   );
-    WidgetVariable          serverJobsDirectory        = new WidgetVariable<String >("server-jobs-directory",         ""   );
+    WidgetVariable          serverJobsDirectory        = new WidgetVariable<String >("jobs-directory",                ""   );
 
     WidgetVariable          continuousMaxSize          = new WidgetVariable<String >("continuous-max-size",           ""   );
 

@@ -5344,18 +5344,29 @@ LOCAL void serverCommand_serverOptionGet(ClientInfo *clientInfo, IndexHandle *in
     String_delete(name);
     return;
   }
+  assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE);
+  assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-  // send value
-  value = String_new();
-  ConfigValue_formatInit(&configValueFormat,
-                         &CONFIG_VALUES[i],
-                         CONFIG_VALUE_FORMAT_MODE_VALUE,
-                         &globalOptions
-                        );
-  ConfigValue_format(&configValueFormat,value);
-  ConfigValue_formatDone(&configValueFormat);
-  ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",value);
-  String_delete(value);
+  if (   (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE)
+      && (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
+     )
+  {
+    // send value
+    value = String_new();
+    ConfigValue_formatInit(&configValueFormat,
+                           &CONFIG_VALUES[i],
+                           CONFIG_VALUE_FORMAT_MODE_VALUE,
+                           &globalOptions
+                          );
+    ConfigValue_format(&configValueFormat,value);
+    ConfigValue_formatDone(&configValueFormat);
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",value);
+    String_delete(value);
+  }
+  else
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DEPRECATED_OR_IGNORED_VALUE,"%S",name);
+  }
 
   // free resources
   String_delete(name);
@@ -5409,7 +5420,7 @@ LOCAL void serverCommand_serverOptionSet(ClientInfo *clientInfo, IndexHandle *in
                          NULL, // sectionName
                          CALLBACK_(NULL,NULL),  // errorFunction
                          CALLBACK_(NULL,NULL),  // warningFunction
-                         &globalOptions
+                         NULL  //variable
                         )
      )
   {
@@ -8102,18 +8113,29 @@ LOCAL void serverCommand_jobOptionGet(ClientInfo *clientInfo, IndexHandle *index
       String_delete(name);
       return;
     }
+    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE);
+    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-    // send value
-    s = String_new();
-    ConfigValue_formatInit(&configValueFormat,
-                           &JOB_CONFIG_VALUES[i],
-                           CONFIG_VALUE_FORMAT_MODE_VALUE,
-                           jobNode
-                          );
-    ConfigValue_format(&configValueFormat,s);
-    ConfigValue_formatDone(&configValueFormat);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",s);
-    String_delete(s);
+    if (   (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE)
+        && (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
+       )
+    {
+      // send value
+      s = String_new();
+      ConfigValue_formatInit(&configValueFormat,
+                             &JOB_CONFIG_VALUES[i],
+                             CONFIG_VALUE_FORMAT_MODE_VALUE,
+                             jobNode
+                            );
+      ConfigValue_format(&configValueFormat,s);
+      ConfigValue_formatDone(&configValueFormat);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",s);
+      String_delete(s);
+    }
+    else
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DEPRECATED_OR_IGNORED_VALUE,"%S",name);
+    }
   }
 
   // free resources
@@ -11955,18 +11977,29 @@ LOCAL void serverCommand_scheduleOptionGet(ClientInfo *clientInfo, IndexHandle *
       String_delete(name);
       return;
     }
+    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE);
+    assert(CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED);
 
-    // send value
-    s = String_new();
-    ConfigValue_formatInit(&configValueFormat,
-                           &JOB_CONFIG_VALUES[i],
-                           CONFIG_VALUE_FORMAT_MODE_VALUE,
-                           jobNode
-                          );
-    ConfigValue_format(&configValueFormat,s);
-    ConfigValue_formatDone(&configValueFormat);
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",s);
-    String_delete(s);
+    if (   (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_IGNORE)
+        && (CONFIG_VALUES[i].type != CONFIG_VALUE_TYPE_DEPRECATED)
+       )
+    {
+      // send value
+      s = String_new();
+      ConfigValue_formatInit(&configValueFormat,
+                             &JOB_CONFIG_VALUES[i],
+                             CONFIG_VALUE_FORMAT_MODE_VALUE,
+                             jobNode
+                            );
+      ConfigValue_format(&configValueFormat,s);
+      ConfigValue_formatDone(&configValueFormat);
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"value=%S",s);
+      String_delete(s);
+    }
+    else
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DEPRECATED_OR_IGNORED_VALUE,"%S",name);
+    }
   }
 
   // free resources
