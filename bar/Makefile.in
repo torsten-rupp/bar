@@ -639,6 +639,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
   \
   misc/*.patch \
   \
+  doc/Makefile.in \
   doc/README \
   doc/COPYING \
   doc/backup-archiver.odt \
@@ -676,6 +677,7 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    bin/install-sh
 	$(MAKE) -C bar dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
 	$(MAKE) -C barcontrol dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
+	$(MAKE) -C doc dist DIRECTORY="../tmp/$(DISTRIBUTION_NAME)"
 	#
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
 	$(INSTALL) -m 664 \

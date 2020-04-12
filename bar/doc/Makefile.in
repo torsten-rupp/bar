@@ -171,4 +171,18 @@ else
 	@$(ECHO) "ERROR: no 'unoconv' tool available! Cannot create PDF manual."
 endif
 
+# ----------------------------------------------------------------------------
+
+# copy distribution files
+.PHONY: dist
+dist:
+ifneq ($(DIRECTORY),)
+	$(INSTALL) -d $(DIRECTORY)/doc
+	$(INSTALL) -m 664 \
+                   -t $(DIRECTORY)/doc \
+                   Makefile.in
+else
+	@$(ECHO) Please call 'make dist' from top-level directory to create a distribution.
+endif
+
 # end of file
