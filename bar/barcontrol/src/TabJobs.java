@@ -10765,7 +10765,6 @@ throw new Error("NYI");
                                   );
 
           String newJobUUID = valueMap.getString("jobUUID");
-Dprintf.dprintf("xxxxxxxxxxxxxxx1");
           Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,newJobUUID);
         }
         catch (Exception exception)
@@ -10911,8 +10910,6 @@ throw new Error("NYI");
                                    valueMap
                                   );
           String newJobUUID = valueMap.getString("jobUUID");
-Dprintf.dprintf("newJobUUID=%s",newJobUUID);
-Dprintf.dprintf("xxxxxxxxxxxxxxx2");
           Widgets.notify(shell,BARControl.USER_EVENT_NEW_JOB,newJobUUID);
         }
         catch (Exception exception)
