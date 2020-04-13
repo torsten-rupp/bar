@@ -935,13 +935,19 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
 .PHONY: deb clean_deb
 deb: \
   deb32 \
+  deb-gui32 \
   deb64 \
+  deb-gui64 \
 
 .PHONY: deb32 deb-gui32 deb64 deb-gui64
 deb32: \
   $(DISTRIBUTION_NAME).deb
+deb-gui32: \
+  $(DISTRIBUTION_NAME_GUI).deb
 deb64: \
   $(DISTRIBUTION_NAME)-x86_64.deb
+deb-gui64: \
+  $(DISTRIBUTION_NAME_GUI)-x86_64.deb
 
 clean_deb:
 	$(RMF) $(DISTRIBUTION_NAME).deb
