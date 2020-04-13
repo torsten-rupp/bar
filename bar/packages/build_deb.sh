@@ -178,11 +178,10 @@ debuild \
 #  -i -us -uc -b
 
 # get result
-ls -la
 cp -f $TMP/${packageName}_[0-9]*.deb $BASE_PATH/$debFileName
 chown $userGroup $BASE_PATH/$debFileName
 if test -n "$debFileNameGUI"; then
-  cp -f /tmp/${packageName}-gui_[0-9]*.deb $BASE_PATH/$debFileNameGUI
+  cp -f $TMP/${packageName}-gui_[0-9]*.deb $BASE_PATH/$debFileNameGUI
   chown $userGroup $BASE_PATH/$debFileNameGUI
 fi
 
@@ -198,7 +197,7 @@ if test $debugFlag -eq 1; then
 fi
 
 #TODO: remove
-#/bin/bash
+/bin/bash
 
 # clean-up
 rm -rf $TMP
