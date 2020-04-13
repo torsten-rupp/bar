@@ -158,6 +158,7 @@ rest time
 - single thread: collector sum+collector
 - test after create: chunk-read, test, compare
 - connector: SSL
+- sd_notify()
 
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok
