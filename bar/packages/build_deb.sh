@@ -4,6 +4,8 @@
 
 BASE_PATH=/media/home
 
+TMP=/tmp/debian
+
 # parse arugments
 packageName=""
 distributionFileName=""
@@ -131,24 +133,29 @@ fi
 #trap /bin/bash ERR
 #set -e
 
+# create build directory
+set -x
+install -d $TMP
+cd $TMP
+
 # extract sources
-cd /tmp
 tar xjf $BASE_PATH/$distributionFileName
 cd $packageName-$version
 
 # create debian files with changelog
 install -d debian
-install packages/debian/compat \
+install -t debian \
+        packages/debian/compat \
         packages/debian/control \
         packages/debian/copyright \
         packages/debian/preinst \
         packages/debian/postinst \
         packages/debian/prerm \
         packages/debian/postrm \
-        packages/debian/rules \
-        debian
-install packages/debian/source/format \
-        debian/source
+        packages/debian/rules
+install -d debian/source
+install -t debian/source \
+        packages/debian/source/format
 
 # create changelog
 LANG=en_US.utf8 ./packages/changelog.pl --type deb < $BASE_PATH/ChangeLog > debian/changelog
@@ -171,7 +178,8 @@ debuild \
 #  -i -us -uc -b
 
 # get result
-cp -f /tmp/${packageName}_[0-9]*.deb     $BASE_PATH/$debFileName
+ls -la
+cp -f $TMP/${packageName}_[0-9]*.deb $BASE_PATH/$debFileName
 chown $userGroup $BASE_PATH/$debFileName
 if test -n "$debFileNameGUI"; then
   cp -f /tmp/${packageName}-gui_[0-9]*.deb $BASE_PATH/$debFileNameGUI
@@ -191,3 +199,6 @@ fi
 
 #TODO: remove
 #/bin/bash
+
+# clean-up
+rm -rf $TMP

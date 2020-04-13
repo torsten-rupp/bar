@@ -4,6 +4,8 @@
 
 BASE_PATH=/media/home
 
+TMP=/tmp/rpm
+
 # parse arugments
 packageName=""
 distributionFileName=""
@@ -122,6 +124,10 @@ fi
 #trap /bin/bash ERR
 #set -e
 
+# create build directory
+install -d $TMP
+cd $TMP
+
 # create .spec-file with changelog
 sed '/^%changelog/q1' < $BASE_PATH/packages/backup-archiver.spec > backup-archiver.spec
 LANG=en_US.utf8 $BASE_PATH/packages/changelog.pl --type rpm < $BASE_PATH/ChangeLog >> backup-archiver.spec
@@ -149,5 +155,9 @@ if test $debugFlag -eq 1; then
   /bin/bash
 fi
 
+
 #TODO: remove
 #/bin/bash
+
+# clean-up
+rm -rf $TMP
