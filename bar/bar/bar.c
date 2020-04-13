@@ -4486,12 +4486,6 @@ LOCAL Errors initAll(void)
   ConfigValue_init(CONFIG_VALUES);
   CmdOption_init(COMMAND_LINE_OPTIONS,SIZE_OF_ARRAY(COMMAND_LINE_OPTIONS));
 
-  // special case: set verbose level in interactive mode
-  if (!daemonFlag && !batchFlag)
-  {
-    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
-  }
-
   // done resources
   AutoFree_done(&autoFreeList);
 
@@ -4791,9 +4785,10 @@ Errors updateConfig(void)
       if (serverNode->server.type == SERVER_TYPE_FTP)
       {
         // insert new ftp server section
-        StringList_insertCString(&configLinesList,"",nextStringNode);
-        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
-        StringList_insertCString(&configLinesList,"# FTP login settings",nextStringNode);
+//TODO: format configuration
+//        StringList_insertCString(&configLinesList,"",nextStringNode);
+//        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
+//        StringList_insertCString(&configLinesList,"# FTP login settings",nextStringNode);
         String_format(line,"[ftp-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
@@ -4824,9 +4819,10 @@ Errors updateConfig(void)
       if (serverNode->server.type == SERVER_TYPE_SSH)
       {
         // insert new ssh-server section
-        StringList_insertCString(&configLinesList,"",nextStringNode);
-        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
-        StringList_insertCString(&configLinesList,"# SSH/SCP/SFTP login settings",nextStringNode);
+//TODO: format configuration
+//        StringList_insertCString(&configLinesList,"",nextStringNode);
+//        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
+//        StringList_insertCString(&configLinesList,"# SSH/SCP/SFTP login settings",nextStringNode);
         String_format(line,"[ssh-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
@@ -4857,9 +4853,10 @@ Errors updateConfig(void)
       if (serverNode->server.type == SERVER_TYPE_WEBDAV)
       {
         // insert new webdav-server sections
-        StringList_insertCString(&configLinesList,"",nextStringNode);
-        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
-        StringList_insertCString(&configLinesList,"# WebDAV login settings",nextStringNode);
+//TODO: format configuration
+//        StringList_insertCString(&configLinesList,"",nextStringNode);
+//        StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
+//        StringList_insertCString(&configLinesList,"# WebDAV login settings",nextStringNode);
         String_format(line,"[webdav-server %'S]",serverNode->server.name);
         StringList_insert(&configLinesList,line,nextStringNode);
 
@@ -4887,9 +4884,10 @@ Errors updateConfig(void)
   nextStringNode = ConfigValue_deleteSections(&configLinesList,"master");
   if (nextStringNode == NULL)
   {
-    StringList_insertCString(&configLinesList,"",nextStringNode);
-    StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
-    StringList_insertCString(&configLinesList,"# master settings",nextStringNode);
+//TODO: format configuration
+//    StringList_insertCString(&configLinesList,"",nextStringNode);
+//    StringList_insertCString(&configLinesList,"# ----------------------------------------------------------------------",nextStringNode);
+//    StringList_insertCString(&configLinesList,"# master settings",nextStringNode);
   }
   String_format(line,"[master]");
   StringList_insert(&configLinesList,line,nextStringNode);
@@ -10879,11 +10877,11 @@ LOCAL Errors bar(int argc, const char *argv[])
     }
   }
 
-  // if not daemon: reset verbose/quiet flag (overwrite defaults by command line options)
-  if (!daemonFlag)
+  // special case: set verbose level/quiet flag in interactive mode
+  if (!daemonFlag && !batchFlag)
   {
     globalOptions.quietFlag    = FALSE;
-    globalOptions.verboseLevel = 0;
+    globalOptions.verboseLevel = DEFAULT_VERBOSE_LEVEL_INTERACTIVE;
   }
 
   // parse command line: pre+post-options
