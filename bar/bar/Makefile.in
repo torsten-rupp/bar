@@ -646,7 +646,7 @@ clean: \
 	$(RMF) $(INTERMEDIATE_SOURCES) $(INTERMEDIATE_HEADERS)
 	$(RMF) /tmp/bar.cfg /tmp/bar-slave.cfg /tmp/bar.log /tmp/bar-slave.log /tmp/pairing
 	$(RMF) bar-gcov.info gmon.out
-	$(RMF) $(TARGETS_ALL)
+	$(RMF) $(TARGETS)
 
 distclean: \
   clean \
