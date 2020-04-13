@@ -51,7 +51,7 @@ SQLITE_VERSION=3270200
 # Note ICU: * 61.1 seems to be the latest version without C++11
 #           * 58.2 seems to be the latest version which can be
 #              compiled on older 32bit systems, e. g. CentOS 6
-ICU_VERSION=58.2
+ICU_VERSION=58.3
 MTX_VERSION=1.3.12
 LIBCDIO_VERSION=2.1.0
 BINUTILS_VERSION=2.32
@@ -1173,7 +1173,7 @@ if test $cleanFlag -eq 0; then
        if test -n "$localDirectory" -a -f $localDirectory/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz; then
          fileName=$localDirectory/icu4c-`echo $ICU_VERSION|sed 's/\./_/g'`-src.tgz
        else
-         url="http://download.icu-project.org/files/icu4c/$ICU_VERSION/$fileName"
+         url="https://github.com/unicode-org/icu/releases/download/release-`echo $ICU_VERSION|sed 's/\./-/g'`/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "$url -> $fileName"
