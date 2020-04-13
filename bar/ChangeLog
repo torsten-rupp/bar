@@ -74,7 +74,7 @@
   * use C99
   * upgrade lzo 2.10
   * upgrade OpenSSL 1.1.1f
-  * upgrade ICU 63.1
+  * upgrade ICU 58.3
   * upgrade GnuTLS 3.5.19
   * upgrade mxml 2.12
   * upgrade libgcrypt 1.8.4
