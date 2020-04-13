@@ -2397,7 +2397,10 @@ public class ServerSettings
       }
       catch (Exception exception)
       {
-        Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",exception.getMessage()));
+        if (!shell.isDisposed())
+        {
+          Dialogs.error(shell,BARControl.tr("Flush server options fail (error: {0})",exception.getMessage()));
+        }
       }
     }
   }
