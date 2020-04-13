@@ -3431,9 +3431,11 @@ if (false) {
       public void handleEvent(Event event)
       {
         Shell widget = (Shell)event.widget;
-
-        widget.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
-        updateMaster();
+        if (!widget.isDisposed())
+        {
+          widget.setText("BAR control "+BARServer.getMode()+": "+BARServer.getInfo());
+          updateMaster();
+        }
       }
     });
     shell.addListener(SWT.Close,new Listener()
