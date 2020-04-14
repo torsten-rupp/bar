@@ -155,7 +155,6 @@ if test $debugFlag -eq 1; then
   /bin/bash
 fi
 
-
 #TODO: remove
 #/bin/bash
 
