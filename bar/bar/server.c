@@ -18667,16 +18667,18 @@ Errors Server_run(ServerModes       mode,
 
   logMessage(NULL,  // logHandle,
              LOG_TYPE_ALWAYS,
-             "Started BAR %u.%u server%s on '%s' with %u threads",
+             "Started BAR %u.%u%s server%s on '%s' with %u threads",
              VERSION_MAJOR,
              VERSION_MINOR,
+             VERSION_PATCH,
              (serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
              String_cString(hostName),
              (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
             );
-  printInfo(1,"Started BAR %u.%u server%s on '%s' with %u threads\n",
+  printInfo(1,"Started BAR %u.%u%s server%s on '%s' with %u threads\n",
             VERSION_MAJOR,
             VERSION_MINOR,
+            VERSION_PATCH,
             (serverMode == SERVER_MODE_SLAVE) ? " slave" : "",
             String_cString(hostName),
             (globalOptions.maxThreads != 0) ? globalOptions.maxThreads : Thread_getNumberOfCores()
