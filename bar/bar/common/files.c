@@ -2274,8 +2274,6 @@ Errors File_write(FileHandle *fileHandle,
   }
   if (n != (ssize_t)bufferLength)
   {
-//TODO: add file name?    return ERRORX_(IO,errno,"%s: %E",String_cString(fileHandle->name),errno);
-fprintf(stderr,"%s, %d: FFFFFFFFFFFFFFFFFf %d %s\n",__FILE__,__LINE__,errno,strerror(errno));
     return getLastError(ERROR_CODE_IO,String_cString(fileHandle->name));;
   }
 
@@ -2446,7 +2444,6 @@ Errors File_transfer(FileHandle *fileHandle,
   {
     bufferLength = MIN(length,BUFFER_SIZE);
 
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     n = fread(buffer,1,bufferLength,fromFileHandle->file);
     if (n != (ssize_t)bufferLength)
     {
