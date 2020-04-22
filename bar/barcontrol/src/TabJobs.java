@@ -10446,6 +10446,7 @@ TODO: implement delete entity
     {
       public void handleEvent(Event event)
       {
+        clearSelectedJob();
         addDirectoryRoots();
         addDevicesList();
       }
