@@ -172,7 +172,7 @@ typedef enum
 #define INDEX_TYPE_MAX INDEX_TYPE_HISTORY
 
 #define INDEX_TYPE_SET_NONE 0
-#define INDEX_TYPE_SET_ANY \
+#define INDEX_TYPE_SET_ALL \
   (  SET_VALUE(INDEX_TYPE_UUID) \
    | SET_VALUE(INDEX_TYPE_ENTITY) \
    | SET_VALUE(INDEX_TYPE_STORAGE) \
@@ -185,7 +185,7 @@ typedef enum
    | SET_VALUE(INDEX_TYPE_SPECIAL) \
    | SET_VALUE(INDEX_TYPE_HISTORY) \
   )
-#define INDEX_TYPE_SET_ANY_ENTRY \
+#define INDEX_TYPE_SET_ALL_ENTRIES \
   (  SET_VALUE(INDEX_TYPE_FILE) \
    | SET_VALUE(INDEX_TYPE_IMAGE) \
    | SET_VALUE(INDEX_TYPE_DIRECTORY) \
@@ -1511,6 +1511,7 @@ bool Index_isEmptyEntity(IndexHandle *indexHandle,
 *          scheduleUUID     - unique schedule UUID or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
+*          indexTypeSet     - index type set
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          IndexModeSet     - index mode set
 *          name             - name pattern (glob, can be NULL)
@@ -1533,6 +1534,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               ConstString   scheduleUUID,
                               const IndexId indexIds[],
                               ulong         indexIdCount,
+                              IndexTypeSet  indexTypeSet,
                               IndexStateSet indexStateSet,
                               IndexModeSet  indexModeSet,
                               ConstString   name,
@@ -1568,6 +1570,7 @@ Errors Index_updateStorageInfos(IndexHandle *indexHandle,
 *          scheduleUUID     - unique schedule UUID or NULL
 *          indexIds         - index ids or NULL
 *          indexIdCount     - index id count or 0
+*          indexTypeSet     - index type set
 *          indexStateSet    - index state set
 *          IndexModeSet     - index mode set
 *          userName         - user name (can be NULL)
@@ -1591,6 +1594,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               ConstString           scheduleUUID,
                               const IndexId         indexIds[],
                               ulong                 indexIdCount,
+                              IndexTypeSet          indexTypeSet,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
                               ConstString           userName,

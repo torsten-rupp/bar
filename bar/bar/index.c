@@ -107,12 +107,17 @@ LOCAL const struct
   IndexTypes indexType;
 } INDEX_TYPES[] =
 {
-  { "FILE",      INDEX_TYPE_FILE      },
-  { "IMAGE",     INDEX_TYPE_IMAGE     },
-  { "DIRECTORY", INDEX_TYPE_DIRECTORY },
-  { "LINK",      INDEX_TYPE_LINK      },
-  { "HARDLINK",  INDEX_TYPE_HARDLINK  },
-  { "SPECIAL",   INDEX_TYPE_SPECIAL   },
+  { "UUID",      INDEX_TYPE_UUID       },
+  { "ENTITY",    INDEX_TYPE_ENTITY     },
+  { "STORAGE",   INDEX_TYPE_STORAGE    },
+  { "ENTRY",     INDEX_TYPE_ENTRY      },
+  { "FILE",      INDEX_TYPE_FILE       },
+  { "IMAGE",     INDEX_TYPE_IMAGE      },
+  { "DIRECTORY", INDEX_TYPE_DIRECTORY  },
+  { "LINK",      INDEX_TYPE_LINK       },
+  { "HARDLINK",  INDEX_TYPE_HARDLINK   },
+  { "SPECIAL",   INDEX_TYPE_SPECIAL    },
+  { "HISTORY",   INDEX_TYPE_HISTORY    },
 };
 
 LOCAL const struct
@@ -983,7 +988,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
                                    NULL,  // jobUUID
                                    NULL,  // scheduleUUID,
                                    NULL,  // indexIds
-                                   0,  // storageIdCount,
+                                   0,  // indexIdCount,
+                                   INDEX_TYPE_SET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -1510,7 +1516,8 @@ LOCAL Errors cleanUpStorageNoName(IndexHandle *indexHandle)
                                  NULL,  // jobUUID
                                  NULL,  // scheduleUUID,
                                  NULL,  // indexIds
-                                 0,  // storageIdCount,
+                                 0,  // indexIdCount,
+                                 INDEX_TYPE_SET_ALL,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // hostName
@@ -2885,7 +2892,8 @@ LOCAL Errors refreshStoragesInfos(IndexHandle *indexHandle)
                                  NULL,  // jobUUID
                                  NULL,  // scheduleUUID,
                                  NULL,  // indexIds
-                                 0,  // storageIdCount,
+                                 0,  // indexIdCount,
+                                 INDEX_TYPE_SET_ANY,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // hostName
@@ -8461,7 +8469,7 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
     fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
     fprintf(stderr,"%s, %d: archiveType=%u\n",__FILE__,__LINE__,archiveType);
     fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
-    fprintf(stderr,"%s, %d: offset=%llu, limit=%llu\n",__FILE__,__LINE__,offset,limit);
+    fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
@@ -9005,6 +9013,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
                               ConstString   scheduleUUID,
                               const IndexId indexIds[],
                               ulong         indexIdCount,
+                              IndexTypeSet  indexTypeSet,
                               IndexStateSet indexStateSet,
                               IndexModeSet  indexModeSet,
                               ConstString   name,
@@ -9020,8 +9029,7 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
   String              uuidIdsString,entityIdsString,storageIdsString;
   ulong               i;
   String              filterIdsString;
-  String              indexStateSetString;
-  String              indexModeSetString;
+  String              string;
   DatabaseQueryHandle databaseQueryHandle;
   Errors              error;
   double              totalStorageSize_,totalEntryCount_,totalEntrySize_,totalEntryContentSize_;
@@ -9079,34 +9087,38 @@ Errors Index_getStoragesInfos(IndexHandle   *indexHandle,
         break;
     }
   }
-  #ifdef INDEX_DEBUG_LIST_INFO
-    fprintf(stderr,"%s, %d: Index_getStoragesInfos ------------------------------------------------------\n",__FILE__,__LINE__);
-    fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
-    fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
-    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
-  #endif /* INDEX_DEBUG_LIST_INFO */
 
-  filterIdsString     = String_new();
-  indexStateSetString = String_new();
-  indexModeSetString  = String_new();
-  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-//  filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storages.id IN (%S)",storageIdsString);
+  filterIdsString = String_new();
+  string          = String_new();
+  filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_UUID) && !String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_ENTITY) && !String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
+  filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_STORAGE) && !String_isEmpty(storageIdsString),"OR","storages.id IN (%S)",storageIdsString);
   filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","entity.uuidId=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,!INDEX_ID_IS_ANY(entityId),"AND","storages.entityId=%lld",Index_getDatabaseId(entityId));
   filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
   filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S')",ftsName);
-  filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",getIndexStateSetString(indexStateSetString,indexStateSet));
-  filterAppend(filterString,TRUE,"AND","storages.mode IN (%S)",getIndexModeSetString(indexModeSetString,indexModeSet));
-  String_delete(indexModeSetString);
-  String_delete(indexStateSetString);
+  filterAppend(filterString,TRUE,"AND","storages.state IN (%S)",getIndexStateSetString(string,indexStateSet));
+  filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
+  String_delete(string);
   String_delete(filterIdsString);
 
   #ifdef INDEX_DEBUG_LIST_INFO
+    fprintf(stderr,"%s, %d: Index_getStoragesInfos ------------------------------------------------------\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: indexTypeSet=%s%s%s\n",__FILE__,__LINE__,
+            IN_SET(indexTypeSet,INDEX_TYPE_UUID) ? " UUID" : "",
+            IN_SET(indexTypeSet,INDEX_TYPE_ENTITY) ? " entity" : "",
+            IN_SET(indexTypeSet,INDEX_TYPE_STORAGE) ? " storage" : ""
+           );
+    fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
+    fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
+    fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
+    fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
+
     t0 = Misc_getTimestamp();
   #endif /* INDEX_DEBUG_LIST_INFO */
+
   INDEX_DOX(error,
             indexHandle,
   {
@@ -9292,6 +9304,7 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
                               ConstString           scheduleUUID,
                               const IndexId         indexIds[],
                               ulong                 indexIdCount,
+                              IndexTypeSet          indexTypeSet,
                               IndexStateSet         indexStateSet,
                               IndexModeSet          indexModeSet,
                               ConstString           hostName,
@@ -9305,12 +9318,12 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 {
   String ftsName;
   String filterString;
-  String string;
   String orderString;
+  ulong  i;
   String uuidIdsString,entityIdsString,storageIdsString;
   String filterIdsString;
+  String string;
   Errors error;
-  ulong  i;
 
   assert(indexQueryHandle != NULL);
   assert(indexHandle != NULL);
@@ -9360,15 +9373,15 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   // get filters
   filterIdsString = String_new();
-  string = String_new();
-  filterAppend(filterIdsString,!String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
-  filterAppend(filterIdsString,!String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
-  filterAppend(filterIdsString,!String_isEmpty(storageIdsString),"OR","storages.id IN (%S)",storageIdsString);
+  string          = String_new();
+  filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_UUID) && !String_isEmpty(uuidIdsString),"OR","uuids.id IN (%S)",uuidIdsString);
+  filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_ENTITY) && !String_isEmpty(entityIdsString),"OR","entities.id IN (%S)",entityIdsString);
+  filterAppend(filterIdsString,IN_SET(indexTypeSet,INDEX_TYPE_STORAGE) && !String_isEmpty(storageIdsString),"OR","storages.id IN (%S)",storageIdsString);
+  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   filterAppend(filterString,!INDEX_ID_IS_ANY(uuidId),"AND","uuids.id=%lld",Index_getDatabaseId(uuidId));
   filterAppend(filterString,!INDEX_ID_IS_ANY(entityId),"AND","storages.entityId=%lld",Index_getDatabaseId(entityId));
   filterAppend(filterString,jobUUID != NULL,"AND","entities.jobUUID='%S'",jobUUID);
   filterAppend(filterString,scheduleUUID != NULL,"AND","entities.scheduleUUID='%S'",scheduleUUID);
-  filterAppend(filterString,!String_isEmpty(filterIdsString),"AND","(%S)",filterIdsString);
   filterAppend(filterString,!String_isEmpty(hostName),"AND","entities.hostName LIKE %S",hostName);
   filterAppend(filterString,!String_isEmpty(userName),"AND","storages.userName LIKE %S",userName);
   filterAppend(filterString,!String_isEmpty(ftsName),"AND","storages.id IN (SELECT storageId FROM FTS_storages WHERE FTS_storages MATCH '%S')",ftsName);
@@ -9382,13 +9395,18 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 
   #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: Index_initListStorages ------------------------------------------------------\n",__FILE__,__LINE__);
+    fprintf(stderr,"%s, %d: indexTypeSet=%s%s%s\n",__FILE__,__LINE__,
+            IN_SET(indexTypeSet,INDEX_TYPE_UUID) ? " UUID" : "",
+            IN_SET(indexTypeSet,INDEX_TYPE_ENTITY) ? " entity" : "",
+            IN_SET(indexTypeSet,INDEX_TYPE_STORAGE) ? " storage" : ""
+           );
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
     fprintf(stderr,"%s, %d: storageIdsString=%s\n",__FILE__,__LINE__,String_cString(storageIdsString));
     fprintf(stderr,"%s, %d: hostName=%s\n",__FILE__,__LINE__,String_cString(hostName));
     fprintf(stderr,"%s, %d: userName=%s\n",__FILE__,__LINE__,String_cString(userName));
     fprintf(stderr,"%s, %d: ftsName=%s\n",__FILE__,__LINE__,String_cString(ftsName));
-    fprintf(stderr,"%s, %d: offset=%llu, limit=%llu\n",__FILE__,__LINE__,offset,limit);
+    fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
@@ -10715,7 +10733,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                       LEFT JOIN directoryEntries ON directoryEntries.entryId=entriesNewest.entryId \
                                       LEFT JOIN linkEntries      ON linkEntries.entryId=entriesNewest.entryId \
                                       LEFT JOIN specialEntries   ON specialEntries.entryId=entriesNewest.entryId \
-                                      LEFT JOIN entities         ON entities.id=storages.entityId \
+                                      LEFT JOIN entities         ON entities.id=entriesNewest.entityId \
                                       LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                     WHERE     entities.deletedFlag!=1 \
                                           AND %S \
@@ -10750,7 +10768,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
                                         LEFT JOIN directoryEntries ON directoryEntries.entryId=entries.id \
                                         LEFT JOIN linkEntries      ON linkEntries.entryId=entries.id \
                                         LEFT JOIN specialEntries   ON specialEntries.entryId=entries.id \
-                                        LEFT JOIN entities         ON entities.id=storages.entityId \
+                                        LEFT JOIN entities         ON entities.id=entries.entityId \
                                         LEFT JOIN uuids            ON uuids.jobUUID=entities.jobUUID \
                                       WHERE     entities.deletedFlag!=1 \
                                             AND %S \
@@ -10764,7 +10782,7 @@ Errors Index_getEntriesInfo(IndexHandle   *indexHandle,
           return error;
         }
         #ifdef INDEX_DEBUG_LIST_INFO
-          Database_debugPrintQueryInfo(&indexQueryHandle->databaseQueryHandle);
+          Database_debugPrintQueryInfo(&databaseQueryHandle);
         #endif
         if (!Database_getNextRow(&databaseQueryHandle,
                                  "%lf",
@@ -11073,7 +11091,7 @@ Errors Index_initListEntries(IndexQueryHandle    *indexQueryHandle,
     fprintf(stderr,"%s, %d: Index_initListEntries -------------------------------------------------------\n",__FILE__,__LINE__);
     fprintf(stderr,"%s, %d: uuidIdsString=%s\n",__FILE__,__LINE__,String_cString(uuidIdsString));
     fprintf(stderr,"%s, %d: entityIdsString=%s\n",__FILE__,__LINE__,String_cString(entityIdsString));
-    fprintf(stderr,"%s, %d: offset=%llu, limit=%llu\n",__FILE__,__LINE__,offset,limit);
+    fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
@@ -11449,8 +11467,8 @@ Errors Index_initListEntryFragments(IndexQueryHandle *indexQueryHandle,
 
   #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: Index_initListEntryFragments ------------------------------------------------\n",__FILE__,__LINE__);
-    fprintf(stderr,"%s, %d: entryId=%u\n",__FILE__,__LINE__,entryId);
-    fprintf(stderr,"%s, %d: offset=%llu, limit=%llu\n",__FILE__,__LINE__,offset,limit);
+    fprintf(stderr,"%s, %d: entryId=%ld\n",__FILE__,__LINE__,entryId);
+    fprintf(stderr,"%s, %d: offset=%"PRIu64", limit=%"PRIu64"\n",__FILE__,__LINE__,offset,limit);
   #endif /* INDEX_DEBUG_LIST_INFO */
 
   // prepare list
