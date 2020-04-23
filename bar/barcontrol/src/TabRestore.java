@@ -18,9 +18,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+
 import java.lang.ref.WeakReference;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +35,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 
 // graphics
 import org.eclipse.swt.custom.TreeEditor;
@@ -2338,7 +2344,7 @@ Dprintf.dprintf("");
                                      String       jobUUID          = valueMap.getString("jobUUID"                       );
                                      String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
                                      ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                     long         createdDateTime  = valueMap.getLong  ("createdDateTime"           );
+                                     long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
                                      String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
                                      long         totalSize        = valueMap.getLong  ("totalSize"                     );
                                      long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
@@ -4226,46 +4232,50 @@ Dprintf.dprintf("");
   // --------------------------- variables --------------------------------
 
   // global variable references
-  private Shell                                 shell;
-  private Display                               display;
-  private TabStatus                             tabStatus;
+  private Shell                                                      shell;
+  private Display                                                    display;
+  private TabStatus                                                  tabStatus;
 
   // widgets
-  public  Composite                             widgetTab;
-  private TabFolder                             widgetTabFolder;
+  public  Composite                                                  widgetTab;
+  private TabFolder                                                  widgetTabFolder;
 
-  private TabFolder                             widgetStorageTabFolderTitle;
-  private TabFolder                             widgetStorageTabFolder;
-  private Tree                                  widgetStorageTree;
-  private Shell                                 widgetStorageTreeToolTip = null;
-  private Table                                 widgetStorageTable;
-  private Shell                                 widgetStorageTableToolTip = null;
-  private Text                                  widgetStorageFilter;
-  private Combo                                 widgetStorageStateFilter;
-  private Menu                                  widgetStorageAssignToMenu;
-  final private IndexIdSet                      checkedIndexIdSet = new IndexIdSet();
-  private WidgetEvent                           enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
-  private WidgetEvent                           checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage chang
+  private TabFolder                                                  widgetStorageTabFolderTitle;
+  private TabFolder                                                  widgetStorageTabFolder;
+  private Tree                                                       widgetStorageTree;
+  private Shell                                                      widgetStorageTreeToolTip = null;
+  private Table                                                      widgetStorageTable;
+  private Shell                                                      widgetStorageTableToolTip = null;
+  private Text                                                       widgetStorageFilter;
+  private Combo                                                      widgetStorageStateFilter;
+  private Menu                                                       widgetStorageAssignToMenu;
+  final private IndexIdSet                                           checkedIndexIdSet = new IndexIdSet();
+  private WidgetEvent                                                enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
+  private WidgetEvent                                                checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage change
 
-  private Label                                 widgetEntryTableTitle;
-  private Table                                 widgetEntryTable;
-  private Shell                                 widgetEntryTableToolTip = null;
-  private Text                                  widgetEntryFilter;
-  private Combo                                 widgetEntryTypeFilter;
-  private Button                                widgetEntryNewestOnly;
-  final private IndexIdSet                      checkedEntryIdSet = new IndexIdSet();
-  private WidgetEvent                           enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
-  private WidgetEvent                           checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
+  private Label                                                      widgetEntryTableTitle;
+  private Table                                                      widgetEntryTable;
+  private Shell                                                      widgetEntryTableToolTip = null;
+  private Text                                                       widgetEntryFilter;
+  private Combo                                                      widgetEntryTypeFilter;
+  private Button                                                     widgetEntryNewestOnly;
+  final private IndexIdSet                                           checkedEntryIdSet = new IndexIdSet();
+  private WidgetEvent                                                enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
+  private WidgetEvent                                                checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
 
-  private UpdateStorageTreeTableThread          updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
-  private TabJobs                               tabJobs;
-  private IndexData                             selectedIndexData = null;
+  private UpdateStorageTreeTableThread                               updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
+  private TabJobs                                                    tabJobs;
+  private IndexData                                                  selectedIndexData = null;
 
-  private UpdateEntryTableThread                updateEntryTableThread = new UpdateEntryTableThread();
+  private Timer                                                      updateAssignToTimer        = new Timer(true);
+  private TimerTask                                                  updateAssignToTimerTask    = null;
+  private Object                                                     assignToLock               = new Object();
+  private java.util.List<UUIDIndexData>                              assignToUUIDIndexDataList  = null;
+  private Map<String,java.util.List<EntityIndexData>>                assignToEntityIndexDataMap = null;
+  private Map<String,Map<ArchiveTypes,java.util.List<AssignToData>>> assignToDataMap            = null;
 
-  private final ArrayListCache<UUIDIndexData>   uuidIndexDataListCache = new ArrayListCache<UUIDIndexData>();
-  private ArrayListCacheMap<EntityIndexData>    entityIndexDataListCacheMap = new ArrayListCacheMap<EntityIndexData>();
-  private final ArrayListCacheMap<AssignToData> assignToDataCacheMap = new ArrayListCacheMap<AssignToData>();
+  private UpdateEntryTableThread                                     updateEntryTableThread = new UpdateEntryTableThread();
+
 
   // ------------------------ native functions ----------------------------
 
@@ -5152,7 +5162,7 @@ Dprintf.dprintf("");
       {
         TabItem tabItem = (TabItem)selectionEvent.item;
         TabItem[] tabItems = parentTabFolder.getItems();
-        if ((tabItems.length >= 3) && (tabItem == tabItems[2]))
+        if ((tabItems.length >= 3) && (tabItems[2] == tabItem))
         {
           if (updateEntryTableThread.getTotalEntryCount() >= MAX_SHOWN_ENTRIES)
           {
@@ -5164,6 +5174,19 @@ Dprintf.dprintf("");
                                          )
                            );
           }
+
+          updateAssignToTimerTask = new TimerTask()
+                                    {
+                                      public void run()
+                                      {
+                                        updateAssignTo();
+                                      }
+                                    };
+          updateAssignToTimer.schedule(updateAssignToTimerTask,0,30*1000);
+        }
+        else
+        {
+          updateAssignToTimerTask.cancel();
         }
       }
     });
@@ -5880,7 +5903,14 @@ Dprintf.dprintf("");
         {
           public void handleEvent(Event event)
           {
-            updateAssignToMenu(widgetStorageAssignToMenu);
+            synchronized(assignToLock)
+            {
+              updateAssignToMenu(widgetStorageAssignToMenu,
+                                 assignToUUIDIndexDataList,
+                                 assignToEntityIndexDataMap,
+                                 assignToDataMap
+                                );
+            }
           }
         });
 
@@ -7321,77 +7351,143 @@ Dprintf.dprintf("");
     return indexDataHashSet;
   }
 
-  /** update assign-to sub-menu
-   * @param menu menu
+  /** update assign-to
    */
-  private synchronized void updateAssignToMenu(final Menu menu)
+  private void updateAssignTo()
   {
-    // discard old menu items
-    for (MenuItem menuItem : menu.getItems())
-    {
-      menuItem.dispose();
-    }
-
-    // insert new UUIDs menu items
     try
     {
-      final ArrayList<UUIDIndexData> uuidIndexDataList = uuidIndexDataListCache.getData();
-
-      // update cache every 30s
-      if (uuidIndexDataListCache.isExpired(30*1000))
-      {
-        // get UUID index data list
-        uuidIndexDataList.clear();
-        BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=* indexModeSet=*"),
-                                 2,  // debugLevel
-                                 new Command.ResultHandler()
+      // get UUID index data list
+      final java.util.List<UUIDIndexData> assignToUUIDIndexDataList = new ArrayList<UUIDIndexData>();
+      BARServer.executeCommand(StringParser.format("INDEX_UUID_LIST indexStateSet=* indexModeSet=*"),
+                               2,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
                                  {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
-                                   {
-                                     long   uuidId               = valueMap.getLong  ("uuidId"              );
-                                     String jobUUID              = valueMap.getString("jobUUID"             );
-                                     String name                 = valueMap.getString("name"                );
-                                     long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
-                                     String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
-                                     long   totalSize            = valueMap.getLong  ("totalSize"           );
-                                     long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
-                                     long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
+                                   long   uuidId               = valueMap.getLong  ("uuidId"              );
+                                   String jobUUID              = valueMap.getString("jobUUID"             );
+                                   String name                 = valueMap.getString("name"                );
+                                   long   lastExecutedDateTime = valueMap.getLong  ("lastExecutedDateTime");
+                                   String lastErrorMessage     = valueMap.getString("lastErrorMessage"    );
+                                   long   totalSize            = valueMap.getLong  ("totalSize"           );
+                                   long   totalEntryCount      = valueMap.getLong  ("totalEntryCount"     );
+                                   long   totalEntrySize       = valueMap.getLong  ("totalEntrySize"      );
 
-                                     // add UUID index data
-                                     uuidIndexDataList.add(new UUIDIndexData(uuidId,
-                                                                             jobUUID,
-                                                                             name,
-                                                                             lastExecutedDateTime,
-                                                                             lastErrorMessage,
-                                                                             totalSize,
-                                                                             totalEntryCount,
-                                                                             totalEntrySize
-                                                                            )
-                                                          );
-                                   }
+                                   // add UUID index data
+                                   assignToUUIDIndexDataList.add(new UUIDIndexData(uuidId,
+                                                                                   jobUUID,
+                                                                                   name,
+                                                                                   lastExecutedDateTime,
+                                                                                   lastErrorMessage,
+                                                                                   totalSize,
+                                                                                   totalEntryCount,
+                                                                                   totalEntrySize
+                                                                                  )
+                                                                );
                                  }
-                                );
-        uuidIndexDataListCache.updated();
-      }
+                               }
+                              );
 
-      // update menu
-      for (final UUIDIndexData uuidIndexData : uuidIndexDataList)
+      // get entity index data list
+      final Map<String,java.util.List<EntityIndexData>> assignToEntityIndexDataMap = new HashMap<String,java.util.List<EntityIndexData>>();
+      BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=*"),
+                               2,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   long         entityId         = valueMap.getLong  ("entityId"                      );
+                                   String       jobUUID          = valueMap.getString("jobUUID"                       );
+                                   String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
+                                   ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
+                                   long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
+                                   String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
+                                   long         totalSize        = valueMap.getLong  ("totalSize"                     );
+                                   long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
+                                   long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
+                                   long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
+
+                                   // get entity data list
+                                   java.util.List<EntityIndexData> entityIndexDataList = assignToEntityIndexDataMap.get(jobUUID);
+                                   if (entityIndexDataList == null)
+                                   {
+                                     entityIndexDataList = new ArrayList<EntityIndexData>();
+                                     assignToEntityIndexDataMap.put(jobUUID,entityIndexDataList);
+                                   }
+
+                                   // add entity data index
+                                   entityIndexDataList.add(new EntityIndexData(entityId,
+                                                                               jobUUID,
+                                                                               scheduleUUID,
+                                                                               archiveType,
+                                                                               createdDateTime,
+                                                                               lastErrorMessage,
+                                                                               totalSize,
+                                                                               totalEntryCount,
+                                                                               totalEntrySize,
+                                                                               expireDateTime
+                                                                              )
+                                                        );
+                                 }
+                               }
+                              );
+
+
+      // get job schedule index data list
+      final Map<String,Map<ArchiveTypes,java.util.List<AssignToData>>> assignToDataMap = new HashMap<String,Map<ArchiveTypes,java.util.List<AssignToData>>>();
+      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST"),
+                               2,  // debugLevel
+                               new Command.ResultHandler()
+                               {
+                                 @Override
+                                 public void handle(int i, ValueMap valueMap)
+                                 {
+                                   String        jobUUID      = valueMap.getString ("jobUUID"                       );
+                                   String        scheduleUUID = valueMap.getString ("scheduleUUID"                  );
+                                   ArchiveTypes  archiveType  = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
+                                   final String  date         = valueMap.getString ("date"                          );
+                                   final String  weekDays     = valueMap.getString ("weekDays"                      );
+                                   final String  time         = valueMap.getString ("time"                          );
+                                   final String  customText   = valueMap.getString ("customText"                    );
+                                   final boolean enabled      = valueMap.getBoolean("enabled"                       );
+
+                                   // get archive type list
+                                   Map<ArchiveTypes,java.util.List<AssignToData>> archiveTypeMap = assignToDataMap.get(jobUUID);
+                                   if (archiveTypeMap == null)
+                                   {
+                                     archiveTypeMap = new HashMap<ArchiveTypes,java.util.List<AssignToData>>();
+                                     assignToDataMap.put(jobUUID,archiveTypeMap);
+                                   }
+
+                                   // get assign-to data list
+                                   java.util.List<AssignToData> assignToDataList = archiveTypeMap.get(archiveType);
+                                   if (assignToDataList == null)
+                                   {
+                                     assignToDataList = new ArrayList<AssignToData>();
+                                     archiveTypeMap.put(archiveType,assignToDataList);
+                                   }
+
+                                   // add assign-to data with schedule
+                                   assignToDataList.add(new AssignToData(jobUUID,
+                                                                         scheduleUUID,
+                                                                         date,
+                                                                         weekDays,
+                                                                         time,
+                                                                         customText,
+                                                                         enabled
+                                                                        )
+                                                       );
+                                 }
+                               });
+
+      synchronized(assignToLock)
       {
-        final Menu subMenu = Widgets.insertMenu(menu,
-                                                findStorageMenuIndex(menu,uuidIndexData),
-                                                (Object)uuidIndexData,
-                                                uuidIndexData.name.replaceAll("&","&&")
-                                               );
-        uuidIndexData.setSubMenu(subMenu);
-
-        subMenu.addListener(SWT.Show,new Listener()
-        {
-          public void handleEvent(Event event)
-          {
-            updateAssignToMenu(subMenu,uuidIndexData.jobUUID);
-          }
-        });
+        this.assignToUUIDIndexDataList  = assignToUUIDIndexDataList;
+        this.assignToEntityIndexDataMap = assignToEntityIndexDataMap;
+        this.assignToDataMap            = assignToDataMap;
       }
     }
     catch (Exception exception)
@@ -7405,10 +7501,53 @@ Dprintf.dprintf("");
 
   /** update assign-to sub-menu
    * @param menu menu
-   * @param jobUUID job UUID
+   * @param uuidIndexDataList UUID inded data list
+   * @param entityIndexDataMap entity index data map
+   * @param assignToDataMap assign-to data map
    */
-  private void updateAssignToMenu(Menu         subMenu,
-                                  final String jobUUID
+  private synchronized void updateAssignToMenu(Menu                                                       menu,
+                                               java.util.List<UUIDIndexData>                              uuidIndexDataList,
+                                               Map<String,java.util.List<EntityIndexData>>                entityIndexDataMap,
+                                               Map<String,Map<ArchiveTypes,java.util.List<AssignToData>>> assignToDataMap
+                                              )
+  {
+    // discard old menu items
+    for (MenuItem menuItem : menu.getItems())
+    {
+      menuItem.dispose();
+    }
+
+    // update menu
+    if (uuidIndexDataList != null)
+    {
+      for (UUIDIndexData uuidIndexData : uuidIndexDataList)
+      {
+        Menu subMenu = Widgets.insertMenu(menu,
+                                          findStorageMenuIndex(menu,uuidIndexData),
+                                          (Object)uuidIndexData,
+                                          uuidIndexData.name.replaceAll("&","&&")
+                                         );
+        uuidIndexData.setSubMenu(subMenu);
+
+        updateAssignToMenu(subMenu,
+                           uuidIndexData.jobUUID,
+                           entityIndexDataMap.get(uuidIndexData.jobUUID),
+                           assignToDataMap.get(uuidIndexData.jobUUID)
+                          );
+      }
+    }
+  }
+
+  /** update assign-to sub-menu
+   * @param menu menu
+   * @param jobUUID job UUID
+   * @param entityIndexDataList entity index data list
+   * @param archiveTypeMap archive type map
+   */
+  private void updateAssignToMenu(Menu                                           subMenu,
+                                  String                                         jobUUID,
+                                  java.util.List<EntityIndexData>                entityIndexDataList,
+                                  Map<ArchiveTypes,java.util.List<AssignToData>> archiveTypeMap
                                  )
   {
     Menu subSubMenu;
@@ -7426,7 +7565,8 @@ Dprintf.dprintf("");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       ArchiveTypes.NORMAL
+                       ArchiveTypes.NORMAL,
+                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.NORMAL) : null
                       );
 
     // add full menu items
@@ -7436,7 +7576,8 @@ Dprintf.dprintf("");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       ArchiveTypes.FULL
+                       ArchiveTypes.FULL,
+                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.FULL) : null
                       );
 
     // add incremental menu items
@@ -7446,7 +7587,8 @@ Dprintf.dprintf("");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       ArchiveTypes.INCREMENTAL
+                       ArchiveTypes.INCREMENTAL,
+                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.INCREMENTAL) : null
                       );
 
 
@@ -7457,7 +7599,8 @@ Dprintf.dprintf("");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       ArchiveTypes.DIFFERENTIAL
+                       ArchiveTypes.DIFFERENTIAL,
+                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.DIFFERENTIAL) : null
                       );
 
     // add continuous menu items
@@ -7467,60 +7610,15 @@ Dprintf.dprintf("");
                                 );
     updateAssignToMenu(subSubMenu,
                        jobUUID,
-                       ArchiveTypes.CONTINUOUS
+                       ArchiveTypes.CONTINUOUS,
+                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.CONTINUOUS) : null
                       );
 
     Widgets.addMenuItemSeparator(subMenu);
 
     // add entity menu items
-    try
+    if (entityIndexDataList != null)
     {
-      ArrayListCache<EntityIndexData>  entityIndexDataListCache = entityIndexDataListCacheMap.get(jobUUID);
-      final ArrayList<EntityIndexData> entityIndexDataList      = entityIndexDataListCache.getData();
-
-      // update cache every 30s
-      if (entityIndexDataListCache.isExpired(30*1000))
-      {
-        entityIndexDataList.clear();
-        BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST jobUUID=%'S indexStateSet=* indexModeSet=*",
-                                                     jobUUID
-                                                    ),
-                                 2,  // debugLevel
-                                 new Command.ResultHandler()
-                                 {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
-                                   {
-                                     long         entityId         = valueMap.getLong  ("entityId"                      );
-                                     String       jobUUID          = valueMap.getString("jobUUID"                       );
-                                     String       scheduleUUID     = valueMap.getString("scheduleUUID"                  );
-                                     ArchiveTypes archiveType      = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
-                                     long         createdDateTime  = valueMap.getLong  ("createdDateTime"               );
-                                     String       lastErrorMessage = valueMap.getString("lastErrorMessage"              );
-                                     long         totalSize        = valueMap.getLong  ("totalSize"                     );
-                                     long         totalEntryCount  = valueMap.getLong  ("totalEntryCount"               );
-                                     long         totalEntrySize   = valueMap.getLong  ("totalEntrySize"                );
-                                     long         expireDateTime   = valueMap.getLong  ("expireDateTime"                );
-
-                                     // add entity data index
-                                     entityIndexDataList.add(new EntityIndexData(entityId,
-                                                                                 jobUUID,
-                                                                                 scheduleUUID,
-                                                                                 archiveType,
-                                                                                 createdDateTime,
-                                                                                 lastErrorMessage,
-                                                                                 totalSize,
-                                                                                 totalEntryCount,
-                                                                                 totalEntrySize,
-                                                                                 expireDateTime
-                                                                                )
-                                                          );
-                                   }
-                                 }
-                                );
-        entityIndexDataListCache.updated();
-      }
-
       for (EntityIndexData entityIndexData : entityIndexDataList)
       {
         MenuItem menuItem = Widgets.addMenuItem(subMenu,
@@ -7549,23 +7647,18 @@ Dprintf.dprintf("");
         });
       }
     }
-    catch (Exception exception)
-    {
-      if (Settings.debugLevel > 0)
-      {
-        BARControl.internalError(exception);
-      }
-    }
   }
 
   /** update assign-to sub-menu
    * @param menu menu
    * @param jobUUID job UUID
    * @param archiveType archive type
+   * @param assignToDataList assign-to data list
    */
-  private void updateAssignToMenu(final Menu         menu,
-                                  final String       jobUUID,
-                                  final ArchiveTypes archiveType
+  private void updateAssignToMenu(final Menu                   menu,
+                                  final String                 jobUUID,
+                                  final ArchiveTypes           archiveType,
+                                  java.util.List<AssignToData> assignToDataList
                                  )
   {
     MenuItem menuItem;
@@ -7587,47 +7680,9 @@ Dprintf.dprintf("");
       }
     });
 
-    try
+    // add assign-to menu items
+    if (assignToDataList != null)
     {
-      ArrayListCache<AssignToData>  assignToDataListCache = assignToDataCacheMap.get(jobUUID+archiveType.toString());
-      final ArrayList<AssignToData> assignToDataList      = assignToDataListCache.getData();
-
-      if (assignToDataListCache.isExpired(30*1000))
-      {
-        // get assign-to data list
-        assignToDataList.clear();
-        BARServer.executeCommand(StringParser.format("SCHEDULE_LIST jobUUID=%'S archiveType=%s",
-                                                     jobUUID,
-                                                     archiveType.toString()
-                                                    ),
-                                 2,  // debugLevel
-                                 new Command.ResultHandler()
-                                 {
-                                   @Override
-                                   public void handle(int i, ValueMap valueMap)
-                                   {
-                                     String        scheduleUUID = valueMap.getString("scheduleUUID");
-                                     final String  date         = valueMap.getString("date"        );
-                                     final String  weekDays     = valueMap.getString("weekDays"    );
-                                     final String  time         = valueMap.getString("time"        );
-                                     final String  customText   = valueMap.getString("customText"  );
-                                     final boolean enabled      = valueMap.getBoolean("enabled");
-
-                                     // add assign-to data with schedule
-                                     assignToDataList.add(new AssignToData(jobUUID,
-                                                                           scheduleUUID,
-                                                                           date,
-                                                                           weekDays,
-                                                                           time,
-                                                                           customText,
-                                                                           enabled
-                                                                          )
-                                                         );
-                                   }
-                                 });
-        assignToDataListCache.updated();
-      }
-
       for (AssignToData assignToData : assignToDataList)
       {
         menuItem = Widgets.addMenuItem(menu,
@@ -7653,13 +7708,6 @@ Dprintf.dprintf("");
             assignStorages(assignToData.jobUUID,assignToData.scheduleUUID,archiveType);
           }
         });
-      }
-    }
-    catch (Exception exception)
-    {
-      if (Settings.debugLevel > 0)
-      {
-        BARControl.internalError(exception);
       }
     }
   }

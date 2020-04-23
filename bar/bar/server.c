@@ -10931,9 +10931,10 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            jobUUID=<uuid>
-*            archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS
+*            [jobUUID=<uuid>]
+*            [archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS]
 *          Result:
+*            jobUUID=<uuid> \
 *            scheduleUUID=<uuid> \
 *            archiveType=normal|full|incremental|differential
 *            date=<year>|*-<month>|*-<day>|* \
@@ -10951,37 +10952,22 @@ LOCAL void serverCommand_excludeCompressListRemove(ClientInfo *clientInfo, Index
 
 LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
-  ArchiveTypes  archiveType;
-  const JobNode *jobNode;
-  ScheduleNode  *scheduleNode;
-  String        date,weekDays,time;
+  /***********************************************************************\
+  * Name   : sendJobScheduleList
+  * Purpose: send job schedule list
+  * Input  : jobNode     - job node
+  *          archiveType - archive type
+  * Output : -
+  * Return : -
+  * Notes  : -
+  \***********************************************************************/
 
-  assert(clientInfo != NULL);
-  assert(argumentMap != NULL);
-
-  UNUSED_VARIABLE(indexHandle);
-
-  // get job UUID, archive type
-  if (!StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL))
+  auto void sendJobScheduleList(const JobNode *jobNode, ArchiveTypes archiveType);
+  void sendJobScheduleList(const JobNode *jobNode, ArchiveTypes archiveType)
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid>");
-    return;
-  }
-  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
+    ScheduleNode *scheduleNode;
+    String       date,weekDays,time;
 
-  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
-  {
-    // find job
-    jobNode = Job_findByUUID(jobUUID);
-    if (jobNode == NULL)
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
-      Job_listUnlock();
-      return;
-    }
-
-    // send schedule list
     date     = String_new();
     weekDays = String_new();
     time     = String_new();
@@ -11057,7 +11043,8 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
 
         // send schedule info
         ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                            "scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                            "jobUUID=%S scheduleUUID=%S archiveType=%s date=%S weekDays=%S time=%S interval=%u customText=%'S noStorage=%y enabled=%y lastExecutedDateTime=%"PRIu64" totalEntities=%lu totalStorageCount=%lu totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                            jobNode->job.uuid,
                             scheduleNode->uuid,
                             (scheduleNode->archiveType != ARCHIVE_TYPE_UNKNOWN) ? Archive_archiveTypeToString(scheduleNode->archiveType) : "*",
                             date,
@@ -11078,6 +11065,45 @@ LOCAL void serverCommand_scheduleList(ClientInfo *clientInfo, IndexHandle *index
     String_delete(time);
     String_delete(weekDays);
     String_delete(date);
+  }
+
+  StaticString  (jobUUID,MISC_UUID_STRING_LENGTH);
+  ArchiveTypes  archiveType;
+  const JobNode *jobNode;
+
+  assert(clientInfo != NULL);
+  assert(argumentMap != NULL);
+
+  UNUSED_VARIABLE(indexHandle);
+
+  // get job UUID, archive type
+  StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
+  StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_NONE);
+
+  JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
+  {
+    if (!String_isEmpty(jobUUID))
+    {
+      // find job
+      jobNode = Job_findByUUID(jobUUID);
+      if (jobNode == NULL)
+      {
+        ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);
+        Job_listUnlock();
+        return;
+      }
+
+      // send schedule list
+      sendJobScheduleList(jobNode,archiveType);
+    }
+    else
+    {
+      // send schedule list for all jobs
+      JOB_LIST_ITERATE(jobNode)
+      {
+        sendJobScheduleList(jobNode,archiveType);
+      }
+    }
   }
 
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
@@ -11165,7 +11191,7 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"archiveType","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"archiveType",NULL),"*"))
   {
     archiveType = ARCHIVE_TYPE_NORMAL;
   }
@@ -11562,7 +11588,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"minKeep","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"minKeep",NULL),"*"))
   {
     minKeep = KEEP_ALL;
   }
@@ -11574,7 +11600,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       return;
     }
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep",NULL),"*"))
   {
     maxKeep = KEEP_ALL;
   }
@@ -11586,7 +11612,7 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
       return;
     }
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxAge","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxAge",NULL),"*"))
   {
     maxAge = AGE_FOREVER;
   }
@@ -11696,7 +11722,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"minKeep","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"minKeep",NULL),"*"))
   {
     minKeep = KEEP_ALL;
   }
@@ -11708,7 +11734,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
       return;
     }
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep",NULL),"*"))
   {
     maxKeep = KEEP_ALL;
   }
@@ -11720,7 +11746,7 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
       return;
     }
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxAge","*"),"*"))
+  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxAge",NULL),"*"))
   {
     maxAge = AGE_FOREVER;
   }
@@ -13410,7 +13436,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   assert(argumentMap != NULL);
 
   // filter index state set, index mode set, name
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet",NULL),"*"))
   {
     indexStateAny = TRUE;
   }
@@ -13423,7 +13449,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet",NULL),"*"))
   {
     indexModeAny = TRUE;
   }
@@ -13571,7 +13597,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            [jobUUID=<uuid>]
+*            [jobUUID=<uuid>|""]
 *            indexStateSet=<state set>|*
 *            indexModeSet=<mode set>|*
 *            [name=<text>]
@@ -13619,7 +13645,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 
   // get uuid, index state set, index mode set, name, name
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexStateSet",NULL),"*"))
   {
     indexStateAny = TRUE;
   }
@@ -13632,7 +13658,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet",NULL),"*"))
   {
     indexModeAny = TRUE;
   }
@@ -14594,7 +14620,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   // filter name, index type, new entries only, fragments, offset, limit
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
     entryType = INDEX_TYPE_ANY;
   }
@@ -14968,7 +14994,7 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
     String_delete(name);
     return;
   }
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
   {
     entryType = INDEX_TYPE_ANY;
   }
@@ -16743,7 +16769,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   assert(argumentMap != NULL);
 
   // state, uuidId/entityId/storageId/jobUUID/name
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"state",NULL),"*"))
   {
     stateAny = TRUE;
   }
@@ -17159,7 +17185,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   assert(argumentMap != NULL);
 
   // get state and jobUUID, entityId, or storageId
-  if      (stringEquals(StringMap_getTextCString(argumentMap,"state","*"),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"state",NULL),"*"))
   {
     stateAny = TRUE;
   }
