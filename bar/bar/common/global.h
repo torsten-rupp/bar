@@ -2163,7 +2163,7 @@ static inline ulong stringLength(const char *s)
 /***********************************************************************\
 * Name   : stringEquals
 * Purpose: compare strings for equal
-* Input  : s1, s2 - strings
+* Input  : s1, s2 - strings (can be NULL)
 * Output : -
 * Return : TRUE iff equals
 * Notes  : -
@@ -2171,7 +2171,7 @@ static inline ulong stringLength(const char *s)
 
 static inline bool stringEquals(const char *s1, const char *s2)
 {
-  return strcmp(s1,s2) == 0;
+  return (s1 == s2) || ((s1 != NULL) && (s2 != NULL) && (strcmp(s1,s2) == 0));
 }
 
 /***********************************************************************\
@@ -2200,7 +2200,7 @@ static inline bool stringEqualsPrefix(const char *s1, const char *s2, uint n)
 
 static inline bool stringEqualsIgnoreCase(const char *s1, const char *s2)
 {
-  return strcasecmp(s1,s2) == 0;
+  return (s1 == s2) || ((s1 != NULL) && (s2 != NULL) && (strcasecmp(s1,s2) == 0));
 }
 
 /***********************************************************************\
