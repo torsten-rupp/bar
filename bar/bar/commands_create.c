@@ -4053,8 +4053,9 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                    INDEX_ID_ANY, // entityId
                                    NULL,  // jobUUID,
                                    NULL,  // scheduleUUID,
-                                   NULL,  // storageIds
-                                   0,  // storageIdCount
+                                   NULL,  // indexIds
+                                   0,  // indexIdCount
+                                   INDEX_TYPE_SET_ALL,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // hostName
@@ -4232,8 +4233,9 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                      INDEX_ID_ANY,  // entityId
                                      jobUUID,
                                      NULL,  // scheduleUUID,
-                                     NULL,  // storageIds
-                                     0,   // storageIdCount
+                                     NULL,  // indexIds
+                                     0,   // indexIdCount
+                                     INDEX_TYPE_SET_ALL,
                                        INDEX_STATE_SET(INDEX_STATE_OK)
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
@@ -4445,8 +4447,9 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                      INDEX_ID_ANY,  // entityId
                                      NULL,  // jobUUID,
                                      NULL,  // scheduleUUID,
-                                     NULL,  // storageIds
-                                     0,   // storageIdCount
+                                     NULL,  // indexIds
+                                     0,   // indexIdCount
+                                     INDEX_TYPE_SET_ALL,
                                        INDEX_STATE_SET(INDEX_STATE_OK)
                                      | INDEX_STATE_SET(INDEX_STATE_UPDATE_REQUESTED)
                                      | INDEX_STATE_SET(INDEX_STATE_ERROR),
@@ -5060,8 +5063,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                                            INDEX_ID_ANY, // entityId
                                            NULL,  // jobUUID,
                                            NULL,  // scheduleUUID,
-                                           NULL,  // storageIds
-                                           0,  // storageIdCount
+                                           NULL,  // indexIds
+                                           0,  // indexIdCount
+                                           INDEX_TYPE_SET_ALL,
                                            INDEX_STATE_SET_ALL,
                                            INDEX_MODE_SET_ALL,
                                            NULL,  // hostName

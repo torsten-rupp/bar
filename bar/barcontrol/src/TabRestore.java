@@ -2787,13 +2787,13 @@ Dprintf.dprintf("");
       {
         // get total storage count, total storage size
         ValueMap valueMap = new ValueMap();
-        BARServer.executeCommand(StringParser.format("INDEX_LIST_INFO entityId=%s jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S",
+        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_INFO entityId=%s jobUUID=%'S indexTypeSet=UUID|ENTITY indexStateSet=%s indexModeSet=* name=%'S",
                                                      (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                      (jobUUID != null) ? jobUUID : "*",
                                                      storageIndexStateSet.nameList("|"),
                                                      storageName
                                                     ),
-                                 1,  // debugLevel
+                                 2,  // debugLevel
                                  valueMap
                                 );
         totalStorageCount = valueMap.getInt ("totalStorageCount");
@@ -2904,7 +2904,7 @@ Dprintf.dprintf("");
         final ArrayList<StorageIndexData> storageIndexDataList = new ArrayList<StorageIndexData>();
         try
         {
-          storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s jobUUID=%'S indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
+          storageTableCommand = BARServer.asyncExecuteCommand(StringParser.format("INDEX_STORAGE_LIST entityId=%s jobUUID=%'S indexTypeSet=UUID|ENTITY indexStateSet=%s indexModeSet=* name=%'S offset=%d limit=%d sortMode=%s ordering=%s",
                                                                                   (storageEntityState != EntityStates.NONE) ? "*" : "NONE",
                                                                                   (jobUUID != null) ? jobUUID : "*",
                                                                                   storageIndexStateSet.nameList("|"),
@@ -6995,7 +6995,7 @@ Dprintf.dprintf("");
       {
         if (checked)
         {
-          BARServer.executeCommand(StringParser.format("INDEX_LIST_ADD storageIds=%ld",
+          BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_ADD storageIds=%ld",
                                                        indexId
                                                       ),
                                    2  // debugLevel
@@ -7003,7 +7003,7 @@ Dprintf.dprintf("");
         }
         else
         {
-          BARServer.executeCommand(StringParser.format("INDEX_LIST_REMOVE storageIds=%ld",
+          BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_REMOVE storageIds=%ld",
                                                        indexId
                                                       ),
                                    2  // debugLevel
@@ -7025,7 +7025,7 @@ Dprintf.dprintf("");
   {
     try
     {
-      BARServer.executeCommand(StringParser.format("INDEX_LIST_CLEAR"),2);
+      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_CLEAR"),2);
     }
     catch (Exception exception)
     {
@@ -7044,7 +7044,7 @@ Dprintf.dprintf("");
 
     try
     {
-      BARServer.executeCommand(StringParser.format("INDEX_LIST_CLEAR"),2);
+      BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_CLEAR"),2);
     }
     catch (Exception exception)
     {
@@ -7059,7 +7059,7 @@ Dprintf.dprintf("");
       int n = storageIds.length-i; if (n > 1024) n = 1024;
       try
       {
-        BARServer.executeCommand(StringParser.format("INDEX_LIST_ADD storageIds=%s",
+        BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_ADD storageIds=%s",
                                                      StringUtils.join(storageIds,i,n,',')
                                                     ),
                                  1  // debugLevel
@@ -8537,10 +8537,11 @@ Dprintf.dprintf("");
       long totalEntryCount;
       try
       {
-        totalEntryCount = BARServer.getLong(StringParser.format("INDEX_LIST_INFO"),
+        totalEntryCount = BARServer.getLong(StringParser.format("INDEX_STORAGE_LIST_INFO"),
                                             2,  // debugLevel
                                             "totalEntryCount"
                                            );
+        assert(totalEntryCount >= 0);
       }
       catch (final Exception exception)
       {
@@ -8901,7 +8902,7 @@ Dprintf.dprintf("");
         // set index list
         setStorageList(indexIdSet);
 
-        // get list
+        // get storage list
         try
         {
           BARServer.executeCommand("INDEX_STORAGE_LIST",
@@ -8938,12 +8939,14 @@ Dprintf.dprintf("");
         try
         {
           ValueMap valueMap = new ValueMap();
-          BARServer.executeCommand(StringParser.format("INDEX_LIST_INFO"),
+          BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_INFO"),
                                    2,  // debugLevel
                                    valueMap
                                   );
           totalEntryCount = valueMap.getLong("totalEntryCount");
           totalEntrySize  = valueMap.getLong("totalEntrySize" );
+          assert(totalEntryCount >= 0);
+          assert(totalEntrySize >= 0);
         }
         catch (Exception exception)
         {
@@ -9632,14 +9635,16 @@ Dprintf.dprintf("");
               try
               {
                 // get total number entries, size to restore
-                BARServer.executeCommand(StringParser.format("INDEX_LIST_INFO"),
-                                         1,  // debugLevel
+                BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST_INFO"),
+                                         2,  // debugLevel
                                          valueMap
                                         );
-
                 data.totalEntryCount       = valueMap.getLong("totalEntryCount"      );
                 data.totalEntrySize        = valueMap.getLong("totalEntrySize"       );
                 data.totalEntryContentSize = valueMap.getLong("totalEntryContentSize");
+                assert(data.totalEntryCount >= 0);
+                assert(data.totalEntrySize >= 0);
+                assert(data.totalEntryContentSize >= 0);
 
                 display.syncExec(new Runnable()
                 {
@@ -9658,7 +9663,7 @@ Dprintf.dprintf("");
                   }
                 });
 
-                // get archives to restore
+                // get storages to restore
                 BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST"),
                                          1,  // debugLevel
                                          new Command.ResultHandler()
