@@ -5186,7 +5186,11 @@ Dprintf.dprintf("");
         }
         else
         {
-          updateAssignToTimerTask.cancel();
+          if (updateAssignToTimerTask != null)
+          {
+            updateAssignToTimerTask.cancel();
+            updateAssignToTimerTask = null;
+          }
         }
       }
     });
