@@ -100,7 +100,8 @@ SHELL = bash
 
 VERSION_MAJOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MAJOR|$(SED) 's/MAJOR=//g')
 VERSION_MINOR := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) MINOR|$(SED) 's/MINOR=//g')
-VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)
+VERSION_PATCH := $(shell $(CAT) $(SOURCE_DIR)/version|$(GREP) PATCH|$(SED) 's/PATCH=//g')
+VERSION       := $(VERSION_MAJOR).$(VERSION_MINOR)$(VERSION_PATCH)
 
 CRYPT_NAMES    = none 3DES CAST5 BLOWFISH AES128 AES192 AES256 TWOFISH128 TWOFISH256
 COMPRESS_NAMES = none zip0 zip1 zip2 zip3 zip4 zip5 zip6 zip7 zip8 zip9 bzip1 bzip2 bzip3 bzip4 bzip5 bzip6 bzip7 bzip8 bzip9
@@ -910,7 +911,7 @@ $(DISTRIBUTION_NAME).rpm: \
             bar-centos:6 setarch i686 -- /media/home/packages/build_rpm.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION_MAJOR).$(VERSION_MINOR) \
+              $(VERSION) \
               $(shell id -u):$(shell id -g) \
               $(DISTRIBUTION_NAME).rpm; \
         ) | tee $@.log
@@ -925,7 +926,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
             bar-centos-x86_64:6 setarch x86_64 --  /media/home/packages/build_rpm.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION_MAJOR).$(VERSION_MINOR) \
+              $(VERSION) \
               $(shell id -u):$(shell id -g) \
               $(DISTRIBUTION_NAME)-x86_64.rpm; \
         ) | tee $@.log
@@ -964,7 +965,7 @@ $(DISTRIBUTION_NAME).deb $(DISTRIBUTION_NAME_GUI).deb: \
             bar-debian:8 setarch i686 -- /media/home/packages/build_deb.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION_MAJOR).$(VERSION_MINOR) \
+              $(VERSION) \
               $(shell id -u):$(shell id -g) \
               $(DISTRIBUTION_NAME).deb \
               $(DISTRIBUTION_NAME_GUI).deb; \
@@ -980,7 +981,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
             bar-debian-x86_64:8 setarch x86_64 -- /media/home/packages/build_deb.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION_MAJOR).$(VERSION_MINOR) \
+              $(VERSION) \
               $(shell id -u):$(shell id -g) \
               $(DISTRIBUTION_NAME)-x86_64.deb \
               $(DISTRIBUTION_NAME_GUI)-x86_64.deb; \
@@ -1009,7 +1010,7 @@ $(DISTRIBUTION_NAME)-setup.exe: \
             bar-mingw32 setarch i686 -- /media/home/packages/build_win32.sh \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
-              $(VERSION_MAJOR).$(VERSION_MINOR) \
+              $(VERSION) \
               $(shell id -u):$(shell id -g) \
               $(WINE) \
               $(DISTRIBUTION_NAME)-setup; \
@@ -1054,55 +1055,55 @@ functionInstallTestDEB = \
 .PHONY: install_test_rpm_centos6
 install_test_rpm_centos6:
 	@$(call functionPrintInfo,Test install Centos 6)
-	@$(call functionInstallTestRPM,bar-centos:6,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,bar-centos:6,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_rpm_centos6-x86_64
 install_test_rpm_centos6-x86_64:
 	@$(call functionPrintInfo,Test install Centos 6 64bit)
-	@$(call functionInstallTestRPM,centos:6,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,centos:6,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_rpm_centos7
 install_test_rpm_centos7:
 	@$(call functionPrintInfo,Test install Centos 7)
-	@$(call functionInstallTestRPM,bar-centos:7,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,bar-centos:7,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_rpm_centos7-x86_64
 install_test_rpm_centos7-x86_64:
 	@$(call functionPrintInfo,Test install Centos 7 64bit)
-	@$(call functionInstallTestRPM,centos:7,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,centos:7,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_rpm_fedora28-x86_64
 install_test_rpm_fedora28-x86_64:
 	@$(call functionPrintInfo,Test install Fedora 28 64bit)
-	@$(call functionInstallTestRPM,fedora:28,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,fedora:28,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_rpm_fedora29-x86_64
 install_test_rpm_fedora29-x86_64:
 	@$(call functionPrintInfo,Test install Fedora 29 64bit)
-	@$(call functionInstallTestRPM,fedora:29,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,fedora:29,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_rpm_fedora30-x86_64
 install_test_rpm_fedora30-x86_64:
 	@$(call functionPrintInfo,Test install Fedora 30 64bit)
-	@$(call functionInstallTestRPM,fedora:30,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,fedora:30,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_rpm_fedora31-x86_64
 install_test_rpm_fedora31-x86_64:
 	@$(call functionPrintInfo,Test install Fedora 31 64bit)
-	@$(call functionInstallTestRPM,fedora:31,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,fedora:31,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_rpm_opensuse-tumbleweed-x86_64
 install_test_rpm_opensuse-tumbleweed-x86_64:
 	@$(call functionPrintInfo,Test install OpenSuSE tumbleweed 64bit)
-	@$(call functionInstallTestRPM,opensuse/tumbleweed,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,opensuse/tumbleweed,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_rpm_opensuse-leap-x86_64
 install_test_rpm_opensuse-leap-x86_64:
 	@$(call functionPrintInfo,Test install OpenSuSE Leap 64bit)
-	@$(call functionInstallTestRPM,opensuse/leap,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestRPM,opensuse/leap,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_deb
@@ -1120,58 +1121,58 @@ install_test_deb: \
 .PHONY: install_test_deb_debian8
 install_test_deb_debian8:
 	@$(call functionPrintInfo,Test install Debian 8)
-	@$(call functionInstallTestDEB,bar-debian:8,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,bar-debian:8,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian8-x86_64
 install_test_deb_debian8-x86_64:
 	@$(call functionPrintInfo,Test install Debian 8 64bit)
-	@$(call functionInstallTestDEB,bar-debian-x86_64:8,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,bar-debian-x86_64:8,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian9
 install_test_deb_debian9:
 	@$(call functionPrintInfo,Test install Debian 9)
-	@$(call functionInstallTestDEB,i386/debian:9,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,i386/debian:9,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian9-x86_64
 install_test_deb_debian9-x86_64:
 	@$(call functionPrintInfo,Test install Debian 9 64bit)
-	@$(call functionInstallTestDEB,debian:9,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,debian:9,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian10
 install_test_deb_debian10:
 	@$(call functionPrintInfo,Test install Debian 10)
-	@$(call functionInstallTestDEB,i386/debian:10,i686,$(VERSION_MAJOR).$(VERSION_MINOR)) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,i386/debian:10,i686,$(VERSION)) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_debian10-x86_64
 install_test_deb_debian10-x86_64:
 	@$(call functionPrintInfo,Test install Debian 10 64bit)
-	@$(call functionInstallTestDEB,debian:10,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,debian:10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 .PHONY: install_test_deb_ubuntu16.04-x86_64
 install_test_deb_ubuntu16.04-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu 16.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:16.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,ubuntu:16.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_ubuntu18.04-x86_64
 install_test_deb_ubuntu18.04-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu 18.10 64bit)
-	@$(call functionInstallTestDEB,ubuntu:18.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,ubuntu:18.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_ubuntu19.04-x86_64
 install_test_deb_ubuntu19.04-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu 19.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:19.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,ubuntu:19.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_ubuntu19.10-x86_64
 install_test_deb_ubuntu19.10-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu 19.10 64bit)
-	@$(call functionInstallTestDEB,ubuntu:19.10,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,ubuntu:19.10,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 .PHONY: install_test_deb_ubuntu20.04-x86_64
 install_test_deb_ubuntu20.04-x86_64:
 	@$(call functionPrintInfo,Test install Ubuntu 20.04 64bit)
-	@$(call functionInstallTestDEB,ubuntu:20.04,x86_64,$(VERSION_MAJOR).$(VERSION_MINOR)-x86_64) $(if $(QUIET),1>/dev/null)
+	@$(call functionInstallTestDEB,ubuntu:20.04,x86_64,$(VERSION)-x86_64) $(if $(QUIET),1>/dev/null)
 	@$(call functionPrintResult,OK)
 
 # GUI
