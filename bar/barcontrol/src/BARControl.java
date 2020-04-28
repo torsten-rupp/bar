@@ -1654,7 +1654,7 @@ public class BARControl
   public static final String ALL_FILE_EXTENSION;
 
   // version, email address, homepage URL
-  public static final String VERSION          = Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_REVISION+")";
+  public static final String VERSION          = Config.VERSION;
   public static final char   MAIL_AT          = '@';  // use MAIL_AT to avoid spam
   public static final String EMAIL_ADDRESS    = "torsten.rupp"+MAIL_AT+"gmx.net";
   public static final String URL              = "http://www.kigen.de/projects/bar";
@@ -3041,7 +3041,7 @@ if (false) {
         {
           Dialogs.info(shell,
                        BARControl.tr("About"),
-                       "BAR control "+Config.VERSION_MAJOR+"."+Config.VERSION_MINOR+" ("+Config.VERSION_REVISION+").\n"+
+                       "BAR control "+Config.VERSION+".\n"+
                        "\n"+
                        BARControl.tr("Written by Torsten Rupp")+"\n"
                       );
