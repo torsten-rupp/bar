@@ -154,9 +154,11 @@ case "$1" in
 		;;
 	esac
 	;;
+  status)
+        status_of_proc -p $BAR_PID_FILENAME $BAR_BIN $NAME && exit 0 || exit $?
+        ;;
   *)
-	#echo "Usage: $BAR_SCRIPT_FILENAME {start|stop|restart|reload|force-reload}" >&2
-	echo "Usage: $BAR_SCRIPT_FILENAME {start|stop|restart|force-reload}" >&2
+	echo "Usage: $BAR_SCRIPT_FILENAME {start|stop|restart|force-reload|status}" >&2
 	exit 3
 	;;
 esac
