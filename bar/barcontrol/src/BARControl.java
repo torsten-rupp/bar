@@ -2303,6 +2303,7 @@ if (false) {
     {
       private String                  homepageVersionMajor    = null;
       private String                  homepageVersionMinor    = null;
+      private String                  homepageVersionPatch    = null;
       private String                  homepageVersionRevision = null;
       private final ArrayList<String> homepageChangeLog       = new ArrayList<String>();
 
@@ -2357,7 +2358,7 @@ if (false) {
             if (   ((homepageVersionMajor != null) && (homepageVersionMinor != null))
                 && (   (homepageVersionMajor.compareTo(Config.VERSION_MAJOR) > 0)
                     || (homepageVersionMinor.compareTo(Config.VERSION_MINOR) > 0)
-//                    || ((homepageVersionRevision != null) && (homepageVersionRevision.compareTo(Config.VERSION_MAJOR) > 0))
+                    || (homepageVersionPatch.compareTo(Config.VERSION_PATCH) > 0)
                    )
                )
             {
@@ -2384,6 +2385,7 @@ if (false) {
       {
         final Pattern PATTERN_MAJOR    = Pattern.compile("MAJOR=(.*)");
         final Pattern PATTERN_MINOR    = Pattern.compile("MINOR=(.*)");
+        final Pattern PATTERN_PATCH    = Pattern.compile("PATCH=(.*)");
         final Pattern PATTERN_REVISION = Pattern.compile("REVISION=(.*)");
 
         BufferedReader input = null;
@@ -2404,6 +2406,10 @@ if (false) {
             else if ((matcher = PATTERN_MINOR.matcher(line)).matches())
             {
               homepageVersionMinor    = matcher.group(1);
+            }
+            else if ((matcher = PATTERN_PATCH.matcher(line)).matches())
+            {
+              homepageVersionPatch    = matcher.group(1);
             }
             else if ((matcher = PATTERN_REVISION.matcher(line)).matches())
             {
@@ -2439,9 +2445,10 @@ if (false) {
         Text      text;
         Button    button;
 
-        String version = String.format("%s.%s%s",
+        String version = String.format("%s.%s%s%s",
                                        homepageVersionMajor,
                                        homepageVersionMinor,
+                                       homepageVersionPatch,
                                        (homepageVersionRevision != null) ? " (revision "+homepageVersionRevision+")" : ""
                                       );
 
@@ -2473,9 +2480,9 @@ if (false) {
           Widgets.layout(label,0,1,TableLayoutData.W,0,0,4);
 
           // change log
-          text = Widgets.newStringView(composite,SWT.BORDER|SWT.WRAP);
+          text = Widgets.newStringView(composite,SWT.BORDER|SWT.WRAP|SWT.H_SCROLL|SWT.V_SCROLL);
           text.setText(changeLog.toString());
-          Widgets.layout(text,1,1,TableLayoutData.NSWE,0,0,4);
+          Widgets.layout(text,1,1,TableLayoutData.NSWE,0,0,4,0,300,300);
 
           // show again
           widgetShowAgain = Widgets.newCheckbox(composite,"show again");
@@ -2504,7 +2511,7 @@ if (false) {
             }
           });
 
-          button = Widgets.newButton(composite,"Cancel");
+          button = Widgets.newButton(composite,"Continue");
           Widgets.layout(button,0,1,TableLayoutData.E,0,0,0,0,SWT.DEFAULT,SWT.DEFAULT,120,SWT.DEFAULT);
           button.addSelectionListener(new SelectionListener()
           {
