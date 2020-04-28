@@ -724,6 +724,7 @@ dnl ----------------------- substitute settings ------------------------
 
 AC_SUBST(VERSION_MAJOR)                     dnl version major number
 AC_SUBST(VERSION_MINOR)                     dnl version minor number
+AC_SUBST(VERSION_PATCH)                     dnl version patch level
 AC_SUBST(VERSION_REVISION)                  dnl version revision number (SVN number)
 
 AC_SUBST(COPYRIGHT_DATE)                    dnl copyright date
@@ -4227,6 +4228,7 @@ dnl -------------------------------- misc ------------------------------
 
 VERSION_MAJOR=`cat $SOURCE_DIR/version|grep MAJOR|sed 's/.*=//g'`
 VERSION_MINOR=`cat $SOURCE_DIR/version|grep MINOR|sed 's/.*=//g'`
+VERSION_PATCH=`cat $SOURCE_DIR/version|grep PATCH|sed 's/.*=//g'`
 VERSION_REVISION=`$SVNVERSION . 2>/dev/null || cat $SOURCE_DIR/version|grep RELEASE|sed 's/RELEASE=//g'`
 
 COPYRIGHT_DATE="2007-`date +%Y`"
@@ -4450,7 +4452,7 @@ AC_CONFIG_FILES(epm.list)
 
 AC_CONFIG_COMMANDS(BUILD_NOTE,
                    [echo "";
-                    echo "Configuration $VERSION_MAJOR.$VERSION_MINOR ($VERSION_REVISION):";
+                    echo "Configuration $VERSION_MAJOR.$VERSION_MINOR$VERSION_PATCH ($VERSION_REVISION):";
                     echo "  Host               : $host";
                     echo "  Dynamic linked     : `if test "$ENABLE_LINK_DYNAMIC" = "yes"; then echo yes; else echo no; fi`";
                     echo "  SQLite             : yes ($VERSION_SQLITE)";
@@ -4508,6 +4510,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    ],
                    VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_MINOR="$VERSION_MINOR"
+                   VERSION_PATCH="$VERSION_PATCH"
                    VERSION_REVISION="$VERSION_REVISION"
 
                    host="$host"
