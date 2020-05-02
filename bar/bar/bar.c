@@ -84,7 +84,7 @@
 #define VERSION_MAJOR_STRING __VERSION_TO_STRING(VERSION_MAJOR)
 #define VERSION_MINOR_STRING __VERSION_TO_STRING(VERSION_MINOR)
 #define VERSION_REPOSITORY_STRING __VERSION_TO_STRING(VERSION_REPOSITORY)
-#define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING " (rev. " VERSION_REPOSITORY_STRING ")"
+#define VERSION_STRING VERSION_MAJOR_STRING "." VERSION_MINOR_STRING VERSION_PATCH " (rev. " VERSION_REPOSITORY_STRING ")"
 
 #define MOUNT_TIMEOUT (1L*60L*MS_PER_SECOND)  // mount timeout [ms]
 
@@ -10672,7 +10672,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             error = Command_list(&storageNameList,
                                  &includeEntryList,
                                  &excludePatternList,
-                                 !globalOptions.metaInfoFlag,  // showContentFlag
+                                 !globalOptions.metaInfoFlag,  // showEntriesFlag
                                  &jobOptions,
                                  CALLBACK_(getCryptPasswordFromConsole,NULL),
                                  NULL  // logHandle
@@ -10682,7 +10682,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             error = Command_list(&storageNameList,
                                  &includeEntryList,
                                  &excludePatternList,
-                                 TRUE,  // showContentFlag
+                                 TRUE,  // showEntriesFlag
                                  &jobOptions,
                                  CALLBACK_(getCryptPasswordFromConsole,NULL),
                                  NULL  // logHandle
