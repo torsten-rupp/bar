@@ -16740,7 +16740,7 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            state=<state>|*
+*            [state=<state>|*]
 *            uuidId=<id>|0 and/or
 *            entityId=<id>|0 and/or
 *            storageId=<id>|0 and/or
@@ -16779,8 +16779,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    return;
+    stateAny = TRUE;
   }
   name = String_new();
   if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
