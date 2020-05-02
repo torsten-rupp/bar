@@ -5277,15 +5277,13 @@ int main(int argc, const char *argv[])
                      {
                        assert(count == 2);
                        assert(values != NULL);
-                       assert(values[0] != NULL);
-                       assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = (uint)1+log10(atof(values[0]));
-                       maxStorageNameLength = (uint)atoi(values[1]);
+                       maxIdLength          = (values[0] != NULL) ? (uint)1+log10(atof(values[0])) : 0;
+                       maxStorageNameLength = (values[1] != NULL) ? (uint)atoi(values[1]) : 0;
 
                        return ERROR_NONE;
                      },NULL),
@@ -5347,16 +5345,14 @@ int main(int argc, const char *argv[])
                      {
                        assert(count == 3);
                        assert(values != NULL);
-                       assert(values[0] != NULL);
-                       assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = (uint)1+log10(atof(values[0]));
-                       maxEntryNameLength   = (uint)atoi(values[1]);
-                       maxStorageNameLength = (uint)atoi(values[2]);
+                       maxIdLength          = (values[0] != NULL) ? (uint)1+log10(atof(values[0])) : 0;
+                       maxEntryNameLength   = (values[1] != NULL) ? (uint)atoi(values[1]) : 0;
+                       maxStorageNameLength = (values[2] != NULL) ? (uint)atoi(values[2]) : 0;
 
                        return ERROR_NONE;
                      },NULL),
@@ -5410,16 +5406,14 @@ int main(int argc, const char *argv[])
                      {
                        assert(count == 3);
                        assert(values != NULL);
-                       assert(values[0] != NULL);
-                       assert(values[1] != NULL);
 
                        UNUSED_VARIABLE(columns);
                        UNUSED_VARIABLE(count);
                        UNUSED_VARIABLE(userData);
 
-                       maxIdLength          = (uint)1+log10(atof(values[0]));
-                       maxEntryNameLength   = (uint)atoi(values[1]);
-                       maxStorageNameLength = (uint)atoi(values[2]);
+                       maxIdLength          = (values[0] != NULL) ? (uint)1+log10(atof(values[0])) : 0;
+                       maxEntryNameLength   = (values[1] != NULL) ? (uint)atoi(values[1]) : 0;
+                       maxStorageNameLength = (values[2] != NULL) ? (uint)atoi(values[2]) : 0;
 
                        return ERROR_NONE;
                      },NULL),
