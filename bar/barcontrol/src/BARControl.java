@@ -2357,9 +2357,15 @@ if (false) {
             // check if newer version is available
             if (   ((homepageVersionMajor != null) && (homepageVersionMinor != null))
                 && (   (homepageVersionMajor.compareTo(Config.VERSION_MAJOR) > 0)
-                    || (homepageVersionMinor.compareTo(Config.VERSION_MINOR) > 0)
-                    || (homepageVersionPatch.compareTo(Config.VERSION_PATCH) > 0)
+                    || (   (homepageVersionMajor.compareTo(Config.VERSION_MAJOR) >= 0)
+                        && (homepageVersionMinor.compareTo(Config.VERSION_MINOR) > 0))
+                    || (   (homepageVersionPatch != null)
+                        && (homepageVersionMajor.compareTo(Config.VERSION_MAJOR) >= 0)
+                        && (homepageVersionMinor.compareTo(Config.VERSION_MINOR) >= 0)
+                        && (homepageVersionPatch.compareTo(Config.VERSION_PATCH) > 0)
+                       )
                    )
+
                )
             {
               display.syncExec(new Runnable()
