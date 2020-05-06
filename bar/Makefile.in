@@ -666,8 +666,9 @@ $(DISTRIBUTION_NAME).tar.bz2: \
                    ToDo \
                    ChangeLog
 	( \
-          $(GREP) MINOR version; \
           $(GREP) MAJOR version; \
+          $(GREP) MINOR version; \
+          $(GREP) PATCH version; \
           $(ECHO) "RELEASE=$(shell $(SVNVERSION) .)"; \
         ) > tmp/$(DISTRIBUTION_NAME)/version
 	$(INSTALL) -d tmp/$(DISTRIBUTION_NAME)/bin
