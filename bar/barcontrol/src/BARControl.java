@@ -2169,6 +2169,7 @@ public class BARControl
     }
 
     // add/update server
+    Settings.servers.add(new Settings.Server(Settings.DEFAULT_SERVER_NAME,Settings.DEFAULT_SERVER_PORT));
     if (Settings.serverName != null)
     {
       Settings.servers.add(new Settings.Server(Settings.serverName,Settings.serverPort));
