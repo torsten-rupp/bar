@@ -5149,6 +5149,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         {
           error = Index_updateStorage(createInfo->indexHandle,
                                       storageId,
+                                      NULL,  // hostName
                                       NULL,  // userName
                                       printableStorageName,
                                       0,  // createDateTime
@@ -5310,6 +5311,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         // delete all matching storage files which are unknown
         (void)Storage_forAll(&createInfo->storageInfo.storageSpecifier,
+                             NULL,  // directory
                              pattern,
                              CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                              {
@@ -5374,7 +5376,6 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, u
 
   assert(createInfo != NULL);
   assert(name != NULL);
-  assert((size == 0LL) || (fragmentCount > 0));
 
   STATUS_INFO_UPDATE(createInfo,name,NULL)
   {
@@ -5530,7 +5531,6 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       return error;
     }
   }
-  assert((fileInfo.size == 0LL) || (fragmentCount > 0));
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
@@ -6016,7 +6016,6 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
       return error;
     }
   }
-  assert((deviceInfo.size == 0LL) || (fragmentCount > 0));
 
   // check device block size, get max. blocks in buffer
   if (deviceInfo.blockSize > bufferSize)
@@ -6913,7 +6912,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       return error;
     }
   }
-  assert((fileInfo.size == 0LL) || (fragmentCount > 0));
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);

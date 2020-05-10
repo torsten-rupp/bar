@@ -4024,6 +4024,7 @@ NULL, // masterIO
 }
 
 Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
+                      ConstString             directory,
                       ConstString             patternString,
                       StorageFunction         storageFunction,
                       void                    *storageUserData,
@@ -4068,7 +4069,7 @@ Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
   }
 
   // get total number of files (if possible)
-  if (File_getFileSystemInfo(&fileSystemInfo,storageSpecifier->archiveName) == ERROR_NONE)
+  if (File_getFileSystemInfo(&fileSystemInfo,(directory != NULL) ? directory : storageSpecifier->archiveName) == ERROR_NONE)
   {
     totalCount = fileSystemInfo.totalFiles;
   }
@@ -4078,7 +4079,7 @@ Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
   }
 
   // read directory and scan all sub-directories
-  StringList_append(&directoryList,storageSpecifier->archiveName);
+  StringList_append(&directoryList,(directory != NULL) ? directory : storageSpecifier->archiveName);
   doneCount = 0L;
   while (!StringList_isEmpty(&directoryList))
   {
