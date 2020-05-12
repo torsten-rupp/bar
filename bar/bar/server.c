@@ -4346,24 +4346,24 @@ LOCAL void autoIndexThreadCode(void)
                                              Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
 
                                              // get index id, request index update
-                                             if (Index_findStorageByName(indexHandle,
-                                                                         &storageSpecifier,
-                                                                         NULL,  // archiveName
-                                                                         NULL,  // uuidId
-                                                                         NULL,  // entityId
-                                                                         NULL,  // jobUUID
-                                                                         NULL,  // scheduleUUID
-                                                                         &storageId,
-                                                                         NULL,  // createdDateTime
-                                                                         NULL,  // size
-                                                                         &indexState,
-                                                                         NULL,  // indexMode
-                                                                         &lastCheckedDateTime,
-                                                                         NULL,  // errorMessage
-                                                                         NULL,  // totalEntryCount
-                                                                         NULL  // totalEntrySize
-                                                                        )
-                                                )
+                                             if      (Index_findStorageByName(indexHandle,
+                                                                              &storageSpecifier,
+                                                                              NULL,  // archiveName
+                                                                              NULL,  // uuidId
+                                                                              NULL,  // entityId
+                                                                              NULL,  // jobUUID
+                                                                              NULL,  // scheduleUUID
+                                                                              &storageId,
+                                                                              NULL,  // createdDateTime
+                                                                              NULL,  // size
+                                                                              &indexState,
+                                                                              NULL,  // indexMode
+                                                                              &lastCheckedDateTime,
+                                                                              NULL,  // errorMessage
+                                                                              NULL,  // totalEntryCount
+                                                                              NULL  // totalEntrySize
+                                                                             )
+                                                     )
                                              {
                                                // already in index -> check if modified/state
                                                if      (fileInfo->timeModified > lastCheckedDateTime)
@@ -4396,9 +4396,9 @@ LOCAL void autoIndexThreadCode(void)
                                                                               );
                                                }
                                              }
-                                             else
+                                             else if (Misc_getCurrentDateTime() > (fileInfo->timeLastChanged+30*S_PER_MINUTE))
                                              {
-                                               // add to index
+                                               // add to index (Note: to avoid update on currently created archive, wait for min. 30min after craation)
                                                error = Index_newStorage(indexHandle,
                                                                         INDEX_ID_NONE, // uuidId
                                                                         INDEX_ID_NONE, // entityId
