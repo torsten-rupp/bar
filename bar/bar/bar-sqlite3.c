@@ -101,6 +101,7 @@ LOCAL bool       verboseFlag                          = FALSE;
 LOCAL bool       timeFlag                             = FALSE;
 LOCAL bool       explainQueryPlanFlag                 = FALSE;
 LOCAL const char *jobUUID                             = NULL;
+LOCAL const char *toFileName                          = NULL;
 
 /****************************** Macros *********************************/
 
@@ -164,7 +165,7 @@ LOCAL void printUsage(const char *programName)
   printf("          --create-aggregates-storages          - re-create aggregated data\n");
   printf("          --check                               - check index database integrity\n");
   printf("          --clean                               - clean index database\n");
-  printf("          --vacuum                              - collect and free unused file space\n");
+  printf("          --vacuum [<file name>]                - collect and free unused file space\n");
   printf("          -s|--storages [<uuid>]                - print storages\n");
   printf("          -e|--entries [<uuid>]                 - print entries\n");
   printf("          --entries-newest [<uuid>]             - print newest entries\n");
@@ -3158,21 +3159,64 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void vacuum(DatabaseHandle *databaseHandle)
+LOCAL void vacuum(DatabaseHandle *databaseHandle, const char *toFileName)
 {
-  Errors error;
+  Errors     error;
+  FileHandle handle;
 
   if (verboseFlag) { fprintf(stdout,"Vacuum..."); fflush(stdout); }
 
-  error = Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           NULL,  // changedRowCount
-                           "VACUUM"
-                          );
-  if (error != ERROR_NONE)
+  if (toFileName != NULL)
   {
-    printError("vacuum fail: %s!",Error_getText(error));
-    exit(1);
+    // check if file exists
+    if (!forceFlag && File_existsCString(toFileName))
+    {
+      if (verboseFlag) { fprintf(stdout,"FAIL\n"); }
+      printError("vacuum fail: file '%s' already exists!",toFileName);
+      exit(1);
+    }
+
+    // create empty file
+    error = File_openCString(&handle,toFileName,FILE_OPEN_CREATE);
+    if (error == ERROR_NONE)
+    {
+      (void)File_close(&handle);
+    }
+    else
+    {
+      if (verboseFlag) { fprintf(stdout,"FAIL\n"); }
+      printError("vacuum fail: %s!",Error_getText(error));
+      exit(1);
+    }
+
+    // vacuum into file
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "VACUUM INTO '%s'",
+                             toFileName
+                            );
+    if (error != ERROR_NONE)
+    {
+      if (verboseFlag) { fprintf(stdout,"FAIL\n"); }
+      printError("vacuum fail: %s!",Error_getText(error));
+      exit(1);
+    }
+  }
+  else
+  {
+    // vacuum
+    error = Database_execute(databaseHandle,
+                             CALLBACK_(NULL,NULL),  // databaseRowFunction
+                             NULL,  // changedRowCount
+                             "VACUUM"
+                            );
+    if (error != ERROR_NONE)
+    {
+      if (verboseFlag) { fprintf(stdout,"FAIL\n"); }
+      printError("vacuum fail: %s!",Error_getText(error));
+      exit(1);
+    }
   }
 
   if (verboseFlag) fprintf(stdout,"OK\n");
@@ -4290,23 +4334,24 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 
                              entityId            = (DatabaseId)atoll(values[0]);
                              type                = (uint)atoi(values[1]);
-                             totalEntryCount     = (ulong)atoll(values[3]);
-                             totalEntrySize      = (uint64)atoll(values[4]);
-                             totalFileCount      = (ulong)atoll(values[5]);
-                             totalFileSize       = (uint64)atoll(values[6]);
-                             totalImageCount     = (ulong)atoll(values[7]);
-                             totalImageSize      = (uint64)atoll(values[8]);
-                             totalDirectoryCount = (ulong)atoll(values[9]);
-                             totalLinkCount      = (ulong)atoll(values[10]);
-                             totalhardlinkCount  = (ulong)atoll(values[11]);
-                             totalHardlinkSize   = (uint64)atoll(values[12]);
-                             totalSpecialCount   = (ulong)atoll(values[13]);
+                             totalEntryCount     = (ulong)atoll(values[4]);
+                             totalEntrySize      = (uint64)atoll(values[5]);
+                             totalFileCount      = (ulong)atoll(values[6]);
+                             totalFileSize       = (uint64)atoll(values[7]);
+                             totalImageCount     = (ulong)atoll(values[8]);
+                             totalImageSize      = (uint64)atoll(values[9]);
+                             totalDirectoryCount = (ulong)atoll(values[10]);
+                             totalLinkCount      = (ulong)atoll(values[11]);
+                             totalhardlinkCount  = (ulong)atoll(values[12]);
+                             totalHardlinkSize   = (uint64)atoll(values[13]);
+                             totalSpecialCount   = (ulong)atoll(values[14]);
 
-                             uuidId              = (DatabaseId)atoll(values[25]);
+                             uuidId              = (DatabaseId)atoll(values[26]);
 
                              printf("  Id              : %"PRIi64"\n",entityId);
                              printf("    Type          : %s\n",(type <= CHUNK_CONST_ARCHIVE_TYPE_CONTINUOUS) ? TYPE_NAMES[type] : values[ 1]);
-                             printf("    UUID          : %s\n",values[ 2]);
+                             printf("    Job UUID      : %s\n",values[ 2]);
+                             printf("    Schedule UUID : %s\n",values[ 3]);
                              printf("\n");
                              printf("    Total entries : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                              printf("\n");
@@ -4353,6 +4398,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
                            "SELECT id,\
                                    type, \
                                    jobUUID, \
+                                   scheduleUUID, \
                                    \
                                    totalEntryCount, \
                                    totalEntrySize, \
@@ -4453,29 +4499,30 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                              UNUSED_VARIABLE(count);
                              UNUSED_VARIABLE(userData);
 
-                             state               = (uint)atoi(values[7]);
-                             mode                = (uint)atoi(values[8]);
-                             totalEntryCount     = (values[11] != NULL) ? (ulong)atoll(values[11]) : 0L;
-                             totalEntrySize      = (values[12] != NULL) ? (uint64)atoll(values[12]) : 0LL;
-                             totalFileCount      = (values[13] != NULL) ? (ulong)atoll(values[13]) : 0L;
-                             totalFileSize       = (values[14] != NULL) ? (uint64)atoll(values[14]) : 0LL;
-                             totalImageCount     = (values[15] != NULL) ? (ulong)atoll(values[15]) : 0L;
-                             totalImageSize      = (values[16] != NULL) ? (uint64)atoll(values[16]) : 0LL;
-                             totalDirectoryCount = (values[17] != NULL) ? (ulong)atoll(values[17]) : 0L;
-                             totalLinkCount      = (values[18] != NULL) ? (ulong)atoll(values[18]) : 0L;
-                             totalHardlinkCount  = (values[19] != NULL) ? (ulong)atoll(values[19]) : 0L;
-                             totalHardlinkSize   = (values[20] != NULL) ? (uint64)atoll(values[20]) : 0LL;
-                             totalSpecialCount   = (values[21] != NULL) ? (ulong)atoll(values[21]) : 0L;
+                             state               = (uint)atoi(values[10]);
+                             mode                = (uint)atoi(values[11]);
+                             totalEntryCount     = (values[14] != NULL) ? (ulong)atoll(values[14]) : 0L;
+                             totalEntrySize      = (values[15] != NULL) ? (uint64)atoll(values[15]) : 0LL;
+                             totalFileCount      = (values[16] != NULL) ? (ulong)atoll(values[16]) : 0L;
+                             totalFileSize       = (values[17] != NULL) ? (uint64)atoll(values[17]) : 0LL;
+                             totalImageCount     = (values[18] != NULL) ? (ulong)atoll(values[18]) : 0L;
+                             totalImageSize      = (values[19] != NULL) ? (uint64)atoll(values[19]) : 0LL;
+                             totalDirectoryCount = (values[20] != NULL) ? (ulong)atoll(values[20]) : 0L;
+                             totalLinkCount      = (values[21] != NULL) ? (ulong)atoll(values[21]) : 0L;
+                             totalHardlinkCount  = (values[22] != NULL) ? (ulong)atoll(values[22]) : 0L;
+                             totalHardlinkSize   = (values[23] != NULL) ? (uint64)atoll(values[23]) : 0LL;
+                             totalSpecialCount   = (values[24] != NULL) ? (ulong)atoll(values[24]) : 0L;
 
                              printf("  Id              : %s\n",values[ 0]);
-                             printf("    Name          : %s\n",values[ 3]);
-                             printf("    Created       : %s\n",(values[ 4] != NULL) ? values[ 4] : "");
-                             printf("    User name     : %s\n",(values[ 5] != NULL) ? values[ 5] : "");
-                             printf("    Comment       : %s\n",(values[ 6] != NULL) ? values[ 6] : "");
-                             printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : values[ 7]);
-                             printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : values[ 8]);
-                             printf("    Last checked  : %s\n",values[ 9]);
-                             printf("    Error message : %s\n",(values[10] != NULL) ? values[10] : "");
+                             printf("    Name          : %s\n",values[ 5]);
+                             printf("    Created       : %s\n",(values[ 6] != NULL) ? values[ 6] : "");
+                             printf("    Host name     : %s\n",(values[ 7] != NULL) ? values[ 7] : "");
+                             printf("    User name     : %s\n",(values[ 8] != NULL) ? values[ 8] : "");
+                             printf("    Comment       : %s\n",(values[ 9] != NULL) ? values[ 9] : "");
+                             printf("    State         : %s\n",(state <= INDEX_CONST_STATE_ERROR) ? STATE_TEXT[state] : values[10]);
+                             printf("    Mode          : %s\n",(mode <= INDEX_CONST_MODE_AUTO) ? MODE_TEXT[mode] : values[11]);
+                             printf("    Last checked  : %s\n",values[12]);
+                             printf("    Error message : %s\n",(values[13] != NULL) ? values[13] : "");
                              printf("\n");
                              printf("    Total entries : %lu, %.1lf%s (%"PRIu64"bytes)\n",totalEntryCount,getByteSize(totalEntrySize),getByteUnitShort(totalEntrySize),totalEntrySize);
                              printf("\n");
@@ -4488,6 +4535,8 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                              printf("\n");
                              printf("    UUID id       : %s\n",values[1]);
                              printf("    Entity id     : %s\n",values[2]);
+                             printf("    Job UUID      : %s\n",values[3]);
+                             printf("    Schedule UUID : %s\n",values[4]);
 
                              return ERROR_NONE;
                            },NULL),
@@ -4495,8 +4544,11 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                            "SELECT storages.id,\
                                    storages.uuidId, \
                                    storages.entityId, \
+                                   entities.jobUUID, \
+                                   entities.scheduleUUID, \
                                    storages.name, \
                                    storages.created, \
+                                   storages.hostName, \
                                    storages.userName, \
                                    storages.comment, \
                                    storages.state, \
@@ -4531,6 +4583,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
                                    storages.totalSpecialCountNewest \
                             FROM storages \
                             LEFT JOIN entities ON entities.id=storages.entityId \
+                            LEFT JOIN uuids ON uuids.jobUUID=entities.jobUUID \
                             WHERE     (%d OR storages.id IN (%S)) \
                                   AND (%d OR entities.id IS NULL) \
                                   AND storages.deletedFlag!=1 \
@@ -5074,8 +5127,15 @@ int main(int argc, const char *argv[])
           i++;
           break;
         default:
-          String_appendCString(commands,argv[i]);
-          jobUUID = argv[i];
+          if (vacuumFlag)
+          {
+            toFileName = argv[i];
+          }
+          else
+          {
+            String_appendCString(commands,argv[i]);
+            jobUUID = argv[i];
+          }
           i++;
           break;
       }
@@ -5091,8 +5151,15 @@ int main(int argc, const char *argv[])
         i++;
         break;
       default:
-        String_appendCString(commands,argv[i]);
-        jobUUID = argv[i];
+        if (vacuumFlag)
+        {
+          toFileName = argv[i];
+        }
+        else
+        {
+          String_appendCString(commands,argv[i]);
+          jobUUID = argv[i];
+        }
         i++;
         break;
     }
@@ -5263,7 +5330,7 @@ int main(int argc, const char *argv[])
   // vacuum
   if (vacuumFlag)
   {
-    vacuum(&databaseHandle);
+    vacuum(&databaseHandle,toFileName);
   }
 
 #warning remove? use storages-info?
