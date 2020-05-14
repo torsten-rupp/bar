@@ -634,7 +634,8 @@ typedef struct
   ServerList                  serverList;                     // list with FTP/SSH/WebDAV servers
   DeviceList                  deviceList;                     // list with devices
 
-  bool                        indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index datbase
+  bool                        indexDatabaseUpdateFlag;        // TRUE for update of index database
+  bool                        indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index database
   BandWidthList               indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
   uint                        indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
 

@@ -700,6 +700,7 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
   CMD_OPTION_STRING       ("incremental-data-directory",        0,  1,1,globalOptions.incrementalDataDirectory,          0,                                                             "server incremental data directory","path name"                            ),
 
   CMD_OPTION_CSTRING      ("index-database",                    0,  1,1,indexDatabaseFileName,                           0,                                                             "index database file name","file name"                                     ),
+  CMD_OPTION_BOOLEAN      ("index-database-update",             0,  1,1,globalOptions.indexDatabaseUpdateFlag,           0,                                                             "enabled update index database"                                            ),
   CMD_OPTION_BOOLEAN      ("index-database-auto-update",        0,  1,1,globalOptions.indexDatabaseAutoUpdateFlag,       0,                                                             "enabled automatic update index database"                                  ),
   CMD_OPTION_SPECIAL      ("index-database-max-band-width",     0,  1,1,&globalOptions.indexDatabaseMaxBandWidthList,    0,cmdOptionParseBandWidth,NULL,1,                              "max. band width to use for index updates [bis/s]","number or file name"   ),
   CMD_OPTION_INTEGER      ("index-database-keep-time",          0,  1,1,globalOptions.indexDatabaseKeepTime,             0,0,MAX_INT,COMMAND_LINE_TIME_UNITS,                           "time to keep index data of not existing storages",NULL                    ),
@@ -908,6 +909,7 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_STRING            ("incremental-data-directory",       &globalOptions.incrementalDataDirectory,-1                     ),
 
   CONFIG_VALUE_CSTRING           ("index-database",                   &indexDatabaseFileName,-1                                      ),
+  CONFIG_VALUE_BOOLEAN           ("index-database-update",            &globalOptions.indexDatabaseUpdateFlag,-1                      ),
   CONFIG_VALUE_BOOLEAN           ("index-database-auto-update",       &globalOptions.indexDatabaseAutoUpdateFlag,-1                  ),
   CONFIG_VALUE_SPECIAL           ("index-database-max-band-width",    &globalOptions.indexDatabaseMaxBandWidthList,-1,               configValueParseBandWidth,NULL,NULL,NULL,&globalOptions.indexDatabaseMaxBandWidthList),
   CONFIG_VALUE_INTEGER           ("index-database-keep-time",         &globalOptions.indexDatabaseKeepTime,-1,                       0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
@@ -3876,6 +3878,7 @@ LOCAL void initGlobalOptions(void)
   List_init(&globalOptions.deviceList);
   Semaphore_init(&globalOptions.deviceList.lock,SEMAPHORE_TYPE_BINARY);
 
+  globalOptions.indexDatabaseUpdateFlag                         = TRUE;
   globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
   List_init(&globalOptions.indexDatabaseMaxBandWidthList);
   globalOptions.indexDatabaseMaxBandWidthList.n                 = 0L;
