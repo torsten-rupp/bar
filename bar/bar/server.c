@@ -63,34 +63,32 @@
 
 /***************************** Constants *******************************/
 
-#define SESSION_KEY_SIZE                         1024     // number of session key bits
+#define SESSION_KEY_SIZE                         1024                     // number of session key bits
 
-#define MAX_NETWORK_CLIENT_THREADS               3        // number of threads for a client
+#define MAX_NETWORK_CLIENT_THREADS               3                        // number of threads for a client
 #define LOCK_TIMEOUT                             (10L*60L*MS_PER_SECOND)  // general lock timeout [ms]
-#define CLIENT_TIMEOUT                           (30L*MS_PER_SECOND)  // client timeout [ms]
+#define CLIENT_TIMEOUT                           (30L*MS_PER_SECOND)      // client timeout [ms]
 
 #define SLAVE_DEBUG_LEVEL                        1
 #define SLAVE_COMMAND_TIMEOUT                    (10L*MS_PER_SECOND)
 
-#define AUTHORIZATION_PENALITY_TIME              500      // delay processing by failCount^2*n [ms]
-#define MAX_AUTHORIZATION_PENALITY_TIME          30000    // max. penality time [ms]
-#define MAX_AUTHORIZATION_HISTORY_KEEP_TIME      30000    // max. time to keep entries in authorization fail history [ms]
-#define MAX_AUTHORIZATION_FAIL_HISTORY           64       // max. length of history of authorization fail clients
-#define MAX_ABORT_COMMAND_IDS                    512      // max. aborted command ids history
+#define AUTHORIZATION_PENALITY_TIME              500                      // delay processing by failCount^2*n [ms]
+#define MAX_AUTHORIZATION_PENALITY_TIME          30000                    // max. penality time [ms]
+#define MAX_AUTHORIZATION_HISTORY_KEEP_TIME      30000                    // max. time to keep entries in authorization fail history [ms]
+#define MAX_AUTHORIZATION_FAIL_HISTORY           64                       // max. length of history of authorization fail clients
+#define MAX_ABORT_COMMAND_IDS                    512                      // max. aborted command ids history
 
-#define MAX_SCHEDULE_CATCH_TIME                  30       // max. schedule catch time [days]
+#define MAX_SCHEDULE_CATCH_TIME                  30                       // max. schedule catch time [days]
 
-#define DEFAULT_PAIRING_MASTER_TIMEOUT           120      // default timeout pairing new master [s]
+#define DEFAULT_PAIRING_MASTER_TIMEOUT           120                      // default timeout pairing new master [s]
 
 // sleep times
-#define SLEEP_TIME_PAIRING_THREAD                ( 1*60)  // [s]
-#define SLEEP_TIME_SCHEDULER_THREAD              ( 1*60)  // [s]
-#define SLEEP_TIME_PAUSE_THREAD                  ( 1*60)  // [s]
-#define SLEEP_TIME_INDEX_THREAD                  ( 1*60)  // [s]
-#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*60)  // [s]
-#warning remove/revert
-//#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*60)  // [s]
-#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (1*60)  // [s]
+#define SLEEP_TIME_PAIRING_THREAD                ( 1*S_PER_MINUTE)        // [s]
+#define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)        // [s]
+#define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)        // [s]
+#define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)        // [s]
+#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)        // [s]
+#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*S_PER_MINUTE)        // [s]
 
 // id none
 #define ID_NONE                                  0
@@ -335,6 +333,7 @@ LOCAL Thread                pauseThread;
 LOCAL Thread                pairingThread;               // thread for pairing master/slaves
 LOCAL Semaphore             indexThreadTrigger;
 LOCAL Thread                indexThread;                 // thread to add/update index
+LOCAL Semaphore             autoIndexThreadTrigger;
 LOCAL Thread                autoIndexThread;             // thread to collect BAR files for auto-index
 LOCAL Thread                purgeExpiredEntitiesThread;  // thread to purge expired archive files
 
@@ -1332,7 +1331,7 @@ LOCAL void delayThread(uint sleepTime, Semaphore *trigger)
     {
       while (   !quitFlag
              && (n < sleepTime)
-             && !Semaphore_waitModified(&indexThreadTrigger,5*MS_PER_SECOND)
+             && !Semaphore_waitModified(trigger,5*MS_PER_SECOND)
             )
       {
         n += 5;
@@ -1470,6 +1469,7 @@ LOCAL void jobThreadCode(void)
       do
       {
         // first check for a continuous job to run
+//TODO: use LIST_FIND?
         jobNode = jobList.head;
         while (   !quitFlag
                && (jobNode != NULL)
@@ -1485,6 +1485,7 @@ LOCAL void jobThreadCode(void)
         if (jobNode == NULL)
         {
           // next check for other job types to run
+//TODO: use LIST_FIND?
           jobNode = jobList.head;
           while (   !quitFlag
                  && (jobNode != NULL)
@@ -4012,7 +4013,7 @@ LOCAL void indexThreadCode(void)
       pauseIndexUpdate();
       if (quitFlag) break;
 
-      if (Index_isInitialized())
+      if (Index_isInitialized() && globalOptions.indexDatabaseUpdateFlag)
       {
         // get all job crypt passwords and crypt private keys (including no password and default crypt password)
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -4353,7 +4354,7 @@ LOCAL void autoIndexThreadCode(void)
       pauseIndexUpdate();
       if (quitFlag) break;
 
-      if (Index_isInitialized())
+      if (Index_isInitialized() && globalOptions.indexDatabaseAutoUpdateFlag)
       {
         // collect storage locations to check for BAR files
         getStorageDirectories(&storageDirectoryList);
@@ -4410,7 +4411,7 @@ LOCAL void autoIndexThreadCode(void)
                 File_appendFileNameCString(File_setFileName(pattern,baseName),"*.bar");
                 (void)Storage_forAll(&storageSpecifier,
                                      baseName,
-                                     pattern,
+                                     String_cString(pattern),
                                      CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                                      {
                                        Errors error;
@@ -4609,7 +4610,7 @@ LOCAL void autoIndexThreadCode(void)
       if (quitFlag) break;
 
       // sleep and check quit flag
-      delayThread(SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD,NULL);
+      delayThread(SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD,&autoIndexThreadTrigger);
     }
 
     // done index
@@ -6778,6 +6779,7 @@ LOCAL void serverCommand_deviceList(ClientInfo *clientInfo, IndexHandle *indexHa
   // get job UUID
   StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL);
 
+//TODO: avoid long running lock
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -6917,6 +6919,7 @@ LOCAL void serverCommand_rootList(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
+//TODO: avoid long running lock
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -7059,6 +7062,7 @@ LOCAL void serverCommand_fileInfo(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
+//TODO: avoid long running lock
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -7263,6 +7267,7 @@ LOCAL void serverCommand_fileList(ClientInfo *clientInfo, IndexHandle *indexHand
     return;
   }
 
+//TODO: avoid long running lock
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -7497,6 +7502,7 @@ LOCAL void serverCommand_fileAttributeGet(ClientInfo *clientInfo, IndexHandle *i
     return;
   }
 
+//TODO: avoid long running lock
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -7620,6 +7626,7 @@ LOCAL void serverCommand_fileAttributeSet(ClientInfo *clientInfo, IndexHandle *i
 //TODO: value still not used
 UNUSED_VARIABLE(value);
 
+//TODO: avoid long running lock
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -7779,6 +7786,7 @@ LOCAL void serverCommand_fileAttributeClear(ClientInfo *clientInfo, IndexHandle 
     return;
   }
 
+//TODO: avoid long running lock
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
     // find job
@@ -7941,6 +7949,7 @@ LOCAL void serverCommand_directoryInfo(ClientInfo *clientInfo, IndexHandle *inde
   }
   StringMap_getInt64(argumentMap,"timeout",&timeout,0LL);
 
+//TODO: avoid long running lock
   fileCount = 0LL;
   fileSize  = 0LL;
   timedOut  = FALSE;
@@ -8076,6 +8085,7 @@ LOCAL void serverCommand_testScript(ClientInfo *clientInfo, IndexHandle *indexHa
     return;
   }
 
+//TODO: avoid long running lock
   error = ERROR_UNKNOWN;
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
   {
@@ -16334,6 +16344,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   bool             forceRefresh;
   int              progressSteps;
   StorageSpecifier storageSpecifier;
+  bool             updateRequestedFlag;
   StorageInfo      storageInfo;
   String           printableStorageName;
   IndexId          storageId;
@@ -16375,10 +16386,10 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
-  error = ERROR_UNKNOWN;
+  updateRequestedFlag = FALSE;
 
   // try to open as storage file
-  if (error != ERROR_NONE)
+  if (!updateRequestedFlag)
   {
     if (!Storage_isPatternSpecifier(&storageSpecifier))
     {
@@ -16434,10 +16445,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                   printableStorageName
                                  );
             }
-          }
-          else
-          {
-            error = ERROR_NONE;
+
+            updateRequestedFlag = TRUE;
           }
         }
         else
@@ -16461,20 +16470,29 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                 printableStorageName
                                );
           }
+
+          updateRequestedFlag = TRUE;
         }
         Storage_done(&storageInfo);
 
         String_delete(printableStorageName);
       }
     }
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      Storage_doneSpecifier(&storageSpecifier);
+      String_delete(pattern);
+      return;
+    }
   }
 
   // try to open as directory: add all matching entries
-  if (error != ERROR_NONE)
+  if (!updateRequestedFlag)
   {
     error = Storage_forAll(&storageSpecifier,
                            NULL,  // directory
-                           storageSpecifier.archivePatternString,
+                           "*" FILE_NAME_EXTENSION_ARCHIVE_FILE,
                            CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                            {
                              ConstString printableStorageName;
@@ -16522,11 +16540,9 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                                            storageId,
                                                            printableStorageName
                                                           );
+
+                                       updateRequestedFlag = TRUE;
                                      }
-                                   }
-                                   else
-                                   {
-                                     error = ERROR_NONE;
                                    }
                                  }
                                  else
@@ -16549,6 +16565,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                                          storageId,
                                                          printableStorageName
                                                         );
+                                     updateRequestedFlag = TRUE;
                                    }
                                  }
                                  if (error != ERROR_NONE)
@@ -16572,10 +16589,20 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                              }
                            },NULL)
                           );
+    if (error != ERROR_NONE)
+    {
+      ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      Storage_doneSpecifier(&storageSpecifier);
+      String_delete(pattern);
+      return;
+    }
   }
 
   // trigger index thread
-  Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+  if (updateRequestedFlag)
+  {
+    Semaphore_signalModified(&indexThreadTrigger,SEMAPHORE_SIGNAL_MODIFY_ALL);
+  }
 
   if (error == ERROR_NONE)
   {
@@ -19109,19 +19136,14 @@ Errors Server_run(ServerModes       mode,
       Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
       Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-      if (globalOptions.indexDatabaseUpdateFlag)
+      if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
       {
-        if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
-        {
-          HALT_FATAL_ERROR("Cannot initialize index thread!");
-        }
+        HALT_FATAL_ERROR("Cannot initialize index thread!");
       }
-      if (globalOptions.indexDatabaseAutoUpdateFlag)
+      Semaphore_init(&autoIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+      if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
       {
-        if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
-        {
-          HALT_FATAL_ERROR("Cannot initialize index update thread!");
-        }
+        HALT_FATAL_ERROR("Cannot initialize index update thread!");
       }
       if (!Thread_init(&purgeExpiredEntitiesThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredEntitiesThreadCode,NULL))
       {
@@ -19584,23 +19606,17 @@ Errors Server_run(ServerModes       mode,
       }
       Thread_done(&purgeExpiredEntitiesThread);
 
-      if (globalOptions.indexDatabaseAutoUpdateFlag)
+      if (!Thread_join(&autoIndexThread))
       {
-        if (!Thread_join(&autoIndexThread))
-        {
-          HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
-        }
-        Thread_done(&autoIndexThread);
+        HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
       }
-      if (globalOptions.indexDatabaseUpdateFlag)
+      Thread_done(&autoIndexThread);
+      Semaphore_done(&autoIndexThreadTrigger);
+      if (!Thread_join(&indexThread))
       {
-        if (!Thread_join(&indexThread))
-        {
-          HALT_INTERNAL_ERROR("Cannot stop index thread!");
-        }
-        Thread_done(&indexThread);
+        HALT_INTERNAL_ERROR("Cannot stop index thread!");
       }
-
+      Thread_done(&indexThread);
       Semaphore_done(&indexThreadTrigger);
 
       // done database pause callbacks
@@ -19735,19 +19751,14 @@ Errors Server_batch(int        inputDescriptor,
     Index_setPauseCallback(CALLBACK_(indexPauseCallback,NULL));
 
     Semaphore_init(&indexThreadTrigger,SEMAPHORE_TYPE_BINARY);
-    if (globalOptions.indexDatabaseUpdateFlag)
+    if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
     {
-      if (!Thread_init(&indexThread,"BAR index",globalOptions.niceLevel,indexThreadCode,NULL))
-      {
-        HALT_FATAL_ERROR("Cannot initialize index thread!");
-      }
+      HALT_FATAL_ERROR("Cannot initialize index thread!");
     }
-    if (globalOptions.indexDatabaseAutoUpdateFlag)
+    Semaphore_init(&autoIndexThreadTrigger,SEMAPHORE_TYPE_BINARY);
+    if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
     {
-      if (!Thread_init(&autoIndexThread,"BAR auto index",globalOptions.niceLevel,autoIndexThreadCode,NULL))
-      {
-        HALT_FATAL_ERROR("Cannot initialize index update thread!");
-      }
+      HALT_FATAL_ERROR("Cannot initialize index update thread!");
     }
     if (!Thread_init(&purgeExpiredEntitiesThread,"BAR purge expired",globalOptions.niceLevel,purgeExpiredEntitiesThreadCode,NULL))
     {
@@ -19848,23 +19859,17 @@ processCommand(&clientInfo,commandString);
     }
     Thread_done(&purgeExpiredEntitiesThread);
 
-    if (globalOptions.indexDatabaseAutoUpdateFlag)
+    if (!Thread_join(&autoIndexThread))
     {
-      if (!Thread_join(&autoIndexThread))
-      {
-        HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
-      }
-      Thread_done(&autoIndexThread);
+      HALT_INTERNAL_ERROR("Cannot stop auto index thread!");
     }
-    if (globalOptions.indexDatabaseUpdateFlag)
+    Thread_done(&autoIndexThread);
+    Semaphore_done(&autoIndexThreadTrigger);
+    if (!Thread_join(&indexThread))
     {
-      if (!Thread_join(&indexThread))
-      {
-        HALT_INTERNAL_ERROR("Cannot stop index thread!");
-      }
-      Thread_done(&indexThread);
+      HALT_INTERNAL_ERROR("Cannot stop index thread!");
     }
-
+    Thread_done(&indexThread);
     Semaphore_done(&indexThreadTrigger);
 
     // done database pause callbacks
