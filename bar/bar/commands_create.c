@@ -5312,7 +5312,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
         // delete all matching storage files which are unknown
         (void)Storage_forAll(&createInfo->storageInfo.storageSpecifier,
                              NULL,  // directory
-                             pattern,
+                             String_cString(pattern),
                              CALLBACK_INLINE(Errors,(ConstString storageName, const FileInfo *fileInfo, void *userData),
                              {
                                StorageSpecifier storageSpecifier;
@@ -7770,7 +7770,11 @@ Errors Command_create(ServerIO                     *masterIO,
   incrementalListFileName      = NULL;
   useIncrementalFileInfoFlag   = FALSE;
   incrementalFileInfoExistFlag = FALSE;
+  hostName                     = String_new();
+  userName                     = String_new();
   AUTOFREE_ADD(&autoFreeList,printableStorageName,{ String_delete(printableStorageName); });
+  AUTOFREE_ADD(&autoFreeList,hostName,{ String_delete(hostName); });
+  AUTOFREE_ADD(&autoFreeList,userName,{ String_delete(userName); });
 
   // check if storage name given
   if (String_isEmpty(storageName))
@@ -7831,6 +7835,10 @@ Errors Command_create(ServerIO                     *masterIO,
 
   // get printable storage name
   Storage_getPrintableName(printableStorageName,&storageSpecifier,NULL);
+
+  // get hostname, username
+  Network_getHostName(hostName);
+  Misc_getCurrentUserName(userName);
 
   // init storage
   error = Storage_init(&createInfo.storageInfo,
@@ -7987,8 +7995,6 @@ Errors Command_create(ServerIO                     *masterIO,
     }
 
     // create new index entity
-    hostName = Network_getHostName(String_new());
-    userName = Misc_getCurrentUserName(String_new());
     error = Index_newEntity(indexHandle,
                             jobUUID,
                             scheduleUUID,
@@ -8005,22 +8011,18 @@ Errors Command_create(ServerIO                     *masterIO,
                  String_cString(printableStorageName),
                  Error_getText(error)
                 );
-      String_delete(userName);
-      String_delete(hostName);
       AutoFree_cleanup(&autoFreeList);
       return error;
     }
     assert(!INDEX_ID_IS_NONE(entityId));
     DEBUG_TESTCODE() { Index_deleteEntity(indexHandle,entityId); AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
     AUTOFREE_ADD(&autoFreeList,&entityId,{ Index_deleteEntity(indexHandle,entityId); });
-    String_delete(userName);
-    String_delete(hostName);
   }
 
   // create new archive
   error = Archive_create(&createInfo.archiveHandle,
-                         NULL,  // hostName
-                         NULL,  // userName
+                         hostName,
+                         userName,
                          &createInfo.storageInfo,
                          NULL,  // archiveName
                          uuidId,
