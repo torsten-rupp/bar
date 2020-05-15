@@ -4937,6 +4937,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         assert(!INDEX_ID_IS_NONE(storageMsg.entityId));
 
+//TODO: move this to archive.c
         // check if append and storage exists => assign to existing storage index
         if (   appendFlag
             && Index_findStorageByName(createInfo->indexHandle,
@@ -7801,6 +7802,7 @@ Errors Command_create(ServerIO                     *masterIO,
   AUTOFREE_ADD(&autoFreeList,&storageSpecifier,{ Storage_doneSpecifier(&storageSpecifier); });
 
   // open index
+//TODO: each thread need his own handle!
   indexHandle = Index_open(masterIO,INDEX_TIMEOUT);
   AUTOFREE_ADD(&autoFreeList,indexHandle,{ Index_close(indexHandle); });
 

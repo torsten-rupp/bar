@@ -1572,148 +1572,151 @@ LOCAL Errors flushArchiveIndexList(ArchiveHandle *archiveHandle,
 
   error = ERROR_NONE;
 
-  // init variables
-  List_init(&archiveIndexList);
-
-  // get list to flush
-  SEMAPHORE_LOCKED_DO(&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  if (archiveHandle->indexHandle != NULL)
   {
-    if (List_count(&archiveHandle->archiveIndexList) >= maxIndexEntries)
-    {
-      List_move(&archiveIndexList,NULL,&archiveHandle->archiveIndexList,NULL,NULL);
-    }
-  }
+    // init variables
+    List_init(&archiveIndexList);
 
-  // flush list
-  if (!List_isEmpty(&archiveIndexList))
-  {
-    SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+    // get list to flush
+    SEMAPHORE_LOCKED_DO(&archiveHandle->archiveIndexList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
-      // start transaction
-      error = Index_beginTransaction(archiveHandle->indexHandle,INDEX_TIMEOUT);
-      if (error != ERROR_NONE)
+      if (List_count(&archiveHandle->archiveIndexList) >= maxIndexEntries)
       {
-        Semaphore_unlock(&archiveHandle->indexLock);
-        return error;
+        List_move(&archiveIndexList,NULL,&archiveHandle->archiveIndexList,NULL,NULL);
       }
+    }
 
-      // add to index
-      while (!List_isEmpty(&archiveIndexList) && (error == ERROR_NONE))
+    // flush list
+    if (!List_isEmpty(&archiveIndexList))
+    {
+      SEMAPHORE_LOCKED_DO(&archiveHandle->indexLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
       {
-        archiveIndexNode = (ArchiveIndexNode*)List_removeFirst(&archiveIndexList);
-
-        switch (archiveIndexNode->type)
+        // start transaction
+        error = Index_beginTransaction(archiveHandle->indexHandle,INDEX_TIMEOUT);
+        if (error != ERROR_NONE)
         {
-          case ARCHIVE_ENTRY_TYPE_FILE:
-            error = Index_addFile(archiveHandle->indexHandle,
-                                  uuidId,
-                                  entityId,
-                                  storageId,
-                                  archiveIndexNode->file.name,
-                                  archiveIndexNode->file.size,
-                                  archiveIndexNode->file.timeLastAccess,
-                                  archiveIndexNode->file.timeModified,
-                                  archiveIndexNode->file.timeLastChanged,
-                                  archiveIndexNode->file.userId,
-                                  archiveIndexNode->file.groupId,
-                                  archiveIndexNode->file.permission,
-                                  archiveIndexNode->file.fragmentOffset,
-                                  archiveIndexNode->file.fragmentSize
-                                 );
-            break;
-          case ARCHIVE_ENTRY_TYPE_IMAGE:
-            error = Index_addImage(archiveHandle->indexHandle,
-                                   uuidId,
-                                   entityId,
-                                   storageId,
-                                   archiveIndexNode->image.name,
-                                   archiveIndexNode->image.fileSystemType,
-                                   archiveIndexNode->image.size,
-                                   archiveIndexNode->image.blockSize,
-                                   archiveIndexNode->image.blockOffset,
-                                   archiveIndexNode->image.blockCount
-                                  );
-            break;
-          case ARCHIVE_ENTRY_TYPE_DIRECTORY:
-            error = Index_addDirectory(archiveHandle->indexHandle,
-                                       uuidId,
-                                       entityId,
-                                       storageId,
-                                       archiveIndexNode->directory.name,
-                                       archiveIndexNode->directory.timeLastAccess,
-                                       archiveIndexNode->directory.timeModified,
-                                       archiveIndexNode->directory.timeLastChanged,
-                                       archiveIndexNode->directory.userId,
-                                       archiveIndexNode->directory.groupId,
-                                       archiveIndexNode->directory.permission
-                                      );
-            break;
-          case ARCHIVE_ENTRY_TYPE_LINK:
-            error = Index_addLink(archiveHandle->indexHandle,
-                                  uuidId,
-                                  entityId,
-                                  storageId,
-                                  archiveIndexNode->link.name,
-                                  archiveIndexNode->link.destinationName,
-                                  archiveIndexNode->link.timeLastAccess,
-                                  archiveIndexNode->link.timeModified,
-                                  archiveIndexNode->link.timeLastChanged,
-                                  archiveIndexNode->link.userId,
-                                  archiveIndexNode->link.groupId,
-                                  archiveIndexNode->link.permission
-                                 );
-            break;
-          case ARCHIVE_ENTRY_TYPE_HARDLINK:
-            error = Index_addHardlink(archiveHandle->indexHandle,
-                                      uuidId,
-                                      entityId,
-                                      storageId,
-                                      archiveIndexNode->hardlink.name,
-                                      archiveIndexNode->hardlink.size,
-                                      archiveIndexNode->hardlink.timeLastAccess,
-                                      archiveIndexNode->hardlink.timeModified,
-                                      archiveIndexNode->hardlink.timeLastChanged,
-                                      archiveIndexNode->hardlink.userId,
-                                      archiveIndexNode->hardlink.groupId,
-                                      archiveIndexNode->hardlink.permission,
-                                      archiveIndexNode->hardlink.fragmentOffset,
-                                      archiveIndexNode->hardlink.fragmentSize
-                                     );
-            break;
-          case ARCHIVE_ENTRY_TYPE_SPECIAL:
-            error = Index_addSpecial(archiveHandle->indexHandle,
+          Semaphore_unlock(&archiveHandle->indexLock);
+          return error;
+        }
+
+        // add to index
+        while (!List_isEmpty(&archiveIndexList) && (error == ERROR_NONE))
+        {
+          archiveIndexNode = (ArchiveIndexNode*)List_removeFirst(&archiveIndexList);
+
+          switch (archiveIndexNode->type)
+          {
+            case ARCHIVE_ENTRY_TYPE_FILE:
+              error = Index_addFile(archiveHandle->indexHandle,
+                                    uuidId,
+                                    entityId,
+                                    storageId,
+                                    archiveIndexNode->file.name,
+                                    archiveIndexNode->file.size,
+                                    archiveIndexNode->file.timeLastAccess,
+                                    archiveIndexNode->file.timeModified,
+                                    archiveIndexNode->file.timeLastChanged,
+                                    archiveIndexNode->file.userId,
+                                    archiveIndexNode->file.groupId,
+                                    archiveIndexNode->file.permission,
+                                    archiveIndexNode->file.fragmentOffset,
+                                    archiveIndexNode->file.fragmentSize
+                                   );
+              break;
+            case ARCHIVE_ENTRY_TYPE_IMAGE:
+              error = Index_addImage(archiveHandle->indexHandle,
                                      uuidId,
                                      entityId,
                                      storageId,
-                                     archiveIndexNode->special.name,
-                                     archiveIndexNode->special.specialType,
-                                     archiveIndexNode->special.timeLastAccess,
-                                     archiveIndexNode->special.timeModified,
-                                     archiveIndexNode->special.timeLastChanged,
-                                     archiveIndexNode->special.userId,
-                                     archiveIndexNode->special.groupId,
-                                     archiveIndexNode->special.permission,
-                                     archiveIndexNode->special.major,
-                                     archiveIndexNode->special.minor
+                                     archiveIndexNode->image.name,
+                                     archiveIndexNode->image.fileSystemType,
+                                     archiveIndexNode->image.size,
+                                     archiveIndexNode->image.blockSize,
+                                     archiveIndexNode->image.blockOffset,
+                                     archiveIndexNode->image.blockCount
                                     );
-            break;
-          default:
-            #ifndef NDEBUG
-              HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
-            #endif /* NDEBUG */
-            break;
+              break;
+            case ARCHIVE_ENTRY_TYPE_DIRECTORY:
+              error = Index_addDirectory(archiveHandle->indexHandle,
+                                         uuidId,
+                                         entityId,
+                                         storageId,
+                                         archiveIndexNode->directory.name,
+                                         archiveIndexNode->directory.timeLastAccess,
+                                         archiveIndexNode->directory.timeModified,
+                                         archiveIndexNode->directory.timeLastChanged,
+                                         archiveIndexNode->directory.userId,
+                                         archiveIndexNode->directory.groupId,
+                                         archiveIndexNode->directory.permission
+                                        );
+              break;
+            case ARCHIVE_ENTRY_TYPE_LINK:
+              error = Index_addLink(archiveHandle->indexHandle,
+                                    uuidId,
+                                    entityId,
+                                    storageId,
+                                    archiveIndexNode->link.name,
+                                    archiveIndexNode->link.destinationName,
+                                    archiveIndexNode->link.timeLastAccess,
+                                    archiveIndexNode->link.timeModified,
+                                    archiveIndexNode->link.timeLastChanged,
+                                    archiveIndexNode->link.userId,
+                                    archiveIndexNode->link.groupId,
+                                    archiveIndexNode->link.permission
+                                   );
+              break;
+            case ARCHIVE_ENTRY_TYPE_HARDLINK:
+              error = Index_addHardlink(archiveHandle->indexHandle,
+                                        uuidId,
+                                        entityId,
+                                        storageId,
+                                        archiveIndexNode->hardlink.name,
+                                        archiveIndexNode->hardlink.size,
+                                        archiveIndexNode->hardlink.timeLastAccess,
+                                        archiveIndexNode->hardlink.timeModified,
+                                        archiveIndexNode->hardlink.timeLastChanged,
+                                        archiveIndexNode->hardlink.userId,
+                                        archiveIndexNode->hardlink.groupId,
+                                        archiveIndexNode->hardlink.permission,
+                                        archiveIndexNode->hardlink.fragmentOffset,
+                                        archiveIndexNode->hardlink.fragmentSize
+                                       );
+              break;
+            case ARCHIVE_ENTRY_TYPE_SPECIAL:
+              error = Index_addSpecial(archiveHandle->indexHandle,
+                                       uuidId,
+                                       entityId,
+                                       storageId,
+                                       archiveIndexNode->special.name,
+                                       archiveIndexNode->special.specialType,
+                                       archiveIndexNode->special.timeLastAccess,
+                                       archiveIndexNode->special.timeModified,
+                                       archiveIndexNode->special.timeLastChanged,
+                                       archiveIndexNode->special.userId,
+                                       archiveIndexNode->special.groupId,
+                                       archiveIndexNode->special.permission,
+                                       archiveIndexNode->special.major,
+                                       archiveIndexNode->special.minor
+                                      );
+              break;
+            default:
+              #ifndef NDEBUG
+                HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
+              #endif /* NDEBUG */
+              break;
+          }
+
+          deleteArchiveIndexNode(archiveIndexNode);
         }
 
-        deleteArchiveIndexNode(archiveIndexNode);
+        // end transaction
+        (void)Index_endTransaction(archiveHandle->indexHandle);
       }
-
-      // end transaction
-      (void)Index_endTransaction(archiveHandle->indexHandle);
     }
-  }
 
-  // free resources
-  List_done(&archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL));
+    // free resources
+    List_done(&archiveIndexList,(ListNodeFreeFunction)CALLBACK_(freeArchiveIndexNode,NULL));
+  }
 
   return error;
 }
@@ -3056,6 +3059,20 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
   (*partNumber)  = ARCHIVE_PART_NUMBER_NONE;
   (*archiveSize) = 0LL;
 
+  // flush index entries
+  error = flushArchiveIndexList(archiveHandle,
+                                archiveHandle->uuidId,
+                                archiveHandle->entityId,
+                                archiveHandle->storageId,
+                                0
+                               );
+  if (error != ERROR_NONE)
+  {
+    (void)File_close(&archiveHandle->create.tmpFileHandle);
+    archiveHandle->create.openFlag = FALSE;
+    return error;
+  }
+
   if (archiveHandle->create.openFlag)
   {
     // add signature
@@ -3066,7 +3083,6 @@ LOCAL Errors closeArchiveFile(ArchiveHandle *archiveHandle,
       {
         (void)File_close(&archiveHandle->create.tmpFileHandle);
         archiveHandle->create.openFlag = FALSE;
-        Semaphore_unlock(&archiveHandle->lock);
         return error;
       }
     }
@@ -3208,6 +3224,19 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
         String_delete(intermediateFileName);
         return error;
       }
+
+// TODO: activate when removed Index_updateStorageInfos() from commands_create.c
+#if 0
+      // update index aggregates
+      error = Index_updateStorageInfos(archiveHandle->indexHandle,
+                                       storageId
+                                      );
+      if (error != ERROR_NONE)
+      {
+        String_delete(intermediateFileName);
+        return error;
+      }
+#endif
 
       // store archive file
       error = storeArchiveFile(archiveHandle,
@@ -3740,18 +3769,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
-
-          // flush index list
-          error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
-                                            archiveEntryInfo->archiveHandle->uuidId,
-                                            archiveEntryInfo->archiveHandle->entityId,
-                                            archiveEntryInfo->archiveHandle->storageId
-                                           );
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
-            return error;
-          }
         }
 
         // close archive
@@ -3794,6 +3811,19 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
+
+// TODO: activate when removed Index_updateStorageInfos() from commands_create.c
+#if 0
+        // update index aggregates
+        error = Index_updateStorageInfos(archiveEntryInfo->archiveHandle->indexHandle,
+                                         storageId
+                                        );
+        if (error != ERROR_NONE)
+        {
+          String_delete(intermediateFileName);
+          return error;
+        }
+#endif
 
         // store archive file
         error = storeArchiveFile(archiveEntryInfo->archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
@@ -4348,18 +4378,6 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
-
-          // flush index list
-          error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
-                                            archiveEntryInfo->archiveHandle->uuidId,
-                                            archiveEntryInfo->archiveHandle->entityId,
-                                            archiveEntryInfo->archiveHandle->storageId
-                                           );
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
-            return error;
-          }
         }
 
         // close archive
@@ -4402,6 +4420,19 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
+
+// TODO: activate when removed Index_updateStorageInfos() from commands_create.c
+#if 0
+        // update index aggregates
+        error = Index_updateStorageInfos(archiveEntryInfo->archiveHandle->indexHandle,
+                                         storageId
+                                        );
+        if (error != ERROR_NONE)
+        {
+          String_delete(intermediateFileName);
+          return error;
+        }
+#endif
 
         // store archive file
         error = storeArchiveFile(archiveEntryInfo->archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
@@ -5005,18 +5036,6 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
             Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
             return error;
           }
-
-          // flush index list
-          error = autoFlushArchiveIndexList(archiveEntryInfo->archiveHandle,
-                                            archiveEntryInfo->archiveHandle->uuidId,
-                                            archiveEntryInfo->archiveHandle->entityId,
-                                            archiveEntryInfo->archiveHandle->storageId
-                                           );
-          if (error != ERROR_NONE)
-          {
-            Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
-            return error;
-          }
         }
 
         // close archive
@@ -5059,6 +5078,19 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 
         // unlock
         Semaphore_unlock(&archiveEntryInfo->archiveHandle->lock);
+
+// TODO: activate when removed Index_updateStorageInfos() from commands_create.c
+#if 0
+        // update index aggregates
+        error = Index_updateStorageInfos(archiveEntryInfo->archiveHandle->indexHandle,
+                                         storageId
+                                        );
+        if (error != ERROR_NONE)
+        {
+          String_delete(intermediateFileName);
+          return error;
+        }
+#endif
 
         // store archive file
         error = storeArchiveFile(archiveEntryInfo->archiveHandle,storageId,intermediateFileName,partNumber,archiveSize);
@@ -6101,13 +6133,10 @@ UNUSED_VARIABLE(storageInfo);
           if (result == ERROR_NONE) result = error;
         }
 
-        // flush index list
-        error = flushArchiveIndexList(archiveHandle,
-                                      archiveHandle->uuidId,
-                                      archiveHandle->entityId,
-                                      archiveHandle->storageId,
-                                      0
-                                     );
+        // update index aggregates
+        error = Index_updateStorageInfos(archiveHandle->indexHandle,
+                                         storageId
+                                        );
         if (error != ERROR_NONE)
         {
           if (result == ERROR_NONE) result = error;
@@ -14670,6 +14699,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   String             destinationName;
   StringList         fileNameList;
   String             hostName,userName;
+  String             comment;
   StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
   StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
   ArchiveTypes       archiveType;
@@ -14755,9 +14785,19 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(storageInfo != NULL);
 
+fprintf(stderr,"%s, %d: ------------------- %lld\n",__FILE__,__LINE__,entityId);
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
+  fileName                    = String_new();
+  imageName                   = String_new();
+  directoryName               = String_new();
+  linkName                    = String_new();
+  destinationName             = String_new();
+  StringList_init(&fileNameList);
+  hostName                    = String_new();
+  userName                    = String_new();
+  comment                     = String_new();
 
   // get printable name
   Storage_getPrintableName(printableStorageName,&storageInfo->storageSpecifier,NULL);
@@ -14801,6 +14841,15 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   }
   if (error != ERROR_NONE)
   {
+    String_delete(comment);
+    String_delete(userName);
+    String_delete(hostName);
+    StringList_done(&fileNameList);
+    String_delete(destinationName);
+    String_delete(linkName);
+    String_delete(directoryName);
+    String_delete(imageName);
+    String_delete(fileName);
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -14812,7 +14861,16 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                             );
   if (error != ERROR_NONE)
   {
-    Archive_close(&archiveHandle);
+    (void)Archive_close(&archiveHandle);
+    String_delete(comment);
+    String_delete(userName);
+    String_delete(hostName);
+    StringList_done(&fileNameList);
+    String_delete(destinationName);
+    String_delete(linkName);
+    String_delete(directoryName);
+    String_delete(imageName);
+    String_delete(fileName);
     String_delete(printableStorageName);
     Storage_doneSpecifier(&storageSpecifier);
     return error;
@@ -14829,14 +14887,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   deletedFlag                 = FALSE;
   abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
   serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
-  fileName                    = String_new();
-  imageName                   = String_new();
-  directoryName               = String_new();
-  linkName                    = String_new();
-  destinationName             = String_new();
-  StringList_init(&fileNameList);
-  hostName                    = String_new();
-  userName                    = String_new();
 //uint64 t0,t1; t0 = Misc_getTimestamp();
   while (   !Archive_eof(&archiveHandle,ARCHIVE_FLAG_NONE)
          && (error == ERROR_NONE)
@@ -15138,7 +15188,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                         scheduleUUID,
                                         &archiveType,
                                         &createdDateTime,
-                                        NULL  // comment
+                                        comment
                                        );
           if (error != ERROR_NONE)
           {
@@ -15157,22 +15207,26 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
             (void)Archive_closeEntry(&archiveEntryInfo);
             break;
           }
+fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
 
           if (!INDEX_ID_IS_NONE(entityId))
           {
             // update entity
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             error = Index_updateEntity(indexHandle,
                                        entityId,
                                        jobUUID,
                                        scheduleUUID,
                                        hostName,
+                                       userName,
                                        archiveType,
                                        createdDateTime
                                       );
           }
           else
           {
-            // check if entity with given schedule/host/archive type exists, otherwise create new entity
+fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
+            // check if entity with given job UUID/schedule UUID/host/archive type/created date/time exists, otherwise create new entity
             if (!Index_findEntity(indexHandle,
                                   INDEX_ID_NONE,  // findEntityIndexId
                                   jobUUID,
@@ -15192,6 +15246,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                  )
                )
             {
+fprintf(stderr,"%s, %d: create new \n",__FILE__,__LINE__);
               error = Index_newEntity(indexHandle,
                                       jobUUID,
                                       scheduleUUID,
@@ -15204,6 +15259,23 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                      );
             }
           }
+          if (error != ERROR_NONE)
+          {
+            (void)Archive_closeEntry(&archiveEntryInfo);
+            break;
+          }
+
+          // assign storage
+fprintf(stderr,"%s, %d: assgin %s -> entityId=%lld: %s\n",__FILE__,__LINE__,String_cString(jobUUID),entityId);
+          error = Index_assignTo(indexHandle,
+                                 NULL,  // jobUUID
+                                 INDEX_ID_NONE,  // entityId
+                                 storageId,
+                                 NULL,  // toJobUUID
+                                 entityId,
+                                 ARCHIVE_TYPE_NONE,  // toArchiveType
+                                 INDEX_ID_NONE  // toStorageId
+                                );
           if (error != ERROR_NONE)
           {
             (void)Archive_closeEntry(&archiveEntryInfo);
@@ -15281,17 +15353,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
     abortedFlag                 = (isAbortedFunction != NULL) && isAbortedFunction(isAbortedUserData);
     serverAllocationPendingFlag = Storage_isServerAllocationPending(storageInfo);
   }
-  String_delete(userName);
-  String_delete(hostName);
-  StringList_done(&fileNameList);
-  String_delete(destinationName);
-  String_delete(linkName);
-  String_delete(directoryName);
-  String_delete(imageName);
-  String_delete(fileName);
-
-  // done progress info
-  doneUpdateIndexProgress();
 
   // flush index list
   if (error == ERROR_NONE)
@@ -15304,30 +15365,17 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                  );
   }
 
-  // close archive
-  Archive_close(&archiveHandle);
-
-  // info
-  if     (abortedFlag)
-  {
-    error = ERROR_ABORTED;
-  }
-  else if (serverAllocationPendingFlag)
-  {
-    error = ERROR_INTERRUPTED;
-  }
-  else
-  {
-    // update size
+    // update hostName/userName/created date/time/size/comment
     if (error == ERROR_NONE)
     {
       error = Index_updateStorage(indexHandle,
                                   storageId,
-                                  NULL,  // userName
+                                  hostName,
+                                  userName,
                                   NULL,  // storageName
-                                  0,  // createdDateTime
+                                  createdDateTime,
                                   size,
-                                  NULL  // comment
+                                  comment
                                  );
     }
 
@@ -15338,6 +15386,21 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                        storageId
                                       );
     }
+
+  // close archive
+  Archive_close(&archiveHandle);
+
+  // done progress info
+  doneUpdateIndexProgress();
+
+  // info
+  if     (abortedFlag)
+  {
+    error = ERROR_ABORTED;
+  }
+  else if (serverAllocationPendingFlag)
+  {
+    error = ERROR_INTERRUPTED;
   }
 
   // get total entries/size
@@ -15345,6 +15408,15 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   if (totalSize       != NULL) (*totalSize      ) = size;
 
   // free resources
+  String_delete(comment);
+  String_delete(userName);
+  String_delete(hostName);
+  StringList_done(&fileNameList);
+  String_delete(destinationName);
+  String_delete(linkName);
+  String_delete(directoryName);
+  String_delete(imageName);
+  String_delete(fileName);
   String_delete(printableStorageName);
   Storage_doneSpecifier(&storageSpecifier);
 
