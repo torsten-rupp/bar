@@ -1106,6 +1106,7 @@ LOCAL_INLINE bool isOwnReadWriteLock(DatabaseHandle *databaseHandle)
   assert(databaseHandle->databaseNode != NULL);
   assert(databaseHandle->databaseNode->readWriteCount >= databaseHandle->readWriteLockCount);
 
+// TODO: acitvate when each thread has his own index handle
 //  return    (databaseHandle->databaseNode->readWriteCount > 0)
 //         && Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy);
   return    (databaseHandle->readWriteLockCount > 0);
@@ -1362,9 +1363,12 @@ LOCAL_INLINE void __readWritesIncrement(const char *__fileName__, ulong __lineNb
   databaseHandle->readWriteLockCount++;
   databaseHandle->databaseNode->readWriteCount++;
   #ifndef NDEBUG
+// TODO: acitvate when each thread has his own index handle
+#if 0
     assert(   Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy)
            || Thread_equalThreads(databaseHandle->databaseNode->readWriteLockedBy,THREAD_ID_NONE)
           );
+#endif
 
     databaseHandle->debug.locked.threadId = Thread_getCurrentId();
     databaseHandle->debug.locked.fileName = __fileName__;
@@ -2668,7 +2672,10 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
          && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
         )
   {
+// TODO: acitvate when each thread has his own index handle
+#if 0
     assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
+#endif
 
     #ifndef NDEBUG
       String_setCString(databaseHandle->debug.current.sqlCommand,sqlString);
