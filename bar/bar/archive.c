@@ -3228,6 +3228,8 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
 // TODO: activate when removed Index_updateStorageInfos() from commands_create.c
 #if 0
       // update index aggregates
+      if (archiveHandle->indexHandle != NULL)
+      {
       error = Index_updateStorageInfos(archiveHandle->indexHandle,
                                        storageId
                                       );
@@ -3235,6 +3237,7 @@ LOCAL Errors ensureArchiveSpace(ArchiveHandle *archiveHandle,
       {
         String_delete(intermediateFileName);
         return error;
+      }
       }
 #endif
 
@@ -3815,6 +3818,8 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 // TODO: activate when removed Index_updateStorageInfos() from commands_create.c
 #if 0
         // update index aggregates
+        if (archiveHandle->indexHandle != NULL)
+        {
         error = Index_updateStorageInfos(archiveEntryInfo->archiveHandle->indexHandle,
                                          storageId
                                         );
@@ -3822,6 +3827,7 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         {
           String_delete(intermediateFileName);
           return error;
+        }
         }
 #endif
 
@@ -4424,6 +4430,8 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 // TODO: activate when removed Index_updateStorageInfos() from commands_create.c
 #if 0
         // update index aggregates
+        if (archiveHandle->indexHandle != NULL)
+        {
         error = Index_updateStorageInfos(archiveEntryInfo->archiveHandle->indexHandle,
                                          storageId
                                         );
@@ -4431,6 +4439,7 @@ LOCAL Errors writeImageDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         {
           String_delete(intermediateFileName);
           return error;
+        }
         }
 #endif
 
@@ -5082,6 +5091,8 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
 // TODO: activate when removed Index_updateStorageInfos() from commands_create.c
 #if 0
         // update index aggregates
+        if (archiveHandle->indexHandle != NULL)
+        {
         error = Index_updateStorageInfos(archiveEntryInfo->archiveHandle->indexHandle,
                                          storageId
                                         );
@@ -5089,6 +5100,7 @@ LOCAL Errors writeHardLinkDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         {
           String_delete(intermediateFileName);
           return error;
+        }
         }
 #endif
 
@@ -6134,12 +6146,15 @@ UNUSED_VARIABLE(storageInfo);
         }
 
         // update index aggregates
-        error = Index_updateStorageInfos(archiveHandle->indexHandle,
-                                         storageId
-                                        );
-        if (error != ERROR_NONE)
+        if (archiveHandle->indexHandle != NULL)
         {
-          if (result == ERROR_NONE) result = error;
+          error = Index_updateStorageInfos(archiveHandle->indexHandle,
+                                           storageId
+                                          );
+          if (error != ERROR_NONE)
+          {
+            if (result == ERROR_NONE) result = error;
+          }
         }
         break;
       case ARCHIVE_MODE_READ:
@@ -15209,22 +15224,22 @@ fprintf(stderr,"%s, %d: ------------------- %lld\n",__FILE__,__LINE__,entityId);
           }
 fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
 
-          if (!INDEX_ID_IS_NONE(entityId))
-          {
-            // update entity
+            if (!INDEX_ID_IS_NONE(entityId))
+            {
+              // update entity
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-            error = Index_updateEntity(indexHandle,
-                                       entityId,
-                                       jobUUID,
-                                       scheduleUUID,
-                                       hostName,
-                                       userName,
-                                       archiveType,
-                                       createdDateTime
-                                      );
-          }
-          else
-          {
+              error = Index_updateEntity(indexHandle,
+                                         entityId,
+                                         jobUUID,
+                                         scheduleUUID,
+                                         hostName,
+                                         userName,
+                                         archiveType,
+                                         createdDateTime
+                                        );
+            }
+            else
+            {
 fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             // check if entity with given job UUID/schedule UUID/host/archive type/created date/time exists, otherwise create new entity
             if (!Index_findEntity(indexHandle,

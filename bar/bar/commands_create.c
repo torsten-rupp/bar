@@ -4933,7 +4933,9 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       }
 
       // update index database and set state
-      if (!INDEX_ID_IS_NONE(storageMsg.storageId))
+      if (   (createInfo->indexHandle != NULL)
+          && !INDEX_ID_IS_NONE(storageMsg.storageId)
+         )
       {
         assert(!INDEX_ID_IS_NONE(storageMsg.entityId));
 
