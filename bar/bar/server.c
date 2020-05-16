@@ -16344,6 +16344,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   bool             forceRefresh;
   int              progressSteps;
   StorageSpecifier storageSpecifier;
+  bool             foundFlag;
   bool             updateRequestedFlag;
   StorageInfo      storageInfo;
   String           printableStorageName;
@@ -16386,10 +16387,11 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     return;
   }
 
+  foundFlag           = FALSE;
   updateRequestedFlag = FALSE;
 
   // try to open as storage file
-  if (!updateRequestedFlag)
+  if (!foundFlag)
   {
     if (!Storage_isPatternSpecifier(&storageSpecifier))
     {
@@ -16476,6 +16478,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
         Storage_done(&storageInfo);
 
         String_delete(printableStorageName);
+
+        foundFlag = TRUE;
       }
     }
     if (error != ERROR_NONE)
@@ -16488,7 +16492,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // try to open as directory: add all matching entries
-  if (!updateRequestedFlag)
+  if (!foundFlag)
   {
     error = Storage_forAll(&storageSpecifier,
                            NULL,  // directory
@@ -16574,6 +16578,8 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                                  }
                                }
                              }
+
+                             foundFlag = TRUE;
 
                              return !isCommandAborted(clientInfo,id) ? ERROR_NONE : ERROR_ABORTED;
                            },NULL),
