@@ -284,6 +284,7 @@ public class ServerSettings
     WidgetVariable          continuousMaxSize          = new WidgetVariable<String >("continuous-max-size",           ""   );
 
     WidgetVariable          indexDatabase              = new WidgetVariable<String >("index-database",                ""   );
+    WidgetVariable          indexDatabaseUpdate        = new WidgetVariable<Boolean>("index-database-update",         false);
     WidgetVariable          indexDatabaseAutoUpdate    = new WidgetVariable<Boolean>("index-database-auto-update",    false);
 //    WidgetVariable          indexDatabaseMaxBandWidth  = new WidgetVariable<String>("index-database-max-band-width",""   );
     WidgetVariable          indexDatabaseKeepTime      = new WidgetVariable<String >("index-database-keep-time",      ""   );
@@ -502,7 +503,15 @@ public class ServerSettings
       row++;
 
       button = BARWidgets.newCheckbox(composite,
-                                      BARControl.tr("Auto index update database."),
+                                      BARControl.tr("Run requested index database updates."),
+                                      indexDatabaseUpdate,
+                                      BARControl.tr("Index update")
+                                     );
+      Widgets.layout(button,row,1,TableLayoutData.W);
+      row++;
+
+      button = BARWidgets.newCheckbox(composite,
+                                      BARControl.tr("Auto add lost archives to index database."),
                                       indexDatabaseAutoUpdate,
                                       BARControl.tr("Auto index update")
                                      );
@@ -2136,6 +2145,7 @@ public class ServerSettings
     BARServer.getServerOption(continuousMaxSize          );
 
     BARServer.getServerOption(indexDatabase              );
+    BARServer.getServerOption(indexDatabaseUpdate        );
     BARServer.getServerOption(indexDatabaseAutoUpdate    );
 //    BARServer.getServerOption(indexDatabaseMaxBandWidth  );
     BARServer.getServerOption(indexDatabaseKeepTime      );
@@ -2308,6 +2318,7 @@ public class ServerSettings
         BARServer.setServerOption(continuousMaxSize          );
 
         BARServer.setServerOption(indexDatabase);
+        BARServer.setServerOption(indexDatabaseUpdate        );
         BARServer.setServerOption(indexDatabaseAutoUpdate    );
   //      BARServer.setServerOption(indexDatabaseMaxBandWidth);
         BARServer.setServerOption(indexDatabaseKeepTime      );
