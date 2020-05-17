@@ -6047,17 +6047,18 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
      * @param gc graphics context
      * @param x,y position
      * @param width,height size
+     * @return true iff rendered
      */
-    abstract public void render(TableItem tableItem, int column, GC gc, int x, int y, int width, int height);
+    abstract public boolean render(TableItem tableItem, int column, GC gc, int x, int y, int width, int height);
   }
 
   /** create new table widget
    * @param composite composite widget
    * @param style style
-   * @param object object data
+   * @param renderer table item renderer
    * @return new table widget
    */
-  public static Table newTable(Composite composite, int style)
+  public static Table newTable(Composite composite, int style, final TableItemRenderer renderer)
   {
     Table table;
 
@@ -6066,6 +6067,16 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
     table.setHeaderVisible(true);
 
     return table;
+  }
+
+  /** create new table widget
+   * @param composite composite widget
+   * @param style style
+   * @return new table widget
+   */
+  public static Table newTable(Composite composite, int style)
+  {
+    return newTable(composite,style,(TableItemRenderer)null);
   }
 
   /** create new table widget
@@ -7759,6 +7770,7 @@ for (int j = 1; j < listItems.size(); j++) assert(comparator.compare((T)listItem
   /** new tree widget
    * @param composite composite widget
    * @param style style
+   * @param renderer tree item renderer
    * @return new tree widget
    */
   public static Tree newTree(final Composite composite, int style, final TreeItemRenderer renderer)
@@ -7884,6 +7896,11 @@ TODO: treeEditor for checkboxes in some rows does not work reliable, 2020-01-03
     return tree;
   }
 
+  /** new tree widget
+   * @param composite composite widget
+   * @param style style
+   * @return new tree widget
+   */
   public static Tree newTree(final Composite composite, int style)
   {
     return newTree(composite,style,(TreeItemRenderer)null);

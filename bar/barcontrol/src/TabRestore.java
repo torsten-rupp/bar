@@ -2976,7 +2976,7 @@ Dprintf.dprintf("");
         {
           if (Settings.debugLevel > 0)
           {
-            BARControl.internalError(exception);
+            BARControl.printError(exception);
           }
         }
 
@@ -4047,7 +4047,7 @@ Dprintf.dprintf("");
         {
           if (Settings.debugLevel > 0)
           {
-            BARControl.internalError(exception);
+            BARControl.printError(exception);
           }
         }
 
@@ -5257,9 +5257,10 @@ Dprintf.dprintf("");
 
       widgetStorageTree = Widgets.newTree(tab,SWT.CHECK|SWT.MULTI,new Widgets.TreeItemRenderer()
       {
+//TODO: use
+        @Override
         public boolean render(TreeItem treeItem, int column, GC gc, int x, int y, int width, int height)
         {
-Dprintf.dprintf("");
           if (column == 2)
           {
             // draw column 2: date/time
@@ -5674,7 +5675,44 @@ Dprintf.dprintf("");
       tab.setLayout(new TableLayout(new double[]{0.0,1.0,0.0},1.0,2));
       Widgets.layout(tab,0,0,TableLayoutData.NSWE);
 
-      widgetStorageTable = Widgets.newTable(tab,SWT.CHECK|SWT.VIRTUAL);
+      widgetStorageTable = Widgets.newTable(tab,SWT.CHECK|SWT.VIRTUAL, new Widgets.TableItemRenderer()
+      {
+//TODO: use
+        @Override
+        public boolean render(TableItem tableItem, int column, GC gc, int x, int y, int width, int height)
+        {
+          if (column == 2)
+          {
+            // draw column 2: date/time
+            IndexData indexData = (IndexData)tableItem.getData();
+
+            long dateTime = indexData.getDateTime();
+            if (dateTime > 0)
+            {
+              // render date/time with date, day, time in columns
+              String t1 = SIMPLE_DATE_FORMAT1.format(new Date(dateTime*1000L));
+              String t2 = SIMPLE_DATE_FORMAT2.format(new Date(dateTime*1000L));
+              String t3 = SIMPLE_DATE_FORMAT3.format(new Date(dateTime*1000L));
+              Point  s1 = gc.textExtent(t1);
+              Point  s2 = gc.textExtent("MMM");
+              Point  s3 = gc.textExtent(t3);
+              gc.drawText(t1,x+0            ,y,true);
+              gc.drawText(t2,x+s1.x+2       ,y,true);
+              gc.drawText(t3,x+s1.x+2+s2.x+2,y,true);
+            }
+            else
+            {
+              gc.drawText("-", x+0, y, true);
+            }
+
+            return true;
+          }
+          else
+          {
+            return false;
+          }
+        }
+      });
       widgetStorageTable.setLayout(new TableLayout(null,new double[]{1.0,0.0,0.0,0.0}));
       Widgets.layout(widgetStorageTable,1,0,TableLayoutData.NSWE);
       SelectionListener storageTableColumnSelectionListener = new SelectionListener()
@@ -5722,6 +5760,56 @@ Dprintf.dprintf("");
       tableColumn.setToolTipText(BARControl.tr("Click to sort for state."));
       tableColumn.addSelectionListener(storageTableColumnSelectionListener);
       Widgets.sortTable(widgetStorageTable,0,SWT.UP);
+
+      // special case for drawing date/time
+      widgetStorageTable.addListener(SWT.EraseItem, new Listener()
+      {
+        public void handleEvent(Event event)
+        {
+          TableItem tableItem = (TableItem)event.item;
+
+          if (event.index == 3)
+          {
+            // Note: do not draw column 3 = date/time
+            event.detail &= ~SWT.FOREGROUND;
+          }
+        }
+      });
+      widgetStorageTable.addListener(SWT.PaintItem, new Listener()
+      {
+        public void handleEvent(Event event)
+        {
+          TableItem tableItem = (TableItem)event.item;
+
+          if (event.index == 3)
+          {
+            // draw column 3 => date/time
+            IndexData indexData = (IndexData)tableItem.getData();
+            if (indexData != null)
+            {
+              long dateTime = indexData.getDateTime();
+              if (dateTime > 0)
+              {
+                String t1 = SIMPLE_DATE_FORMAT1.format(new Date(dateTime*1000L));
+                String t2 = SIMPLE_DATE_FORMAT2.format(new Date(dateTime*1000L));
+                String t3 = SIMPLE_DATE_FORMAT3.format(new Date(dateTime*1000L));
+                Point  s1 = event.gc.textExtent(t1);
+                Point  s2 = event.gc.textExtent("MMM");
+                Point  s3 = event.gc.textExtent(t3);
+                event.gc.drawText(t1,event.x+0            ,event.y+(event.height-s1.y)/2,true);
+                event.gc.drawText(t2,event.x+s1.x+2       ,event.y+(event.height-s2.y)/2,true);
+                event.gc.drawText(t3,event.x+s1.x+2+s2.x+2,event.y+(event.height-s3.y)/2,true);
+              }
+              else
+              {
+                String t1 = "-";
+                Point  s1 = event.gc.textExtent(t1);
+                event.gc.drawText(t1, event.x+0, event.y+(event.height-s1.y)/2, true);
+              }
+            }
+          }
+        }
+      });
       widgetStorageTable.addListener(SWT.SetData,new Listener()
       {
         @Override
@@ -7216,7 +7304,7 @@ Dprintf.dprintf("");
               {
                 if (Settings.debugLevel > 0)
                 {
-                  BARControl.internalError(exception);
+                  BARControl.printError(exception);
                 }
               }
             }
@@ -7498,7 +7586,7 @@ Dprintf.dprintf("");
     {
       if (Settings.debugLevel > 0)
       {
-        BARControl.internalError(exception);
+        BARControl.printError(exception);
       }
     }
   }
@@ -9004,7 +9092,7 @@ Dprintf.dprintf("");
         {
           if (Settings.debugLevel > 0)
           {
-            BARControl.internalError(exception);
+            BARControl.printError(exception);
           }
         }
       }
