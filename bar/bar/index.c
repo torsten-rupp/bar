@@ -4476,17 +4476,15 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
 
-  // get directory aggregate data
+  // get directory aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(DISTINCT entries.id) \
                             FROM directoryEntries \
                               LEFT JOIN entries ON entries.id=directoryEntries.entryId \
-                            WHERE     directoryEntries.storageId=%lld \
-                                  AND entries.type=%u \
+                            WHERE directoryEntries.storageId=%lld \
                            ",
-                           storageId,
-                           INDEX_TYPE_DIRECTORY
+                           storageId
                           );
   if (error != ERROR_NONE)
   {
@@ -4502,17 +4500,15 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   }
   Database_finalize(&databaseQueryHandle);
 
-  // get link aggregate data
+  // get link aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(DISTINCT entries.id) \
                             FROM linkEntries \
                               LEFT JOIN entries ON entries.id=linkEntries.entryId \
-                            WHERE     linkEntries.storageId=%lld \
-                                  AND entries.type=%u \
+                            WHERE linkEntries.storageId=%lld \
                            ",
-                           storageId,
-                           INDEX_TYPE_LINK
+                           storageId
                           );
   if (error != ERROR_NONE)
   {
@@ -4560,17 +4556,15 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
 
-  // get special aggregate data
+  // get special aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(DISTINCT entries.id) \
                             FROM specialEntries \
                               LEFT JOIN entries ON entries.id=specialEntries.entryId \
-                            WHERE     specialEntries.storageId=%lld \
-                                  AND entries.type=%u \
+                            WHERE specialEntries.storageId=%lld \
                            ",
-                           storageId,
-                           INDEX_TYPE_SPECIAL
+                           storageId
                           );
   if (error != ERROR_NONE)
   {
@@ -4686,17 +4680,15 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   totalImageSize = (totalImageSize_ >= 0.0) ? (uint64)totalImageSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
 
-  // get newest directory aggregate data
+  // get newest directory aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(DISTINCT entriesNewest.id) \
                             FROM directoryEntries \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=directoryEntries.entryId \
-                            WHERE     directoryEntries.storageId=%lld \
-                                  AND entriesNewest.type=%u \
+                            WHERE directoryEntries.storageId=%lld \
                            ",
-                           storageId,
-                           INDEX_TYPE_DIRECTORY
+                           storageId
                           );
   if (error != ERROR_NONE)
   {
@@ -4712,17 +4704,15 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   }
   Database_finalize(&databaseQueryHandle);
 
-  // get newest link aggregate data
+  // get newest link aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(DISTINCT entriesNewest.id) \
                             FROM linkEntries \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=linkEntries.entryId \
-                            WHERE     linkEntries.storageId=%lld \
-                                  AND entriesNewest.type=%u \
+                            WHERE linkEntries.storageId=%lld \
                            ",
-                           storageId,
-                           INDEX_TYPE_LINK
+                           storageId
                           );
   if (error != ERROR_NONE)
   {
@@ -4770,17 +4760,15 @@ LOCAL Errors updateStorageAggregates(IndexHandle *indexHandle,
   totalHardlinkSize = (totalHardlinkSize_ >= 0.0) ? (uint64)totalHardlinkSize_ : 0LL;
   Database_finalize(&databaseQueryHandle);
 
-  // get newest special aggregate data
+  // get newest special aggregate data (Note: do not filter by entries.type -> not required and it is slow!)
   error = Database_prepare(&databaseQueryHandle,
                            &indexHandle->databaseHandle,
                            "SELECT COUNT(DISTINCT entriesNewest.id) \
                             FROM specialEntries \
                               LEFT JOIN entriesNewest ON entriesNewest.entryId=specialEntries.entryId \
-                            WHERE     specialEntries.storageId=%lld \
-                                  AND entriesNewest.type=%u \
+                            WHERE specialEntries.storageId=%lld \
                            ",
-                           storageId,
-                           INDEX_TYPE_SPECIAL
+                           storageId
                           );
   if (error != ERROR_NONE)
   {
@@ -6441,7 +6429,7 @@ bool Index_findUUID(IndexHandle  *indexHandle,
       #endif
 
       if (!Database_getNextRow(&databaseQueryHandle,
-                               "%lld %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %llu %lu %llu",
+                               "%lld %lu %lu %lu %lu %lu %llu %llu %llu %llu %llu %lu %lu %lf %lf %lf",
                                &uuidDatabaseId,
                                executionCountNormal,
                                executionCountFull,
