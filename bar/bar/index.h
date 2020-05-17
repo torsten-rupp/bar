@@ -1070,8 +1070,8 @@ bool Index_getNextHistory(IndexQueryHandle *indexQueryHandle,
 * Input  : indexHandle  - index handle
 *          jobUUID           - unique job UUID
 *          scheduleUUID      - unique schedule UUID (can be NULL)
-*          userName          - user name (can be NULL)
 *          hostName          - host name (can be NULL)
+*          userName          - user name (can be NULL)
 *          archiveType       - archive type
 *          createdDateTime   - create date/time stamp [s]
 *          errorMessage      - last storage error message (can be NULL)
@@ -1415,6 +1415,7 @@ Errors Index_newEntity(IndexHandle  *indexHandle,
 *          jobUUID         - unique job UUID (can be NULL)
 *          scheduleUUID    - unique schedule UUID (can be NULL)
 *          hostName        - host name (can be NULL)
+*          userName        - user name (can be NULL)
 *          archiveType     - archive type
 *          createdDateTime - create date/time
 * Output : -
@@ -1427,6 +1428,7 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
                           ConstString  jobUUID,
                           ConstString  scheduleUUID,
                           ConstString  hostName,
+                          ConstString  userName,
                           ArchiveTypes archiveType,
                           uint64       createdDateTime
                          );
@@ -1691,6 +1693,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 * Purpose: update storage index
 * Input  : indexHandle     - index handle
 *          storageId       - index id of storage
+*          hostName          - host name (can be NULL)
 *          userName        - user name (can be NULL)
 *          storageName     - storage name (can be NULL)
 *          createdDateTime - create date/time (can be 0)
@@ -1703,6 +1706,7 @@ Errors Index_newStorage(IndexHandle *indexHandle,
 
 Errors Index_updateStorage(IndexHandle  *indexHandle,
                            IndexId      storageId,
+                           ConstString  hostName,
                            ConstString  userName,
                            ConstString  storageName,
                            uint64       createdDateTime,
