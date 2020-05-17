@@ -198,6 +198,9 @@ bzip9      4536M 21.38 1684.05s    21M
 lzma1      4426M 23.28 2097.76s    22M
 lzma9      4355M 24.52 3888.69s   654M
 
+Note: measurements where done on a system with 12 cores/24G RAM
+      and a RAID1.
+
 The compression of lzma9 is usually better than for bzip9 or zip9,
 lzo, lz4, or zstd but the compression time and the required memory
 also increased significantly.
@@ -220,7 +223,7 @@ used encryption algorithm is not broken by someone).
 
 For asymmetric encryption a pair of keys with hybrit
 encryption is used: the file meta data and file data is
-encrypted with a symmetric algorithmis, e. g. AES or Twofish.
+encrypted with a symmetric algorithm, e. g. AES or Twofish.
 The key for symmetric encryption is chosen from random data,
 encrypted asymmetric with the public key and stored in the BAR
 archive files, too. Those archives can only be read when the
