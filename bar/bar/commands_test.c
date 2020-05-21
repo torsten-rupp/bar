@@ -343,7 +343,11 @@ LOCAL Errors testFileEntry(ArchiveHandle     *archiveHandle,
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),
+                   ", fragment %*"PRIu64"..%*"PRIu64,
+                   stringInt64Length(fileInfo.size),fragmentOffset,
+                   stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                  );
     }
 
     // output
@@ -543,7 +547,11 @@ LOCAL Errors testImageEntry(ArchiveHandle     *archiveHandle,
     stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
-      stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),
+                   ", fragment %*"PRIu64"..%*"PRIu64,
+                   stringInt64Length(deviceInfo.size),blockOffset*(uint64)deviceInfo.blockSize,
+                   stringInt64Length(deviceInfo.size),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL
+                  );
     }
 
     // output
@@ -921,7 +929,11 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),
+                       ", fragment %*"PRIu64"..%*"PRIu64,
+                       stringInt64Length(fileInfo.size),fragmentOffset,
+                       stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                      );
         }
 
         // output
@@ -943,7 +955,11 @@ LOCAL Errors testHardLinkEntry(ArchiveHandle     *archiveHandle,
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),
+                       ", fragment %*"PRIu64"..%*"PRIu64,
+                       stringInt64Length(fileInfo.size),fragmentOffset,
+                       stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                      );
         }
 
         if (error == ERROR_NONE)

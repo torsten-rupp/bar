@@ -492,7 +492,11 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
     stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64"",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),
+                   ", fragment %*"PRIu64"..%*"PRIu64,
+                   stringInt64Length(fileInfo.size),fragmentOffset,
+                   stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                  );
     }
 
     // output
@@ -855,7 +859,11 @@ LOCAL Errors compareImageEntry(ArchiveHandle     *archiveHandle,
     stringClear(fragmentString);
     if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
     {
-      stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,(blockOffset*(uint64)deviceInfo.blockSize),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),
+                   ", fragment %*"PRIu64"..%*"PRIu64,
+                   stringInt64Length(deviceInfo.size),blockOffset*(uint64)deviceInfo.blockSize,
+                   stringInt64Length(deviceInfo.size),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL
+                  );
     }
 
     // output
@@ -1481,7 +1489,11 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
         stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),
+                       ", fragment %*"PRIu64"..%*"PRIu64,
+                       stringInt64Length(fileInfo.size),fragmentOffset,
+                       stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                      );
         }
 
         // output
@@ -1492,9 +1504,29 @@ LOCAL Errors compareHardLinkEntry(ArchiveHandle     *archiveHandle,
       else
       {
         // compare hard link data already done
+
+        // get size/fragment info
+        if (globalOptions.humanFormatFlag)
+        {
+          getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+        }
+        else
+        {
+          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+        }
+        stringClear(fragmentString);
+        if (fragmentSize < fileInfo.size)
+        {
+          stringFormat(fragmentString,sizeof(fragmentString),
+                       ", fragment %*"PRIu64"..%*"PRIu64,
+                       stringInt64Length(fileInfo.size),fragmentOffset,
+                       stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                      );
+        }
+
         if (error == ERROR_NONE)
         {
-          printInfo(1,"OK\n");
+          printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
         }
         else
         {
