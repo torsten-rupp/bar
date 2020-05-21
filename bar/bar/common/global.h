@@ -2325,6 +2325,70 @@ static inline char* stringSetBuffer(char *destination, ulong n, const char *buff
 
 
 /***********************************************************************\
+* Name   : stringIntLength
+* Purpose: get string length of integer (number of digits)
+* Input  : n - integer
+* Output : -
+* Return : string integer length
+* Notes  : -
+\***********************************************************************/
+
+static inline uint stringIntLength(int n)
+{
+  #ifdef __GNUC__
+    // log10 of 64-bit numbers 1..2^64
+    static const uint8_t DIGITS_COUNT[64] = { 1, 1, 1, 1, 2, 2, 2, 3,
+                                              3, 3, 4, 4, 4, 4, 5, 5,
+                                              5, 6, 6, 6, 7, 7, 7, 7,
+                                              8, 8, 8, 9, 9, 9,10,10,
+                                             10,10,11,11,11,12,12,12,
+                                             13,13,13,13,14,14,14,15,
+                                             15,15,16,16,16,16,17,17,
+                                             17,18,18,18,19,19,19,19
+                                            };
+    assert(__builtin_clz(0) <= sizeof(DIGITS_COUNT));
+    assert((sizeof(n)*8) <= sizeof(DIGITS_COUNT));
+//fprintf(stderr,"%s, %d: %d -> %d -> %d\n",__FILE__,__LINE__,n,sizeof(n)*8-((n >= 0) ? __builtin_clz(n) : __builtin_clz(-n)),(n >= 0) ? DIGITS_COUNT[sizeof(n)*8-__builtin_clz(n)] : 1+DIGITS_COUNT[sizeof(n)*8-__builtin_clz(-n)]);
+
+    return (n >= 0) ? DIGITS_COUNT[sizeof(n)*8-__builtin_clz(n)] : 1+DIGITS_COUNT[sizeof(n)*8-__builtin_clz(-n)];
+  #else /* not GCC */
+    #error stringIntLength() still not implemented
+  #endif /* GCC */
+}
+
+/***********************************************************************\
+* Name   : stringInt64Length
+* Purpose: get string length of integer (number of digits)
+* Input  : n - integer
+* Output : -
+* Return : string integer length
+* Notes  : -
+\***********************************************************************/
+
+static inline uint stringInt64Length(int64 n)
+{
+  #ifdef __GNUC__
+    // log10 of 64-bit numbers 1..2^64
+    static const uint8_t DIGITS_COUNT[64] = { 1, 1, 1, 1, 2, 2, 2, 3,
+                                              3, 3, 4, 4, 4, 4, 5, 5,
+                                              5, 6, 6, 6, 7, 7, 7, 7,
+                                              8, 8, 8, 9, 9, 9,10,10,
+                                             10,10,11,11,11,12,12,12,
+                                             13,13,13,13,14,14,14,15,
+                                             15,15,16,16,16,16,17,17,
+                                             17,18,18,18,19,19,19,19
+                                            };
+    assert(__builtin_clz(0) <= sizeof(DIGITS_COUNT));
+    assert((sizeof(n)*8) <= sizeof(DIGITS_COUNT));
+//fprintf(stderr,"%s, %d: %d %d -> %d -> %d\n",__FILE__,__LINE__,sizeof(n),n,sizeof(n)*8-((n >= 0) ? __builtin_clzll(n) : __builtin_clzll(-n)),(n >= 0) ? DIGITS_COUNT[sizeof(n)*8-__builtin_clzll(n)] : 1+DIGITS_COUNT[sizeof(n)*8-__builtin_clzll(-n)]);
+
+    return (n >= 0) ? DIGITS_COUNT[sizeof(n)*8-__builtin_clzll(n)] : 1+DIGITS_COUNT[sizeof(n)*8-__builtin_clzll(-n)];
+  #else /* not GCC */
+    #error stringIntLength() still not implemented
+  #endif /* GCC */
+}
+
+/***********************************************************************\
 * Name   : stringVFormat, stringFormat
 * Purpose: format string
 * Input  : string    - string
