@@ -151,7 +151,7 @@ LOCAL MountedList        mountedList;                      // list of mounts
 LOCAL Commands           command;
 LOCAL String             jobUUIDName;
 
-LOCAL String             jobUUID;                          // UUID of job to execute
+LOCAL String             jobUUID;                          // UUID of job to execute/convert
 LOCAL String             storageName;
 LOCAL EntryList          includeEntryList;                 // included entries
 LOCAL PatternList        excludePatternList;               // excluded entry patterns
@@ -10470,8 +10470,9 @@ LOCAL Errors runJob(ConstString jobUUIDName)
 
 LOCAL Errors runInteractive(int argc, const char *argv[])
 {
-  JobOptions jobOptions;
-  Errors     error;
+  StaticString (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  JobOptions   jobOptions;
+  Errors       error;
 
   // get include/excluded entries from file list
   if (!String_isEmpty(globalOptions.includeFileListFileName))
@@ -10546,7 +10547,12 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
   // interactive mode
   globalOptions.runMode = RUN_MODE_INTERACTIVE;
 
+  // get new schedule UUID
+  Misc_getUUID(scheduleUUID);
+
+  // init job options
   Job_initOptions(&jobOptions);
+
   error = ERROR_NONE;
   switch (command)
   {
@@ -10591,7 +10597,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           // create archive
           error = Command_create(NULL, // masterIO
                                  NULL, // job UUID
-                                 NULL, // schedule UUID
+                                 scheduleUUID,
                                  NULL, // scheduleTitle
                                  NULL, // scheduleCustomText
                                  storageName,
@@ -10726,8 +10732,9 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
           case COMMAND_CONVERT:
             error = Command_convert(&storageNameList,
                                     jobUUID,
-                                    &jobOptions,
+                                    scheduleUUID,
                                     Misc_getCurrentDateTime(),
+                                    &jobOptions,
                                     CALLBACK_(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
                                    );

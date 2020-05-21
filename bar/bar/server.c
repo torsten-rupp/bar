@@ -1516,16 +1516,7 @@ LOCAL void jobThreadCode(void)
       EntryList_clear(&includeEntryList); EntryList_copy(&includeEntryList,&jobNode->job.includeEntryList,CALLBACK_(NULL,NULL));
       PatternList_clear(&excludePatternList); PatternList_copy(&excludePatternList,&jobNode->job.excludePatternList,CALLBACK_(NULL,NULL));
       Job_duplicateOptions(&jobOptions,&jobNode->job.options);
-      if (!String_isEmpty(jobNode->scheduleUUID))
-      {
-        String_set(scheduleUUID,      jobNode->scheduleUUID);
-        String_set(scheduleCustomText,jobNode->scheduleCustomText);
-      }
-      else
-      {
-        String_clear(scheduleUUID);
-        String_clear(scheduleCustomText);
-      }
+      String_set(scheduleCustomText,jobNode->scheduleCustomText);
       archiveType   = jobNode->archiveType;
       startDateTime = jobNode->startDateTime;
       storageFlags  = jobNode->storageFlags;
@@ -1543,6 +1534,9 @@ LOCAL void jobThreadCode(void)
     }
 
     // Note: job is now protected by running state from being deleted
+
+    // get new schedule UUID
+    Misc_getUUID(scheduleUUID);
 
     // init log
     initLog(&logHandle);
@@ -3210,6 +3204,7 @@ LOCAL Errors deleteUUID(IndexHandle *indexHandle,
                                  INDEX_STATE_SET_ALL,
                                  INDEX_MODE_SET_ALL,
                                  NULL,  // name
+                                 INDEX_ENTITY_SORT_MODE_NONE,
                                  DATABASE_ORDERING_NONE,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
@@ -3401,6 +3396,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
+                                   INDEX_ENTITY_SORT_MODE_CREATED,
                                    DATABASE_ORDERING_DESCENDING,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
@@ -13756,28 +13752,30 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 
 LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
-  StaticString       (jobUUID,MISC_UUID_STRING_LENGTH);
-  bool               indexStateAny;
-  IndexStateSet      indexStateSet;
-  bool               indexModeAny;
-  IndexModeSet       indexModeSet;
-  String             name;
-  Errors             error;
-  IndexQueryHandle   indexQueryHandle;
-  IndexId            uuidId;
-  String             jobName;
-  IndexId            entityId;
-  StaticString       (scheduleUUID,MISC_UUID_STRING_LENGTH);
-  uint64             createdDateTime;
-  ArchiveTypes       archiveType;
-  String             lastErrorMessage;
-  uint64             totalSize;
-  ulong              totalEntryCount;
-  uint64             totalEntrySize;
-  int                maxAge;
-  const JobNode      *jobNode;
-  const ScheduleNode *scheduleNode;
-  uint64             expireDateTime;
+  StaticString         (jobUUID,MISC_UUID_STRING_LENGTH);
+  bool                 indexStateAny;
+  IndexStateSet        indexStateSet;
+  bool                 indexModeAny;
+  IndexModeSet         indexModeSet;
+  String               name;
+  IndexEntitySortModes sortMode;
+  DatabaseOrdering     ordering;
+  Errors               error;
+  IndexQueryHandle     indexQueryHandle;
+  IndexId              uuidId;
+  String               jobName;
+  IndexId              entityId;
+  StaticString         (scheduleUUID,MISC_UUID_STRING_LENGTH);
+  uint64               createdDateTime;
+  ArchiveTypes         archiveType;
+  String               lastErrorMessage;
+  uint64               totalSize;
+  ulong                totalEntryCount;
+  uint64               totalEntrySize;
+  int                  maxAge;
+  const JobNode        *jobNode;
+  const ScheduleNode   *scheduleNode;
+  uint64               expireDateTime;
 
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
@@ -13812,6 +13810,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
+  StringMap_getEnum(argumentMap,"sortMode",&sortMode,(StringMapParseEnumFunction)Index_parseEntitySortMode,INDEX_ENTITY_SORT_MODE_JOB_UUID);
+  StringMap_getEnum(argumentMap,"ordering",&ordering,(StringMapParseEnumFunction)Index_parseOrdering,DATABASE_ORDERING_NONE);
 
   // check if index database is available
   if (indexHandle == NULL)
@@ -13835,7 +13835,8 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
                                  indexStateAny ? INDEX_STATE_SET_ALL : indexStateSet,
                                  indexModeAny ? INDEX_MODE_SET_ALL : indexModeSet,
                                  name,
-                                 DATABASE_ORDERING_ASCENDING,
+                                 sortMode,
+                                 ordering,
                                  0LL,  // offset
                                  INDEX_UNLIMITED
                                 );

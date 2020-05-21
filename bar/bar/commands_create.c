@@ -7749,8 +7749,8 @@ Errors Command_create(ServerIO                     *masterIO,
   bool             incrementalFileInfoExistFlag;
   IndexHandle      *indexHandle;
   CreateInfo       createInfo;
+  Errors           error;
   StorageSpecifier storageSpecifier;
-//  String           directoryName;
   IndexId          uuidId;
   String           hostName,userName;
   IndexId          entityId;
@@ -7760,7 +7760,6 @@ Errors Command_create(ServerIO                     *masterIO,
   Thread           *createThreads;
   uint             createThreadCount;
   uint             i;
-  Errors           error;
   String           fileName;
 
   assert(storageName != NULL);

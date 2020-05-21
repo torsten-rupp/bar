@@ -17,6 +17,7 @@
 #include <semaphore.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -51,8 +52,9 @@ typedef struct
 {
   StorageInfo             storageInfo;
   ConstString             jobUUID;
-  const JobOptions        *jobOptions;
+  ConstString             scheduleUUID;
   uint64                  createdDateTime;
+  const JobOptions        *jobOptions;
   GetNamePasswordFunction getNamePasswordFunction;
   void                    *getNamePasswordUserData;
   LogHandle               *logHandle;                         // log handle
@@ -141,6 +143,8 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 * Purpose: initialize convert info
 * Input  : convertInfo             - convert info variable
 *          jobUUID                 - job UUID
+*          scheduleUUID            - schedule UUID
+*          createdDateTime         - created date/time
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password call back
@@ -152,8 +156,9 @@ LOCAL void freeStorageMsg(StorageMsg *storageMsg, void *userData)
 
 LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
                            ConstString             jobUUID,
-                           const JobOptions        *jobOptions,
+                           ConstString             scheduleUUID,
                            uint64                  createdDateTime,
+                           const JobOptions        *jobOptions,
                            GetNamePasswordFunction getNamePasswordFunction,
                            void                    *getNamePasswordUserData,
                            LogHandle               *logHandle
@@ -163,8 +168,9 @@ LOCAL void initConvertInfo(ConvertInfo             *convertInfo,
 
   // init variables
   convertInfo->jobUUID                 = jobUUID;
-  convertInfo->jobOptions              = jobOptions;
+  convertInfo->scheduleUUID            = scheduleUUID;
   convertInfo->createdDateTime         = createdDateTime;
+  convertInfo->jobOptions              = jobOptions;
   convertInfo->getNamePasswordFunction = getNamePasswordFunction;
   convertInfo->getNamePasswordUserData = getNamePasswordUserData;
   convertInfo->logHandle               = logHandle;
@@ -700,6 +706,8 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   FileExtendedAttributeList fileExtendedAttributeList;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
   uint64                    fragmentOffset,fragmentSize;
+  char                      sizeString[32];
+  char                      fragmentString[256];
   uint64                    length;
   ulong                     bufferLength;
 
@@ -732,7 +740,25 @@ LOCAL Errors convertFileEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); String_delete(fileName); return DEBUG_TESTCODE_ERROR(); }
 
-  printInfo(1,"  Convert file      '%s'...",String_cString(fileName));
+  // get size/fragment info
+  if (globalOptions.humanFormatFlag)
+  {
+    getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+  }
+  else
+  {
+    stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+  }
+  stringClear(fragmentString);
+  if (fragmentSize < fileInfo.size)
+  {
+    stringFormat(fragmentString,sizeof(fragmentString),
+                 ", fragment %*"PRIu64"..%*"PRIu64,
+                 stringInt64Length(fileInfo.size),fragmentOffset,
+                 stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                );
+  }
+  printInfo(1,"  Convert file      '%s' (%s bytes%s)...",String_cString(fileName),sizeString,fragmentString);
 
   // set new compression, crypt settings
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
@@ -895,6 +921,8 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   ArchiveEntryInfo   destinationArchiveEntryInfo;
   uint64             blockOffset,blockCount;
   FileSystemTypes    fileSystemType;
+  char               sizeString[32];
+  char               fragmentString[256];
   uint64             block;
 
   // read source image entry
@@ -936,7 +964,25 @@ LOCAL Errors convertImageEntry(ArchiveHandle    *sourceArchiveHandle,
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); String_delete(deviceName); return DEBUG_TESTCODE_ERROR(); }
   assert(deviceInfo.blockSize > 0);
 
-  printInfo(1,"  Convert image     '%s'...",String_cString(deviceName));
+  // get size/fragment info
+  if (globalOptions.humanFormatFlag)
+  {
+    getHumanSizeString(sizeString,sizeof(sizeString),deviceInfo.size);
+  }
+  else
+  {
+    stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*(uint64)deviceInfo.blockSize);
+  }
+  stringClear(fragmentString);
+  if ((blockCount*(uint64)deviceInfo.blockSize) < deviceInfo.size)
+  {
+    stringFormat(fragmentString,sizeof(fragmentString),
+                 ", fragment %*"PRIu64"..%*"PRIu64,
+                 stringInt64Length(deviceInfo.size),blockOffset*(uint64)deviceInfo.blockSize,
+                 stringInt64Length(deviceInfo.size),(blockOffset*(uint64)deviceInfo.blockSize)+(blockCount*(uint64)deviceInfo.blockSize)-1LL
+                );
+  }
+  printInfo(1,"  Convert image     '%s' (%s bytes%s)...",String_cString(deviceName),sizeString,fragmentString);
 
   // set new compression, crypt settings
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
@@ -1323,6 +1369,8 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   FileInfo                  fileInfo;
   ArchiveEntryInfo          destinationArchiveEntryInfo;
   uint64                    fragmentOffset,fragmentSize;
+  char                      sizeString[32];
+  char                      fragmentString[256];
   uint64                    length;
   ulong                     bufferLength;
 
@@ -1355,7 +1403,25 @@ LOCAL Errors convertHardLinkEntry(ArchiveHandle    *sourceArchiveHandle,
   }
   DEBUG_TESTCODE() { Archive_closeEntry(&sourceArchiveEntryInfo); File_doneExtendedAttributes(&fileExtendedAttributeList); StringList_done(&fileNameList); return DEBUG_TESTCODE_ERROR(); }
 
-  printInfo(1,"  Convert hard link '%s'...",String_cString(StringList_first(&fileNameList,NULL)));
+  // get size/fragment info
+  if (globalOptions.humanFormatFlag)
+  {
+    getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+  }
+  else
+  {
+    stringFormat(fragmentString,sizeof(fragmentString),
+                 ", fragment %*"PRIu64"..%*"PRIu64,
+                 stringInt64Length(fileInfo.size),fragmentOffset,
+                 stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                );
+  }
+  stringClear(fragmentString);
+  if (fragmentSize < fileInfo.size)
+  {
+    stringFormat(fragmentString,sizeof(fragmentString),", fragment %"PRIu64"..%"PRIu64,fragmentOffset,fragmentOffset+fragmentSize-1LL);
+  }
+  printInfo(1,"  Convert hard link '%s' (%s bytes%s)...",String_cString(StringList_first(&fileNameList,NULL)),sizeString,fragmentString);
 
   // set new compression, crypt settings
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMPRESS_ALGORITHMS)) byteCompressAlgorithm = jobOptions->compressAlgorithms.byte;
@@ -1593,8 +1659,9 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 * Input  : sourceArchiveHandle      - source archive handle
 *          destinationArchiveHandle - destination archive handle
 *          newJobUUID               - new job UUID or NULL
-*          newJobOptions            - new job options or NULL
+*          newScheduleUUID          - new schedule UUID or NULL
 *          newCreatedDateTime       - new created date/time or 0
+*          newJobOptions            - new job options or NULL
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
@@ -1603,8 +1670,9 @@ LOCAL Errors convertSpecialEntry(ArchiveHandle    *sourceArchiveHandle,
 LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
                               ArchiveHandle    *destinationArchiveHandle,
                               ConstString      newJobUUID,
-                              const JobOptions *newJobOptions,
-                              uint64           newCreatedDateTime
+                              ConstString      newScheduleUUID,
+                              uint64           newCreatedDateTime,
+                              const JobOptions *newJobOptions
                              )
 {
   String           hostName;
@@ -1649,8 +1717,9 @@ LOCAL Errors convertMetaEntry(ArchiveHandle    *sourceArchiveHandle,
 
   printInfo(1,"  Convert meta      ...");
 
-  // set new UUID, comment
+  // set new job UUID, schedule UUOD, created date/time comment
   if (!String_isEmpty(newJobUUID)) String_set(jobUUID,newJobUUID);
+  if (!String_isEmpty(newScheduleUUID)) String_set(scheduleUUID,newScheduleUUID);
   if (newCreatedDateTime != 0LL) createdDateTime = newCreatedDateTime;
   if (VALUESET_IS_SET(globalOptionSet,GLOBAL_OPTION_SET_COMMENT)) String_set(comment,newJobOptions->comment);
 
@@ -1838,8 +1907,9 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
         error = convertMetaEntry(&sourceArchiveHandle,
                                  &convertInfo->destinationArchiveHandle,
                                  convertInfo->jobUUID,
-                                 convertInfo->jobOptions,
-                                 convertInfo->createdDateTime
+                                 convertInfo->scheduleUUID,
+                                 convertInfo->createdDateTime,
+                                 convertInfo->jobOptions
                                 );
         break;
       case ARCHIVE_ENTRY_TYPE_SIGNATURE:
@@ -1876,6 +1946,8 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 * Input  : storageSpecifier        - storage specifier
 *          archiveName             - archive name (can be NULL)
 *          jobUUID                 - job UUID
+*          scheduleUUID            - schedule UUID
+*          createdDateTime         - created date/time
 *          jobOptions              - job options
 *          getNamePasswordFunction - get password call back
 *          getNamePasswordUserData - user data for get password
@@ -1888,8 +1960,9 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
                             ConstString             archiveName,
                             ConstString             jobUUID,
-                            JobOptions              *jobOptions,
+                            ConstString             scheduleUUID,
                             uint64                  createdDateTime,
+                            JobOptions              *jobOptions,
                             GetNamePasswordFunction getNamePasswordFunction,
                             void                    *getNamePasswordUserData,
                             LogHandle               *logHandle
@@ -1938,8 +2011,9 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
   // init convert info
   initConvertInfo(&convertInfo,
                   jobUUID,
-                  jobOptions,
+                  scheduleUUID,
                   createdDateTime,
+                  jobOptions,
                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                   logHandle
                  );
@@ -2239,8 +2313,9 @@ CALLBACK_(NULL,NULL),//                         CALLBACK_(archiveGetSize,&conver
 
 Errors Command_convert(const StringList        *storageNameList,
                        ConstString             newJobUUID,
-                       JobOptions              *newJobOptions,
+                       ConstString             newScheduleUUID,
                        uint64                  newCreatedDateTime,
+                       JobOptions              *newJobOptions,
                        GetNamePasswordFunction getNamePasswordFunction,
                        void                    *getNamePasswordUserData,
                        LogHandle               *logHandle
@@ -2289,8 +2364,9 @@ Errors Command_convert(const StringList        *storageNameList,
         error = convertArchive(&storageSpecifier,
                                NULL,
                                newJobUUID,
-                               newJobOptions,
+                               newScheduleUUID,
                                newCreatedDateTime,
+                               newJobOptions,
                                CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                logHandle
                               );
@@ -2335,6 +2411,7 @@ Errors Command_convert(const StringList        *storageNameList,
             error = convertArchive(&storageSpecifier,
                                    fileName,
                                    newJobUUID,
+                                   newScheduleUUID,
                                    newJobOptions,
                                    newCreatedDateTime,
                                    CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
