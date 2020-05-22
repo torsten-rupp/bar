@@ -4796,7 +4796,7 @@ if (false) {
                                             )
                               );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S",
+            BARServer.executeCommand(StringParser.format("INDEX_ENTITY_LIST indexStateSet=* indexModeSet=* name=%'S sortMode=JOB_UUID ordering=ASCENDING",
                                                          !Settings.indexDatabaseEntitiesListName.isEmpty() ? Settings.indexDatabaseEntitiesListName : ""
                                                         ),
                                      1,  // debug level
@@ -4857,7 +4857,7 @@ if (false) {
                                             )
                               );
             System.out.println(StringUtils.repeat("-",getTerminalWidth()));
-            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S",
+            BARServer.executeCommand(StringParser.format("INDEX_STORAGE_LIST entityId=* indexStateSet=* indexModeSet=* name=%'S sortMode=NAME ordering=ASCENDING",
                                                          Settings.indexDatabaseStoragesListName
                                                         ),
                                      1,  // debug level
