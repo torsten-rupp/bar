@@ -374,9 +374,6 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
                  }
                 );
 
-    // get printable storage name
-    Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,convertInfo->archiveName);
-
     // get file info
     error = File_getInfo(&fileInfo,storageMsg.fileName);
     if (error != ERROR_NONE)
@@ -391,6 +388,9 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       continue;
     }
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); break; }
+
+    // get printable storage name
+    Storage_getPrintableName(printableStorageName,&convertInfo->storageInfo.storageSpecifier,convertInfo->archiveName);
 
     // open file to store
     #ifndef NDEBUG
@@ -413,7 +413,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
     AUTOFREE_ADD(&autoFreeList,&fileHandle,{ File_close(&fileHandle); });
     DEBUG_TESTCODE() { convertInfo->failError = DEBUG_TESTCODE_ERROR(); AutoFree_restore(&autoFreeList,autoFreeSavePoint,TRUE); continue; }
 
-    // save original storage file to temporary file
+    // rename original storage file to temporary file
     if (Storage_exists(&convertInfo->storageInfo,convertInfo->archiveName))
     {
       Storage_getTmpName(tmpArchiveName,&convertInfo->storageInfo);
@@ -457,7 +457,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
       DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
       AUTOFREE_ADD(&autoFreeList,&toFileHandle,{ File_close(&toFileHandle); });
 
-      // transfer data
+      // transfer data from temporary file to local file
       File_seek(&fileHandle,0);
       do
       {
@@ -535,7 +535,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
         DEBUG_TESTCODE() { Storage_close(&storageHandle); error = DEBUG_TESTCODE_ERROR(); break; }
         AUTOFREE_ADD(&autoFreeList,&storageHandle,{ Storage_close(&storageHandle); Storage_delete(&convertInfo->storageInfo,convertInfo->archiveName); });
 
-        // copy data
+        // transfer data from temporary file to storage
         File_seek(&fileHandle,0);
         do
         {
@@ -613,7 +613,7 @@ LOCAL void storageThreadCode(ConvertInfo *convertInfo)
 
     if (!String_isEmpty(tmpArchiveName))
     {
-      // delete saved original storage file
+      // delete original storage file
 //fprintf(stderr,"%s, %d: delete saved orginal %s\n",__FILE__,__LINE__,String_cString(tmpArchiveName));
       error = Storage_delete(&convertInfo->storageInfo,tmpArchiveName);
       if (error != ERROR_NONE)
@@ -2119,42 +2119,25 @@ LOCAL Errors convertArchive(StorageSpecifier        *storageSpecifier,
     }
   }
 
-  // create destination archive
+  // create destination archive name
   baseName = File_getBaseName(String_new(),(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
   if (!String_isEmpty(jobOptions->destination))
   {
     File_setFileName(convertInfo.archiveName,jobOptions->destination);
     File_appendFileName(convertInfo.archiveName,baseName);
-
-    error = File_getTmpFileName(convertInfo.newArchiveName,
-                                String_cString(baseName),
-                                jobOptions->destination
-                               );
   }
   else
   {
     File_setFileName(convertInfo.archiveName,(archiveName != NULL) ? archiveName : storageSpecifier->archiveName);
-
-    error = Storage_getTmpName(convertInfo.newArchiveName,
-                               &convertInfo.storageInfo
-                              );
   }
   String_delete(baseName);
-  if (error != ERROR_NONE)
-  {
-    printError("Cannot create temporary file (error: %s)!",
-               Error_getText(error)
-              );
-    AutoFree_cleanup(&autoFreeList);
-    return error;
-  }
-  AUTOFREE_ADD(&autoFreeList,&convertInfo.newArchiveName,{ (void)Storage_delete(&convertInfo.storageInfo,convertInfo.newArchiveName); });
+
+  // create new archive
   error = Archive_create(&convertInfo.destinationArchiveHandle,
                          NULL,  // hostName
                          NULL,  // userName
                          &convertInfo.storageInfo,
-                         convertInfo.newArchiveName,
-//                         NULL,  // indexHandle,
+                         NULL,  // archiveName,
                          INDEX_ID_NONE,  // uuidId,
                          INDEX_ID_NONE,  // entityId,
                          NULL,  // jobUUID,
