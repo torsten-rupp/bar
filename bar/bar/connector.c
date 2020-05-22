@@ -2691,15 +2691,18 @@ LOCAL void connectorCommand_indexEntityDelete(ConnectorInfo *connectorInfo, Inde
 * Return : -
 * Notes  : Arguments:
 *            storageId=<n>
+*            hostName=<text>
+*            userName=<text>
 *            storageName=<text>
 *            storageSize=<n>
+*            comment=<text>
 *          Result:
 \***********************************************************************/
 
 LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, IndexHandle *indexHandle, uint id, const StringMap argumentMap)
 {
   IndexId storageId;
-  String  userName;
+  String  hostName,userName;
   String  storageName;
   uint64  createdDateTime;
   uint64  storageSize;
@@ -2721,6 +2724,8 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
     sendResult(connectorInfo,id,TRUE,ERROR_DATABASE_INVALID_INDEX,"not a storage index id %llx",storageId);
     return;
   }
+  hostName = String_new();
+  StringMap_getString(argumentMap,"hostName",hostName,NULL);
   userName = String_new();
   StringMap_getString(argumentMap,"userName",userName,NULL);
   storageName = String_new();
@@ -2741,6 +2746,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
     // update storage
     error = Index_updateStorage(indexHandle,
                                 storageId,
+                                hostName,
                                 userName,
                                 storageName,
                                 createdDateTime,
