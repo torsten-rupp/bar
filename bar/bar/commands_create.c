@@ -8318,6 +8318,8 @@ Errors Command_create(ServerIO                     *masterIO,
   doneCreateInfo(&createInfo);
   Index_close(indexHandle);
   Storage_doneSpecifier(&storageSpecifier);
+  String_delete(userName);
+  String_delete(hostName);
   String_delete(printableStorageName);
   AutoFree_done(&autoFreeList);
 
