@@ -128,6 +128,7 @@ LOCAL void printUsage(const char *programName)
   printf("Usage %s: [<options>] <database file> [<command>...|-]\n",programName);
   printf("\n");
   printf("Options:  --info                                - output index database infos\n");
+  printf("          --info-jobs[=id|UUID,...]             - output index database job infos\n");
   printf("          --info-entities[=id,...]              - output index database entities infos\n");
   printf("          --info-storages[=id,...]              - output index database storages infos\n");
   printf("          --info-lost-storages[=id,...]         - output index database storages infos without an entity\n");
@@ -2043,6 +2044,7 @@ LOCAL void createAggregatesDirectoryContent(DatabaseHandle *databaseHandle, cons
 * Name   : createAggregatesEntities
 * Purpose: create aggregates entities data
 * Input  : databaseHandle - database handle
+*          entityIdArray  - database entity id array
 * Output : -
 * Return : -
 * Notes  : -
@@ -2377,6 +2379,7 @@ LOCAL void createAggregatesEntities(DatabaseHandle *databaseHandle, const Array 
 * Name   : createAggregatesStorages
 * Purpose: create aggregates storages data
 * Input  : databaseHandle - database handle
+*          storageIdArray - database storage id array
 * Output : -
 * Return : -
 * Notes  : -
@@ -4265,23 +4268,33 @@ LOCAL void printIndexInfo(DatabaseHandle *databaseHandle)
 * Purpose: print UUIDs index info
 * Input  : databaseHandle - database handle
 *          uuidIdArray    - array with UUID ids or empty array
+*          uuidArray      - array with UUIDs or empty array
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArray)
+LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArray, const Array uuidArray)
 {
-  String     uuidIdsString;
-  ulong      i;
-  DatabaseId uuidId;
-  Errors     error;
+  String       uuidIdsString,uuidsString;
+  char         s[MISC_UUID_STRING_LENGTH];
+  StaticString (uuid,MISC_UUID_STRING_LENGTH);
+  ulong        i;
+  DatabaseId   uuidId;
+  Errors       error;
 
   uuidIdsString = String_new();
+  uuidsString = String_new();
   ARRAY_ITERATE(&uuidIdArray,i,uuidId)
   {
     if (!String_isEmpty(uuidIdsString)) String_appendChar(uuidIdsString,',');
     String_formatAppend(uuidIdsString,"%lld",uuidId);
+  }
+  ARRAY_ITERATE(&uuidArray,i,s)
+  {
+    String_setBuffer(uuid,s,MISC_UUID_STRING_LENGTH);
+    if (!String_isEmpty(uuidsString)) String_appendChar(uuidsString,',');
+    String_formatAppend(uuidsString,"'%S'",uuid);
   }
 
   printf("UUIDs:\n");
@@ -4421,9 +4434,12 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
                                    (SELECT TOTAL(totalSpecialCountNewest) FROM entities WHERE entities.uuidId=uuids.id) \
                             FROM uuids \
                             WHERE     (%d OR id IN (%S)) \
+                                  AND (%d OR jobUUID IN (%S)) \
                            ",
                            String_isEmpty(uuidIdsString) ? 1 : 0,
-                           uuidIdsString
+                           uuidIdsString,
+                           String_isEmpty(uuidsString) ? 1 : 0,
+                           uuidsString
                           );
   if (error != ERROR_NONE)
   {
@@ -4432,6 +4448,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
   }
 
   // free resources
+  String_delete(uuidsString);
   String_delete(uuidIdsString);
 }
 
@@ -4439,7 +4456,7 @@ LOCAL void printUUIDsInfo(DatabaseHandle *databaseHandle, const Array uuidIdArra
 * Name   : printEntitiesInfo
 * Purpose: print entities index info
 * Input  : databaseHandle - database handle
-*          entityIdArray  - array with entity ids or empty array
+*          entityIdArray  - database entity ids array or empty array
 * Output : -
 * Return : -
 * Notes  : -
@@ -4604,7 +4621,7 @@ LOCAL void printEntitiesInfo(DatabaseHandle *databaseHandle, const Array entityI
 * Name   : printStoragesInfo
 * Purpose: print storages index info
 * Input  : databaseHandle - database handle
-*          storageIdArray - array with storage ids or empty array
+*          storageIdArray - datbase storage ids array or empty array
 * Output : -
 * Return : -
 * Notes  : -
@@ -4762,7 +4779,7 @@ LOCAL void printStoragesInfo(DatabaseHandle *databaseHandle, const Array storage
 * Name   : printEntriesInfo
 * Purpose: print entries index info
 * Input  : databaseHandle - database handle
-*          entityIdArray  - array with entity ids or empty array
+*          entityIdArray  - database entity ids array or empty array
 * Output : -
 * Return : -
 * Notes  : -
@@ -4991,7 +5008,8 @@ int main(int argc, const char *argv[])
 {
   const uint MAX_LINE_LENGTH = 8192;
 
-  Array            uuidIdArray,entityIdArray,storageIdArray;
+  Array            uuidIdArray,uuidArray,entityIdArray,storageIdArray;
+  StaticString     (uuid,MISC_UUID_STRING_LENGTH);
   String           entryName;
   uint             i,n;
   CStringTokenizer stringTokenizer;
@@ -5011,6 +5029,7 @@ int main(int argc, const char *argv[])
 
   // init variables
   Array_init(&uuidIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
+  Array_init(&uuidArray,MISC_UUID_STRING_LENGTH,64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&entityIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   Array_init(&storageIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   entryName        = String_new();
@@ -5026,21 +5045,36 @@ int main(int argc, const char *argv[])
       infoFlag = TRUE;
       i++;
     }
-    else if (stringStartsWith(argv[i],"--info-uuids"))
+    else if (stringEquals(argv[i],"--info-jobs"))
     {
       infoUUIDsFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--info-jobs="))
+    {
+      infoUUIDsFlag = TRUE;
+      stringTokenizerInit(&stringTokenizer,&argv[i][12],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
         if (stringToInt64(token,&databaseId))
         {
           Array_append(&uuidIdArray,&databaseId);
         }
+        else
+        {
+          String_setCString(uuid,token);
+          Array_append(&uuidArray,String_cString(uuid));
+        }
       }
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
-    else if (stringStartsWith(argv[i],"--info-entities"))
+    else if (stringEquals(argv[i],"--info-entities"))
+    {
+      infoEntitiesFlag = TRUE;
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--info-entities="))
     {
       infoEntitiesFlag = TRUE;
       stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
@@ -5054,7 +5088,12 @@ int main(int argc, const char *argv[])
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
-    else if (stringStartsWith(argv[i],"--info-storages"))
+    else if (stringEquals(argv[i],"--info-storages"))
+    {
+      infoStoragesFlag = TRUE;
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--info-storages="))
     {
       infoStoragesFlag = TRUE;
       stringTokenizerInit(&stringTokenizer,&argv[i][16],",");
@@ -5068,15 +5107,20 @@ int main(int argc, const char *argv[])
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
-    else if (stringStartsWith(argv[i],"--info-lost-storages"))
+    else if (stringEquals(argv[i],"--info-lost-storages"))
     {
       infoLostStoragesFlag = TRUE;
       i++;
     }
-    else if (stringStartsWith(argv[i],"--info-entries"))
+    else if (stringEquals(argv[i],"--info-entries"))
     {
       infoEntriesFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][14],",");
+      i++;
+    }
+    else if (stringStartsWith(argv[i],"--info-entries="))
+    {
+      infoEntriesFlag = TRUE;
+      stringTokenizerInit(&stringTokenizer,&argv[i][15],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
         if (stringToInt64(token,&databaseId))
@@ -5088,7 +5132,7 @@ int main(int argc, const char *argv[])
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
-    else if (stringStartsWith(argv[i],"--info-lost-entries"))
+    else if (stringEquals(argv[i],"--info-lost-entries"))
     {
       infoLostEntriesFlag = TRUE;
       i++;
@@ -5126,7 +5170,7 @@ int main(int argc, const char *argv[])
     else if (stringStartsWith(argv[i],"--create-aggregates-directory-content"))
     {
       createAggregatesDirectoryContentFlag = TRUE;
-      stringTokenizerInit(&stringTokenizer,&argv[i][38],",");
+      stringTokenizerInit(&stringTokenizer,&argv[i][37],",");
       while (stringGetNextToken(&stringTokenizer,&token))
       {
         if (stringToInt64(token,&databaseId))
@@ -5417,7 +5461,7 @@ int main(int argc, const char *argv[])
 
   if (infoUUIDsFlag)
   {
-    printUUIDsInfo(&databaseHandle,uuidIdArray);
+    printUUIDsInfo(&databaseHandle,uuidIdArray,uuidArray);
   }
 
   if (infoEntitiesFlag)
@@ -5916,6 +5960,7 @@ int main(int argc, const char *argv[])
   String_delete(entryName);
   Array_done(&storageIdArray);
   Array_done(&entityIdArray);
+  Array_done(&uuidArray);
   Array_done(&uuidIdArray);
   String_delete(commands);
 
