@@ -3091,7 +3091,7 @@ public class TabStatus
   }
 
   /** show job tool tip
-   * @param entryIndexData entry index data
+   * @param jobData job data
    * @param x,y positions
    */
   private void showJobToolTip(JobData jobData, int x, int y)
