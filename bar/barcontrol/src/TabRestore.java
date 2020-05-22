@@ -4657,6 +4657,22 @@ Dprintf.dprintf("");
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
 
+      label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entity")+":");
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,0,TableLayoutData.W);
+      label = Widgets.newLabel(widgetStorageTableToolTip,
+                                storageIndexData.archiveType
+                               +((storageIndexData.createdDateTime > 0)
+                                   ? ", "+SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L))
+                                   : ""
+                                )
+                              );
+      label.setForeground(COLOR_INFO_FOREGROUND);
+      label.setBackground(COLOR_INFO_BACKGROUND);
+      Widgets.layout(label,row,1,TableLayoutData.WE);
+      row++;
+
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Hostname")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
       label.setBackground(COLOR_INFO_BACKGROUND);
@@ -4691,26 +4707,6 @@ Dprintf.dprintf("");
         Widgets.layout(label,row,1,TableLayoutData.WE);
         row++;
       }
-
-      label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Created")+":");
-      label.setForeground(COLOR_INFO_FOREGROUND);
-      label.setBackground(COLOR_INFO_BACKGROUND);
-      Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,(storageIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(storageIndexData.createdDateTime*1000L)) : "-");
-      label.setForeground(COLOR_INFO_FOREGROUND);
-      label.setBackground(COLOR_INFO_BACKGROUND);
-      Widgets.layout(label,row,1,TableLayoutData.WE);
-      row++;
-
-      label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Type")+":");
-      label.setForeground(COLOR_INFO_FOREGROUND);
-      label.setBackground(COLOR_INFO_BACKGROUND);
-      Widgets.layout(label,row,0,TableLayoutData.W);
-      label = Widgets.newLabel(widgetStorageTableToolTip,storageIndexData.archiveType.getText());
-      label.setForeground(COLOR_INFO_FOREGROUND);
-      label.setBackground(COLOR_INFO_BACKGROUND);
-      Widgets.layout(label,row,1,TableLayoutData.WE);
-      row++;
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entries")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
