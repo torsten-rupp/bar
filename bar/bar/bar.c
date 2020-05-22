@@ -10733,7 +10733,7 @@ LOCAL Errors runInteractive(int argc, const char *argv[])
             error = Command_convert(&storageNameList,
                                     jobUUID,
                                     scheduleUUID,
-                                    Misc_getCurrentDateTime(),
+                                    0LL,  // newCreatedDateTime
                                     &jobOptions,
                                     CALLBACK_(getCryptPasswordFromConsole,NULL),
                                     NULL  // logHandle
