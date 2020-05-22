@@ -122,6 +122,16 @@ LOCAL const struct
 
 LOCAL const struct
 {
+  const char           *name;
+  IndexEntitySortModes sortMode;
+} INDEX_ENTITY_SORT_MODES[] =
+{
+  { "JOB_UUID",INDEX_ENTITY_SORT_MODE_JOB_UUID },
+  { "CREATED", INDEX_ENTITY_SORT_MODE_CREATED  },
+};
+
+LOCAL const struct
+{
   const char            *name;
   IndexStorageSortModes sortMode;
 } INDEX_STORAGE_SORT_MODES[] =
@@ -145,6 +155,14 @@ LOCAL const struct
   { "SIZE",         INDEX_ENTRY_SORT_MODE_SIZE         },
   { "FRAGMENT",     INDEX_ENTRY_SORT_MODE_FRAGMENT     },
   { "LAST_CHANGED", INDEX_ENTRY_SORT_MODE_LAST_CHANGED },
+};
+
+LOCAL const char *INDEX_ENTITY_SORT_MODE_COLUMNS[] =
+{
+  [INDEX_ENTITY_SORT_MODE_NONE    ] = NULL,
+
+  [INDEX_ENTITY_SORT_MODE_JOB_UUID] = "entities.jobUUID",
+  [INDEX_ENTITY_SORT_MODE_CREATED ] = "entities.created",
 };
 
 LOCAL const char *INDEX_STORAGE_SORT_MODE_COLUMNS[] =
@@ -1048,7 +1066,8 @@ LOCAL Errors importIndex(IndexHandle *indexHandle, ConstString oldDatabaseFileNa
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name
-                                   DATABASE_ORDERING_ASCENDING,
+                                   INDEX_ENTITY_SORT_MODE_NONE,
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -5582,7 +5601,8 @@ LOCAL Errors assignJobToJob(IndexHandle  *indexHandle,
                                    INDEX_STATE_SET_ALL,
                                    INDEX_MODE_SET_ALL,
                                    NULL,  // name,
-                                   DATABASE_ORDERING_ASCENDING,
+                                   INDEX_ENTITY_SORT_MODE_NONE,
+                                   DATABASE_ORDERING_NONE,
                                    0LL,  // offset
                                    INDEX_UNLIMITED
                                   );
@@ -5819,6 +5839,33 @@ bool Index_parseType(const char *name, IndexTypes *indexType)
   }
 }
 
+bool Index_parseEntitySortMode(const char *name, IndexEntitySortModes *indexEntitySortMode, void *userData)
+{
+  uint i;
+
+  assert(name != NULL);
+  assert(indexEntitySortMode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  i = 0;
+  while (   (i < SIZE_OF_ARRAY(INDEX_ENTITY_SORT_MODES))
+         && !stringEqualsIgnoreCase(INDEX_ENTITY_SORT_MODES[i].name,name)
+        )
+  {
+    i++;
+  }
+  if (i < SIZE_OF_ARRAY(INDEX_ENTITY_SORT_MODES))
+  {
+    (*indexEntitySortMode) = INDEX_ENTITY_SORT_MODES[i].sortMode;
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexStorageSortMode, void *userData)
 {
   uint i;
@@ -5846,12 +5893,14 @@ bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexSt
   }
 }
 
-bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntrySortMode)
+bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntrySortMode, void *userData)
 {
   uint i;
 
   assert(name != NULL);
   assert(indexEntrySortMode != NULL);
+
+  UNUSED_VARIABLE(userData);
 
   i = 0;
   while (   (i < SIZE_OF_ARRAY(INDEX_ENTRY_SORT_MODES))
@@ -8423,18 +8472,19 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
   return ERROR_NONE;
 }
 
-Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
-                              IndexHandle      *indexHandle,
-                              IndexId          uuidId,
-                              ConstString      jobUUID,
-                              ConstString      scheduleUUID,
-                              ArchiveTypes     archiveType,
-                              IndexStateSet    indexStateSet,
-                              IndexModeSet     indexModeSet,
-                              ConstString      name,
-                              DatabaseOrdering ordering,
-                              ulong            offset,
-                              uint64           limit
+Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
+                              IndexHandle          *indexHandle,
+                              IndexId              uuidId,
+                              ConstString          jobUUID,
+                              ConstString          scheduleUUID,
+                              ArchiveTypes         archiveType,
+                              IndexStateSet        indexStateSet,
+                              IndexModeSet         indexModeSet,
+                              ConstString          name,
+                              IndexEntitySortModes sortMode,
+                              DatabaseOrdering     ordering,
+                              ulong                offset,
+                              uint64               limit
                              )
 {
   String ftsName;
@@ -8472,8 +8522,8 @@ Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
   filterAppend(filterString,indexModeSet != INDEX_MODE_SET_ALL,"AND","storages.mode IN (%S)",getIndexModeSetString(string,indexModeSet));
   String_delete(string);
 
-  // get ordering
-  appendOrdering(orderString,TRUE,"entities.created",ordering);
+  // get sort mode, ordering
+  appendOrdering(orderString,sortMode != INDEX_ENTITY_SORT_MODE_NONE,INDEX_ENTITY_SORT_MODE_COLUMNS[sortMode],ordering);
 
   #ifdef INDEX_DEBUG_LIST_INFO
     fprintf(stderr,"%s, %d: Index_initListEntities ------------------------------------------------------\n",__FILE__,__LINE__);
@@ -8893,8 +8943,10 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                           IndexId     entityId
                          )
 {
-  Errors     error;
-  DatabaseId uuidId;
+  Errors              error;
+  DatabaseId          uuidId;
+  DatabaseQueryHandle databaseQueryHandle;
+  DatabaseId          storageId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(entityId) == INDEX_TYPE_ENTITY);
@@ -8919,6 +8971,35 @@ Errors Index_deleteEntity(IndexHandle *indexHandle,
                              ",
                              Index_getDatabaseId(entityId)
                             );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+
+      // delete storages
+      error = Database_prepare(&databaseQueryHandle,
+                               &indexHandle->databaseHandle,
+                               "SELECT storages.id \
+                                FROM storages \
+                                  LEFT JOIN entities ON entities.id=storages.entityId \
+                                WHERE entities.id=%lld \
+                               ",
+                               Index_getDatabaseId(entityId)
+                              );
+      if (error != ERROR_NONE)
+      {
+        return error;
+      }
+      while (   Database_getNextRow(&databaseQueryHandle,
+                                    "%lld",
+                                    &storageId
+                                   )
+             && (error == ERROR_NONE)
+            )
+      {
+        error = Index_deleteStorage(indexHandle,INDEX_ID_STORAGE(storageId));
+      }
+      Database_finalize(&databaseQueryHandle);
       if (error != ERROR_NONE)
       {
         return error;

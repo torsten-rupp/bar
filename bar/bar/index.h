@@ -220,6 +220,14 @@ extern const IndexId INDEX_ID_ANY;
 // sort modes
 typedef enum
 {
+  INDEX_ENTITY_SORT_MODE_NONE,
+
+  INDEX_ENTITY_SORT_MODE_JOB_UUID,
+  INDEX_ENTITY_SORT_MODE_CREATED
+} IndexEntitySortModes;
+
+typedef enum
+{
   INDEX_STORAGE_SORT_MODE_NONE,
 
   INDEX_STORAGE_SORT_MODE_USERNAME,
@@ -421,6 +429,17 @@ const char *Index_typeToString(IndexTypes indexType, const char *defaultValue);
 bool Index_parseType(const char *name, IndexTypes *indexType);
 
 /***********************************************************************\
+* Name   : Index_parseEntitySortMode
+* Purpose: parse index entity sort mode string
+* Input  : name - name
+* Output : indexEntitySortMode - index entry sort mode
+* Return : TRUE iff parsed
+* Notes  : -
+\***********************************************************************/
+
+bool Index_parseEntitySortMode(const char *name, IndexEntitySortModes *indexEntitySortMode, void *userData);
+
+/***********************************************************************\
 * Name   : Index_parseStorageSortMode
 * Purpose: parse index storage sort mode string
 * Input  : name     - name
@@ -441,7 +460,7 @@ bool Index_parseStorageSortMode(const char *name, IndexStorageSortModes *indexSt
 * Notes  : -
 \***********************************************************************/
 
-bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntrySortMode);
+bool Index_parseEntrySortMode(const char *name, IndexEntrySortModes *indexEntrySortMode, void *userData);
 
 /***********************************************************************\
 * Name   : Index_parseOrdering
@@ -1321,6 +1340,7 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
 *          indexStateSet    - index state set or INDEX_STATE_SET_ANY
 *          IndexModeSet     - index mode set
 *          name             - storage name pattern (glob, can be NULL)
+*          sortMode         - sort mode; see IndexEntitySortModes
 *          ordering         - ordering mode
 *          offset           - offset or 0
 *          limit            - numer of entries to list or
@@ -1330,19 +1350,20 @@ Errors Index_updateEntityInfos(IndexHandle *indexHandle,
 * Notes  : -
 \***********************************************************************/
 
-Errors Index_initListEntities(IndexQueryHandle *indexQueryHandle,
-                              IndexHandle      *indexHandle,
-                              IndexId          uuidId,
+Errors Index_initListEntities(IndexQueryHandle     *indexQueryHandle,
+                              IndexHandle          *indexHandle,
+                              IndexId              uuidId,
 //TODO: remove?
-                              ConstString      jobUUID,
-                              ConstString      scheduleUUID,
-                              ArchiveTypes     archiveType,
-                              IndexStateSet    indexStateSet,
-                              IndexModeSet     indexModeSet,
-                              ConstString      name,
-                              DatabaseOrdering ordering,
-                              ulong            offset,
-                              uint64           limit
+                              ConstString          jobUUID,
+                              ConstString          scheduleUUID,
+                              ArchiveTypes         archiveType,
+                              IndexStateSet        indexStateSet,
+                              IndexModeSet         indexModeSet,
+                              ConstString          name,
+                              IndexEntitySortModes sortMode,
+                              DatabaseOrdering     ordering,
+                              ulong                offset,
+                              uint64               limit
                              );
 
 /***********************************************************************\
