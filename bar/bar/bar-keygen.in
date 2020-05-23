@@ -68,7 +68,6 @@ certtoolFlag=0
 opensslFlag=0
 forceFlag=0
 quietFlag=0
-jksFlag=0
 debugFlag=0
 
 # ---------------------------------- functions -------------------------------
@@ -234,7 +233,6 @@ Options: -d|--tls-directory=<path>       - TLS directory (default: $DEFAULT_TLS_
          -f|--force                      - force overwriting existing keys
          --certtool                      - use certtool to generate keys
          --openssl                       - use openssl to generate keys
-         --jks                           - create Java key store file
          -h|--help                       - print this help
 EOT
 }
@@ -307,10 +305,6 @@ while test $# != 0; do
       ;;
     --openssl)
       opensslFlag=1
-      shift
-      ;;
-    --jks)
-      jksFlag=1
       shift
       ;;
     --quiet=*)
@@ -425,7 +419,6 @@ barKey="$privateDir/bar-key.pem"
 barCA="$certsDir/bar-ca.pem"
 barServerKey="$privateDir/bar-server-key.pem"
 barServerCert="$certsDir/bar-server-cert.pem"
-barJKS="$javaPrivateDir/bar.jks"
 
 # check if keys already exists
 if test $forceFlag -eq 0; then
@@ -444,12 +437,6 @@ if test $forceFlag -eq 0; then
   if test -f "$barServerCert"; then
     println "'$barServerCert' already exists! Use option --force to overwrite existing keys."
     exit $EXITCODE_OK
-  fi
-  if test $jksFlag -eq 1; then
-    if test -f "$barJKS"; then
-      println "'$barJKS' already exists! Use option --force to overwrite existing keys."
-      exit $EXITCODE_OK
-    fi
   fi
 fi
 
@@ -639,31 +626,6 @@ if test $rc -ne 0; then
   exit $EXITCODE_CREATE_KEY_FAIL
 fi
 println "OK"
-
-if test $jksFlag -eq 1; then
-  # create Java key
-  if test $KEYTOOL_OK -eq 1; then
-    print "Create '$barJKS'..."
-    $RMF $barJKS
-    $KEYTOOL \
-      -import \
-      -trustcacerts \
-      -keypass not_needed \
-      -storepass not_needed \
-      -noprompt \
-      -file "$barServerCert" \
-      -keystore "$barJKS" \
-      1>$stdout 2>$stderr
-    rc=$?
-    if test $rc -ne 0; then
-      println "FAIL"
-      printError "Cannot create BAR Java key '$barJKS' (exitcode: $rc)"
-      catStderr $stderr
-      exit $EXITCODE_CREATE_KEY_FAIL
-    fi
-    println "OK"
-  fi
-fi
 
 # free resources
 $RMRF $tmpDir 2>/dev/null
