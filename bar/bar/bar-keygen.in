@@ -17,7 +17,6 @@ PROGRAM_NAME=`basename $0`
 # supported key tools
 CERTTOOL="certtool"
 OPENSSL="openssl"
-KEYTOOL="keytool"
 
 # shell commands/tools
 CAT="cat"
@@ -61,7 +60,6 @@ EXITCODE_UNKNOWN=127
 tlsDir="$DEFAULT_TLS_DIR"
 privateDir=""
 certsDir=""
-javaPrivateDir="$DEFAULT_CONFIG_DIR"
 
 # flags
 certtoolFlag=0
@@ -226,14 +224,13 @@ printUsage()
   $CAT << EOT
 Usage: $PROGRAM_NAME [<options>] [--]
 
-Options: -d|--tls-directory=<path>       - TLS directory (default: $DEFAULT_TLS_DIR)
-         --private-directory=<path>      - directory for private keys (default: <TLS directory>/private)
-         --certs-directory=<path>        - directory for certicates (default: <TLS directory>/certs)
-         --java-private-directory=<path> - directory for certicates (default: $DEFAULT_CONFIG_DIR)
-         -f|--force                      - force overwriting existing keys
-         --certtool                      - use certtool to generate keys
-         --openssl                       - use openssl to generate keys
-         -h|--help                       - print this help
+Options: -d|--tls-directory=<path>  - TLS directory (default: $DEFAULT_TLS_DIR)
+         --private-directory=<path> - directory for private keys (default: <TLS directory>/private)
+         --certs-directory=<path>   - directory for certicates (default: <TLS directory>/certs)
+         -f|--force                 - force overwriting existing keys
+         --certtool                 - use certtool to generate keys
+         --openssl                  - use openssl to generate keys
+         -h|--help                  - print this help
 EOT
 }
 
@@ -271,15 +268,6 @@ while test $# != 0; do
       ;;
     --certs-directory | --certs-dir)
       certsDir=$2
-      shift
-      shift
-      ;;
-    --java-private-directory=* | --java-private-dir=*)
-      javaPrivateDir=`$ECHO "$1" | $SED 's/^[^=]*=\(.*\)$/\1/g'`
-      shift
-      ;;
-    --java-private-directory | --java-private-dir)
-      javaPrivateDir=$2
       shift
       shift
       ;;
@@ -358,10 +346,6 @@ if test -z "$tlsDir"; then
   printError "No TLS directory given!"
   exit $EXITCODE_INVALID_ARGUMENT
 fi
-if test -z "$javaPrivateDir"; then
-  printError "No BAR Java private directory given!"
-  exit $EXITCODE_INVALID_ARGUMENT
-fi
 
 # check keytools
 $CERTTOOL --help 1>/dev/null 2>/dev/null
@@ -395,15 +379,6 @@ if test $opensslFlag -eq 1; then
     printError "'$OPENSSL' not found!"
     exit $EXITCODE_NO_KEYTOOLS
   fi
-fi
-$KEYTOOL -help 1>/dev/null 2>/dev/null
-if test $? -ne 127; then
-  KEYTOOL_OK=1
-else
-  KEYTOOL_OK=0
-fi
-if test $KEYTOOL_OK -ne 1; then
-  printWarning "'$KEYTOOL' not found or not executable - cannot create Java key."
 fi
 
 # get directory names
