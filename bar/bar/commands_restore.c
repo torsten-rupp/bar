@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <errno.h>
 #include <assert.h>
 
@@ -502,7 +503,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
-  char                      s[256];
+  char                      sizeString[32];
+  char                      fragmentString[256];
 
   assert(restoreInfo != NULL);
   assert(restoreInfo->jobOptions != NULL);
@@ -956,27 +958,33 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    // get fragment info
-    stringClear(s);
+    // get size/fragment info
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+    }
+    stringClear(fragmentString);
     if (fragmentSize < fileInfo.size)
     {
-      stringFormat(s,sizeof(s),", fragment %llu..%llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),
+                   ", fragment %*"PRIu64"..%*"PRIu64,
+                   stringInt64Length(fileInfo.size),fragmentOffset,
+                   stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                  );
     }
 
     // output result
     if (!restoreInfo->storageFlags.dryRun)
     {
-      printInfo(1,"OK (%llu bytes%s)\n",
-                fragmentSize,
-                s
-               );
+      printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
     }
     else
     {
-      printInfo(1,"OK (%llu bytes%s, dry-run)\n",
-                fragmentSize,
-                s
-               );
+      printInfo(1,"OK (%s bytes%s, dry-run)\n",sizeString,fragmentString);
     }
 
     /* check if all data read.
@@ -1064,7 +1072,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
   FileHandle       fileHandle;
   uint64           block;
   ulong            bufferBlockCount;
-  char             s[256];
+  char             sizeString[32];
+  char             fragmentString[256];
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -1455,27 +1464,33 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
       }
     }
 
-    // get fragment info
-    stringClear(s);
+    // get size/fragment info
+    if (globalOptions.humanFormatFlag)
+    {
+      getHumanSizeString(sizeString,sizeof(sizeString),blockCount*deviceInfo.blockSize);
+    }
+    else
+    {
+      stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,blockCount*deviceInfo.blockSize);
+    }
+    stringClear(fragmentString);
     if ((blockCount*deviceInfo.blockSize) < deviceInfo.size)
     {
-      stringFormat(s,sizeof(s),", fragment %llu..%llu",blockOffset*deviceInfo.blockSize,blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL);
+      stringFormat(fragmentString,sizeof(fragmentString),
+                   ", fragment %*"PRIu64"..%*"PRIu64,
+                   stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize,
+                   stringInt64Length(deviceInfo.size),blockOffset*deviceInfo.blockSize+(blockCount*deviceInfo.blockSize)-1LL
+                  );
     }
 
     // output result
     if (!restoreInfo->storageFlags.dryRun)
     {
-      printInfo(1,"OK (%llu bytes%s)\n",
-                blockCount*deviceInfo.blockSize,
-                s
-               );
+      printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
     }
     else
     {
-      printInfo(1,"OK (%llu bytes%s, dry-run)\n",
-                blockCount*deviceInfo.blockSize,
-                s
-               );
+      printInfo(1,"OK (%s bytes%s, dry-run)\n",sizeString,fragmentString);
     }
 
     /* check if all data read.
@@ -2147,7 +2162,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
   FileHandle                fileHandle;
   uint64                    length;
   ulong                     bufferLength;
-  char                      s[256];
+  char                      sizeString[32];
+  char                      fragmentString[256];
 
   // init variables
   AutoFree_init(&autoFreeList);
@@ -2613,27 +2629,33 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
           }
         }
 
-        // get fragment info
-        stringClear(s);
+        // get size/fragment info
+        if (globalOptions.humanFormatFlag)
+        {
+          getHumanSizeString(sizeString,sizeof(sizeString),fileInfo.size);
+        }
+        else
+        {
+          stringFormat(sizeString,sizeof(sizeString),"%"PRIu64,fileInfo.size);
+        }
+        stringClear(fragmentString);
         if (fragmentSize < fileInfo.size)
         {
-          stringFormat(s,sizeof(s),", fragment %llu..%llu",fragmentOffset,fragmentOffset+fragmentSize-1LL);
+          stringFormat(fragmentString,sizeof(fragmentString),
+                       ", fragment %*"PRIu64"..%*"PRIu64,
+                       stringInt64Length(fileInfo.size),fragmentOffset,
+                       stringInt64Length(fileInfo.size),fragmentOffset+fragmentSize-1LL
+                      );
         }
 
         // output result
         if (!restoreInfo->storageFlags.dryRun)
         {
-          printInfo(1,"OK (%llu bytes%s)\n",
-                    fragmentSize,
-                    s
-                   );
+          printInfo(1,"OK (%s bytes%s)\n",sizeString,fragmentString);
         }
         else
         {
-          printInfo(1,"OK (%llu bytes%s, dry-run)\n",
-                    fragmentSize,
-                    s
-                   );
+          printInfo(1,"OK (%s bytes%s, dry-run)\n",sizeString,fragmentString);
         }
 
         restoredDataFlag = TRUE;
