@@ -94,6 +94,7 @@ LOCAL bool       showEntriesNewestFlag                = FALSE;  // show newest e
 LOCAL bool       showNamesFlag                        = FALSE;
 LOCAL bool       showHeaderFlag                       = FALSE;
 LOCAL bool       headerPrintedFlag                    = FALSE;
+LOCAL bool       transactionFlag                      = FALSE;
 LOCAL bool       foreignKeysFlag                      = TRUE;
 LOCAL bool       forceFlag                            = FALSE;
 LOCAL bool       pipeFlag                             = FALSE;
@@ -151,9 +152,10 @@ LOCAL void printUsage(const char *programName)
   printf("          --entries-newest [<uuid>]             - print newest entries\n");
   printf("          -n|--names                            - print named values\n");
   printf("          -H|--header                           - print headers\n");
+  printf("          --transactions                        - enable transcations\n");
   printf("          -f|--no-foreign-keys                  - disable foreign key constraints\n");
   printf("          --force                               - force operation\n");
-  printf("          --pipe                                - read data from stdin and pipe into database\n");
+  printf("          --pipe|-                              - read data from stdin and pipe into database\n");
   printf("          --tmp-directory                       - temporary files directory\n");
   printf("          -v|--verbose                          - verbose output\n");
   printf("          -t|--time                             - print execution time\n");
@@ -5017,7 +5019,7 @@ int main(int argc, const char *argv[])
   DatabaseId       databaseId;
   const char       *databaseFileName;
   String           path;
-  String           commands;
+  String           command;
   char             line[MAX_LINE_LENGTH];
   Errors           error;
   DatabaseHandle   databaseHandle;
@@ -5034,7 +5036,7 @@ int main(int argc, const char *argv[])
   Array_init(&storageIdArray,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   entryName        = String_new();
   databaseFileName = NULL;
-  commands         = String_new();
+  command          = String_new();
 
   i = 1;
   n = 0;
@@ -5265,6 +5267,11 @@ int main(int argc, const char *argv[])
       showHeaderFlag = TRUE;
       i++;
     }
+    else if (stringEquals(argv[i],"--transaction"))
+    {
+      transactionFlag = FALSE;
+      i++;
+    }
     else if (stringEquals(argv[i],"-f") || stringEquals(argv[i],"--no-foreign-keys"))
     {
       foreignKeysFlag = FALSE;
@@ -5285,7 +5292,7 @@ int main(int argc, const char *argv[])
       if ((i+1) >= (uint)argc)
       {
         printError("expected path name for option --tmp-directory!");
-        String_delete(commands);
+        String_delete(command);
         exit(EXITCODE_INVALID_ARGUMENT);
       }
       tmpDirectory = argv[i+1];
@@ -5311,6 +5318,11 @@ int main(int argc, const char *argv[])
       printUsage(argv[0]);
       exit(EXITCODE_OK);
     }
+    else if (stringEquals(argv[i],"-"))
+    {
+      pipeFlag = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--"))
     {
       i++;
@@ -5319,7 +5331,7 @@ int main(int argc, const char *argv[])
     else if (stringStartsWith(argv[i],"-"))
     {
       printError("unknown option '%s'!",argv[i]);
-      String_delete(commands);
+      String_delete(command);
       exit(EXITCODE_INVALID_ARGUMENT);
     }
     else
@@ -5338,7 +5350,8 @@ int main(int argc, const char *argv[])
           }
           else
           {
-            String_appendCString(commands,argv[i]);
+            if (!String_isEmpty(command)) String_appendChar(command,' ');
+            String_appendCString(command,argv[i]);
             jobUUID = argv[i];
           }
           i++;
@@ -5362,7 +5375,8 @@ int main(int argc, const char *argv[])
         }
         else
         {
-          String_appendCString(commands,argv[i]);
+          if (!String_isEmpty(command)) String_appendChar(command,' ');
+          String_appendCString(command,argv[i]);
           jobUUID = argv[i];
         }
         i++;
@@ -5374,19 +5388,21 @@ int main(int argc, const char *argv[])
   if (databaseFileName == NULL)
   {
     printError("no database file name given!");
-    String_delete(commands);
+    String_delete(command);
     exit(EXITCODE_INVALID_ARGUMENT);
   }
 
-  if (String_equalsCString(commands,"-"))
+#if 0
+  if (String_equalsCString(command,"-"))
   {
-    // get commands from stdin
+    // get command from stdin
     String_clear(commands);
     while (fgets(line,sizeof(line),stdin) != NULL)
     {
       String_appendCString(commands,line);
     }
   }
+#endif
 
   if (createFlag)
   {
@@ -5400,14 +5416,14 @@ int main(int argc, const char *argv[])
   }
   if (error != ERROR_NONE)
   {
-    String_delete(commands);
+    String_delete(command);
     exit(EXITCODE_FAIL);
   }
   error = Database_setEnabledForeignKeys(&databaseHandle,foreignKeysFlag);
   if (error != ERROR_NONE)
   {
     closeDatabase(&databaseHandle);
-    String_delete(commands);
+    String_delete(command);
     exit(EXITCODE_FAIL);
   }
 
@@ -5426,7 +5442,7 @@ int main(int argc, const char *argv[])
   if (error != ERROR_NONE)
   {
     closeDatabase(&databaseHandle);
-    String_delete(commands);
+    String_delete(command);
     exit(EXITCODE_FAIL);
   }
 
@@ -5451,7 +5467,7 @@ int main(int argc, const char *argv[])
           && !showStoragesFlag
           && !showEntriesFlag
           && !showEntriesNewestFlag
-          && String_isEmpty(commands)
+          && String_isEmpty(command)
           && !pipeFlag
           && !inputAvailable())
      )
@@ -5741,216 +5757,78 @@ int main(int argc, const char *argv[])
      )
   {
     // execute command
-    if (!String_isEmpty(commands))
+    if (!String_isEmpty(command))
     {
-      if (pipeFlag)
+      s = String_new();
+      s = explainQueryPlanFlag
+            ? String_append(String_setCString(s,"EXPLAIN QUERY PLAN "),command)
+            : String_set(s,command);
+      t0 = Misc_getTimestamp();
+      error = Database_execute(&databaseHandle,
+                               CALLBACK_(printRow,NULL),
+                               NULL,  // changedRowCount
+                               String_cString(s)
+                              );
+      t1 = Misc_getTimestamp();
+      String_delete(s);
+      if (error != ERROR_NONE)
       {
-        // pipe from stdin
-
-        // start transaction
-        error = Database_execute(&databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "BEGIN TRANSACTION"
-                                );
-        if (error != ERROR_NONE)
-        {
-          printf("FAIL\n");
-          printError("start transaction fail: %s!",Error_getText(error));
-          String_delete(commands);
-          exit(EXITCODE_FAIL);
-        }
-
-#if 0
-        // prepare SQL statements
-        statementHandleCount = 0;
-        command = String_cString(commands);
-        while (!stringIsEmpty(command))
-        {
-          if (statementHandleCount > SIZE_OF_ARRAY(statementHandles))
-          {
-            printError("too many SQL commands (limit %lu)!",SIZE_OF_ARRAY(statementHandles));
-            String_delete(commands);
-            exit(EXITCODE_FAIL);
-          }
-
-          sqliteResult = sqlite3_prepare_v2(databaseHandle,
-                                            command,
-                                            -1,
-                                            &statementHandles[statementHandleCount],
-                                            &nextCommand
-                                           );
-          if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
-          if (sqliteResult != SQLITE_OK)
-          {
-            (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-//TODO          printError("SQL command #%u: '%s' fail: %s!",i+1,command,sqlite3_errmsg(databaseHandle));
-            String_delete(commands);
-            exit(EXITCODE_FAIL);
-          }
-          statementHandleCount++;
-          command = stringTrimBegin(nextCommand);
-        }
-
-        s = String_new();
-        while (fgets(line,sizeof(line),stdin) != NULL)
-        {
-//fprintf(stderr,"%s, %d: line=%s\n",__FILE__,__LINE__,line);
-          String_trim(String_setCString(s,line),STRING_WHITE_SPACES);
-          if (verboseFlag) fprintf(stderr,"%s...",String_cString(s));
-
-          // reset SQL statements
-          for (i = 0; i < statementHandleCount; i++)
-          {
-            sqlite3_reset(statementHandles[i]);
-          }
-
-          // parse input
-          i = 0;
-          String_initTokenizer(&stringTokenizer,s,STRING_BEGIN,STRING_WHITE_SPACES,STRING_QUOTES,TRUE);
-          i = 0;
-          j = 1;
-          while ((i < statementHandleCount) && String_getNextToken(&stringTokenizer,&string,NULL))
-          {
-//fprintf(stderr,"%s, %d: %d %d -> %s\n",__FILE__,__LINE__,i,j,String_cString(string));
-            do
-            {
-              nextIndex = STRING_BEGIN;
-              if      (nextIndex != STRING_END)
-              {
-                value.l = String_toInteger64(string,STRING_BEGIN,&nextIndex,NULL,0);
-                if (nextIndex == STRING_END)
-                {
-                  sqliteResult = sqlite3_bind_int64(statementHandles[i],j,value.l);
-                }
-              }
-              if (nextIndex != STRING_END)
-              {
-                value.d = String_toDouble(string,STRING_BEGIN,&nextIndex,NULL,0);
-                if (nextIndex == STRING_END)
-                {
-                  sqliteResult = sqlite3_bind_double(statementHandles[i],j,value.d);
-                }
-              }
-              if (nextIndex != STRING_END)
-              {
-                nextIndex = STRING_END;
-                sqliteResult = sqlite3_bind_text(statementHandles[i],j,String_cString(string),String_length(string),SQLITE_TRANSIENT);
-              }
-              if (nextIndex != STRING_END)
-              {
-                String_delete(s);
-                (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-                printError("Invalid data '%s'!",String_cString(string));
-                String_delete(commands);
-                exit(EXITCODE_FAIL);
-              }
-
-              if (sqliteResult == SQLITE_OK)
-              {
-                // next argument
-                j++;
-              }
-              else
-              {
-                // next statement
-                i++;
-                j = 1;
-              }
-            }
-            while ((sqliteResult != SQLITE_OK) && (i < statementHandleCount));
-          }
-          String_doneTokenizer(&stringTokenizer);
-
-          // execute SQL commands
-          for (i = 0; i < statementHandleCount; i++)
-          {
-            sqliteResult = sqlite3_step(statementHandles[i]);
-            if (sqliteResult != SQLITE_DONE) break;
-          }
-          if (verboseFlag) fprintf(stderr,"Result: %d\n",sqliteResult);
-          if (sqliteResult != SQLITE_DONE)
-          {
-            String_delete(s);
-            (void)Database_execute(databaseHandle,CALLBACK_(NULL,NULL),NULL,"ROLLBACK TRANSACTION");
-//TODO          printError("SQL command #%u: '%s' fail: %s!",i+1,String_cString(commands),sqlite3_errmsg(databaseHandle));
-            String_delete(commands);
-            exit(EXITCODE_FAIL);
-          }
-        }
-        String_delete(s);
-
-        // free resources
-        for (i = 0; i < statementHandleCount; i++)
-        {
-          sqlite3_finalize(statementHandles[i]);
-        }
-#endif
-
-        // end transaction
-        error = Database_execute(&databaseHandle,
-                                 CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                 NULL,  // changedRowCount
-                                 "END TRANSACTION"
-                                );
-        if (error != ERROR_NONE)
-        {
-          printError("end transaction fail: %s!",Error_getText(error));
-          String_delete(commands);
-          exit(EXITCODE_FAIL);
-        }
+        printError("SQL command '%s' fail: %s!",String_cString(command),Error_getText(error));
+        String_delete(command);
+        exit(EXITCODE_FAIL);
       }
-      else
-      {
-        // single command execution
-        s = String_new();
-        s = explainQueryPlanFlag
-              ? String_append(String_setCString(s,"EXPLAIN QUERY PLAN "),commands)
-              : String_set(s,commands);
-        t0 = Misc_getTimestamp();
-        error = Database_execute(&databaseHandle,
-                                 CALLBACK_(printRow,NULL),
-                                 NULL,  // changedRowCount
-                                 String_cString(s)
-                                );
-        t1 = Misc_getTimestamp();
-        String_delete(s);
-        if (error != ERROR_NONE)
-        {
-          printError("SQL command '%s' fail: %s!",String_cString(commands),Error_getText(error));
-          String_delete(commands);
-          exit(EXITCODE_FAIL);
-        }
 
-        dt = t1-t0;
-        if (timeFlag && !explainQueryPlanFlag) printf("Execution time: %lumin:%us:%uus\n",(ulong)(dt/US_PER_MINUTE),(uint)((dt%US_PER_MINUTE)/US_PER_S),(uint)(dt%US_PER_S));
-      }
+      dt = t1-t0;
+      if (timeFlag && !explainQueryPlanFlag) printf("Execution time: %lumin:%us:%uus\n",(ulong)(dt/US_PER_MINUTE),(uint)((dt%US_PER_MINUTE)/US_PER_S),(uint)(dt%US_PER_S));
     }
   }
 
-  while (inputAvailable() && (fgets(line,sizeof(line),stdin) != NULL))
+  if (pipeFlag)
   {
-    l = stringTrim(line);
-    t0 = Misc_getTimestamp();
-    error = Database_execute(&databaseHandle,
-                             CALLBACK_(NULL,NULL),  // databaseRowFunction
-                             NULL,  // changedRowCount
-                             l
-                            );
-    if (error == ERROR_NONE)
+    if (transactionFlag)
     {
-      if (verboseFlag) fprintf(stderr,"Result: %s\n",Error_getText(error));
+      error = Database_beginTransaction(&databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER);
+      if (error != ERROR_NONE)
+      {
+        printError("Init transaction fail: %s!",Error_getText(error));
+        String_delete(command);
+        exit(EXITCODE_FAIL);
+      }
     }
-    else
+    while (inputAvailable() && (fgets(line,sizeof(line),stdin) != NULL))
     {
-      printError("SQL command '%s' fail: %s!",l,Error_getText(error));
-      String_delete(commands);
-      exit(EXITCODE_FAIL);
-    }
-    t1 = Misc_getTimestamp();
+      l = stringTrim(line);
+      t0 = Misc_getTimestamp();
+      error = Database_execute(&databaseHandle,
+                               CALLBACK_(printRow,NULL),
+                               NULL,  // changedRowCount
+                               l
+                              );
+      if (error == ERROR_NONE)
+      {
+        if (verboseFlag) fprintf(stderr,"Result: %s\n",Error_getText(error));
+      }
+      else
+      {
+        printError("SQL command '%s' fail: %s!",l,Error_getText(error));
+        String_delete(command);
+        exit(EXITCODE_FAIL);
+      }
+      t1 = Misc_getTimestamp();
 
-    dt = t1-t0;
-    if (timeFlag && !explainQueryPlanFlag) printf("Execution time: %lumin:%us:%uus\n",(ulong)(dt/US_PER_MINUTE),(uint)((dt%US_PER_MINUTE)/US_PER_S),(uint)(dt%US_PER_S));
+      dt = t1-t0;
+      if (timeFlag && !explainQueryPlanFlag) printf("Execution time: %lumin:%us:%uus\n",(ulong)(dt/US_PER_MINUTE),(uint)((dt%US_PER_MINUTE)/US_PER_S),(uint)(dt%US_PER_S));
+    }
+    if (transactionFlag)
+    {
+      error = Database_endTransaction(&databaseHandle);
+      if (error != ERROR_NONE)
+      {
+        printError("Done transaction fail: %s!",Error_getText(error));
+        String_delete(command);
+        exit(EXITCODE_FAIL);
+      }
+    }
   }
 
   // close database
@@ -5962,7 +5840,7 @@ int main(int argc, const char *argv[])
   Array_done(&entityIdArray);
   Array_done(&uuidArray);
   Array_done(&uuidIdArray);
-  String_delete(commands);
+  String_delete(command);
 
   doneAll();
 
