@@ -10215,7 +10215,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   }
 
   // generate new key pair for encryption
-  printInfo(1,"Generate keys (collecting entropie)...");
+  if (Misc_isStdoutTerminal()) printInfo(1,"Generate keys (collecting entropie)...");
   Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
   Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
@@ -10230,7 +10230,7 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   }
 //fprintf(stderr,"%s, %d: public %d \n",__FILE__,__LINE__,publicKey.dataLength); debugDumpMemory(publicKey.data,publicKey.dataLength,0);
 //fprintf(stderr,"%s, %d: private %d\n",__FILE__,__LINE__,privateKey.dataLength); debugDumpMemory(privateKey.data,privateKey.dataLength,0);
-  printInfo(1,"OK\n");
+  if (Misc_isStdoutTerminal()) printInfo(1,"OK\n");
 
   // output keys
   if (keyFileBaseName != NULL)
@@ -10414,7 +10414,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
   }
 
   // generate new key pair for signature
-  printInfo(1,"Generate keys (collecting entropie)...");
+  if (Misc_isStdoutTerminal()) printInfo(1,"Generate signature keys (collecting entropie)...");
   Crypt_initKey(&publicKey,CRYPT_PADDING_TYPE_NONE);
   Crypt_initKey(&privateKey,CRYPT_PADDING_TYPE_NONE);
   error = Crypt_createPublicPrivateKeyPair(&publicKey,&privateKey,generateKeyBits,generateKeyMode);
@@ -10427,7 +10427,7 @@ LOCAL Errors generateSignatureKeys(const char *keyFileBaseName)
     String_delete(publicKeyFileName);
     return error;
   }
-  printInfo(1,"OK\n");
+  if (Misc_isStdoutTerminal()) printInfo(1,"OK\n");
 
   // output keys
   if (keyFileBaseName != NULL)

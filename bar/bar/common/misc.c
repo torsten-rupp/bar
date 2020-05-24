@@ -2290,6 +2290,19 @@ Errors Misc_executeScript(const char        *script,
 
 /*---------------------------------------------------------------------*/
 
+bool Misc_isTerminal(int handle)
+{
+  #if   defined(PLATFORM_LINUX)
+  #elif defined(PLATFORM_WINDOWS)
+  #endif /* PLATFORM_... */
+
+  #if   defined(PLATFORM_LINUX)
+    return isatty(handle) == 1;
+  #elif defined(PLATFORM_WINDOWS)
+    return TRUE;
+  #endif /* PLATFORM_... */
+}
+
 void Misc_waitEnter(void)
 {
   #if   defined(PLATFORM_LINUX)
