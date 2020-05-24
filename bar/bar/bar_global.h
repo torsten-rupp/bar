@@ -610,6 +610,31 @@ typedef struct
   Key        publicKey;
 } MasterInfo;
 
+// maintenance time node
+typedef struct MaintenanceTimeNode
+{
+  LIST_NODE_HEADER(struct MaintenanceTimeNode);
+
+  uint id;                                                  // unique maintenance time id
+  struct
+  {
+    int        year;                                          // valid year or DATE_ANY
+    int        month;                                         // valid month or DATE_ANY
+    int        day;                                           // valid day or DATE_ANY
+    int        hour;                                          // valid hour or TIME_ANY
+    int        minute;                                        // valid minute or TIME_ANY
+    WeekDaySet weekDaySet;                                    // valid weekday set or WEEKDAY_SET_ANY
+  } begin,end;
+} MaintenanceTimeNode;
+
+// maintenance time list
+typedef struct
+{
+  LIST_HEADER(MaintenanceTimeNode);
+
+  Semaphore lock;
+} MaintenanceTimeList;
+
 // global options
 typedef struct
 {
@@ -638,6 +663,8 @@ typedef struct
   bool                        indexDatabaseAutoUpdateFlag;    // TRUE for automatic update of index database
   BandWidthList               indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
   uint                        indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
+
+  MaintenanceTimeList         maintenanceTimeList;            // maintenance time list
 
   bool                        metaInfoFlag;                   // TRUE iff meta info should be print
   bool                        groupFlag;                      // TRUE iff entries in list should be grouped
