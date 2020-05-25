@@ -2996,7 +2996,7 @@ LOCAL MaintenanceTimeNode *newMaintenanceTimeNode(void)
 {
   MaintenanceTimeNode *maintenanceTimeNode;
 
-  maintenanceTimeNode = LIST_NEW_NODE(BandWidthNode);
+  maintenanceTimeNode = LIST_NEW_NODE(MaintenanceTimeNode);
   if (maintenanceTimeNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
