@@ -6146,7 +6146,9 @@ UNUSED_VARIABLE(storageInfo);
         }
 
         // update index aggregates
-        if (archiveHandle->indexHandle != NULL)
+        if (   (archiveHandle->indexHandle != NULL)
+            && !INDEX_ID_IS_NONE(storageId)
+           )
         {
           error = Index_updateStorageInfos(archiveHandle->indexHandle,
                                            storageId
@@ -14800,7 +14802,6 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
   assert(storageInfo != NULL);
 
-fprintf(stderr,"%s, %d: ------------------- %lld\n",__FILE__,__LINE__,entityId);
   // init variables
   Storage_initSpecifier(&storageSpecifier);
   printableStorageName = String_new();
@@ -14822,6 +14823,7 @@ fprintf(stderr,"%s, %d: ------------------- %lld\n",__FILE__,__LINE__,entityId);
   {
     // try to open scp-storage first with sftp
     storageSpecifier.type = STORAGE_TYPE_SFTP;
+//TODO: use indexHandle in Archive_open
     error = Archive_open(&archiveHandle,
                          storageInfo,
                          NULL,  // archive name
@@ -15222,33 +15224,30 @@ fprintf(stderr,"%s, %d: ------------------- %lld\n",__FILE__,__LINE__,entityId);
             (void)Archive_closeEntry(&archiveEntryInfo);
             break;
           }
-fprintf(stderr,"%s, %d: jobUUID=%s\n",__FILE__,__LINE__,String_cString(jobUUID));
 
-            if (!INDEX_ID_IS_NONE(entityId))
-            {
-              // update entity
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-              error = Index_updateEntity(indexHandle,
-                                         entityId,
-                                         jobUUID,
-                                         scheduleUUID,
-                                         hostName,
-                                         userName,
-                                         archiveType,
-                                         createdDateTime
-                                        );
-            }
-            else
-            {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-            // check if entity with given job UUID/schedule UUID/host/archive type/created date/time exists, otherwise create new entity
+          if (!INDEX_ID_IS_NONE(entityId))
+          {
+            // update entity
+            error = Index_updateEntity(indexHandle,
+                                       entityId,
+                                       jobUUID,
+                                       scheduleUUID,
+                                       hostName,
+                                       userName,
+                                       archiveType,
+                                       createdDateTime
+                                      );
+          }
+          else
+          {
+            // check if entity with given job UUID/schedule UUID/host name/archive type exists, otherwise create new entity
             if (!Index_findEntity(indexHandle,
                                   INDEX_ID_NONE,  // findEntityIndexId
                                   jobUUID,
                                   scheduleUUID,
                                   hostName,
                                   archiveType,
-                                  createdDateTime,
+                                  NULL,  // createdDateTime,
                                   NULL,  // jobUUID,
                                   NULL,  // scheduleUUID,
                                   NULL,  // uuidIndexId,
@@ -15261,7 +15260,7 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
                                  )
                )
             {
-fprintf(stderr,"%s, %d: create new \n",__FILE__,__LINE__);
+              // create new entity
               error = Index_newEntity(indexHandle,
                                       jobUUID,
                                       scheduleUUID,
@@ -15273,6 +15272,11 @@ fprintf(stderr,"%s, %d: create new \n",__FILE__,__LINE__);
                                       &entityId
                                      );
             }
+            else
+            {
+              // entity exists
+              error = ERROR_NONE;
+            }
           }
           if (error != ERROR_NONE)
           {
@@ -15281,7 +15285,6 @@ fprintf(stderr,"%s, %d: create new \n",__FILE__,__LINE__);
           }
 
           // assign storage
-fprintf(stderr,"%s, %d: assgin %s -> entityId=%lld: %s\n",__FILE__,__LINE__,String_cString(jobUUID),entityId);
           error = Index_assignTo(indexHandle,
                                  NULL,  // jobUUID
                                  INDEX_ID_NONE,  // entityId
