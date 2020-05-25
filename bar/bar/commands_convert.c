@@ -1934,7 +1934,6 @@ LOCAL void convertThreadCode(ConvertInfo *convertInfo)
 
     freeEntryMsg(&entryMsg,NULL);
   }
-  if (!isPrintInfo(1)) printInfo(0,"%s",(convertInfo->failError == ERROR_NONE) ? "OK\n" : "FAIL!\n");
 
   // free resources
   free(buffer);
