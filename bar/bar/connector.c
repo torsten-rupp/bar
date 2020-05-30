@@ -1279,7 +1279,7 @@ LOCAL void connectorCommand_indexNewEntity(ConnectorInfo *connectorInfo, IndexHa
 *            uuidId=<n>
 *            entityId=<n>
 *            storageName=<name>
-*            createdDateTime=<n>
+*            dateTime=<n>
 *            size=<n>
 *            indexState=<n>
 *            indexMode=<n>
@@ -1291,7 +1291,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
 {
   IndexId      uuidId,entityId;
   String       storageName;
-  uint64       createdDateTime;
+  uint64       dateTime;
   uint64       size;
   IndexStates  indexState;
   IndexModes   indexMode;
@@ -1302,7 +1302,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
   DEBUG_CHECK_RESOURCE_TRACE(connectorInfo);
   assert(connectorInfo->io.type == SERVER_IO_TYPE_NETWORK);
 
-  // get uuidId, entityId, storageName, createdDateTime, size, indexMode, indexState
+  // get uuidId, entityId, storageName, dateTime, size, indexMode, indexState
   if (!StringMap_getInt64(argumentMap,"uuidId",&uuidId,0LL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<n>");
@@ -1320,9 +1320,9 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
     String_delete(storageName);
     return;
   }
-  if (!StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL))
+  if (!StringMap_getUInt64(argumentMap,"dateTime",&dateTime,0LL))
   {
-    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"createdDateTime=<n>");
+    sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"dateTime=<n>");
     String_delete(storageName);
     return;
   }
@@ -1354,7 +1354,7 @@ LOCAL void connectorCommand_indexNewStorage(ConnectorInfo *connectorInfo, IndexH
                              connectorInfo->io.network.name,
                              NULL,  // userName
                              storageName,
-                             createdDateTime,
+                             dateTime,
                              size,
                              indexState,
                              indexMode,
@@ -2704,7 +2704,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   IndexId storageId;
   String  hostName,userName;
   String  storageName;
-  uint64  createdDateTime;
+  uint64  dateTime;
   uint64  storageSize;
   String  comment;
   Errors  error;
@@ -2730,7 +2730,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
   StringMap_getString(argumentMap,"userName",userName,NULL);
   storageName = String_new();
   StringMap_getString(argumentMap,"storageName",storageName,NULL);
-  StringMap_getUInt64(argumentMap,"createdDateTime",&createdDateTime,0LL);
+  StringMap_getUInt64(argumentMap,"dateTime",&dateTime,0LL);
   if (!StringMap_getUInt64(argumentMap,"storageSize",&storageSize,0LL))
   {
     sendResult(connectorInfo,id,TRUE,ERROR_EXPECTED_PARAMETER,"storageSize=<n>");
@@ -2749,7 +2749,7 @@ LOCAL void connectorCommand_indexStorageUpdate(ConnectorInfo *connectorInfo, Ind
                                 hostName,
                                 userName,
                                 storageName,
-                                createdDateTime,
+                                dateTime,
                                 storageSize,
                                 comment
                                );
