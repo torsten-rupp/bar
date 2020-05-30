@@ -1106,7 +1106,7 @@ LOCAL_INLINE bool isOwnReadWriteLock(DatabaseHandle *databaseHandle)
   assert(databaseHandle->databaseNode != NULL);
   assert(databaseHandle->databaseNode->readWriteCount >= databaseHandle->readWriteLockCount);
 
-// TODO: acitvate when each thread has his own index handle
+// TODO: reactivate when each thread has his own index handle
 //  return    (databaseHandle->databaseNode->readWriteCount > 0)
 //         && Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy);
   return    (databaseHandle->readWriteLockCount > 0);
@@ -1363,7 +1363,7 @@ LOCAL_INLINE void __readWritesIncrement(const char *__fileName__, ulong __lineNb
   databaseHandle->readWriteLockCount++;
   databaseHandle->databaseNode->readWriteCount++;
   #ifndef NDEBUG
-// TODO: acitvate when each thread has his own index handle
+// TODO: reactivate when each thread has his own index handle
 #if 0
     assert(   Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy)
            || Thread_equalThreads(databaseHandle->databaseNode->readWriteLockedBy,THREAD_ID_NONE)
@@ -2672,7 +2672,7 @@ LOCAL Errors sqliteExecute(DatabaseHandle      *databaseHandle,
          && ((timeout == WAIT_FOREVER) || (retryCount <= maxRetryCount))
         )
   {
-// TODO: acitvate when each thread has his own index handle
+// TODO: reactivate when each thread has his own index handle
 #if 0
     assert(Thread_isCurrentThread(databaseHandle->databaseNode->readWriteLockedBy));
 #endif
@@ -6786,7 +6786,7 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
 
   // format SQL command string
   sqlString = formatSQLString(String_new(),
-                              "SELECT %s \
+                              "SELECT DISTINCT %s \
                                FROM %s \
                               ",
                               columnName,
@@ -6846,10 +6846,7 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
     while (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
     {
       value = (DatabaseId)sqlite3_column_int64(statementHandle,0);
-      if (!Array_contains(values,&value,CALLBACK_(NULL,NULL)))
-      {
-        Array_append(values,&value);
-      }
+      Array_append(values,&value);
     }
     sqlite3_finalize(statementHandle);
 
