@@ -1719,7 +1719,7 @@ Errors Storage_copy(const StorageSpecifier          *storageSpecifier,
 
 Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
                       ConstString             directory,
-                      ConstString             patternString,
+                      const char              *patternString,
                       StorageFunction         storageFunction,
                       void                    *storageUserData,
                       StorageProgressFunction storageProgressFunction,
