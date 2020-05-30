@@ -398,18 +398,6 @@ CREATE TRIGGER BEFORE DELETE ON entries
     DELETE FROM FTS_entries WHERE entryId=OLD.id;
   END;
 
-CREATE TABLE IF NOT EXISTS entryFragments(
-  id        INTEGER PRIMARY KEY,
-  entryId   INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
-  storageId INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
-  offset    INTEGER,
-  size      INTEGER
-);
-CREATE INDEX ON entryFragments (entryId);
-CREATE INDEX ON entryFragments (storageId);
-
-// -------------------------------------------------------
-
 //TODO
 // --- skipped entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS skippedEntries(
@@ -423,6 +411,17 @@ CREATE TABLE IF NOT EXISTS skippedEntries(
 CREATE INDEX ON skippedEntries (entityId,type,name);
 CREATE INDEX ON skippedEntries (name);
 CREATE INDEX ON skippedEntries (type,name);
+
+// --- entry fragments -------------------------------------------------
+CREATE TABLE IF NOT EXISTS entryFragments(
+  id        INTEGER PRIMARY KEY,
+  entryId   INTEGER NOT NULL REFERENCES entries(id) ON DELETE CASCADE,
+  storageId INTEGER NOT NULL REFERENCES storages(id) ON DELETE CASCADE,
+  offset    INTEGER,
+  size      INTEGER
+);
+CREATE INDEX ON entryFragments (entryId);
+CREATE INDEX ON entryFragments (storageId);
 
 // --- files -----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fileEntries(

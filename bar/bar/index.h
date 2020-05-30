@@ -840,7 +840,7 @@ bool Index_findEntity(IndexHandle  *indexHandle,
 *          uuidId              - index id of UUID entry (can be NULL)
 *          entityId            - index id of entity entry (can be NULL)
 *          storageName         - storage name (can be NULL)
-*          createdDateTime     - date/time stamp [s] (can be NULL)
+*          dateTime            - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
@@ -860,7 +860,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
                            IndexId     *uuidId,
                            IndexId     *entityId,
                            String      storageName,
-                           uint64      *createdDateTime,
+                           uint64      *dateTime,
                            uint64      *size,
                            IndexStates *indexState,
                            IndexModes  *indexMode,
@@ -882,7 +882,7 @@ bool Index_findStorageById(IndexHandle *indexHandle,
 *          scheduleUUID        - unique schedule UUID (can be NULL)
 *          entityId             - index id of entity entry (can be NULL)
 *          storageId           - index id of storage entry (can be NULL)
-*          createdDateTime     - date/time stamp [s] (can be NULL)
+*          dateTime            - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
@@ -903,7 +903,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
                              String                 jobUUID,
                              String                 scheduleUUID,
                              IndexId                *storageId,
-                             uint64                 *createdDateTime,
+                             uint64                 *dateTime,
                              uint64                 *size,
                              IndexStates            *indexState,
                              IndexModes             *indexMode,
@@ -924,7 +924,7 @@ bool Index_findStorageByName(IndexHandle            *indexHandle,
 *          entityId            - index id of entity (can be NULL)
 *          storageId           - index id of storage (can be NULL)
 *          storageName         - storage name (can be NULL)
-*          createdDateTime     - date/time stamp [s] (can be NULL)
+*          dateTime            - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
 *          indexState          - index state (can be NULL)
 *          indexMode           - index mode (can be NULL)
@@ -945,7 +945,7 @@ bool Index_findStorageByState(IndexHandle   *indexHandle,
                               String        scheduleUUID,
                               IndexId       *storageId,
                               String        storageName,
-                              uint64        *createdDateTime,
+                              uint64        *dateTime,
                               uint64        *size,
                               IndexModes    *indexMode,
                               uint64        *lastCheckedDateTime,
@@ -1639,10 +1639,11 @@ Errors Index_initListStorages(IndexQueryHandle      *indexQueryHandle,
 *          scheduleUUID        - schedule UUID (can be NULL)
 *          hostName            - host name (can be NULL)
 *          userName            - user name (can be NULL)
+*          createdDateTime     - created date/time (can be NULL)
 *          archiveType         - archive type (can be NULL)
 *          storage             - index id of storage
 *          storageName         - storage name (can be NULL)
-*          createdDateTime     - date/time stamp [s] (can be NULL)
+*          dateTime            - date/time stamp [s] (can be NULL)
 *          size                - storage size [bytes]
 *          userName            - user name (can be NULL)
 *          comment             - comment (can be NULL)
@@ -1665,10 +1666,11 @@ bool Index_getNextStorage(IndexQueryHandle *indexQueryHandle,
                           String           hostName,
                           String           userName,
                           String           comment,
+                          uint64           *createdDateTime,
                           ArchiveTypes     *archiveType,
                           IndexId          *storageId,
                           String           storageName,
-                          uint64           *createdDateTime,
+                          uint64           *dateTime,
                           uint64           *size,
                           IndexStates      *indexState,
                           IndexModes       *indexMode,

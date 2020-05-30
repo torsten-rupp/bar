@@ -4080,6 +4080,7 @@ LOCAL Errors purgeStorageIndex(IndexHandle      *indexHandle,
                                 NULL,  // hostName
                                 NULL,  // userName
                                 NULL,  // comment
+                                NULL,  // createdDateTime
                                 NULL,  // archiveType
                                 &oldStorageId,
                                 oldStorageName,
@@ -4262,18 +4263,19 @@ LOCAL void purgeStorageByJobUUID(IndexHandle *indexHandle,
                                   &uuidId,
                                   NULL,  // jobUUID,
                                   &entityId,
-                                  NULL,  // scheduleUUID,
+                                  NULL,  // scheduleUUID
                                   NULL,  // hostName
                                   NULL,  // userName
                                   NULL,  // comment
-                                  NULL,  // archiveType,
+                                  NULL,  // createdDateTime
+                                  NULL,  // archiveType
                                   &storageId,
                                   storageName,
                                   &createdDateTime,
                                   &size,
-                                  NULL,  // indexState,
-                                  NULL,  // indexMode,
-                                  NULL,  // lastCheckedDateTime,
+                                  NULL,  // indexState
+                                  NULL,  // indexMode
+                                  NULL,  // lastCheckedDateTime
                                   NULL,  // errorMessage
                                   NULL,  // totalEntryCount
                                   NULL  // totalEntrySize
@@ -4476,18 +4478,19 @@ LOCAL void purgeStorageByServer(IndexHandle  *indexHandle,
                                   &uuidId,
                                   NULL,  // jobUUID,
                                   &entityId,
-                                  NULL,  // scheduleUUID,
+                                  NULL,  // scheduleUUID
                                   NULL,  // hostName
                                   NULL,  // userName
                                   NULL,  // comment
-                                  NULL,  // archiveType,
+                                  NULL,  // createdDateTime
+                                  NULL,  // archiveType
                                   &storageId,
                                   storageName,
                                   &createdDateTime,
                                   &size,
-                                  NULL,  // indexState,
-                                  NULL,  // indexMode,
-                                  NULL,  // lastCheckedDateTime,
+                                  NULL,  // indexState
+                                  NULL,  // indexMode
+                                  NULL,  // lastCheckedDateTime
                                   NULL,  // errorMessage
                                   NULL,  // totalEntryCount
                                   NULL  // totalEntrySize
@@ -5089,19 +5092,20 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
             while (Index_getNextStorage(&indexQueryHandle,
                                         NULL,  // uuidId
                                         NULL,  // job UUID
-                                        &existingEntityId,  // entityId,
+                                        &existingEntityId,
                                         NULL,  // schedule UUID
                                         NULL,  // hostName
                                         NULL,  // userName
                                         NULL,  // comment
+                                        NULL,  // createdDateTime
                                         NULL,  // archiveType
                                         &existingStorageId,
                                         existingStorageName,
                                         NULL,  // createdDateTime
                                         NULL,  // size
-                                        NULL,  // indexState,
-                                        NULL,  // indexMode,
-                                        NULL,  // lastCheckedDateTime,
+                                        NULL,  // indexState
+                                        NULL,  // indexMode
+                                        NULL,  // lastCheckedDateTime
                                         NULL,  // errorMessage
                                         NULL,  // totalEntryCount
                                         NULL  // totalEntrySize

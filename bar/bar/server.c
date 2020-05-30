@@ -3088,6 +3088,7 @@ LOCAL Errors deleteEntity(IndexHandle *indexHandle,
                                  NULL,  // hostName
                                  NULL,  // userName
                                  NULL,  // comment
+                                 NULL,  // createdDateTime
                                  NULL,  // archiveType
                                  &storageId,
                                  NULL,  // storageName
@@ -4555,6 +4556,7 @@ LOCAL void autoIndexThreadCode(void)
                                          NULL,  // hostName
                                          NULL,  // userName
                                          NULL,  // comment
+                                         NULL,  // createdDateTime
                                          NULL,  // archiveType
                                          &storageId,
                                          storageName,
@@ -13738,8 +13740,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 *            [name=<text>]
 *          Result:
 *            jobUUID=<uuid> \
-*            scheduleUUID=<uuid> \
 *            entityId=<id> \
+*            scheduleUUID=<uuid> \
 *            archiveType=<type> \
 *            createdDateTime=<time stamp [s]> \
 *            lastErrorMessage=<error message>
@@ -13946,6 +13948,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
 *            entityId=<id> \
 *            scheduleUUID=<uuid> \
 *            hostName=<name> \
+*            createdDateTime=<date/time> \
 *            archiveType=<type> \
 *            storageId=<id> \
 *            name=<name> \
@@ -13988,6 +13991,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
   String                printableStorageName;
   String                errorMessage;
   IndexId               uuidId,storageId;
+  uint64                createdDateTime;
   ArchiveTypes          archiveType;
   uint64                dateTime;
   uint64                size;
@@ -14142,6 +14146,7 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
                                  hostName,
                                  NULL,  // userName
                                  NULL,  // comment
+                                 &createdDateTime,
                                  &archiveType,
                                  &storageId,
                                  storageName,
@@ -14179,13 +14184,14 @@ LOCAL void serverCommand_indexStorageList(ClientInfo *clientInfo, IndexHandle *i
     }
 
     ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,
-                        "uuidId=%"PRIu64" jobUUID=%S jobName=%'S entityId=%"PRIu64" scheduleUUID=%S hostName=%'S archiveType='%s' storageId=%"PRIu64" name=%'S dateTime=%"PRIu64" size=%"PRIu64" indexState=%'s indexMode=%'s lastCheckedDateTime=%"PRIu64" errorMessage=%'S totalEntryCount=%lu totalEntrySize=%"PRIu64"",
+                        "uuidId=%"PRIu64" jobUUID=%S jobName=%'S entityId=%"PRIu64" scheduleUUID=%S hostName=%'S createdDateTime=%"PRIu64" archiveType='%s' storageId=%"PRIu64" name=%'S dateTime=%"PRIu64" size=%"PRIu64" indexState=%'s indexMode=%'s lastCheckedDateTime=%"PRIu64" errorMessage=%'S totalEntryCount=%lu totalEntrySize=%"PRIu64"",
                         uuidId,
                         jobUUID,
                         jobName,
                         entityId,
                         scheduleUUID,
                         hostName,
+                        createdDateTime,
                         Archive_archiveTypeToString(archiveType),
                         storageId,
                         printableStorageName,
@@ -16048,6 +16054,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                          NULL,  // hostName
                                          NULL,  // userName
                                          NULL,  // comment
+                                         NULL,  // createdDateTime
                                          NULL,  // archiveType
                                          NULL,  // storageId
                                          storageName,
@@ -16322,7 +16329,7 @@ LOCAL void serverCommand_indexEntityAdd(ClientInfo *clientInfo, IndexHandle *ind
 
 /***********************************************************************\
 * Name   : serverCommand_indexStorageAdd
-* Purpose: add storage to index database (if not already exists)
+* Purpose: add storages to index database (if not already exists)
 * Input  : clientInfo  - client info
 *          indexHandle - index handle
 *          id          - command id
@@ -16345,10 +16352,11 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   bool             forceRefresh;
   int              progressSteps;
   StorageSpecifier storageSpecifier;
+  JobOptions       jobOptions;
   bool             foundFlag;
+  String           printableStorageName;
   bool             updateRequestedFlag;
   StorageInfo      storageInfo;
-  String           printableStorageName;
   IndexId          storageId;
   Errors           error;
 
@@ -16377,6 +16385,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 
   // init variables
   Storage_initSpecifier(&storageSpecifier);
+  Job_initOptions(&jobOptions);
 
   // parse storage specifier
   error = Storage_parseName(&storageSpecifier,pattern);
@@ -16399,7 +16408,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
       if (Storage_init(&storageInfo,
                        NULL, // masterIO
                        &storageSpecifier,
-                       NULL, // jobOptions
+                       &jobOptions,
                        &globalOptions.indexDatabaseMaxBandWidthList,
                        SERVER_CONNECTION_PRIORITY_LOW,
                        STORAGE_FLAGS_NONE,
@@ -16412,35 +16421,62 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
                       ) == ERROR_NONE
          )
       {
-        printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,NULL);
-
-        if (Index_findStorageByName(indexHandle,
-                                    &storageSpecifier,
-                                    NULL,  // archiveName
-                                    NULL,  // uuidId
-                                    NULL,  // entityId
-                                    NULL,  // jobUUID
-                                    NULL,  // scheduleUUID
-                                    &storageId,
-                                    NULL,  // createdDateTime
-                                    NULL,  // size
-                                    NULL,  // indexState
-                                    NULL,  // indexMode
-                                    NULL,  // lastCheckedDateTime
-                                    NULL,  // errorMessage
-                                    NULL,  // totalEntryCount
-                                    NULL  // totalEntrySize
-                                   )
-           )
+        if (Storage_exists(&storageInfo,NULL))
         {
-          if (forceRefresh)
+          printableStorageName = Storage_getPrintableName(String_new(),&storageSpecifier,NULL);
+
+          if (Index_findStorageByName(indexHandle,
+                                      &storageSpecifier,
+                                      NULL,  // archiveName
+                                      NULL,  // uuidId
+                                      NULL,  // entityId
+                                      NULL,  // jobUUID
+                                      NULL,  // scheduleUUID
+                                      &storageId,
+                                      NULL,  // createdDateTime
+                                      NULL,  // size
+                                      NULL,  // indexState
+                                      NULL,  // indexMode
+                                      NULL,  // lastCheckedDateTime
+                                      NULL,  // errorMessage
+                                      NULL,  // totalEntryCount
+                                      NULL  // totalEntrySize
+                                     )
+             )
           {
-            error = Index_setStorageState(indexHandle,
-                                          storageId,
-                                          INDEX_STATE_UPDATE_REQUESTED,
-                                          Misc_getCurrentDateTime(),
-                                          NULL  // errorMessage
-                                         );
+            if (forceRefresh)
+            {
+              error = Index_setStorageState(indexHandle,
+                                            storageId,
+                                            INDEX_STATE_UPDATE_REQUESTED,
+                                            Misc_getCurrentDateTime(),
+                                            NULL  // errorMessage
+                                           );
+              if (error == ERROR_NONE)
+              {
+                ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
+                                    storageId,
+                                    printableStorageName
+                                   );
+              }
+
+              updateRequestedFlag = TRUE;
+            }
+          }
+          else
+          {
+            error = Index_newStorage(indexHandle,
+                                     INDEX_ID_NONE, // uuidId
+                                     INDEX_ID_NONE, // entityId
+                                     NULL,  // hostName
+                                     NULL,  // userName
+                                     Storage_getName(NULL,&storageSpecifier,NULL),
+                                     0LL,  // createdDateTime
+                                     0LL,  // size
+                                     INDEX_STATE_UPDATE_REQUESTED,
+                                     INDEX_MODE_MANUAL,
+                                     &storageId
+                                    );
             if (error == ERROR_NONE)
             {
               ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
@@ -16451,36 +16487,13 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
 
             updateRequestedFlag = TRUE;
           }
-        }
-        else
-        {
-          error = Index_newStorage(indexHandle,
-                                   INDEX_ID_NONE, // uuidId
-                                   INDEX_ID_NONE, // entityId
-                                   NULL,  // hostName
-                                   NULL,  // userName
-                                   Storage_getName(NULL,&storageSpecifier,NULL),
-                                   0LL,  // createdDateTime
-                                   0LL,  // size
-                                   INDEX_STATE_UPDATE_REQUESTED,
-                                   INDEX_MODE_MANUAL,
-                                   &storageId
-                                  );
-          if (error == ERROR_NONE)
-          {
-            ServerIO_sendResult(&clientInfo->io,id,FALSE,ERROR_NONE,"storageId=%"PRIu64" name=%'S",
-                                storageId,
-                                printableStorageName
-                               );
-          }
 
-          updateRequestedFlag = TRUE;
+          String_delete(printableStorageName);
+
+          foundFlag = TRUE;
         }
+
         Storage_done(&storageInfo);
-
-        String_delete(printableStorageName);
-
-        foundFlag = TRUE;
       }
     }
     if (error != ERROR_NONE)
@@ -16621,6 +16634,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   }
 
   // free resources
+  Job_doneOptions(&jobOptions);
   Storage_doneSpecifier(&storageSpecifier);
   String_delete(pattern);
 }
@@ -17018,6 +17032,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
+                                   NULL,  // createdDateTime
                                    NULL,  // archiveType
                                    &storageId,
                                    NULL,  // storageName
@@ -17079,6 +17094,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
+                                   NULL,  // createdDateTime
                                    NULL,  // archiveType
                                    &storageId,
                                    NULL,  // storageName
@@ -17140,6 +17156,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
+                                   NULL,  // createdDateTime
                                    NULL,  // archiveType
                                    &storageId,
                                    NULL,  // storageName
@@ -17201,11 +17218,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
            && Index_getNextStorage(&indexQueryHandle,
                                    NULL,  // uuidId
                                    NULL,  // jobUUID
+                                   NULL,  // entityId
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
-                                   NULL,  // entityId
+                                   NULL,  // createdDateTime
                                    NULL,  // archiveType
                                    &storageId,
                                    NULL,  // storageName
@@ -17262,11 +17280,12 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
            && Index_getNextStorage(&indexQueryHandle,
                                    NULL,  // uuidId
                                    NULL,  // jobUUID
+                                   NULL,  // entityId
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
-                                   NULL,  // entityId
+                                   NULL,  // createdDateTime
                                    NULL,  // archiveType
                                    &storageId,
                                    storageName,
@@ -17426,11 +17445,12 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
            && Index_getNextStorage(&indexQueryHandle,
                                    NULL,  // uuidId
                                    NULL,  // jobUUID
+                                   NULL,  // entityId
                                    NULL,  // scheduleUUID
                                    NULL,  // hostName
                                    NULL,  // userName
                                    NULL,  // comment
-                                   NULL,  // entityId
+                                   NULL,  // createdDateTime
                                    NULL,  // archiveType
                                    &storageId,
                                    storageName,
