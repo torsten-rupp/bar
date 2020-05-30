@@ -2212,7 +2212,7 @@ bool Storage_exists(StorageInfo *storageInfo, ConstString archiveName)
   if (archiveName == NULL) archiveName = storageInfo->storageSpecifier.archiveName;
   if (String_isEmpty(archiveName))
   {
-    return ERROR_NO_ARCHIVE_FILE_NAME;
+    return FALSE;
   }
 
   existsFlag = FALSE;
@@ -4025,7 +4025,7 @@ NULL, // masterIO
 
 Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
                       ConstString             directory,
-                      ConstString             patternString,
+                      const char              *patternString,
                       StorageFunction         storageFunction,
                       void                    *storageUserData,
                       StorageProgressFunction storageProgressFunction,
@@ -4054,11 +4054,11 @@ Errors Storage_forAll(StorageSpecifier        *storageSpecifier,
   // parse pattern
   if (patternString != NULL)
   {
-    error = Pattern_init(&pattern,
-                         patternString,
-                         PATTERN_TYPE_GLOB,
-                         PATTERN_FLAG_NONE
-                        );
+    error = Pattern_initCString(&pattern,
+                                patternString,
+                                PATTERN_TYPE_GLOB,
+                                PATTERN_FLAG_NONE
+                               );
     if (error != ERROR_NONE)
     {
       String_delete(name);
