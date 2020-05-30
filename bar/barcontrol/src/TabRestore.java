@@ -4237,44 +4237,43 @@ Dprintf.dprintf("");
   private TabStatus                                                  tabStatus;
 
   // widgets
-  public  Composite                                                  widgetTab;
-  private TabFolder                                                  widgetTabFolder;
+  public  Composite                                   widgetTab;
+  private TabFolder                                   widgetTabFolder;
 
-  private TabFolder                                                  widgetStorageTabFolderTitle;
-  private TabFolder                                                  widgetStorageTabFolder;
-  private Tree                                                       widgetStorageTree;
-  private Shell                                                      widgetStorageTreeToolTip = null;
-  private Table                                                      widgetStorageTable;
-  private Shell                                                      widgetStorageTableToolTip = null;
-  private Text                                                       widgetStorageFilter;
-  private Combo                                                      widgetStorageStateFilter;
-  private Menu                                                       widgetStorageAssignToMenu;
-  final private IndexIdSet                                           checkedIndexIdSet = new IndexIdSet();
-  private WidgetEvent                                                enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
-  private WidgetEvent                                                checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage change
+  private TabFolder                                   widgetStorageTabFolderTitle;
+  private TabFolder                                   widgetStorageTabFolder;
+  private Tree                                        widgetStorageTree;
+  private Shell                                       widgetStorageTreeToolTip = null;
+  private Table                                       widgetStorageTable;
+  private Shell                                       widgetStorageTableToolTip = null;
+  private Text                                        widgetStorageFilter;
+  private Combo                                       widgetStorageStateFilter;
+  private Menu                                        widgetStorageAssignToMenu;
+  final private IndexIdSet                            checkedIndexIdSet = new IndexIdSet();
+  private WidgetEvent                                 enableMarkIndexEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
+  private WidgetEvent                                 checkedIndexEvent = new WidgetEvent();       // triggered when checked-state of some uuid/enity/storage change
 
-  private Label                                                      widgetEntryTableTitle;
-  private Table                                                      widgetEntryTable;
-  private Shell                                                      widgetEntryTableToolTip = null;
-  private Text                                                       widgetEntryFilter;
-  private Combo                                                      widgetEntryTypeFilter;
-  private Button                                                     widgetEntryNewestOnly;
-  final private IndexIdSet                                           checkedEntryIdSet = new IndexIdSet();
-  private WidgetEvent                                                enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
-  private WidgetEvent                                                checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
+  private Label                                       widgetEntryTableTitle;
+  private Table                                       widgetEntryTable;
+  private Shell                                       widgetEntryTableToolTip = null;
+  private Text                                        widgetEntryFilter;
+  private Combo                                       widgetEntryTypeFilter;
+  private Button                                      widgetEntryNewestOnly;
+  final private IndexIdSet                            checkedEntryIdSet = new IndexIdSet();
+  private WidgetEvent                                 enableMarkEntriesEvent = new WidgetEvent<Boolean>();  // triggered when check all/none
+  private WidgetEvent                                 checkedEntryEvent = new WidgetEvent();       // triggered when checked-state of some entry changed
 
-  private UpdateStorageTreeTableThread                               updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
-  private TabJobs                                                    tabJobs;
-  private IndexData                                                  selectedIndexData = null;
+  private UpdateStorageTreeTableThread                updateStorageTreeTableThread = new UpdateStorageTreeTableThread();
+  private TabJobs                                     tabJobs;
+  private IndexData                                   selectedIndexData = null;
 
-  private Timer                                                      updateAssignToTimer        = new Timer(true);
-  private TimerTask                                                  updateAssignToTimerTask    = null;
-  private Object                                                     assignToLock               = new Object();
-  private java.util.List<UUIDIndexData>                              assignToUUIDIndexDataList  = null;
-  private Map<String,java.util.List<EntityIndexData>>                assignToEntityIndexDataMap = null;
-  private Map<String,Map<ArchiveTypes,java.util.List<AssignToData>>> assignToDataMap            = null;
+  private Timer                                       updateAssignToTimer        = new Timer(true);
+  private TimerTask                                   updateAssignToTimerTask    = null;
+  private Object                                      assignToLock               = new Object();
+  private java.util.List<UUIDIndexData>               assignToUUIDIndexDataList  = null;
+  private Map<String,java.util.List<EntityIndexData>> assignToEntityIndexDataMap = null;
 
-  private UpdateEntryTableThread                                     updateEntryTableThread = new UpdateEntryTableThread();
+  private UpdateEntryTableThread                      updateEntryTableThread = new UpdateEntryTableThread();
 
 
   // ------------------------ native functions ----------------------------
@@ -5995,8 +5994,7 @@ Dprintf.dprintf("");
             {
               updateAssignToMenu(widgetStorageAssignToMenu,
                                  assignToUUIDIndexDataList,
-                                 assignToEntityIndexDataMap,
-                                 assignToDataMap
+                                 assignToEntityIndexDataMap
                                 );
             }
           }
@@ -7439,6 +7437,14 @@ Dprintf.dprintf("");
     return indexDataHashSet;
   }
 
+  /** clear selected storage
+   */
+  private void clearSelectedIndexData()
+  {
+    widgetStorageTree.deselectAll();
+    widgetStorageTable.deselectAll();
+  }
+
   /** update assign-to
    */
   private void updateAssignTo()
@@ -7524,58 +7530,10 @@ Dprintf.dprintf("");
                               );
 
 
-      // get job schedule index data list
-      final Map<String,Map<ArchiveTypes,java.util.List<AssignToData>>> assignToDataMap = new HashMap<String,Map<ArchiveTypes,java.util.List<AssignToData>>>();
-      BARServer.executeCommand(StringParser.format("SCHEDULE_LIST"),
-                               2,  // debugLevel
-                               new Command.ResultHandler()
-                               {
-                                 @Override
-                                 public void handle(int i, ValueMap valueMap)
-                                 {
-                                   String        jobUUID      = valueMap.getString ("jobUUID"                       );
-                                   String        scheduleUUID = valueMap.getString ("scheduleUUID"                  );
-                                   ArchiveTypes  archiveType  = valueMap.getEnum   ("archiveType",ArchiveTypes.class);
-                                   final String  date         = valueMap.getString ("date"                          );
-                                   final String  weekDays     = valueMap.getString ("weekDays"                      );
-                                   final String  time         = valueMap.getString ("time"                          );
-                                   final String  customText   = valueMap.getString ("customText"                    );
-                                   final boolean enabled      = valueMap.getBoolean("enabled"                       );
-
-                                   // get archive type list
-                                   Map<ArchiveTypes,java.util.List<AssignToData>> archiveTypeMap = assignToDataMap.get(jobUUID);
-                                   if (archiveTypeMap == null)
-                                   {
-                                     archiveTypeMap = new HashMap<ArchiveTypes,java.util.List<AssignToData>>();
-                                     assignToDataMap.put(jobUUID,archiveTypeMap);
-                                   }
-
-                                   // get assign-to data list
-                                   java.util.List<AssignToData> assignToDataList = archiveTypeMap.get(archiveType);
-                                   if (assignToDataList == null)
-                                   {
-                                     assignToDataList = new ArrayList<AssignToData>();
-                                     archiveTypeMap.put(archiveType,assignToDataList);
-                                   }
-
-                                   // add assign-to data with schedule
-                                   assignToDataList.add(new AssignToData(jobUUID,
-                                                                         scheduleUUID,
-                                                                         date,
-                                                                         weekDays,
-                                                                         time,
-                                                                         customText,
-                                                                         enabled
-                                                                        )
-                                                       );
-                                 }
-                               });
-
       synchronized(assignToLock)
       {
         this.assignToUUIDIndexDataList  = assignToUUIDIndexDataList;
         this.assignToEntityIndexDataMap = assignToEntityIndexDataMap;
-        this.assignToDataMap            = assignToDataMap;
       }
     }
     catch (Exception exception)
@@ -7591,12 +7549,10 @@ Dprintf.dprintf("");
    * @param menu menu
    * @param uuidIndexDataList UUID inded data list
    * @param entityIndexDataMap entity index data map
-   * @param assignToDataMap assign-to data map
    */
-  private synchronized void updateAssignToMenu(Menu                                                       menu,
-                                               java.util.List<UUIDIndexData>                              uuidIndexDataList,
-                                               Map<String,java.util.List<EntityIndexData>>                entityIndexDataMap,
-                                               Map<String,Map<ArchiveTypes,java.util.List<AssignToData>>> assignToDataMap
+  private synchronized void updateAssignToMenu(Menu                                        menu,
+                                               java.util.List<UUIDIndexData>               uuidIndexDataList,
+                                               Map<String,java.util.List<EntityIndexData>> entityIndexDataMap
                                               )
   {
     // discard old menu items
@@ -7619,8 +7575,7 @@ Dprintf.dprintf("");
 
         updateAssignToMenu(subMenu,
                            uuidIndexData.jobUUID,
-                           entityIndexDataMap.get(uuidIndexData.jobUUID),
-                           assignToDataMap.get(uuidIndexData.jobUUID)
+                           entityIndexDataMap.get(uuidIndexData.jobUUID)
                           );
       }
     }
@@ -7630,14 +7585,13 @@ Dprintf.dprintf("");
    * @param menu menu
    * @param jobUUID job UUID
    * @param entityIndexDataList entity index data list
-   * @param archiveTypeMap archive type map
    */
-  private void updateAssignToMenu(Menu                                           subMenu,
-                                  String                                         jobUUID,
-                                  java.util.List<EntityIndexData>                entityIndexDataList,
-                                  Map<ArchiveTypes,java.util.List<AssignToData>> archiveTypeMap
+  private void updateAssignToMenu(Menu                            subMenu,
+                                  String                          jobUUID,
+                                  java.util.List<EntityIndexData> entityIndexDataList
                                  )
   {
+    Menu subSubMenuNormal,subSubMenuFull,subSubMenuIncremental,subSubMenuDifferential,subSubMenuContinuous;
     Menu subSubMenu;
 
     // discard old menu items
@@ -7647,113 +7601,79 @@ Dprintf.dprintf("");
     }
 
     // add normal menu items
-    subSubMenu = Widgets.addMenu(subMenu,
-                                 null,
-                                 BARControl.tr("normal")
-                                );
-    updateAssignToMenu(subSubMenu,
+    subSubMenuNormal = Widgets.addMenu(subMenu,
+                                       null,
+                                       BARControl.tr("normal")
+                                      );
+    updateAssignToMenu(subSubMenuNormal,
                        jobUUID,
                        ArchiveTypes.NORMAL,
-                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.NORMAL) : null
+                       entityIndexDataList
                       );
 
     // add full menu items
-    subSubMenu = Widgets.addMenu(subMenu,
-                                 null,
-                                 BARControl.tr("full")
-                                );
-    updateAssignToMenu(subSubMenu,
+    subSubMenuFull = Widgets.addMenu(subMenu,
+                                     null,
+                                     BARControl.tr("full")
+                                    );
+    updateAssignToMenu(subSubMenuFull,
                        jobUUID,
                        ArchiveTypes.FULL,
-                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.FULL) : null
+                       entityIndexDataList
                       );
 
     // add incremental menu items
-    subSubMenu = Widgets.addMenu(subMenu,
-                                 null,
-                                 BARControl.tr("incremental")
-                                );
-    updateAssignToMenu(subSubMenu,
+    subSubMenuIncremental = Widgets.addMenu(subMenu,
+                                            null,
+                                            BARControl.tr("incremental")
+                                           );
+    updateAssignToMenu(subSubMenuIncremental,
                        jobUUID,
                        ArchiveTypes.INCREMENTAL,
-                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.INCREMENTAL) : null
+                       entityIndexDataList
                       );
 
 
     // add differential menu items
-    subSubMenu = Widgets.addMenu(subMenu,
-                                 null,
-                                 BARControl.tr("differential")
-                                );
-    updateAssignToMenu(subSubMenu,
+    subSubMenuDifferential = Widgets.addMenu(subMenu,
+                                             null,
+                                             BARControl.tr("differential")
+                                            );
+    updateAssignToMenu(subSubMenuDifferential,
                        jobUUID,
                        ArchiveTypes.DIFFERENTIAL,
-                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.DIFFERENTIAL) : null
+                       entityIndexDataList
                       );
 
     // add continuous menu items
-    subSubMenu = Widgets.addMenu(subMenu,
-                                 null,
-                                 BARControl.tr("continuous")
-                                );
-    updateAssignToMenu(subSubMenu,
+    subSubMenuContinuous = Widgets.addMenu(subMenu,
+                                           null,
+                                           BARControl.tr("continuous")
+                                          );
+    updateAssignToMenu(subSubMenuContinuous,
                        jobUUID,
                        ArchiveTypes.CONTINUOUS,
-                       (archiveTypeMap != null) ? archiveTypeMap.get(ArchiveTypes.CONTINUOUS) : null
+                       entityIndexDataList
                       );
-
-    Widgets.addMenuItemSeparator(subMenu);
-
-    // add entity menu items
-    if (entityIndexDataList != null)
-    {
-      for (EntityIndexData entityIndexData : entityIndexDataList)
-      {
-        MenuItem menuItem = Widgets.addMenuItem(subMenu,
-                                                (Object)entityIndexData,
-                                                ((entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-")+", "+entityIndexData.archiveType.toString()
-                                               );
-        entityIndexData.setMenuItem(menuItem);
-
-        menuItem.addSelectionListener(new SelectionListener()
-        {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            MenuItem        widget          = (MenuItem)selectionEvent.widget;
-            EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
-
-            // Work-around for SWT bug: sometimes some sub-menu keeps open; force dispose of all menu items
-            Widgets.removeAllMenuItems(widgetStorageAssignToMenu);
-
-            assignStorages(entityIndexData);
-          }
-        });
-      }
-    }
   }
 
   /** update assign-to sub-menu
    * @param menu menu
    * @param jobUUID job UUID
    * @param archiveType archive type
-   * @param assignToDataList assign-to data list
+   * @param entityIndexDataList entity index data list
    */
-  private void updateAssignToMenu(final Menu                   menu,
-                                  final String                 jobUUID,
-                                  final ArchiveTypes           archiveType,
-                                  java.util.List<AssignToData> assignToDataList
+  private void updateAssignToMenu(final Menu                      menu,
+                                  final String                    jobUUID,
+                                  final ArchiveTypes              archiveType,
+                                  java.util.List<EntityIndexData> entityIndexDataList
                                  )
   {
     MenuItem menuItem;
 
     menuItem = Widgets.addMenuItem(menu,
                                    (Object)null,
-                                   BARControl.tr("new")
+                                   BARControl.tr("new")+"\u2026"
                                   );
     menuItem.addSelectionListener(new SelectionListener()
     {
@@ -7768,34 +7688,38 @@ Dprintf.dprintf("");
       }
     });
 
-    // add assign-to menu items
-    if (assignToDataList != null)
+    Widgets.addMenuItemSeparator(menu);
+
+    if (entityIndexDataList != null)
     {
-      for (AssignToData assignToData : assignToDataList)
+      for (EntityIndexData entityIndexData : entityIndexDataList)
       {
-        menuItem = Widgets.addMenuItem(menu,
-                                       (Object)assignToData,
-                                       (assignToData.enabled ? "\u2713" : "-")+" "+assignToData.date+". "+assignToData.weekDays+". "+assignToData.time+(!assignToData.customText.isEmpty() ? ", "+assignToData.customText : "")
-                                      );
-
-        menuItem.addSelectionListener(new SelectionListener()
+        if (entityIndexData.archiveType == archiveType)
         {
-          @Override
-          public void widgetDefaultSelected(SelectionEvent selectionEvent)
-          {
-          }
-          @Override
-          public void widgetSelected(SelectionEvent selectionEvent)
-          {
-            MenuItem     widget       = (MenuItem)selectionEvent.widget;
-            AssignToData assignToData = (AssignToData)widget.getData();
+          menuItem = Widgets.addMenuItem(menu,
+                                         (Object)entityIndexData,
+                                         ((entityIndexData.createdDateTime > 0) ? SIMPLE_DATE_FORMAT.format(new Date(entityIndexData.createdDateTime*1000L)) : "-")
+                                        );
 
-            // Work-around for SWT bug: sometimes some sub-menu keeps open; force dispose of all menu items
-            Widgets.removeAllMenuItems(widgetStorageAssignToMenu);
+          menuItem.addSelectionListener(new SelectionListener()
+          {
+            @Override
+            public void widgetDefaultSelected(SelectionEvent selectionEvent)
+            {
+            }
+            @Override
+            public void widgetSelected(SelectionEvent selectionEvent)
+            {
+              MenuItem        widget          = (MenuItem)selectionEvent.widget;
+              EntityIndexData entityIndexData = (EntityIndexData)widget.getData();
 
-            assignStorages(assignToData.jobUUID,assignToData.scheduleUUID,archiveType);
-          }
-        });
+              // Work-around for SWT bug: sometimes some sub-menu keeps open; force dispose of all menu items
+              Widgets.removeAllMenuItems(widgetStorageAssignToMenu);
+
+              assignStorages(entityIndexData);
+            }
+          });
+        }
       }
     }
   }
@@ -7805,12 +7729,13 @@ Dprintf.dprintf("");
    * @param toJobUUID to job UUID
    * @param toScheduleUUID to schedule UUID or null
    * @param archiveType archive type
+   * @return true iff assigned
    */
-  private void assignStorages(HashSet<IndexData> indexDataHashSet,
-                              String             toJobUUID,
-                              String             toScheduleUUID,
-                              ArchiveTypes       archiveType
-                             )
+  private boolean assignStorages(HashSet<IndexData> indexDataHashSet,
+                                 String             toJobUUID,
+                                 String             toScheduleUUID,
+                                 ArchiveTypes       archiveType
+                                )
   {
     final SimpleDateFormat DATE_FORMATS[] = {new SimpleDateFormat("yyyy-MM-dd")};
 
@@ -7850,7 +7775,7 @@ Dprintf.dprintf("");
         dateTime = Dialogs.date(shell,BARControl.tr("Assign entity date"),(String)null,dateTime,BARControl.tr("Assign"));
         if (dateTime == null)
         {
-          return;
+          return false;
         }
       }
 
@@ -7890,7 +7815,7 @@ Dprintf.dprintf("");
                                       exception.getMessage()
                                      )
                        );
-          return;
+          return false;
         }
 
         if (!busyDialog.isAborted())
@@ -7936,6 +7861,7 @@ Dprintf.dprintf("");
             catch (Exception exception)
             {
               Dialogs.error(shell,BARControl.tr("Cannot assign index for\n\n''{0}''!\n\n(error: {1})",info,exception.getMessage()));
+              return false;
             }
 
             if (busyDialog.isAborted())
@@ -7956,6 +7882,8 @@ Dprintf.dprintf("");
 
       updateStorageTreeTableThread.triggerUpdate();
     }
+
+    return true;
   }
 
   /** assign jobs/entities/storages to entity
@@ -7980,7 +7908,10 @@ Dprintf.dprintf("");
   private void assignStorages(String toJobUUID, String toScheduleUUID, ArchiveTypes archiveType)
   {
     HashSet<IndexData> indexDataHashSet = getSelectedIndexData();
-    assignStorages(indexDataHashSet,toJobUUID,toScheduleUUID,archiveType);
+    if (assignStorages(indexDataHashSet,toJobUUID,toScheduleUUID,archiveType))
+    {
+      clearSelectedIndexData();
+    }
   }
 
   /** assign selected/checked jobs/entities/storages to entity
@@ -9026,9 +8957,11 @@ Dprintf.dprintf("");
 
     if (!indexIdSet.isEmpty())
     {
-      final HashMap<Long,String> storageMap      = new HashMap<Long,String>();
-      long                       totalEntryCount = 0L;
-      long                       totalEntrySize  = 0L;
+      final HashMap<Long,String> storageMap        = new HashMap<Long,String>();
+      long                       totalStorageCount = 0L;
+      long                       totalStorageSize  = 0L;
+      long                       totalEntryCount   = 0L;
+      long                       totalEntrySize    = 0L;
 
       {
         BARControl.waitCursor();
@@ -9079,8 +9012,12 @@ Dprintf.dprintf("");
                                    2,  // debugLevel
                                    valueMap
                                   );
-          totalEntryCount = valueMap.getLong("totalEntryCount");
-          totalEntrySize  = valueMap.getLong("totalEntrySize" );
+          totalStorageCount = valueMap.getLong("totalStorageCount");
+          totalStorageSize  = valueMap.getLong("totalStorageSize" );
+          totalEntryCount   = valueMap.getLong("totalEntryCount");
+          totalEntrySize    = valueMap.getLong("totalEntrySize" );
+          assert(totalStorageCount >= 0);
+          assert(totalStorageSize >= 0);
           assert(totalEntryCount >= 0);
           assert(totalEntrySize >= 0);
         }
@@ -9098,12 +9035,12 @@ Dprintf.dprintf("");
       }
 
       // confirm
+//TODO: dialog with all information
       if (Dialogs.confirm(shell,
-                          BARControl.tr("Delete {0} {0,choice,0#jobs/entities/storage files|1#job/entity/storage file|1<jobs/entities/storage files} with {1} {1,choice,0#entries|1#entry|1<entries}, {2} ({3} {3,choice,0#bytes|1#byte|1<bytes})?",
+                          BARControl.tr("Delete {0} {0,choice,0#storage files|1#storage file|1<storage files} with {1} ({2} {2,choice,0#bytes|1#byte|1<bytes})?",
                                         storageMap.size(),
-                                        totalEntryCount,
-                                        Units.formatByteSize(totalEntrySize),
-                                        totalEntrySize
+                                        Units.formatByteSize(totalStorageSize),
+                                        totalStorageSize
                                        )
                          )
          )
