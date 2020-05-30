@@ -115,7 +115,7 @@ const ChunkIO CHUNK_IO_STORAGE =
 };
 
 // max. lenght of index list to write in single transaction
-#define MAX_INDEX_LIST 256
+const uint MAX_INDEX_LIST = 256;
 
 /***************************** Datatypes *******************************/
 
@@ -14695,6 +14695,8 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                            LogHandle         *logHandle
                           )
 {
+  const uint MAX_INDEX_LIST = 1024;
+
   uint64             updateStartTimestamp;
   uint64             updateSize;
   uint               importLastProgress;
@@ -15325,7 +15327,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                   uuidId,
                                   entityId,
                                   storageId,
-                                  64*1024
+                                  MAX_INDEX_LIST
                                  );
     if (error != ERROR_NONE)
     {
