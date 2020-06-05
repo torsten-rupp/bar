@@ -54,6 +54,13 @@ typedef int(*ArrayCompareFunction)(const void *data1, const void *data2, void *u
 // array iterator
 typedef ulong ArrayIterator;
 
+// array segment iterator
+typedef struct
+{
+  uint  size;
+  ulong offset;
+} ArraySegmentIterator;
+
 /***********************************************************************\
 * Name   : ArrayIterateFunction
 * Purpose: iterator array data elements function
@@ -122,13 +129,12 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 /***********************************************************************\
 * Name   : ARRAY_ITERATE
 * Purpose: iterated over array and execute block
-* Input  : array     - array
-*          variable - iteration variable
-*          data      - pointer to data element
+* Input  : array         - array
+*          arrayIterator - iteration variable
+*          data          - pointer to data element
 * Output : -
 * Return : -
-* Notes  : variable will contain all indizes in array
-*          usage:
+* Notes  : usage:
 *            ArrayIterator arrayIterator;
 *
 *            ARRAY_ITERATE(array,arrayIterator,data)
@@ -137,23 +143,56 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 *            }
 \***********************************************************************/
 
-#define ARRAY_ITERATE(array,variable,data) \
-  for ((variable) = 0, Array_get(array,0,&(data)); \
-       (variable) < Array_length(array); \
-       (variable)++, Array_get(array,variable,&(data)) \
+#define ARRAY_ITERATE(array,arrayIterator,data) \
+  for ((arrayIterator) = 0, Array_get(array,0,&(data)); \
+       (arrayIterator) < Array_length(array); \
+       (arrayIterator)++, Array_get(array,arrayIterator,&(data)) \
+      )
+
+/***********************************************************************\
+* Name   : ARRAY_SEGMENT, ARRAY_SEGMENT_ITERATE
+* Purpose: iterated over array in segments and execute block
+* Input  : array                              - array
+*          arraySegmentIterator,arrayIterator - iteration variables
+*          segmentSize                        - segment size
+*          data                               - pointer to data element
+* Output : -
+* Return : -
+* Notes  : usage:
+*            ArraySegmentIterator arraySegmentIterator;
+*            ArrayIterator        arrayIterator;
+*
+*            ARRAY_SEGMENT(array,segmentIterator,64)
+*            {
+*              ARRAY_SEGMENT_ITERATE(array,segmentIterator,arrayIterator,data)
+*              {
+*                ... = data
+*              }
+*            }
+\***********************************************************************/
+
+#define ARRAY_SEGMENT(array,arraySegmentIterator,segmentSize) \
+  for ((arraySegmentIterator) = ((ArraySegmentIterator){segmentSize,0L}); \
+       (arraySegmentIterator).offset < Array_length(array); \
+       (arraySegmentIterator).offset += (segmentSize) \
+      )
+
+#define ARRAY_SEGMENT_ITERATE(array,arraySegmentIterator,arrayIterator,data) \
+  for ((arrayIterator) = 0, Array_get(array,(arraySegmentIterator).offset,&(data)); \
+       ((arrayIterator) < (arraySegmentIterator).size) && (((arraySegmentIterator).offset+(arrayIterator)) < Array_length(array)); \
+       (arrayIterator)++, Array_get(array,(arraySegmentIterator).offset+(arrayIterator),&(data)) \
       )
 
 /***********************************************************************\
 * Name   : ARRAY_ITERATEX
 * Purpose: iterated over array and execute block
-* Input  : array     - array
-*          variable  - iteration variable
-*          data      - pointer to data element
-*          condition - additional condition
+* Input  : array         - array
+*          arrayIterator - iteration variable
+*          data          - pointer to data element
+*          condition     - additional condition
 * Output : -
 * Return : -
-* Notes  : variable will contain all indizes in array
-*          usage:
+* Notes  : usage:
 *            ArrayIterator arrayIterator;
 *
 *            ARRAY_ITERATEX(array,arrayIterator,data,TRUE)
@@ -162,10 +201,45 @@ typedef bool(*ArrayDumpInfoFunction)(const Array *array,
 *            }
 \***********************************************************************/
 
-#define ARRAY_ITERATEX(array,variable,data,condition) \
-  for ((variable) = 0, Array_get(array,0,&(data)); \
-       ((variable) < Array_length(array)) && (condition); \
-       (variable)++, Array_get(array,variable,&(data)) \
+#define ARRAY_ITERATEX(array,arrayIterator,data,condition) \
+  for ((arrayIterator) = 0, Array_get(array,0,&(data)); \
+       ((arrayIterator) < Array_length(array)) && (condition); \
+       (arrayIterator)++, Array_get(array,arrayIterator,&(data)) \
+      )
+
+/***********************************************************************\
+* Name   : ARRAY_SEGMENTX, ARRAY_SEGMENT_ITERATEX
+* Purpose: iterated over array in segments and execute block
+* Input  : array                              - array
+*          arraySegmentIterator,arrayIterator - iteration variables
+*          segmentSize                        - segment size
+*          data                               - pointer to data element
+*          condition                          - additional condition
+* Output : -
+* Return : -
+* Notes  : usage:
+*            ArraySegmentIterator arraySegmentIterator;
+*            ArrayIterator        arrayIterator;
+*
+*            ARRAY_SEGMENT(array,segmentIterator,64)
+*            {
+*              ARRAY_SEGMENT_ITERATE(array,segmentIterator,arrayIterator,data)
+*              {
+*                ... = data
+*              }
+*            }
+\***********************************************************************/
+
+#define ARRAY_SEGMENTX(array,arraySegmentIterator,segmentSize,condition) \
+  for ((arraySegmentIterator) = ((ArraySegmentIterator){segmentSize,0L}); \
+       ((arraySegmentIterator).offset < Array_length(array)) && (condition); \
+       (arraySegmentIterator).offset += (segmentSize) \
+      )
+
+#define ARRAY_SEGMENT_ITERATEX(array,arraySegmentIterator,arrayIterator,data,condition) \
+  for ((arrayIterator) = 0, Array_get(array,(arraySegmentIterator).offset,&(data)); \
+       ((arrayIterator) < (arraySegmentIterator).size) && (((arraySegmentIterator).offset+(arrayIterator)) < Array_length(array)) && (condition); \
+       (arrayIterator)++, Array_get(array,(arraySegmentIterator).offset+(arrayIterator),&(data)) \
       )
 
 /***************************** Forwards ********************************/
