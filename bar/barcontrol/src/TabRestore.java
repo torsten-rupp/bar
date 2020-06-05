@@ -1252,10 +1252,12 @@ Dprintf.dprintf("");
   {
     public  String       jobUUID;                  // job UUID
     public  String       jobName;                  // job name or null
-    public  ArchiveTypes archiveType;              // archive type
+    public  long         entityId;                 // entiy index id
     public  String       hostName;                 // host name
+    public  long         createdDateTime;          // date/time when some entty was created
+    public  ArchiveTypes archiveType;              // archive type
     public  String       name;                     // name
-    public  long         createdDateTime;          // date/time when some storage was created
+    public  long         dateTime;                 // date/time when some storage was created
     private long         size;                     // storage size [bytes]
     public  IndexStates  indexState;               // state of index
     public  IndexModes   indexMode;                // mode of index
@@ -1301,10 +1303,12 @@ Dprintf.dprintf("");
      * @param indexId index id
      * @param jobUUID job UUID
      * @param jobName job name or null
-     * @param archiveType archive type
+     * @param entityId entity index id
      * @param hostName host name
-     * @param name name of storage
+     * @param archiveType archive type
      * @param createdDateTime date/time (timestamp) when some storage was created
+     * @param name name of storage
+     * @param dateTime date/time (timestamp) when some storage was created
      * @param size size of storage [byte]
      * @param entryCount number of entries
      * @param indexState storage index state
@@ -1317,10 +1321,12 @@ Dprintf.dprintf("");
     StorageIndexData(long         indexId,
                      String       jobUUID,
                      String       jobName,
-                     ArchiveTypes archiveType,
+                     long         entityId,
                      String       hostName,
-                     String       name,
                      long         createdDateTime,
+                     ArchiveTypes archiveType,
+                     String       name,
+                     long         dateTime,
                      long         size,
                      IndexStates  indexState,
                      IndexModes   indexMode,
@@ -1333,15 +1339,18 @@ Dprintf.dprintf("");
       super(indexId);
 
       assert (indexId & 0x0000000F) == 3 : indexId;
+      assert (entityId & 0x0000000F) == 2 : entityId;
       assert(totalEntryCount >= 0);
       assert(totalEntrySize >= 0);
 
       this.jobUUID             = jobUUID;
       this.jobName             = jobName;
-      this.archiveType         = archiveType;
+      this.entityId            = entityId;
       this.hostName            = hostName;
-      this.name                = name;
       this.createdDateTime     = createdDateTime;
+      this.archiveType         = archiveType;
+      this.name                = name;
+      this.dateTime            = dateTime;
       this.size                = size;
       this.indexState          = indexState;
       this.indexMode           = indexMode;
@@ -1358,26 +1367,28 @@ Dprintf.dprintf("");
      * @param archiveType archive type
      * @param hostName host name
      * @param name name of storage
-     * @param lastCreatedDateTime date/time (timestamp) when storage was created
+     * @param dateTime date/time (timestamp) when storage was created
      * @param lastCheckedDateTime last checked date/time (timestamp)
      */
     StorageIndexData(long         storageId,
                      String       jobUUID,
                      String       jobName,
-                     ArchiveTypes archiveType,
                      String       hostName,
+                     ArchiveTypes archiveType,
                      String       name,
-                     long         createdDateTime,
+                     long         dateTime,
                      long         lastCheckedDateTime
                     )
     {
       this(storageId,
            jobUUID,
            jobName,
-           archiveType,
+           0L,  // entity index id
            hostName,
+           0L,  // createdDateTime
+           archiveType,
            name,
-           createdDateTime,
+           dateTime,
            0L,  // size
            IndexStates.OK,
            IndexModes.MANUAL,
@@ -1391,20 +1402,20 @@ Dprintf.dprintf("");
     /** create storage data
      * @param storageId database storage id
      * @param jobUUID job UUID
-     * @param hostName host name
      * @param jobName job name
+     * @param hostName host name
      * @param archiveType archive type
      * @param name name of storage
      */
-    StorageIndexData(long storageId, String jobUUID, String jobName, ArchiveTypes archiveType, String hostName, String name)
+    StorageIndexData(long storageId, String jobUUID, String jobName, String hostName, ArchiveTypes archiveType, String name)
     {
       this(storageId,
            jobUUID,
            jobName,
-           archiveType,
            hostName,
+           archiveType,
            name,
-           0L,  // createdDateTime
+           0L,  // dateTime
            0L  // lastCheckedDateTime
           );
     }
@@ -2574,9 +2585,11 @@ Dprintf.dprintf("");
                                    {
                                      long         storageId           = valueMap.getLong  ("storageId"                     );
                                      String       jobUUID             = valueMap.getString("jobUUID"                       );
+                                     String       jobName             = valueMap.getString("jobName"                       );
+                                     long         entityId            = valueMap.getLong  ("entityId"                      );
                                      String       scheduleUUID        = valueMap.getString("scheduleUUID"                  );
                                      String       hostName            = valueMap.getString("hostName"                      );
-                                     String       jobName             = valueMap.getString("jobName"                       );
+                                     long         createdDateTime     = valueMap.getLong  ("createdDateTime"               ,0L); // TODO remove default
                                      ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class);
                                      String       name                = valueMap.getString("name"                          );
                                      long         dateTime            = valueMap.getLong  ("dateTime"                      );
@@ -2592,8 +2605,10 @@ Dprintf.dprintf("");
                                      StorageIndexData storageIndexData = new StorageIndexData(storageId,
                                                                                               jobUUID,
                                                                                               jobName,
-                                                                                              archiveType,
+                                                                                              entityId,
                                                                                               hostName,
+                                                                                              createdDateTime,
+                                                                                              archiveType,
                                                                                               name,
                                                                                               dateTime,
                                                                                               size,
@@ -2929,8 +2944,10 @@ Dprintf.dprintf("");
                                                                   long         storageId           = valueMap.getLong  ("storageId"                                         );
                                                                   String       jobUUID             = valueMap.getString("jobUUID"                                           );
                                                                   String       jobName             = valueMap.getString("jobName"                                           );
-                                                                  ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class,ArchiveTypes.NORMAL);
+                                                                  long         entityId            = valueMap.getLong  ("entityId"                                          );
                                                                   String       hostName            = valueMap.getString("hostName"                                          );
+                                                                  long         createdDateTime     = valueMap.getLong  ("createdDateTime"                                   ,0L); // TODO remove default
+                                                                  ArchiveTypes archiveType         = valueMap.getEnum  ("archiveType",ArchiveTypes.class,ArchiveTypes.NORMAL);
                                                                   String       name                = valueMap.getString("name"                                              );
                                                                   long         dateTime            = valueMap.getLong  ("dateTime"                                          );
                                                                   long         size                = valueMap.getLong  ("size"                                              );
@@ -2945,8 +2962,10 @@ Dprintf.dprintf("");
                                                                   storageIndexDataList.add(new StorageIndexData(storageId,
                                                                                                                 jobUUID,
                                                                                                                 jobName,
-                                                                                                                archiveType,
+                                                                                                                entityId,
                                                                                                                 hostName,
+                                                                                                                createdDateTime,
+                                                                                                                archiveType,
                                                                                                                 name,
                                                                                                                 dateTime,
                                                                                                                 size,
@@ -4671,6 +4690,21 @@ Dprintf.dprintf("");
       label.setBackground(COLOR_INFO_BACKGROUND);
       Widgets.layout(label,row,1,TableLayoutData.WE);
       row++;
+
+      if (Settings.debugLevel > 0)
+      {
+        assert (storageIndexData.entityId & 0x0000000F) == 2 : storageIndexData;
+
+        label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Entity id")+":");
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,0,TableLayoutData.W);
+        label = Widgets.newLabel(widgetStorageTableToolTip,Long.toString(storageIndexData.entityId >> 4));
+        label.setForeground(COLOR_INFO_FOREGROUND);
+        label.setBackground(COLOR_INFO_BACKGROUND);
+        Widgets.layout(label,row,1,TableLayoutData.WE);
+        row++;
+      }
 
       label = Widgets.newLabel(widgetStorageTableToolTip,BARControl.tr("Hostname")+":");
       label.setForeground(COLOR_INFO_FOREGROUND);
