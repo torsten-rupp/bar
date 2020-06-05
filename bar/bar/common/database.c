@@ -6863,6 +6863,135 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
   return error;
 }
 
+Errors Database_getMaxId(DatabaseHandle *databaseHandle,
+                         DatabaseId     *value,
+                         const char     *tableName,
+                         const char     *columnName,
+                         const char     *additional,
+                         ...
+                        )
+{
+  va_list arguments;
+  Errors  error;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->handle != NULL);
+  assert(value != NULL);
+  assert(tableName != NULL);
+
+  va_start(arguments,additional);
+  error = Database_vgetMaxId(databaseHandle,value,tableName,columnName,additional,arguments);
+  va_end(arguments);
+
+  return error;
+}
+
+Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
+                          DatabaseId     *value,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          va_list        arguments
+                         )
+{
+  String       sqlString;
+  Errors       error;
+  sqlite3_stmt *statementHandle;
+  int          sqliteResult;
+
+  assert(databaseHandle != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
+  assert(databaseHandle->handle != NULL);
+  assert(value != NULL);
+  assert(tableName != NULL);
+
+  // init variables
+  (*value) = DATABASE_ID_NONE;
+
+  // format SQL command string
+  sqlString = formatSQLString(String_new(),
+                              "SELECT %s \
+                               FROM %s \
+                              ",
+                              columnName,
+                              tableName
+                             );
+  if (additional != NULL)
+  {
+    String_appendChar(sqlString,' ');
+    vformatSQLString(sqlString,
+                     additional,
+                     arguments
+                    );
+  }
+  formatSQLString(sqlString,
+                  " ORDER BY %s DESC LIMIT 0,1",
+                  columnName
+                 );
+fprintf(stderr,"%s, %d: sqlString=%s\n",__FILE__,__LINE__,String_cString(sqlString));
+
+  // execute SQL command
+  DATABASE_DEBUG_SQLX(databaseHandle,"get max. id",sqlString);
+  DATABASE_DOX(error,
+               ERROR_DATABASE_TIMEOUT,
+               databaseHandle,
+               DATABASE_LOCK_TYPE_READ,
+               databaseHandle->timeout,
+  {
+    #ifndef NDEBUG
+      String_set(databaseHandle->debug.current.sqlCommand,sqlString);
+    #endif /* not NDEBUG */
+
+    sqliteResult = sqlite3_prepare_v2(databaseHandle->handle,
+                                      String_cString(sqlString),
+                                      -1,
+                                      &statementHandle,
+                                      NULL
+                                     );
+    if      (sqliteResult == SQLITE_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else if (sqliteResult == SQLITE_MISUSE)
+    {
+      HALT_INTERNAL_ERROR("SQLite library reported misuse %d %d",sqliteResult,sqlite3_extended_errcode(databaseHandle->handle));
+    }
+    else if (sqliteResult == SQLITE_INTERRUPT)
+    {
+      return ERRORX_(INTERRUPTED,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+    }
+    else
+    {
+      return ERRORX_(DATABASE,sqlite3_errcode(databaseHandle->handle),"%s: %s",sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+    }
+    #ifndef NDEBUG
+      if (statementHandle == NULL)
+      {
+        fprintf(stderr,"%s, %d: SQLite prepare fail %d: %s\n%s\n",__FILE__,__LINE__,sqlite3_errcode(databaseHandle->handle),sqlite3_errmsg(databaseHandle->handle),String_cString(sqlString));
+        abort();
+      }
+    #endif /* not NDEBUG */
+
+    if (sqliteStep(databaseHandle->handle,statementHandle,databaseHandle->timeout) == SQLITE_ROW)
+    {
+      (*value) = (DatabaseId)sqlite3_column_int64(statementHandle,0);
+    }
+    sqlite3_finalize(statementHandle);
+
+    #ifndef NDEBUG
+      String_set(databaseHandle->debug.current.sqlCommand,sqlString);
+    #endif /* not NDEBUG */
+
+    return ERROR_NONE;
+  });
+
+  // free resources
+  String_delete(sqlString);
+
+  return error;
+}
+
 Errors Database_getInteger64(DatabaseHandle *databaseHandle,
                              int64          *value,
                              const char     *tableName,

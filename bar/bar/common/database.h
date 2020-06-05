@@ -426,20 +426,43 @@ typedef void(*DatabaseCopyProgressCallbackFunction)(void *userData);
 * Output : -
 * Return : -
 * Notes  : usage:
-*            SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType,timeout)
+*            DATABASE_LOCKED_DO(databaseHandle,SEMAPHORE_LOCK_TYPE_READ,1000)
 *            {
 *              ...
 *            }
-*
-*          semaphore must be unlocked manually if 'break'  or
-*          'return' is used!
 \***********************************************************************/
 
-#define DATABASE_LOCKED_DO(databaseHandle,lockType,timeout) \
-  for (bool __databaseLock ## __COUNTER__ = Database_lock(databaseHandle,lockType,timeout); \
+#define DATABASE_LOCKED_DO(databaseHandle,semaphoreLockType,timeout) \
+  for (bool __databaseLock ## __COUNTER__ = Database_lock(databaseHandle,semaphoreLockType,timeout); \
        __databaseLock ## __COUNTER__; \
-       Database_unlock(databaseHandle,lockType), __databaseLock ## __COUNTER__ = FALSE \
+       Database_unlock(databaseHandle,semaphoreLockType), __databaseLock ## __COUNTER__ = FALSE \
       )
+
+/***********************************************************************\
+* Name   : DATABASE_TRANSACTION_DO
+* Purpose: execute block with database transaction
+* Input  : databaseHandle          - database handle
+*          databaseTransactionType - transaction type; see
+*                                    DatabaseTransactionTypes
+*          timeout                 - timeout [ms] or NO_WAIT, WAIT_FOREVER
+* Output : -
+* Return : -
+* Notes  : usage:
+*            DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,1000)
+*            {
+*              ...
+*            }
+\***********************************************************************/
+
+#define DATABASE_TRANSACTION_DO(databaseHandle,databaseTransactionType,timeout) \
+  for (bool __databaseTransaction ## __COUNTER__ = (Database_beginTransaction(databaseHandle,databaseTransactionType,timeout) == ERROR_NONE); \
+       __databaseTransaction ## __COUNTER__; \
+       Database_endTransaction(databaseHandle), __databaseTransaction ## __COUNTER__ = FALSE \
+      )
+
+//TODO: rollback
+#define DATABASE_TRANSACTION_ABORT(databaseHandle) \
+  continue
 
 #ifndef NDEBUG
   #define Database_open(...)                __Database_open               (__FILE__,__LINE__, ## __VA_ARGS__)
@@ -1182,7 +1205,6 @@ Errors Database_getIds(DatabaseHandle *databaseHandle,
                        const char     *additional,
                        ...
                       );
-
 Errors Database_vgetIds(DatabaseHandle *databaseHandle,
                         Array          *values,
                         const char     *tableName,
@@ -1190,6 +1212,35 @@ Errors Database_vgetIds(DatabaseHandle *databaseHandle,
                         const char     *additional,
                         va_list        arguments
                        );
+
+/***********************************************************************\
+* Name   : Database_getMaxId, Database_vgetMaxId
+* Purpose: get max. database id of value from database table
+* Input  : databaseHandle - database handle
+*          tableName      - table name
+*          columnName     - column name
+*          additional     - additional string (e. g. WHERE...)
+*                           special functions:
+*                             REGEXP(pattern,case-flag,text)
+* Output : value - max. database id or DATABASE_ID_NONE
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+Errors Database_getMaxId(DatabaseHandle *databaseHandle,
+                         DatabaseId     *value,
+                         const char     *tableName,
+                         const char     *columnName,
+                         const char     *additional,
+                         ...
+                        );
+Errors Database_vgetMaxId(DatabaseHandle *databaseHandle,
+                          DatabaseId     *value,
+                          const char     *tableName,
+                          const char     *columnName,
+                          const char     *additional,
+                          va_list        arguments
+                         );
 
 /***********************************************************************\
 * Name   : Database_getInteger64, Database_vgetInteger64
