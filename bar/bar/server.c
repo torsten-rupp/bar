@@ -16392,6 +16392,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
   if (error != ERROR_NONE)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"invalid storage specifier");
+    Job_doneOptions(&jobOptions);
     Storage_doneSpecifier(&storageSpecifier);
     String_delete(pattern);
     return;
@@ -16499,6 +16500,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      Job_doneOptions(&jobOptions);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(pattern);
       return;
@@ -16612,6 +16614,7 @@ LOCAL void serverCommand_indexStorageAdd(ClientInfo *clientInfo, IndexHandle *in
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      Job_doneOptions(&jobOptions);
       Storage_doneSpecifier(&storageSpecifier);
       String_delete(pattern);
       return;
