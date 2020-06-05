@@ -10191,16 +10191,17 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
                           IndexId     storageId
                          )
 {
-  Array         entryIds;
-  String        entryIdsString;
-  uint          n;
-  Errors        error;
-  bool          doneFlag;
+  Array                entryIds;
+  String               entryIdsString;
+  uint                 n;
+  Errors               error;
+  bool                 doneFlag;
+  ArraySegmentIterator arraySegmentIterator;
+  ArrayIterator        arrayIterator;
+  DatabaseId           entryId;
   #ifndef NDEBUG
-    ulong deletedCounter;
+    ulong                deletedCounter;
   #endif
-  ArrayIterator arrayIterator;
-  DatabaseId    entryId;
 
   assert(indexHandle != NULL);
   assert(Index_getType(storageId) == INDEX_TYPE_STORAGE);
@@ -10223,16 +10224,119 @@ Errors Index_clearStorage(IndexHandle *indexHandle,
     {
       break;
     }
-Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
+
     {
       #ifndef NDEBUG
         deletedCounter = 0;
       #endif
 
+      /* purge entries without associated file/image/directory/link/hardlink/special entry
+         Note: may be left from interrupted purge of previous run
+      */
+//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
+      Array_clear(&entryIds);
+      INDEX_DOX(error,
+                indexHandle,
+      {
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "entries",
+                                "id",
+                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1)",
+                                INDEX_TYPE_FILE
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "entries",
+                                "id",
+                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1)",
+                                INDEX_TYPE_IMAGE
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "entries",
+                                "id",
+                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1)",
+                                INDEX_TYPE_DIRECTORY
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "entries",
+                                "id",
+                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1)",
+                                INDEX_TYPE_LINK
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "entries",
+                                "id",
+                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1)",
+                                INDEX_TYPE_HARDLINK
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+        error = Database_getIds(&indexHandle->databaseHandle,
+                                &entryIds,
+                                "entries",
+                                "id",
+                                "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1)",
+                                INDEX_TYPE_SPECIAL
+                               );
+        if (error != ERROR_NONE)
+        {
+          return error;
+        }
+
+        return ERROR_NONE;
+      });
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,64,(error == ERROR_NONE) && doneFlag)
+        {
+          String_clear(entryIdsString);
+          ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
+          {
+            if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
+            String_formatAppend(entryIdsString,"%lld",entryId);
+          }
+
+          error = purge(indexHandle,
+                        &doneFlag,
+                        #ifndef NDEBUG
+                          &deletedCounter,
+                        #else
+                          NULL,  // deletedCounter
+                        #endif
+                        "entries",
+                        "id IN (%S)",
+                        entryIdsString
+                       );
+        }
+      }
+
+      // get entries to purge
+      Array_clear(&entryIds);
       if ((error == ERROR_NONE) && doneFlag)
       {
         // get file/image/hardlink entry ids to check for purge
-        Array_clear(&entryIds);
         INDEX_DOX(error,
                   indexHandle,
         {
@@ -10248,134 +10352,6 @@ Database_setEnabledForeignKeys(&indexHandle->databaseHandle,FALSE);
             return error;
           }
 
-          return ERROR_NONE;
-        });
-
-        // purge file/image/hardlink entry fragments (Note: do not use INDEX_DOX because of indexUseCount)
-        if (error == ERROR_NONE)
-        {
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entryFragments",
-                        "storageId=%lld",
-                        Index_getDatabaseId(storageId)
-                       );
-        }
-#ifndef NDEBUG
-//fprintf(stderr,"%s, %d: 1 fragments done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
-#endif
-
-fprintf(stderr,"%s, %d: xxxxxxxxx entrys=%lu\n",__FILE__,__LINE__,Array_length(&entryIds));
-#if 0
-        ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,(error == ERROR_NONE) && doneFlag)
-        {
-fprintf(stderr,"%s, %d: xxxxxxxxx entryId=%lld\n",__FILE__,__LINE__,entryId);
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entries",
-                        "    id=%lld \
-                         AND NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=%lld LIMIT 0,1) \
-                        ",
-                        entryId,
-                        entryId
-                       );
-        }
-#elif 1
-        String_clear(entryIdsString);
-        n = 0;
-        ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,(error == ERROR_NONE) && doneFlag)
-        {
-fprintf(stderr,"%s, %d: xxxxxxxxx entryId=%lld\n",__FILE__,__LINE__,entryId);
-          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%lld",entryId);
-          n++;
-
-          if (n >= 64)
-          {
-            error = purge(indexHandle,
-                          &doneFlag,
-                          #ifndef NDEBUG
-                            &deletedCounter,
-                          #else
-                            NULL,  // deletedCounter
-                          #endif
-                          "entries",
-                          "    id IN (%S) \
-                           AND NOT id IN (SELECT DISTINCT entryId FROM entryFragments WHERE entryId IN (%S)) \
-                          ",
-                          entryIdsString,
-                          entryIdsString
-                         );
-
-            String_clear(entryIdsString);
-            n = 0;
-          }
-        }
-        if ((error == ERROR_NONE) && !String_isEmpty(entryIdsString))
-        {
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entries",
-                        "    id IN (%S) \
-                         AND NOT id IN (SELECT DISTINCT entryId FROM entryFragments WHERE entryId IN (%S)) \
-                        ",
-                        entryIdsString,
-                        entryIdsString
-                       );
-        }
-#else
-        if (error == ERROR_NONE)
-        {
-          String_clear(entryIdsString);
-          ARRAY_ITERATE(&entryIds,arrayIterator,entryId)
-          {
-            if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-            String_formatAppend(entryIdsString,"%lld",entryId);
-          }
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entries",
-                        "    id IN (%S) \
-                         AND NOT id IN (SELECT DISTINCT entryId FROM entryFragments WHERE entryId IN (%S)) \
-                        ",
-                        entryIdsString,
-                        entryIdsString
-                       );
-        }
-#endif
-      }
-#ifndef NDEBUG
-//fprintf(stderr,"%s, %d: 2 file/image/hardlink done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
-#endif
-
-      // purge directory/link/special entries
-      if ((error == ERROR_NONE) && doneFlag)
-      {
-        // get directory/link/special entries to purge (Note: do not use INDEX_DOX because of indexUseCount)
-        Array_clear(&entryIds);
-        INDEX_DOX(error,
-                  indexHandle,
-        {
           error = Database_getIds(&indexHandle->databaseHandle,
                                   &entryIds,
                                   "directoryEntries",
@@ -10414,78 +10390,141 @@ fprintf(stderr,"%s, %d: xxxxxxxxx entryId=%lld\n",__FILE__,__LINE__,entryId);
 
           return ERROR_NONE;
         });
+      }
 
-        // purge directory/link/special entries (Note: do not use INDEX_DOX because of indexUseCount)
-fprintf(stderr,"%s, %d: xxxxxxxxx2 entrys=%lu\n",__FILE__,__LINE__,Array_length(&entryIds));
-#if 0
-        ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,(error == ERROR_NONE) && doneFlag)
-        {
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entries",
-                        "id=%lld \
-                        ",
-                        entryId
-                       );
-        }
-#elif 1
-        String_clear(entryIdsString);
-        n = 0;
-        ARRAY_ITERATEX(&entryIds,arrayIterator,entryId,(error == ERROR_NONE) && doneFlag)
-        {
-fprintf(stderr,"%s, %d: xxxxxxxxx entryId=%lld\n",__FILE__,__LINE__,entryId);
-          if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
-          String_formatAppend(entryIdsString,"%lld",entryId);
-          n++;
-
-          if (n >= 64)
-          {
-            error = purge(indexHandle,
-                          &doneFlag,
-                          #ifndef NDEBUG
-                            &deletedCounter,
-                          #else
-                            NULL,  // deletedCounter
-                          #endif
-                          "entries",
-                          "id IN (%S) \
-                          ",
-                          entryIdsString
-                         );
-
-            String_clear(entryIdsString);
-            n = 0;
-          }
-        }
-        if ((error == ERROR_NONE) && !String_isEmpty(entryIdsString))
-        {
-          error = purge(indexHandle,
-                        &doneFlag,
-                        #ifndef NDEBUG
-                          &deletedCounter,
-                        #else
-                          NULL,  // deletedCounter
-                        #endif
-                        "entries",
-                        "id IN (%S) \
-                        ",
-                        entryIdsString
-                       );
-        }
-#else
+      // purge fragments
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        // purge entry fragments of storage
         if (error == ERROR_NONE)
         {
+          error = purge(indexHandle,
+                        &doneFlag,
+                        #ifndef NDEBUG
+                          &deletedCounter,
+                        #else
+                          NULL,  // deletedCounter
+                        #endif
+                        "entryFragments",
+                        "storageId=%lld",
+                        Index_getDatabaseId(storageId)
+                       );
+        }
+      }
+#ifndef NDEBUG
+//fprintf(stderr,"%s, %d: 1 fragments done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
+#endif
+
+      // purge file/image/directory/link/hardlink/special entries
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        // purge file entries without fragments
+        error = purge(indexHandle,
+                      &doneFlag,
+                      #ifndef NDEBUG
+                        &deletedCounter,
+                      #else
+                        NULL,  // deletedCounter
+                      #endif
+                      "fileEntries",
+                      "NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=fileEntries.entryId LIMIT 0,1)",
+                      Index_getDatabaseId(storageId)
+                     );
+
+      }
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        // purge image entries without fragments
+        error = purge(indexHandle,
+                      &doneFlag,
+                      #ifndef NDEBUG
+                        &deletedCounter,
+                      #else
+                        NULL,  // deletedCounter
+                      #endif
+                      "imageEntries",
+                      "NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=imageEntries.entryId LIMIT 0,1)"
+                     );
+
+      }
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        // purge directory entries
+        error = purge(indexHandle,
+                      &doneFlag,
+                      #ifndef NDEBUG
+                        &deletedCounter,
+                      #else
+                        NULL,  // deletedCounter
+                      #endif
+                      "directoryEntries",
+                      "storageId=%lld",
+                      Index_getDatabaseId(storageId)
+                     );
+
+      }
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        // purge link entries
+        error = purge(indexHandle,
+                      &doneFlag,
+                      #ifndef NDEBUG
+                        &deletedCounter,
+                      #else
+                        NULL,  // deletedCounter
+                      #endif
+                      "linkEntries",
+                      "storageId=%lld",
+                      Index_getDatabaseId(storageId)
+                     );
+
+      }
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        // purge hardlink entries without fragments
+        error = purge(indexHandle,
+                      &doneFlag,
+                      #ifndef NDEBUG
+                        &deletedCounter,
+                      #else
+                        NULL,  // deletedCounter
+                      #endif
+                      "hardlinkEntries",
+                      "NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=hardlinkEntries.entryId LIMIT 0,1)"
+                     );
+
+      }
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        // purge special entries
+        error = purge(indexHandle,
+                      &doneFlag,
+                      #ifndef NDEBUG
+                        &deletedCounter,
+                      #else
+                        NULL,  // deletedCounter
+                      #endif
+                      "specialEntries",
+                      "storageId=%lld",
+                      Index_getDatabaseId(storageId)
+                     );
+      }
+#ifndef NDEBUG
+//fprintf(stderr,"%s, %d: 2 file/image/hardlink done=%d deletedCounter=%lu: %s\n",__FILE__,__LINE__,doneFlag,deletedCounter,Error_getText(error));
+#endif
+
+      // purge entries
+      if ((error == ERROR_NONE) && doneFlag)
+      {
+        ARRAY_SEGMENTX(&entryIds,arraySegmentIterator,64,(error == ERROR_NONE) && doneFlag)
+        {
           String_clear(entryIdsString);
-          ARRAY_ITERATE(&entryIds,arrayIterator,entryId)
+          ARRAY_SEGMENT_ITERATE(&entryIds,arraySegmentIterator,arrayIterator,entryId)
           {
             if (!String_isEmpty(entryIdsString)) String_appendChar(entryIdsString,',');
             String_formatAppend(entryIdsString,"%lld",entryId);
           }
+
           error = purge(indexHandle,
                         &doneFlag,
                         #ifndef NDEBUG
@@ -10494,21 +10533,20 @@ fprintf(stderr,"%s, %d: xxxxxxxxx entryId=%lld\n",__FILE__,__LINE__,entryId);
                           NULL,  // deletedCounter
                         #endif
                         "entries",
-                        "id IN (%S) \
-                        ",
+                        "id IN (%S)",
                         entryIdsString
                        );
         }
-#endif
       }
     }
-Database_setEnabledForeignKeys(&indexHandle->databaseHandle,TRUE);
+
     // end transaction
     (void)Index_endTransaction(indexHandle);
-fprintf(stderr,"%s, %d: doneFlag=%d\n",__FILE__,__LINE__,doneFlag);
+
+    // if not done sleep a short time
     if ((error == ERROR_NONE) && !doneFlag)
     {
-Misc_mdelay(30*MS_PER_SECOND);
+      Misc_mdelay(30*MS_PER_SECOND);
     }
   }
   while ((error == ERROR_NONE) && !doneFlag);
