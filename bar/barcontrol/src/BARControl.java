@@ -1782,6 +1782,7 @@ public class BARControl
 
   private LoginData       loginData;
   private Menu            serverMenu;
+  private MenuItem        serverMenuLastSelectedItem = null;
   private MenuItem        masterMenuItem;
   private TabFolder       tabFolder;
   private TabStatus       tabStatus;
@@ -2658,41 +2659,76 @@ if (false) {
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
-            final Settings.Server defaultServer = Settings.getLastServer();
-            loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
-                                      (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
-                                      !Settings.serverNoTLS && Settings.serverForceTLS,
-                                      Settings.role
-                                     );
-            if (getLoginData(loginData,false))
+            MenuItem menuItem = (MenuItem)selectionEvent.widget;
+
+            if (menuItem.getSelection())
             {
-              try
-              {
-                BARServer.connect(display,
-                                  loginData.serverName,
-                                  loginData.serverPort,
-                                  loginData.serverTLSPort,
-                                  Settings.serverNoTLS,
-                                  loginData.forceTLS,
-                                  loginData.password,
-                                  Settings.serverCAFileName,
-                                  Settings.serverCertificateFileName,
-                                  Settings.serverKeyFileName
-                                 );
-              }
-              catch (ConnectionError error)
-              {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
-              }
-              catch (CommunicationError error)
-              {
-                Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
-              }
+              boolean connectOkFlag = false;
+              String  errorMessage  = null;
 
-              updateServerMenu();
+              final Settings.Server defaultServer = Settings.getLastServer();
+              loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
+                                        (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
+                                        !Settings.serverNoTLS && Settings.serverForceTLS,
+                                        Settings.role
+                                       );
+              if (getLoginData(loginData,false))
+              {
+                try
+                {
+                  BARServer.connect(display,
+                                    loginData.serverName,
+                                    loginData.serverPort,
+                                    loginData.serverTLSPort,
+                                    Settings.serverNoTLS,
+                                    loginData.forceTLS,
+                                    loginData.password,
+                                    Settings.serverCAFileName,
+                                    Settings.serverCertificateFileName,
+                                    Settings.serverKeyFileName
+                                   );
+                  connectOkFlag = true;
+                }
+                catch (ConnectionError error)
+                {
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                }
+                catch (CommunicationError error)
+                {
+                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
+                }
 
-              // notify new server
-              Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+                if (connectOkFlag)
+                {
+                  updateServerMenu();
+
+                  // notify new server
+                  Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+                }
+                else
+                {
+                  // show error message
+                  if (errorMessage != null)
+                  {
+                    Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+errorMessage);
+                  }
+                  else
+                  {
+                    Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
+                  }
+
+                  // revert selection
+                  if (serverMenuLastSelectedItem != null)
+                  {
+                    menuItem.setSelection(false);
+                    serverMenuLastSelectedItem.setSelection(true);
+                  }
+                }
+              }
+            }
+            else
+            {
+              serverMenuLastSelectedItem = menuItem;
             }
           }
         });
@@ -3909,6 +3945,7 @@ if (false) {
             }
             else
             {
+              // show error message
               if (errorMessage != null)
               {
                 Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+errorMessage);
@@ -3917,7 +3954,18 @@ if (false) {
               {
                 Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
               }
+
+              // revert selection
+              if (serverMenuLastSelectedItem != null)
+              {
+                menuItem.setSelection(false);
+                serverMenuLastSelectedItem.setSelection(true);
+              }
             }
+          }
+          else
+          {
+            serverMenuLastSelectedItem = menuItem;
           }
         }
       });
