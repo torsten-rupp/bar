@@ -10182,15 +10182,8 @@ Dprintf.dprintf("");
                                      }
                                     );
 
-            // close/done busy dialog, restore cursor
-            if (errorCount[0] > 0)
-            {
-              busyDialog.done();
-            }
-            else
-            {
-              busyDialog.close();
-            }
+            // done busy dialog
+            busyDialog.done();
           }
           catch (final BARException exception)
           {
