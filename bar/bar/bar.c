@@ -8098,6 +8098,8 @@ bool configValueFormatMaintenanceTime(void **formatUserData, void *userData, Str
   assert(formatUserData != NULL);
 
   UNUSED_VARIABLE(userData);
+//TODO
+UNUSED_VARIABLE(line);
 
   maintenanceTimeNode = (MaintenanceTimeNode*)(*formatUserData);
   if (maintenanceTimeNode != NULL)
