@@ -147,7 +147,7 @@ typedef struct
 {
   uint       count;                                                 // number of hard links
   StringList nameList;                                              // list of hard linked names
-  uint64     size;
+  FileInfo   fileInfo;
 } HardLinkInfo;
 
 // entry message, send from collector thread -> main
@@ -157,6 +157,7 @@ typedef struct
   FileTypes  fileType;
   String     name;                                                // file/image/directory/link/special name
   StringList nameList;                                            // list of hard link names
+  FileInfo   fileInfo;
   uint       fragmentNumber;                                      // fragment number [0..n-1]
   uint       fragmentCount;                                       // fragment count
   uint64     fragmentOffset;
@@ -1015,18 +1016,18 @@ LOCAL bool updateStorageStatusInfo(const StorageStatusInfo *storageStatusInfo,
 * Input  : entryMsgQueue    - entry message queue
 *          entryType        - entry type
 *          name             - name (will be copied!)
-*          size             - file size [bytes]
+*          fileInfo         - file info
 *          maxFragmentSize  - max. fragment size or 0
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
-                                 EntryTypes  entryType,
-                                 ConstString name,
-                                 uint64      size,
-                                 uint64      maxFragmentSize
+LOCAL void appendFileToEntryList(MsgQueue       *entryMsgQueue,
+                                 EntryTypes     entryType,
+                                 ConstString    name,
+                                 const FileInfo *fileInfo,
+                                 uint64         maxFragmentSize
                                 )
 {
   uint     fragmentCount;
@@ -1036,24 +1037,26 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
+  assert(fileInfo != NULL);
 
   fragmentCount  = (maxFragmentSize > 0LL)
-                     ? (size+maxFragmentSize-1)/maxFragmentSize
+                     ? (fileInfo->size+maxFragmentSize-1)/maxFragmentSize
                      : 1;
   fragmentNumber = 0;
   fragmentOffset = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((maxFragmentSize > 0LL) && ((size-fragmentOffset) > maxFragmentSize))
+    fragmentSize = ((maxFragmentSize > 0LL) && ((fileInfo->size-fragmentOffset) > maxFragmentSize))
                      ? maxFragmentSize
-                     : size-fragmentOffset;
+                     : fileInfo->size-fragmentOffset;
 
     // init
     entryMsg.entryType         = entryType;
     entryMsg.fileType          = FILE_TYPE_FILE;
     entryMsg.name              = String_duplicate(name);
     StringList_init(&entryMsg.nameList);
+    memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
     entryMsg.fragmentNumber    = fragmentNumber;
     entryMsg.fragmentCount     = fragmentCount;
     entryMsg.fragmentOffset    = fragmentOffset;
@@ -1069,7 +1072,7 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
     fragmentNumber++;
     fragmentOffset += fragmentSize;
   }
-  while (fragmentOffset < size);
+  while (fragmentOffset < fileInfo->size);
 }
 
 /***********************************************************************\
@@ -1078,26 +1081,30 @@ LOCAL void appendFileToEntryList(MsgQueue    *entryMsgQueue,
 * Input  : entryMsgQueue - entry message queue
 *          entryType     - entry type
 *          name          - name (will be copied!)
+*          fileInfo      - file info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendDirectoryToEntryList(MsgQueue    *entryMsgQueue,
-                                      EntryTypes  entryType,
-                                      ConstString name
+LOCAL void appendDirectoryToEntryList(MsgQueue       *entryMsgQueue,
+                                      EntryTypes     entryType,
+                                      ConstString    name,
+                                      const FileInfo *fileInfo
                                      )
 {
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
+  assert(fileInfo != NULL);
 
   // init
   entryMsg.entryType      = entryType;
   entryMsg.fileType       = FILE_TYPE_DIRECTORY;
   entryMsg.name           = String_duplicate(name);
   StringList_init(&entryMsg.nameList);
+  memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
   entryMsg.fragmentNumber = 0;
   entryMsg.fragmentCount  = 0;
   entryMsg.fragmentOffset = 0LL;
@@ -1115,28 +1122,31 @@ LOCAL void appendDirectoryToEntryList(MsgQueue    *entryMsgQueue,
 * Purpose: append link to entry list
 * Input  : entryMsgQueue - entry message queue
 *          entryType     - entry type
-*          fileType      - file type
 *          name          - name (will be copied!)
+*          fileInfo      - file info
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
-                                 EntryTypes  entryType,
-                                 ConstString name
+LOCAL void appendLinkToEntryList(MsgQueue       *entryMsgQueue,
+                                 EntryTypes     entryType,
+                                 ConstString    name,
+                                 const FileInfo *fileInfo
                                 )
 {
   EntryMsg entryMsg;
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
+  assert(fileInfo != NULL);
 
   // init
   entryMsg.entryType      = entryType;
   entryMsg.fileType       = FILE_TYPE_LINK;
   entryMsg.name           = String_duplicate(name);
   StringList_init(&entryMsg.nameList);
+  memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
   entryMsg.fragmentNumber = 0;
   entryMsg.fragmentCount  = 0;
   entryMsg.fragmentOffset = 0LL;
@@ -1155,18 +1165,18 @@ LOCAL void appendLinkToEntryList(MsgQueue    *entryMsgQueue,
 * Input  : entryMsgQueue   - entry message queue
 *          entryType       - entry type
 *          nameList        - name list
-*          size            - file size [bytes]
+*          fileInfo        - file info
 *          maxFragmentSize - max. fragment size or 0
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
-                                     EntryTypes entryType,
-                                     StringList *nameList,
-                                     uint64     size,
-                                     uint64     maxFragmentSize
+LOCAL void appendHardLinkToEntryList(MsgQueue       *entryMsgQueue,
+                                     EntryTypes     entryType,
+                                     StringList     *nameList,
+                                     const FileInfo *fileInfo,
+                                     uint64         maxFragmentSize
                                     )
 {
   uint     fragmentCount;
@@ -1177,24 +1187,26 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
   assert(entryMsgQueue != NULL);
   assert(nameList != NULL);
   assert(!StringList_isEmpty(nameList));
+  assert(fileInfo != NULL);
 
   fragmentCount     = (maxFragmentSize > 0LL)
-                        ? (size+maxFragmentSize-1)/maxFragmentSize
+                        ? (fileInfo->size+maxFragmentSize-1)/maxFragmentSize
                         : 1;
   fragmentNumber    = 0;
   fragmentOffset    = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((maxFragmentSize > 0LL) && ((size-fragmentOffset) > maxFragmentSize))
+    fragmentSize = ((maxFragmentSize > 0LL) && ((fileInfo->size-fragmentOffset) > maxFragmentSize))
                      ? maxFragmentSize
-                     : size-fragmentOffset;
+                     : fileInfo->size-fragmentOffset;
 
     // init
     entryMsg.entryType      = entryType;
     entryMsg.fileType       = FILE_TYPE_HARDLINK;
     entryMsg.name           = NULL;
     StringList_initDuplicate(&entryMsg.nameList,nameList);
+    memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
     entryMsg.fragmentNumber = fragmentNumber;
     entryMsg.fragmentCount  = fragmentCount;
     entryMsg.fragmentOffset = fragmentOffset;
@@ -1210,7 +1222,7 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
     fragmentNumber++;
     fragmentOffset += fragmentSize;
   }
-  while (fragmentOffset < size);
+  while (fragmentOffset < fileInfo->size);
   StringList_clear(nameList);
 }
 
@@ -1220,18 +1232,18 @@ LOCAL void appendHardLinkToEntryList(MsgQueue   *entryMsgQueue,
 * Input  : entryMsgQueue    - entry message queue
 *          entryType        - entry type
 *          name             - name (will be copied!)
-*          size             - device size [bytes]
+*          fileInfo         - file info
 *          maxFragmentSize  - max. fragment size or 0
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
-                                    EntryTypes  entryType,
-                                    ConstString name,
-                                    uint64      size,
-                                    uint64      maxFragmentSize
+LOCAL void appendSpecialToEntryList(MsgQueue       *entryMsgQueue,
+                                    EntryTypes     entryType,
+                                    ConstString    name,
+                                    const FileInfo *fileInfo,
+                                    uint64         maxFragmentSize
                                    )
 {
   uint     fragmentCount;
@@ -1241,24 +1253,26 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
 
   assert(entryMsgQueue != NULL);
   assert(name != NULL);
+  assert(fileInfo != NULL);
 
   fragmentCount  = (maxFragmentSize > 0LL)
-                     ? (size+maxFragmentSize-1)/maxFragmentSize
+                     ? (fileInfo->size+maxFragmentSize-1)/maxFragmentSize
                      : 1;
   fragmentNumber = 0;
   fragmentOffset = 0LL;
   do
   {
     // calculate fragment size
-    fragmentSize = ((maxFragmentSize > 0LL) && ((size-fragmentOffset) > maxFragmentSize))
+    fragmentSize = ((maxFragmentSize > 0LL) && ((fileInfo->size-fragmentOffset) > maxFragmentSize))
                      ? maxFragmentSize
-                     : size-fragmentOffset;
+                     : fileInfo->size-fragmentOffset;
 
     // init
     entryMsg.entryType      = entryType;
     entryMsg.fileType       = FILE_TYPE_SPECIAL;
     entryMsg.name           = String_duplicate(name);
     StringList_init(&entryMsg.nameList);
+    memCopyFast(&entryMsg.fileInfo,sizeof(entryMsg.fileInfo),fileInfo,sizeof(FileInfo));
     entryMsg.fragmentNumber = fragmentNumber;
     entryMsg.fragmentCount  = fragmentCount;
     entryMsg.fragmentOffset = fragmentOffset;
@@ -1274,7 +1288,7 @@ LOCAL void appendSpecialToEntryList(MsgQueue    *entryMsgQueue,
     fragmentNumber++;
     fragmentOffset += fragmentSize;
   }
-  while (fragmentOffset < size);
+  while (fragmentOffset < fileInfo->size);
 }
 
 /***********************************************************************\
@@ -1798,7 +1812,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                         hardLinkInfo.count = fileInfo.linkCount;
                         StringList_init(&hardLinkInfo.nameList);
                         StringList_append(&hardLinkInfo.nameList,name);
-                        hardLinkInfo.size  = fileInfo.size;
+                        memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
 
                         if (!Dictionary_add(&hardLinksDictionary,
                                             &fileInfo.id,
@@ -2164,7 +2178,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                                           hardLinkInfo.count = fileInfo.linkCount;
                                           StringList_init(&hardLinkInfo.nameList);
                                           StringList_append(&hardLinkInfo.nameList,fileName);
-                                          hardLinkInfo.size  = fileInfo.size;
+                                          memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
 
                                           if (!Dictionary_add(&hardLinksDictionary,
                                                               &fileInfo.id,
@@ -2366,7 +2380,7 @@ LOCAL void collectorSumThreadCode(CreateInfo *createInfo)
                               hardLinkInfo.count = fileInfo.linkCount;
                               StringList_init(&hardLinkInfo.nameList);
                               StringList_append(&hardLinkInfo.nameList,fileName);
-                              hardLinkInfo.size  = fileInfo.size;
+                              memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
 
                               if (!Dictionary_add(&hardLinksDictionary,
                                                   &fileInfo.id,
@@ -2606,13 +2620,23 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {
-          printInfo(2,"Cannot access '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
-          logMessage(createInfo->logHandle,
-                     LOG_TYPE_ENTRY_ACCESS_DENIED,
-                     "Access denied '%s' (error: %s)",
-                     String_cString(name),
-                     Error_getText(error)
-                    );
+          if (createInfo->jobOptions->skipUnreadableFlag)
+          {
+            printInfo(2,"Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+            logMessage(createInfo->logHandle,
+                       LOG_TYPE_ENTRY_ACCESS_DENIED,
+                       "Access denied '%s' (error: %s)",
+                       String_cString(name),
+                       Error_getText(error)
+                      );
+          }
+          else
+          {
+            printError("Cannot get info for '%s' (error: %s)",
+                       String_cString(name),
+                       Error_getText(error)
+                      );
+          }
 
           STATUS_INFO_UPDATE(createInfo,name,NULL)
           {
@@ -2646,7 +2670,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                     appendFileToEntryList(&createInfo->entryMsgQueue,
                                           ENTRY_TYPE_FILE,
                                           name,
-                                          fileInfo.size,
+                                          &fileInfo,
                                           !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                          );
                   }
@@ -2684,7 +2708,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
               }
               appendDirectoryToEntryList(&createInfo->entryMsgQueue,
                                          ENTRY_TYPE_FILE,
-                                         name
+                                         name,
+                                         &fileInfo
                                         );
               break;
             case FILE_TYPE_LINK:
@@ -2704,7 +2729,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   }
                   appendLinkToEntryList(&createInfo->entryMsgQueue,
                                         ENTRY_TYPE_FILE,
-                                        name
+                                        name,
+                                        &fileInfo
                                        );
                 }
               }
@@ -2751,7 +2777,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                         appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                                                   ENTRY_TYPE_FILE,
                                                   &data.hardLinkInfo->nameList,
-                                                  data.hardLinkInfo->size,
+                                                  &data.hardLinkInfo->fileInfo,
                                                   !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                  );
 
@@ -2776,7 +2802,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                       hardLinkInfo.count = fileInfo.linkCount;
                       StringList_init(&hardLinkInfo.nameList);
                       StringList_append(&hardLinkInfo.nameList,name);
-                      hardLinkInfo.size  = fileInfo.size;
+                      memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
 
                       if (!Dictionary_add(&hardLinksDictionary,
                                           &fileInfo.id,
@@ -2831,7 +2857,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                   appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                            ENTRY_TYPE_FILE,
                                            name,
-                                           0LL,  // size
+                                           &fileInfo,
                                            !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                           );
                 }
@@ -2932,6 +2958,29 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
         error = File_getInfo(&fileInfo,name);
         if (error != ERROR_NONE)
         {
+          if (createInfo->jobOptions->skipUnreadableFlag)
+          {
+            printInfo(2,"Cannot get info for '%s' (error: %s) - skipped\n",String_cString(name),Error_getText(error));
+            logMessage(createInfo->logHandle,
+                       LOG_TYPE_ENTRY_ACCESS_DENIED,
+                       "Access denied '%s' (error: %s)",
+                       String_cString(name),
+                       Error_getText(error)
+                      );
+          }
+          else
+          {
+            printError("Cannot get info for '%s' (error: %s)",
+                       String_cString(fileName),
+                       Error_getText(error)
+                      );
+          }
+
+          STATUS_INFO_UPDATE(createInfo,name,NULL)
+          {
+            createInfo->statusInfo.error.count++;
+          }
+
           continue;
         }
 
@@ -2967,7 +3016,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           appendFileToEntryList(&createInfo->entryMsgQueue,
                                                 ENTRY_TYPE_FILE,
                                                 name,
-                                                fileInfo.size,
+                                                &fileInfo,
                                                 !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                );
                         }
@@ -3019,7 +3068,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           }
                           appendDirectoryToEntryList(&createInfo->entryMsgQueue,
                                                      ENTRY_TYPE_FILE,
-                                                     name
+                                                     name,
+                                                     &fileInfo
                                                     );
                         }
                         break;
@@ -3128,7 +3178,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendFileToEntryList(&createInfo->entryMsgQueue,
                                                             ENTRY_TYPE_FILE,
                                                             fileName,
-                                                            fileInfo.size,
+                                                            &fileInfo,
                                                             !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                            );
                                     }
@@ -3168,7 +3218,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       }
                                       appendLinkToEntryList(&createInfo->entryMsgQueue,
                                                             ENTRY_TYPE_FILE,
-                                                            fileName
+                                                            fileName,
+                                                            &fileInfo
                                                            );
                                     }
                                     break;
@@ -3202,7 +3253,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                         appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                  ENTRY_TYPE_IMAGE,
                                                                  name,
-                                                                 deviceInfo.size,
+                                                                 &fileInfo,
                                                                  !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                                 );
                                       }
@@ -3250,7 +3301,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                             appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                                                                       ENTRY_TYPE_FILE,
                                                                       &data.hardLinkInfo->nameList,
-                                                                      data.hardLinkInfo->size,
+                                                                      &data.hardLinkInfo->fileInfo,
                                                                       !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                                      );
 
@@ -3275,7 +3326,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                           hardLinkInfo.count = fileInfo.linkCount;
                                           StringList_init(&hardLinkInfo.nameList);
                                           StringList_append(&hardLinkInfo.nameList,fileName);
-                                          hardLinkInfo.size  = fileInfo.size;
+                                          memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
 
                                           if (!Dictionary_add(&hardLinksDictionary,
                                                               &fileInfo.id,
@@ -3323,7 +3374,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                ENTRY_TYPE_FILE,
                                                                fileName,
-                                                               0LL,  // size
+                                                               &fileInfo,
                                                                !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                               );
                                     }
@@ -3335,7 +3386,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                                       appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                                ENTRY_TYPE_IMAGE,
                                                                fileName,
-                                                               fileInfo.size,
+                                                               &fileInfo,
                                                                !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                               );
                                     }
@@ -3432,7 +3483,8 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           }
                           appendLinkToEntryList(&createInfo->entryMsgQueue,
                                                 ENTRY_TYPE_FILE,
-                                                name
+                                                name,
+                                                &fileInfo
                                                );
                         }
                         break;
@@ -3466,7 +3518,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                      ENTRY_TYPE_IMAGE,
                                                      name,
-                                                     deviceInfo.size,
+                                                     &fileInfo,
                                                      !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                     );
                           }
@@ -3529,7 +3581,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                               appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                                                         ENTRY_TYPE_FILE,
                                                         &data.hardLinkInfo->nameList,
-                                                        data.hardLinkInfo->size,
+                                                        &data.hardLinkInfo->fileInfo,
                                                         !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                        );
 
@@ -3554,7 +3606,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             hardLinkInfo.count = fileInfo.linkCount;
                             StringList_init(&hardLinkInfo.nameList);
                             StringList_append(&hardLinkInfo.nameList,name);
-                            hardLinkInfo.size  = fileInfo.size;
+                            memCopyFast(&hardLinkInfo.fileInfo,sizeof(hardLinkInfo.fileInfo),&fileInfo,sizeof(fileInfo));
 
                             if (!Dictionary_add(&hardLinksDictionary,
                                                 &fileInfo.id,
@@ -3617,7 +3669,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                           appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                    ENTRY_TYPE_FILE,
                                                    name,
-                                                   0LL,  // size
+                                                   &fileInfo,
                                                    !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                   );
                         }
@@ -3652,7 +3704,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
                             appendSpecialToEntryList(&createInfo->entryMsgQueue,
                                                      ENTRY_TYPE_IMAGE,
                                                      name,
-                                                     deviceInfo.size,
+                                                     &fileInfo,
                                                      !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                                                     );
                           }
@@ -3750,7 +3802,7 @@ union { void *value; HardLinkInfo *hardLinkInfo; } data;
     appendHardLinkToEntryList(&createInfo->entryMsgQueue,
                               ENTRY_TYPE_FILE,
                               &data.hardLinkInfo->nameList,
-                              data.hardLinkInfo->size,
+                              &data.hardLinkInfo->fileInfo,
                               !createInfo->storageFlags.noStorage ? globalOptions.fragmentSize : 0LL
                              );
   }
@@ -4942,7 +4994,6 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
       {
         assert(!INDEX_ID_IS_NONE(storageMsg.entityId));
 
-//TODO: move this to archive.c
         // check if append and storage exists => assign to existing storage index
         if (   appendFlag
             && Index_findStorageByName(createInfo->indexHandle,
@@ -5462,6 +5513,7 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 * Purpose: store a file entry into archive
 * Input  : createInfo     - create info structure
 *          fileName       - file name to store
+*          fileInfo       - file info
 *          fragmentNumber - fragment number [0..n-1]
 *          fragmentCount  - fragment count
 *          fragmentOffset - fragment offset [bytes]
@@ -5473,18 +5525,18 @@ LOCAL void fragmentDone(CreateInfo *createInfo, ConstString name)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
-                            ConstString fileName,
-                            uint        fragmentNumber,
-                            uint        fragmentCount,
-                            uint64      fragmentOffset,
-                            uint64      fragmentSize,
-                            byte        *buffer,
-                            uint        bufferSize
+LOCAL Errors storeFileEntry(CreateInfo     *createInfo,
+                            ConstString    fileName,
+                            const FileInfo *fileInfo,
+                            uint           fragmentNumber,
+                            uint           fragmentCount,
+                            uint64         fragmentOffset,
+                            uint64         fragmentSize,
+                            byte           *buffer,
+                            uint           bufferSize
                            )
 {
   Errors                    error;
-  FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   FileHandle                fileHandle;
   ArchiveFlags              archiveFlags;
@@ -5502,42 +5554,11 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(fileName != NULL);
+  assert(fileInfo != NULL);
   assert((fragmentCount == 0) || (fragmentNumber < fragmentCount));
   assert(buffer != NULL);
 
   printInfo(1,"Add file      '%s'...",String_cString(fileName));
-
-  // get file info
-  error = File_getInfo(&fileInfo,fileName);
-  if (error != ERROR_NONE)
-  {
-    if (createInfo->jobOptions->skipUnreadableFlag)
-    {
-      printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,
-                 LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Access denied '%s' (error: %s)",
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-
-      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
-      {
-        createInfo->statusInfo.error.count++;
-      }
-
-      return ERROR_NONE;
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      printError("Cannot get info for '%s' (error: %s)",
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-      return error;
-    }
-  }
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
@@ -5608,7 +5629,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       STATUS_INFO_UPDATE(createInfo,fileName,NULL)
       {
         createInfo->statusInfo.error.count++;
-        createInfo->statusInfo.error.size += (uint64)fileInfo.size;
+        createInfo->statusInfo.error.size += (uint64)fileInfo->size;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -5630,7 +5651,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   }
 
   // init fragment
-  fragmentInit(createInfo,fileName,fileInfo.size,fragmentCount);
+  fragmentInit(createInfo,fileName,fileInfo->size,fragmentCount);
 
   if (!createInfo->storageFlags.noStorage)
   {
@@ -5639,7 +5660,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
-    if (   (fileInfo.size > globalOptions.compressMinFileSize)
+    if (   (fileInfo->size > globalOptions.compressMinFileSize)
         && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta)
        )
     {
@@ -5647,7 +5668,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
     }
 
     // check if file data should be byte compressed
-    if (   (fileInfo.size > globalOptions.compressMinFileSize)
+    if (   (fileInfo->size > globalOptions.compressMinFileSize)
         && !PatternList_match(&createInfo->jobOptions->compressExcludePatternList,fileName,PATTERN_MATCH_MODE_EXACT)
        )
     {
@@ -5660,7 +5681,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
                                  createInfo->jobOptions->compressAlgorithms.delta,
                                  createInfo->jobOptions->compressAlgorithms.byte,
                                  fileName,
-                                 &fileInfo,
+                                 fileInfo,
                                  &fileExtendedAttributeList,
                                  fragmentOffset,
                                  fragmentSize,
@@ -5847,7 +5868,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 
     // get fragment info
     stringClear(s1);
-    if (fragmentSize < fileInfo.size)
+    if (fragmentSize < fileInfo->size)
     {
       stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
@@ -5897,7 +5918,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
       if (fragmentNode != NULL)
       {
         // add fragment
-        FragmentList_addRange(fragmentNode,0,fileInfo.size);
+        FragmentList_addRange(fragmentNode,0,fileInfo->size);
       }
     }
 
@@ -5933,7 +5954,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    addIncrementalList(&createInfo->namesDictionary,fileName,&fileInfo);
+    addIncrementalList(&createInfo->namesDictionary,fileName,fileInfo);
   }
 
   return ERROR_NONE;
@@ -5944,6 +5965,7 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 * Purpose: store an image entry into archive
 * Input  : createInfo     - create info structure
 *          deviceName     - device name
+*          fileInfo       - file info
 *          fragmentNumber - fragment number [0..n-1]
 *          fragmentCount  - fragment count
 *          fragmentOffset - fragment offset [blocks]
@@ -5955,14 +5977,16 @@ LOCAL Errors storeFileEntry(CreateInfo  *createInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
-                             ConstString deviceName,
-                             uint        fragmentNumber,
-                             uint        fragmentCount,
-                             uint64      fragmentOffset,
-                             uint64      fragmentSize,
-                             byte        *buffer,
-                             uint        bufferSize
+LOCAL Errors storeImageEntry(CreateInfo     *createInfo,
+                             ConstString    deviceName,
+//TODO: use deviceInfo
+                             const FileInfo *fileInfo,
+                             uint           fragmentNumber,
+                             uint           fragmentCount,
+                             uint64         fragmentOffset,
+                             uint64         fragmentSize,
+                             byte           *buffer,
+                             uint           bufferSize
                             )
 {
   Errors           error;
@@ -5986,8 +6010,12 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(deviceName != NULL);
+  assert(fileInfo != NULL);
   assert((fragmentCount == 0) || (fragmentNumber < fragmentCount));
   assert(buffer != NULL);
+
+//TODO:
+UNUSED_VARIABLE(fileInfo);
 
   printInfo(1,"Add image     '%s'...",String_cString(deviceName));
 
@@ -6422,58 +6450,27 @@ LOCAL Errors storeImageEntry(CreateInfo  *createInfo,
 * Purpose: store a directory entry into archive
 * Input  : createInfo    - create info structure
 *          directoryName - directory name to store
+*          fileInfo      - file info
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
-                                 ConstString directoryName
+LOCAL Errors storeDirectoryEntry(CreateInfo     *createInfo,
+                                 ConstString    directoryName,
+                                 const FileInfo *fileInfo
                                 )
 {
   Errors                    error;
-  FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   ArchiveEntryInfo          archiveEntryInfo;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(directoryName != NULL);
+  assert(fileInfo != NULL);
 
   printInfo(1,"Add directory '%s'...",String_cString(directoryName));
-
-  // get file info
-  error = File_getInfo(&fileInfo,directoryName);
-  if (error != ERROR_NONE)
-  {
-    if (createInfo->jobOptions->skipUnreadableFlag)
-    {
-      printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,
-                 LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Access denied '%s' (error: %s)",
-                 String_cString(directoryName),
-                 Error_getText(error)
-                );
-
-      STATUS_INFO_UPDATE(createInfo,directoryName,NULL)
-      {
-        createInfo->statusInfo.error.count++;
-      }
-
-      return ERROR_NONE;
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      printError("Cannot get info for '%s' (error: %s)",
-                 String_cString(directoryName),
-                 Error_getText(error)
-                );
-
-      return error;
-    }
-  }
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
@@ -6531,7 +6528,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
     error = Archive_newDirectoryEntry(&archiveEntryInfo,
                                       &createInfo->archiveHandle,
                                       directoryName,
-                                      &fileInfo,
+                                      fileInfo,
                                       &fileExtendedAttributeList
                                      );
     if (error != ERROR_NONE)
@@ -6597,7 +6594,7 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    addIncrementalList(&createInfo->namesDictionary,directoryName,&fileInfo);
+    addIncrementalList(&createInfo->namesDictionary,directoryName,fileInfo);
   }
 
   return ERROR_NONE;
@@ -6608,57 +6605,27 @@ LOCAL Errors storeDirectoryEntry(CreateInfo  *createInfo,
 * Purpose: store a link entry into archive
 * Input  : createInfo  - create info structure
 *          linkName    - link name to store
+*          fileInfo    - file info
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
-                            ConstString linkName
+LOCAL Errors storeLinkEntry(CreateInfo     *createInfo,
+                            ConstString    linkName,
+                            const FileInfo *fileInfo
                            )
 {
   Errors                    error;
-  FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   String                    fileName;
   ArchiveEntryInfo          archiveEntryInfo;
 
   assert(createInfo != NULL);
   assert(linkName != NULL);
+  assert(fileInfo != NULL);
 
   printInfo(1,"Add link      '%s'...",String_cString(linkName));
-
-  // get file info
-  error = File_getInfo(&fileInfo,linkName);
-  if (error != ERROR_NONE)
-  {
-    if (createInfo->jobOptions->skipUnreadableFlag)
-    {
-      printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,
-                 LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Alccess denied '%s' (error: %s)",
-                 String_cString(linkName),
-                 Error_getText(error)
-                );
-
-      STATUS_INFO_UPDATE(createInfo,linkName,NULL)
-      {
-        createInfo->statusInfo.error.count++;
-      }
-
-      return ERROR_NONE;
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      printError("Cannot get info for '%s' (error: %s)",
-                 String_cString(linkName),
-                 Error_getText(error)
-                );
-      return error;
-    }
-  }
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
@@ -6732,7 +6699,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
         STATUS_INFO_UPDATE(createInfo,linkName,NULL)
         {
           createInfo->statusInfo.error.count++;
-          createInfo->statusInfo.error.size += (uint64)fileInfo.size;
+          createInfo->statusInfo.error.size += (uint64)fileInfo->size;
         }
 
         String_delete(fileName);
@@ -6755,12 +6722,12 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
       }
     }
 
-    // new link
+    // new linke
     error = Archive_newLinkEntry(&archiveEntryInfo,
                                  &createInfo->archiveHandle,
                                  linkName,
                                  fileName,
-                                 &fileInfo,
+                                 fileInfo,
                                  &fileExtendedAttributeList
                                 );
     if (error != ERROR_NONE)
@@ -6829,7 +6796,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    addIncrementalList(&createInfo->namesDictionary,linkName,&fileInfo);
+    addIncrementalList(&createInfo->namesDictionary,linkName,fileInfo);
   }
 
   return ERROR_NONE;
@@ -6840,6 +6807,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 * Purpose: store a hard link entry into archive
 * Input  : createInfo     - create info structure
 *          fileNameList   - hard link filename list to store
+*          fileInfo       - file info
 *          fragmentNumber - fragment number [0..n-1]
 *          fragmentCount  - fragment count
 *          fragmentOffset - fragment offset [bytes]
@@ -6853,6 +6821,7 @@ LOCAL Errors storeLinkEntry(CreateInfo  *createInfo,
 
 LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                 const StringList *fileNameList,
+                                const FileInfo   *fileInfo,
                                 uint             fragmentNumber,
                                 uint             fragmentCount,
                                 uint64           fragmentOffset,
@@ -6862,7 +6831,6 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                )
 {
   Errors                    error;
-  FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   FileHandle                fileHandle;
   ArchiveFlags              archiveFlags;
@@ -6882,43 +6850,11 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   assert(createInfo != NULL);
   assert(fileNameList != NULL);
   assert(!StringList_isEmpty(fileNameList));
+  assert(fileInfo != NULL);
   assert((fragmentCount == 0) || (fragmentNumber < fragmentCount));
   assert(buffer != NULL);
 
   printInfo(1,"Add hardlink  '%s'...",String_cString(StringList_first(fileNameList,NULL)));
-
-  // get file info
-  error = File_getInfo(&fileInfo,StringList_first(fileNameList,NULL));
-  if (error != ERROR_NONE)
-  {
-    if (createInfo->jobOptions->skipUnreadableFlag)
-    {
-      printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,
-                 LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Access denied '%s' (error: %s)",
-                 String_cString(StringList_first(fileNameList,NULL)),
-                 Error_getText(error)
-                );
-
-      STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
-      {
-        createInfo->statusInfo.error.count += StringList_count(fileNameList);
-      }
-
-      return ERROR_NONE;
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      printError("Cannot get info for '%s' (error: %s)",
-                 String_cString(StringList_first(fileNameList,NULL)),
-                 Error_getText(error)
-                );
-
-      return error;
-    }
-  }
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
@@ -6989,7 +6925,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       STATUS_INFO_UPDATE(createInfo,StringList_first(fileNameList,NULL),NULL)
       {
         createInfo->statusInfo.error.count += StringList_count(fileNameList);
-        createInfo->statusInfo.error.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo.size;
+        createInfo->statusInfo.error.size += (uint64)StringList_count(fileNameList)*(uint64)fileInfo->size;
       }
 
       File_doneExtendedAttributes(&fileExtendedAttributeList);
@@ -7011,14 +6947,14 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   }
 
   // init fragment
-  fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo.size,fragmentCount);
+  fragmentInit(createInfo,StringList_first(fileNameList,NULL),fileInfo->size,fragmentCount);
 
   if (!createInfo->storageFlags.noStorage)
   {
     archiveFlags = ARCHIVE_FLAG_NONE;
 
     // check if file data should be delta compressed
-    if (   (fileInfo.size > globalOptions.compressMinFileSize)
+    if (   (fileInfo->size > globalOptions.compressMinFileSize)
         && Compress_isCompressed(createInfo->jobOptions->compressAlgorithms.delta)
        )
     {
@@ -7026,7 +6962,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
     }
 
     // check if file data should be byte compressed
-    if (   (fileInfo.size > globalOptions.compressMinFileSize)
+    if (   (fileInfo->size > globalOptions.compressMinFileSize)
         && !PatternList_matchStringList(&createInfo->jobOptions->compressExcludePatternList,fileNameList,PATTERN_MATCH_MODE_EXACT)
        )
     {
@@ -7039,7 +6975,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
                                      createInfo->jobOptions->compressAlgorithms.delta,
                                      createInfo->jobOptions->compressAlgorithms.byte,
                                      fileNameList,
-                                     &fileInfo,
+                                     fileInfo,
                                      &fileExtendedAttributeList,
                                      fragmentOffset,
                                      fragmentSize,
@@ -7226,7 +7162,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 
     // get fragment info
     stringClear(s1);
-    if (fragmentSize < fileInfo.size)
+    if (fragmentSize < fileInfo->size)
     {
       stringFormat(t1,sizeof(t1),"%u",fragmentCount);
       stringFormat(t2,sizeof(t2),"%u",fragmentNumber+1);
@@ -7277,7 +7213,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
       if (fragmentNode != NULL)
       {
         // add fragment
-        FragmentList_addRange(fragmentNode,0,fileInfo.size);
+        FragmentList_addRange(fragmentNode,0,fileInfo->size);
       }
     }
 
@@ -7316,7 +7252,7 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
   {
     STRINGLIST_ITERATE(fileNameList,stringNode,fileName)
     {
-      addIncrementalList(&createInfo->namesDictionary,fileName,&fileInfo);
+      addIncrementalList(&createInfo->namesDictionary,fileName,fileInfo);
     }
   }
 
@@ -7328,58 +7264,27 @@ LOCAL Errors storeHardLinkEntry(CreateInfo       *createInfo,
 * Purpose: store a special entry into archive
 * Input  : createInfo  - create info structure
 *          fileName    - file name to store
+*          fileInfo    - file info
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
-                               ConstString fileName
+LOCAL Errors storeSpecialEntry(CreateInfo     *createInfo,
+                               ConstString    fileName,
+                               const FileInfo *fileInfo
                               )
 {
   Errors                    error;
-  FileInfo                  fileInfo;
   FileExtendedAttributeList fileExtendedAttributeList;
   ArchiveEntryInfo          archiveEntryInfo;
 
   assert(createInfo != NULL);
   assert(createInfo->jobOptions != NULL);
   assert(fileName != NULL);
+  assert(fileInfo != NULL);
 
   printInfo(1,"Add special   '%s'...",String_cString(fileName));
-
-  // get file info, file extended attributes
-  error = File_getInfo(&fileInfo,fileName);
-  if (error != ERROR_NONE)
-  {
-    if (createInfo->jobOptions->skipUnreadableFlag)
-    {
-      printInfo(1,"skipped (reason: %s)\n",Error_getText(error));
-      logMessage(createInfo->logHandle,
-                 LOG_TYPE_ENTRY_ACCESS_DENIED,
-                 "Access denied '%s' (error: %s)",
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-
-      STATUS_INFO_UPDATE(createInfo,fileName,NULL)
-      {
-        createInfo->statusInfo.error.count++;
-      }
-
-      return ERROR_NONE;
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      printError("Cannot get info for '%s' (error: %s)",
-                 String_cString(fileName),
-                 Error_getText(error)
-                );
-
-      return error;
-    }
-  }
 
   // get file extended attributes
   File_initExtendedAttributes(&fileExtendedAttributeList);
@@ -7438,7 +7343,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
     error = Archive_newSpecialEntry(&archiveEntryInfo,
                                     &createInfo->archiveHandle,
                                     fileName,
-                                    &fileInfo,
+                                    fileInfo,
                                     &fileExtendedAttributeList
                                    );
     if (error != ERROR_NONE)
@@ -7496,7 +7401,7 @@ LOCAL Errors storeSpecialEntry(CreateInfo  *createInfo,
   // add to incremental list
   if (createInfo->storeIncrementalFileInfoFlag)
   {
-    addIncrementalList(&createInfo->namesDictionary,fileName,&fileInfo);
+    addIncrementalList(&createInfo->namesDictionary,fileName,fileInfo);
   }
 
   return ERROR_NONE;
@@ -7561,6 +7466,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
             case ENTRY_TYPE_FILE:
               error = storeFileEntry(createInfo,
                                      entryMsg.name,
+                                     &entryMsg.fileInfo,
                                      entryMsg.fragmentNumber,
                                      entryMsg.fragmentCount,
                                      entryMsg.fragmentOffset,
@@ -7585,7 +7491,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeDirectoryEntry(createInfo,
-                                          entryMsg.name
+                                          entryMsg.name,
+                                          &entryMsg.fileInfo
                                          );
               if (error != ERROR_NONE) createInfo->failError = error;
               break;
@@ -7604,7 +7511,8 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeLinkEntry(createInfo,
-                                     entryMsg.name
+                                     entryMsg.name,
+                                     &entryMsg.fileInfo
                                     );
               if (error != ERROR_NONE) createInfo->failError = error;
               break;
@@ -7624,6 +7532,7 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
             case ENTRY_TYPE_FILE:
               error = storeHardLinkEntry(createInfo,
                                          &entryMsg.nameList,
+                                         &entryMsg.fileInfo,
                                          entryMsg.fragmentNumber,
                                          entryMsg.fragmentCount,
                                          entryMsg.fragmentOffset,
@@ -7648,13 +7557,15 @@ LOCAL void createThreadCode(CreateInfo *createInfo)
           {
             case ENTRY_TYPE_FILE:
               error = storeSpecialEntry(createInfo,
-                                        entryMsg.name
+                                        entryMsg.name,
+                                        &entryMsg.fileInfo
                                        );
               if (error != ERROR_NONE) createInfo->failError = error;
               break;
             case ENTRY_TYPE_IMAGE:
               error = storeImageEntry(createInfo,
                                       entryMsg.name,
+                                      &entryMsg.fileInfo,
                                       entryMsg.fragmentNumber,
                                       entryMsg.fragmentCount,
                                       entryMsg.fragmentOffset,
