@@ -2394,8 +2394,8 @@ Errors Command_convert(const StringList        *storageNameList,
                                    fileName,
                                    newJobUUID,
                                    newScheduleUUID,
-                                   newJobOptions,
                                    newCreatedDateTime,
+                                   newJobOptions,
                                    CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                    logHandle
                                   );
