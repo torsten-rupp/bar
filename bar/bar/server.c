@@ -1069,6 +1069,8 @@ LOCAL const char *getSlaveStateText(SlaveStates slaveState)
 LOCAL void initAggregateInfo(AggregateInfo *aggregateInfo)
 {
   assert(aggregateInfo != NULL);
+
+  UNUSED_VARIABLE(aggregateInfo);
 }
 
 /***********************************************************************\
@@ -1083,6 +1085,8 @@ LOCAL void initAggregateInfo(AggregateInfo *aggregateInfo)
 LOCAL void doneAggregateInfo(AggregateInfo *aggregateInfo)
 {
   assert(aggregateInfo != NULL);
+
+  UNUSED_VARIABLE(aggregateInfo);
 }
 
 /***********************************************************************\
@@ -11322,21 +11326,18 @@ LOCAL void serverCommand_scheduleListAdd(ClientInfo *clientInfo, IndexHandle *in
     String_delete(title);
     return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"archiveType",NULL),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"archiveType",NULL),"*"))
   {
     archiveType = ARCHIVE_TYPE_NORMAL;
   }
-  else
+  else if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
   {
-    if (!StringMap_getEnum(argumentMap,"archiveType",&archiveType,(StringMapParseEnumFunction)Archive_parseType,ARCHIVE_TYPE_UNKNOWN))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
-      String_delete(time);
-      String_delete(weekDays);
-      String_delete(date);
-      String_delete(title);
-      return;
-    }
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
+    String_delete(time);
+    String_delete(weekDays);
+    String_delete(date);
+    String_delete(title);
+    return;
   }
   StringMap_getUInt(argumentMap,"interval",&interval,0);
   customText = String_new();
@@ -11725,41 +11726,32 @@ LOCAL void serverCommand_persistenceListAdd(ClientInfo *clientInfo, IndexHandle 
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"minKeep",NULL),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"minKeep",NULL),"*"))
   {
     minKeep = KEEP_ALL;
   }
-  else
+  else if (!StringMap_getInt(argumentMap,"minKeep",&minKeep,0))
   {
-    if (!StringMap_getInt(argumentMap,"minKeep",&minKeep,0))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>|*");
-      return;
-    }
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>|*");
+    return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep",NULL),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep",NULL),"*"))
   {
     maxKeep = KEEP_ALL;
   }
-  else
+  else if (!StringMap_getInt(argumentMap,"maxKeep",&maxKeep,0))
   {
-    if (!StringMap_getInt(argumentMap,"maxKeep",&maxKeep,0))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>|*");
-      return;
-    }
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>|*");
+    return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxAge",NULL),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"maxAge",NULL),"*"))
   {
     maxAge = AGE_FOREVER;
   }
-  else
+  else if (!StringMap_getInt(argumentMap,"maxAge",&maxAge,0))
   {
-    if (!StringMap_getInt(argumentMap,"maxAge",&maxAge,0))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
-      return;
-    }
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
+    return;
   }
 
   persistenceId = ID_NONE;
@@ -11859,41 +11851,32 @@ LOCAL void serverCommand_persistenceListUpdate(ClientInfo *clientInfo, IndexHand
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"archiveType=NORMAL|FULL|INCREMENTAL|DIFFERENTIAL|CONTINUOUS");
     return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"minKeep",NULL),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"minKeep",NULL),"*"))
   {
     minKeep = KEEP_ALL;
   }
-  else
+  else if (!StringMap_getInt(argumentMap,"minKeep",&minKeep,0))
   {
-    if (!StringMap_getInt(argumentMap,"minKeep",&minKeep,0))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>|*");
-      return;
-    }
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"minKeep=<n>|*");
+    return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep",NULL),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"maxKeep",NULL),"*"))
   {
     maxKeep = KEEP_ALL;
   }
-  else
+  else if (!StringMap_getInt(argumentMap,"maxKeep",&maxKeep,0))
   {
-    if (!StringMap_getInt(argumentMap,"maxKeep",&maxKeep,0))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>|*");
-      return;
-    }
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxKeep=<n>|*");
+    return;
   }
-  if   (stringEquals(StringMap_getTextCString(argumentMap,"maxAge",NULL),"*"))
+  if      (stringEquals(StringMap_getTextCString(argumentMap,"maxAge",NULL),"*"))
   {
     maxAge = AGE_FOREVER;
   }
-  else
+  else if (!StringMap_getInt(argumentMap,"maxAge",&maxAge,0))
   {
-    if (!StringMap_getInt(argumentMap,"maxAge",&maxAge,0))
-    {
-      ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
-      return;
-    }
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"maxAge=<n>|*");
+    return;
   }
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ_WRITE,LOCK_TIMEOUT)
@@ -13493,8 +13476,8 @@ LOCAL void serverCommand_archiveList(ClientInfo *clientInfo, IndexHandle *indexH
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            indexStateSet=<state set>|*
-*            indexModeSet=<mode set>|*
+*            [indexStateSet=<state set>|*]
+*            [indexModeSet=<mode set>|*]
 *            [name=<text>]
 *          Result:
 *            uuidId=<n>
@@ -13583,8 +13566,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    return;
+    indexStateAny = TRUE;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet",NULL),"*"))
   {
@@ -13596,8 +13578,7 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexModeSet=MANUAL|AUTO|*");
-    return;
+    indexModeAny = TRUE;
   }
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
@@ -13735,8 +13716,8 @@ LOCAL void serverCommand_indexUUIDList(ClientInfo *clientInfo, IndexHandle *inde
 * Return : -
 * Notes  : Arguments:
 *            [jobUUID=<uuid>|""]
-*            indexStateSet=<state set>|*
-*            indexModeSet=<mode set>|*
+*            [indexStateSet=<state set>|*]
+*            [indexModeSet=<mode set>|*]
 *            [name=<text>]
 *          Result:
 *            jobUUID=<uuid> \
@@ -13794,8 +13775,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexStateSet=OK|CREATE|UPDATE_REQUESTED|UPDATE|ERROR|*");
-    return;
+    indexStateAny = TRUE;
   }
   if      (stringEquals(StringMap_getTextCString(argumentMap,"indexModeSet",NULL),"*"))
   {
@@ -13807,8 +13787,7 @@ LOCAL void serverCommand_indexEntityList(ClientInfo *clientInfo, IndexHandle *in
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"indexModeSet=MANUAL|AUTO|*");
-    return;
+    indexModeAny = TRUE;
   }
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
@@ -14581,10 +14560,10 @@ totalEntryContentSize=0;
 * Return : -
 * Notes  : Arguments:
 *            name=<text>
-*            entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
-*            newestOnly=yes|no
-*            selectedOnly=yes|no
-*            fragments=yes|no
+*            [entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL]
+*            [newestOnly=yes|no]
+*            [selectedOnly=yes|no]
+*            [fragments=yes|no]
 *            [offset=<n>]
 *            [limit=<n>]
 *            [sortMode=ARCHIVE|NAME|TYPE|SIZE|LAST_CHANGED]
@@ -14767,7 +14746,7 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // filter name, index type, new entries only, fragments, offset, limit
+  // filter name, entry type, new entries only, fragments, offset, limit
   name = String_new();
   StringMap_getString(argumentMap,"name",name,NULL);
   if      (stringEquals(StringMap_getTextCString(argumentMap,"entryType",NULL),"*"))
@@ -14780,28 +14759,11 @@ LOCAL void serverCommand_indexEntryList(ClientInfo *clientInfo, IndexHandle *ind
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL");
-    String_delete(name);
-    return;
+    entryType = INDEX_TYPE_ANY;
   }
-  if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newestOnly=yes|no");
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"selectedOnly=yes|no");
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getBool(argumentMap,"fragmentsCount",&fragmentsCount,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"fragments=yes|no");
-    String_delete(name);
-    return;
-  }
+  StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
+  StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
+  StringMap_getBool(argumentMap,"fragmentsCount",&fragmentsCount,FALSE);
   StringMap_getUInt64(argumentMap,"offset",&offset,0);
   StringMap_getUInt64(argumentMap,"limit",&limit,INDEX_UNLIMITED);
   StringMap_getEnum(argumentMap,"sortMode",&sortMode,(StringMapParseEnumFunction)Index_parseEntrySortMode,INDEX_ENTRY_SORT_MODE_NAME);
@@ -15114,9 +15076,9 @@ LOCAL void serverCommand_indexEntryListRemove(ClientInfo *clientInfo, IndexHandl
 * Return : -
 * Notes  : Arguments:
 *            name=<text>
-*            entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL
-*            newestOnly=yes|no
-*            selectedOnly=yes|no
+*            [entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL]
+*            [newestOnly=yes|no]
+*            [selectedOnly=yes|no]
 *          Result:
 *            totalEntryCount=<n>
 *            totalEntrySize=<n [bytes]>
@@ -15154,22 +15116,10 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
   }
   else
   {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"entryType=*|FILE|IMAGE|DIRECTORY|LINK|HARDLINK|SPECIAL");
-    String_delete(name);
-    return;
+    entryType = INDEX_TYPE_ANY;
   }
-  if (!StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"newestOnly=yes|no");
-    String_delete(name);
-    return;
-  }
-  if (!StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE))
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"selectedOnly=yes|no");
-    String_delete(name);
-    return;
-  }
+  StringMap_getBool(argumentMap,"newestOnly",&newestOnly,FALSE);
+  StringMap_getBool(argumentMap,"selectedOnly",&selectedOnly,FALSE);
 
   // check if index database is available, check if index database is ready
   if (indexHandle == NULL)
@@ -15194,8 +15144,6 @@ LOCAL void serverCommand_indexEntryListInfo(ClientInfo *clientInfo, IndexHandle 
                               );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: xxxxxxxxxxxxxxx\n",__FILE__,__LINE__);
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
     ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"get entries info index database fail");
     String_delete(name);
     return;
