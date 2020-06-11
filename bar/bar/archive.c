@@ -15249,7 +15249,7 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                   scheduleUUID,
                                   hostName,
                                   archiveType,
-                                  NULL,  // createdDateTime,
+                                  0LL,  // createdDateTime,
                                   NULL,  // jobUUID,
                                   NULL,  // scheduleUUID,
                                   NULL,  // uuidIndexId,
@@ -15385,27 +15385,27 @@ Errors Archive_updateIndex(IndexHandle       *indexHandle,
                                  );
   }
 
-    // update hostName/userName/created date/time/size/comment
-    if (error == ERROR_NONE)
-    {
-      error = Index_updateStorage(indexHandle,
-                                  storageId,
-                                  hostName,
-                                  userName,
-                                  NULL,  // storageName
-                                  createdDateTime,
-                                  size,
-                                  comment
-                                 );
-    }
+  // update hostName/userName/created date/time/size/comment
+  if (error == ERROR_NONE)
+  {
+    error = Index_updateStorage(indexHandle,
+                                storageId,
+                                hostName,
+                                userName,
+                                NULL,  // storageName
+                                createdDateTime,
+                                size,
+                                comment
+                               );
+  }
 
-    // update storages info (aggregated values)
-    if (error == ERROR_NONE)
-    {
-      error = Index_updateStorageInfos(indexHandle,
-                                       storageId
-                                      );
-    }
+  // update storages info (aggregated values)
+  if (error == ERROR_NONE)
+  {
+    error = Index_updateStorageInfos(indexHandle,
+                                     storageId
+                                    );
+  }
 
   // close archive
   Archive_close(&archiveHandle);
