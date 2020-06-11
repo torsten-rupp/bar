@@ -82,13 +82,13 @@
 
 #define DEFAULT_PAIRING_MASTER_TIMEOUT           120                      // default timeout pairing new master [s]
 
-// sleep times
-#define SLEEP_TIME_PAIRING_THREAD                ( 1*S_PER_MINUTE)        // [s]
-#define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)        // [s]
-#define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)        // [s]
-#define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)        // [s]
-#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)        // [s]
-#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*S_PER_MINUTE)        // [s]
+// sleep times [s]
+#define SLEEP_TIME_PAIRING_THREAD                ( 1*S_PER_MINUTE)
+#define SLEEP_TIME_SCHEDULER_THREAD              ( 1*S_PER_MINUTE)
+#define SLEEP_TIME_PAUSE_THREAD                  ( 1*S_PER_MINUTE)
+#define SLEEP_TIME_INDEX_THREAD                  ( 1*S_PER_MINUTE)
+#define SLEEP_TIME_AUTO_INDEX_UPDATE_THREAD      (10*S_PER_MINUTE)
+#define SLEEP_TIME_PURGE_EXPIRED_ENTITIES_THREAD (10*S_PER_MINUTE)
 
 // id none
 #define ID_NONE                                  0
@@ -1603,7 +1603,7 @@ LOCAL void jobThreadCode(void)
     {
       while (!quitFlag && (indexHandle == NULL))
       {
-        indexHandle = Index_open(jobNode->masterIO,10*MS_PER_SECOND);
+        indexHandle = Index_open(jobNode->masterIO,INDEX_TIMEOUT);
       }
     }
 
@@ -2538,7 +2538,7 @@ LOCAL void schedulerThreadCode(void)
   {
     while (!quitFlag && (indexHandle == NULL))
     {
-      indexHandle = Index_open(NULL,10*MS_PER_SECOND);
+      indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     }
   }
 
@@ -3649,7 +3649,7 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
   {
     while (!quitFlag && (indexHandle == NULL))
     {
-      indexHandle = Index_open(NULL,10*MS_PER_SECOND);
+      indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     }
   }
 
@@ -4001,7 +4001,7 @@ LOCAL void indexThreadCode(void)
   {
     while (!quitFlag && (indexHandle == NULL))
     {
-      indexHandle = Index_open(NULL,10*MS_PER_SECOND);
+      indexHandle = Index_open(NULL,INDEX_TIMEOUT);
     }
   }
 
@@ -4342,7 +4342,7 @@ LOCAL void autoIndexThreadCode(void)
   {
     while (!quitFlag && (indexHandle == NULL))
     {
-      indexHandle = Index_open(NULL,10*MS_PER_SECOND);
+      indexHandle = Index_open(NULL,30*MS_PER_SECOND);
     }
   }
 
@@ -16022,6 +16022,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
           Index_doneList(&indexQueryHandle1);
         }
       }
+      if (StringList_isEmpty(&storageNameList))
+      {
+        error = ERROR_ARCHIVE_NOT_FOUND;
+      }
       break;
     case ENTRIES:
       error = Index_initListEntries(&indexQueryHandle1,
@@ -16030,7 +16034,7 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
                                     0, // indexIdCount
                                     Array_cArray(&clientInfo->entryIdArray),
                                     Array_length(&clientInfo->entryIdArray),
-                                    INDEX_TYPE_NONE,
+                                    INDEX_TYPE_ANY,
                                     NULL, // name
                                     FALSE,  // newestOnly,
                                     FALSE,  //fragments
@@ -16096,6 +16100,10 @@ LOCAL void serverCommand_restore(ClientInfo *clientInfo, IndexHandle *indexHandl
           }
         }
         Index_doneList(&indexQueryHandle1);
+      }
+      if (StringList_isEmpty(&storageNameList))
+      {
+        error = ERROR_ENTRY_NOT_FOUND;
       }
       break;
     default:
@@ -17299,7 +17307,7 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
 * Output : -
 * Return : -
 * Notes  : Arguments:
-*            <state>|*
+*            state=<state>|*
 *            uuidId=<id> or entityId=<id> or storageId=<id>
 *          Result:
 \***********************************************************************/
@@ -17335,17 +17343,9 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  uuidId    = INDEX_ID_NONE;
-  entityId  = INDEX_ID_NONE;
-  storageId = INDEX_ID_NONE;
-  if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
-      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
-     )
-  {
-    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"jobUUID=<uuid> or entityId=<id> or storageId=<id>");
-    return;
-  }
+  StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE);
+  StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE);
+  StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE);
 
   // check if index database is available
   if (indexHandle == NULL)
