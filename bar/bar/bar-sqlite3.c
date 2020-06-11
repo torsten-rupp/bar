@@ -76,7 +76,8 @@ LOCAL bool       infoStoragesFlag                     = FALSE;  // output index 
 LOCAL bool       infoLostStoragesFlag                 = FALSE;  // output index database lost storages info
 LOCAL bool       infoEntriesFlag                      = FALSE;  // output index database entries info
 LOCAL bool       infoLostEntriesFlag                  = FALSE;  // output index database lost entries info
-LOCAL bool       checkFlag                            = FALSE;  // check database
+LOCAL bool       checkIntegrityFlag                   = FALSE;  // check database integrity
+LOCAL bool       checkOrphanedFlag                    = FALSE;  // check database orphaned entries
 LOCAL bool       optimizeFlag                         = FALSE;  // optimize database
 LOCAL bool       createFlag                           = FALSE;  // create new index database
 LOCAL bool       createTriggersFlag                   = FALSE;  // re-create triggers
@@ -146,7 +147,9 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --create-aggregates-entities          - re-create aggregated data entities\n");
   printf("          --create-aggregates-storages          - re-create aggregated data storages\n");
   printf("          --optimize                            - optimize database (analyze and collect statistics data)\n");
-  printf("          --check                               - check index database integrity\n");
+  printf("          --check                               - check index database\n");
+  printf("          --check-integrity                     - check index database integrity\n");
+  printf("          --check-orphaned                      - check index database for orphaned entries\n");
   printf("          --clean                               - clean orphaned/duplicates in index database\n");
   printf("          --vacuum [<new file name>]            - collect and free unused file space\n");
   printf("          -s|--storages [<uuid>]                - print storages\n");
@@ -443,25 +446,21 @@ LOCAL void closeDatabase(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : checkDatabase
-* Purpose: check database
+* Name   : checkDatabaseIntegrity
+* Purpose: check database integrity
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
+LOCAL void checkDatabaseIntegrity(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  uint64 totalCount;
-  int64  n;
 
-  totalCount = 0LL;
+  printInfo("Check integrity:\n");
 
-  printInfo("Check:\n");
-
-  printInfo("  quick integrity...");
+  printInfo("  quick...");
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -493,7 +492,7 @@ LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
     printError("foreign key check fail (error: %s)!\n",Error_getText(error));
   }
 
-  printInfo("  full integrity...");
+  printInfo("  full...");
   error = Database_execute(databaseHandle,
                            CALLBACK_(NULL,NULL),  // databaseRowFunction
                            NULL,  // changedRowCount
@@ -508,6 +507,26 @@ LOCAL void checkDatabase(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
+}
+
+/***********************************************************************\
+* Name   : checkDatabaseOrphaned
+* Purpose: check database orphaned entries
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
+{
+  Errors error;
+  uint64 totalCount;
+  int64  n;
+
+  totalCount = 0LL;
+
+  printInfo("Check orphaned:\n");
 
   // check entries without fragments
   printInfo("  file entries without fragments...");
@@ -1040,6 +1059,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
   printInfo("Create indizes:\n");
 
   // delete all existing indizes
+  error = ERROR_UNKNOWN;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     printInfo("  Discard indizes...");
@@ -2942,7 +2962,6 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
 LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
 {
-  Errors error;
   String storageName;
   ulong  total;
 DatabaseId  maxId;
@@ -3530,7 +3549,8 @@ LOCAL void purgeDeletedStorages(DatabaseHandle *databaseHandle)
 
   printInfo("Purge deleted storages:\n");
 
-  n = 0L;
+  n     = 0L;
+  error = ERROR_UNKNOWN;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
     error = Database_execute(databaseHandle,
@@ -5095,6 +5115,8 @@ LOCAL void printEntriesInfo(DatabaseHandle *databaseHandle, const Array entityId
   DatabaseId entityId;
   Errors     error;
 
+//TODO: lostFlag
+
   entityIdsString = String_new();
   ARRAY_ITERATE(&entityIdArray,i,entityId)
   {
@@ -5437,9 +5459,20 @@ int main(int argc, const char *argv[])
       infoLostEntriesFlag = TRUE;
       i++;
     }
+    else if (stringEquals(argv[i],"--check-integrity"))
+    {
+      checkIntegrityFlag = TRUE;
+      i++;
+    }
+    else if (stringEquals(argv[i],"--check-orphaned"))
+    {
+      checkOrphanedFlag = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--check"))
     {
-      checkFlag = TRUE;
+      checkIntegrityFlag = TRUE;
+      checkOrphanedFlag  = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--optimize"))
@@ -5767,13 +5800,15 @@ int main(int argc, const char *argv[])
           && !infoLostStoragesFlag
           && !infoEntriesFlag
           && !infoLostEntriesFlag
-          && !checkFlag
+          && !checkIntegrityFlag
+          && !checkOrphanedFlag
           && !optimizeFlag
           && !createTriggersFlag
           && !dropTriggersFlag
           && !createIndizesFlag
           && !dropIndizesFlag
           && !createNewestFlag
+          && !createAggregatesDirectoryContentFlag
           && !createAggregatesEntitiesFlag
           && !createAggregatesStoragesFlag
           && !cleanFlag
@@ -5818,9 +5853,13 @@ int main(int argc, const char *argv[])
     printEntriesInfo(&databaseHandle,entityIdArray,entryName,FALSE);
   }
 
-  if (checkFlag)
+  if (checkIntegrityFlag)
   {
-    checkDatabase(&databaseHandle);
+    checkDatabaseIntegrity(&databaseHandle);
+  }
+  if (checkOrphanedFlag)
+  {
+    checkDatabaseOrphaned(&databaseHandle);
   }
 
   if (optimizeFlag)
@@ -5852,6 +5891,13 @@ int main(int argc, const char *argv[])
     dropIndizes(&databaseHandle);
   }
 
+  // clean
+  if (cleanFlag)
+  {
+    cleanUpOrphanedEntries(&databaseHandle);
+    cleanUpDuplicateIndizes(&databaseHandle);
+  }
+
   // recreate newest data
   if (createNewestFlag)
   {
@@ -5870,13 +5916,6 @@ int main(int argc, const char *argv[])
   if (createAggregatesEntitiesFlag)
   {
     createAggregatesEntities(&databaseHandle,entityIdArray);
-  }
-
-  // clean
-  if (cleanFlag)
-  {
-    cleanUpOrphanedEntries(&databaseHandle);
-    cleanUpDuplicateIndizes(&databaseHandle);
   }
 
   // purge deleted storages
