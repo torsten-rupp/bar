@@ -78,6 +78,7 @@ LOCAL bool       infoEntriesFlag                      = FALSE;  // output index 
 LOCAL bool       infoLostEntriesFlag                  = FALSE;  // output index database lost entries info
 LOCAL bool       checkIntegrityFlag                   = FALSE;  // check database integrity
 LOCAL bool       checkOrphanedFlag                    = FALSE;  // check database orphaned entries
+LOCAL bool       checkDuplicatesFlag                  = FALSE;  // check database duplicate entries
 LOCAL bool       optimizeFlag                         = FALSE;  // optimize database
 LOCAL bool       createFlag                           = FALSE;  // create new index database
 LOCAL bool       createTriggersFlag                   = FALSE;  // re-create triggers
@@ -88,7 +89,8 @@ LOCAL bool       createNewestFlag                     = FALSE;  // re-create new
 LOCAL bool       createAggregatesDirectoryContentFlag = FALSE;  // re-create aggregates entities data
 LOCAL bool       createAggregatesEntitiesFlag         = FALSE;  // re-create aggregates entities data
 LOCAL bool       createAggregatesStoragesFlag         = FALSE;  // re-create aggregates storages data
-LOCAL bool       cleanFlag                            = FALSE;  // execute clean
+LOCAL bool       cleanOrphanedFlag                    = FALSE;  // execute clean orphaned entries
+LOCAL bool       cleanDuplicatesFlag                  = FALSE;  // execute clean duplicate entries
 LOCAL bool       purgeDeletedFlag                     = FALSE;  // execute purge deleted storages
 LOCAL bool       vacuumFlag                           = FALSE;  // execute vacuum
 LOCAL bool       showStoragesFlag                     = FALSE;  // show storage of job
@@ -150,7 +152,10 @@ LOCAL void printUsage(const char *programName, bool extendedFlag)
   printf("          --check                               - check index database\n");
   printf("          --check-integrity                     - check index database integrity\n");
   printf("          --check-orphaned                      - check index database for orphaned entries\n");
-  printf("          --clean                               - clean orphaned/duplicates in index database\n");
+  printf("          --check-duplicates                    - check index database for duplicate entries\n");
+  printf("          --clean                               - clean index database\n");
+  printf("          --clean-orphaned                      - clean orphaned in index database\n");
+  printf("          --clean-duplicates                    - clean duplicates in index database\n");
   printf("          --vacuum [<new file name>]            - collect and free unused file space\n");
   printf("          -s|--storages [<uuid>]                - print storages\n");
   printf("          -e|--entries [<uuid>]                 - print entries\n");
@@ -521,7 +526,7 @@ LOCAL void checkDatabaseIntegrity(DatabaseHandle *databaseHandle)
 LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
 {
   Errors error;
-  uint64 totalCount;
+  ulong  totalCount;
   int64  n;
 
   totalCount = 0LL;
@@ -545,7 +550,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
   printInfo("  image entries without fragments...");
   error = Database_getInteger64(databaseHandle,
                                 &n,
@@ -579,7 +584,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
 
   // check entries without associated file/image/directory/link/hardlink/special entry
   printInfo("  entries without file entry...");
@@ -599,7 +604,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
   printInfo("  entries without image entry...");
   error = Database_getInteger64(databaseHandle,
                                 &n,
@@ -617,7 +622,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
   printInfo("  entries without directory entry...");
   error = Database_getInteger64(databaseHandle,
                                 &n,
@@ -635,7 +640,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
   printInfo("  entries without link entry...");
   error = Database_getInteger64(databaseHandle,
                                 &n,
@@ -653,7 +658,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
   printInfo("  entries without hardlink entry...");
   error = Database_getInteger64(databaseHandle,
                                 &n,
@@ -671,7 +676,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
   printInfo("  entries without special entry...");
   error = Database_getInteger64(databaseHandle,
                                 &n,
@@ -689,9 +694,9 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
 
-  // clean-up storages without name
+  // check storages without name
   printInfo("  storages without name...");
   error = Database_getInteger64(databaseHandle,
                                 &n,
@@ -708,12 +713,83 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
     printInfo("FAIL!\n");
     printError("integrity check fail (error: %s)!\n",Error_getText(error));
   }
-  totalCount += (uint64)n;
+  totalCount += (ulong)n;
 
   if (totalCount > 0LL)
   {
     printWarning("Found orphaned entries. Clean is recommented");
   }
+
+  // free resources
+}
+
+/***********************************************************************\
+* Name   : checkDatabaseDuplicates
+* Purpose: check database duplicate entries
+* Input  : databaseHandle - database handle
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void checkDatabaseDuplicates(DatabaseHandle *databaseHandle)
+{
+  String name;
+  Errors error;
+  ulong  totalCount;
+  ulong  n;
+
+  name       = String_new();
+  totalCount = 0LL;
+
+  printInfo("Check duplicates:\n");
+
+  // check duplicate storages
+  printInfo("  storages...");
+  n = 0L;
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             assert(count == 1);
+                             assert(values != NULL);
+                             assert(values[0] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
+                             UNUSED_VARIABLE(userData);
+
+                             if (String_equalsCString(name,values[0]))
+                             {
+                               n++;
+                             }
+                             String_setCString(name,values[0]);
+
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT name FROM storages \
+                            WHERE deletedFlag!=1 \
+                            ORDER BY name \
+                           "
+                          );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%lld\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("duplicates check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += n;
+
+  if (totalCount > 0LL)
+  {
+    printWarning("Found orphaned entries. Clean is recommented");
+  }
+
+  // free resources
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -2952,15 +3028,15 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 }
 
 /***********************************************************************\
-* Name   : cleanUpOrphanedEntries
-* Purpose: purge orphaned entries (entries without storage)
+* Name   : cleanOrphanedEntries
+* Purpose: purge orphaned entries
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanUpOrphanedEntries(DatabaseHandle *databaseHandle)
+LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 {
   String storageName;
   ulong  total;
@@ -2973,7 +3049,7 @@ DatabaseId  maxId;
 
   printInfo("Clean-up orphaned:\n");
 
-  // clean-up fragments/directory entries/link entries/special entries without or an empty storage name
+  // clean fragments/directory entries/link entries/special entries without or an empty storage name
   printInfo("  entries without storage name...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -3023,7 +3099,7 @@ DatabaseId  maxId;
   printInfo("%lu\n",n);
   total += n;
 
-  // clean-up entries without fragments
+  // clean entries without fragments
   printInfo("  file entries without fragments...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -3069,7 +3145,7 @@ DatabaseId  maxId;
   total += n;
 
 #if 1
-  // clean-up entries without associated file/image/directory/link/hardlink/special entry
+  // clean entries without associated file/image/directory/link/hardlink/special entry
   printInfo("  entries without file entry...");
   n = 0L;
 #if 0
@@ -3170,7 +3246,7 @@ fprintf(stderr,"%s, %d: maxId=%lld\n",__FILE__,__LINE__,maxId);
   printInfo("%lu\n",n);
   total += n;
 
-  // clean-up storages without name
+  // clean storages without name
   printInfo("  storages without name...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
@@ -3189,7 +3265,7 @@ fprintf(stderr,"%s, %d: maxId=%lld\n",__FILE__,__LINE__,maxId);
 
 //TODO: obsolete, remove
 #if 0
-  // clean-up *Entries without entry
+  // clean *Entries without entry
   printInfo("  orphaned entries...");
   n = 0L;
   (void)Database_execute(databaseHandle,
@@ -3431,104 +3507,85 @@ fprintf(stderr,"%s, %d: maxId=%lld\n",__FILE__,__LINE__,maxId);
 }
 
 /***********************************************************************\
-* Name   : cleanUpDuplicateIndizes
-* Purpose: purge duplicate storage entries
+* Name   : cleanDuplicates
+* Purpose: purge duplicate entries
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void cleanUpDuplicateIndizes(DatabaseHandle *databaseHandle)
+LOCAL void cleanDuplicates(DatabaseHandle *databaseHandle)
 {
-  ulong  n;
+  String name;
   Errors error;
+  ulong  totalCount;
+  ulong  n;
 
   // init variables
+  name       = String_new();
+  totalCount = 0LL;
 
-  printInfo("Clean-up duplicates:\n");
+  printInfo("Clean duplicates:\n");
 
+  // check duplicate storages
+  printInfo("  storages:\n");
   n = 0L;
-  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
-  {
-    error = Database_execute(databaseHandle,
-                             CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+  error = Database_execute(databaseHandle,
+                           CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
+                           {
+                             DatabaseId storageId;
+
+                             assert(count == 2);
+                             assert(values != NULL);
+                             assert(values[0] != NULL);
+                             assert(values[1] != NULL);
+
+                             UNUSED_VARIABLE(columns);
+                             UNUSED_VARIABLE(count);
+                             UNUSED_VARIABLE(userData);
+
+                             storageId = (DatabaseId)atoll(values[0]);
+
+                             if (String_equalsCString(name,values[1]))
                              {
-                               int64      databaseId;
-                               const char *storageName;
+                               error = Database_execute(databaseHandle,
+                                                        CALLBACK_(NULL,NULL),  // databaseRowFunction
+                                                        NULL,  // changedRowCount
+                                                        "UPDATE storages \
+                                                         SET deletedFlag=1 \
+                                                         WHERE id=%lld \
+                                                        ",
+                                                        storageId
+                                                       );
+                               if (error != ERROR_NONE)
+                               {
+                                 return error;
+                               }
+                               n++;
+                               printInfo("    %s\n",values[1]);
+                             }
+                             String_setCString(name,values[1]);
 
-                               assert(count == 2);
-                               assert(values != NULL);
-                               assert(values[0] != NULL);
-
-                               UNUSED_VARIABLE(columns);
-                               UNUSED_VARIABLE(count);
-                               UNUSED_VARIABLE(userData);
-
-                               databaseId  = (int64)atoll(values[0]);
-                               storageName = values[1];
-
-                               (void)Database_execute(databaseHandle,
-                                                      CALLBACK_INLINE(Errors,(const char *columns[], const char *values[], uint count, void *userData),
-                                                      {
-                                                        int64 duplicateDatabaseId;
-
-                                                        assert(count == 1);
-                                                        assert(values != NULL);
-                                                        assert(values[0] != NULL);
-
-                                                        UNUSED_VARIABLE(columns);
-                                                        UNUSED_VARIABLE(count);
-                                                        UNUSED_VARIABLE(userData);
-
-                                                        duplicateDatabaseId = (int64)atoll(values[0]);
-
-                                                        (void)Database_execute(databaseHandle,
-                                                                               CALLBACK_(NULL,NULL),  // databaseRowFunction
-                                                                               NULL,  // changedRowCount,
-                                                                               "DELETE FROM storages \
-                                                                                WHERE id=%lld \
-                                                                               ",
-                                                                               duplicateDatabaseId
-                                                                              );
-
-                                                        n++;
-
-                                                        return ERROR_NONE;
-                                                      },NULL),
-                                                      NULL,  // changedRowCount
-                                                      "SELECT id \
-                                                       FROM storages \
-                                                       WHERE id!=%lld AND name='%s' \
-                                                      ",
-                                                      databaseId,
-                                                      storageName
-                                                     );
-
-                               return ERROR_NONE;
-                             },NULL),
-                             NULL,  // changedRowCount
-                             "SELECT id,name \
-                              FROM storages \
-                              WHERE deletedFlag!=1 \
-                             "
-                            );
-
-#if 0
-//              && Storage_equalNames(storageName,duplicateStorageName)
-//          error = Index_deleteStorage(indexHandle,deleteStorageIndexId);
-#endif
-    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
-  }
+                             return ERROR_NONE;
+                           },NULL),
+                           NULL,  // changedRowCount
+                           "SELECT id,name FROM storages \
+                            WHERE deletedFlag!=1 \
+                            ORDER BY name \
+                           "
+                          );
   if (error != ERROR_NONE)
   {
-    printError("clean duplicates fail (error: %s)!",Error_getText(error));
-    exit(EXITCODE_FAIL);
+    printInfo("FAIL!\n");
+    printError("clean duplicates fail (error: %s)!\n",Error_getText(error));
   }
+  totalCount += n;
 
   fprintf(stdout,"Total %lu duplicate entries\n",n);
 
   // free resources
+  String_delete(name);
 }
 
 /***********************************************************************\
@@ -5469,10 +5526,16 @@ int main(int argc, const char *argv[])
       checkOrphanedFlag = TRUE;
       i++;
     }
+    else if (stringEquals(argv[i],"--check-duplicates"))
+    {
+      checkDuplicatesFlag = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--check"))
     {
-      checkIntegrityFlag = TRUE;
-      checkOrphanedFlag  = TRUE;
+      checkIntegrityFlag  = TRUE;
+      checkOrphanedFlag   = TRUE;
+      checkDuplicatesFlag = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--optimize"))
@@ -5568,9 +5631,20 @@ int main(int argc, const char *argv[])
       stringTokenizerDone(&stringTokenizer);
       i++;
     }
+    else if (stringEquals(argv[i],"--clean-orphaned"))
+    {
+      cleanOrphanedFlag = TRUE;
+      i++;
+    }
+    else if (stringEquals(argv[i],"--clean-duplicates"))
+    {
+      cleanDuplicatesFlag = TRUE;
+      i++;
+    }
     else if (stringEquals(argv[i],"--clean"))
     {
-      cleanFlag = TRUE;
+      cleanOrphanedFlag   = TRUE;
+      cleanDuplicatesFlag = TRUE;
       i++;
     }
     else if (stringEquals(argv[i],"--purge"))
@@ -5802,6 +5876,7 @@ int main(int argc, const char *argv[])
           && !infoLostEntriesFlag
           && !checkIntegrityFlag
           && !checkOrphanedFlag
+          && !checkDuplicatesFlag
           && !optimizeFlag
           && !createTriggersFlag
           && !dropTriggersFlag
@@ -5811,7 +5886,8 @@ int main(int argc, const char *argv[])
           && !createAggregatesDirectoryContentFlag
           && !createAggregatesEntitiesFlag
           && !createAggregatesStoragesFlag
-          && !cleanFlag
+          && !cleanOrphanedFlag
+          && !cleanDuplicatesFlag
           && !purgeDeletedFlag
           && !vacuumFlag
           && !showStoragesFlag
@@ -5861,6 +5937,10 @@ int main(int argc, const char *argv[])
   {
     checkDatabaseOrphaned(&databaseHandle);
   }
+  if (checkDuplicatesFlag)
+  {
+    checkDatabaseDuplicates(&databaseHandle);
+  }
 
   if (optimizeFlag)
   {
@@ -5892,10 +5972,13 @@ int main(int argc, const char *argv[])
   }
 
   // clean
-  if (cleanFlag)
+  if (cleanOrphanedFlag)
   {
-    cleanUpOrphanedEntries(&databaseHandle);
-    cleanUpDuplicateIndizes(&databaseHandle);
+    cleanOrphanedEntries(&databaseHandle);
+  }
+  if (cleanDuplicatesFlag)
+  {
+    cleanDuplicates(&databaseHandle);
   }
 
   // recreate newest data
