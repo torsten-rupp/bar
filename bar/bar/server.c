@@ -16640,7 +16640,7 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
   assert(clientInfo != NULL);
   assert(argumentMap != NULL);
 
-  // get toJobUUID, toScheduleUUID, toEntityId, archive type, jobUUID/entityId/storageId
+  // get toJobUUID/toEntityId, toScheduleUUID, toHostName, archive type, createdDateTime, jobUUID/entityId/storageId
   String_clear(toJobUUID);
   toEntityId = INDEX_ID_NONE;
   if (   !StringMap_getString(argumentMap,"toJobUUID",toJobUUID,NULL)
