@@ -5712,17 +5712,10 @@ LOCAL Errors assignEntityStoragesToEntity(IndexHandle *indexHandle,
                              "UPDATE storages \
                               SET uuidId  =%lld, \
                                   entityId=%lld \
-                              WHERE id IN (      SELECT storageId FROM entryFragments   LEFT JOIN entries ON entries.id=entryFragments.entryId   WHERE entries.entityId=%lld \
-                                           UNION SELECT storageId FROM directoryEntries LEFT JOIN entries ON entries.id=directoryEntries.entryId WHERE entries.entityId=%lld \
-                                           UNION SELECT storageId FROM linkEntries      LEFT JOIN entries ON entries.id=linkEntries.entryId      WHERE entries.entityId=%lld \
-                                           UNION SELECT storageId FROM specialEntries   LEFT JOIN entries ON entries.id=specialEntries.entryId   WHERE entries.entityId=%lld \
-                                          ) \
+                              WHERE entityId=%lld \
                              ",
                              toUUIDId,
                              toEntityId,
-                             entityId,
-                             entityId,
-                             entityId,
                              entityId
                             );
   }
