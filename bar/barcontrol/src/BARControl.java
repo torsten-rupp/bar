@@ -2261,6 +2261,73 @@ if (false) {
     return jobUUID[0];
   }
 
+  /** connect to server
+   * @param serverName server name
+   * @param serverPort server port
+   * @param serverTLSPort server TLS port
+   * @param serverNoTLS server no TLS
+   * @param forceTLS force TLS
+   * @param serverCAFileName server certificate authority file
+   * @param serverCertificateFileName server certificate file
+   * @param serverKeyFileName server key file
+   * @param password login password
+   */
+  private void connect(String    serverName,
+                       int       serverPort,
+                       int       serverTLSPort,
+                       boolean   serverNoTLS,
+                       boolean   forceTLS,
+                       String    serverCAFileName,
+                       String    serverCertificateFileName,
+                       String    serverKeyFileName,
+                       String    password
+                      )
+    throws ConnectionError
+  {
+    BusyDialog busyDialog = null;
+    {
+      // process SWT events
+      while (display.readAndDispatch())
+      {
+        // nothing to do
+      }
+
+      // connect dialog
+      if (shell != null)
+      {
+        busyDialog = new BusyDialog(shell,
+                                    BARControl.tr("Connect"),
+                                    400,
+                                    60,
+                                    BARControl.tr("Try to connect to ''"+serverName+"''\u2026"),
+                                    BusyDialog.AUTO_ANIMATE
+                                   );
+      }
+    }
+    try
+    {
+      BARServer.connect(display,
+                        serverName,
+                        serverPort,
+                        serverTLSPort,
+                        serverNoTLS,
+                        forceTLS,
+                        password,
+                        serverCAFileName,
+                        serverCertificateFileName,
+                        serverKeyFileName
+                       );
+    }
+    catch (CommunicationError error)
+    {
+      throw new ConnectionError(error.getMessage());
+    }
+    finally
+    {
+      if (busyDialog != null) busyDialog.close();
+    }
+  }
+
   /** init loaded classes/JARs watchdog
    */
   private void initClassesWatchDog()
@@ -2664,9 +2731,8 @@ if (false) {
             if (menuItem.getSelection())
             {
               boolean connectOkFlag = false;
-              String  errorMessage  = null;
 
-              final Settings.Server defaultServer = Settings.getLastServer();
+              Settings.Server defaultServer = Settings.getLastServer();
               loginData = new LoginData((defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_PORT,
                                         (defaultServer != null) ? defaultServer.port : Settings.DEFAULT_SERVER_TLS_PORT,
                                         !Settings.serverNoTLS && Settings.serverForceTLS,
@@ -2676,46 +2742,26 @@ if (false) {
               {
                 try
                 {
-                  BARServer.connect(display,
-                                    loginData.serverName,
-                                    loginData.serverPort,
-                                    loginData.serverTLSPort,
-                                    Settings.serverNoTLS,
-                                    loginData.forceTLS,
-                                    loginData.password,
-                                    Settings.serverCAFileName,
-                                    Settings.serverCertificateFileName,
-                                    Settings.serverKeyFileName
-                                   );
-                  connectOkFlag = true;
-                }
-                catch (ConnectionError error)
-                {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
-                }
-                catch (CommunicationError error)
-                {
-                  if ((errorMessage == null) && (error.getMessage() != null)) errorMessage = error.getMessage();
-                }
+                  connect(loginData.serverName,
+                          loginData.serverPort,
+                          loginData.serverTLSPort,
+                          Settings.serverNoTLS,
+                          loginData.forceTLS,
+                          Settings.serverCAFileName,
+                          Settings.serverCertificateFileName,
+                          Settings.serverKeyFileName,
+                          loginData.password
+                         );
 
-                if (connectOkFlag)
-                {
                   updateServerMenu();
 
                   // notify new server
                   Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
                 }
-                else
+                catch (ConnectionError error)
                 {
                   // show error message
-                  if (errorMessage != null)
-                  {
-                    Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+errorMessage);
-                  }
-                  else
-                  {
-                    Dialogs.error(new Shell(),BARControl.tr("Connection fail"));
-                  }
+                  Dialogs.error(new Shell(),BARControl.tr("Connection fail")+":\n\n"+error.getMessage());
 
                   // revert selection
                   if (serverMenuLastSelectedItem != null)
@@ -3331,24 +3377,29 @@ if (false) {
       {
         try
         {
-          BARServer.connect(display,
-                            loginData.serverName,
-                            loginData.serverPort,
-                            loginData.serverTLSPort,
-                            Settings.serverNoTLS,
-                            loginData.forceTLS,
-                            loginData.password,
-                            Settings.serverCAFileName,
-                            Settings.serverCertificateFileName,
-                            Settings.serverKeyFileName
-                           );
+          connect(loginData.serverName,
+                  loginData.serverPort,
+                  loginData.serverTLSPort,
+                  Settings.serverNoTLS,
+                  loginData.forceTLS,
+                  Settings.serverCAFileName,
+                  Settings.serverCertificateFileName,
+                  Settings.serverKeyFileName,
+                  loginData.password
+                 );
+
+          updateServerMenu();
+
+          // notify new server
+          Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+
           connectOkFlag = true;
         }
-        catch (ConnectionError reconnectError)
+        catch (ConnectionError error)
         {
           if (!Dialogs.confirmError(new Shell(),
                                     BARControl.tr("Connection fail"),
-                                    reconnectError.getMessage(),
+                                    error.getMessage(),
                                     BARControl.tr("Try again"),
                                     BARControl.tr("Cancel")
                                    )
@@ -3358,11 +3409,11 @@ if (false) {
             break;
           }
         }
-        catch (CommunicationError reconnectError)
+        catch (CommunicationError error)
         {
           if (!Dialogs.confirmError(new Shell(),
                                     BARControl.tr("Connection fail"),
-                                    reconnectError.getMessage(),
+                                    error.getMessage(),
                                     BARControl.tr("Try again"),
                                     BARControl.tr("Cancel")
                                    )
@@ -3383,24 +3434,29 @@ if (false) {
         // try to connect to server
         try
         {
-          BARServer.connect(display,
-                            loginData.serverName,
-                            loginData.serverPort,
-                            loginData.serverTLSPort,
-                            Settings.serverNoTLS,
-                            loginData.forceTLS,
-                            loginData.password,
-                            Settings.serverCAFileName,
-                            Settings.serverCertificateFileName,
-                            Settings.serverKeyFileName
-                           );
+          connect(loginData.serverName,
+                  loginData.serverPort,
+                  loginData.serverTLSPort,
+                  Settings.serverNoTLS,
+                  loginData.forceTLS,
+                  Settings.serverCAFileName,
+                  Settings.serverCertificateFileName,
+                  Settings.serverKeyFileName,
+                  loginData.password
+                 );
+
+          updateServerMenu();
+
+          // notify new server
+          Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+
           connectOkFlag = true;
         }
-        catch (ConnectionError reconnectError)
+        catch (ConnectionError error)
         {
           if (!Dialogs.confirmError(new Shell(),
                                     BARControl.tr("Connection fail"),
-                                    reconnectError.getMessage(),
+                                    error.getMessage(),
                                     BARControl.tr("Try again"),
                                     BARControl.tr("Cancel")
                                    )
@@ -3410,11 +3466,11 @@ if (false) {
             break;
           }
         }
-        catch (CommunicationError reconnectError)
+        catch (CommunicationError error)
         {
           if (!Dialogs.confirmError(new Shell(),
                                     BARControl.tr("Connection fail"),
-                                    reconnectError.getMessage(),
+                                    error.getMessage(),
                                     BARControl.tr("Try again"),
                                     BARControl.tr("Cancel")
                                    )
@@ -3839,17 +3895,22 @@ if (false) {
                                        );
               try
               {
-                BARServer.connect(display,
-                                  loginData.serverName,
-                                  loginData.serverPort,
-                                  loginData.serverTLSPort,
-                                  Settings.serverNoTLS,
-                                  loginData.forceTLS,
-                                  loginData.password,
-                                  Settings.serverCAFileName,
-                                  Settings.serverCertificateFileName,
-                                  Settings.serverKeyFileName
-                                 );
+                connect(loginData.serverName,
+                        loginData.serverPort,
+                        loginData.serverTLSPort,
+                        Settings.serverNoTLS,
+                        loginData.forceTLS,
+                        Settings.serverCAFileName,
+                        Settings.serverCertificateFileName,
+                        Settings.serverKeyFileName,
+                        loginData.password
+                       );
+
+                updateServerMenu();
+
+                // notify new server
+                Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+
                 connectOkFlag = true;
               }
               catch (ConnectionError error)
@@ -3875,17 +3936,22 @@ if (false) {
               {
                 try
                 {
-                  BARServer.connect(display,
-                                    loginData.serverName,
-                                    loginData.serverPort,
-                                    loginData.serverTLSPort,
-                                    true,  // noTLS,
-                                    false,  // forceTLS
-                                    loginData.password,
-                                    (String)null,  // serverCAFileName
-                                    (String)null,  // serverCertificateFileName
-                                    (String)null  // serverKeyFileName
-                                   );
+                  connect(loginData.serverName,
+                          loginData.serverPort,
+                          loginData.serverTLSPort,
+                          true,  // noTLS,
+                          false,  // forceTLS
+                          (String)null,  // serverCAFileName
+                          (String)null,  // serverCertificateFileName
+                          (String)null,  // serverKeyFileName
+                          loginData.password
+                         );
+
+                  updateServerMenu();
+
+                  // notify new server
+                  Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+
                   connectOkFlag = true;
                 }
                 catch (ConnectionError error)
@@ -3912,17 +3978,22 @@ if (false) {
               {
                 try
                 {
-                  BARServer.connect(display,
-                                    loginData.serverName,
-                                    loginData.serverPort,
-                                    loginData.serverTLSPort,
-                                    Settings.serverNoTLS,
-                                    loginData.forceTLS,
-                                    loginData.password,
-                                    Settings.serverCAFileName,
-                                    Settings.serverCertificateFileName,
-                                    Settings.serverKeyFileName
-                                   );
+                  connect(loginData.serverName,
+                          loginData.serverPort,
+                          loginData.serverTLSPort,
+                          Settings.serverNoTLS,
+                          loginData.forceTLS,
+                          Settings.serverCAFileName,
+                          Settings.serverCertificateFileName,
+                          Settings.serverKeyFileName,
+                          loginData.password
+                         );
+
+                  updateServerMenu();
+
+                  // notify new server
+                  Widgets.notify(shell,BARControl.USER_EVENT_SELECT_SERVER);
+
                   connectOkFlag = true;
                 }
                 catch (ConnectionError error)
@@ -4440,16 +4511,16 @@ if (false) {
         // connect to server
         try
         {
-          BARServer.connect(loginData.serverName,
-                            loginData.serverPort,
-                            loginData.serverTLSPort,
-                            Settings.serverNoTLS,
-                            loginData.forceTLS,
-                            loginData.password,
-                            Settings.serverCAFileName,
-                            Settings.serverCertificateFileName,
-                            Settings.serverKeyFileName
-                           );
+          connect(loginData.serverName,
+                  loginData.serverPort,
+                  loginData.serverTLSPort,
+                  Settings.serverNoTLS,
+                  loginData.forceTLS,
+                  Settings.serverCAFileName,
+                  Settings.serverCertificateFileName,
+                  Settings.serverKeyFileName,
+                  loginData.password
+                 );
         }
         catch (ConnectionError error)
         {
@@ -5420,17 +5491,16 @@ Dprintf.dprintf("still not supported");
             // try to connect to server with preset data
             try
             {
-              BARServer.connect(display,
-                                loginData.serverName,
-                                loginData.serverPort,
-                                loginData.serverTLSPort,
-                                Settings.serverNoTLS,
-                                loginData.forceTLS,
-                                loginData.password,
-                                Settings.serverCAFileName,
-                                Settings.serverCertificateFileName,
-                                Settings.serverKeyFileName
-                               );
+              connect(loginData.serverName,
+                      loginData.serverPort,
+                      loginData.serverTLSPort,
+                      Settings.serverNoTLS,
+                      loginData.forceTLS,
+                      Settings.serverCAFileName,
+                      Settings.serverCertificateFileName,
+                      Settings.serverKeyFileName,
+                      loginData.password
+                     );
               connectOkFlag = true;
             }
             catch (ConnectionError error)
@@ -5443,17 +5513,16 @@ Dprintf.dprintf("still not supported");
             // try to connect to server with empty password
             try
             {
-              BARServer.connect(display,
-                                loginData.serverName,
-                                loginData.serverPort,
-                                loginData.serverTLSPort,
-                                Settings.serverNoTLS,
-                                loginData.forceTLS,
-                                "",  // password
-                                Settings.serverCAFileName,
-                                Settings.serverCertificateFileName,
-                                Settings.serverKeyFileName
-                               );
+              connect(loginData.serverName,
+                      loginData.serverPort,
+                      loginData.serverTLSPort,
+                      Settings.serverNoTLS,
+                      loginData.forceTLS,
+                      Settings.serverCAFileName,
+                      Settings.serverCertificateFileName,
+                      Settings.serverKeyFileName,
+                      ""  // password
+                     );
               connectOkFlag = true;
             }
             catch (ConnectionError error)
@@ -5481,17 +5550,17 @@ Dprintf.dprintf("still not supported");
           {
             try
             {
-              BARServer.connect(display,
-                                loginData.serverName,
-                                loginData.serverPort,
-                                loginData.serverTLSPort,
-                                Settings.serverNoTLS,
-                                loginData.forceTLS,
-                                loginData.password,
-                                Settings.serverCAFileName,
-                                Settings.serverCertificateFileName,
-                                Settings.serverKeyFileName
-                               );
+              connect(loginData.serverName,
+                      loginData.serverPort,
+                      loginData.serverTLSPort,
+                      Settings.serverNoTLS,
+                      loginData.forceTLS,
+                      Settings.serverCAFileName,
+                      Settings.serverCertificateFileName,
+                      Settings.serverKeyFileName,
+                      loginData.password
+
+                     );
               connectOkFlag = true;
             }
             catch (ConnectionError error)
@@ -5528,16 +5597,15 @@ Dprintf.dprintf("still not supported");
             {
               try
               {
-                BARServer.connect(display,
-                                  loginData.serverName,
+                BARServer.connect(loginData.serverName,
                                   loginData.serverPort,
                                   loginData.serverTLSPort,
                                   true, // serverNoTLS,
                                   false,  // forceTLS
-                                  loginData.password,
                                   (String)null,  // serverCAFileName
                                   (String)null,  // serverCertificateFileName
-                                  (String)null  // serverKeyFileName
+                                  (String)null,  // serverKeyFileName
+                                  loginData.password
                                  );
                 connectOkFlag = true;
               }
