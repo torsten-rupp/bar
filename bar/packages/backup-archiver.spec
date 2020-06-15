@@ -155,6 +155,7 @@ rm -f /etc/init.d/barserver
 %defattr(-,root,root)
 
 %{_bindir}/bar
+%{_bindir}/bar.sym
 %{_bindir}/bar-debug
 %{_bindir}/bar-debug.sym
 %{_bindir}/barcontrol
