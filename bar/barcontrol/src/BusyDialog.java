@@ -45,15 +45,16 @@ public class BusyDialog
   // --------------------------- constants --------------------------------
 
   // busy dialog flags
-  public final static int NONE          = 0;
-  public final static int TEXT0         = 1 <<  0;   // show text line 0
-  public final static int TEXT1         = 1 <<  1;   // show text line 1
-  public final static int PROGRESS_BAR0 = 1 <<  2;   // show progress bar 0
-  public final static int PROGRESS_BAR1 = 1 <<  3;   // show progress bar 1
-  public final static int LIST          = 1 <<  4;   // show list
-  public final static int ABORT_CLOSE   = 1 <<  5;   // enable abort button
+  public final static int NONE               = 0;
+  public final static int TEXT0              = 1 <<  0;   // show text line 0
+  public final static int TEXT1              = 1 <<  1;   // show text line 1
+  public final static int PROGRESS_BAR0      = 1 <<  2;   // show progress bar 0
+  public final static int PROGRESS_BAR1      = 1 <<  3;   // show progress bar 1
+  public final static int LIST               = 1 <<  4;   // show list
+  public final static int ABORT_CLOSE        = 1 <<  5;   // abort/close button
+  public final static int ENABLE_ABORT_CLOSE = 1 <<  6;   // enable abort/close button
 
-  public final static int AUTO_ANIMATE  = 1 << 24;   // auto animate
+  public final static int AUTO_ANIMATE       = 1 << 24;   // auto animate
 
   // --------------------------- variables --------------------------------
   private static I18n                         i18n;
@@ -271,28 +272,35 @@ public class BusyDialog
     composite.setLayout(new TableLayout(0.0,1.0));
     composite.setLayoutData(new TableLayoutData(1,0,TableLayoutData.WE,0,0,4,4));
     {
-      widgetAbortCloseButton = new Button(composite,SWT.CENTER|SWT.BORDER);
-      widgetAbortCloseButton.setText(BusyDialog.tr("Abort"));
-      widgetAbortCloseButton.setEnabled((flags & ABORT_CLOSE) != 0);
-      widgetAbortCloseButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,120,SWT.DEFAULT));
-      widgetAbortCloseButton.addSelectionListener(new SelectionListener()
+      if ((flags & ABORT_CLOSE) != 0)
       {
-        public void widgetDefaultSelected(SelectionEvent selectionEvent)
+        widgetAbortCloseButton = new Button(composite,SWT.CENTER|SWT.BORDER);
+        widgetAbortCloseButton.setText(BusyDialog.tr("Abort"));
+        widgetAbortCloseButton.setEnabled((flags & ENABLE_ABORT_CLOSE) != 0);
+        widgetAbortCloseButton.setLayoutData(new TableLayoutData(0,0,TableLayoutData.NONE,0,0,0,0,120,SWT.DEFAULT));
+        widgetAbortCloseButton.addSelectionListener(new SelectionListener()
         {
-        }
-        public void widgetSelected(SelectionEvent selectionEvent)
-        {
-          Button widget = (Button)selectionEvent.widget;
-          if (isDone())
+          public void widgetDefaultSelected(SelectionEvent selectionEvent)
           {
-            close();
           }
-          else
+          public void widgetSelected(SelectionEvent selectionEvent)
           {
-            abort();
+            Button widget = (Button)selectionEvent.widget;
+            if (isDone())
+            {
+              close();
+            }
+            else
+            {
+              abort();
+            }
           }
-        }
-      });
+        });
+      }
+      else
+      {
+        widgetAbortCloseButton = null;
+      }
     }
 
     // resize handler
@@ -333,7 +341,7 @@ public class BusyDialog
       {
         Shell widget = (Shell)event.widget;
 
-        if ((flags & ABORT_CLOSE) != 0)
+        if ((flags & ENABLE_ABORT_CLOSE) != 0)
         {
           abort();
         }
@@ -385,7 +393,7 @@ public class BusyDialog
     listEmptyFlag       = true;
     redrawRequestedFlag = false;
     dialog.open();
-    widgetAbortCloseButton.setFocus();
+    if (widgetAbortCloseButton != null) widgetAbortCloseButton.setFocus();
     display.update();
   }
 
@@ -434,7 +442,7 @@ public class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, int width, int height, String message)
   {
-    this(parentShell,title,width,height,message,ABORT_CLOSE);
+    this(parentShell,title,width,height,message,ABORT_CLOSE|ENABLE_ABORT_CLOSE);
   }
 
   /** create busy dialog
@@ -477,7 +485,7 @@ public class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title, int width, int height)
   {
-    this(parentShell,title,width,height,ABORT_CLOSE);
+    this(parentShell,title,width,height,ABORT_CLOSE|ENABLE_ABORT_CLOSE);
   }
 
   /** create busy dialog
@@ -539,7 +547,7 @@ public class BusyDialog
    */
   public BusyDialog(Shell parentShell, String title)
   {
-    this(parentShell,title,ABORT_CLOSE);
+    this(parentShell,title,ABORT_CLOSE|ENABLE_ABORT_CLOSE);
   }
 
   /** add listener to dialog
@@ -585,7 +593,7 @@ public class BusyDialog
     {
       public void run()
       {
-        if (!widgetAbortCloseButton.isDisposed())
+        if ((widgetAbortCloseButton != null) && !widgetAbortCloseButton.isDisposed())
         {
           // set progress bars to 100%
           if (widgetProgressBar0 != null) widgetProgressBar0.setSelection(widgetProgressBar0.getMaximum());
@@ -616,7 +624,7 @@ public class BusyDialog
     {
       public void run()
       {
-        if (!widgetAbortCloseButton.isDisposed())
+        if ((widgetAbortCloseButton != null) && !widgetAbortCloseButton.isDisposed())
         {
           widgetAbortCloseButton.setEnabled(false);
         }

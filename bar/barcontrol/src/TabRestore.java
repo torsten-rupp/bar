@@ -7300,7 +7300,7 @@ Dprintf.dprintf("");
             {
               try
               {
-                storageCount[0] = BARServer.getInt(StringParser.format("INDEX_STORAGES_INFO indexStateSet=%s indexModeSet=* name=%'S",
+                storageCount[0] = BARServer.getInt(StringParser.format("INDEX_STORAGES_LIST_INFO indexStateSet=%s indexModeSet=* name=%'S",
                                                                        updateStorageTreeTableThread.getStorageIndexStateSet().nameList("|"),
                                                                        updateStorageTreeTableThread.getStorageName()
                                                                       ),
@@ -7348,7 +7348,13 @@ Dprintf.dprintf("");
                 // check/uncheck all entries
                 clearStorageList();
 
-                final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
+                final BusyDialog busyDialog = new BusyDialog(shell,
+                                                             BARControl.tr("Mark entries"),
+                                                             500,
+                                                             100,
+                                                             (String)null,
+                                                             BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                                            );
                 try
                 {
                   final IndexIdSet indexIdSet = new IndexIdSet();
@@ -7816,7 +7822,13 @@ Dprintf.dprintf("");
       final BusyDialog busyDialog;
       {
         BARControl.waitCursor();
-        busyDialog = new BusyDialog(shell,BARControl.tr("Assign storages"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        busyDialog = new BusyDialog(shell,
+                                    BARControl.tr("Assign storages"),
+                                    500,
+                                    100,
+                                    (String)null,
+                                    BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                   );
         busyDialog.setMaximum(1+indexDataHashSet.size());
       }
       try
@@ -7968,7 +7980,13 @@ Dprintf.dprintf("");
       final BusyDialog busyDialog;
       {
         BARControl.waitCursor();
-        busyDialog = new BusyDialog(shell,BARControl.tr("Assign storages"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        busyDialog = new BusyDialog(shell,
+                                    BARControl.tr("Assign storages"),
+                                    500,
+                                    100,
+                                    (String)null,
+                                    BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                   );
         busyDialog.setMaximum(indexDataHashSet.size());
       }
       try
@@ -8065,7 +8083,13 @@ Dprintf.dprintf("");
       final BusyDialog busyDialog;
       {
         BARControl.waitCursor();
-        busyDialog = new BusyDialog(shell,BARControl.tr("Assign storages"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        busyDialog = new BusyDialog(shell,
+                                    BARControl.tr("Assign storages"),
+                                    500,
+                                    100,
+                                    (String)null,
+                                    BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                   );
         busyDialog.setMaximum(indexDataHashSet.size());
       }
       try
@@ -8167,7 +8191,13 @@ Dprintf.dprintf("");
       final BusyDialog busyDialog;
       {
         BARControl.waitCursor();
-        busyDialog = new BusyDialog(shell,BARControl.tr("Set archive type"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        busyDialog = new BusyDialog(shell,
+                                    BARControl.tr("Set archive type"),
+                                    500,
+                                    100,
+                                    (String)null,
+                                    BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                   );
         busyDialog.setMaximum(indexDataHashSet.size());
       }
       try
@@ -8534,7 +8564,7 @@ Dprintf.dprintf("");
                                                    BARControl.tr("Add indizes"),
                                                    500,200,
                                                    (String)null,
-                                                   BusyDialog.PROGRESS_BAR0|BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE
+                                                   BusyDialog.PROGRESS_BAR0|BusyDialog.TEXT0|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
                                                   );
 
       Background.run(new BackgroundRunnable(busyDialog,storagePath)
@@ -8549,38 +8579,38 @@ Dprintf.dprintf("");
             BARServer.executeCommand(StringParser.format("INDEX_STORAGE_ADD pattern=%'S patternType=GLOB progressSteps=1000",
                                                          new File(storagePath,"*").getPath()
                                                         ),
-                         0,  // debugLevel
-                         new Command.ResultHandler()
-                         {
-                           @Override
-                           public void handle(int i, ValueMap valueMap)
-                           {
-                             long   storageId  = valueMap.getLong  ("storageId", 0L);
-                             String name       = valueMap.getString("name",      "");
-                             long   doneCount  = valueMap.getLong  ("doneCount", 0L);
-                             long   totalCount = valueMap.getLong  ("totalCount",0L);
+                                     0,  // debugLevel
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                       {
+                                         long   storageId  = valueMap.getLong  ("storageId", 0L);
+                                         String name       = valueMap.getString("name",      "");
+                                         long   doneCount  = valueMap.getLong  ("doneCount", 0L);
+                                         long   totalCount = valueMap.getLong  ("totalCount",0L);
 
-                             if      ((storageId != 0) && (!name.isEmpty()))
-                             {
-                               n[0]++;
-                               busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
-                               busyDialog.updateList(name);
-                             }
-                             else if (totalCount > 0)
-                             {
-                               busyDialog.updateProgressBar(0,((double)doneCount*100.0)/(double)totalCount);
-                             }
-                           }
-                         },
-                         new BusyIndicator()
-                         {
-                           @Override
-                           public boolean isAborted()
-                           {
-                             return busyDialog.isAborted();
-                           }
-                         }
-                        );
+                                         if      ((storageId != 0) && (!name.isEmpty()))
+                                         {
+                                           n[0]++;
+                                           busyDialog.updateText(BARControl.tr("Found archives: {0}",n[0]));
+                                           busyDialog.updateList(name);
+                                         }
+                                         else if (totalCount > 0)
+                                         {
+                                           busyDialog.updateProgressBar(0,((double)doneCount*100.0)/(double)totalCount);
+                                         }
+                                       }
+                                     },
+                                     new BusyIndicator()
+                                     {
+                                       @Override
+                                       public boolean isAborted()
+                                       {
+                                         return busyDialog.isAborted();
+                                       }
+                                     }
+                                    );
             busyDialog.done();
             updateStorageTreeTableThread.triggerUpdate();
           }
@@ -8667,7 +8697,13 @@ Dprintf.dprintf("");
                          )
         )
       {
-        final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Remove indizes"),500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        final BusyDialog busyDialog = new BusyDialog(shell,
+                                                     BARControl.tr("Remove indizes"),
+                                                     500,
+                                                     100,
+                                                     (String)null,
+                                                     BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                                    );
         busyDialog.setMaximum(indexDataHashSet.size());
 
         Background.run(new BackgroundRunnable(busyDialog,indexDataHashSet)
@@ -8795,13 +8831,13 @@ Dprintf.dprintf("");
     try
     {
       // get number of indizes with error state
-      long errorTotalEntryCount;
+      long errorTotalStorageCount;
       try
       {
-        errorTotalEntryCount = BARServer.getLong("INDEX_STORAGES_INFO entityId=* indexStateSet=ERROR indexModeSet=* name=*",
-                                                 1,  // debugLevel
-                                                 "totalEntryCount"
-                                                );
+        errorTotalStorageCount = BARServer.getLong("INDEX_STORAGE_LIST_INFO entityId=* indexStateSet=ERROR indexModeSet=* name=*",
+                                                   1,  // debugLevel
+                                                   "totalStorageCount"
+                                                  );
       }
       catch (final Exception exception)
       {
@@ -8816,12 +8852,18 @@ Dprintf.dprintf("");
         return;
       }
 
-      if (errorTotalEntryCount > 0)
+      if (errorTotalStorageCount > 0)
       {
-        if (Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#indizes|1#index|1<indizes} with error state?",errorTotalEntryCount)))
+        if (Dialogs.confirm(shell,BARControl.tr("Remove {0} {0,choice,0#storages|1#storage|1<storages} with error state?",errorTotalStorageCount)))
         {
-          final BusyDialog busyDialog = new BusyDialog(shell,"Remove indizes with error",500,100,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
-          busyDialog.setMaximum(errorTotalEntryCount);
+          final BusyDialog busyDialog = new BusyDialog(shell,
+                                                       "Remove storages with error",
+                                                       500,
+                                                       100,
+                                                       (String)null,
+                                                       BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                                      );
+          busyDialog.setMaximum(errorTotalStorageCount);
 
           Background.run(new BackgroundRunnable(busyDialog)
           {
@@ -8833,7 +8875,9 @@ Dprintf.dprintf("");
                 ValueMap       valueMap     = new ValueMap();
 
                 // remove indizes with error state
-                Command command = BARServer.runCommand("INDEX_REMOVE state=ERROR",0);
+                Command command = BARServer.runCommand("INDEX_REMOVE state=ERROR",
+                                                       0  // debug level
+                                                      );
 
                 long n = 0;
                 while (   !command.endOfData()
@@ -9079,7 +9123,13 @@ Dprintf.dprintf("");
                          )
          )
       {
-        final BusyDialog busyDialog = new BusyDialog(shell,"Delete storage indizes and archives",500,150,null,BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE);
+        final BusyDialog busyDialog = new BusyDialog(shell,
+                                                     BARControl.tr("Delete storage indizes and archives"),
+                                                     500,
+                                                     150,
+                                                     (String)null,
+                                                     BusyDialog.TEXT0|BusyDialog.PROGRESS_BAR0|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                                    );
         busyDialog.setMaximum(storageMap.size());
 
         Background.run(new BackgroundRunnable(busyDialog,storageMap)
@@ -9362,7 +9412,13 @@ Dprintf.dprintf("");
       {
         clearEntryList();
 
-        final BusyDialog busyDialog = new BusyDialog(shell,BARControl.tr("Mark entries"),500,100,null,BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE);
+        final BusyDialog busyDialog = new BusyDialog(shell,
+                                                     BARControl.tr("Mark entries"),
+                                                     500,
+                                                     100,
+                                                     (String)null,
+                                                     BusyDialog.PROGRESS_BAR0|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE
+                                                    );
         try
         {
           final IndexIdSet entryIdSet = new IndexIdSet();
@@ -10065,7 +10121,7 @@ Dprintf.dprintf("");
                                                    500,
                                                    300,
                                                    null,
-                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE,
+                                                   BusyDialog.TEXT0|BusyDialog.TEXT1|BusyDialog.PROGRESS_BAR0|BusyDialog.PROGRESS_BAR1|BusyDialog.LIST|BusyDialog.AUTO_ANIMATE|BusyDialog.ABORT_CLOSE|BusyDialog.ENABLE_ABORT_CLOSE,
                                                    250  // max. lines
                                                   );
       busyDialog.updateText(2,"%s",BARControl.tr("Failed entries")+":");
