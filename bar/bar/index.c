@@ -350,11 +350,13 @@ LOCAL uint64                     importLastProgressTimestamp;
       error = beginPurgeTransaction(indexHandle,&transactionFlag); \
     } \
     if (error == ERROR_NONE) \
-    ({ \
-      auto void __closure__(void); \
-      \
-      void __closure__(void)block; __closure__; \
-    })(); \
+    { \
+      error = ({ \
+                auto typeof(error) __closure__(void); \
+                \
+                typeof(error) __closure__(void)block; __closure__; \
+              })(); \
+    } \
     (void)endPurgeTransaction(indexHandle,&transactionFlag); \
   } \
   while (0)
@@ -2102,8 +2104,6 @@ LOCAL Errors purge(IndexHandle *indexHandle,
   va_list arguments;
   Errors  error;
   ulong   changedRowCount;
-ulong   x;
-int64 l;
 
   // init variables
   filterString = String_new();
@@ -2114,7 +2114,6 @@ int64 l;
   va_end(arguments);
 
   error = ERROR_NONE;
-x = 0;
   do
   {
     changedRowCount = 0;
@@ -2134,7 +2133,6 @@ x = 0;
       if (deletedCounter != NULL)(*deletedCounter) += changedRowCount;
     }
 //fprintf(stderr,"%s, %d: tableName=%s indexUseCount=%d isIndexInUse()=%d changedRowCount=%d doneFlag=%d\n",__FILE__,__LINE__,tableName,indexUseCount,isIndexInUse(),changedRowCount,(doneFlag != NULL) ? *doneFlag : -1);
-x += changedRowCount;
   }
   while (   (error == ERROR_NONE)
          && (changedRowCount > 0)
@@ -2144,20 +2142,12 @@ x += changedRowCount;
   // update done-flag
   if ((error == ERROR_NONE) && (doneFlag != NULL))
   {
-fprintf(stderr,"%s, %d: exists check %s: %s c=%lu count=%d inuse=%d\n",__FILE__,__LINE__,tableName,String_cString(filterString),x,changedRowCount,isIndexInUse());
-#if 0
-    if (Database_exists(&indexHandle->databaseHandle,tableName,"id","WHERE %S",filterString))
-    {
-      (*doneFlag) = FALSE;
-    }
-#else
-//    if ((changedRowCount >= SINGLE_STEP_PURGE_LIMIT) || isIndexInUse())
+//fprintf(stderr,"%s, %d: exists check %s: %s c=%lu count=%d inuse=%d\n",__FILE__,__LINE__,tableName,String_cString(filterString),x,changedRowCount,isIndexInUse());
     if ((changedRowCount > 0) && isIndexInUse())
     {
-fprintf(stderr,"%s, %d: clear done %d %d\n",__FILE__,__LINE__,changedRowCount,isIndexInUse());
+//fprintf(stderr,"%s, %d: clear done %d %d\n",__FILE__,__LINE__,changedRowCount,isIndexInUse());
       (*doneFlag) = FALSE;
     }
-#endif
   }
 
   // free resources
@@ -4058,7 +4048,6 @@ LOCAL Errors updateEntityAggregates(IndexHandle *indexHandle,
                           );
   if (error != ERROR_NONE)
   {
-fprintf(stderr,"%s, %d: error=%s\n",__FILE__,__LINE__,Error_getText(error));
     return error;
   }
 
@@ -4605,23 +4594,23 @@ LOCAL Errors pausePurge(IndexHandle *indexHandle, bool *transactionFlag)
   assert(transactionFlag != NULL);
   assert(*transactionFlag);
 
+  // temporary end transaction
   error = Index_endTransaction(indexHandle);
   if (error != ERROR_NONE)
   {
     return error;
   }
-
   (*transactionFlag) = FALSE;
 
-fprintf(stderr,"%s, %d: pausePurge\n",__FILE__,__LINE__);
+  // sleep a short time
   Misc_udelay(SLEEP_TIME_PURGE*US_PER_SECOND);
-fprintf(stderr,"%s, %d: inuse=%d\n",__FILE__,__LINE__,isIndexInUse());
+
+  // begin transaction
   error = Index_beginTransaction(indexHandle,WAIT_FOREVER);
   if (error != ERROR_NONE)
   {
     return error;
   }
-
   (*transactionFlag) = TRUE;
 
   return ERROR_NONE;
@@ -4644,7 +4633,6 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   Array                entryIds;
   String               entryIdsString;
   bool                 transactionFlag;
-  uint                 n;
   Errors               error;
   bool                 doneFlag;
   ArraySegmentIterator arraySegmentIterator;
@@ -4653,7 +4641,6 @@ LOCAL Errors clearStorage(IndexHandle *indexHandle,
   #ifndef NDEBUG
     ulong                deletedCounter;
   #endif
-int64 l=0;
 
   assert(indexHandle != NULL);
 
@@ -4663,8 +4650,8 @@ int64 l=0;
     return indexHandle->upgradeError;
   }
 
+  // lock
   Semaphore_lock(&indexClearStorageLock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER);
-fprintf(stderr,"%s, %d: SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS %llu %s: %lld\n",__FILE__,__LINE__,Misc_getTimestamp(),Thread_getCurrentIdString(),storageId);
 
   // init variables
   Array_init(&entryIds,sizeof(DatabaseId),256,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
@@ -4757,12 +4744,6 @@ fprintf(stderr,"%s, %d: SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS %llu %s: %lld\n",__F
     });
   }
 
-fprintf(stderr,"%s, %d: orphaned entries %lu: ",__FILE__,__LINE__,Array_length(&entryIds));
-ARRAY_ITERATE(&entryIds,arrayIterator,entryId)
-{
-fprintf(stderr," %lld",entryId);
-}
-fprintf(stderr,"\n");
   if (error == ERROR_NONE)
   {
     INDEX_PURGE_TRANSACTION_DOX(error,
@@ -4862,7 +4843,6 @@ fprintf(stderr,"\n");
 
       return ERROR_NONE;
     });
-fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&entryIds));
   }
 
   // purge fragments
@@ -4874,7 +4854,7 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
     {
       do
       {
-  //l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"entryFragments","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: fragments %d: %lld\n",__FILE__,__LINE__,storageId,l);
+//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"entryFragments","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: fragments %d: %lld\n",__FILE__,__LINE__,storageId,l);
         doneFlag = TRUE;
         error = purge(indexHandle,
                       &doneFlag,
@@ -4893,6 +4873,8 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
+
+      return error;
     });
   }
 #ifndef NDEBUG
@@ -4909,7 +4891,7 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
     {
       do
       {
-  //l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=fileEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: fileEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
+//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=fileEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: fileEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
         doneFlag = TRUE;
         error = purge(indexHandle,
                       &doneFlag,
@@ -4927,6 +4909,8 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
+
+      return error;
     });
   }
   if (error == ERROR_NONE)
@@ -4939,7 +4923,7 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
     {
       do
       {
-  //l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=imageEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: imageEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
+//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=imageEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: imageEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
         doneFlag = TRUE;
         error = purge(indexHandle,
                       &doneFlag,
@@ -4957,6 +4941,8 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
+
+      return error;
     });
   }
   if (error == ERROR_NONE)
@@ -4969,7 +4955,7 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
     {
       do
       {
-  //l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: directoryEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
+//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: directoryEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
         doneFlag = TRUE;
         error = purge(indexHandle,
                       &doneFlag,
@@ -4988,6 +4974,8 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
+
+      return error;
     });
   }
   if (error == ERROR_NONE)
@@ -5000,7 +4988,7 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
     {
       do
       {
-  //l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: linkEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
+//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: linkEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
         doneFlag = TRUE;
         error = purge(indexHandle,
                       &doneFlag,
@@ -5019,6 +5007,8 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
+
+      return error;
     });
   }
   if (error == ERROR_NONE)
@@ -5031,7 +5021,7 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
     {
       do
       {
-  //l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=hardlinkEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: hardlinkEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
+//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"fileEntries","count(id)","WHERE NOT EXISTS(SELECT id FROM entryFragments WHERE entryId=hardlinkEntries.entryId LIMIT 0,1)");fprintf(stderr,"%s, %lld: hardlinkEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
         doneFlag = TRUE;
         error = purge(indexHandle,
                       &doneFlag,
@@ -5049,6 +5039,8 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
+
+      return error;
     });
   }
   if (error == ERROR_NONE)
@@ -5061,7 +5053,7 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
     {
       do
       {
-  //l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"specialEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: specialEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
+//l=0;Database_getInteger64(&indexHandle->databaseHandle,&l,"specialEntries","count(id)","WHERE storageId=%lld",storageId);fprintf(stderr,"%s, %lld: specialEntries %d: %lld\n",__FILE__,__LINE__,storageId,l);
         doneFlag = TRUE;
         error = purge(indexHandle,
                       &doneFlag,
@@ -5080,6 +5072,8 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
         }
       }
       while ((error == ERROR_NONE) && !doneFlag);
+
+      return error;
     });
   }
 #ifndef NDEBUG
@@ -5124,10 +5118,13 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
         }
         while ((error == ERROR_NONE) && !doneFlag);
       }
+
+      return error;
     });
   }
   if (error != ERROR_NONE)
   {
+    Semaphore_unlock(&indexClearStorageLock);
     String_delete(entryIdsString);
     Array_done(&entryIds);
     return error;
@@ -5137,17 +5134,13 @@ fprintf(stderr,"%s, %d: purge entries %lu\n",__FILE__,__LINE__,Array_length(&ent
   error = updateStorageAggregates(indexHandle,storageId);
   if (error != ERROR_NONE)
   {
+    Semaphore_unlock(&indexClearStorageLock);
     String_delete(entryIdsString);
     Array_done(&entryIds);
     return error;
   }
-fprintf(stderr,"%s, %d: QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ %llu %s: %lld\n",__FILE__,__LINE__,Misc_getTimestamp(),Thread_getCurrentIdString(),storageId);
 
-if (error != ERROR_NONE)
-{
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
-}
+  // unlock
   Semaphore_unlock(&indexClearStorageLock);
 
   // free resources
@@ -5370,7 +5363,6 @@ LOCAL void indexThreadCode(void)
         // remove from database
         if (databaseId != DATABASE_ID_NONE)
         {
-fprintf(stderr,"%s, %d: remove databaseId=%"PRIi64"\n",__FILE__,__LINE__,databaseId);
           error           = ERROR_NONE;
           transactionFlag = FALSE;
 
@@ -5391,27 +5383,29 @@ fprintf(stderr,"%s, %d: remove databaseId=%"PRIi64"\n",__FILE__,__LINE__,databas
                                         &indexHandle,
                                         transactionFlag,
             {
-            do
-            {
-              doneFlag = TRUE;
-              error = purge(&indexHandle,
-                            &doneFlag,
-                            #ifndef NDEBUG
-                              &deletedCounter,
-                            #else
-                              NULL,  // deletedCounter
-                            #endif
-                            "storages",
-                            "id=%lld",
-                            databaseId
-                           );
-//fprintf(stderr,"%s, %d: databaseId=%"PRIi64" storage done=%d deletedCounter=%lu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
-              if ((error == ERROR_NONE) && !doneFlag && !quitFlag)
+              do
               {
-                error = pausePurge(&indexHandle,&transactionFlag);
+                doneFlag = TRUE;
+                error = purge(&indexHandle,
+                              &doneFlag,
+                              #ifndef NDEBUG
+                                &deletedCounter,
+                              #else
+                                NULL,  // deletedCounter
+                              #endif
+                              "storages",
+                              "id=%lld",
+                              databaseId
+                             );
+//fprintf(stderr,"%s, %d: databaseId=%"PRIi64" storage done=%d deletedCounter=%lu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
+                if ((error == ERROR_NONE) && !doneFlag && !quitFlag)
+                {
+                  error = pausePurge(&indexHandle,&transactionFlag);
+                }
               }
-            }
-            while ((error == ERROR_NONE) && !doneFlag && !quitFlag);
+              while ((error == ERROR_NONE) && !doneFlag && !quitFlag);
+
+              return error;
             });
           }
 
@@ -5422,24 +5416,26 @@ fprintf(stderr,"%s, %d: remove databaseId=%"PRIi64"\n",__FILE__,__LINE__,databas
                                         &indexHandle,
                                         transactionFlag,
             {
-            do
-            {
-              doneFlag = TRUE;
-              error = pruneEntities(&indexHandle,
-                                    &doneFlag,
-                                    #ifndef NDEBUG
-                                      &deletedCounter
-                                    #else
-                                      NULL  // deletedCounter
-                                    #endif
-                                   );
-//fprintf(stderr,"%s, %d: databaseId=%"PRIi64" pruneEntities done=%d deletedCounter=%lu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
-              if ((error == ERROR_NONE) && !doneFlag && !quitFlag)
+              do
               {
-                error = pausePurge(&indexHandle,&transactionFlag);
+                doneFlag = TRUE;
+                error = pruneEntities(&indexHandle,
+                                      &doneFlag,
+                                      #ifndef NDEBUG
+                                        &deletedCounter
+                                      #else
+                                        NULL  // deletedCounter
+                                      #endif
+                                     );
+//fprintf(stderr,"%s, %d: databaseId=%"PRIi64" pruneEntities done=%d deletedCounter=%lu error=%s\n",__FILE__,__LINE__,databaseId,doneFlag,deletedCounter,Error_getText(error));
+                if ((error == ERROR_NONE) && !doneFlag && !quitFlag)
+                {
+                  error = pausePurge(&indexHandle,&transactionFlag);
+                }
               }
-            }
-            while ((error == ERROR_NONE) && !doneFlag && !quitFlag);
+              while ((error == ERROR_NONE) && !doneFlag && !quitFlag);
+
+              return error;
             });
           }
 
@@ -5471,8 +5467,9 @@ fprintf(stderr,"%s, %d: remove databaseId=%"PRIi64"\n",__FILE__,__LINE__,databas
       while (databaseId != DATABASE_ID_NONE);
     #endif /* INDEX_SUPPORT_DELETE */
 
-    // sleep and check quit flag/trigger
-    sleepTime = 0;
+    // sleep and check quit flag/trigger (min. 10s)
+    Misc_udelay(10*US_PER_SECOND);
+    sleepTime = 10;
     SEMAPHORE_LOCKED_DO(&indexThreadTrigger,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
     {
       while (   !quitFlag
@@ -9441,7 +9438,6 @@ Errors Index_updateEntity(IndexHandle  *indexHandle,
     INDEX_DOX(error,
               indexHandle,
     {
-fprintf(stderr,"%s, %d: %llu %d\n",__FILE__,__LINE__,Misc_getTimestamp(),indexHandle->databaseHandle.timeout);
       error = Database_execute(&indexHandle->databaseHandle,
                                CALLBACK_(NULL,NULL),  // databaseRowFunction
                                NULL,  // changedRowCount
@@ -9464,7 +9460,6 @@ fprintf(stderr,"%s, %d: %llu %d\n",__FILE__,__LINE__,Misc_getTimestamp(),indexHa
                               );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %llu %s\n",__FILE__,__LINE__,Misc_getTimestamp(),Error_getText(error));
         return error;
       }
 

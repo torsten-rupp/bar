@@ -3426,7 +3426,7 @@ LOCAL bool getExpirationEntityList(ExpirationEntityList *expirationEntityList,
                               )
           )
     {
-  //fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
+//fprintf(stderr,"%s, %d: entityId=%lld archiveType=%d totalSize=%llu now=%llu createdDateTime=%llu -> age=%llu\n",__FILE__,__LINE__,entityId,archiveType,totalSize,now,createdDateTime,(now-createdDateTime)/S_PER_DAY);
       if (lockedCount == 0)
       {
         // create expiration node
@@ -3666,7 +3666,6 @@ LOCAL void purgeExpiredEntitiesThreadCode(void)
                                 indexHandle
                                );
 
-fprintf(stderr,"%s, %d: get ex list done: %d\n",__FILE__,__LINE__,List_count(&expirationEntityList));
         Array_clear(&entityIdArray);
         do
         {
@@ -3688,7 +3687,6 @@ fprintf(stderr,"%s, %d: get ex list done: %d\n",__FILE__,__LINE__,List_count(&ex
                                          jobNode->job.uuid,
                                          &jobNode->job.options.persistenceList
                                         );
-fprintf(stderr,"%s, %d: get job ex list done %s: %d\n",__FILE__,__LINE__,String_cString(jobNode->name),List_count(&jobExpirationEntityList));
 
               if (   (Misc_getCurrentDateTime() > (jobNode->job.options.persistenceList.lastModificationDateTime+10*S_PER_MINUTE))
                   && !List_isEmpty(&jobExpirationEntityList)  // only expire if persistence list is not empty
@@ -4053,7 +4051,6 @@ LOCAL void indexThreadCode(void)
           // pause
           pauseIndexUpdate();
           if (quitFlag) break;
-fprintf(stderr,"%s, %d: entityId=%lld storageId=%lld: %s\n",__FILE__,__LINE__,entityId,storageId,String_cString(storageName));
 
           // parse storage name, get printable name
           error = Storage_parseName(&storageSpecifier,storageName);
@@ -4086,7 +4083,6 @@ fprintf(stderr,"%s, %d: entityId=%lld storageId=%lld: %s\n",__FILE__,__LINE__,en
                               );
           if (error == ERROR_NONE)
           {
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
             // index archive contents
             printInfo(4,"Start create index for '%s'\n",String_cString(printableStorageName));
             plogMessage(NULL,  // logHandle
@@ -4103,7 +4099,6 @@ fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               Index_lockEntity(indexHandle,entityId);
             }
 
-fprintf(stderr,"%s, %d: %lld\n",__FILE__,__LINE__,entityId);
             // set state 'update'
             Index_setStorageState(indexHandle,
                                   storageId,
@@ -4121,7 +4116,6 @@ fprintf(stderr,"%s, %d: %lld\n",__FILE__,__LINE__,entityId);
 
               // index update
               startTimestamp = Misc_getTimestamp();
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
               error = Archive_updateIndex(indexHandle,
                                           uuidId,
                                           entityId,
@@ -16808,7 +16802,6 @@ LOCAL void serverCommand_indexAssign(ClientInfo *clientInfo, IndexHandle *indexH
                             );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(toHostName);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage to entity fail");
         return;
@@ -16846,7 +16839,6 @@ fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
                             );
       if (error != ERROR_NONE)
       {
-fprintf(stderr,"%s, %d: %s\n",__FILE__,__LINE__,Error_getText(error));
         String_delete(toHostName);
         ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"assign storage to entity fail");
         return;
