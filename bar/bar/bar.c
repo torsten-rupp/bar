@@ -772,6 +772,18 @@ LOCAL CommandLineOption COMMAND_LINE_OPTIONS[] =
 };
 
 LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL bool configValueParseMaintenanceDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueFormatInitMaintenanceDate(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueFormatDoneMaintenanceDate(void **formatUserData, void *userData);
+LOCAL bool configValueFormatMaintenanceDate(void **formatUserData, void *userData, String line);
+LOCAL bool configValueParseMaintenanceWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueFormatInitMaintenanceWeekDaySet(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueFormatDoneMaintenanceWeekDaySet(void **formatUserData, void *userData);
+LOCAL bool configValueFormatMaintenanceWeekDaySet(void **formatUserData, void *userData, String line);
+LOCAL bool configValueParseMaintenanceTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
+LOCAL void configValueFormatInitMaintenanceTime(void **formatUserData, void *userData, void *variable);
+LOCAL void configValueFormatDoneMaintenanceTime(void **formatUserData, void *userData);
+LOCAL bool configValueFormatMaintenanceTime(void **formatUserData, void *userData, String line);
 
 // handle deprecated configuration values
 LOCAL bool configValueParseDeprecatedArchiveFileModeOverwrite(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize);
@@ -918,7 +930,12 @@ ConfigValue CONFIG_VALUES[] = CONFIG_VALUE_ARRAY
   CONFIG_VALUE_INTEGER64         ("continuous-max-size",              &globalOptions.continuousMaxSize,-1,                           0LL,MAX_LONG_LONG,CONFIG_VALUE_BYTES_UNITS),
   CONFIG_VALUE_INTEGER           ("continuous-min-time-delta",        &globalOptions.continuousMinTimeDelta,-1,                      0,MAX_INT,CONFIG_VALUE_TIME_UNITS),
 
-  CONFIG_VALUE_SPECIAL           ("maintenance-time",                 &globalOptions.maintenanceTimeList,-1,                         configValueParseMaintenanceTime,NULL,NULL,NULL,&globalOptions.maintenanceTimeList),
+  CONFIG_VALUE_BEGIN_SECTION     ("maintenance",-1),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("date",                             MaintenanceNode,date,                                          configValueParseMaintenanceDate,configValueFormatInitMaintenanceDate,configValueFormatDoneMaintenanceDate,configValueFormatMaintenanceDate,&globalOptions.maintenanceList),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("weekdays",                         MaintenanceNode,weekDaySet,                                    configValueParseMaintenanceWeekDaySet,configValueFormatInitMaintenanceWeekDaySet,configValueFormatDoneMaintenanceWeekDaySet,configValueFormatMaintenanceWeekDaySet,&globalOptions.maintenanceList),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("begin",                            MaintenanceNode,begin,                                         configValueParseMaintenanceTime,NULL,NULL,NULL,&globalOptions.maintenanceList),
+    CONFIG_STRUCT_VALUE_SPECIAL  ("end",                              MaintenanceNode,end,                                           configValueParseMaintenanceTime,NULL,NULL,NULL,&globalOptions.maintenanceList),
+  CONFIG_VALUE_END_SECTION(),
 
   // global job settings
   CONFIG_VALUE_IGNORE            ("host-name",                                                                                       NULL,FALSE),
@@ -1566,25 +1583,6 @@ LOCAL DeviceNode *newDeviceNode(ConstString name)
 }
 
 /***********************************************************************\
-* Name   : freeMountedNode
-* Purpose: free mounted node
-* Input  : mountedNode - mounted node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void freeMountedNode(MountedNode *mountedNode, void *userData)
-{
-  assert(mountedNode != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  String_delete(mountedNode->device);
-  String_delete(mountedNode->name);
-}
-
-/***********************************************************************\
 * Name   : freeDeviceNode
 * Purpose: free device node
 * Input  : deviceNode - device node
@@ -1601,6 +1599,74 @@ LOCAL void freeDeviceNode(DeviceNode *deviceNode, void *userData)
   UNUSED_VARIABLE(userData);
 
   doneDevice(&deviceNode->device);
+}
+
+/***********************************************************************\
+* Name   : freeMountedNode
+* Purpose: free mounted node
+* Input  : mountedNode - mounted node
+*          userData    - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeMountedNode(MountedNode *mountedNode, void *userData)
+{
+  assert(mountedNode != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  String_delete(mountedNode->device);
+  String_delete(mountedNode->name);
+}
+
+/***********************************************************************\
+* Name   : newMaintenanceNode
+* Purpose: create new maintenance node
+* Input  : -
+* Output : -
+* Return : maintenance node
+* Notes  : -
+\***********************************************************************/
+
+LOCAL MaintenanceNode *newMaintenanceNode(void)
+{
+  MaintenanceNode *maintenanceNode;
+
+  maintenanceNode = LIST_NEW_NODE(MaintenanceNode);
+  if (maintenanceNode == NULL)
+  {
+    HALT_INSUFFICIENT_MEMORY();
+  }
+  maintenanceNode->date.year    = DATE_ANY;
+  maintenanceNode->date.month   = DATE_ANY;
+  maintenanceNode->date.day     = DATE_ANY;
+  maintenanceNode->weekDaySet   = WEEKDAY_SET_ANY;
+  maintenanceNode->begin.hour   = TIME_ANY;
+  maintenanceNode->begin.minute = TIME_ANY;
+  maintenanceNode->end.hour     = TIME_ANY;
+  maintenanceNode->end.minute   = TIME_ANY;
+
+  return maintenanceNode;
+}
+
+/***********************************************************************\
+* Name   : freeMaintenanceNode
+* Purpose: delete maintenance time node
+* Input  : maintenanceNode - maintenance node
+*          userData        - user data (not used)
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void freeMaintenanceNode(MaintenanceNode *maintenanceNode, void *userData)
+{
+  assert(maintenanceNode != NULL);
+
+  UNUSED_VARIABLE(maintenanceNode);
+  UNUSED_VARIABLE(userData);
 }
 
 /***********************************************************************\
@@ -2064,6 +2130,62 @@ LOCAL bool readConfigFile(ConstString fileName, bool printInfoFlag)
           }
         }
         File_ungetLine(&fileHandle,line,&lineNb);
+      }
+      else if (String_parse(line,STRING_BEGIN,"[maintenance]",NULL))
+      {
+        MaintenanceNode *maintenanceNode;
+
+        // allocate new maintenance time node
+        maintenanceNode = newMaintenanceNode();
+
+        // parse section
+        while (   !failFlag
+               && File_getLine(&fileHandle,line,&lineNb,"#")
+               && !String_matchCString(line,STRING_BEGIN,"^\\s*\\[",NULL,NULL,NULL)
+              )
+        {
+          if (String_parse(line,STRING_BEGIN,"%S=% S",&nextIndex,name,value))
+          {
+            (void)ConfigValue_parse(String_cString(name),
+                                    String_cString(value),
+                                    CONFIG_VALUES,
+                                    "maintenance",
+                                    CALLBACK_LAMBDA_(void,(const char *errorMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      printError("%s in section '%s' in %s, line %ld",errorMessage,"maintenance",String_cString(fileName),lineNb);
+                                      failFlag = TRUE;
+                                    },NULL),
+                                    CALLBACK_LAMBDA_(void,(const char *warningMessage, void *userData),
+                                    {
+                                      UNUSED_VARIABLE(userData);
+
+                                      printWarning("%s in section '%s' in %s, line %ld",warningMessage,"maintenance",String_cString(fileName),lineNb);
+                                    },NULL),
+                                    maintenanceNode
+                                   );
+            if (failFlag) break;
+          }
+          else
+          {
+            if (printInfoFlag) printConsole(stdout,0,"FAIL!\n");
+            printError(_("Syntax error in '%s', line %ld: '%s'"),
+                       String_cString(fileName),
+                       lineNb,
+                       String_cString(line)
+                      );
+            failFlag = TRUE;
+            break;
+          }
+        }
+        File_ungetLine(&fileHandle,line,&lineNb);
+
+        // add to maintenance list
+        SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+        {
+          List_append(&globalOptions.maintenanceList,maintenanceNode);
+        }
       }
       else if (String_parse(line,STRING_BEGIN,"[global]",NULL))
       {
@@ -2984,229 +3106,6 @@ LOCAL bool cmdOptionParseBandWidth(void *userData, void *variable, const char *n
 }
 
 /***********************************************************************\
-* Name   : newMaintenanceTimeNode
-* Purpose: create new maintenance time node
-* Input  : -
-* Output : -
-* Return : maintenance time node
-* Notes  : -
-\***********************************************************************/
-
-LOCAL MaintenanceTimeNode *newMaintenanceTimeNode(void)
-{
-  MaintenanceTimeNode *maintenanceTimeNode;
-
-  maintenanceTimeNode = LIST_NEW_NODE(MaintenanceTimeNode);
-  if (maintenanceTimeNode == NULL)
-  {
-    HALT_INSUFFICIENT_MEMORY();
-  }
-  maintenanceTimeNode->begin.year       = DATE_ANY;
-  maintenanceTimeNode->begin.month      = DATE_ANY;
-  maintenanceTimeNode->begin.day        = DATE_ANY;
-  maintenanceTimeNode->begin.hour       = TIME_ANY;
-  maintenanceTimeNode->begin.minute     = TIME_ANY;
-  maintenanceTimeNode->begin.weekDaySet = WEEKDAY_SET_ANY;
-  maintenanceTimeNode->end.year         = DATE_ANY;
-  maintenanceTimeNode->end.month        = DATE_ANY;
-  maintenanceTimeNode->end.day          = DATE_ANY;
-  maintenanceTimeNode->end.hour         = TIME_ANY;
-  maintenanceTimeNode->end.minute       = TIME_ANY;
-  maintenanceTimeNode->end.weekDaySet   = WEEKDAY_SET_ANY;
-
-  return maintenanceTimeNode;
-}
-
-/***********************************************************************\
-* Name   : deleteMaintenanceTimeNode
-* Purpose: delete maintenance time node
-* Input  : maintenanceTimeNode - maintenance time node
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-LOCAL void deleteMaintenanceTimeNode(MaintenanceTimeNode *maintenanceTimeNode)
-{
-  assert(maintenanceTimeNode != NULL);
-
-  LIST_DELETE_NODE(maintenanceTimeNode);
-}
-
-/***********************************************************************\
-* Name   : parseMaintenanceTime
-* Purpose: parse maintenance time
-* Input  : s                - band width string
-*          errorMessage     - error message
-*          errorMessageSize - max. error message size
-* Output : -
-* Return : band width node or NULL
-* Notes  : -
-\***********************************************************************/
-
-LOCAL MaintenanceTimeNode *parseMaintenanceTime(ConstString s, char errorMessage[], uint errorMessageSize)
-{
-  MaintenanceTimeNode *maintenanceTimeNode;
-  bool                errorFlag;
-  String              s0,s1,s2;
-  long                nextIndex;
-
-  assert(s != NULL);
-
-  // allocate new maintenance time node
-  maintenanceTimeNode = newMaintenanceTimeNode();
-
-  // parse bandwidth. Format: <date> [<weekday>] <time>,<date> [<weekday>] <time>
-  errorFlag = FALSE;
-  s0        = String_new();
-  s1        = String_new();
-  s2        = String_new();
-  nextIndex = STRING_BEGIN;
-  if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&maintenanceTimeNode->begin.year ))
-    {
-      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance year '%s'",String_cString(s0));
-      errorFlag = TRUE;
-    }
-    if (!parseDateMonth     (s1,&maintenanceTimeNode->begin.month))
-    {
-      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance month '%s'",String_cString(s1));
-      errorFlag = TRUE;
-    }
-    if (!parseDateTimeNumber(s2,&maintenanceTimeNode->begin.day  ))
-    {
-      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance day '%s'",String_cString(s2));
-      errorFlag = TRUE;
-    }
-  }
-  else
-  {
-    stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance begin date in '%s'",String_cString(s));
-    errorFlag = TRUE;
-  }
-  if (nextIndex < (long)String_length(s))
-  {
-    if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
-    {
-      if (!parseWeekDaySet(String_cString(s0),&maintenanceTimeNode->begin.weekDaySet))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",String_cString(s0));
-        errorFlag = TRUE;
-      }
-      if (!parseDateTimeNumber(s1,&maintenanceTimeNode->begin.hour  ))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance hour '%s'",String_cString(s1));
-        errorFlag = TRUE;
-      }
-      if (!parseDateTimeNumber(s2,&maintenanceTimeNode->begin.minute))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance minute '%s'",String_cString(s2));
-        errorFlag = TRUE;
-      }
-    }
-    else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
-    {
-      if (!parseDateTimeNumber(s0,&maintenanceTimeNode->begin.hour  ))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance hour '%s'",String_cString(s0));
-        errorFlag = TRUE;
-      }
-      if (!parseDateTimeNumber(s1,&maintenanceTimeNode->begin.minute))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance minute '%s'",String_cString(s1));
-        errorFlag = TRUE;
-      }
-    }
-    else
-    {
-      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance begin weekday/time in '%s'",s);
-      errorFlag = TRUE;
-    }
-  }
-
-  if (!String_parse(s,nextIndex,",",&nextIndex))
-  {
-    if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance end in '%s'",s);
-    errorFlag = TRUE;
-  }
-
-  if      (String_parse(s,nextIndex,"%S-%S-%S",&nextIndex,s0,s1,s2))
-  {
-    if (!parseDateTimeNumber(s0,&maintenanceTimeNode->end.year ))
-    {
-      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance year '%s'",String_cString(s0));
-      errorFlag = TRUE;
-    }
-    if (!parseDateMonth     (s1,&maintenanceTimeNode->end.month))
-    {
-      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance month '%s'",String_cString(s1));
-      errorFlag = TRUE;
-    }
-    if (!parseDateTimeNumber(s2,&maintenanceTimeNode->end.day  ))
-    {
-      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance day '%s'",String_cString(s2));
-      errorFlag = TRUE;
-    }
-  }
-  else
-  {
-    stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance end date in '%s'",String_cString(s));
-    errorFlag = TRUE;
-  }
-  if (nextIndex < (long)String_length(s))
-  {
-    if      (String_parse(s,nextIndex,"%S %S:%S",&nextIndex,s0,s1,s2))
-    {
-      if (!parseWeekDaySet(String_cString(s0),&maintenanceTimeNode->end.weekDaySet))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",String_cString(s0));
-        errorFlag = TRUE;
-      }
-      if (!parseDateTimeNumber(s1,&maintenanceTimeNode->end.hour  ))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance hour '%s'",String_cString(s1));
-        errorFlag = TRUE;
-      }
-      if (!parseDateTimeNumber(s2,&maintenanceTimeNode->end.minute))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance minute '%s'",String_cString(s2));
-        errorFlag = TRUE;
-      }
-    }
-    else if (String_parse(s,nextIndex,"%S:%S",&nextIndex,s0,s1))
-    {
-      if (!parseDateTimeNumber(s0,&maintenanceTimeNode->end.hour  ))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance hour '%s'",String_cString(s0));
-        errorFlag = TRUE;
-      }
-      if (!parseDateTimeNumber(s1,&maintenanceTimeNode->end.minute))
-      {
-        if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance minute '%s'",String_cString(s1));
-        errorFlag = TRUE;
-      }
-    }
-    else
-    {
-      if (!errorFlag) stringFormat(errorMessage,errorMessageSize,"Cannot parse maintenance end weekday/time in '%s'",s);
-      errorFlag = TRUE;
-    }
-  }
-  String_delete(s2);
-  String_delete(s1);
-  String_delete(s0);
-
-  if (errorFlag || (nextIndex < (long)String_length(s)))
-  {
-    deleteMaintenanceTimeNode(maintenanceTimeNode);
-    return NULL;
-  }
-
-  return maintenanceTimeNode;
-}
-
-/***********************************************************************\
 * Name   : cmdOptionParseOwner
 * Purpose: command line option call back for parsing owner
 * Input  : -
@@ -3872,6 +3771,436 @@ LOCAL bool configValueParseConfigFile(void *userData, void *variable, const char
 }
 
 /***********************************************************************\
+* Name   : configValueParseMaintenanceDate
+* Purpose: config value option call back for parsing maintenance date
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseMaintenanceDate(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool         errorFlag;
+  String       s0,s1,s2;
+  ScheduleDate date;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  s2 = String_new();
+  if      (String_parseCString(value,"%S-%S-%S",NULL,s0,s1,s2))
+  {
+    if (!parseDateTimeNumber(s0,&date.year )) errorFlag = TRUE;
+    if (!parseDateMonth     (s1,&date.month)) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s2,&date.day  )) errorFlag = TRUE;
+  }
+  else
+  {
+    errorFlag = TRUE;
+  }
+  String_delete(s2);
+  String_delete(s1);
+  String_delete(s0);
+  if (errorFlag)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance date '%s'",value);
+    return FALSE;
+  }
+
+  // store values
+  (*(ScheduleDate*)variable) = date;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatInitMaintenanceDate
+* Purpose: init format config maintenance
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void configValueFormatInitMaintenanceDate(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (ScheduleDate*)variable;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatDoneMaintenanceDate
+* Purpose: done format of config maintenance statements
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void configValueFormatDoneMaintenanceDate(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
+* Name   : configValueFormatMaintenanceDate
+* Purpose: format maintenance config statement
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueFormatMaintenanceDate(void **formatUserData, void *userData, String line)
+{
+  const ScheduleDate *scheduleDate;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleDate = (const ScheduleDate*)(*formatUserData);
+  if (scheduleDate != NULL)
+  {
+    if (scheduleDate->year != DATE_ANY)
+    {
+      String_appendFormat(line,"%d",scheduleDate->year);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,'-');
+    if (scheduleDate->month != DATE_ANY)
+    {
+      String_appendFormat(line,"%d",scheduleDate->month);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,'-');
+    if (scheduleDate->day != DATE_ANY)
+    {
+      String_appendFormat(line,"%d",scheduleDate->day);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
+* Name   : configValueParseMaintenanceWeekDaySet
+* Purpose: config value option call back for parsing maintenance week
+*          day set
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseMaintenanceWeekDaySet(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  WeekDaySet weekDaySet;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  if (!parseWeekDaySet(value,&weekDaySet))
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance weekday '%s'",value);
+    return FALSE;
+  }
+
+  // store value
+  (*(WeekDaySet*)variable) = weekDaySet;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatInitMaintenanceWeekDaySet
+* Purpose: init format config maintenance week day set
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void configValueFormatInitMaintenanceWeekDaySet(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (WeekDaySet*)variable;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatDoneMaintenanceWeekDays
+* Purpose: done format of config maintenance week day set
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void configValueFormatDoneMaintenanceWeekDaySet(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
+* Name   : configValueFormatMaintenanceWeekDaySet
+* Purpose: format maintenance config week day set
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueFormatMaintenanceWeekDaySet(void **formatUserData, void *userData, String line)
+{
+  const ScheduleWeekDaySet *scheduleWeekDaySet;
+  String                   names;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  scheduleWeekDaySet = (ScheduleWeekDaySet*)(*formatUserData);
+  if (scheduleWeekDaySet != NULL)
+  {
+    if ((*scheduleWeekDaySet) != WEEKDAY_SET_ANY)
+    {
+      names = String_new();
+
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_MON)) { String_joinCString(names,"Mon",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_TUE)) { String_joinCString(names,"Tue",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_WED)) { String_joinCString(names,"Wed",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_THU)) { String_joinCString(names,"Thu",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_FRI)) { String_joinCString(names,"Fri",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SAT)) { String_joinCString(names,"Sat",','); }
+      if (IN_SET(*scheduleWeekDaySet,WEEKDAY_SUN)) { String_joinCString(names,"Sun",','); }
+
+      String_append(line,names);
+      String_appendChar(line,' ');
+
+      String_delete(names);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
+* Name   : configValueParseMaintenanceTime
+* Purpose: config value option call back for parsing maintenance time
+* Input  : userData              - user data
+*          variable              - config variable
+*          name                  - config name
+*          value                 - config value
+*          maxErrorMessageLength - max. length of error message text
+* Output : errorMessage - error message text
+* Return : TRUE if config value parsed and stored in variable, FALSE
+*          otherwise
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueParseMaintenanceTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
+{
+  bool         errorFlag;
+  String       s0,s1;
+  ScheduleTime time;
+
+  assert(variable != NULL);
+  assert(value != NULL);
+
+  UNUSED_VARIABLE(userData);
+  UNUSED_VARIABLE(name);
+
+  // parse
+  errorFlag = FALSE;
+  s0 = String_new();
+  s1 = String_new();
+  if (String_parseCString(value,"%S:%S",NULL,s0,s1))
+  {
+    if (!parseDateTimeNumber(s0,&time.hour  )) errorFlag = TRUE;
+    if (!parseDateTimeNumber(s1,&time.minute)) errorFlag = TRUE;
+  }
+  String_delete(s1);
+  String_delete(s0);
+  if (errorFlag)
+  {
+    snprintf(errorMessage,errorMessageSize,"Cannot parse maintenance time '%s'",value);
+    return FALSE;
+  }
+
+  // store values
+  (*(ScheduleTime*)variable) = time;
+
+  return TRUE;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatInitMaintenanceTime
+* Purpose: init format config maintenance
+* Input  : userData - user data
+*          variable - config variable
+* Output : formatUserData - format user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void configValueFormatInitMaintenanceTime(void **formatUserData, void *userData, void *variable)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  (*formatUserData) = (MaintenanceTime*)variable;
+}
+
+/***********************************************************************\
+* Name   : configValueFormatDoneMaintenanceTime
+* Purpose: done format of config maintenance
+* Input  : formatUserData - format user data
+*          userData       - user data
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void configValueFormatDoneMaintenanceTime(void **formatUserData, void *userData)
+{
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(formatUserData);
+  UNUSED_VARIABLE(userData);
+}
+
+/***********************************************************************\
+* Name   : configValueFormatMaintenanceTime
+* Purpose: format maintenance config
+* Input  : formatUserData - format user data
+*          userData       - user data
+*          line           - line variable
+*          name           - config name
+* Output : line - formated line
+* Return : TRUE if config statement formated, FALSE if end of data
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool configValueFormatMaintenanceTime(void **formatUserData, void *userData, String line)
+{
+  const MaintenanceTime *maintenanceTime;
+
+  assert(formatUserData != NULL);
+
+  UNUSED_VARIABLE(userData);
+
+  maintenanceTime = (const MaintenanceTime*)(*formatUserData);
+  if (maintenanceTime != NULL)
+  {
+    if (maintenanceTime->hour != TIME_ANY)
+    {
+      String_appendFormat(line,"%d",maintenanceTime->hour);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+    String_appendChar(line,':');
+    if (maintenanceTime->minute != TIME_ANY)
+    {
+      String_appendFormat(line,"%d",maintenanceTime->minute);
+    }
+    else
+    {
+      String_appendCString(line,"*");
+    }
+
+    (*formatUserData) = NULL;
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/***********************************************************************\
 * Name   : configValueParseDeprecatedMountDevice
 * Purpose: config value option call back for deprecated mount-device
 * Input  : userData              - user data
@@ -4113,10 +4442,10 @@ LOCAL void initGlobalOptions(void)
   globalOptions.maxBandWidthList.n                              = 0L;
   globalOptions.maxBandWidthList.lastReadTimestamp              = 0LL;
 
-  List_init(&globalOptions.serverList);
   Semaphore_init(&globalOptions.serverList.lock,SEMAPHORE_TYPE_BINARY);
-  List_init(&globalOptions.deviceList);
+  List_init(&globalOptions.serverList);
   Semaphore_init(&globalOptions.deviceList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&globalOptions.deviceList);
 
   globalOptions.indexDatabaseUpdateFlag                         = TRUE;
   globalOptions.indexDatabaseAutoUpdateFlag                     = TRUE;
@@ -4124,6 +4453,9 @@ LOCAL void initGlobalOptions(void)
   globalOptions.indexDatabaseMaxBandWidthList.n                 = 0L;
   globalOptions.indexDatabaseMaxBandWidthList.lastReadTimestamp = 0LL;
   globalOptions.indexDatabaseKeepTime                           = S_PER_DAY;
+
+  Semaphore_init(&globalOptions.maintenanceList.lock,SEMAPHORE_TYPE_BINARY);
+  List_init(&globalOptions.maintenanceList);
 
   globalOptions.metaInfoFlag                                    = FALSE;
   globalOptions.groupFlag                                       = FALSE;
@@ -4313,7 +4645,6 @@ LOCAL void initGlobalOptions(void)
 
 LOCAL void doneGlobalOptions(void)
 {
-  List_done(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
   String_delete(globalOptions.bd.writeImageCommand);
   String_delete(globalOptions.bd.writeCommand);
   String_delete(globalOptions.bd.writePostProcessCommand);
@@ -4377,6 +4708,11 @@ LOCAL void doneGlobalOptions(void)
   String_delete(globalOptions.remoteBARExecutable);
 
   String_delete(globalOptions.comment);
+
+  List_done(&globalOptions.maintenanceList,CALLBACK_((ListNodeFreeFunction)freeMaintenanceNode,NULL));
+  Semaphore_done(&globalOptions.maintenanceList.lock);
+
+  List_done(&globalOptions.indexDatabaseMaxBandWidthList,CALLBACK_((ListNodeFreeFunction)freeBandWidthNode,NULL));
 
   List_done(&globalOptions.deviceList,CALLBACK_((ListNodeFreeFunction)freeDeviceNode,NULL));
   Semaphore_done(&globalOptions.deviceList.lock);
@@ -8049,73 +8385,6 @@ bool configValueFormatBandWidth(void **formatUserData, void *userData, String li
   }
 }
 
-bool configValueParseMaintenanceTime(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
-{
-  MaintenanceTimeNode *maintenanceTimeNode;
-  String              s;
-
-  assert(variable != NULL);
-  assert(value != NULL);
-
-  UNUSED_VARIABLE(userData);
-  UNUSED_VARIABLE(name);
-
-  // parse maintenance time node
-  s = String_newCString(value);
-  maintenanceTimeNode = parseMaintenanceTime(s,errorMessage,errorMessageSize);
-  if (maintenanceTimeNode == NULL)
-  {
-    String_delete(s);
-    return FALSE;
-  }
-  String_delete(s);
-
-  // append to list
-  List_append((MaintenanceTimeList*)variable,maintenanceTimeNode);
-
-  return TRUE;
-}
-
-void configValueFormatInitMaintenanceTime(void **formatUserData, void *userData, void *variable)
-{
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-
-  (*formatUserData) = ((MaintenanceTimeList*)variable)->head;
-}
-
-void configValueFormatDoneMaintenanceTime(void **formatUserData, void *userData)
-{
-  UNUSED_VARIABLE(formatUserData);
-  UNUSED_VARIABLE(userData);
-}
-
-bool configValueFormatMaintenanceTime(void **formatUserData, void *userData, String line)
-{
-  MaintenanceTimeNode *maintenanceTimeNode;
-
-  assert(formatUserData != NULL);
-
-  UNUSED_VARIABLE(userData);
-//TODO
-UNUSED_VARIABLE(line);
-
-  maintenanceTimeNode = (MaintenanceTimeNode*)(*formatUserData);
-  if (maintenanceTimeNode != NULL)
-  {
-//TODO    String_appendFormat(line,"%lu",bandWidthNode->n);
-
-    (*formatUserData) = NULL;
-
-    return TRUE;
-  }
-  else
-  {
-    return FALSE;
-  }
-}
-
 bool configValueParseOwner(void *userData, void *variable, const char *name, const char *value, char errorMessage[], uint errorMessageSize)
 {
   char   userName[256],groupName[256];
@@ -9934,6 +10203,80 @@ bool hasNoDumpAttribute(ConstString name)
   }
 
   return hasNoDumpAttributeFlag;
+}
+
+bool isMaintenanceTime(uint64 dateTime)
+{
+  // get time from hour/minute
+  #define TIME(hour,minute) ((hour)*60+(minute))
+  // get begin time from hour/minute or 00:00
+  #define TIME_BEGIN(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) :  0)*60+ \
+                                   (((minute) != TIME_ANY) ? (uint)(minute) :  0) \
+                                  )
+  // get end time from hour/minute or 24:00
+  #define TIME_END(hour,minute) ((((hour)   != TIME_ANY) ? (uint)(hour  ) : 23)*60+ \
+                                 (((minute) != TIME_ANY) ? (uint)(minute) : 60) \
+                                )
+
+  bool                  maintenanceTimeFlag;
+  uint                  year;
+  uint                  month;
+  uint                  day;
+  uint                  hour;
+  uint                  minute;
+  uint                  second;
+  WeekDays              weekDay;
+  const MaintenanceNode *maintenanceNode;
+
+  maintenanceTimeFlag = FALSE;
+
+  Misc_splitDateTime(dateTime,
+                     &year,
+                     &month,
+                     &day,
+                     &hour,
+                     &minute,
+                     &second,
+                     &weekDay
+                    );
+
+  SEMAPHORE_LOCKED_DO(&globalOptions.maintenanceList.lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
+  {
+    if (!List_isEmpty(&globalOptions.maintenanceList))
+    {
+      LIST_ITERATE(&globalOptions.maintenanceList,maintenanceNode)
+      {
+        if (   (   (maintenanceNode->date.year == DATE_ANY)
+                || ((uint)maintenanceNode->date.year == year )
+               )
+            && (   (maintenanceNode->date.month == DATE_ANY)
+                || ((uint)maintenanceNode->date.month == month)
+               )
+            && (   (maintenanceNode->date.day == DATE_ANY)
+                || ((uint)maintenanceNode->date.day == day  )
+               )
+            && (   (maintenanceNode->weekDaySet == WEEKDAY_SET_ANY)
+                || IN_SET(maintenanceNode->weekDaySet,weekDay)
+               )
+            && (TIME_BEGIN(maintenanceNode->begin.hour,maintenanceNode->begin.minute) <= TIME(hour,minute))
+            && (TIME_END  (maintenanceNode->end.hour,  maintenanceNode->end.minute  ) >= TIME(hour,minute))
+           )
+        {
+          maintenanceTimeFlag = TRUE;
+        }
+      }
+    }
+    else
+    {
+      maintenanceTimeFlag = TRUE;
+    }
+  }
+
+  return maintenanceTimeFlag;
+
+  #undef TIME_END
+  #undef TIME_BEGIN
+  #undef TIME
 }
 
 // ----------------------------------------------------------------------

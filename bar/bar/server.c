@@ -4012,7 +4012,10 @@ LOCAL void indexThreadCode(void)
       pauseIndexUpdate();
       if (quitFlag) break;
 
-      if (Index_isInitialized() && globalOptions.indexDatabaseUpdateFlag)
+      if (   Index_isInitialized()
+          && globalOptions.indexDatabaseUpdateFlag
+          && isMaintenanceTime(Misc_getCurrentDateTime())
+         )
       {
         // get all job crypt passwords and crypt private keys (including no password and default crypt password)
         JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
@@ -16943,7 +16946,8 @@ LOCAL void serverCommand_indexRefresh(ClientInfo *clientInfo, IndexHandle *index
   if (   INDEX_ID_IS_NONE(uuidId)
       && INDEX_ID_IS_NONE(storageId)
       && INDEX_ID_IS_NONE(entityId)
-      && String_isEmpty(jobUUID) && String_isEmpty(name)
+      && String_isEmpty(jobUUID)
+      && String_isEmpty(name)
      )
   {
     // refresh all storage with specific state
@@ -17311,6 +17315,8 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
   IndexId          uuidId;
   IndexId          entityId;
   IndexId          storageId;
+  StaticString     (jobUUID,MISC_UUID_STRING_LENGTH);
+  String           name;
   Errors           error;
   IndexQueryHandle indexQueryHandle;
   StorageSpecifier storageSpecifier;
@@ -17335,20 +17341,33 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"filter state=OK|UPDATE_REQUESTED|UPDATE|ERROR|*");
     return;
   }
-  StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE);
-  StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE);
-  StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE);
+  name = String_new();
+  name = String_new();
+  if (   !StringMap_getInt64(argumentMap,"uuidId",&uuidId,INDEX_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"entityId",&entityId,INDEX_ID_NONE)
+      && !StringMap_getInt64(argumentMap,"storageId",&storageId,INDEX_ID_NONE)
+      && !StringMap_getString(argumentMap,"jobUUID",jobUUID,NULL)
+      && !StringMap_getString(argumentMap,"name",name,NULL)
+     )
+  {
+    ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_EXPECTED_PARAMETER,"uuidId=<id> or entityId=<id> or storageId=<id> or jobUUID=<uuid> or name=<text>");
+    String_delete(name);
+    return;
+  }
 
   // check if index database is available
   if (indexHandle == NULL)
   {
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_DATABASE_INDEX_NOT_FOUND,"no index database available");
+    String_delete(name);
     return;
   }
 
   if (   (INDEX_ID_IS_NONE(uuidId))
       && (INDEX_ID_IS_NONE(storageId))
       && (INDEX_ID_IS_NONE(entityId))
+      && String_isEmpty(jobUUID)
+      && String_isEmpty(name)
      )
   {
     // initialize variables
@@ -17382,6 +17401,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
       String_delete(printableStorageName);
       String_delete(storageName);
       Storage_doneSpecifier(&storageSpecifier);
+      String_delete(name);
       return;
     }
     while (   !isCommandAborted(clientInfo,id)
@@ -17435,6 +17455,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
         {
           ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
           Index_doneList(&indexQueryHandle);
+          String_delete(name);
           return;
         }
 
@@ -17460,6 +17481,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      String_delete(name);
       return;
     }
 
@@ -17477,6 +17499,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      String_delete(name);
       return;
     }
 
@@ -17494,6 +17517,7 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     if (error != ERROR_NONE)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,error,"");
+      String_delete(name);
       return;
     }
 
@@ -17504,9 +17528,22 @@ LOCAL void serverCommand_indexRemove(ClientInfo *clientInfo, IndexHandle *indexH
     }
   }
 
+  if (!String_isEmpty(jobUUID))
+  {
+    // delete all storages of job
+//TODO
+  }
+
+  if (!String_isEmpty(jobUUID))
+  {
+    // delete all storages which match name
+//TODO
+  }
+
   ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,"");
 
   // free resources
+  String_delete(name);
 }
 
 #ifndef NDEBUG

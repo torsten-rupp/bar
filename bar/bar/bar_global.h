@@ -327,17 +327,17 @@ typedef struct
 // schedule date/time
 typedef struct
 {
-  int year;                                                   // year or SCHEDULE_ANY
-  int month;                                                  // month or SCHEDULE_ANY
-  int day;                                                    // day or SCHEDULE_ANY
+  int year;                                                   // year or DATE_ANY
+  int month;                                                  // month or DATE_ANY
+  int day;                                                    // day or DATE_ANY
 } ScheduleDate;
 
 typedef WeekDaySet ScheduleWeekDaySet;
 
 typedef struct
 {
-  int hour;                                                   // hour or SCHEDULE_ANY
-  int minute;                                                 // minute or SCHEDULE_ANY
+  int hour;                                                   // hour or TIME_ANY
+  int minute;                                                 // minute or TIME_ANY
 } ScheduleTime;
 
 typedef struct ScheduleNode
@@ -610,30 +610,40 @@ typedef struct
   Key        publicKey;
 } MasterInfo;
 
-// maintenance time node
-typedef struct MaintenanceTimeNode
-{
-  LIST_NODE_HEADER(struct MaintenanceTimeNode);
-
-  uint id;                                                  // unique maintenance time id
-  struct
-  {
-    int        year;                                          // valid year or DATE_ANY
-    int        month;                                         // valid month or DATE_ANY
-    int        day;                                           // valid day or DATE_ANY
-    int        hour;                                          // valid hour or TIME_ANY
-    int        minute;                                        // valid minute or TIME_ANY
-    WeekDaySet weekDaySet;                                    // valid weekday set or WEEKDAY_SET_ANY
-  } begin,end;
-} MaintenanceTimeNode;
-
-// maintenance time list
+// maintenance date/time
 typedef struct
 {
-  LIST_HEADER(MaintenanceTimeNode);
+  int year;                                                   // year or DATE_ANY
+  int month;                                                  // month or DATE_ANY
+  int day;                                                    // day or DATE_ANY
+} MaintenanceDate;
+
+typedef WeekDaySet MaintenanceWeekDaySet;
+
+typedef struct
+{
+  int hour;                                                   // hour or TIME_ANY
+  int minute;                                                 // minute or TIME_ANY
+} MaintenanceTime;
+
+// maintenance node
+typedef struct MaintenanceNode
+{
+  LIST_NODE_HEADER(struct MaintenanceNode);
+
+  uint id;                                                    // unique maintenance id
+  MaintenanceDate       date;
+  MaintenanceWeekDaySet weekDaySet;
+  MaintenanceTime       begin,end;
+} MaintenanceNode;
+
+// maintenance list
+typedef struct
+{
+  LIST_HEADER(MaintenanceNode);
 
   Semaphore lock;
-} MaintenanceTimeList;
+} MaintenanceList;
 
 // global options
 typedef struct
@@ -664,7 +674,7 @@ typedef struct
   BandWidthList               indexDatabaseMaxBandWidthList;  // list of max. band width to use for index updates [bits/s]
   uint                        indexDatabaseKeepTime;          // number of seconds to keep index data of not existing storage
 
-  MaintenanceTimeList         maintenanceTimeList;            // maintenance time list
+  MaintenanceList             maintenanceList;                // maintenance list
 
   bool                        metaInfoFlag;                   // TRUE iff meta info should be print
   bool                        groupFlag;                      // TRUE iff entries in list should be grouped

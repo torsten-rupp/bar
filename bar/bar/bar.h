@@ -1476,62 +1476,6 @@ void configValueFormatDoneBandWidth(void **formatUserData, void *userData);
 bool configValueFormatBandWidth(void **formatUserData, void *userData, String line);
 
 /***********************************************************************\
-* Name   : configValueParseMaintenanceTime
-* Purpose: config value call back for parsing maintenance time setting
-*          patterns
-* Input  : userData              - user data
-*          variable              - config variable
-*          name                  - config name
-*          value                 - config value
-*          maxErrorMessageLength - max. length of error message text
-* Output : errorMessage - error message text
-* Return : TRUE if config value parsed and stored into variable, FALSE
-*          otherwise
-* Notes  : -
-\***********************************************************************/
-
-bool configValueParseMaintenanceTime(void *userData, void *variable, const char *name, const char *value, char *errorMessage, uint maxErrorMessageLength);
-
-/***********************************************************************\
-* Name   : configValueFormatInitMaintenanceTime
-* Purpose: init format of config maintenance time settings
-* Input  : userData - user data
-*          variable - config variable
-* Output : formatUserData - format user data
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatInitMaintenanceTime(void **formatUserData, void *userData, void *variable);
-
-/***********************************************************************\
-* Name   : configValueFormatDoneMaintenanceTime
-* Purpose: done format of config maintenance time setting
-* Input  : formatUserData - format user data
-*          userData       - user data
-* Input  : -
-* Output : -
-* Return : -
-* Notes  : -
-\***********************************************************************/
-
-void configValueFormatDoneMaintenanceTime(void **formatUserData, void *userData);
-
-/***********************************************************************\
-* Name   : configValueFormatMaintenanceTime
-* Purpose: format next config maintenance time setting
-* Input  : formatUserData - format user data
-*          userData       - user data
-*          line           - line variable
-*          name           - config name
-* Output : line - formated line
-* Return : TRUE if config statement formated, FALSE if end of data
-* Notes  : -
-\***********************************************************************/
-
-bool configValueFormatMaintenanceTime(void **formatUserData, void *userData, String line);
-
-/***********************************************************************\
 * Name   : configValueParseOwner
 * Purpose: config value call back for parsing owner patterns
 * Input  : userData              - user data
@@ -2437,6 +2381,17 @@ bool hasNoBackup(ConstString pathName);
 \***********************************************************************/
 
 bool hasNoDumpAttribute(ConstString name);
+
+/***********************************************************************\
+* Name   : isMaintenanceTime
+* Purpose: check if date/time is maintence time
+* Input  : dateTime - date/time
+* Output : -
+* Return : TRUE if maintenance, FALSE otherwise
+* Notes  : -
+\***********************************************************************/
+
+bool isMaintenanceTime(uint64 dateTime);
 
 #ifdef __cplusplus
   }
