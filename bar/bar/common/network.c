@@ -793,7 +793,6 @@ Errors Network_connect(SocketHandle *socketHandle,
 //fprintf(stderr,"%s, %d: sshPrivateKeyLength=%d\n",__FILE__,__LINE__,sshPrivateKeyLength); debugDumpMemory(sshPrivateKeyData,sshPrivateKeyLength,0);
 //fprintf(stderr,"%s, %d: loginName=%s\n",__FILE__,__LINE__,String_cString(loginName));
 //fprintf(stderr,"%s, %d: plainPassword=%s\n",__FILE__,__LINE__,plainPassword);
-//fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__); asm("int3");
           if (Error_getCode(error) == ERROR_CODE_SSH_AUTHENTICATION)
           {
             if (   (sshPublicKeyData != NULL)
