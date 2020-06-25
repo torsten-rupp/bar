@@ -384,7 +384,7 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
   msgNode = (MsgNode*)malloc(sizeof(MsgNode)+size);
   if (msgNode == NULL)
   {
-    return FALSE;
+    HALT_INSUFFICIENT_MEMORY();
   }
   msgNode->size = size;
   memcpy(msgNode->data,msg,size);
@@ -399,19 +399,14 @@ bool MsgQueue_put(MsgQueue *msgQueue, const void *msg, ulong size)
       return FALSE;
     }
 
-    // check number of messages
     if (msgQueue->maxMsgs > 0)
     {
+      // wait for space in queue
       while (!msgQueue->endOfMsgFlag && (List_count(&msgQueue->list) >= msgQueue->maxMsgs))
       {
         waitModified(msgQueue,NULL);
       }
-      if (List_count(&msgQueue->list) >= msgQueue->maxMsgs)
-      {
-        free(msgNode);
-        unlock(msgQueue);
-        return FALSE;
-      }
+      assert(msgQueue->endOfMsgFlag || List_count(&msgQueue->list) < msgQueue->maxMsgs);
     }
 
     // put message
