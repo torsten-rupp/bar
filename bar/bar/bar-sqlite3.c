@@ -357,6 +357,23 @@ LOCAL void printPercentage(ulong n, ulong count)
 }
 
 /***********************************************************************\
+* Name   : clearPercentage
+* Purpose: clear percentage value (if verbose)
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void clearPercentage(void)
+{
+  if (verboseFlag)
+  {
+    fprintf(stdout,"    \b\b\b\b"); fflush(stdout);
+  }
+}
+
+/***********************************************************************\
 * Name   : createDatabase
 * Purpose: create database
 * Input  : databaseFileName - database file name
@@ -515,7 +532,7 @@ LOCAL void checkDatabaseIntegrity(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : checkDatabaseOrphaned
+* Name   : checkOrphanedEntries
 * Purpose: check database orphaned entries
 * Input  : databaseHandle - database handle
 * Output : -
@@ -523,7 +540,7 @@ LOCAL void checkDatabaseIntegrity(DatabaseHandle *databaseHandle)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
+LOCAL void checkOrphanedEntries(DatabaseHandle *databaseHandle)
 {
   Errors error;
   ulong  totalCount;
@@ -548,7 +565,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  image entries without fragments...");
@@ -565,7 +582,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (uint64)n;
   printInfo("  hardlink entries without fragments...");
@@ -582,7 +599,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -602,7 +619,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without image entry...");
@@ -620,7 +637,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without directory entry...");
@@ -638,7 +655,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without link entry...");
@@ -656,7 +673,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without hardlink entry...");
@@ -674,7 +691,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
   printInfo("  entries without special entry...");
@@ -692,7 +709,7 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -711,7 +728,64 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError("integrity check fail (error: %s)!\n",Error_getText(error));
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += (ulong)n;
+
+  // check FTS entries without entry
+  printInfo("  FTS entries without entry...");
+  error = Database_getInteger64(databaseHandle,
+                                &n,
+                                "FTS_entries",
+                                "COUNT(entryId)",
+                                "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1)"
+                               );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%lld\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += (ulong)n;
+
+  // check FTS storages without storage
+  printInfo("  FTS storages without storage...");
+  error = Database_getInteger64(databaseHandle,
+                                &n,
+                                "FTS_storages",
+                                "COUNT(storageId)",
+                                "WHERE NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1)"
+                               );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%lld\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
+  }
+  totalCount += (ulong)n;
+
+  // check newest entries without entry
+  printInfo("  newest entries without entry...");
+  error = Database_getInteger64(databaseHandle,
+                                &n,
+                                "entriesNewest",
+                                "COUNT(id)",
+                                "WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1)"
+                               );
+  if (error == ERROR_NONE)
+  {
+    printInfo("%lld\n",n);
+  }
+  else
+  {
+    printInfo("FAIL!\n");
+    printError("orphaned check fail (error: %s)!\n",Error_getText(error));
   }
   totalCount += (ulong)n;
 
@@ -724,15 +798,15 @@ LOCAL void checkDatabaseOrphaned(DatabaseHandle *databaseHandle)
 }
 
 /***********************************************************************\
-* Name   : checkDatabaseDuplicates
-* Purpose: check database duplicate entries
+* Name   : checkDuplicates
+* Purpose: check database duplicates
 * Input  : databaseHandle - database handle
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void checkDatabaseDuplicates(DatabaseHandle *databaseHandle)
+LOCAL void checkDuplicates(DatabaseHandle *databaseHandle)
 {
   String name;
   Errors error;
@@ -785,7 +859,7 @@ LOCAL void checkDatabaseDuplicates(DatabaseHandle *databaseHandle)
 
   if (totalCount > 0LL)
   {
-    printWarning("Found orphaned entries. Clean is recommented");
+    printWarning("Found duplicate entries. Clean is recommented");
   }
 
   // free resources
@@ -1209,8 +1283,7 @@ LOCAL void createIndizes(DatabaseHandle *databaseHandle)
       sqlProgressHandler(NULL);
     }
     while ((error == ERROR_NONE) && !stringIsEmpty(name));
-fprintf(stderr,"%s, %d: \n",__FILE__,__LINE__);
-//    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
+    if (error != ERROR_NONE) DATABASE_TRANSACTION_ABORT(databaseHandle);
 
     printInfo("OK\n");
 
@@ -3038,13 +3111,17 @@ LOCAL void createAggregatesStorages(DatabaseHandle *databaseHandle, const Array 
 
 LOCAL void cleanOrphanedEntries(DatabaseHandle *databaseHandle)
 {
-  String storageName;
-  ulong  total;
-DatabaseId  maxId;
-  ulong  n;
+  String        storageName;
+  Errors        error;
+  ulong         total;
+  ulong         n;
+  Array         entryIds;
+  ArrayIterator arrayIterator;
+  DatabaseId    databaseId;
 
   // initialize variables
   storageName = String_new();
+  Array_init(&entryIds,sizeof(DatabaseId),64,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   total       = 0;
 
   printInfo("Clean-up orphaned:\n");
@@ -3144,104 +3221,208 @@ DatabaseId  maxId;
   printInfo("%lu\n",n);
   total += n;
 
-#if 1
   // clean entries without associated file/image/directory/link/hardlink/special entry
   printInfo("  entries without file entry...");
   n = 0L;
-#if 0
-  error = Database_getMaxId(databaseHandle,
-                            &maxId,
-                            "entries",
-                            "id",
-                            NULL
-                           );
-fprintf(stderr,"%s, %d: maxId=%lld\n",__FILE__,__LINE__,maxId);
-#endif
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           "DELETE FROM entries \
-                            WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
-                           ",
-                           INDEX_CONST_TYPE_FILE
-                          );
+    Array_clear(&entryIds);
+    error = Database_getIds(databaseHandle,
+                            &entryIds,
+                            "entries",
+                            "id",
+                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM fileEntries WHERE fileEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
+                            INDEX_CONST_TYPE_FILE
+                           );
+    if (error == ERROR_NONE)
+    {
+      printPercentage(0,Array_length(&entryIds));
+      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      {
+        (void)Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               &n,
+                               "DELETE FROM entries \
+                                WHERE id=%lld \
+                               ",
+                               databaseId
+                              );
+        printPercentage(n,Array_length(&entryIds));
+      }
+      clearPercentage();
+    }
   }
   printInfo("%lu\n",n);
   total += n;
+
   printInfo("  entries without image entry...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           "DELETE FROM entries \
-                            WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
-                           ",
-                           INDEX_CONST_TYPE_IMAGE
-                          );
+    Array_clear(&entryIds);
+    error = Database_getIds(databaseHandle,
+                            &entryIds,
+                            "entries",
+                            "id",
+                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM imageEntries WHERE imageEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
+                            INDEX_CONST_TYPE_IMAGE
+                           );
+    if (error == ERROR_NONE)
+    {
+      printPercentage(0,Array_length(&entryIds));
+      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      {
+        (void)Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               &n,
+                               "DELETE FROM entries \
+                                WHERE id=%lld \
+                               ",
+                               databaseId
+                              );
+        printPercentage(n,Array_length(&entryIds));
+      }
+      clearPercentage();
+    }
   }
   printInfo("%lu\n",n);
   total += n;
+
   printInfo("  entries without directory entry...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           "DELETE FROM entries \
-                            WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
-                           ",
-                           INDEX_CONST_TYPE_DIRECTORY
-                          );
+    Array_clear(&entryIds);
+    error = Database_getIds(databaseHandle,
+                            &entryIds,
+                            "entries",
+                            "id",
+                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM directoryEntries WHERE directoryEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
+                            INDEX_CONST_TYPE_DIRECTORY
+                           );
+    if (error == ERROR_NONE)
+    {
+//fprintf(stderr,"%s, %d: %d\n",__FILE__,__LINE__,Array_length(&entryIds));
+      printPercentage(0,Array_length(&entryIds));
+      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      {
+        (void)Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               &n,
+                               "DELETE FROM entries \
+                                WHERE id=%lld \
+                               ",
+                               databaseId
+                              );
+        printPercentage(n,Array_length(&entryIds));
+      }
+      clearPercentage();
+    }
   }
   printInfo("%lu\n",n);
   total += n;
+
   printInfo("  entries without link entry...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           "DELETE FROM entries \
-                            WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
-                           ",
-                           INDEX_CONST_TYPE_LINK
-                          );
+    Array_clear(&entryIds);
+    error = Database_getIds(databaseHandle,
+                            &entryIds,
+                            "entries",
+                            "id",
+                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM linkEntries WHERE linkEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
+                            INDEX_CONST_TYPE_LINK
+                           );
+    if (error == ERROR_NONE)
+    {
+      printPercentage(0,Array_length(&entryIds));
+      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      {
+        (void)Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               &n,
+                               "DELETE FROM entries \
+                                WHERE id=%lld \
+                               ",
+                               databaseId
+                              );
+        printPercentage(n,Array_length(&entryIds));
+      }
+      clearPercentage();
+    }
   }
   printInfo("%lu\n",n);
   total += n;
+
   printInfo("  entries without hardlink entry...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           "DELETE FROM entries \
-                            WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
-                           ",
-                           INDEX_CONST_TYPE_HARDLINK
-                          );
+    Array_clear(&entryIds);
+    error = Database_getIds(databaseHandle,
+                            &entryIds,
+                            "entries",
+                            "id",
+                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM hardlinkEntries WHERE hardlinkEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
+                            INDEX_CONST_TYPE_HARDLINK
+                           );
+    if (error == ERROR_NONE)
+    {
+      printPercentage(0,Array_length(&entryIds));
+      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      {
+        (void)Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               &n,
+                               "DELETE FROM entries \
+                                WHERE id=%lld \
+                               ",
+                               databaseId
+                              );
+        printPercentage(n,Array_length(&entryIds));
+      }
+      clearPercentage();
+    }
   }
   printInfo("%lu\n",n);
   total += n;
+
   printInfo("  entries without special entry...");
   n = 0L;
   DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
   {
-    (void)Database_execute(databaseHandle,
-                           CALLBACK_(NULL,NULL),  // databaseRowFunction
-                           &n,
-                           "DELETE FROM entries \
-                            WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
-                           ",
-                           INDEX_CONST_TYPE_SPECIAL
-                          );
+    Array_clear(&entryIds);
+    error = Database_getIds(databaseHandle,
+                            &entryIds,
+                            "entries",
+                            "id",
+                            "WHERE entries.type=%u AND NOT EXISTS(SELECT id FROM specialEntries WHERE specialEntries.entryId=entries.id LIMIT 0,1) \
+                            ",
+                            INDEX_CONST_TYPE_SPECIAL
+                           );
+    if (error == ERROR_NONE)
+    {
+      printPercentage(0,Array_length(&entryIds));
+      ARRAY_ITERATE(&entryIds,arrayIterator,databaseId)
+      {
+        (void)Database_execute(databaseHandle,
+                               CALLBACK_(NULL,NULL),  // databaseRowFunction
+                               &n,
+                               "DELETE FROM entries \
+                                WHERE id=%lld \
+                               ",
+                               databaseId
+                              );
+        printPercentage(n,Array_length(&entryIds));
+      }
+      clearPercentage();
+    }
   }
   printInfo("%lu\n",n);
   total += n;
@@ -3261,7 +3442,54 @@ fprintf(stderr,"%s, %d: maxId=%lld\n",__FILE__,__LINE__,maxId);
   }
   printInfo("%lu\n",n);
   total += n;
-#endif
+
+  // clean FTS entries without entry
+  printInfo("  FTS entries without entry...");
+  n = 0L;
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    (void)Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           &n,
+                           "DELETE FROM FTS_entries \
+                            WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=FTS_entries.entryId LIMIT 0,1) \
+                           "
+                          );
+  }
+  printInfo("%lu\n",n);
+  total += n;
+
+  // clean FTS storages without entry
+  printInfo("  FTS storages without storage...");
+  n = 0L;
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    (void)Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           &n,
+                           "DELETE FROM FTS_storages \
+                            WHERE NOT EXISTS(SELECT id FROM storages WHERE storages.id=FTS_storages.storageId LIMIT 0,1) \
+                           "
+                          );
+  }
+  printInfo("%lu\n",n);
+  total += n;
+
+  // clean newest entries without entry
+  printInfo("  FTS entries without entry...");
+  n = 0L;
+  DATABASE_TRANSACTION_DO(databaseHandle,DATABASE_TRANSACTION_TYPE_EXCLUSIVE,WAIT_FOREVER)
+  {
+    (void)Database_execute(databaseHandle,
+                           CALLBACK_(NULL,NULL),  // databaseRowFunction
+                           &n,
+                           "DELETE FROM entriesNewest \
+                            WHERE NOT EXISTS(SELECT id FROM entries WHERE entries.id=entriesNewest.entryId LIMIT 0,1) \
+                           "
+                          );
+  }
+  printInfo("%lu\n",n);
+  total += n;
 
 //TODO: obsolete, remove
 #if 0
@@ -3503,6 +3731,7 @@ fprintf(stderr,"%s, %d: maxId=%lld\n",__FILE__,__LINE__,maxId);
   fprintf(stdout,"Total %lu orphaned entries cleaned\n",total);
 
   // free resources
+  Array_done(&entryIds);
   String_delete(storageName);
 }
 
@@ -5929,22 +6158,30 @@ int main(int argc, const char *argv[])
     printEntriesInfo(&databaseHandle,entityIdArray,entryName,FALSE);
   }
 
+  // drop triggeres
+  if (dropTriggersFlag)
+  {
+    dropTriggers(&databaseHandle);
+  }
+
+  // drop indizes
+  if (dropIndizesFlag)
+  {
+    dropIndizes(&databaseHandle);
+  }
+
+  // check
   if (checkIntegrityFlag)
   {
     checkDatabaseIntegrity(&databaseHandle);
   }
   if (checkOrphanedFlag)
   {
-    checkDatabaseOrphaned(&databaseHandle);
+    checkOrphanedEntries(&databaseHandle);
   }
   if (checkDuplicatesFlag)
   {
-    checkDatabaseDuplicates(&databaseHandle);
-  }
-
-  if (optimizeFlag)
-  {
-    optimizeDatabase(&databaseHandle);
+    checkDuplicates(&databaseHandle);
   }
 
   // recreate triggeres
@@ -5953,22 +6190,10 @@ int main(int argc, const char *argv[])
     createTriggers(&databaseHandle);
   }
 
-  // drop triggeres
-  if (dropTriggersFlag)
-  {
-    dropTriggers(&databaseHandle);
-  }
-
   // recreate indizes
   if (createIndizesFlag)
   {
     createIndizes(&databaseHandle);
-  }
-
-  // drop indizes
-  if (dropIndizesFlag)
-  {
-    dropIndizes(&databaseHandle);
   }
 
   // clean
@@ -6011,6 +6236,12 @@ int main(int argc, const char *argv[])
   if (vacuumFlag)
   {
     vacuum(&databaseHandle,toFileName);
+  }
+
+  // optimize
+  if (optimizeFlag)
+  {
+    optimizeDatabase(&databaseHandle);
   }
 
 #warning remove? use storages-info?
