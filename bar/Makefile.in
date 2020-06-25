@@ -378,7 +378,6 @@ $(KEY_FILES):
            --tls-directory=.. \
            --private-directory=.. \
            --certs-directory=.. \
-           --java-private-directory=.. \
            $(if $(CERTTOOL),--certtool) \
            $(if $(OPENSSL),--openssl) \
            --force \
