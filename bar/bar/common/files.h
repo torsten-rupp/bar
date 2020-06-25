@@ -28,8 +28,8 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
-#include "common/strings.h"
 #include "common/lists.h"
+#include "common/strings.h"
 #include "common/stringlists.h"
 #include "errors.h"
 

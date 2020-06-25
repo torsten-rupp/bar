@@ -56,9 +56,11 @@
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
+#include "common/lists.h"
 #include "common/strings.h"
 #include "common/stringlists.h"
 #include "common/devices.h"
+#include "errors.h"
 
 #ifndef NDEBUG
   #include <pthread.h>
