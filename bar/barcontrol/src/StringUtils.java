@@ -1404,22 +1404,17 @@ public class StringUtils
   }
 
   /** split string
+   * @param stringList string list
    * @param string string to split
    * @param splitChars characters used for splitting
    * @param spaceChars spaces characters to skip (can be null)
    * @param quoteChars quote characters (can be null)
    * @param escapeChar escape character (can be null)
    * @param emptyFlag true to return empty parts, false to skip empty parts
-   * @return string list
+   * @return extended string list
    */
   private static <T extends AbstractList<String> > T split(T stringList, String string, String splitChars, String spaceChars, String quoteChars, Character escapeChar, boolean emptyFlag)
   {
-//    Class<T> clazz = T.getClass();
-//    T<String> stringList = new T<String>();
-//    T stringList = clazz.newInstance();
-//    T stringList;// = new T();
-//Dprintf.dprintf("string=%s splitChars=%s spaceChars=%s quoteChars=%s em=%s",string,splitChars,spaceChars,quoteChars,emptyFlag);
-
     char[]        chars  = string.toCharArray();
     int           i      = 0;
     int           n      = chars.length;
@@ -1487,12 +1482,13 @@ public class StringUtils
   }
 
   /** split string
+   * @param stringList string list
    * @param string string to split
    * @param splitChars characters used for splitting
    * @param spaceChars spaces characters to skip (can be null)
    * @param quoteChars quote characters (can be null)
    * @param emptyFlag true to return empty parts, false to skip empty parts
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars, String spaceChars, String quoteChars, boolean emptyFlag)
   {
@@ -1500,12 +1496,13 @@ public class StringUtils
   }
 
   /** split string
+   * @param stringList string list
    * @param string string to split
    * @param splitChar character used for splitting
    * @param spaceChars spaces characters to skip (can be null)
    * @param quoteChars quote characters (can be null)
    * @param emptyFlag true to return empty parts, false to skip empty parts
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, char splitChar, String spaceChars, String quoteChars, boolean emptyFlag)
   {
@@ -1513,11 +1510,12 @@ public class StringUtils
   }
 
   /** split string, discard white spaces between strings
+   * @param stringList string list
    * @param string string to split
    * @param splitChars characters used for splitting
    * @param quoteChars quote characters
    * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars, String quoteChars, boolean emptyFlag)
   {
@@ -1525,11 +1523,12 @@ public class StringUtils
   }
 
   /** split string, discard white spaces between strings
+   * @param stringList string list
    * @param string string to split
    * @param splitChar characters used for splitting
    * @param quoteChars quote characters
    * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, char splitChar, String quoteChars, boolean emptyFlag)
   {
@@ -1537,10 +1536,11 @@ public class StringUtils
   }
 
   /** split string, discard white spaces between strings
+   * @param stringList string list
    * @param string string to split
    * @param splitChars characters used for splitting
    * @param quoteChars quote characters
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars, String quoteChars)
   {
@@ -1548,10 +1548,11 @@ public class StringUtils
   }
 
   /** split string (no quotes)
+   * @param stringList string list
    * @param string string to split
    * @param splitChars characters used for splitting
    * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars, boolean emptyFlag)
   {
@@ -1559,10 +1560,11 @@ public class StringUtils
   }
 
   /** split string (no quotes)
+   * @param stringList string list
    * @param string string to split
    * @param splitChar character used for splitting
    * @param emptyFlag TRUE to return empty parts, FALSE to skip empty parts
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, char splitChar, boolean emptyFlag)
   {
@@ -1570,9 +1572,10 @@ public class StringUtils
   }
 
   /** split string (no quotes)
+   * @param stringList string list
    * @param string string to split
    * @param splitChars characters used for splitting
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, String splitChars)
   {
@@ -1580,9 +1583,10 @@ public class StringUtils
   }
 
   /** split string (no quotes)
+   * @param stringList string list
    * @param string string to split
    * @param splitChar character used for splitting
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string, char splitChar)
   {
@@ -1590,12 +1594,169 @@ public class StringUtils
   }
 
   /** split string (no quotes) at white-spaces
+   * @param stringList string list
    * @param string string to split
-   * @return string list
+   * @return extended string list
    */
   public static <T extends AbstractList<String>> AbstractList<String> split(T stringList, String string)
   {
     return split(stringList,string,WHITE_SPACES);
+  }
+
+  /** split string
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param escapeChar escape character (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, String splitChars, String spaceChars, String quoteChars, Character escapeChar, boolean emptyFlag)
+  {
+    try
+    {
+      return split(clazz.getConstructor().newInstance(),string,splitChars,spaceChars,quoteChars,escapeChar,emptyFlag);
+    }
+    catch (InstantiationException exception)
+    {
+      return null;
+    }
+    catch (IllegalAccessException exception)
+    {
+      return null;
+    }
+    catch (java.lang.reflect.InvocationTargetException exception)
+    {
+      return null;
+    }
+    catch (NoSuchMethodException exception)
+    {
+      return null;
+    }
+  }
+
+  /** split string
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, String splitChars, String spaceChars, String quoteChars, boolean emptyFlag)
+  {
+    return split(clazz,string,splitChars,spaceChars,quoteChars,(Character)null,emptyFlag);
+  }
+
+  /** split string
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @param spaceChars spaces characters to skip (can be null)
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, char splitChar, String spaceChars, String quoteChars, boolean emptyFlag)
+  {
+    return split(clazz,string,new String(new char[]{splitChar}),spaceChars,quoteChars,emptyFlag);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, String splitChars, String quoteChars, Character escapeChar, boolean emptyFlag)
+  {
+    return split(clazz,string,splitChars,WHITE_SPACES,quoteChars,emptyFlag);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChar characters used for splitting
+   * @param quoteChars quote characters (can be null)
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, char splitChar, String quoteChars, Character escapeChar, boolean emptyFlag)
+  {
+    return split(clazz,string,splitChar,WHITE_SPACES,quoteChars,emptyFlag);
+  }
+
+  /** split string, discard white spaces between strings
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param quoteChars quote characters (can be null)
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, String splitChars, String quoteChars, Character escapeChar)
+  {
+    return split(clazz,string,splitChars,WHITE_SPACES,quoteChars,true);
+  }
+
+  /** split string (no quotes)
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, String splitChars, boolean emptyFlag)
+  {
+    return split(clazz,string,splitChars,(String)null,(String)null,emptyFlag);
+  }
+
+  /** split string (no quotes)
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @param emptyFlag true to return empty parts, false to skip empty parts
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, char splitChar, boolean emptyFlag)
+  {
+    return split(clazz,string,splitChar,(String)null,(String)null,emptyFlag);
+  }
+
+  /** split string (no quotes)
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChars characters used for splitting
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, String splitChars)
+  {
+    return split(clazz,string,splitChars,true);
+  }
+
+  /** split string (no quotes)
+   * @param clazz string list class
+   * @param string string to split
+   * @param splitChar character used for splitting
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string, char splitChar)
+  {
+    return split(clazz,string,splitChar,true);
+  }
+
+  /** split string (no quotes) at white-spaces
+   * @param clazz string list class
+   * @param string string to split
+   * @return string list
+   */
+  public static <T extends AbstractList<String> > T split(Class<T> clazz, String string)
+  {
+    return split(clazz,string,WHITE_SPACES);
   }
 
   /** convert to string array
@@ -1662,7 +1823,7 @@ public class StringUtils
 
   /** split string
    * @param string string to split
-   * @param splitChar character used for splitting
+   * @param splitChars characters used for splitting
    * @param spaceChars spaces characters to skip (can be null)
    * @param quoteChars quote characters (can be null)
    * @param emptyFlag true to return empty parts, false to skip empty parts
