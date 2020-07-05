@@ -1740,6 +1740,7 @@ public class BARControl
     new Option("--continue",                     "-c",Options.Types.BOOLEAN,    "continueFlag"),
     new Option("--list",                         "-l",Options.Types.BOOLEAN,    "listFlag"),
 
+    new Option("--index-database-info",          null,Options.Types.BOOLEAN,    "indexDatabaseInfo"),
     new Option("--index-database-add",           null,Options.Types.STRING,     "indexDatabaseAddStorageName"),
     new Option("--index-database-remove",        null,Options.Types.STRING,     "indexDatabaseRemoveStorageName"),
     new Option("--index-database-refresh",       null,Options.Types.STRING,     "indexDatabaseRefreshStorageName"),
@@ -2086,6 +2087,8 @@ public class BARControl
     System.out.println("         -c|--continue                              - continue job execution");
     System.out.println("         -l|--list                                  - list jobs");
     System.out.println("");
+    System.out.println("         --index-database-info                      - print index info");
+    System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
     System.out.println("         --index-database-add=<name|directory>      - add storage archive <name> or all .bar files to index");
     System.out.println("         --index-database-remove=<text>             - remove matching storage archives from index");
     System.out.println("         --index-database-refresh=<text>            - refresh matching storage archive in index");
@@ -4498,6 +4501,7 @@ if (false) {
           || (Settings.suspendFlag)
           || (Settings.continueFlag)
           || (Settings.listFlag)
+          || Settings.indexDatabaseInfo
           || (Settings.indexDatabaseAddStorageName != null)
           || (Settings.indexDatabaseRemoveStorageName != null)
           || (Settings.indexDatabaseRefreshStorageName != null)
@@ -4819,6 +4823,101 @@ if (false) {
           catch (Exception exception)
           {
             printError("cannot get job list (error: %s)",exception.getMessage());
+            BARServer.disconnect();
+            System.exit(ExitCodes.FAIL);
+          }
+        }
+
+        if (Settings.indexDatabaseInfo)
+        {
+          // add index for storage
+          try
+          {
+            BARServer.executeCommand(StringParser.format("INDEX_INFO"),
+                                     1,  // debug level
+                                     new Command.ResultHandler()
+                                     {
+                                       @Override
+                                       public void handle(int i, ValueMap valueMap)
+                                         throws BARException
+                                       {
+                                         long   totalEntityCount            = valueMap.getLong  ("totalEntityCount"           , 0L);
+                                         long   totalDeletedEntityCount     = valueMap.getLong  ("totalDeletedEntityCount"    , 0L);
+
+                                         long   totalEntryCount             = valueMap.getLong  ("totalEntryCount"            , 0L);
+                                         long   totalEntrySize              = valueMap.getLong  ("totalEntrySize"             , 0L);
+                                         long   totalEntryContentSize       = valueMap.getLong  ("totalEntryContentSize"      , 0L);
+                                         long   totalFileCount              = valueMap.getLong  ("totalFileCount"             , 0L);
+                                         long   totalFileSize               = valueMap.getLong  ("totalFileSize"              , 0L);
+                                         long   totalImageCount             = valueMap.getLong  ("totalImageCount"            , 0L);
+                                         long   totalImageSize              = valueMap.getLong  ("totalImageSize"             , 0L);
+                                         long   totalDirectoryCount         = valueMap.getLong  ("totalDirectoryCount"        , 0L);
+                                         long   totalLinkCount              = valueMap.getLong  ("totalLinkCount"             , 0L);
+                                         long   totalHardlinkCount          = valueMap.getLong  ("totalHardlinkCount"         , 0L);
+                                         long   totalHardlinkSize           = valueMap.getLong  ("totalHardlinkSize"          , 0L);
+                                         long   totalSpecialCount           = valueMap.getLong  ("totalSpecialCount"          , 0L);
+
+                                         long   totalEntryCountNewest       = valueMap.getLong  ("totalEntryCountNewest"      , 0L);
+                                         long   totalEntrySizeNewest        = valueMap.getLong  ("totalEntrySizeNewest"       , 0L);
+                                         long   totalEntryContentSizeNewest = valueMap.getLong  ("totalEntryContentSizeNewest", 0L);
+                                         long   totalFileCountNewest        = valueMap.getLong  ("totalFileCountNewest"       , 0L);
+                                         long   totalFileSizeNewest         = valueMap.getLong  ("totalFileSizeNewest"        , 0L);
+                                         long   totalImageCountNewest       = valueMap.getLong  ("totalImageCountNewest"      , 0L);
+                                         long   totalImageSizeNewest        = valueMap.getLong  ("totalImageSizeNewest"       , 0L);
+                                         long   totalDirectoryCountNewest   = valueMap.getLong  ("totalDirectoryCountNewest"  , 0L);
+                                         long   totalLinkCountNewest        = valueMap.getLong  ("totalLinkCountNewest"       , 0L);
+                                         long   totalHardlinkCountNewest    = valueMap.getLong  ("totalHardlinkCountNewest"   , 0L);
+                                         long   totalHardlinkSizeNewest     = valueMap.getLong  ("totalHardlinkSizeNewest"    , 0L);
+                                         long   totalSpecialCountNewest     = valueMap.getLong  ("totalSpecialCountNewest"    , 0L);
+
+                                         long   totalSkippedEntryCount      = valueMap.getLong  ("totalSkippedEntryCount"     , 0L);
+
+                                         long   totalStorageCount           = valueMap.getLong  ("totalStorageCount"          , 0L);
+                                         long   totalStorageSize            = valueMap.getLong  ("totalStorageSize"           , 0L);
+                                         long   totalDeletedStorageCount    = valueMap.getLong  ("totalDeletedStorageCount"   , 0L);
+
+                                         System.out.println("Entities");
+                                         System.out.println(String.format("  total             : %d",totalEntityCount           ));
+                                         System.out.println(String.format("  deleted           : %d",totalDeletedEntityCount    ));
+                                         System.out.println("Entries");
+                                         System.out.println(String.format("  total             : %d",totalEntryCount            ));
+                                         System.out.println(String.format("  total size        : %d",totalEntrySize             ));
+                                         System.out.println(String.format("  total content size: %d",totalEntryContentSize      ));
+                                         System.out.println(String.format("  files             : %d",totalFileCount             ));
+                                         System.out.println(String.format("  file size         : %d",totalFileSize              ));
+                                         System.out.println(String.format("  images            : %d",totalImageCount            ));
+                                         System.out.println(String.format("  image size        : %d",totalImageSize             ));
+                                         System.out.println(String.format("  directories       : %d",totalDirectoryCount        ));
+                                         System.out.println(String.format("  links             : %d",totalLinkCount             ));
+                                         System.out.println(String.format("  hardlinks         : %d",totalHardlinkCount         ));
+                                         System.out.println(String.format("  hardlink size     : %d",totalHardlinkSize          ));
+                                         System.out.println(String.format("  special           : %d",totalSpecialCount          ));
+                                         System.out.println("Newest entries:");
+                                         System.out.println(String.format("  total             : %d",totalEntryCountNewest      ));
+                                         System.out.println(String.format("  total size        : %d",totalEntrySizeNewest       ));
+                                         System.out.println(String.format("  entry content size: %d",totalEntryContentSizeNewest));
+                                         System.out.println(String.format("  files             : %d",totalFileCountNewest       ));
+                                         System.out.println(String.format("  file size         : %d",totalFileSizeNewest        ));
+                                         System.out.println(String.format("  images            : %d",totalImageCountNewest      ));
+                                         System.out.println(String.format("  image size        : %d",totalImageSizeNewest       ));
+                                         System.out.println(String.format("  directories       : %d",totalDirectoryCountNewest  ));
+                                         System.out.println(String.format("  links             : %d",totalLinkCountNewest       ));
+                                         System.out.println(String.format("  hardlinks         : %d",totalHardlinkCountNewest   ));
+                                         System.out.println(String.format("  hardlink size     : %d",totalHardlinkSizeNewest    ));
+                                         System.out.println(String.format("  special           : %d",totalSpecialCountNewest    ));
+                                         System.out.println("Skipped:");
+                                         System.out.println(String.format("  total             : %d",totalSkippedEntryCount     ));
+                                         System.out.println("Storages:");
+                                         System.out.println(String.format("  total             : %d",totalStorageCount          ));
+                                         System.out.println(String.format("  total size        : %d",totalStorageSize           ));
+                                         System.out.println(String.format("  deleted           : %d",totalDeletedStorageCount   ));
+                                       }
+                                     }
+                                    );
+          }
+          catch (Exception exception)
+          {
+            printError("cannot get index info (error: %s)",exception.getMessage());
             BARServer.disconnect();
             System.exit(ExitCodes.FAIL);
           }

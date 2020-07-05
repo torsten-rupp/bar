@@ -491,6 +491,7 @@ public class Settings
   public static boolean                        continueFlag                    = false;
   public static boolean                        listFlag                        = false;
 
+  public static boolean                        indexDatabaseInfo               = false;
   public static String                         indexDatabaseAddStorageName     = null;
   public static String                         indexDatabaseRemoveStorageName  = null;
   public static String                         indexDatabaseRefreshStorageName = null;
