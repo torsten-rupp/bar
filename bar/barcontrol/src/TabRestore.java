@@ -3433,7 +3433,7 @@ Dprintf.dprintf("");
           // update table count, table segment
           boolean updateIndicator = false;
           {
-            // set busy cursor, foreground color to inform about update
+            // set busy cursor, foreground color to inform about update, clear background color
             if (setUpdateIndicator)
             {
               display.syncExec(new Runnable()
@@ -3449,6 +3449,16 @@ Dprintf.dprintf("");
               });
               updateIndicator = true;
             }
+            display.syncExec(new Runnable()
+            {
+              public void run()
+              {
+                if (!widgetEntryFilter.isDisposed())
+                {
+                  widgetEntryFilter.setBackground(null);
+                }
+              }
+            });
           }
           try
           {
@@ -3481,7 +3491,7 @@ Dprintf.dprintf("");
           }
           finally
           {
-            // reset cursor, foreground color
+            // reset cursor, colors
             if (updateIndicator)
             {
               display.syncExec(new Runnable()
@@ -3504,7 +3514,7 @@ Dprintf.dprintf("");
             // wait for refresh request trigger or timeout
             if (!this.requestUpdateTotalEntryCountSize && this.requestUpdateOffsets.isEmpty())
             {
-              try { trigger.wait(30*1000); } catch (InterruptedException exception) { /* ignored */ };
+              try { trigger.wait(5*60*1000); } catch (InterruptedException exception) { /* ignored */ };
             }
 
             // check if update count, offsets to update
@@ -3526,7 +3536,7 @@ Dprintf.dprintf("");
               this.requestUpdateOffsets.clear();
               this.requestSetUpdateIndicator        = false;
 
-              try { trigger.wait(500); } catch (InterruptedException exception) { /* ignored */ };
+              try { trigger.wait(2000); } catch (InterruptedException exception) { /* ignored */ };
 
               updateTotalEntryCount |= this.requestUpdateTotalEntryCountSize;
               updateOffsets.addAll(this.requestUpdateOffsets);
@@ -6969,12 +6979,14 @@ Dprintf.dprintf("");
           {
             Text  widget = (Text)selectionEvent.widget;
             updateEntryTableThread.triggerUpdateEntryName(widget.getText());
+            widget.setBackground(COLOR_MODIFIED);
           }
           @Override
           public void widgetSelected(SelectionEvent selectionEvent)
           {
             Text widget = (Text)selectionEvent.widget;
             updateEntryTableThread.triggerUpdateEntryName(widget.getText());
+            widget.setBackground(COLOR_MODIFIED);
           }
         });
         widgetEntryFilter.addKeyListener(new KeyListener()
@@ -6983,11 +6995,13 @@ Dprintf.dprintf("");
           public void keyPressed(KeyEvent keyEvent)
           {
           }
+
           @Override
           public void keyReleased(KeyEvent keyEvent)
           {
             Text widget = (Text)keyEvent.widget;
             updateEntryTableThread.triggerUpdateEntryName(widget.getText());
+            widget.setBackground(COLOR_MODIFIED);
           }
         });
 
